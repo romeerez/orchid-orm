@@ -1,13 +1,10 @@
 import {
-  ColumnTypeBase,
   EmptyObject,
   Expression,
   FnUnknownToUnknown,
   IsQuery,
   MaybePromise,
   PickQueryShape,
-  QueryColumn,
-  QueryColumns,
   QueryMetaBase,
   QueryOrExpression,
   QueryReturnType,
@@ -21,17 +18,19 @@ import {
   QueryBatchResult,
   SqlMethod,
 } from '../queryMethods';
-import { ColumnType, UnknownColumn } from '../columns';
+import { Column, UnknownColumn } from '../columns';
 import { QueryData } from '../sql';
 import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
 } from '../common/query-result-processing';
 
-declare module '../core' {
-  interface ColumnDataBase {
-    // SQL computed columns have an Expression in their data, which will be used for building SQL.
-    computed?: Expression;
+declare module '../columns/column' {
+  namespace Column {
+    interface Data {
+      // SQL computed columns have an Expression in their data, which will be used for building SQL.
+      computed?: Expression;
+    }
   }
 }
 
@@ -43,7 +42,7 @@ export type ComputedColumnsFromOptions<
       [K in keyof R]: R[K] extends QueryOrExpression<unknown>
         ? R[K]['result']['value']
         : R[K] extends () => {
-            result: { value: infer Value extends QueryColumn };
+            result: { value: infer Value extends Column.Pick.QueryColumn };
           }
         ? Value
         : never;
@@ -54,11 +53,13 @@ export interface ComputedOptionsConfig {
   [K: string]: QueryOrExpression<unknown> | ReturnsQueryOrExpression<unknown>;
 }
 
-export type ComputedOptionsFactory<ColumnTypes, Shape extends QueryColumns> = (
-  t: ComputedMethods<ColumnTypes, Shape>,
-) => ComputedOptionsConfig;
+export type ComputedOptionsFactory<
+  ColumnTypes,
+  Shape extends Column.QueryColumns,
+> = (t: ComputedMethods<ColumnTypes, Shape>) => ComputedOptionsConfig;
 
-export interface RuntimeComputedQueryColumn<OutputType> extends QueryColumn {
+export interface RuntimeComputedQueryColumn<OutputType>
+  extends Column.Pick.QueryColumn {
   dataType: 'runtimeComputed';
   type: never;
   outputType: OutputType;
@@ -66,7 +67,7 @@ export interface RuntimeComputedQueryColumn<OutputType> extends QueryColumn {
   operators: { cannotQueryRuntimeComputed: never };
 }
 
-export interface ComputedMethods<ColumnTypes, Shape extends QueryColumns>
+export interface ComputedMethods<ColumnTypes, Shape extends Column.QueryColumns>
   extends QueryComputedArg<ColumnTypes, Shape> {
   computeAtRuntime<Deps extends keyof Shape, OutputType>(
     dependsOn: Deps[],
@@ -102,8 +103,10 @@ const computeAtRuntime = (deps: string[], fn: () => void) =>
 const computeBatchAtRuntime = (deps: string[], fn: () => void) =>
   new ComputedColumn('many', deps, fn);
 
-export interface QueryComputedArg<ColumnTypes, Shape extends QueryColumns>
-  extends ExpressionMethods,
+export interface QueryComputedArg<
+  ColumnTypes,
+  Shape extends Column.QueryColumns,
+> extends ExpressionMethods,
     SqlMethod<ColumnTypes> {
   shape: Shape;
   columnTypes: ColumnTypes;
@@ -111,7 +114,9 @@ export interface QueryComputedArg<ColumnTypes, Shape extends QueryColumns>
   relations: RelationsBase;
   result: EmptyObject;
   meta: Omit<QueryMetaBase, 'selectable'> & {
-    selectable: { [K in keyof Shape]: { as: string; column: QueryColumn } };
+    selectable: {
+      [K in keyof Shape]: { as: string; column: Column.Pick.QueryColumn };
+    };
   };
 }
 
@@ -133,22 +138,23 @@ export const applyComputedColumns = (
         [key]: item,
       };
     } else {
-      let col = item.result.value as ColumnType | undefined;
+      let col = item.result.value as Column | undefined;
       if (!col) {
         item.result.value = col = Object.create(
           UnknownColumn.instance,
-        ) as ColumnType;
+        ) as Column;
         col.data = { ...col.data };
       }
 
-      ((q as unknown as PickQueryShape).shape as QueryColumns)[key] = col;
+      ((q as unknown as PickQueryShape).shape as Column.QueryColumns)[key] =
+        col;
 
       const { data } = col;
       data.computed = item as Expression;
       data.explicitSelect = true;
       data.readOnly = true;
 
-      const parse = (item.result.value as ColumnTypeBase)._parse;
+      const parse = (item.result.value as Column)._parse;
       if (parse) {
         ((q as unknown as PickQueryQ).q.defaultParsers ??= {})[key] = parse;
       }

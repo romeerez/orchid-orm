@@ -1,11 +1,7 @@
-import {
-  IsQuery,
-  pushQueryValueImmutable,
-  QueryColumn,
-  QueryThen,
-} from '../core';
+import { IsQuery, pushQueryValueImmutable, QueryThen } from '../core';
 import { _clone } from '../query/queryUtils';
 import { QueryData } from '../sql';
+import { Column } from '../columns';
 
 export class TransformMethods {
   /**
@@ -71,7 +67,7 @@ export class TransformMethods {
     [K in keyof T]: K extends 'returnType'
       ? 'valueOrThrow'
       : K extends 'result'
-      ? { value: QueryColumn<Result> }
+      ? { value: Column.Pick.QueryColumnOfType<Result> }
       : K extends 'then'
       ? QueryThen<Result>
       : T[K];

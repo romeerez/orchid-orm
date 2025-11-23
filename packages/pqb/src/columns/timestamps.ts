@@ -1,17 +1,13 @@
-import {
-  ColumnTypeBase,
-  ColumnWithDefault,
-  getDefaultNowFn,
-} from './columnType';
-import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../utils';
-import { RawSQLBase } from '../raw';
+import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../core/utils';
+import { RawSQLBase } from '../core/raw';
+import { Column, getDefaultNowFn } from './column';
 
 // Column types returned by `...t.timestamps()` and variations.
-export interface Timestamps<T extends ColumnTypeBase> {
+export interface Timestamps<T extends Column.Pick.Data> {
   // Timestamp column with a `now()` default
-  createdAt: ColumnWithDefault<T, RawSQLBase>;
+  createdAt: Column.Modifiers.Default<T, RawSQLBase>;
   // Timestamp column with a `now()` default, and it's being updated on every record update.
-  updatedAt: ColumnWithDefault<T, RawSQLBase>;
+  updatedAt: Column.Modifiers.Default<T, RawSQLBase>;
 }
 
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.
@@ -32,25 +28,27 @@ export interface TimestampHelpers {
   /**
    * Add `createdAt` and `updatedAt` timestamps. Both have `now()` as a default, `updatedAt` is automatically updated during update.
    */
-  timestamps<T extends ColumnTypeBase>(this: { timestamp(): T }): Timestamps<T>;
+  timestamps<T extends Column.Pick.Data>(this: {
+    timestamp(): T;
+  }): Timestamps<T>;
 
   /**
    * The same as {@link timestamps}, for the timestamp without time zone time.
    */
-  timestampsNoTZ<T extends ColumnTypeBase>(this: {
+  timestampsNoTZ<T extends Column.Pick.Data>(this: {
     timestampNoTZ(): T;
   }): Timestamps<T>;
 }
 
-const makeTimestamps = <T extends ColumnTypeBase>(timestamp: () => T) => {
+const makeTimestamps = <T extends Column.Pick.Data>(timestamp: () => T) => {
   const now = getDefaultNowFn();
   const nowRaw = raw(now);
-  const updatedAt = timestamp().default(nowRaw);
+  const updatedAt = (timestamp() as unknown as Column).default(nowRaw);
   let updater:
     | ((data: (RecordUnknown | (() => void))[]) => RecordUnknown | undefined)
     | undefined;
 
-  updatedAt.data.modifyQuery = (q: unknown, column: ColumnTypeBase) => {
+  updatedAt.data.modifyQuery = (q: unknown, column: Column.Pick.Data) => {
     if (!updater) {
       const key = column.data.key;
       updater = (data) => {
@@ -74,23 +72,23 @@ const makeTimestamps = <T extends ColumnTypeBase>(timestamp: () => T) => {
   };
   updatedAt.data.defaultTimestamp = 'updatedAt';
 
-  const createdAt = timestamp().default(nowRaw);
+  const createdAt = (timestamp() as unknown as Column).default(nowRaw);
   createdAt.data.defaultTimestamp = 'createdAt';
 
   return {
     createdAt,
     updatedAt,
-  };
+  } as Timestamps<T>;
 };
 
 export const timestampHelpers: TimestampHelpers = {
-  timestamps<T extends ColumnTypeBase>(this: {
+  timestamps<T extends Column.Pick.Data>(this: {
     timestamp(): T;
   }): Timestamps<T> {
     return makeTimestamps(this.timestamp);
   },
 
-  timestampsNoTZ<T extends ColumnTypeBase>(this: {
+  timestampsNoTZ<T extends Column.Pick.Data>(this: {
     timestampNoTZ(): T;
   }): Timestamps<T> {
     return makeTimestamps(this.timestampNoTZ);

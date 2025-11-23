@@ -1,6 +1,6 @@
 import {
   ColumnsShape,
-  ColumnType,
+  Column,
   GeneratorIgnore,
   VirtualColumn,
   DbStructureDomainsMap,
@@ -63,8 +63,8 @@ interface ChangingColumns {
 }
 
 export interface ChangingColumnsPair {
-  from: ColumnType;
-  to: ColumnType;
+  from: Column;
+  to: Column;
 }
 
 export interface TableShapes {
@@ -284,7 +284,7 @@ const applyChangeTables = async (
       const types: string[] = [];
 
       for (const key in codeTable.shape) {
-        const column = codeTable.shape[key] as ColumnType;
+        const column = codeTable.shape[key] as Column;
         // skip virtual columns
         if (!column.dataType) continue;
 
@@ -416,7 +416,7 @@ const cloneCodeTableForChange = (codeTable: CodeTable) => ({
   table: codeTable.table,
   shape: Object.fromEntries(
     Object.entries(codeTable.shape).map(([key, column]) => {
-      const cloned = Object.create(column as ColumnType);
+      const cloned = Object.create(column as Column);
       cloned.data = {
         ...cloned.data,
         checks: cloned.data.checks && [...cloned.data.checks],
@@ -448,7 +448,7 @@ const makeTableShape = (table: CodeTable): ColumnsShape => {
   for (const key in table.shape) {
     const column = table.shape[key];
     if (!(column instanceof VirtualColumn)) {
-      shape[key] = column as ColumnType;
+      shape[key] = column as Column;
     }
   }
   return shape;

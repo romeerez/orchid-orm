@@ -6,7 +6,8 @@ import {
   TestSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnToCodeCtx } from '../../core';
+
+import { ColumnToCodeCtx } from '../code';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',

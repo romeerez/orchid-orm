@@ -7,14 +7,18 @@ import {
 import { _clone, throwIfNoWhere } from '../../query/queryUtils';
 import { _queryWhereIn, WhereResult } from '../where/where';
 import { ToSQLQuery } from '../../sql';
-import { anyShape, ColumnSchemaConfig, VirtualColumn } from '../../columns';
+import {
+  anyShape,
+  Column,
+  ColumnSchemaConfig,
+  VirtualColumn,
+} from '../../columns';
 import { Db } from '../../query/db';
 import {
   isExpression,
   callWithThis,
   RecordUnknown,
   EmptyObject,
-  ColumnTypeBase,
   pushQueryValueImmutable,
   QueryOrExpression,
   requirePrimaryKeys,
@@ -120,7 +124,7 @@ export interface UpdateCtxCollect {
   data: RecordUnknown;
 }
 
-const throwOnReadOnly = (q: unknown, column: ColumnTypeBase, key: string) => {
+const throwOnReadOnly = (q: unknown, column: Column.Pick.Data, key: string) => {
   if (column.data.appReadOnly || column.data.readOnly) {
     throw new OrchidOrmInternalError(
       q as Query,
@@ -157,7 +161,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 
       const column = self.shape[key];
       if (column) {
-        throwOnReadOnly(self, column as ColumnTypeBase, key);
+        throwOnReadOnly(self, column as unknown as Column.Pick.Data, key);
       }
     }
   } else {
@@ -165,7 +169,11 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 
     const column = self.shape[data as string];
     if (column) {
-      throwOnReadOnly(self, column as ColumnTypeBase, data as string);
+      throwOnReadOnly(
+        self,
+        column as unknown as Column.Pick.Data,
+        data as string,
+      );
     }
   }
 

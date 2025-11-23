@@ -6,10 +6,8 @@ import {
 } from '../../query/query';
 import {
   addColumnParserToQuery,
-  ColumnsShapeToNullableObject,
-  ColumnsShapeToObject,
-  ColumnsShapeToObjectArray,
-  ColumnsShapeToPluck,
+  Column,
+  ColumnsShape,
   UnknownColumn,
 } from '../../columns';
 import { JSONTextColumn } from '../../columns/column-types/json';
@@ -24,7 +22,6 @@ import {
   _addToHookSelectWithTable,
   _copyQueryAliasToQuery,
   BatchParser,
-  ColumnTypeBase,
   EmptyObject,
   Expression,
   getQueryParsers,
@@ -38,7 +35,6 @@ import {
   PickQueryWithData,
   pushQueryValueImmutable,
   QueryBase,
-  QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
   QueryReturnType,
@@ -46,13 +42,13 @@ import {
   RecordString,
   RecordUnknown,
   RelationsBase,
-  setColumnData,
   setObjectValueImmutable,
   setParserToQuery,
   spreadObjectValues,
   UnionToIntersection,
   NotFoundError,
 } from '../../core';
+import { setColumnData } from '../../columns/column';
 import { _joinLateral } from '../join/_join';
 import {
   resolveSubQueryCallbackV2,
@@ -71,9 +67,9 @@ import {
 import { cloneQueryBaseUnscoped } from '../queryMethods.utils';
 
 export interface SelectSelf {
-  shape: QueryColumns;
+  shape: Column.QueryColumns;
   relations: RelationsBase;
-  result: QueryColumns;
+  result: Column.QueryColumns;
   meta: QueryMetaBase;
   returnType: QueryReturnType;
   withData: EmptyObject;
@@ -116,7 +112,10 @@ export interface SelectAsArg<T extends SelectSelf> {
 }
 
 type SelectAsFnReturnType =
-  | { result: QueryColumns; returnType: Exclude<QueryReturnType, 'rows'> }
+  | {
+      result: Column.QueryColumns;
+      returnType: Exclude<QueryReturnType, 'rows'>;
+    }
   | Expression;
 
 interface SelectAsCheckReturnTypes {
@@ -271,7 +270,7 @@ type SelectResultColumnsAndObj<
 // To allow where-ing on a relation that returns a single record.
 // Where-ing is allowed because relation is joined and the row is not JSON-ed unlike selecting multiple rows.
 interface AllowedRelationOneQueryForSelectable extends QueryMetaIsSubQuery {
-  result: QueryColumns;
+  result: Column.QueryColumns;
   returnType: 'value' | 'valueOrThrow' | 'one' | 'oneOrThrow';
 }
 
@@ -329,14 +328,14 @@ type SelectAsValueResult<
 // query that returns a single record becomes an object column, possibly nullable
 export type SelectSubQueryResult<Arg extends SelectSelf> =
   Arg['returnType'] extends undefined | 'all'
-    ? ColumnsShapeToObjectArray<Arg['result']>
+    ? ColumnsShape.MapToObjectArrayColumn<Arg['result']>
     : Arg['returnType'] extends 'value' | 'valueOrThrow'
     ? Arg['result']['value']
     : Arg['returnType'] extends 'pluck'
-    ? ColumnsShapeToPluck<Arg['result']>
+    ? ColumnsShape.MapToPluckColumn<Arg['result']>
     : Arg['returnType'] extends 'one'
-    ? ColumnsShapeToNullableObject<Arg['result']>
-    : ColumnsShapeToObject<Arg['result']>;
+    ? ColumnsShape.MapToNullableObjectColumn<Arg['result']>
+    : ColumnsShape.MapToObjectColumn<Arg['result']>;
 
 // add a parser for a raw expression column
 // is used by .select and .get methods
@@ -503,7 +502,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             case 'value':
             case 'valueOrThrow': {
               const notNullable = !(
-                query.getColumn as ColumnTypeBase | undefined
+                query.getColumn as Column.Pick.Data | undefined
               )?.data.isNullable;
 
               const parse = parsers?.[getValueKey];
@@ -877,7 +876,7 @@ const selectColumn = (
 export const getShapeFromSelect = (
   q: IsQuery,
   isSubQuery?: boolean,
-): QueryColumns => {
+): Column.QueryColumns => {
   const query = (q as Query).q;
   const { shape } = query;
   let select: SelectItem[] | undefined;
@@ -891,7 +890,7 @@ export const getShapeFromSelect = (
     select = query.select;
   }
 
-  let result: QueryColumns;
+  let result: Column.QueryColumns;
   if (!select) {
     if (query.type) {
       // mutative queries with no select are returning nothing
@@ -937,7 +936,10 @@ export const getShapeFromSelect = (
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               const type = it.q.getColumn;
               result[key] = type
-                ? mapSubSelectColumn(type as ColumnTypeBase, isSubQuery)
+                ? mapSubSelectColumn(
+                    type as unknown as Column.Pick.Data,
+                    isSubQuery,
+                  )
                 : UnknownColumn.instance;
             } else {
               result[key] = new JSONTextColumn(defaultSchemaConfig);
@@ -956,9 +958,9 @@ export const getShapeFromSelect = (
 const addColumnToShapeFromSelect = (
   q: IsQuery,
   arg: string,
-  shape: QueryColumns,
+  shape: Column.QueryColumns,
   query: QueryData,
-  result: QueryColumns,
+  result: Column.QueryColumns,
   isSubQuery?: boolean,
   key?: string,
 ) => {
@@ -973,29 +975,29 @@ const addColumnToShapeFromSelect = (
       const it = query.joinedShapes?.[table]?.[column];
       if (it)
         result[key || column] = mapSubSelectColumn(
-          it as ColumnTypeBase,
+          it as unknown as Column.Pick.Data,
           isSubQuery,
         );
     }
   } else if (arg === '*') {
     for (const key in shape) {
-      if (!(shape[key] as ColumnTypeBase).data.explicitSelect) {
+      if (!(shape[key] as unknown as Column.Pick.Data).data.explicitSelect) {
         result[key] = mapSubSelectColumn(
-          shape[key] as ColumnTypeBase,
+          shape[key] as unknown as Column.Pick.Data,
           isSubQuery,
         );
       }
     }
   } else {
     result[key || arg] = mapSubSelectColumn(
-      shape[arg] as ColumnTypeBase,
+      shape[arg] as unknown as Column.Pick.Data,
       isSubQuery,
     );
   }
 };
 
 // un-name a column if `isSubQuery` is true
-const mapSubSelectColumn = (column: ColumnTypeBase, isSubQuery?: boolean) => {
+const mapSubSelectColumn = (column: Column.Pick.Data, isSubQuery?: boolean) => {
   // `!column` is needed for case when wrong column is passed to subquery (see issue #236)
   if (
     !isSubQuery ||

@@ -5,7 +5,8 @@ import {
   postgisTypmodToSql,
 } from './postgis';
 import { defaultSchemaConfig } from '../default-schema-config';
-import { ColumnToCodeCtx } from '../../core';
+
+import { ColumnToCodeCtx } from '../code';
 
 describe('postgis columns', () => {
   afterAll(testDb.close);

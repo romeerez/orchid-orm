@@ -3,7 +3,6 @@ import {
   IsQuery,
   PickQueryShape,
   pushQueryValueImmutable,
-  QueryColumns,
   QueryHookUtils,
 } from '../core';
 import {
@@ -13,11 +12,12 @@ import {
 } from '../sql';
 import { PickQueryQ } from '../query/query';
 import { AfterCommitErrorHandler } from './transaction';
+import { Column } from '../columns';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
 export type AfterHook<
   Select extends PropertyKey[],
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
 > = QueryAfterHook<
   {
     [K in Select[number]]: K extends keyof Shape

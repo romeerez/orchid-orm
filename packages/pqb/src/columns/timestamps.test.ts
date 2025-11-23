@@ -5,7 +5,8 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
-import { setDefaultNowFn } from './columnType';
+
+import { setDefaultNowFn } from './column';
 
 // now() should be customizable: https://github.com/romeerez/orchid-orm/issues/71
 setDefaultNowFn('custom_now()');

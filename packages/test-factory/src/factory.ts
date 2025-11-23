@@ -11,7 +11,7 @@ import {
   CircleColumn,
   CitextColumn,
   ColumnsShape,
-  ColumnType,
+  Column,
   CreateData,
   CreateSelf,
   DateColumn,
@@ -50,8 +50,6 @@ import {
   XMLColumn,
   BaseNumberData,
   ColumnSchemaConfig,
-  ColumnShapeOutput,
-  ColumnTypeBase,
   emptyObject,
   EmptyObject,
   getPrimaryKeys,
@@ -59,7 +57,7 @@ import {
   PickQueryShape,
   QueryBase,
   RecordUnknown,
-  StringTypeData,
+  StringData,
 } from 'pqb';
 import { faker } from '@faker-js/faker';
 import randexp from 'randexp';
@@ -67,7 +65,7 @@ import randexp from 'randexp';
 type FakeDataFn = (sequence: number) => unknown;
 
 interface FakeDataDefineFns {
-  [K: string]: (column: ColumnTypeBase) => FakeDataFn;
+  [K: string]: (column: Column.Pick.Data) => FakeDataFn;
 }
 
 interface FakeDataFns {
@@ -141,7 +139,7 @@ export type CreateArg<T extends TestFactory> = CreateData<{
 
 type CreateResult<T extends TestFactory> = Result<
   T,
-  ColumnShapeOutput<T['table']['shape']>
+  ColumnsShape.Output<T['table']['shape']>
 >;
 
 const omit = <T, Keys extends RecordUnknown>(
@@ -224,7 +222,9 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
   }
 
   for (const key of getPrimaryKeys(factory.table as unknown as QueryBase)) {
-    const item = factory.table.shape[key] as ColumnTypeBase;
+    const item = factory.table.shape[
+      key
+    ] as unknown as Column.Pick.DataAndDataType;
 
     if ('identity' in item.data || item.dataType.includes('serial')) {
       delete pick[key];
@@ -435,7 +435,7 @@ export class TestFactory<
 
 type TableFactory<T extends CreateSelf> = TestFactory<
   T,
-  ColumnShapeOutput<T['shape']>
+  ColumnsShape.Output<T['shape']>
 >;
 
 let fixedTime: Date | undefined;
@@ -452,7 +452,7 @@ const float = (min: number, max: number, multipleOf: number) =>
 
 const point = () => float(-100, 100, 0.01);
 
-const isoTime = (c: ColumnTypeBase, sequence: number) => {
+const isoTime = (c: Column.Pick.Data, sequence: number) => {
   const data = c.data as { min?: Date; max?: Date };
 
   return (
@@ -485,7 +485,7 @@ const numOpts = (
 const num = (
   uniqueColumns: Set<string>,
   key: string,
-  c: ColumnType<ColumnSchemaConfig>,
+  c: Column<ColumnSchemaConfig>,
   method: 'int' | 'float' | 'bigInt' | 'amount',
   {
     step,
@@ -538,7 +538,7 @@ const makeGeneratorForColumn = (
   table: PickQueryShape,
   uniqueColumns: Set<string>,
   key: string,
-  c: ColumnTypeBase,
+  c: Column.Pick.DataAndDataType,
 ): ((sequence: number) => unknown) | undefined => {
   let fn: (sequence: number) => unknown;
 
@@ -595,7 +595,7 @@ const makeGeneratorForColumn = (
     c instanceof StringColumn ||
     c instanceof CitextColumn
   ) {
-    const data = c.data as StringTypeData;
+    const data = c.data as StringData;
     const lowerKey = key.toLowerCase();
     const strippedKey = lowerKey.replace(/_|-/g, '');
 
@@ -860,7 +860,13 @@ const makeGeneratorForColumn = (
       );
     }
 
-    return makeGeneratorForColumn(config, table, uniqueColumns, key, as);
+    return makeGeneratorForColumn(
+      config,
+      table,
+      uniqueColumns,
+      key,
+      as as never,
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -883,7 +889,7 @@ export const tableFactory = <T extends CreateSelf>(
 
     const {
       data: { indexes, primaryKey },
-    } = shape[key] as ColumnType;
+    } = shape[key] as Column;
 
     if (primaryKey) {
       uniqueColumns.add(key);

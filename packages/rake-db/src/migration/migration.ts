@@ -1,6 +1,6 @@
 import {
   ColumnsShape,
-  ColumnType,
+  Column,
   createDbWithAdapter,
   DbDomainArg,
   DbResult,
@@ -439,7 +439,7 @@ export class Migration<CT> {
   addColumn(
     tableName: string,
     columnName: string,
-    fn: (t: MigrationColumnTypes<CT>) => ColumnType,
+    fn: (t: MigrationColumnTypes<CT>) => Column,
   ): Promise<void> {
     return addColumn(this, this.up, tableName, columnName, fn);
   }
@@ -454,7 +454,7 @@ export class Migration<CT> {
   dropColumn(
     tableName: string,
     columnName: string,
-    fn: (t: MigrationColumnTypes<CT>) => ColumnType,
+    fn: (t: MigrationColumnTypes<CT>) => Column,
   ): Promise<void> {
     return addColumn(this, !this.up, tableName, columnName, fn);
   }
@@ -1438,7 +1438,7 @@ const addColumn = <CT>(
   up: boolean,
   tableName: string,
   columnName: string,
-  fn: (t: MigrationColumnTypes<CT>) => ColumnType,
+  fn: (t: MigrationColumnTypes<CT>) => Column,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     [columnName]: t.add(fn(t)),

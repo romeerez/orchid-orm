@@ -7,7 +7,6 @@ import { ToSQLCtx } from '../sql';
 import { getSqlText } from '../sql/utils';
 import {
   addValue,
-  ColumnTypeBase,
   emptyArray,
   Expression,
   getValueKey,
@@ -15,16 +14,27 @@ import {
   isIterable,
   IsQuery,
   MaybeArray,
-  PickOutputTypeAndOperators,
-  PickQueryColumnTypes,
+  PickQueryColumTypes,
   PickQueryResult,
   PickQueryResultColumnTypes,
-  QueryColumn,
   RecordUnknown,
   setObjectValueImmutable,
 } from '../core';
 import { BooleanQueryColumn } from '../queryMethods';
 import { addColumnParserToQuery } from './column.utils';
+import { Column } from './column';
+
+/**
+ * Function to turn the operator expression into SQL.
+ *
+ * @param key - SQL of the target to apply operator for, can be a quoted column name or an SQL expression wrapped with parens.
+ * @param args - arguments of operator function.
+ * @param ctx - context object for SQL conversions, for collecting query variables.
+ * @param quotedAs - quoted table name.
+ */
+export interface OperatorToSQL {
+  (key: string, args: [unknown], ctx: unknown, quotedAs?: string): string;
+}
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.
@@ -32,7 +42,7 @@ import { addColumnParserToQuery } from './column.utils';
 // for a case when operator gives a different column type.
 export interface Operator<
   Value,
-  Column extends PickOutputTypeAndOperators = PickOutputTypeAndOperators,
+  Column extends Column.Pick.OutputTypeAndOperators = Column.Pick.OutputTypeAndOperators,
 > {
   <T extends PickQueryResult>(this: T, arg: Value):
     | Omit<
@@ -325,8 +335,8 @@ interface JsonPathQueryOptions {
 }
 
 interface JsonPathQueryTypeOptions<
-  T extends PickQueryColumnTypes,
-  C extends QueryColumn,
+  T extends PickQueryColumTypes,
+  C extends Column.Pick.QueryColumn,
 > extends JsonPathQueryOptions {
   type?: (types: T['columnTypes']) => C;
 }
@@ -389,7 +399,10 @@ interface JsonPathQuery {
    */
   <
     T extends PickQueryResultColumnTypes,
-    C extends QueryColumn = QueryColumn<unknown, OperatorsAny>,
+    C extends Column.Pick.QueryColumn = Column.Pick.QueryColumnOfTypeAndOps<
+      unknown,
+      OperatorsAny
+    >,
   >(
     this: T,
     path: string,
@@ -613,7 +626,10 @@ const json = {
     function (
       this: IsQuery,
       path: string,
-      options?: JsonPathQueryTypeOptions<PickQueryColumnTypes, ColumnTypeBase>,
+      options?: JsonPathQueryTypeOptions<
+        PickQueryColumTypes,
+        Column.Pick.QueryColumn
+      >,
     ) {
       const { q, columnTypes } = this as Query;
       const chain = (q.chain ??= []);

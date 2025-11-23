@@ -2,8 +2,8 @@ import {
   codeToString,
   columnDefaultArgumentToCode,
   columnsShapeToCode,
+  ColumnToCodeCtx,
 } from './code';
-import { ColumnToCodeCtx } from '../core';
 import { testZodColumnTypes as t } from 'test-utils';
 import { RawSQL } from '../sql/rawSql';
 

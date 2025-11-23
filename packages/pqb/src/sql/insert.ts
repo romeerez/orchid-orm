@@ -5,7 +5,6 @@ import { ToSQLCtx, ToSQLQuery, toSubSqlText } from './toSQL';
 import { InsertQueryDataObjectValues, QueryData } from './data';
 import {
   addValue,
-  ColumnTypeBase,
   DelayedRelationSelect,
   Expression,
   getFreeAlias,
@@ -36,6 +35,7 @@ import {
   composeCteSingleSql,
   moveMutativeQueryToCte,
 } from '../query/cte/cte.sql';
+import { Column } from '../columns/column';
 
 interface InsertSqlState {
   ctx: ToSQLCtx;
@@ -107,7 +107,7 @@ export const makeInsertSql = (
   if (quotedColumns.length === 0) {
     const key = Object.keys(q.shape)[0];
     if (key) {
-      const column = q.shape[key] as ColumnTypeBase;
+      const column = q.shape[key] as unknown as Column.Pick.Data;
       quotedColumns[0] = `"${column?.data.name || key}"`;
 
       // for `create({})` case: `{}` is transformed into `[[]]`,

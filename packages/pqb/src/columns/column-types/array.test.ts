@@ -5,8 +5,9 @@ import {
   testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnToCodeCtx } from '../../core';
 import { z } from 'zod/v4';
+
+import { ColumnToCodeCtx } from '../code';
 
 describe('array column', () => {
   it('should correctly parse various array types', () => {

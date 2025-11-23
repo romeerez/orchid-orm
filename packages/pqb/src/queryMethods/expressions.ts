@@ -1,18 +1,16 @@
 import {
-  ColumnTypeBase,
   emptyObject,
   Expression,
   ExpressionData,
   isExpression,
-  PickOutputType,
-  PickQueryColumnTypes,
+  PickQueryColumTypes,
   PickQueryMeta,
   PickQueryMetaResultRelationsWindowsColumnTypes,
   PickQueryShape,
-  QueryColumn,
   QueryThen,
   ValExpression,
 } from '../core';
+import { Column } from '../columns/column';
 import { getSqlText, QueryData, ToSQLCtx } from '../sql';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {
@@ -28,7 +26,9 @@ import { _clone, getFullColumnTable } from '../query/queryUtils';
 import { UnknownColumn } from '../columns';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
-export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
+export class ColumnRefExpression<
+  T extends Column.Pick.QueryColumn,
+> extends Expression<T> {
   result: { value: T };
   q: ExpressionData;
 
@@ -49,7 +49,9 @@ export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
   }
 }
 
-export class RefExpression<T extends QueryColumn> extends Expression<T> {
+export class RefExpression<
+  T extends Column.Pick.QueryColumn,
+> extends Expression<T> {
   result: { value: T };
   q: QueryData;
   table?: string;
@@ -102,9 +104,9 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
 
 Object.assign(OrExpression.prototype, Operators.boolean);
 
-interface QueryReturnsFnAdd<T extends PickQueryColumnTypes>
+interface QueryReturnsFnAdd<T extends PickQueryColumTypes>
   extends QueryMetaHasSelect {
-  type<C extends QueryColumn>(
+  type<C extends Column.Pick.QueryColumn>(
     fn: (types: T['columnTypes']) => C,
   ): {
     [K in keyof T]: K extends 'result'
@@ -118,8 +120,8 @@ interface QueryReturnsFnAdd<T extends PickQueryColumnTypes>
 }
 
 type SetQueryReturnsFn<
-  T extends PickQueryColumnTypes,
-  C extends PickOutputType,
+  T extends PickQueryColumTypes,
+  C extends Column.Pick.OutputType,
 > = {
   [K in keyof T]: K extends 'result'
     ? { value: C }
@@ -155,7 +157,7 @@ export class ExpressionMethods {
     this: T,
     name: K,
   ): ColumnRefExpression<T['shape'][K]> & T['shape'][K]['operators'] {
-    const column = (this.shape as { [K: PropertyKey]: ColumnTypeBase })[name];
+    const column = (this.shape as { [K: PropertyKey]: Column })[name];
     return new ColumnRefExpression(
       (column || UnknownColumn.instance) as T['shape'][K],
       name as string,
@@ -199,7 +201,7 @@ export class ExpressionMethods {
     const q = _clone(this);
 
     const { shape } = q.q;
-    let column: QueryColumn | undefined;
+    let column: Column.Pick.QueryColumn | undefined;
 
     const index = arg.indexOf('.');
     if (index !== -1) {
@@ -261,7 +263,7 @@ export class ExpressionMethods {
   fn<
     T extends PickQueryMetaResultRelationsWindowsColumnTypes,
     Type = unknown,
-    C extends QueryColumn = QueryColumn<Type>,
+    C extends Column.Pick.QueryColumn = Column.Pick.QueryColumnOfType<Type>,
   >(
     this: T,
     fn: string,

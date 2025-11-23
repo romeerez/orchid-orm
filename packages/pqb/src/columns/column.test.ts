@@ -1,4 +1,4 @@
-import { ColumnType } from './column-type';
+import { Column } from './column';
 import {
   profileData,
   User,
@@ -6,8 +6,7 @@ import {
   UserRecord,
 } from '../test-utils/test-utils';
 import { createDbWithAdapter } from '../query/db';
-import { columnCode } from './code';
-import { ColumnToCodeCtx } from '../core';
+import { columnCode, ColumnToCodeCtx } from './code';
 import { Code } from './code';
 import {
   assertType,
@@ -23,7 +22,7 @@ import {
 import { raw } from '../sql/rawSql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod/v4';
-import { assignDbDataToColumn } from './column-type.utils';
+import { assignDbDataToColumn } from './column-from-db.utils';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { ColumnSchemaConfig } from './column-schema';
 
@@ -31,7 +30,7 @@ describe('column type', () => {
   useTestDatabase();
   afterAll(testDb.close);
 
-  class Column<Schema extends ColumnSchemaConfig> extends ColumnType<
+  class TestColumn<Schema extends ColumnSchemaConfig> extends Column<
     Schema,
     number | string
   > {
@@ -46,7 +45,7 @@ describe('column type', () => {
       return columnCode(this, ctx, key, 'column()');
     }
   }
-  const column = new Column(testSchemaConfig);
+  const column = new TestColumn(testSchemaConfig);
 
   const columnToCodeCtx: ColumnToCodeCtx = {
     t: 't',
@@ -54,7 +53,7 @@ describe('column type', () => {
     currentSchema: 'public',
   };
 
-  describe('.primaryKey', () => {
+  describe('primaryKey', () => {
     it('should mark column as a primary key', () => {
       expect(column.data.primaryKey).toBe(undefined);
       expect(column.primaryKey().data.primaryKey).toBe(true);
@@ -67,7 +66,126 @@ describe('column type', () => {
     });
   });
 
-  describe('.foreignKey', () => {
+  describe('setOnCreate, setOnUpdate, setOnSave', () => {
+    useTestDatabase();
+
+    it('should set values on create', async () => {
+      let createColumns: string[] | undefined;
+      let updateColumns: string[] | undefined;
+
+      const User = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string().setOnCreate(({ columns }) => {
+          createColumns = columns;
+          return 'set on create';
+        }),
+        password: t.string().setOnUpdate(({ columns }) => {
+          updateColumns = columns;
+          return 'set on update';
+        }),
+        picture: t
+          .string()
+          .nullable()
+          .setOnSave(() => 'set on save'),
+      }));
+
+      const user = await User.create({
+        name: 'name',
+        password: 'password',
+      });
+      expect(user).toMatchObject({
+        name: 'set on create',
+        password: 'password',
+        picture: 'set on save',
+      });
+
+      expect(createColumns).toEqual(['name', 'password']);
+      expect(updateColumns).toBe(undefined);
+    });
+
+    it('should set values on update', async () => {
+      let createColumns: string[] | undefined;
+      let updateColumns: string[] | undefined;
+
+      const User = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string().setOnCreate(({ columns }) => {
+          createColumns = columns;
+          return 'set on create';
+        }),
+        password: t.string().setOnUpdate(({ columns }) => {
+          updateColumns = columns;
+          return 'set on update';
+        }),
+        picture: t
+          .string()
+          .nullable()
+          .setOnSave(() => 'set on save'),
+      }));
+
+      const id = await testDb.query
+        .get<number>`INSERT INTO "user"("name", "password") VALUES ('name', 'password') RETURNING "id"`;
+
+      const updated = await User.find(id)
+        .update({
+          name: 'name',
+          password: 'password',
+          picture: 'picture',
+        })
+        .select('*', 'password');
+
+      expect(updated).toMatchObject({
+        name: 'name',
+        password: 'set on update',
+        picture: 'set on save',
+      });
+
+      expect(createColumns).toBe(undefined);
+      expect(updateColumns).toEqual(['name', 'password', 'picture']);
+    });
+
+    it('should not override values when returning undefined', async () => {
+      const User = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string().setOnCreate(() => undefined),
+        password: t.string().setOnUpdate(() => undefined),
+        picture: t
+          .string()
+          .nullable()
+          .setOnSave(() => undefined),
+      }));
+
+      const user = await User.create({
+        name: 'name',
+        password: 'password',
+        picture: 'picture',
+      });
+      expect(user).toMatchObject({
+        name: 'name',
+        password: 'password',
+        picture: 'picture',
+      });
+
+      const id = await testDb.query
+        .get<number>`INSERT INTO "user"("name", "password") VALUES ('n', 'p') RETURNING "id"`;
+
+      const updated = await User.find(id)
+        .update({
+          name: 'name',
+          password: 'password',
+          picture: 'picture',
+        })
+        .select('*', 'password');
+
+      expect(updated).toMatchObject({
+        name: 'name',
+        password: 'password',
+        picture: 'picture',
+      });
+    });
+  });
+
+  describe('foreignKey', () => {
     it('should have toCode', () => {
       class Table {
         readonly table = 'table';
@@ -104,7 +222,7 @@ describe('column type', () => {
     });
   });
 
-  describe('.select(false)', () => {
+  describe('select(false)', () => {
     it('should mark column as hidden', () => {
       expect(column.data.explicitSelect).toBe(undefined);
       expect(column.select(false).data.explicitSelect).toBe(true);
@@ -162,7 +280,7 @@ describe('column type', () => {
     });
   });
 
-  describe('.nullable', () => {
+  describe('nullable', () => {
     it('should mark column as nullable', () => {
       expect(column.data.isNullable).toBe(undefined);
       expect(column.nullable().data.isNullable).toBe(true);
@@ -175,7 +293,7 @@ describe('column type', () => {
     });
   });
 
-  describe('.encode', () => {
+  describe('encode', () => {
     it('should set a function to encode value for this column', () => {
       expect(column.data.encode).toBe(undefined);
       const fn = (input: number) => input.toString();
@@ -185,7 +303,7 @@ describe('column type', () => {
     });
   });
 
-  describe('.parse', () => {
+  describe('parse', () => {
     it('should set a function to encode value for this column', () => {
       expect(column.data.parse).toBe(undefined);
       const fn = () => 123;
@@ -561,7 +679,18 @@ describe('column type', () => {
     });
   });
 
-  describe('.default', () => {
+  describe('default', () => {
+    it('should accept `inputType` that may be overridden by `encode`', () => {
+      testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        balance: t
+          .decimal()
+          .encode((value: string | number) => '100' + String(value))
+          // the column `type` is `string`, but default should accept `inputType` = `string | number`
+          .default(500),
+      }));
+    });
+
     it('should have toCode', () => {
       expect(column.default(123).toCode(columnToCodeCtx, 'key')).toBe(
         `t.column().default(123)`,
@@ -604,7 +733,18 @@ describe('column type', () => {
     });
   });
 
-  describe('.index', () => {
+  describe('hasDefault', () => {
+    it('should allow omitting the column from create', () => {
+      const User = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text().hasDefault(),
+      }));
+
+      User.create({});
+    });
+  });
+
+  describe('index', () => {
     it('should have toCode', () => {
       expect(
         column
@@ -779,7 +919,10 @@ describe('column type', () => {
         dateTimePrecision: 4,
         typmod: -1,
       };
-      const column = assignDbDataToColumn(new Column(testSchemaConfig), params);
+      const column = assignDbDataToColumn(
+        new TestColumn(testSchemaConfig),
+        params,
+      );
       expect(column).toBeInstanceOf(Column);
       expect(column.data).toMatchObject(params);
     });

@@ -1,6 +1,8 @@
 import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
-import { ColumnToCodeCtx } from '../../core';
-import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
+import { makeColumnTypes } from '../column-types';
+import { defaultSchemaConfig } from '../default-schema-config';
+
+import { ColumnToCodeCtx } from '../code';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',

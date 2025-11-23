@@ -1,6 +1,6 @@
 import { RakeDbAst } from '../ast';
 import {
-  ColumnType,
+  Column,
   referencesArgsToCode,
   TimestampTZColumn,
   TimestampColumn,
@@ -629,7 +629,7 @@ const astEncoders: {
 };
 
 const isTimestamp = (
-  column: ColumnType | undefined,
+  column: Column | undefined,
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>
     | typeof TimestampColumn<ColumnSchemaConfig>,
@@ -653,8 +653,8 @@ interface AnyTimestampsInfo {
 }
 
 const getHasTimestamps = (
-  createdAt: ColumnType | undefined,
-  updatedAt: ColumnType | undefined,
+  createdAt: Column | undefined,
+  updatedAt: Column | undefined,
 ): AnyTimestampsInfo => {
   const timestamps = getTimestampsInfo(createdAt, updatedAt, TimestampTZColumn);
   const timestampsNoTZ = getTimestampsInfo(
@@ -670,8 +670,8 @@ const getHasTimestamps = (
 };
 
 const getTimestampsInfo = (
-  createdAt: ColumnType | undefined,
-  updatedAt: ColumnType | undefined,
+  createdAt: Column | undefined,
+  updatedAt: Column | undefined,
   type:
     | typeof TimestampTZColumn<ColumnSchemaConfig>
     | typeof TimestampColumn<ColumnSchemaConfig>,

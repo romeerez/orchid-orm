@@ -9,8 +9,10 @@ import {
   testSchemaConfig,
   useTestDatabase,
 } from 'test-utils';
-import { ColumnToCodeCtx, ColumnTypeBase, TimeInterval } from '../../core';
+import { TimeInterval } from '../types';
 import { z } from 'zod/v4';
+import { Column } from '../column';
+import { ColumnToCodeCtx } from '../code';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',
@@ -18,7 +20,7 @@ const ctx: ColumnToCodeCtx = {
   currentSchema: 'public',
 };
 
-const testTimestampInput = (column: ColumnTypeBase) => {
+const testTimestampInput = (column: Column.Pick.Data) => {
   const date = new Date();
   const string = date.toISOString();
   expect(column.data.encode?.(string) as Date).toBe(string);

@@ -1,4 +1,4 @@
-import { ColumnType } from '../column-type';
+import { Column } from '../column';
 import {
   CreateCtx,
   CreateSelf,
@@ -12,7 +12,7 @@ import { ColumnSchemaConfig } from '../column-schema';
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,
   InputSchema extends Schema['type'] = ReturnType<Schema['never']>,
-> extends ColumnType<Schema, unknown, InputSchema, OperatorsAny> {
+> extends Column<Schema, unknown, InputSchema, OperatorsAny> {
   dataType = '';
   operators = Operators.any;
 

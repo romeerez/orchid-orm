@@ -1,20 +1,19 @@
-import { ColumnData, ColumnType } from '../column-type';
+import { Column, setColumnData } from '../column';
+import { Expression, joinTruthy } from '../../core';
 import {
-  Expression,
-  joinTruthy,
-  setColumnData,
-  ColumnWithDefault,
-  PickColumnBaseData,
+  Code,
+  numberDataToCode,
+  addCode,
+  Codes,
   ColumnToCodeCtx,
-} from '../../core';
-import { Code, numberDataToCode, addCode, Codes } from '../code';
+} from '../code';
 import { columnCode, identityToCode } from '../code';
 import { Operators, OperatorsNumber } from '../operators';
 import { TableData } from '../../tableData';
 import { BaseNumberData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
 
-export interface NumberColumnData extends BaseNumberData, ColumnData {
+export interface NumberColumnData extends BaseNumberData, Column.Data {
   identity?: TableData.Identity;
 }
 
@@ -25,7 +24,7 @@ export interface SerialColumnData extends NumberColumnData {
 export abstract class NumberBaseColumn<
   Schema extends ColumnSchemaConfig,
   SchemaType extends Schema['type'],
-> extends ColumnType<Schema, number, SchemaType, OperatorsNumber> {
+> extends Column<Schema, number, SchemaType, OperatorsNumber> {
   declare data: NumberColumnData;
   operators = Operators.number;
 }
@@ -43,7 +42,7 @@ export abstract class IntegerBaseColumn<
 export abstract class NumberAsStringBaseColumn<
   Schema extends ColumnSchemaConfig,
   InputType = string | number,
-> extends ColumnType<
+> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -51,7 +50,7 @@ export abstract class NumberAsStringBaseColumn<
   InputType
 > {
   operators = Operators.number;
-  declare data: ColumnData;
+  declare data: Column.Data;
 
   constructor(schema: Schema) {
     super(schema, schema.stringSchema() as never);
@@ -59,7 +58,7 @@ export abstract class NumberAsStringBaseColumn<
   }
 }
 
-export interface DecimalColumnData extends ColumnData {
+export interface DecimalColumnData extends Column.Data {
   numericPrecision?: number;
   numericScale?: number;
 }
@@ -112,7 +111,7 @@ export class DecimalColumn<
 const skipNumberMethods = { int: true } as const;
 
 const intToCode = (
-  column: ColumnType,
+  column: Column,
   ctx: ColumnToCodeCtx,
   key: string,
   alias: string,
@@ -133,10 +132,8 @@ const intToCode = (
   return columnCode(column, ctx, key, code);
 };
 
-export type IdentityColumn<T extends PickColumnBaseData> = ColumnWithDefault<
-  T,
-  Expression
->;
+export type IdentityColumn<T extends Column.Pick.Data> =
+  Column.Modifiers.Default<T, Expression>;
 
 // signed two-byte integer
 export class SmallIntColumn<
@@ -154,7 +151,7 @@ export class SmallIntColumn<
     return intToCode(this, ctx, key, 'smallint');
   }
 
-  identity<T extends ColumnType>(
+  identity<T extends Column>(
     this: T,
     options: TableData.Identity = {},
   ): IdentityColumn<T> {
@@ -178,7 +175,7 @@ export class IntegerColumn<
     return intToCode(this, ctx, key, 'integer');
   }
 
-  identity<T extends ColumnType>(
+  identity<T extends Column>(
     this: T,
     options: TableData.Identity = {},
   ): IdentityColumn<T> {
@@ -201,7 +198,7 @@ export class BigIntColumn<
     return intToCode(this, ctx, key, 'bigint');
   }
 
-  identity<T extends ColumnType>(
+  identity<T extends Column>(
     this: T,
     options: TableData.Identity = {},
   ): IdentityColumn<T> {

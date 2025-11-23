@@ -1,6 +1,6 @@
 import { SetQueryReturnsColumnOptional } from '../query/query';
-import { QueryColumn } from '../core';
 import { queryJson } from './json.utils';
+import { Column } from '../columns';
 
 export abstract class JsonMethods {
   /**
@@ -18,7 +18,7 @@ export abstract class JsonMethods {
   json<T>(
     this: T,
     coalesce?: boolean,
-  ): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
+  ): SetQueryReturnsColumnOptional<T, Column.Pick.QueryColumnOfType<string>> {
     return queryJson(this, coalesce) as never;
   }
 }

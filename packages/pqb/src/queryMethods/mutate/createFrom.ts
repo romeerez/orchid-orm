@@ -1,10 +1,5 @@
-import {
-  ColumnTypeBase,
-  IsQuery,
-  MaybeArray,
-  QueryColumns,
-  RecordUnknown,
-} from '../../core';
+import { IsQuery, MaybeArray, RecordUnknown } from '../../core';
+import { Column } from '../../columns/column';
 import { _clone } from '../../query/queryUtils';
 import {
   createCtx,
@@ -41,7 +36,7 @@ export type CreateManyFromMethodNames =
   | 'insertForEachFrom';
 
 interface QueryReturningOne extends IsQuery {
-  result: QueryColumns;
+  result: Column.QueryColumns;
   returnType: 'one' | 'oneOrThrow';
 }
 
@@ -176,7 +171,7 @@ export const getFromSelectColumns = (
   }
 
   for (const key of queryColumns) {
-    const column = q.shape[key] as ColumnTypeBase;
+    const column = q.shape[key] as unknown as Column.Pick.Data;
     if (column) throwOnReadOnly(from, column, key);
   }
 

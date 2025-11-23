@@ -1,6 +1,5 @@
-import { ColumnType } from '../column-type';
-import { columnCode } from '../code';
-import { ColumnToCodeCtx } from '../../core';
+import { Column } from '../column';
+import { columnCode, ColumnToCodeCtx } from '../code';
 import { Code } from '../code';
 import { Operators, OperatorsOrdinalText } from '../operators';
 import { ColumnTypeSchemaArg } from '../column-schema';
@@ -9,7 +8,7 @@ export class EnumColumn<
   Schema extends ColumnTypeSchemaArg,
   SchemaType extends Schema['type'],
   const T extends readonly string[],
-> extends ColumnType<Schema, T[number], SchemaType, OperatorsOrdinalText> {
+> extends Column<Schema, T[number], SchemaType, OperatorsOrdinalText> {
   operators = Operators.ordinalText;
   dataType = 'enum';
 

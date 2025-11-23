@@ -1,21 +1,19 @@
 import {
   DynamicSQLArg,
-  emptyObject,
   Expression,
   ExpressionData,
   ExpressionTypeMethod,
   isTemplateLiteralArgs,
-  QueryColumn,
   RawSQLBase,
   RawSQLValues,
-  RecordUnknown,
   SQLArgs,
-  SQLQueryArgs,
   StaticSQLArgs,
   TemplateLiteralArgs,
-} from '../core';
-import { ColumnSchemaConfig, DefaultColumnTypes } from '../columns';
+} from '../core/raw';
+import { Column, ColumnSchemaConfig, DefaultColumnTypes } from '../columns';
 import { ToSQLCtx } from './toSQL';
+import { emptyObject, RecordUnknown } from '../core/utils';
+import { SQLQueryArgs } from '../core/db';
 
 // reuse array to track which variables were used in the SQL, to throw when there are some unused.
 const used: string[] = [];
@@ -49,7 +47,7 @@ export const templateLiteralToSQL = (
 };
 
 export class RawSQL<
-  T extends QueryColumn,
+  T extends Column.Pick.QueryColumn,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
 > extends RawSQLBase<T, ColumnTypes> {
   declare columnTypes: ColumnTypes;
@@ -128,13 +126,13 @@ export class RawSQL<
 }
 
 // `DynamicRawSQL` extends both `Expression` and `ExpressionTypeMethod`, so it needs a separate interface.
-export interface DynamicRawSQL<T extends QueryColumn>
+export interface DynamicRawSQL<T extends Column.Pick.QueryColumn>
   extends Expression<T>,
     ExpressionTypeMethod {}
 
 // Calls the given function to get inner SQL each time when converting to SQL.
 export class DynamicRawSQL<
-  T extends QueryColumn,
+  T extends Column.Pick.QueryColumn,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
 > extends Expression<T> {
   declare columnTypes: ColumnTypes;
@@ -154,10 +152,12 @@ export class DynamicRawSQL<
 
 DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
-export function raw<T = never>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>>;
 export function raw<T = never>(
-  ...args: [DynamicSQLArg<QueryColumn<T>>]
-): DynamicRawSQL<QueryColumn<T>>;
+  ...args: StaticSQLArgs
+): RawSQL<Column.Pick.QueryColumnOfType<T>>;
+export function raw<T = never>(
+  ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
+): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>>;
 export function raw(...args: SQLArgs) {
   return isTemplateLiteralArgs(args)
     ? new RawSQL(args)
@@ -171,7 +171,7 @@ export const countSelect = [new RawSQL('count(*)')];
 
 export function sqlQueryArgsToExpression(
   args: SQLQueryArgs,
-): RawSQL<QueryColumn> {
+): RawSQL<Column.Pick.QueryColumn> {
   return Array.isArray(args[0])
     ? new RawSQL(args as TemplateLiteralArgs)
     : (args[0] as never);
@@ -188,8 +188,8 @@ export interface SqlFn {
     this: T,
     ...args: Args
   ): Args extends [RecordUnknown]
-    ? (...sql: TemplateLiteralArgs) => RawSQLBase<QueryColumn, T>
-    : RawSQLBase<QueryColumn, T>;
+    ? (...sql: TemplateLiteralArgs) => RawSQLBase<Column.Pick.QueryColumn, T>
+    : RawSQLBase<Column.Pick.QueryColumn, T>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

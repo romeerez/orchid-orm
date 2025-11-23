@@ -1,13 +1,9 @@
-import {
-  ColumnTypeBase,
-  ColumnTypesBase,
-  NullableColumn,
-} from '../core/columns/columnType';
+import { Column } from './column';
 
 export interface ColumnSchemaGetterTableClass {
   prototype: {
     columns: {
-      shape: ColumnTypesBase;
+      shape: Column.Shape.ForValidation;
     };
   };
   inputSchema(): unknown;
@@ -21,9 +17,9 @@ export type ColumnSchemaGetterColumns<T extends ColumnSchemaGetterTableClass> =
 
 export interface ColumnTypeSchemaArg {
   type: unknown;
-  nullable<T extends ColumnTypeBase>(
+  nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): NullableColumn<T, unknown, unknown, unknown>;
+  ): Column.Modifiers.Nullable<T, unknown, unknown, unknown>;
   encode: unknown;
   parse: unknown;
   parseNull: unknown;
@@ -33,8 +29,9 @@ export interface ColumnTypeSchemaArg {
   error?: unknown;
 }
 
-export interface ColumnSchemaConfig<T extends ColumnTypeBase = ColumnTypeBase>
-  extends ColumnTypeSchemaArg {
+export interface ColumnSchemaConfig<
+  T extends Column.Pick.Data = Column.Pick.Data,
+> extends ColumnTypeSchemaArg {
   dateAsNumber: unknown;
   dateAsDate: unknown;
   enum: unknown;

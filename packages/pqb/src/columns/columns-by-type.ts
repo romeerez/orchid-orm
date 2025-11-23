@@ -1,10 +1,9 @@
-import { ColumnTypeBase } from '../core';
 import { makeColumnTypes } from './column-types';
-import { ColumnType } from './column-type';
+import { Column } from './column';
 import { ColumnSchemaConfig } from './column-schema';
 
 export interface ColumnsByType {
-  [K: string]: () => ColumnTypeBase;
+  [K: string]: () => Column.Pick.Data;
 }
 
 export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
@@ -60,12 +59,12 @@ export const makeColumnsByType = (schema: ColumnSchemaConfig) => {
     uuid: t.uuid,
     tsvector: t.tsvector,
     tsquery: t.tsquery,
-    jsonb: schema.json as () => ColumnType,
+    jsonb: schema.json as () => Column,
     smallserial: t.smallSerial,
     serial: t.serial,
     bigserial: t.bigSerial,
     // requires citext extension
     citext: t.citext,
     geographyDefaultPoint: t.geography.point,
-  } as ColumnsByType;
+  } as never;
 };

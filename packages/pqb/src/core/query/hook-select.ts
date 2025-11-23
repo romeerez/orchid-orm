@@ -1,5 +1,6 @@
 import { IsQuery, QueryBase } from './query';
-import { ColumnsShapeBase } from '../columns';
+
+import { Column } from '../../columns/column';
 
 export interface HasCteHooks {
   cteHooks?: CteHooks;
@@ -16,7 +17,7 @@ export interface CteTableHooks {
 
 export interface CteTableHook {
   table: string;
-  shape: ColumnsShapeBase;
+  shape: Column.Shape.Data;
   tableHook: TableHook;
 }
 

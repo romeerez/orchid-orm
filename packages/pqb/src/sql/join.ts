@@ -14,13 +14,13 @@ import {
   addValue,
   Expression,
   isExpression,
-  QueryColumns,
   RecordBoolean,
   RecordUnknown,
 } from '../core';
 import { RawSQL } from './rawSql';
 import { getSqlText } from './utils';
 import { getQueryAs } from '../common/utils';
+import { Column } from '../columns/column';
 
 type ItemOf2Or3Length =
   | [leftColumn: string | Expression, rightColumn: string | Expression]
@@ -131,7 +131,7 @@ export const processJoinItem = (
                     : value,
                 ) +
                 '::' +
-                column.dataType
+                (column as Column).dataType
               );
             })
             .join(', ') +
@@ -253,7 +253,7 @@ const processArgs = (
   ctx: ToSQLCtx,
   query: PickQueryDataShapeAndJoinedShapes,
   joinAs: string,
-  joinShape: QueryColumns,
+  joinShape: Column.QueryColumns,
   quotedAs?: string,
 ): string | undefined => {
   return args.length
@@ -283,7 +283,7 @@ const getConditionsFor3Or4LengthItem = (
   target: string,
   quotedAs: string | undefined,
   args: ItemOf2Or3Length,
-  joinShape: QueryColumns,
+  joinShape: Column.QueryColumns,
 ): string => {
   const [leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
@@ -305,7 +305,7 @@ const getObjectOrRawConditions = (
   data: { [K: string]: string | Expression } | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
-  joinShape: QueryColumns,
+  joinShape: Column.QueryColumns,
 ): string => {
   if (data === true) {
     return 'true';

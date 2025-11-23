@@ -22,21 +22,23 @@ import {
 import { IntervalColumn, TimeColumn } from './column-types/date-time';
 import { BooleanColumn } from './column-types/boolean';
 import { JSONTextColumn } from './column-types/json';
-import {
-  QueryColumnsInit,
-  setCurrentColumnName,
-  setDefaultLanguage,
-  setDefaultNowFn,
-  timestampHelpers,
-  TimestampHelpers,
-} from '../core';
-import { CustomTypeColumn, DomainColumn } from './custom-type';
+import { timestampHelpers, TimestampHelpers } from './timestamps';
+import { CustomTypeColumn, DomainColumn } from './column-types/custom-type';
 import { RawSQL, sqlFn, SqlFn } from '../sql/rawSql';
 import { TableData } from '../tableData';
 import { PostgisGeographyPointColumn } from './column-types/postgis';
 import { ColumnSchemaConfig } from './column-schema';
+import {
+  Column,
+  setCurrentColumnName,
+  setDefaultLanguage,
+  setDefaultNowFn,
+} from './column';
 
-export const getColumnTypes = <ColumnTypes, Shape extends QueryColumnsInit>(
+export const getColumnTypes = <
+  ColumnTypes,
+  Shape extends Column.QueryColumnsInit,
+>(
   types: ColumnTypes,
   fn: (t: ColumnTypes) => Shape,
   nowSQL: string | undefined,

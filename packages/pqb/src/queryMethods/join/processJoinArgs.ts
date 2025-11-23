@@ -12,12 +12,12 @@ import {
   IsQuery,
   PickQueryRelationQueries,
   PickQueryRelations,
-  QueryColumns,
   RelationJoinQuery,
   returnArg,
 } from '../../core';
 import { _clone, pushQueryArrayImmutable } from '../../query/queryUtils';
-import { ColumnsShape } from '../../columns/columns-schema';
+import { ColumnsShape } from '../../columns/columns-shape';
+import { Column } from '../../columns/column';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -37,7 +37,7 @@ export const processJoinArgs = (
   first: JoinFirstArg<never>,
   args: JoinArgs<Query, JoinFirstArg<Query>>,
   joinSubQuery: boolean,
-  shape: QueryColumns | undefined,
+  shape: Column.QueryColumns | undefined,
   whereExists?: boolean,
   forbidLateral?: boolean,
 ): JoinItemArgs => {
@@ -202,7 +202,7 @@ const makeJoinQueryBuilder = (
   joinedQuery: IsQuery,
   joinedShapes: JoinedShapes | undefined,
   joinTo: QueryDataJoinTo,
-  shape: QueryColumns | undefined,
+  shape: Column.QueryColumns | undefined,
 ): JoinQueryBuilder<Query, Query> => {
   const q = (joinedQuery as Query).baseQuery.clone();
   q.baseQuery = q;

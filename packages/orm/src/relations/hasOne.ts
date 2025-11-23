@@ -19,6 +19,16 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
+  defaultSchemaConfig,
+  CreateManyMethodsNames,
+  ColumnSchemaConfig,
+  EmptyObject,
+  getPrimaryKeys,
+  RecordString,
+  RecordUnknown,
+  RelationConfigBase,
+  RelationJoinQuery,
+  Column,
 } from 'pqb';
 import { ORMTableInput, TableClass } from '../baseTable';
 import {
@@ -43,18 +53,6 @@ import {
   RelJoin,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
-import {
-  defaultSchemaConfig,
-  CreateManyMethodsNames,
-  ColumnSchemaConfig,
-  ColumnsShapeBase,
-  EmptyObject,
-  getPrimaryKeys,
-  RecordString,
-  RecordUnknown,
-  RelationConfigBase,
-  RelationJoinQuery,
-} from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasOne extends RelationThunkBase {
@@ -70,7 +68,7 @@ interface RelationHasOneThroughOptions<
 }
 
 export type HasOneOptions<
-  Columns extends ColumnsShapeBase = ColumnsShapeBase,
+  Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
   Related extends TableClass = TableClass,
   Through extends string = string,
   Source extends string = string,

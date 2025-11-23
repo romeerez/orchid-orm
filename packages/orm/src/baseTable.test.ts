@@ -8,7 +8,7 @@ import {
 } from './baseTable';
 import { orchidORMWithAdapter } from './orm';
 import {
-  ColumnType,
+  Column,
   makeColumnTypes,
   Operators,
   TextColumn,
@@ -118,7 +118,7 @@ describe('baseTable', () => {
 
   describe('overriding column types', () => {
     it('should have .sql with overridden types', () => {
-      class Type extends ColumnType {
+      class Type extends Column {
         dataType = 'type';
         operators = Operators.any;
         constructor() {

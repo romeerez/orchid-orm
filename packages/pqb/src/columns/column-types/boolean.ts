@@ -1,6 +1,5 @@
-import { ColumnType } from '../column-type';
-import { columnCode } from '../code';
-import { ColumnToCodeCtx } from '../../core';
+import { Column } from '../column';
+import { columnCode, ColumnToCodeCtx } from '../code';
 import { Code } from '../code';
 import { Operators, OperatorsBoolean } from '../operators';
 import {
@@ -10,9 +9,7 @@ import {
 import { ColumnSchemaConfig } from '../column-schema';
 
 // 1 byte, true or false
-export class BooleanColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class BooleanColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   boolean,
   ReturnType<Schema['boolean']>,

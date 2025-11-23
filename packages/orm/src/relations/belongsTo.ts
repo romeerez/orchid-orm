@@ -28,6 +28,18 @@ import {
   VirtualColumn,
   WhereArg,
   TableData,
+  defaultSchemaConfig,
+  ColumnSchemaConfig,
+  emptyArray,
+  EmptyObject,
+  getPrimaryKeys,
+  pushQueryValueImmutable,
+  QueryResult,
+  RecordUnknown,
+  RelationConfigBase,
+  RelationJoinQuery,
+  ColumnsShape,
+  Column,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -45,20 +57,6 @@ import {
   selectIfNotSelected,
 } from './common/utils';
 import { RelationRefsOptions } from './common/options';
-import {
-  defaultSchemaConfig,
-  ColumnSchemaConfig,
-  ColumnShapeInputPartial,
-  ColumnsShapeBase,
-  emptyArray,
-  EmptyObject,
-  getPrimaryKeys,
-  pushQueryValueImmutable,
-  QueryResult,
-  RecordUnknown,
-  RelationConfigBase,
-  RelationJoinQuery,
-} from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface BelongsTo extends RelationThunkBase {
@@ -67,14 +65,14 @@ export interface BelongsTo extends RelationThunkBase {
 }
 
 export interface BelongsToOptions<
-  Columns extends ColumnsShapeBase = ColumnsShapeBase,
+  Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
   Related extends TableClass = TableClass,
 > {
   required?: boolean;
   columns: (keyof Columns)[];
   references: (keyof InstanceType<Related>['columns']['shape'])[];
   foreignKey?: boolean | TableData.References.Options;
-  on?: ColumnShapeInputPartial<InstanceType<Related>['columns']['shape']>;
+  on?: ColumnsShape.InputPartial<InstanceType<Related>['columns']['shape']>;
 }
 
 export type BelongsToFKey<Relation extends RelationThunkBase> =

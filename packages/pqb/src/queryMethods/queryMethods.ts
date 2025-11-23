@@ -84,7 +84,6 @@ import {
   PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
   PickQueryTableMetaShape,
   pushQueryValueImmutable,
-  QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
   QueryReturnType,
@@ -111,6 +110,7 @@ import { _queryNone } from './none';
 import { _chain } from './chain';
 import { QueryOrCreate } from './mutate/orCreate';
 import { WithDataItems } from '../query/cte/cte.sql';
+import { Column } from '../columns';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -188,7 +188,7 @@ interface QueryHelperQuery<T extends PickQueryMetaShape> {
       `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
     >;
   };
-  result: QueryColumns;
+  result: Column.QueryColumns;
   windows: EmptyObject;
   withData: WithDataItems;
   then: unknown;
@@ -250,7 +250,7 @@ type NarrowInvalidKeys<T extends PickQueryResult, Narrow> = {
 }[keyof Narrow];
 
 interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
-  extends QueryColumns {
+  extends Column.QueryColumns {
   value: {
     [K in keyof T['result']['value']]: K extends 'outputType'
       ? Narrow
@@ -259,7 +259,7 @@ interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
 }
 
 interface NarrowPluckTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
-  extends QueryColumns {
+  extends Column.QueryColumns {
   pluck: {
     [K in keyof T['result']['pluck']]: K extends 'outputType'
       ? Narrow extends unknown[]

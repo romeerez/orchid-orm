@@ -39,6 +39,7 @@ import {
   commitSql,
 } from './transaction';
 import { processComputedResult } from '../modules/computed';
+import { Column } from '../columns';
 
 export const queryMethodByReturnType: {
   [K in string]: 'query' | 'arrays';
@@ -386,9 +387,9 @@ const then = async (
           let hasParsers: boolean | undefined;
           const parsers: ColumnsParsers = {};
           for (const key in hook.shape) {
-            if (hook.shape[key]._parse) {
+            if ((hook.shape[key] as Column)._parse) {
               hasParsers = true;
-              parsers[key] = hook.shape[key]._parse;
+              parsers[key] = (hook.shape[key] as Column)._parse;
             }
           }
 

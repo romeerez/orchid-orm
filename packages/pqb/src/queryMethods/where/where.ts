@@ -77,7 +77,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
             | {
                 result: {
                   value: {
-                    // simplified QueryColumn
+                    // simplified Column.Pick.QueryColumn
                     queryType:
                       | T['meta']['selectable'][K]['column']['queryType']
                       | null;
@@ -88,7 +88,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
             | ((q: T) => {
                 result: {
                   value: {
-                    // simplified QueryColumn
+                    // simplified Column.Pick.QueryColumn
                     queryType:
                       | T['meta']['selectable'][K]['column']['queryType']
                       | null;

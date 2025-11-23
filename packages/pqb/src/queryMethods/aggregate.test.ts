@@ -14,7 +14,7 @@ import {
   RealColumn,
   TextColumn,
   XMLColumn,
-} from 'pqb';
+} from '../columns';
 
 describe('aggregate', () => {
   useTestDatabase();

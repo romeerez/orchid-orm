@@ -1,6 +1,11 @@
-import { ColumnData, ColumnType } from '../column-type';
-import { ColumnDataBase, ColumnToCodeCtx } from '../../core';
-import { addCode, Code, arrayDataToCode, Codes } from '../code';
+import { Column } from '../column';
+import {
+  addCode,
+  Code,
+  arrayDataToCode,
+  Codes,
+  ColumnToCodeCtx,
+} from '../code';
 import { columnCode } from '../code';
 import { Operators, OperatorsArray } from '../operators';
 import { setColumnDefaultParse } from '../column.utils';
@@ -21,11 +26,11 @@ export interface ArrayColumnValue {
   querySchema: any;
   toSQL(): string;
   toCode(ctx: ColumnToCodeCtx, key: string): Code;
-  data: ColumnDataBase;
+  data: Column.Data;
 }
 
 export interface ArrayData<Item extends ArrayColumnValue>
-  extends ColumnData,
+  extends Column.Data,
     ArrayMethodsData {
   item: Item;
   arrayDims: number;
@@ -37,7 +42,7 @@ export class ArrayColumn<
   InputType,
   OutputType,
   QueryType,
-> extends ColumnType<
+> extends Column<
   Schema,
   Item['type'][],
   InputType,

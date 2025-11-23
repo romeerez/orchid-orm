@@ -1,6 +1,7 @@
-import { ColumnData, ColumnType } from '../column-type';
-import { ColumnToCodeCtx, joinTruthy, TimeInterval } from '../../core';
-import { Code, dateDataToCode } from '../code';
+import { Column } from '../column';
+import { joinTruthy } from '../../core/utils';
+import { TimeInterval } from '../types';
+import { Code, ColumnToCodeCtx, dateDataToCode } from '../code';
 import { columnCode } from '../code';
 import { Operators, OperatorsDate, OperatorsTime } from '../operators';
 import { DateColumnData } from '../column-data-types';
@@ -16,7 +17,7 @@ const dateTimeEncode = (input: DateColumnInput) => {
 // common class for Date and DateTime columns
 export abstract class DateBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringNumberDate']>,
@@ -157,7 +158,7 @@ export class TimestampTZColumn<
 }
 
 // time [ (p) ] [ without time zone ]	8 bytes	time of day (no date)	00:00:00	24:00:00	1 microsecond
-export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class TimeColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -187,15 +188,13 @@ export class TimeColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // interval [ fields ] [ (p) ]	16 bytes	time interval	-178000000 years	178000000 years	1 microsecond
-export class IntervalColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class IntervalColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   TimeInterval,
   ReturnType<Schema['timeInterval']>,
   OperatorsDate
 > {
-  declare data: ColumnData & { fields?: string; precision?: number };
+  declare data: Column.Data & { fields?: string; precision?: number };
   dataType = 'interval' as const;
   operators = Operators.date;
 

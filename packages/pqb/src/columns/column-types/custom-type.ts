@@ -1,20 +1,11 @@
-import {
-  ColumnDataBase,
-  ColumnToCodeCtx,
-  ColumnTypeBase,
-  setColumnData,
-  singleQuote,
-} from '../core';
-import { Code } from './code';
-import { ColumnType } from './column-type';
-import { columnCode } from './code';
-import { Operators, OperatorsAny } from './operators';
-import { ColumnSchemaConfig } from './column-schema';
+import { singleQuote } from '../../core/utils';
+import { Column, setColumnData } from '../column';
+import { Code, columnCode, ColumnToCodeCtx } from '../code';
+import { Operators, OperatorsAny } from '../operators';
+import { ColumnSchemaConfig } from '../column-schema';
 
 // for a user-defined type, or for unsupported yet type from some module
-export class CustomTypeColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class CustomTypeColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   unknown,
   ReturnType<Schema['unknown']>,
@@ -62,24 +53,24 @@ export class CustomTypeColumn<
   }
 
   as<
-    T extends { inputType: unknown; outputType: unknown; data: ColumnDataBase },
-    // Omit is optimal
-    C extends Omit<ColumnTypeBase, 'inputType' | 'outputType'> & {
+    T extends { inputType: unknown; outputType: unknown; data: Column.Data },
+    C extends {
       inputType: T['inputType'];
       outputType: T['outputType'];
     },
   >(this: T, column: C): C {
-    const c = setColumnData(
+    const c = column as unknown as Column.Pick.TypeSchemas;
+    const extended = setColumnData(
       this,
       'as',
       column as unknown as T['data']['as'],
-    ) as unknown as C;
+    ) as unknown as Column.Pick.TypeSchemas;
 
-    c.inputSchema = column.inputSchema;
-    c.outputSchema = column.outputSchema;
-    c.querySchema = column.querySchema;
+    extended.inputSchema = c.inputSchema;
+    extended.outputSchema = c.outputSchema;
+    extended.querySchema = c.querySchema;
 
-    return c;
+    return extended as never;
   }
 }
 

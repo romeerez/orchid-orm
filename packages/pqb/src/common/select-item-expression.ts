@@ -1,14 +1,15 @@
-import { Expression, QueryColumn } from '../core';
+import { Expression } from '../core';
 import { QueryData, ToSQLCtx, ToSQLQuery } from '../sql';
 import { selectAllSql } from '../sql/select';
 import { columnToSql } from '../sql/common';
+import { Column } from '../columns/column';
 
 /**
  * Expression that can turn a {@link SelectItem} (except {@link SelectAs}) into SQL.
  * Used by `get` to have an expression that can be chained with operators.
  */
 export class SelectItemExpression<
-  T extends QueryColumn = QueryColumn,
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
 > extends Expression<T> {
   result: { value: T };
   q: QueryData;

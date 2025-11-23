@@ -1,6 +1,5 @@
-import { ColumnToCodeCtx } from '../../core';
-import { Code } from '../code';
-import { ColumnType } from '../column-type';
+import { Code, ColumnToCodeCtx } from '../code';
+import { Column } from '../column';
 import { Operators, OperatorsAny } from '../operators';
 import { columnCode } from '../code';
 import { setColumnDefaultParse } from '../column.utils';
@@ -35,7 +34,7 @@ const encode = ({ srid = defaultSrid, lon, lat }: PostgisPoint): string => {
 
 export class PostgisGeographyPointColumn<
   Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+> extends Column<
   Schema,
   PostgisPoint,
   ReturnType<Schema['geographyPointSchema']>,

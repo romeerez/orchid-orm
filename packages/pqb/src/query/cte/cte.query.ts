@@ -2,10 +2,8 @@ import { Query } from '../query';
 import { _clone, setQueryObjectValueImmutable } from '../queryUtils';
 import {
   Expression,
-  ColumnsShapeBase,
   EmptyObject,
   PickQueryResult,
-  QueryColumns,
   pushOrNewArrayToObjectImmutable,
   pushQueryValueImmutable,
   PickQueryMetaWithDataColumnTypes,
@@ -15,6 +13,7 @@ import { SqlMethod } from '../../queryMethods/sql';
 import { getShapeFromSelect } from '../../queryMethods/select/select';
 import { _queryUnion } from '../../queryMethods/union';
 import { CteItem, CteOptions } from './cte.sql';
+import { Column } from '../../columns';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
@@ -67,7 +66,7 @@ export type CteResult<
 export type CteSqlResult<
   T extends PickQueryWithDataColumnTypes,
   Name extends string,
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
 > = {
   [K in keyof T]: K extends 'withData'
     ? {
@@ -245,7 +244,7 @@ export class CteQuery {
 
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
-      shape: shape as ColumnsShapeBase,
+      shape: shape as Column.Shape.QueryInit,
       computeds: query.q.runtimeComputeds,
     });
   }
@@ -375,7 +374,7 @@ export class CteQuery {
     const arg = q.qb.clone();
     arg.q.withShapes = q.q.withShapes;
     let query = typeof baseFn === 'function' ? baseFn(arg) : baseFn;
-    const shape = getShapeFromSelect(query, true) as ColumnsShapeBase;
+    const shape = getShapeFromSelect(query, true) as Column.Shape.QueryInit;
     const withConfig = { shape, computeds: query.q.runtimeComputeds };
     (arg.q.withShapes ??= {})[name] = withConfig;
     const recursive = recursiveFn(arg);
@@ -452,7 +451,7 @@ export class CteQuery {
   withSql<
     T extends PickQueryWithDataColumnTypes,
     Name extends string,
-    Shape extends ColumnsShapeBase,
+    Shape extends Column.Shape.QueryInit,
   >(
     this: T,
     name: Name,
@@ -463,7 +462,7 @@ export class CteQuery {
   withSql<
     T extends PickQueryWithDataColumnTypes,
     Name extends string,
-    Shape extends ColumnsShapeBase,
+    Shape extends Column.Shape.QueryInit,
   >(
     this: T,
     name: Name,

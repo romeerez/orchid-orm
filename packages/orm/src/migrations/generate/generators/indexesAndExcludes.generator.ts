@@ -6,7 +6,7 @@ import {
   getExcludeName,
 } from 'rake-db';
 import {
-  ColumnType,
+  Column,
   SearchWeight,
   TableData,
   deepCompare,
@@ -275,7 +275,7 @@ const collectCodeIndexes = (
   const codeItems: CodeItems = { indexes: [], excludes: [] };
 
   for (const key in codeTable.shape) {
-    const column = codeTable.shape[key] as ColumnType;
+    const column = codeTable.shape[key] as Column;
     if (!column.data.indexes && !column.data.excludes) continue;
 
     const name = column.data.name ?? key;
@@ -296,7 +296,7 @@ const pushCodeColumnItems = (
   codeItems: CodeItems,
   columnKey: string,
   name: string,
-  column: ColumnType,
+  column: Column,
   key: 'indexes' | 'excludes',
 ) => {
   const items = column.data[key];

@@ -16,7 +16,7 @@ import {
 } from '../core';
 import { getShapeFromSelect } from './select/select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
-import { anyShape, ColumnsShape } from '../columns';
+import { anyShape, Column, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
 import { getQueryAs } from '../common/utils';
 import { WithDataItems } from '../query';
@@ -110,7 +110,7 @@ export type FromResult<
 
 const addWithParsers = (w: WithConfig, parsers: ColumnsParsers) => {
   for (const key in w.shape) {
-    const { _parse } = w.shape[key];
+    const { _parse } = w.shape[key] as Column;
     if (_parse) parsers[key] = _parse;
   }
 };

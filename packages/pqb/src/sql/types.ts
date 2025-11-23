@@ -1,15 +1,14 @@
 import { Query } from '../query/query';
 import { SelectableOrExpression } from '../common/utils';
 import {
-  ColumnTypesBase,
   Expression,
   IsQuery,
   MaybeArray,
-  QueryColumns,
   RecordUnknown,
   RelationConfigBase,
   TemplateLiteralArgs,
 } from '../core';
+import { Column } from '../columns/column';
 import { QueryData } from './data';
 
 // used in `from` logic to decide if convert query to sql or just write table name
@@ -118,7 +117,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // lateral join query
       l: Query;
       // as
@@ -129,7 +128,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // relation query from `relation.joinQuery`
       j: IsQuery;
       // join a sub query, is not applicable in whereExists
@@ -140,7 +139,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // `with` item name
       w: string;
       // callback result
@@ -151,7 +150,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // `with` item name
       w: string;
       // join arguments
@@ -160,7 +159,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // joining query
       q: IsQuery;
       // join a sub query, is not applicable in whereExists
@@ -169,7 +168,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // joining query
       q: IsQuery;
       // callback result
@@ -180,7 +179,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // joining query
       q: IsQuery;
       // join arguments
@@ -191,7 +190,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c: ColumnTypesBase;
+      c: Column.Shape.Data;
       // alias
       a: string;
       // array of values, item is a record

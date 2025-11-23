@@ -13,17 +13,20 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
 import { OnConflictMerge, QueryData, ToSQLQuery } from '../../sql';
-import { anyShape, ColumnSchemaConfig, VirtualColumn } from '../../columns';
+import {
+  anyShape,
+  Column,
+  ColumnSchemaConfig,
+  VirtualColumn,
+} from '../../columns';
 import {
   Expression,
   RecordUnknown,
   PickQueryUniqueProperties,
-  QueryColumn,
   FnUnknownToUnknown,
   isExpression,
   EmptyObject,
   IsQuery,
-  ColumnTypeBase,
   QueryOrExpression,
   RelationConfigDataForCreate,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -215,7 +218,7 @@ type NarrowCreateResult<T extends CreateSelf> =
     ? T['result']
     : {
         [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
-          ? QueryColumn<
+          ? Column.Pick.QueryColumnOfTypeAndOps<
               Exclude<T['result'][K]['type'], null>,
               T['result'][K]['operators']
             >
@@ -336,7 +339,7 @@ const processCreateItem = (
 
 export const throwOnReadOnly = (
   q: unknown,
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   key: string,
 ) => {
   if (column.data.appReadOnly || column.data.readOnly) {
@@ -939,7 +942,7 @@ export class OnConflictQueryBuilder<
   set(set: OnConflictSet<T>): T {
     let resolved: RecordUnknown | undefined;
     for (const key in set) {
-      const column = this.query.shape[key] as ColumnTypeBase;
+      const column = this.query.shape[key] as unknown as Column.Pick.Data;
       if (column) throwOnReadOnly(this.query, column, key);
 
       if (typeof set[key] === 'function') {

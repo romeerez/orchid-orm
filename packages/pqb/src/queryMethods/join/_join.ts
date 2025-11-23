@@ -2,14 +2,12 @@ import { PickQueryQ, Query } from '../../query/query';
 import {
   BatchParsers,
   ColumnsParsers,
-  ColumnsShapeBase,
   getQueryParsers,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShape,
   PickQueryRelationsWithData,
   PickQueryTableMetaResult,
   pushQueryValueImmutable,
-  QueryColumns,
   QueryMetaBase,
   RelationConfigBase,
   setObjectValueImmutable,
@@ -28,9 +26,10 @@ import { getQueryAs, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 import { ComputedColumns } from '../../modules/computed';
-import { addColumnParserToQuery } from '../../columns';
+import { addColumnParserToQuery } from '../../columns/column.utils';
 import { getSqlText } from '../../sql/utils';
 import { JoinItemArgs, SelectItem } from '../../sql/types';
+import { Column } from '../../columns/column';
 
 export const _joinReturningArgs = <
   T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -46,7 +45,7 @@ export const _joinReturningArgs = <
   forbidLateral?: boolean,
 ): JoinItemArgs | undefined => {
   let joinKey: string | undefined;
-  let shape: QueryColumns | undefined;
+  let shape: Column.QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
   let batchParsers: BatchParsers | undefined;
   let computeds: ComputedColumns | undefined;
@@ -79,7 +78,7 @@ export const _joinReturningArgs = <
 
       if (joinSubQuery) {
         first = q.clone() as JoinFirstArg<Query>;
-        (first as Query).shape = shape as ColumnsShapeBase;
+        (first as Query).shape = shape as never;
       }
     }
   } else {
@@ -233,7 +232,7 @@ export const _join = <
 const addAllShapesAndParsers = (
   query: unknown,
   joinKey?: string,
-  shape?: QueryColumns,
+  shape?: Column.QueryColumns,
   parsers?: ColumnsParsers,
   batchParsers?: BatchParsers,
   computeds?: ComputedColumns,
@@ -268,7 +267,7 @@ export const _joinLateralProcessArg = (
   ) => {
     table: string;
     meta: QueryMetaBase;
-    result: QueryColumns;
+    result: Column.QueryColumns;
   },
 ): Query => {
   let relation: RelationConfigBase | undefined;

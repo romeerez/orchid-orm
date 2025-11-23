@@ -1,13 +1,13 @@
 import { assertType, expectSql, sql, testAdapter, testDb } from 'test-utils';
-import { BooleanColumn, ColumnType } from '../columns';
+import { BooleanColumn, Column } from '../columns';
 import { createDbWithAdapter } from '../query/db';
-import { ColumnTypeBase, emptyObject, Expression } from '../core';
+import { emptyObject, Expression } from '../core';
 import { ToSQLCtx } from '../sql';
 import { User, userColumnsSql } from '../test-utils/test-utils';
 
 describe('sql', () => {
   it('should use column types in callback from a db instance', () => {
-    const type = {} as unknown as ColumnType;
+    const type = {} as unknown as Column;
     const db = createDbWithAdapter({
       adapter: testAdapter,
       columnTypes: {
@@ -261,7 +261,7 @@ describe('sql', () => {
 
   it('should interpolate expressions', () => {
     class CustomExpression extends Expression {
-      declare result: { value: ColumnTypeBase };
+      declare result: { value: Column.Pick.QueryColumn };
       q = emptyObject;
       makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
         ctx.values.push('value');

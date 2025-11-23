@@ -5,21 +5,21 @@ import {
   Expression,
   isRelationQuery,
   PickQueryMeta,
-  QueryColumn,
 } from '../core';
 import { _clone } from '../query/queryUtils';
 import { _chain } from '../queryMethods/chain';
+import { Column } from '../columns';
 
 export type SelectableOrExpression<
   T extends PickQueryMeta = PickQueryMeta,
-  C extends QueryColumn = QueryColumn,
+  C extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
 > = '*' | keyof T['meta']['selectable'] | Expression<C>;
 
 export type SelectableOrExpressions<
   T extends { meta: { selectable: unknown } } = {
     meta: { selectable: unknown };
   },
-  C extends QueryColumn = QueryColumn,
+  C extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
 > = ('*' | keyof T['meta']['selectable'] | Expression<C>)[];
 
 export type ExpressionOutput<

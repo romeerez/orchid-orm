@@ -1,10 +1,10 @@
-import { ColumnTypeBase, QueryColumn } from './columns/columnType';
-import { OperatorToSQL } from './columns';
 import { addValue, emptyObject, EmptyObject, RecordUnknown } from './utils';
+import { Column } from '../columns/column';
+import { OperatorToSQL } from '../columns/operators';
 
 // The chain array is used to store a sequence of operators and their arguments, one be one.
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
-export type ExpressionChain = (OperatorToSQL<unknown, unknown> | unknown)[];
+export type ExpressionChain = (OperatorToSQL | unknown)[];
 
 export interface ExpressionData {
   chain?: ExpressionChain;
@@ -12,7 +12,9 @@ export interface ExpressionData {
 }
 
 // Base class for the raw SQL and other classes that can produce SQL
-export abstract class Expression<T extends QueryColumn = QueryColumn> {
+export abstract class Expression<
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
+> {
   // `result` contains an instance of a column type.
   // Starts with underscore to allow having `type` method
   abstract result: { value: T };
@@ -28,7 +30,7 @@ export abstract class Expression<T extends QueryColumn = QueryColumn> {
     if (this.q.chain) {
       const { chain: chain } = this.q;
       for (let i = 0, len = chain.length; i < len; i += 2) {
-        sql = (chain[i] as OperatorToSQL<unknown, unknown>)(
+        sql = (chain[i] as OperatorToSQL)(
           sql,
           chain[i + 1] as never,
           ctx,
@@ -64,11 +66,11 @@ export const isTemplateLiteralArgs = (
 // Argument type for `sql` function.
 // It can take a template literal, an object `{ raw: string, values?: Record<string, unknown> }`,
 // or a function to build SQL lazily.
-export type SQLArgs = StaticSQLArgs | [DynamicSQLArg<QueryColumn>];
+export type SQLArgs = StaticSQLArgs | [DynamicSQLArg<Column.Pick.QueryColumn>];
 
 // Function for sql method to build SQL lazily (dynamically).
 // May be used for computed column to build a different SQL in different executions.
-export interface DynamicSQLArg<T extends QueryColumn> {
+export interface DynamicSQLArg<T extends Column.Pick.QueryColumn> {
   (sql: (...args: StaticSQLArgs) => Expression<T>): Expression<T>;
 }
 
@@ -88,13 +90,13 @@ export abstract class ExpressionTypeMethod {
       q: { expr?: Expression };
       columnTypes: unknown;
     },
-    C extends QueryColumn,
+    C extends Column.Pick.QueryColumn,
   >(
     this: T,
     fn: (types: T['columnTypes']) => C,
   ): // Omit is optimal
   Omit<T, 'result'> & { result: { value: C } } {
-    const column = fn(this.columnTypes) as unknown as ColumnTypeBase;
+    const column = fn(this.columnTypes) as unknown as Column;
     (this.q.expr as Expression).result.value = column;
     Object.assign(
       'baseQuery' in this ? (this.baseQuery as EmptyObject) : this,
@@ -106,14 +108,14 @@ export abstract class ExpressionTypeMethod {
 
 // RawSQLBase extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
 export interface RawSQLBase<
-  T extends QueryColumn = QueryColumn,
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
   ColumnTypes = unknown,
 > extends Expression<T>,
     ExpressionTypeMethod {}
 
 // Base class for raw SQL
 export abstract class RawSQLBase<
-  T extends QueryColumn = QueryColumn,
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
   ColumnTypes = unknown,
 > extends Expression<T> {
   // Column type instance, it is assigned directly to the prototype of RawSQL class.
@@ -179,7 +181,7 @@ export const isRawSQL = (arg: unknown): arg is RawSQLBase =>
 
 export class ValExpression extends Expression {
   // TODO: move unknown column to core and use it here
-  result = { value: emptyObject as ColumnTypeBase };
+  result = { value: emptyObject as Column };
   q: ExpressionData;
 
   constructor(public value: unknown) {

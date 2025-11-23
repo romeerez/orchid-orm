@@ -8,11 +8,11 @@ import { _clone } from '../queryUtils';
 import { getQueryAs } from '../../common/utils';
 import { getShapeFromSelect } from '../../queryMethods/select/select';
 import { SelectItemExpression } from '../../common/select-item-expression';
-import { QueryColumns } from '../../core';
+import { Column } from '../../columns';
 
 export interface WithDataItem {
   table: string;
-  shape: QueryColumns;
+  shape: Column.QueryColumns;
 }
 
 export interface WithDataItems {

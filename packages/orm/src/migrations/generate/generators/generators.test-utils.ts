@@ -5,7 +5,7 @@ import {
   TableDataFn,
   TableDataItem,
   AdapterBase,
-  ColumnsShapeBase,
+  ColumnsShape,
   emptyArray,
   MaybeArray,
   noop,
@@ -146,7 +146,7 @@ const assert = {
   },
 };
 
-const table = <Shape extends ColumnsShapeBase>(
+const table = <Shape extends ColumnsShape.Base>(
   columns?: (t: typeof BaseTable.columnTypes) => Shape,
   dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   options?: { noPrimaryKey?: boolean; name?: string; schema?: string },

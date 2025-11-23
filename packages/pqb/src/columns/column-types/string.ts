@@ -1,25 +1,14 @@
-import {
-  ColumnData,
-  ColumnDataGenerated,
-  ColumnType,
-  GeneratedColumn,
-  PickColumnData,
-} from '../column-type';
+import { Column, getDefaultLanguage, setColumnData } from '../column';
 import { NumberColumnData } from './number';
 import {
   joinTruthy,
-  PrimaryKeyColumn,
-  getDefaultLanguage,
   RawSQLBase,
   StaticSQLArgs,
-  PickColumnBaseData,
-  setColumnData,
   toSnakeCase,
-  ColumnToCodeCtx,
   quoteObjectKey,
   RecordString,
 } from '../../core';
-import { Code, stringDataToCode } from '../code';
+import { Code, ColumnToCodeCtx, stringDataToCode } from '../code';
 import { columnCode } from '../code';
 import { RawSQL } from '../../sql/rawSql';
 import { SearchWeightRecord } from '../../sql';
@@ -34,15 +23,15 @@ import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
 } from '../default-schema-config';
-import { StringTypeData } from '../column-data-types';
+import { StringData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
 
-export type TextColumnData = StringTypeData;
+export type TextColumnData = StringData;
 
 export abstract class TextBaseColumn<
   Schema extends ColumnSchemaConfig,
   Ops = OperatorsText,
-> extends ColumnType<Schema, string, ReturnType<Schema['stringSchema']>, Ops> {
+> extends Column<Schema, string, ReturnType<Schema['stringSchema']>, Ops> {
   declare data: TextColumnData;
   operators = Operators.text as Ops;
 
@@ -171,7 +160,7 @@ const byteaParse = (val: unknown) =>
   typeof val === 'string' ? Buffer.from(val.slice(2), 'hex') : val;
 
 // To store binary strings
-export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class ByteaColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['buffer']>,
@@ -196,7 +185,7 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // point	16 bytes	Point on a plane	(x,y)
-export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class PointColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -215,7 +204,7 @@ export class PointColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // line	32 bytes	Infinite line	{A,B,C}
-export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class LineColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -234,7 +223,7 @@ export class LineColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // lseg	32 bytes	Finite line segment	((x1,y1),(x2,y2))
-export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class LsegColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -253,7 +242,7 @@ export class LsegColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // box	32 bytes	Rectangular box	((x1,y1),(x2,y2))
-export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class BoxColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -273,7 +262,7 @@ export class BoxColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 
 // path	16+16n bytes	Closed path (similar to polygon)	((x1,y1),...)
 // path	16+16n bytes	Open path	[(x1,y1),...]
-export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class PathColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -292,9 +281,7 @@ export class PathColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // polygon	40+16n bytes	Polygon (similar to closed path)	((x1,y1),...)
-export class PolygonColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class PolygonColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -313,7 +300,7 @@ export class PolygonColumn<
 }
 
 // circle	24 bytes	Circle	<(x,y),r> (center point and radius)
-export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class CircleColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -331,7 +318,7 @@ export class CircleColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   }
 }
 
-export class MoneyColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class MoneyColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['number']>,
@@ -367,7 +354,7 @@ const moneyParse = Object.assign(
 );
 
 // cidr	7 or 19 bytes	IPv4 and IPv6 networks
-export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class CidrColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -386,7 +373,7 @@ export class CidrColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // inet	7 or 19 bytes	IPv4 and IPv6 hosts and networks
-export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class InetColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -405,9 +392,7 @@ export class InetColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // macaddr	6 bytes	MAC addresses
-export class MacAddrColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class MacAddrColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -426,9 +411,7 @@ export class MacAddrColumn<
 }
 
 // macaddr8	8 bytes	MAC addresses (EUI-64 format)
-export class MacAddr8Column<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class MacAddr8Column<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -449,7 +432,7 @@ export class MacAddr8Column<
 // Bit strings are strings of 1's and 0's.
 // They can be used to store or visualize bit masks.
 // There are two SQL bit types: bit(n) and bit varying(n), where n is a positive integer.
-export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class BitColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['bit']>,
@@ -457,7 +440,7 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 > {
   dataType = 'bit' as const;
   operators = Operators.ordinalText;
-  declare data: ColumnData & { length: number };
+  declare data: Column.Data & { length: number };
 
   constructor(schema: Schema, length: number) {
     super(schema, schema.bit(length) as ReturnType<Schema['bit']>);
@@ -477,9 +460,7 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   }
 }
 
-export class BitVaryingColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class BitVaryingColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['bit']>,
@@ -487,7 +468,7 @@ export class BitVaryingColumn<
 > {
   dataType = 'varbit' as const;
   operators = Operators.ordinalText;
-  declare data: ColumnData & { length?: number };
+  declare data: Column.Data & { length?: number };
 
   constructor(schema: Schema, length?: number) {
     super(schema, schema.bit(length) as ReturnType<Schema['bit']>);
@@ -511,9 +492,7 @@ export class BitVaryingColumn<
 type TsVectorGeneratedColumns = string[] | SearchWeightRecord;
 
 // A tsvector value is a sorted list of distinct lexemes
-export class TsVectorColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -554,20 +533,20 @@ export class TsVectorColumn<
    *
    * @param args
    */
-  generated<T extends PickColumnData>(
+  generated<T extends Column.Pick.Data>(
     this: T,
     ...args:
       | StaticSQLArgs
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
-  ): GeneratedColumn<T> {
+  ): Column.Modifiers.Generated<T> {
     const arg = args[0];
     // early return on StaticSQLArgs case
     if (typeof arg === 'object' && 'raw' in arg) {
       return super.generated(...(args as StaticSQLArgs)) as never;
     }
 
-    const toSQL: ColumnDataGenerated['toSQL'] = (ctx) => {
+    const toSQL: Column.Data.Generated['toSQL'] = (ctx) => {
       const first = args[0];
       const target = typeof first === 'string' ? (args[1] as string[]) : first;
 
@@ -649,9 +628,7 @@ export class TsVectorColumn<
 }
 
 // A tsquery value stores lexemes that are to be searched for
-export class TsQueryColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class TsQueryColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,
@@ -673,7 +650,7 @@ const uuidDefaultSQL = 'gen_random_uuid()';
 const uuidDefault = new RawSQL(uuidDefaultSQL);
 
 // uuid stores Universally Unique Identifiers (UUID)
-export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['uuid']>,
@@ -688,13 +665,15 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
   }
 
   /**
-   * see {@link ColumnType.primaryKey}
+   * see {@link Column.primaryKey}
    */
-  primaryKey<T extends PickColumnBaseData, Name extends string>(
+  primaryKey<T extends Column.Pick.Data, Name extends string>(
     this: T,
     name?: Name,
   ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
-  PrimaryKeyColumn<T, Name> & { data: { default: RawSQLBase } } {
+  T & {
+    data: { primaryKey: Name; default: RawSQLBase };
+  } {
     const column = super.primaryKey(name);
     if (!column.data.default) column.data.default = uuidDefault;
     return column as never;
@@ -706,7 +685,7 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
 }
 
 // xml data type can be used to store XML data
-export class XMLColumn<Schema extends ColumnSchemaConfig> extends ColumnType<
+export class XMLColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,

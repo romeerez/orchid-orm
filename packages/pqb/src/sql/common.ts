@@ -4,13 +4,10 @@ import { ToSQLCtx } from './toSQL';
 import {
   _getQueryAliasOrName,
   ColumnsParsers,
-  ColumnsShapeBase,
-  ColumnTypeBase,
   Expression,
-  QueryColumn,
-  QueryColumns,
   RecordString,
 } from '../core';
+import { Column } from '../columns/column';
 
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
@@ -18,12 +15,12 @@ import {
 export function simpleColumnToSQL(
   ctx: ToSQLCtx,
   key: string,
-  column?: QueryColumn,
+  column?: Column.Pick.QueryColumn,
   quotedAs?: string,
 ): string {
   if (!column) return `"${key}"`;
 
-  const { data } = column as ColumnTypeBase;
+  const { data } = column as unknown as Column.Pick.Data;
   return data.computed
     ? data.computed.toSQL(ctx, quotedAs)
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
@@ -34,10 +31,10 @@ export function simpleColumnToSQL(
 export function simpleExistingColumnToSQL(
   ctx: ToSQLCtx,
   key: string,
-  column: QueryColumn,
+  column: Column.Pick.QueryColumn,
   quotedAs?: string,
 ): string {
-  const { data } = column as ColumnTypeBase;
+  const { data } = column as unknown as Column.Pick.Data;
   return data.computed
     ? data.computed.toSQL(ctx, quotedAs)
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
@@ -50,7 +47,7 @@ export const columnToSql = (
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
   },
-  shape: QueryColumns,
+  shape: Column.QueryColumns,
   column: string,
   quotedAs?: string,
   select?: true,
@@ -117,7 +114,7 @@ const columnWithDotToSql = (
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
   },
-  shape: QueryColumns,
+  shape: Column.QueryColumns,
   column: string,
   index: number,
   quotedAs?: string,
@@ -129,7 +126,7 @@ const columnWithDotToSql = (
     const shape = data.joinedShapes?.[table];
     return shape
       ? select
-        ? makeRowToJson(table, shape, true)
+        ? makeRowToJson(table, shape as never, true)
         : `"${table}".*`
       : column;
   }
@@ -137,9 +134,11 @@ const columnWithDotToSql = (
   const tableName = _getQueryAliasOrName(data, table);
   const quoted = `"${table}"`;
 
-  const col = (
-    quoted === quotedAs ? shape[key] : data.joinedShapes?.[tableName]?.[key]
-  ) as ColumnTypeBase | undefined;
+  const col = (quoted === quotedAs
+    ? shape[key]
+    : data.joinedShapes?.[tableName]?.[key]) as unknown as
+    | Column.Pick.Data
+    | undefined;
 
   if (col) {
     if (col.data.name) {
@@ -163,7 +162,7 @@ export const columnToSqlWithAs = (
   as: string,
   quotedAs?: string,
   select?: true,
-  jsonList?: { [K: string]: ColumnTypeBase | undefined },
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
 ): string => {
   const index = column.indexOf('.');
   return index !== -1
@@ -190,7 +189,7 @@ export const tableColumnToSqlWithAs = (
   as: string,
   quotedAs?: string,
   select?: true,
-  jsonList?: { [K: string]: ColumnTypeBase | undefined },
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
 ): string => {
   if (key === '*') {
     if (jsonList) jsonList[as] = undefined;
@@ -198,7 +197,7 @@ export const tableColumnToSqlWithAs = (
     const shape = data.joinedShapes?.[table];
     if (shape) {
       if (select) {
-        return makeRowToJson(table, shape, true) + ` "${as}"`;
+        return makeRowToJson(table, shape as never, true) + ` "${as}"`;
       }
 
       return `"${table}"."${table}" "${as}"`;
@@ -210,10 +209,11 @@ export const tableColumnToSqlWithAs = (
   const tableName = _getQueryAliasOrName(data, table);
   const quoted = `"${table}"`;
 
-  const col =
-    quoted === quotedAs ? data.shape[key] : data.joinedShapes?.[tableName][key];
+  const col = (quoted === quotedAs
+    ? data.shape[key]
+    : data.joinedShapes?.[tableName][key]) as unknown as Column.Pick.Data;
 
-  if (jsonList) jsonList[as] = col;
+  if (jsonList) jsonList[as] = col as never;
 
   if (col) {
     if (col.data.name && col.data.name !== key) {
@@ -235,7 +235,7 @@ export const ownColumnToSqlWithAs = (
   as: string,
   quotedAs?: string,
   select?: true,
-  jsonList?: { [K: string]: ColumnTypeBase | undefined },
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
 ): string => {
   if (!select && data.joinedShapes?.[column]) {
     if (jsonList) jsonList[as] = undefined;
@@ -280,7 +280,7 @@ export const rawOrColumnToSql = (
   data: PickQueryDataShapeAndJoinedShapes,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
-  shape: QueryColumns = data.shape,
+  shape: Column.QueryColumns = data.shape,
   select?: true,
 ): string => {
   return typeof expr === 'string'
@@ -297,7 +297,7 @@ export const quoteSchemaAndTable = (
 
 export const makeRowToJson = (
   table: string,
-  shape: ColumnsShapeBase,
+  shape: Column.Shape.Data,
   aliasName: boolean,
   includingExplicitSelect?: boolean,
 ): string => {

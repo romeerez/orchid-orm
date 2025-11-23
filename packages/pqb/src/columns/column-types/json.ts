@@ -1,7 +1,6 @@
-import { ColumnType } from '../column-type';
-import { columnCode } from '../code';
+import { Column } from '../column';
+import { columnCode, ColumnToCodeCtx } from '../code';
 import { Operators, OperatorsJson, OperatorsText } from '../operators';
-import { ColumnToCodeCtx } from '../../core';
 import { Code } from '../code';
 import {
   defaultSchemaConfig,
@@ -16,7 +15,7 @@ export class JSONColumn<
   T,
   Schema extends ColumnTypeSchemaArg,
   InputSchema = Schema['type'],
-> extends ColumnType<Schema, T, InputSchema, OperatorsJson> {
+> extends Column<Schema, T, InputSchema, OperatorsJson> {
   dataType = 'jsonb' as const;
   operators = Operators.json;
 
@@ -32,9 +31,7 @@ export class JSONColumn<
 }
 
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
-export class JSONTextColumn<
-  Schema extends ColumnSchemaConfig,
-> extends ColumnType<
+export class JSONTextColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
   string,
   ReturnType<Schema['stringSchema']>,

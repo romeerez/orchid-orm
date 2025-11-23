@@ -18,8 +18,6 @@ import { QueryData } from './data';
 import { pushCopySql } from './copy';
 import {
   addValue,
-  ColumnsShapeBase,
-  ColumnTypeBase,
   DelayedRelationSelect,
   isExpression,
   Sql,
@@ -39,6 +37,7 @@ import { getQueryAs } from '../common/utils';
 import { _clone } from '../query';
 import { _queryWhereNotExists } from '../queryMethods';
 import { RunAfterQuery } from '../core/query/query';
+import { Column } from '../columns';
 
 interface ToSqlOptionsInternal extends ToSQLOptions, HasCteHooks {
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
@@ -103,10 +102,10 @@ const subToSql = (
 ): Sql => {
   const sql = queryTypeToSQL(q, type, options, true, !!cteName);
   if (sql.tableHook && (sql.tableHook.after || sql.tableHook.afterCommit)) {
-    const shape: ColumnsShapeBase = {};
+    const shape: Column.Shape.Data = {};
     if (sql.tableHook.select) {
       for (const key of sql.tableHook.select.keys()) {
-        shape[key] = q.shape[key] as ColumnTypeBase;
+        shape[key] = q.shape[key] as unknown as Column.Pick.Data;
       }
     }
 

@@ -8,7 +8,6 @@ import {
   PickQueryMeta,
   PickQueryMetaResultRelationsWindows,
   PickQueryMetaResultWindows,
-  QueryColumn,
   toArray,
 } from '../core';
 import { SelectableOrExpression } from './utils';
@@ -25,7 +24,7 @@ import {
   WindowArgDeclaration,
 } from '../queryMethods';
 import { extendQuery } from '../query/queryUtils';
-import { addColumnParserToQuery } from '../columns';
+import { addColumnParserToQuery, Column } from '../columns';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
@@ -73,7 +72,7 @@ export interface FnExpressionArgsValue {
 // Expression for SQL function calls.
 export class FnExpression<
   Q extends Query = Query,
-  T extends QueryColumn = QueryColumn,
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
 > extends Expression<T> {
   result: { value: T };
   q: QueryData;
@@ -190,7 +189,7 @@ export class FnExpression<
 // Applies a function expression to the query.
 export function makeFnExpression<
   T extends PickQueryMetaResultRelationsWindows,
-  C extends QueryColumn,
+  C extends Column.Pick.QueryColumn,
 >(
   self: T,
   type: C,
@@ -202,7 +201,7 @@ export function makeFnExpression<
   (q.baseQuery as unknown as ExpressionTypeMethod).type =
     ExpressionTypeMethod.prototype.type;
 
-  new FnExpression<Query, QueryColumn>(
+  new FnExpression<Query, Column.Pick.QueryColumn>(
     q,
     fn,
     args,

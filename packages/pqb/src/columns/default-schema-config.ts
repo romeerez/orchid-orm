@@ -1,15 +1,4 @@
-import {
-  ColumnDataBase,
-  ColumnInputOutputQueryTypes,
-  ColumnTypeBase,
-  EncodeColumn,
-  MaybeArray,
-  noop,
-  ParseColumn,
-  ParseNullColumn,
-  PickColumnBaseData,
-  setColumnData,
-} from '../core';
+import { MaybeArray, noop } from '../core';
 import {
   DateColumn,
   TimestampColumn,
@@ -36,25 +25,25 @@ import {
   TextColumn,
   VarCharColumn,
 } from './column-types/string';
-import { ColumnType } from './column-type';
+import { Column, setColumnData } from './column';
 import { setColumnParse, setColumnParseNull } from './column.utils';
 import { ColumnSchemaConfig } from './column-schema';
 
-export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
-  parse<T extends ColumnTypeBase, Output>(
+export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
+  parse<T extends Column.Pick.ForParse, Output>(
     this: T,
     fn: (input: T['type']) => Output,
-  ): ParseColumn<T, unknown, Output>;
+  ): Column.Modifiers.Parse<T, unknown, Output>;
 
-  parseNull<T extends ColumnTypeBase, Output>(
+  parseNull<T extends Column.Pick.ForParseNull, Output>(
     this: T,
     fn: () => Output,
-  ): ParseNullColumn<T, unknown, Output>;
+  ): Column.Modifiers.ParseNull<T, unknown, Output>;
 
   encode<T extends { type: unknown }, Input>(
     this: T,
     fn: (input: Input) => unknown,
-  ): EncodeColumn<T, unknown, Input>;
+  ): Column.Modifiers.Encode<T, unknown, Input>;
 
   /**
    * @deprecated use narrowType instead
@@ -81,8 +70,8 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
 
   narrowType<
-    T extends ColumnInputOutputQueryTypes,
-    Types extends ColumnInputOutputQueryTypes,
+    T extends Column.InputOutputQueryTypes,
+    Types extends Column.InputOutputQueryTypes,
   >(
     this: T,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -100,8 +89,8 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
 
   narrowAllTypes<
-    T extends ColumnInputOutputQueryTypes,
-    Types extends ColumnInputOutputQueryTypes,
+    T extends Column.InputOutputQueryTypes,
+    Types extends Column.InputOutputQueryTypes,
   >(
     this: T,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -126,8 +115,12 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<ColumnType> {
     ) => Types,
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
 
-  dateAsNumber<T extends ColumnType>(this: T): ParseColumn<T, unknown, number>;
-  dateAsDate<T extends ColumnType>(this: T): ParseColumn<T, unknown, Date>;
+  dateAsNumber<T extends Column>(
+    this: T,
+  ): Column.Modifiers.Parse<T, unknown, number>;
+  dateAsDate<T extends Column>(
+    this: T,
+  ): Column.Modifiers.Parse<T, unknown, Date>;
 
   enum<const T extends readonly [string, ...string[]]>(
     dataType: string,
@@ -181,14 +174,14 @@ const parseDateToDate = (value: unknown): Date => new Date(value as string);
 export const defaultSchemaConfig = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parse(fn: (input: any) => unknown) {
-    return setColumnParse(this as ColumnTypeBase, fn);
+    return setColumnParse(this as never, fn);
   },
   parseNull(fn: () => unknown) {
-    return setColumnParseNull(this as ColumnTypeBase, fn);
+    return setColumnParseNull(this as never, fn);
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   encode(fn: (input: any) => unknown) {
-    return setColumnData(this as PickColumnBaseData, 'encode', fn);
+    return setColumnData(this as Column.Pick.Data, 'encode', fn);
   },
   asType() {
     return this as never;
@@ -199,11 +192,11 @@ export const defaultSchemaConfig = {
   narrowAllTypes() {
     return this as never;
   },
-  dateAsNumber(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {
-    return this.parse(Date.parse) as ColumnTypeBase;
+  dateAsNumber(this: { data: Column.Data; parse(fn: unknown): unknown }) {
+    return this.parse(Date.parse) as never;
   },
-  dateAsDate(this: { data: ColumnDataBase; parse(fn: unknown): unknown }) {
-    return this.parse(parseDateToDate) as ColumnTypeBase;
+  dateAsDate(this: { data: Column.Data; parse(fn: unknown): unknown }) {
+    return this.parse(parseDateToDate) as never;
   },
   enum<const T extends readonly [string, ...string[]]>(
     dataType: string,
@@ -228,7 +221,7 @@ export const defaultSchemaConfig = {
   timeInterval: noop,
   bit: noop,
   uuid: noop,
-  nullable(this: ColumnTypeBase) {
+  nullable(this: Column.Pick.ForNullable) {
     return setColumnData(this, 'isNullable', true);
   },
   json() {

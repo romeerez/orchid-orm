@@ -13,7 +13,6 @@ import {
   PickQueryMetaTable,
   PickQueryShape,
   PickQueryTable,
-  QueryColumn,
 } from '../core';
 import {
   addParserForRawExpression,
@@ -23,6 +22,7 @@ import { getQueryAs } from '../common/utils';
 import { SelectItemExpression } from '../common/select-item-expression';
 import { Operators, setQueryOperators } from '../columns/operators';
 import { getFullColumnTable } from '../query/queryUtils';
+import { Column } from '../columns';
 
 export type QueryGetSelf = PickQueryMetaTable;
 
@@ -54,8 +54,9 @@ export type GetResultOptional<
 export const _getSelectableColumn = (
   q: IsQuery,
   arg: string,
-): QueryColumn | undefined => {
-  let type: QueryColumn | undefined = (q as unknown as PickQueryQ).q.shape[arg];
+): Column.Pick.QueryColumn | undefined => {
+  let type: Column.Pick.QueryColumn | undefined = (q as unknown as PickQueryQ).q
+    .shape[arg];
   if (!type) {
     const index = arg.indexOf('.');
     if (index !== -1) {
@@ -91,7 +92,7 @@ const _get = <
 
   q.returnType = returnType;
 
-  let type: QueryColumn | undefined;
+  let type: Column.Pick.QueryColumn | undefined;
   if (typeof arg === 'string') {
     type = _getSelectableColumn(query as never, arg);
     q.getColumn = type;

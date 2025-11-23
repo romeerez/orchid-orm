@@ -1,13 +1,18 @@
-import { ColumnDataBase } from '../core/columns/columnType';
+import { Column } from './column';
 
 // method names for numeric columns and JSON types to generate methods' code
-export const numberMethodNames: Exclude<
-  keyof BaseNumberData,
-  keyof ColumnDataBase
->[] = ['gt', 'gte', 'lt', 'lte', 'step', 'int', 'finite', 'safe'];
+export const numberMethodNames: (keyof AdditionalNumberData)[] = [
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'step',
+  'int',
+  'finite',
+  'safe',
+];
 
-// numeric column and JSON type data for validations
-export interface BaseNumberData extends ColumnDataBase {
+export interface AdditionalNumberData {
   lt?: number;
   lte?: number;
   gt?: number;
@@ -18,11 +23,11 @@ export interface BaseNumberData extends ColumnDataBase {
   safe?: boolean;
 }
 
+// numeric column and JSON type data for validations
+export interface BaseNumberData extends Column.Data, AdditionalNumberData {}
+
 // method names for string columns and JSON types to generate methods' code
-export const stringMethodNames: Exclude<
-  keyof StringTypeData,
-  keyof ColumnDataBase
->[] = [
+export const stringMethodNames: (keyof AdditionalStringData)[] = [
   'nonEmpty',
   'min',
   'max',
@@ -46,8 +51,7 @@ export const stringMethodNames: Exclude<
   'toUpperCase',
 ];
 
-// string column and JSON type data for validations
-export interface StringTypeData extends ColumnDataBase {
+export interface AdditionalStringData {
   min?: number;
   max?: number;
   length?: number;
@@ -74,17 +78,19 @@ export interface StringTypeData extends ColumnDataBase {
   toUpperCase?: boolean;
 }
 
-// method names for date columns to generate methods' code
-export const dateMethodNames: Exclude<
-  keyof DateColumnData,
-  keyof ColumnDataBase
->[] = ['min', 'max'];
+// string column and JSON type data for validations
+export interface StringData extends Column.Data, AdditionalStringData {}
 
-// date column data for validations
-export interface DateColumnData extends ColumnDataBase {
+// method names for date columns to generate methods' code
+export const dateMethodNames: (keyof AdditionalDateData)[] = ['min', 'max'];
+
+export interface AdditionalDateData {
   min?: Date;
   max?: Date;
 }
+
+// date column data for validations
+export interface DateColumnData extends Column.Data, AdditionalDateData {}
 
 // method names for array column and JSON type to generate methods' code
 export const arrayMethodNames: (keyof ArrayMethodsData)[] = [
@@ -103,5 +109,5 @@ export interface ArrayMethodsData {
 }
 
 export interface ArrayMethodsDataForBaseColumn
-  extends ColumnDataBase,
+  extends Column.Data,
     ArrayMethodsData {}

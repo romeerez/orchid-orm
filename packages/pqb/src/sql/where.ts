@@ -25,19 +25,18 @@ import {
   _getQueryOuterAliases,
   addValue,
   ColumnsParsers,
-  ColumnTypeBase,
   Expression,
   isExpression,
   IsQuery,
   MaybeArray,
-  OperatorToSQL,
-  QueryColumns,
   QueryDataAliases,
   RecordUnknown,
   toArray,
 } from '../core';
+import { Column } from '../columns/column';
 import { getSqlText } from './utils';
 import { selectToSql } from './select';
+import { OperatorToSQL } from 'pqb';
 
 interface QueryDataForWhere extends QueryDataAliases {
   and?: QueryData['and'];
@@ -298,7 +297,7 @@ const processWhere = (
           )} = ${value.toSQL(ctx, quotedAs)}`,
         );
       } else {
-        let column: ColumnTypeBase | undefined = query.shape[key];
+        let column: Column.Pick.QueryColumn | undefined = query.shape[key];
         let quotedColumn: string | undefined;
         if (column) {
           quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
@@ -340,9 +339,7 @@ const processWhere = (
             if (value[op as keyof typeof value] === undefined) continue;
 
             ands.push(
-              `${(
-                operator as unknown as { _op: OperatorToSQL<any, ToSQLCtx> }
-              )._op(
+              `${(operator as unknown as { _op: OperatorToSQL })._op(
                 quotedColumn as string,
                 value[op as keyof typeof value],
                 ctx,
@@ -371,7 +368,7 @@ const processWhere = (
 interface OnColumnToSQLQuery {
   joinedShapes?: QueryData['joinedShapes'];
   aliases?: QueryData['aliases'];
-  shape: QueryColumns;
+  shape: Column.QueryColumns;
 }
 
 const onColumnToSql = (

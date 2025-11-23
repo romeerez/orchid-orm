@@ -1,7 +1,7 @@
 import {
   _queryHookAfterCreate,
   _queryHookAfterUpdate,
-  ColumnType,
+  Column,
   CreateCtx,
   getQueryAs,
   JoinCallback,
@@ -267,7 +267,7 @@ export const addAutoForeignKey = (
   }
 
   if (foreignKeys.length === 1) {
-    const column = from.shape[foreignKeys[0]] as ColumnType;
+    const column = from.shape[foreignKeys[0]] as Column;
     if (column.data.foreignKeys) {
       const pkey = primaryKeys[0];
 
@@ -326,7 +326,7 @@ export const addAutoForeignKey = (
 
 const getColumnKeyFromDbName = (query: Query, name: string) => {
   for (const k in query.shape) {
-    if ((query.shape[k] as ColumnType).data.name === name) {
+    if ((query.shape[k] as Column).data.name === name) {
       return k;
     }
   }

@@ -1,23 +1,16 @@
-import { ColumnData, ColumnType } from './column-type';
+import { Column } from './column';
 import {
-  ColumnDataBase,
-  ColumnDataCheckBase,
-  ColumnsShapeBase,
-  ColumnToCodeCtx,
-  ColumnTypeBase,
   emptyArray,
   emptyObject,
-  isRawSQL,
   objectHasValues,
   quoteObjectKey,
-  RawSQLBase,
   RecordKeyTrue,
   RecordString,
   singleQuote,
   singleQuoteArray,
   toArray,
   toSnakeCase,
-} from '../core';
+} from '../core/utils';
 import { TableData } from '../tableData';
 import {
   arrayMethodNames,
@@ -26,13 +19,22 @@ import {
   DateColumnData,
   dateMethodNames,
   numberMethodNames,
+  StringData,
   stringMethodNames,
-  StringTypeData,
 } from './column-data-types';
+import { isRawSQL, RawSQLBase } from '../core/raw';
 
 // Type for composing code pieces for the code generation
 export type Code = string | Codes;
 export type Codes = Code[];
+
+export interface ColumnToCodeCtx {
+  t: string;
+  table: string;
+  currentSchema: string;
+  migration?: boolean;
+  snakeCase?: boolean;
+}
 
 /**
  * Push code: this will append a code string to the last code array element when possible.
@@ -106,7 +108,7 @@ export const columnDefaultArgumentToCode = (
  * @param skip - allows skipping some methods
  * @param aliases - provide aliases for specific methods
  */
-export const columnMethodsToCode = <T extends ColumnDataBase>(
+export const columnMethodsToCode = <T extends Column.Data>(
   methodNames: (keyof T)[],
   skip?: RecordKeyTrue,
   aliases?: RecordString,
@@ -138,7 +140,7 @@ export const columnMethodsToCode = <T extends ColumnDataBase>(
  * @param key - name of the method
  * @param name - optional alias for this method
  */
-const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
+const columnMethodToCode = <T extends Column.Data, K extends keyof T>(
   data: T,
   key: K,
   name: string = key as string,
@@ -186,7 +188,7 @@ const columnMethodToCode = <T extends ColumnDataBase, K extends keyof T>(
 
 // Function to encode string column methods
 export const stringDataToCode =
-  columnMethodsToCode<StringTypeData>(stringMethodNames);
+  columnMethodsToCode<StringData>(stringMethodNames);
 
 // Function to encode numeric column methods.
 // `int` method is skipped because it's defined by the column type itself.
@@ -231,7 +233,7 @@ export const columnErrorMessagesToCode = (errors: RecordString): Code => {
   return code;
 };
 
-export const isDefaultTimeStamp = (item: ColumnTypeBase) => {
+export const isDefaultTimeStamp = (item: Column.Pick.DataAndDataType) => {
   if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
@@ -263,13 +265,17 @@ const combineCodeElements = (input: Code): Code => {
 
 export const columnsShapeToCode = (
   ctx: ColumnToCodeCtx,
-  shape: ColumnsShapeBase,
+  shape: Column.Shape.QueryInit,
 ): Codes => {
   const hasTimestamps =
     'createdAt' in shape &&
-    isDefaultTimeStamp(shape.createdAt) &&
+    isDefaultTimeStamp(
+      shape.createdAt as unknown as Column.Pick.DataAndDataType,
+    ) &&
     'updatedAt' in shape &&
-    isDefaultTimeStamp(shape.updatedAt);
+    isDefaultTimeStamp(
+      shape.updatedAt as unknown as Column.Pick.DataAndDataType,
+    );
 
   const code: Code = [];
 
@@ -283,7 +289,7 @@ export const columnsShapeToCode = (
     code.push(
       ...combineCodeElements([
         `${quoteObjectKey(key, ctx.snakeCase)}: `,
-        ...toArray(shape[key].toCode(ctx, key)),
+        ...toArray((shape[key] as Column).toCode(ctx, key)),
         ',',
       ]),
     );
@@ -674,7 +680,7 @@ export const foreignKeyArgumentToCode = (
 };
 
 export const columnIndexesToCode = (
-  items: Exclude<ColumnData['indexes'], undefined>,
+  items: Exclude<Column.Data['indexes'], undefined>,
 ): Codes => {
   const code: Codes = [];
   for (const { options } of items) {
@@ -710,7 +716,7 @@ export const columnIndexesToCode = (
 };
 
 export const columnExcludesToCode = (
-  items: Exclude<ColumnData['excludes'], undefined>,
+  items: Exclude<Column.Data['excludes'], undefined>,
 ): Codes => {
   const code: Codes = [];
   for (const { options, with: w } of items) {
@@ -746,7 +752,7 @@ export const columnExcludesToCode = (
 
 export const columnCheckToCode = (
   ctx: ColumnToCodeCtx,
-  checks: ColumnDataCheckBase[],
+  checks: Column.Data.Check[],
 ): string => {
   return checks
     .map(
@@ -791,7 +797,7 @@ export const identityToCode = (
 };
 
 export const columnCode = (
-  type: ColumnType,
+  type: Column,
   ctx: ColumnToCodeCtx,
   key: string,
   code: Code,
@@ -840,7 +846,7 @@ export const columnCode = (
   if (data.isNullable) addCode(code, '.nullable()');
 
   if (data.as && !ctx.migration) {
-    addCode(code, `.as(${data.as.toCode(ctx, key)})`);
+    addCode(code, `.as(${(data.as as Column).toCode(ctx, key)})`);
   }
 
   if (

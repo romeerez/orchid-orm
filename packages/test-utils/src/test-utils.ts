@@ -4,12 +4,11 @@ import {
   defaultSchemaConfig,
   QueryData,
   createDbWithAdapter,
-  ColumnTypeBase,
   MaybeArray,
-  QueryColumns,
   SingleSqlItem,
   Sql,
   toArray,
+  Column,
 } from 'pqb';
 import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
@@ -106,7 +105,7 @@ export const testZodColumnTypes = {
 };
 
 export const jsonBuildObjectAllSql = (
-  table: { q: QueryData; shape: QueryColumns },
+  table: { q: QueryData; shape: Column.QueryColumns },
   as: string,
 ) =>
   `CASE WHEN "${as}".* IS NULL THEN NULL ELSE json_build_object(` +
@@ -115,8 +114,11 @@ export const jsonBuildObjectAllSql = (
     .map(
       (c) =>
         `'${c}', "${as}"."${
-          (table.shape[c as keyof typeof table.shape] as ColumnTypeBase).data
-            .name ?? c
+          (
+            table.shape[
+              c as keyof typeof table.shape
+            ] as unknown as Column.Pick.Data
+          ).data.name ?? c
         }"`,
     )
     .join(', ') +

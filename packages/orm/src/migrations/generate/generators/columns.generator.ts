@@ -14,11 +14,10 @@ import {
 } from 'rake-db';
 import {
   ArrayColumn,
-  ColumnType,
+  Column,
   DbStructureDomainsMap,
   EnumColumn,
   getColumnBaseType,
-  ColumnTypeBase,
   deepCompare,
   RecordUnknown,
   toSnakeCase,
@@ -35,7 +34,7 @@ export interface TypeCastsCache {
 
 type ColumnsToChange = Map<
   string,
-  { key: string; dbName: string; column: ColumnType }
+  { key: string; dbName: string; column: Column }
 >;
 
 export const processColumns = async (
@@ -93,7 +92,7 @@ export const processColumns = async (
   dropColumns(changeTableData, columnsToDrop);
 };
 
-type KeyAndColumn = { key: string; column: ColumnType };
+type KeyAndColumn = { key: string; column: Column };
 
 const groupColumns = (
   structureToAstCtx: StructureToAstCtx,
@@ -106,8 +105,8 @@ const groupColumns = (
   columnsToDrop: KeyAndColumn[];
   columnsToChange: ColumnsToChange;
 } => {
-  const columnsToAdd: { key: string; column: ColumnType }[] = [];
-  const columnsToDrop: { key: string; column: ColumnType }[] = [];
+  const columnsToAdd: { key: string; column: Column }[] = [];
+  const columnsToDrop: { key: string; column: Column }[] = [];
   const columnsToChange: ColumnsToChange = new Map();
   const columnsToChangeByDbName = new Map<string, true>();
 
@@ -115,7 +114,7 @@ const groupColumns = (
   const checks = getDbTableColumnsChecks(changeTableData.dbTableData);
 
   for (const key in codeTable.shape) {
-    const column = codeTable.shape[key] as ColumnType;
+    const column = codeTable.shape[key] as Column;
     // skip virtual columns
     if (!column.dataType) continue;
 
@@ -338,8 +337,8 @@ const compareColumns = async (
   verifying: boolean | undefined,
   key: string,
   dbName: string,
-  dbColumn: ColumnType,
-  codeColumn: ColumnType,
+  dbColumn: Column,
+  codeColumn: Column,
 ): Promise<'change' | 'recreate' | undefined> => {
   if (dbColumn instanceof ArrayColumn && codeColumn instanceof ArrayColumn) {
     dbColumn = dbColumn.data.item;
@@ -531,8 +530,8 @@ const changeColumn = (
   changeTableData: ChangeTableData,
   key: string,
   dbName: string,
-  dbColumn: ColumnType,
-  codeColumn: ColumnType,
+  dbColumn: Column,
+  codeColumn: Column,
 ) => {
   dbColumn.data.as = codeColumn.data.as = undefined;
 
@@ -559,7 +558,7 @@ const changeColumn = (
 };
 
 export const getColumnDbType = (
-  column: ColumnTypeBase,
+  column: Column.Pick.DataAndDataType,
   currentSchema: string,
 ) => {
   if (column instanceof EnumColumn) {
@@ -591,7 +590,7 @@ export const getColumnDbType = (
 };
 
 export const getColumnDbTypeQuoted = (
-  column: ColumnTypeBase,
+  column: Column.Pick.DataAndDataType,
   currentSchema: string,
 ) => {
   const [schema, type] = getSchemaAndTableFromName(

@@ -18,14 +18,12 @@ import {
   AdapterBase,
   BatchParsers,
   ColumnsParsers,
-  ColumnsShapeBase,
   Expression,
   ExpressionChain,
   HookSelect,
   MaybeArray,
   PickQueryInputType,
   PickQueryTable,
-  QueryColumn,
   QueryDataAliases,
   QueryDataBase,
   QueryDataTransform,
@@ -40,11 +38,11 @@ import {
 } from '../core';
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
-import { ColumnsShape } from '../columns';
+import { Column, ColumnsShape } from '../columns';
 import { CteItem } from '../query/cte/cte.sql';
 
 export interface RecordOfColumnsShapeBase {
-  [K: string]: ColumnsShapeBase;
+  [K: string]: Column.Shape.QueryInit;
 }
 
 export interface WithConfigs {
@@ -52,7 +50,7 @@ export interface WithConfigs {
 }
 
 export interface WithConfig {
-  shape: ColumnsShapeBase;
+  shape: Column.Shape.QueryInit;
   computeds?: ComputedColumns;
 }
 
@@ -148,7 +146,7 @@ export interface QueryData extends QueryDataBase {
    * column type for query with 'value' or 'valueOrThrow' return type
    * Is needed in {@link getShapeFromSelect} to get shape of sub-select that returns a single value.
    */
-  getColumn?: QueryColumn;
+  getColumn?: Column.Pick.QueryColumn;
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   from?: MaybeArray<QueryDataFromItem>;
@@ -335,7 +333,7 @@ export type CopyOptions<Column = string> = {
 );
 
 export interface PickQueryDataShapeAndJoinedShapes {
-  shape: ColumnsShapeBase;
+  shape: Column.Shape.QueryInit;
   joinedShapes?: JoinedShapes;
 }
 

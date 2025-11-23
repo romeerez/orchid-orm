@@ -1,7 +1,6 @@
 import {
   PickQueryMeta,
   PickQueryMetaShapeRelationsWithData,
-  QueryColumns,
   QueryMetaBase,
   setObjectValueImmutable,
 } from '../core';
@@ -9,17 +8,18 @@ import { QueryScopes } from '../sql';
 import { _clone } from '../query/queryUtils';
 import { Where, WhereResult } from './where/where';
 import { SelectableFromShape } from '../query/query';
+import { Column } from '../columns/column';
 
 interface ScopeArgumentQueryMeta<
   Table extends string | undefined,
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
 > extends QueryMetaBase {
   selectable: SelectableFromShape<Shape, Table>;
 }
 
 export interface ScopeArgumentQuery<
   Table extends string | undefined,
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
 > extends Where,
     PickQueryMetaShapeRelationsWithData {
   __isQuery: true;

@@ -1,13 +1,26 @@
 import { RawSQL } from '../sql/rawSql';
-import { ColumnFromDbParams } from './column-type';
-import { ColumnTypeBase, RecordString, TemplateLiteralArgs } from '../core';
+import { Column } from './column';
+import { RecordString, TemplateLiteralArgs } from '../core';
+
+export interface ColumnFromDbParams {
+  isNullable?: boolean;
+  default?: string;
+  maxChars?: number;
+  numericPrecision?: number;
+  numericScale?: number;
+  dateTimePrecision?: number;
+  compression?: string;
+  collate?: string;
+  extension?: string;
+  typmod: number;
+}
 
 const knownDefaults: RecordString = {
   current_timestamp: 'now()',
   'transaction_timestamp()': 'now()',
 };
 
-export const simplifyColumnDefault = (value?: string) => {
+const simplifyColumnDefault = (value?: string) => {
   if (typeof value === 'string') {
     return new RawSQL([
       [knownDefaults[value.toLowerCase()] || value],
@@ -17,9 +30,9 @@ export const simplifyColumnDefault = (value?: string) => {
 };
 
 export const assignDbDataToColumn = (
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   params: ColumnFromDbParams,
-): ColumnTypeBase => {
+): Column.Pick.Data => {
   const { dateTimePrecision } = params;
 
   Object.assign(column.data, {
