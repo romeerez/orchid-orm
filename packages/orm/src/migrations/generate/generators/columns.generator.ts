@@ -576,7 +576,7 @@ export const getColumnDbType = (
       : type;
 
     return type + '[]'.repeat(column.data.arrayDims);
-  } else if (column.data.isOfCustomType) {
+  } else {
     let type = column.dataType;
 
     const i = type.indexOf('(');
@@ -584,9 +584,11 @@ export const getColumnDbType = (
       type = type.slice(0, i);
     }
 
-    return type.includes('.') ? type : currentSchema + '.' + type;
-  } else {
-    return column.dataType;
+    return column.data.isOfCustomType
+      ? type.includes('.')
+        ? type
+        : currentSchema + '.' + type
+      : type;
   }
 };
 

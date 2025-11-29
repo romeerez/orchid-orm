@@ -1,5 +1,5 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSQLBase, colors, QueryResult, AdapterBase, noop } from 'pqb';
+import { RawSQLBase, colors, QueryResult, AdapterBase } from 'pqb';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
@@ -47,9 +47,16 @@ export const compareSqlExpressions = async (
         `DROP VIEW ${viewName}`,
       ].join('; ');
 
-      const result = await adapter
-        .query(combinedQueries, values)
-        .then((res) => (res as unknown as QueryResult[])[1], noop);
+      const result = await adapter.query(combinedQueries, values).then(
+        (res) => (res as unknown as QueryResult[])[1],
+        (err) => {
+          // ignore the "type ... does not exist" because the type may be added in the same migration,
+          // but throw on other errors
+          if (err.code !== '42704') {
+            throw err;
+          }
+        },
+      );
 
       if (!result) {
         handle();

@@ -53,6 +53,39 @@ describe('indexes', () => {
     '\n  ',
   );
 
+  it('should properly quote a geography type, not detect any changes', async () => {
+    await arrange({
+      dbOptions: {
+        extensions: ['postgis'],
+        generatorIgnore: {
+          tables: ['spatial_ref_sys'],
+        },
+      },
+      async prepareDb(db) {
+        await db.createExtension('postgis');
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.geography
+            .point()
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          colUmn: t.geography
+            .point()
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+  });
+
   it('should be able to remove enum values when there is a primary key referencing it', async () => {
     await arrange({
       async prepareDb(db) {
