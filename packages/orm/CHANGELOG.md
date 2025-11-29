@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.58.5
+
+### Patch Changes
+
+- 7bef478: Fix quoting types like type(arg) in the migration gen (#590)
+
 ## 1.58.4
 
 ### Patch Changes
