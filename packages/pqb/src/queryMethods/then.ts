@@ -60,7 +60,11 @@ type Resolve = (result: any) => any;
 type Reject = (error: any) => any;
 
 export interface QueryCatchers {
-  catchUniqueError<T>(this: T, fn: (reason: QueryError) => unknown): T;
+  catchUniqueError<ThenResult, CatchResult>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this: { then: (onfulfilled?: (value: ThenResult) => any) => any },
+    fn: (reason: QueryError) => CatchResult,
+  ): Promise<ThenResult | CatchResult>;
 }
 
 export class Then implements QueryCatchers {
@@ -72,7 +76,7 @@ export class Then implements QueryCatchers {
   catchUniqueError(fn: (reason: QueryError) => unknown) {
     return (this as unknown as Query).then(undefined, (err) => {
       if (err instanceof QueryError && err.isUnique) {
-        fn(err);
+        return fn(err);
       } else {
         throw err;
       }

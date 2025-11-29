@@ -59,10 +59,18 @@ describe('then', () => {
 
       const catcher = jest.fn();
 
-      await db.user.insert({ ...UserData, Id }).catchUniqueError((err) => {
-        expect(err.columns).toEqual({ Id: true });
-        catcher(err);
-      });
+      const result = await db.user
+        .insert({ ...UserData, Id })
+        .catchUniqueError((err) => {
+          expect(err.columns).toEqual({ Id: true });
+          catcher(err);
+
+          return false;
+        });
+
+      assertType<typeof result, number | boolean>();
+
+      expect(result).toBe(false);
 
       expect(catcher).toBeCalledWith(expect.any(QueryError));
     });
@@ -74,16 +82,24 @@ describe('then', () => {
       const err = await User.select({
         column: testDb.sql`koko`.type((t) => t.boolean()),
       })
-        .catchUniqueError(uniqueCatcher)
+        .catchUniqueError((err) => {
+          uniqueCatcher(err);
+          return 'not returned';
+        })
         .catch((err) => {
           anyCatcher(err);
-          return err;
+          return { err: err as unknown };
         });
+
+      assertType<
+        typeof err,
+        { column: boolean }[] | { err: unknown } | string
+      >();
 
       expect(uniqueCatcher).not.toBeCalled();
       expect(anyCatcher).toBeCalled();
 
-      expect(err).toBeInstanceOf(QueryError);
+      expect(err).toEqual({ err: expect.any(QueryError) });
     });
   });
 
