@@ -315,7 +315,7 @@ db.table.select('user.id', 'user.name', { nameAlias: 'user.name' });
 
 // table name may refer to the current table or a joined table:
 db.table
-  .join(Message, 'authorId', 'user.id')
+  .join(db.message, 'authorId', 'user.id')
   .select('user.name', 'message.text', { textAlias: 'message.text' });
 
 // select value from the sub-query,
@@ -422,7 +422,7 @@ Sets table alias:
 db.table.as('u').select('u.name');
 
 // Can be used in the join:
-db.table.join(Profile.as('p'), 'p.userId', 'user.id');
+db.table.join(db.profile.as('p'), 'p.userId', 'user.id');
 ```
 
 ## from

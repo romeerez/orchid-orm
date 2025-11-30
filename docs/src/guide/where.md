@@ -93,7 +93,7 @@ db.table.where((q) =>
     .where({ name: 'Name' })
     .orWhere({ id: 1 }, { id: 2 })
     .whereIn('letter', ['a', 'b', 'c'])
-    .whereExists(Message, 'authorId', 'id'),
+    .whereExists(db.message, 'authorId', 'id'),
 );
 ```
 
@@ -340,7 +340,7 @@ db.table.whereIn(
 It supports sub query which should return records with columns of the same type:
 
 ```ts
-db.table.whereIn(['id', 'name'], OtherTable.select('id', 'name'));
+db.table.whereIn(['id', 'name'], db.otherTable.select('id', 'name'));
 ```
 
 It supports raw SQL expression:
@@ -466,7 +466,7 @@ db.table.where({
     lt: 5,
 
     // lower than the value returned by sub-query
-    lt: OtherTable.select('someNumber').take(),
+    lt: db.otherTable.select('someNumber').take(),
 
     // raw SQL expression produces WHERE "numericColumn" < "otherColumn" + 10
     lt: sql`"otherColumn" + 10`,
@@ -500,7 +500,7 @@ db.table.where({
     in: ['a', 'b', 'c'],
 
     // WHERE "column" IN (SELECT "column" FROM "otherTable")
-    in: OtherTable.select('column'),
+    in: db.otherTable.select('column'),
 
     in: sql`('a', 'b')`,
   },
@@ -540,7 +540,7 @@ db.table.where({
     between: [1, 10],
 
     // sub-query and raw SQL expression
-    between: [OtherTable.select('column').take(), sql`2 + 2`],
+    between: [db.otherTable.select('column').take(), sql`2 + 2`],
   },
 });
 ```

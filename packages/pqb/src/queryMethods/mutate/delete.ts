@@ -91,7 +91,7 @@ export class Delete {
    *
    * ```ts
    * // delete all users who have corresponding profile records:
-   * db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
+   * db.table.join(db.profile, 'profile.userId', 'user.id').all().delete();
    * ```
    *
    * `delete` can be used in {@link WithMethods.with} expressions:

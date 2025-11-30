@@ -436,10 +436,11 @@ Second argument is a callback where you can reference other tables using `on` an
 Note that the regular `join` will also generate `JOIN LATERAL` SQL expression when the query returned from callback is complex enough (see [implicit join lateral](/guide/join#implicit-join-lateral)).
 
 ```ts
-// joinLateral a Message table, alias it as `m`
+// joinLateral messages relation, alias it as `m`
 // without aliasing you can refer to the message by a table name
-User.joinLateral(Message.as('m'), (q) =>
+db.user.joinLateral('messages', (q) =>
   q
+    .as('m') // alias to 'm'
     // select message columns
     .select('text')
     // join the message to the user, column names can be prefixed with table names
@@ -458,10 +459,9 @@ As well as simple `join`, `joinLateral` can select an object of full joined reco
 
 ```ts
 // join by relation name
-const result = await User.joinLateral(
-  'messages',
-  (q) => q.as('message'), // alias to 'message'
-).select('name', { message: 'message.*' });
+const result = await db.user
+  .joinLateral('messages', (q) => q.as('message')) // alias to 'message'
+  .select('name', { message: 'message.*' });
 
 // result has the following type:
 const ok: {
@@ -475,10 +475,9 @@ const ok: {
 
 ```ts
 // join by relation name
-const result = await User.joinLateral(
-  'messages',
-  (q) => q.as('message'), // alias to 'message'
-).select('name', { msg: 'message.*' });
+const result = await db.user
+  .joinLateral('messages', (q) => q.as('message')) // alias to 'message'
+  .select('name', { msg: 'message.*' });
 
 // result has the following type:
 const ok: {

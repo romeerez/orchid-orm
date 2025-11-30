@@ -346,12 +346,12 @@ export class WithMethods {
    *   .withRecursive(
    *     'subordinates',
    *     // the base, anchor query: find the manager to begin recursion with
-   *     Employee.select('id', 'name', 'managerId').find(1),
+   *     db.employee.select('id', 'name', 'managerId').find(1),
    *     // recursive query:
    *     // find employees whos managerId is id from the surrounding subordinates CTE
    *     (q) =>
    *       q
-   *         .from(Employee)
+   *         .from(db.employee)
    *         .select('id', 'name', 'managerId')
    *         .join('subordinates', 'subordinates.id', 'profile.managerId'),
    *   )

@@ -9,7 +9,7 @@ export abstract class QueryAsMethods {
    * db.table.as('u').select('u.name');
    *
    * // Can be used in the join:
-   * db.table.join(Profile.as('p'), 'p.userId', 'user.id');
+   * db.table.join(db.profile.as('p'), 'p.userId', 'user.id');
    * ```
    *
    * @param as - alias for the table of this query

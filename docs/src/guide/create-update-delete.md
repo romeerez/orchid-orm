@@ -374,7 +374,7 @@ Runtime defaults cannot work with it.
 
 ```ts
 const manyRecords = await db.table.createForEachFrom(
-  RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
+  db.relatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
 );
 ```
 
@@ -406,7 +406,8 @@ const user = await db.user
 The data can be returned from a function, it won't be called if the record was found:
 
 ```ts
-const user = await User.selectAll()
+const user = await db.user
+  .selectAll()
   .findBy({ email: 'some@email.com' })
   .orCreate(() => ({
     email: 'some@email.com',
@@ -912,7 +913,8 @@ Or, it can take `data` and `create` objects, `data` will be used for update and 
 No values are returned by default, place `select` or `selectAll` before `upsert` to specify returning columns.
 
 ```ts
-await User.selectAll()
+await db.user
+  .selectAll()
   .findBy({ email: 'some@email.com' })
   .upsert({
     data: {
@@ -930,7 +932,8 @@ await User.selectAll()
   });
 
 // the same as above but using `update` and `create`
-await User.selectAll()
+await db.user
+  .selectAll()
   .findBy({ email: 'some@email.com' })
   .upsert({
     update: {
@@ -947,7 +950,8 @@ await User.selectAll()
 The data for `create` may be returned from a function, it won't be called if a record was updated:
 
 ```ts
-await User.selectAll()
+await db.user
+  .selectAll()
   .findBy({ email: 'some@email.com' })
   .upsert({
     update: {
@@ -960,7 +964,8 @@ await User.selectAll()
   });
 
 // the same as above using `data`
-await User.selectAll()
+await db.user
+  .selectAll()
   .findBy({ email: 'some@email.com' })
   .upsert({
     data: {
@@ -977,7 +982,8 @@ await User.selectAll()
 Data from `data` or `update` is passed to the `create` function and can be used:
 
 ```ts
-const user = await User.selectAll()
+const user = await db.user
+  .selectAll()
   .findBy({ email: 'some@email.com' })
   .upsert({
     data: {
@@ -1117,7 +1123,7 @@ const deletedUsersFull = await db.table
 
 ```ts
 // delete all users who have corresponding profile records:
-db.table.join(Profile, 'profile.userId', 'user.id').all().delete();
+db.table.join(db.profile, 'profile.userId', 'user.id').all().delete();
 ```
 
 `delete` can be used in [with](/guide/advanced-queries#with) expressions:

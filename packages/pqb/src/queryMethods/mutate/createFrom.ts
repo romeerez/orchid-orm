@@ -416,7 +416,7 @@ export class QueryCreateFrom {
    *
    * ```ts
    * const manyRecords = await db.table.createForEachFrom(
-   *   RelatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
+   *   db.relatedTable.select({ relatedId: 'id' }).where({ key: 'value' }),
    * );
    * ```
    *

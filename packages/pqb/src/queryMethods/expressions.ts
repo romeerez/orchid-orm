@@ -228,7 +228,7 @@ export class ExpressionMethods {
    * For example, calling `sqrt` function to get a square root from some numeric column:
    *
    * ```ts
-   * const q = await User.select({
+   * const q = await db.table.select({
    *   sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
    * }).take();
    *
@@ -240,7 +240,7 @@ export class ExpressionMethods {
    * Use `type` method to specify a column type so that its operators such as `lt` and `gt` become available:
    *
    * ```ts
-   * const q = await User.select({
+   * const q = await db.table.select({
    *   // Produces `sqrt("numericColumn") > 5`
    *   sqrtIsGreaterThan5: (q) =>
    *     q
