@@ -22,7 +22,7 @@ export function simpleColumnToSQL(
 
   const { data } = column as unknown as Column.Pick.Data;
   return data.computed
-    ? data.computed.toSQL(ctx, quotedAs)
+    ? `(${data.computed.toSQL(ctx, quotedAs)})`
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
@@ -36,7 +36,7 @@ export function simpleExistingColumnToSQL(
 ): string {
   const { data } = column as unknown as Column.Pick.Data;
   return data.computed
-    ? data.computed.toSQL(ctx, quotedAs)
+    ? `(${data.computed.toSQL(ctx, quotedAs)})`
     : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
 }
 
@@ -146,7 +146,7 @@ const columnWithDotToSql = (
     }
 
     if (col.data.computed) {
-      return col.data.computed.toSQL(ctx, quoted);
+      return `(${col.data.computed.toSQL(ctx, quoted)})`;
     }
 
     return `"${tableName}"."${key}"`;
@@ -221,7 +221,7 @@ export const tableColumnToSqlWithAs = (
     }
 
     if (col.data.computed) {
-      return `${col.data.computed.toSQL(ctx, quoted)} "${as}"`;
+      return `(${col.data.computed.toSQL(ctx, quoted)}) "${as}"`;
     }
   }
 
@@ -255,7 +255,7 @@ export const ownColumnToSqlWithAs = (
     }
 
     if (col.data.computed) {
-      return `${col.data.computed.toSQL(ctx, quotedAs)} "${as}"`;
+      return `(${col.data.computed.toSQL(ctx, quotedAs)}) "${as}"`;
     }
   }
 
@@ -323,7 +323,7 @@ export const makeRowToJson = (
 
   return isSimple
     ? `row_to_json("${table}".*)`
-    : `CASE WHEN "${table}".* IS NULL THEN NULL ELSE json_build_object(` +
+    : `CASE WHEN to_jsonb("${table}") IS NULL THEN NULL ELSE json_build_object(` +
         list.join(', ') +
         ') END';
 };

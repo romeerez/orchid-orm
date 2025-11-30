@@ -108,7 +108,7 @@ export const jsonBuildObjectAllSql = (
   table: { q: QueryData; shape: Column.QueryColumns },
   as: string,
 ) =>
-  `CASE WHEN "${as}".* IS NULL THEN NULL ELSE json_build_object(` +
+  `CASE WHEN to_jsonb("${as}") IS NULL THEN NULL ELSE json_build_object(` +
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   Object.keys(table.q.selectAllShape)
     .map(

@@ -1,10 +1,28 @@
-import { User, userData } from '../test-utils/test-utils';
-import { NotFoundError } from '../core';
-import { assertType, testAdapter, testDb, useTestDatabase } from 'test-utils';
+import { User, userData, UserRecord } from '../test-utils/test-utils';
+import { NotFoundError, QueryError, QueryResultRow } from '../core';
+import {
+  assertType,
+  db,
+  testAdapter,
+  testDb,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 import { noop, TransactionState } from '../core';
+import { MAX_BINDING_PARAMS } from '../sql/constants';
+
+const setMaxBindingParams = (value: number) => {
+  (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
+};
 
 jest.mock('../sql/constants', () => ({
-  MAX_BINDING_PARAMS: 2,
+  // Behold the power of JS coercions
+  MAX_BINDING_PARAMS: {
+    value: 10,
+    toString() {
+      return this.value;
+    },
+  },
 }));
 
 describe('then', () => {
@@ -32,6 +50,147 @@ describe('then', () => {
 
       expect(user.name).toBe(userData.name);
       expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('should not mutate the query', async () => {
+      await User.catch(() => 'ok');
+
+      expect(User.q.catch).toBe(undefined);
+    });
+
+    it('should catch error in transaction using a save-points', async () => {
+      const transactionCatch = jest.fn(() => {
+        throw new Error('should not be called');
+      });
+
+      const res = await testDb
+        .transaction(async () => {
+          const failedThenResult = await User.get('invalid' as 'name').then(
+            () => {
+              throw new Error('should not be called');
+            },
+            () => 'caught',
+          );
+
+          const failedCatchResult = await User.get('invalid' as 'name').catch(
+            () => 'caught',
+          );
+
+          const subsequentQueryResult = await testDb.query`SELECT 'ok' ok`;
+
+          return {
+            failedThenResult,
+            failedCatchResult,
+            subsequentQueryResult: subsequentQueryResult.rows[0],
+          };
+        })
+        .catch(transactionCatch);
+
+      expect(transactionCatch).not.toBeCalled();
+
+      assertType<
+        typeof res,
+        {
+          failedThenResult: string;
+          failedCatchResult: string;
+          subsequentQueryResult: QueryResultRow;
+        }
+      >();
+
+      expect(res).toEqual({
+        failedThenResult: 'caught',
+        failedCatchResult: 'caught',
+        subsequentQueryResult: { ok: 'ok' },
+      });
+    });
+  });
+
+  describe('catchUniqueError', () => {
+    it('should catch unique error', async () => {
+      const Id = await db.user.get('Id').insert(UserData);
+
+      const catcher = jest.fn();
+
+      const result = await db.user
+        .insert({ ...UserData, Id })
+        .catchUniqueError((err) => {
+          expect(err.columns).toEqual({ Id: true });
+          catcher(err);
+
+          return false;
+        });
+
+      assertType<typeof result, number | boolean>();
+
+      expect(result).toBe(false);
+
+      expect(catcher).toBeCalledWith(expect.any(QueryError));
+    });
+
+    it('should not catch other errors', async () => {
+      const uniqueCatcher = jest.fn();
+      const anyCatcher = jest.fn();
+
+      const err = await User.select({
+        column: testDb.sql`koko`.type((t) => t.boolean()),
+      })
+        .catchUniqueError((err) => {
+          uniqueCatcher(err);
+          return 'not returned';
+        })
+        .catch((err) => {
+          anyCatcher(err);
+          return { err: err as unknown };
+        });
+
+      assertType<
+        typeof err,
+        { column: boolean }[] | { err: unknown } | string
+      >();
+
+      expect(uniqueCatcher).not.toBeCalled();
+      expect(anyCatcher).toBeCalled();
+
+      expect(err).toEqual({ err: expect.any(QueryError) });
+    });
+
+    it('should catch error in transaction using a save-points', async () => {
+      const id = await User.get('id').create(userData);
+
+      const transactionCatch = jest.fn(() => {
+        throw new Error('should not be called');
+      });
+
+      const res = await testDb
+        .transaction(async () => {
+          const failedResult = await User.create({
+            ...userData,
+            id,
+          }).catchUniqueError(() => 'caught');
+
+          const subsequentQueryResult = await testDb.query`SELECT 'ok' ok`;
+
+          return {
+            failedResult,
+            subsequentQueryResult: subsequentQueryResult.rows[0],
+          };
+        })
+        .catch(transactionCatch);
+
+      expect(transactionCatch).not.toBeCalled();
+
+      assertType<
+        typeof res,
+        {
+          failedResult: string | UserRecord;
+          subsequentQueryResult: QueryResultRow;
+        }
+      >();
+
+      expect(res).toEqual({
+        failedResult: 'caught',
+        subsequentQueryResult: { ok: 'ok' },
+      });
     });
   });
 
@@ -80,6 +239,8 @@ describe('then', () => {
 
 describe('batch queries', () => {
   beforeAll(async () => {
+    setMaxBindingParams(2);
+
     await testAdapter.query(
       `CREATE TABLE IF NOT EXISTS "tmp.then" ( num INTEGER )`,
     );
@@ -146,10 +307,12 @@ describe('batch queries', () => {
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
+        '1',
       ],
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
         [2],
+        '2',
       ],
     ]);
 

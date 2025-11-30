@@ -32,6 +32,7 @@ export const skipQueryKeysForSubQuery: RecordBoolean = {
   log: true,
   logger: true,
   autoPreparedStatements: true,
+  catch: true,
 };
 
 // extracted from `join` to prevent circular dependencies between query join and sql join

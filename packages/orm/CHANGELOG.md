@@ -1,5 +1,50 @@
 # orchid-orm
 
+## 1.58.7
+
+### Patch Changes
+
+- b024695: Fix migration gen handling of array types in SQLs (#590)
+- Updated dependencies [b024695]
+  - rake-db@2.27.21
+
+## 1.58.6
+
+### Patch Changes
+
+- Updated dependencies [449985e]
+- Updated dependencies [4428542]
+- Updated dependencies [5376a01]
+  - pqb@0.57.5
+  - rake-db@2.27.20
+
+## 1.58.5
+
+### Patch Changes
+
+- 7bef478: Fix quoting types like type(arg) in the migration gen (#590)
+
+## 1.58.4
+
+### Patch Changes
+
+- 8e59669: Fix selecting nested json when a record has only NULL values (#595)
+- ee81c12: Fix index recreation in migrations gen when adding a new enum type to the table (#590)
+- Updated dependencies [95c535e]
+- Updated dependencies [4163993]
+- Updated dependencies [8e59669]
+  - pqb@0.57.4
+  - rake-db@2.27.19
+
+## 1.58.3
+
+### Patch Changes
+
+- 66ca9fb: Prevent columns with runtime defaults being merged in onConflict (#593)
+- Updated dependencies [66ca9fb]
+  - pqb@0.57.3
+  - rake-db@2.27.18
+
 ## 1.58.2
 
 ### Patch Changes

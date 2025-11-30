@@ -235,6 +235,28 @@ npm run db redo
 npm run db redo 3
 ```
 
+## transaction per migration
+
+By default, all pending migrations are executed in a single transaction.
+If the last one fails, all the changes caused by previous are discarded, partially applied state is prevented.
+
+You can override this strategy to have a single transaction per every migration with a `--transaction=per-migration` CLI arg:
+
+```sh
+npm run db up --transaction=per-migration
+npm run db down --transaction=per-migration
+npm run db redo --transaction=per-migration
+```
+
+You can also set it in the config (the CLI arg takes precedence over the config):
+
+```ts
+export const change = rakeDb(config.database, {
+  transaction: 'per-migration',
+  // ...rest
+});
+```
+
 ## status, s
 
 `status` or `s` command will display a list of migrations to your terminal:

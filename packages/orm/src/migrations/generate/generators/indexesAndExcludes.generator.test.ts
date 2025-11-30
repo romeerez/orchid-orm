@@ -53,32 +53,62 @@ describe('indexes', () => {
     '\n  ',
   );
 
-  it('should be able to remove enum values when there is a primary key referencing it', async () => {
+  it('should properly quote a geography type, not detect any changes', async () => {
     await arrange({
+      dbOptions: {
+        extensions: ['postgis'],
+        generatorIgnore: {
+          tables: ['spatial_ref_sys'],
+        },
+      },
       async prepareDb(db) {
-        await db.createEnum('status', ['active', 'inactive']);
+        await db.createExtension('postgis');
 
-        await db.createTable('table', (t) => ({
-          status: t.enum('status').primaryKey(),
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.geography
+            .point()
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
         }));
       },
       tables: [
         table((t) => ({
-          status: t.enum('status', ['active']).primaryKey(),
+          colUmn: t.geography
+            .point()
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
         })),
       ],
     });
 
     await act();
 
-    assert.migration(`import { change } from '../src/migrations/dbScript';
+    assert.migration();
+  });
 
-change(async (db) => {
-  await db.dropEnumValues('public.status', ['inactive']);
-});
-`);
+  it('should properly quote an array type, not detect any changes', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t
+            .array(t.integer())
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          colUmn: t
+            .array(t.integer())
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
+        })),
+      ],
+    });
 
-    assert.report(`${red('- remove values from enum')} status: inactive`);
+    await act();
+
+    assert.migration();
   });
 
   it('should not be dropped in ignored tables', async () => {

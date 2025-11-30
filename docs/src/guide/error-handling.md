@@ -20,7 +20,6 @@ Here is how centralized error handler may look like:
 
 ```ts
 import { ZodError } from 'zod';
-import { ValiError } from 'valibot';
 import { NotFoundError } from 'orchid-orm';
 
 // generic error class that the code of your app will use to throw errors
@@ -70,24 +69,9 @@ app.use((err, req, res, next) => {
     });
   }
 
-  if (err instanceof ValiError) {
-    return res.status(400).send({
-      error: err.issues.map((iss) => iss.message).join('. '),
-    });
-  }
-
   res.status(500).send('Something broke!');
 });
 ```
-
-::: info
-Hint for express.js users:
-
-It still doesn't support async error handling, so you have to install a package [like this](https://www.npmjs.com/package/express-async-errors),
-or come up with a custom helper/wrapper to catch errors of async routes, or to write boilerplative try-catch in every route.
-
-Or switch to a modern framework 😅
-:::
 
 ## database error
 
@@ -109,7 +93,7 @@ We can perform 4 database queries for this:
 - save a user
 - end transaction
 
-Or, instead, just one query is enough, we only need to handle the error:
+You can achieve the same with a single query by handling an error:
 
 ```ts
 try {
@@ -122,10 +106,11 @@ try {
       // columns have type { [column name]?: true }
       // use it to determine which columns have failed uniqueness
       if (error.columns.username) {
-        throw new Error('Username is already taken');
+        // throwing AppError that will be handled by the global error handling
+        throw new AppError('Username is already taken');
       }
       if (error.columns.email) {
-        throw new Error('Email is already taken');
+        throw new AppError('Email is already taken');
       }
     }
   }
@@ -137,3 +122,76 @@ try {
 
 Error classes on the table interface are extending the common `QueryError`,
 it has all the same properties as `DatabaseError` from `pg`.
+
+## catch
+
+`catch` has a special ability in transactions, consider the following:
+
+```ts
+db.$transaction(async () => {
+  try {
+    await db.table.create({ key: 'some key' });
+  } catch (err) {
+    // if the key 'one' already exists, create with a different key:
+    if (err instanceof QueryError && err.isUnique) {
+      await db.table.create({ key: 'other key' });
+    }
+  }
+});
+```
+
+A transaction won't let performing any queries once one of them has failed.
+The second `create` won't work because the transaction is in the failed state.
+
+Use the `catch` method to make it possible:
+
+```ts
+db.$transaction(async () => {
+  await db.table.create({ key: 'some key' }).catch(async (err) => {
+    if (err instanceof QueryError && err.isUnique) {
+      await db.table.create({ key: 'other key' });
+    }
+  });
+});
+```
+
+`catch` wraps the query with `SAVEPOINT` and `RELEASE SAVEPOINT`.
+If the query fails, it does `ROLLBACK TO SAVEPOINT` to recover the transaction from the failed state and to continue.
+
+`postgres-js` sends the save-point and the query SQLs simultaneously, without introducing additional round-trips.
+
+But the same is not possible with `node-postgres` and in case of using it the `catch` adds additional round-trips.
+
+## catchUniqueError
+
+`catchUniqueError` is a helper to catch duplicated unique key exceptions with ease.
+
+In the same way as the `catch`, it wraps the query with save-points when inside a transaction.
+
+```ts
+db.table.create(...data).catchUniqueError((error) => {
+  // the error is of type QueryError, it has `columns`
+  if (error.columns.username) {
+    // throwing AppError that will be handled by the global error handling
+    throw new AppError('Username is already taken');
+  }
+  if (error.columns.email) {
+    throw new AppError('Email is already taken');
+  }
+  throw new Error('Unexpected unique violation');
+});
+```
+
+Alternatively:
+
+```ts
+const result = await db.table
+  .create(...data)
+  .catchUniqueError((err) => ({ err }));
+
+if ('err' in result) {
+  // handle error
+} else {
+  // happy path, result is the created record
+}
+```

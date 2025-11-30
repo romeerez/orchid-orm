@@ -86,9 +86,9 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT
-              "user"."name", "user"."name" || ' ' || "user"."user_key" "nameAndKey",
-              1::decimal "decimal",
-              "user"."name" || ' ' || "user"."user_key" || 'dep' "depSql"
+              "user"."name", ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
+              (1::decimal) "decimal",
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
             FROM "user"
             LIMIT 1
           `,
@@ -122,9 +122,9 @@ describe('computed', () => {
           `
             SELECT
               "user"."name",
-              "user"."name" || ' ' || "user"."user_key" "nameAndKey",
-              1::decimal "decimal",
-              "user"."name" || ' ' || "user"."user_key" || 'dep' "depSql"
+              ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
+              (1::decimal) "decimal",
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
             FROM "user"
             LIMIT 1
           `,
@@ -157,9 +157,9 @@ describe('computed', () => {
           `
             SELECT
               "user"."name",
-              "user"."name" || ' ' || "user"."user_key" "as",
-              1::decimal "dec",
-              "user"."name" || ' ' || "user"."user_key" || 'dep' "dep"
+              ("user"."name" || ' ' || "user"."user_key") "as",
+              (1::decimal) "dec",
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
             FROM "user"
             LIMIT 1
           `,
@@ -192,9 +192,9 @@ describe('computed', () => {
           `
             SELECT
               "user"."name",
-              "user"."name" || ' ' || "user"."user_key" "as",
-              1::decimal "dec",
-              "user"."name" || ' ' || "user"."user_key" || 'dep' "dep"
+              ("user"."name" || ' ' || "user"."user_key") "as",
+              (1::decimal) "dec",
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
             FROM "user"
             LIMIT 1
           `,
@@ -224,9 +224,9 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT
-              "user"."name" || ' ' || "user"."user_key" "nameAndKey",
-              1::decimal "decimal",
-              "user"."name" || ' ' || "user"."user_key" || 'dep' "depSql"
+              ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
+              (1::decimal) "decimal",
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
             FROM "profile"
             JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
@@ -256,9 +256,9 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT
-              "user"."name" || ' ' || "user"."user_key" "as",
-              1::decimal "dec",
-              "user"."name" || ' ' || "user"."user_key" || 'dep' "dep"
+              ("user"."name" || ' ' || "user"."user_key") "as",
+              (1::decimal) "dec",
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
             FROM "profile"
             JOIN "user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
@@ -286,9 +286,9 @@ describe('computed', () => {
           `
             SELECT ${userColumnsSql} FROM "user"
             WHERE
-              "user"."name" || ' ' || "user"."user_key" = $1 AND
-              1::decimal = $2 AND
-              "user"."name" || ' ' || "user"."user_key" || 'dep' = $3
+              ("user"."name" || ' ' || "user"."user_key") = $1 AND
+              (1::decimal) = $2 AND
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') = $3
           `,
           ['value', 1, 'dep'],
         );
@@ -304,8 +304,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            WHERE 1::decimal > $1
-              AND "user"."name" || ' ' || "user"."user_key" || 'dep' ILIKE '%' || $2
+            WHERE (1::decimal) > $1
+              AND ("user"."name" || ' ' || "user"."user_key" || 'dep') ILIKE '%' || $2
           `,
           [0, 'dep'],
         );
@@ -321,8 +321,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT ${userColumnsSql} FROM "user"
-            WHERE 1::decimal > $1
-              AND "user"."name" || ' ' || "user"."user_key" || 'dep' ILIKE '%' || $2
+            WHERE (1::decimal) > $1
+              AND ("user"."name" || ' ' || "user"."user_key" || 'dep') ILIKE '%' || $2
           `,
           [0, 'dep'],
         );
@@ -338,9 +338,9 @@ describe('computed', () => {
           `
             SELECT ${userColumnsSql} FROM "user"
             ORDER BY
-              "user"."name" || ' ' || "user"."user_key" ASC,
-              1::decimal ASC,
-              "user"."name" || ' ' || "user"."user_key" || 'dep' ASC
+              ("user"."name" || ' ' || "user"."user_key") ASC,
+              (1::decimal) ASC,
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') ASC
           `,
         );
       });
@@ -357,9 +357,9 @@ describe('computed', () => {
           `
             SELECT ${userColumnsSql} FROM "user"
             ORDER BY
-              "user"."name" || ' ' || "user"."user_key" DESC,
-              1::decimal DESC,
-              "user"."name" || ' ' || "user"."user_key" || 'dep' DESC
+              ("user"."name" || ' ' || "user"."user_key") DESC,
+              (1::decimal) DESC,
+              ("user"."name" || ' ' || "user"."user_key" || 'dep') DESC
           `,
         );
       });

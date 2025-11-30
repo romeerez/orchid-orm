@@ -126,11 +126,13 @@ export interface AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryResult<T>>;
   // make a query to get rows as array of column values
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>>;
   /**
    * Run a transaction
@@ -160,6 +162,8 @@ export interface TransactionState {
   log?: QueryLogObject;
   // number of test transaction wrapping the current one
   testTransactionCount?: number;
+  // sequential number for catching save-points
+  catchI?: number;
 }
 
 /**

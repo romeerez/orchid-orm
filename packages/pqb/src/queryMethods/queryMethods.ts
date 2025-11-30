@@ -25,7 +25,7 @@ import {
   _queryTakeOptional,
   pushQueryArrayImmutable,
 } from '../query/queryUtils';
-import { Then } from './then';
+import { QueryCatchers, Then } from './then';
 import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select/select';
 import { FromMethods, FromQuerySelf } from './from';
@@ -372,6 +372,7 @@ export interface QueryMethods<ColumnTypes>
     SearchMethods,
     Clear,
     Having,
+    QueryCatchers,
     QueryLog,
     QueryHooks,
     QueryUpsert,

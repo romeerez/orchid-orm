@@ -223,30 +223,45 @@ export class PostgresJsAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return query(this.sql, text, values);
+    return query(this.sql, text, values, catchingSavepoint);
   }
 
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return arrays(this.sql, text, values);
+    return arrays(this.sql, text, values, catchingSavepoint);
   }
 
   async transaction<Result>(
     options: string | undefined,
     cb: (adapter: AdapterBase) => Promise<Result>,
   ): Promise<Result> {
+    let ok: boolean | undefined;
+    let result: unknown;
+
     return (
       options
         ? this.sql.begin(options, (sql) =>
-            cb(new PostgresJsTransactionAdapter(this, sql)),
+            cb(new PostgresJsTransactionAdapter(this, sql)).then((res) => {
+              ok = true;
+              return (result = res);
+            }),
           )
         : this.sql.begin((sql) =>
-            cb(new PostgresJsTransactionAdapter(this, sql)),
+            cb(new PostgresJsTransactionAdapter(this, sql)).then((res) => {
+              ok = true;
+              return (result = res);
+            }),
           )
-    ) as never;
+    ).catch((err) => {
+      if (ok) return result;
+
+      throw err;
+    }) as never;
   }
 
   close(): Promise<void> {
@@ -275,19 +290,40 @@ const query = <T extends QueryResultRow = QueryResultRow>(
   sql: postgres.Sql,
   text: string,
   values?: unknown[],
+  catchingSavepoint?: string,
+  arrays?: boolean,
 ): Promise<QueryResult<T>> => {
-  return sql.unsafe(text, values as never).then(wrapResult);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = sql.unsafe(text, values as never) as any;
+
+  if (arrays) query = query.values();
+
+  if (catchingSavepoint) {
+    return Promise.all([
+      sql.unsafe(`SAVEPOINT "${catchingSavepoint}"`),
+      query,
+      sql.unsafe(`RELEASE SAVEPOINT "${catchingSavepoint}"`),
+    ]).then(
+      (results: RawResult[]) => {
+        return wrapResult(results[1]);
+      },
+      (err) =>
+        sql.unsafe(`ROLLBACK TO SAVEPOINT "${catchingSavepoint}"`).then(() => {
+          throw err;
+        }),
+    );
+  } else {
+    return query.then(wrapResult);
+  }
 };
 
 const arrays = <R extends any[] = any[]>(
   sql: postgres.Sql,
   text: string,
   values?: unknown[],
+  catchingSavepoint?: string,
 ): Promise<QueryArraysResult<R>> => {
-  return sql
-    .unsafe(text, values as never)
-    .values()
-    .then(wrapResult);
+  return query(sql, text, values, catchingSavepoint, true);
 };
 
 export class PostgresJsTransactionAdapter implements AdapterBase {
@@ -323,16 +359,18 @@ export class PostgresJsTransactionAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return query(this.sql, text, values);
+    return query(this.sql, text, values, catchingSavepoint);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return arrays(this.sql, text, values);
+    return arrays(this.sql, text, values, catchingSavepoint);
   }
 
   async transaction<Result>(

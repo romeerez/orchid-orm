@@ -88,7 +88,7 @@ export const rakeDbWithAdapters = ((
   partialConfig,
   args = process.argv.slice(2),
 ) => {
-  const config = processRakeDbConfig(partialConfig);
+  const config = processRakeDbConfig(partialConfig, args);
   const promise = runCommand(
     adapters,
     config as unknown as RakeDbConfig<ColumnSchemaConfig>,

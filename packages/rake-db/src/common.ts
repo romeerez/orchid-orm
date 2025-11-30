@@ -90,18 +90,24 @@ export const quoteCustomType = (s: string) => {
   return schema ? '"' + schema + '".' + type : type;
 };
 
-export const quoteSchemaTable = (arg: { schema?: string; name: string }) => {
-  return singleQuote(concatSchemaAndName(arg));
+export const quoteSchemaTable = (
+  arg: { schema?: string; name: string },
+  excludeCurrentSchema?: string,
+) => {
+  return singleQuote(concatSchemaAndName(arg, excludeCurrentSchema));
 };
 
-export const concatSchemaAndName = ({
-  schema,
-  name,
-}: {
-  schema?: string;
-  name: string;
-}) => {
-  return schema ? `${schema}.${name}` : name;
+export const concatSchemaAndName = (
+  {
+    schema,
+    name,
+  }: {
+    schema?: string;
+    name: string;
+  },
+  excludeCurrentSchema?: string,
+) => {
+  return schema && schema !== excludeCurrentSchema ? `${schema}.${name}` : name;
 };
 
 export const makePopulateEnumQuery = (
@@ -126,3 +132,18 @@ export const transaction = <T>(
 
 export const queryLock = (trx: AdapterBase) =>
   trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);
+
+export const getCliParam = (
+  args: string[] | undefined,
+  name: string,
+): string | undefined => {
+  if (args) {
+    const key = '--' + name;
+    for (let i = 0; i < args.length; i += 1) {
+      const arg = args[i];
+      if (arg === key) return args[i + 1];
+      else if (arg.startsWith(key)) return arg.slice(key.length + 1);
+    }
+  }
+  return;
+};

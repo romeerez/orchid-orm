@@ -256,7 +256,7 @@ export const instantiateDbColumn = (
       if (enumType) {
         column = new EnumColumn(
           ctx.columnSchemaConfig,
-          typeId,
+          typeSchema === ctx.currentSchema ? typeName : typeId,
           enumType.values,
           ctx.columnSchemaConfig.type,
         );

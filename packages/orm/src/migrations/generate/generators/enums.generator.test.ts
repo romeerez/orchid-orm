@@ -18,6 +18,77 @@ const { green, red, yellow } = colors;
 describe('enums', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should be able to remove enum values when there is a primary key referencing it', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('status', ['active', 'inactive']);
+
+        await db.createTable('table', (t) => ({
+          status: t.enum('status').primaryKey(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          status: t.enum('status', ['active']).primaryKey(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.dropEnumValues('status', ['inactive']);
+});
+`);
+
+    assert.report(`${red('- remove values from enum')} status: inactive`);
+  });
+
+  it('should not recreate an index that is unrelated to the enum', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          deleted: t
+            .timestamp()
+            .nullable()
+            .index({ where: '"deleted" is null' })
+            .asDate(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          enum: t.enum('enum_name', ['a', 'b']),
+          deleted: t
+            .timestamp()
+            .nullable()
+            .index({ where: '"deleted" is null' })
+            .asDate(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createEnum('enum_name', ['a', 'b']);
+});
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    enum: t.add(t.enum('enum_name')),
+  }));
+});
+`);
+
+    assert.report(`${green('+ create enum')} enum_name: (a, b)
+${yellow('~ change table')} table:
+  ${green('+ add column')} enum public.enum_name`);
+  });
+
   it('should create a table with enum and a default value', async () => {
     await arrange({
       tables: [
@@ -35,7 +106,7 @@ describe('enums', () => {
     assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.createEnum('public.numbers', ['one', 'two', 'three']);
+  await db.createEnum('numbers', ['one', 'two', 'three']);
 });
 
 change(async (db) => {
@@ -80,23 +151,23 @@ ${green('+ create table')} table (2 columns, no primary key)`);
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    numBers: t.change(t.enum('public.numbers'), t.text()),
-    numBersArr: t.change(t.array(t.enum('public.numbers')), t.array(t.text())),
+    numBers: t.change(t.enum('numbers'), t.text()),
+    numBersArr: t.change(t.array(t.enum('numbers')), t.array(t.text())),
   }));
 });
 
 change(async (db) => {
-  await db.dropEnum('public.numbers', ['one', 'two', 'three']);
+  await db.dropEnum('numbers', ['one', 'two', 'three']);
 });
 `);
 
     assert.report(`${red('- drop enum')} numbers: (one, two, three)
 ${yellow('~ change table')} table:
   ${yellow('~ change column')} numBers:
-    ${yellow('from')}: t.enum('public.numbers')
+    ${yellow('from')}: t.enum('numbers')
       ${yellow('to')}: t.text()
   ${yellow('~ change column')} numBersArr:
-    ${yellow('from')}: t.array(t.enum('public.numbers'))
+    ${yellow('from')}: t.array(t.enum('numbers'))
       ${yellow('to')}: t.array(t.text())`);
   });
 
@@ -140,7 +211,7 @@ ${yellow('~ change table')} table:
     assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.createEnum('public.numbers', ['one', 'two', 'three']);
+  await db.createEnum('numbers', ['one', 'two', 'three']);
 });
 
 change(async (db) => {
@@ -175,13 +246,13 @@ ${green('+ create table')} table (3 columns)`);
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    numBers: t.drop(t.enum('public.numbers')),
-    numBersArr: t.drop(t.array(t.enum('public.numbers'))),
+    numBers: t.drop(t.enum('numbers')),
+    numBersArr: t.drop(t.array(t.enum('numbers'))),
   }));
 });
 
 change(async (db) => {
-  await db.dropEnum('public.numbers', ['one', 'two', 'three']);
+  await db.dropEnum('numbers', ['one', 'two', 'three']);
 });
 `);
 
@@ -253,18 +324,18 @@ change(async (db) => {
     assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.createEnum('public.to', ['one', 'two', 'three']);
+  await db.createEnum('to', ['one', 'two', 'three']);
 });
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    colUmn: t.change(t.enum('public.from'), t.enum('public.to')),
-    colUmnArr: t.change(t.array(t.enum('public.from')), t.array(t.enum('public.to'))),
+    colUmn: t.change(t.enum('from'), t.enum('to')),
+    colUmnArr: t.change(t.array(t.enum('from')), t.array(t.enum('to'))),
   }));
 });
 
 change(async (db) => {
-  await db.dropEnum('public.from', ['one', 'two', 'three']);
+  await db.dropEnum('from', ['one', 'two', 'three']);
 });
 `);
 
@@ -272,11 +343,11 @@ change(async (db) => {
 ${red('- drop enum')} from: (one, two, three)
 ${yellow('~ change table')} table:
   ${yellow('~ change column')} colUmn:
-    ${yellow('from')}: t.enum('public.from')
-      ${yellow('to')}: t.enum('public.to')
+    ${yellow('from')}: t.enum('from')
+      ${yellow('to')}: t.enum('to')
   ${yellow('~ change column')} colUmnArr:
-    ${yellow('from')}: t.array(t.enum('public.from'))
-      ${yellow('to')}: t.array(t.enum('public.to'))`);
+    ${yellow('from')}: t.array(t.enum('from'))
+      ${yellow('to')}: t.array(t.enum('to'))`);
   });
 
   it('should rename enum after prompt', async () => {
@@ -338,7 +409,7 @@ change(async (db) => {
 });
 
 change(async (db) => {
-  await db.addEnumValues('public.to', ['four']);
+  await db.addEnumValues('to', ['four']);
 });
 `);
 
@@ -581,7 +652,7 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
       assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.addEnumValues('public.numbers', ['two', 'three']);
+  await db.addEnumValues('numbers', ['two', 'three']);
 });
 `);
 
@@ -599,7 +670,7 @@ change(async (db) => {
       assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.dropEnumValues('public.numbers', ['two', 'three']);
+  await db.dropEnumValues('numbers', ['two', 'three']);
 });
 `);
 
@@ -617,7 +688,7 @@ change(async (db) => {
       assert.migration(`import { change } from '../src/migrations/dbScript';
 
 change(async (db) => {
-  await db.changeEnumValues('public.numbers', ['one', 'two'], ['three', 'four']);
+  await db.changeEnumValues('numbers', ['one', 'two'], ['three', 'four']);
 });
 `);
 

@@ -1,6 +1,6 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
 
 export interface EnumItem {
   schema?: string;
@@ -17,6 +17,7 @@ export const processEnums = async (
     verifying,
     internal: { generatorIgnore },
   }: ComposeMigrationParams,
+  pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
   const createEnums: EnumItem[] = [];
   const dropEnums: DbStructure.Enum[] = [];
@@ -41,7 +42,7 @@ export const processEnums = async (
 
     const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
     if (codeEnum) {
-      changeEnum(ast, dbEnum, codeEnum);
+      changeEnum(ast, dbEnum, codeEnum, pendingDbTypes);
       continue;
     }
 
@@ -62,8 +63,9 @@ export const processEnums = async (
         toSchema,
         to: dbEnum.name,
       });
+      pendingDbTypes.add(toSchema, dbEnum.name);
 
-      changeEnum(ast, dbEnum, codeEnum);
+      changeEnum(ast, dbEnum, codeEnum, pendingDbTypes);
 
       continue;
     }
@@ -108,8 +110,9 @@ export const processEnums = async (
           toSchema,
           to,
         });
+        pendingDbTypes.add(toSchema, to);
 
-        changeEnum(ast, dbEnum, codeEnum);
+        changeEnum(ast, dbEnum, codeEnum, pendingDbTypes);
 
         continue;
       }
@@ -120,6 +123,7 @@ export const processEnums = async (
       action: 'create',
       ...codeEnum,
     });
+    pendingDbTypes.add(codeEnum.schema, codeEnum.name);
   }
 
   for (const dbEnum of dropEnums) {
@@ -137,6 +141,7 @@ const changeEnum = (
   ast: RakeDbAst[],
   dbEnum: DbStructure.Enum,
   codeEnum: EnumItem,
+  pendingDbTypes: PendingDbTypes,
 ) => {
   const { values: dbValues } = dbEnum;
   const { values: codeValues, schema, name } = codeEnum;
@@ -150,6 +155,7 @@ const changeEnum = (
         name,
         values: codeValues.filter((value) => !dbValues.includes(value)),
       });
+      pendingDbTypes.add(schema, name);
       return;
     }
   } else if (dbValues.length > codeValues.length) {
@@ -161,6 +167,7 @@ const changeEnum = (
         name,
         values: dbValues.filter((value) => !codeValues.includes(value)),
       });
+      pendingDbTypes.add(schema, name);
       return;
     }
   } else if (!dbValues.some((value) => !codeValues.includes(value))) {
@@ -174,6 +181,7 @@ const changeEnum = (
     fromValues: dbValues,
     toValues: codeValues,
   });
+  pendingDbTypes.add(schema, name);
 };
 
 const renameColumnsTypeSchema = (

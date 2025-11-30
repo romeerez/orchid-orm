@@ -565,7 +565,7 @@ export const getColumnDbType = (
     const [schema = currentSchema, name] = getSchemaAndTableFromName(
       column.enumName,
     );
-    return (column.enumName = `${schema}.${name}`);
+    return `${schema}.${name}`;
   } else if (column instanceof ArrayColumn) {
     const { item } = column.data;
     let type = item instanceof EnumColumn ? item.enumName : item.dataType;
@@ -587,16 +587,6 @@ export const getColumnDbType = (
   } else {
     return column.dataType;
   }
-};
-
-export const getColumnDbTypeQuoted = (
-  column: Column.Pick.DataAndDataType,
-  currentSchema: string,
-) => {
-  const [schema, type] = getSchemaAndTableFromName(
-    getColumnDbType(column, currentSchema),
-  );
-  return schema ? `"${schema}"."${type}"` : `"${type}"`;
 };
 
 const renameColumn = (columns: string[], from: string, to: string) => {

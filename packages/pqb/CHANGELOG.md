@@ -1,5 +1,26 @@
 # pqb
 
+## 0.57.5
+
+### Patch Changes
+
+- 449985e: Fix catchUniqueError returning type and result (#596)
+- 4428542: Wrap computed SQL columns with (parens) (#598)
+- 5376a01: Catch queries in transactions with savepoints (#597)
+
+## 0.57.4
+
+### Patch Changes
+
+- 95c535e: Add 'catchUniqueError' helper (#592)
+- 8e59669: Fix selecting nested json when a record has only NULL values (#595)
+
+## 0.57.3
+
+### Patch Changes
+
+- 66ca9fb: Prevent columns with runtime defaults being merged in onConflict (#593)
+
 ## 0.57.2
 
 ### Patch Changes

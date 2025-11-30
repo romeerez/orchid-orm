@@ -37,6 +37,7 @@ import {
   PickMigrationId,
   PickMigrationsPath,
   PickMigrationsTable,
+  PickTransactionSetting,
   RakeDbConfig,
 } from '../config';
 import path from 'path';
@@ -56,15 +57,27 @@ export interface MigrateFnConfig
     PickAfterChangeCommit,
     PickBasePath,
     PickImport,
-    PickMigrationsPath {}
+    PickMigrationsPath,
+    PickTransactionSetting {}
 
-type MigrateFn = (params: {
+interface MigrateFnParams {
   ctx?: RakeDbCtx;
   adapter: AdapterBase;
   config: MigrateFnConfig;
   count?: number;
   force?: boolean;
-}) => Promise<void>;
+}
+
+type MigrateFn = (params: MigrateFnParams) => Promise<void>;
+
+const transactionIfSingle = (
+  params: MigrateFnParams,
+  fn: (trx: AdapterBase) => Promise<void>,
+) => {
+  return params.config.transaction === 'single'
+    ? transaction(params.adapter, fn)
+    : fn(params.adapter);
+};
 
 function makeMigrateFn(
   up: boolean,
@@ -85,7 +98,7 @@ function makeMigrateFn(
 
     let migrations: MigrationItem[] | undefined;
     try {
-      await transaction(params.adapter, async (trx) => {
+      await transactionIfSingle(params, async (trx) => {
         const versions = await getMigratedVersionsMap(
           ctx,
           trx,
@@ -97,7 +110,7 @@ function makeMigrateFn(
       });
     } catch (err) {
       if (err instanceof NoMigrationsTableError) {
-        await transaction(params.adapter, async (trx) => {
+        await transactionIfSingle(params, async (trx) => {
           await createMigrationsTable(trx, params.config);
 
           const versions = await getMigratedVersionsMap(
@@ -232,7 +245,8 @@ interface MigrateOrRollbackConfig
     PickMigrationId,
     QueryLogOptions,
     PickForceDefaultExports,
-    PickMigrationsTable {
+    PickMigrationsTable,
+    PickTransactionSetting {
   columnTypes: unknown;
 }
 
@@ -294,6 +308,11 @@ export const migrateOrRollback = async (
 
   let migrations: MigrationItem[] | undefined;
 
+  const migrationRunner =
+    config.transaction === 'single'
+      ? runMigration
+      : runMigrationInOwnTransaction;
+
   for (const file of set.migrations) {
     if (
       (up && versionsMap[file.version]) ||
@@ -314,7 +333,7 @@ export const migrateOrRollback = async (
     }
 
     const changes = await getChanges(file, config);
-    const adapter = await runMigration(trx, up, changes, config);
+    const adapter = await migrationRunner(trx, up, changes, config);
     await changeMigratedVersion(adapter, up, file, config);
 
     (migrations ??= []).push(file);
@@ -425,6 +444,13 @@ export const getChanges = async (
   }
 
   return changes;
+};
+
+export const runMigrationInOwnTransaction: typeof runMigration = (
+  adapter,
+  ...rest
+) => {
+  return transaction(adapter, (trx) => runMigration(trx, ...rest));
 };
 
 /**

@@ -33,6 +33,7 @@ import {
   db,
   expectSql,
   jsonBuildObjectAllSql,
+  ProfileData,
   sql,
   testZodColumnTypes as t,
   UserData,
@@ -338,297 +339,6 @@ describe('select', () => {
           JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
         `,
       );
-    });
-
-    it('should select joined table as json', async () => {
-      await insertUserAndProfile();
-
-      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
-        .select('p.*')
-        .where({
-          'p.bio': profileData.bio,
-        });
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-          WHERE "p"."bio" = $1
-        `,
-        [profileData.bio],
-      );
-
-      const res = await q;
-
-      assertType<typeof res, { p: ProfileRecord }[]>();
-
-      expect(res).toEqual([
-        {
-          p: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
-            createdAt: expect.any(Date),
-            updatedAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select joined table as json with alias', async () => {
-      await insertUserAndProfile();
-
-      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
-        .select({
-          profile: 'p.*',
-        })
-        .where({
-          'p.bio': profileData.bio,
-        });
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-          WHERE "p"."bio" = $1
-        `,
-        [profileData.bio],
-      );
-
-      const res = await q;
-
-      assertType<Awaited<typeof res>, { profile: ProfileRecord }[]>();
-
-      expect(res).toEqual([
-        {
-          profile: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
-            createdAt: expect.any(Date),
-            updatedAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select left joined table as json', async () => {
-      await insertUserAndProfile();
-
-      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select(
-        'p.*',
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-          LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
-
-      const res = await q;
-
-      assertType<typeof res, { p: ProfileRecord | undefined }[]>();
-
-      expect(res).toEqual([
-        {
-          p: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
-            createdAt: expect.any(Date),
-            updatedAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select left joined table as json with alias', async () => {
-      await insertUserAndProfile();
-
-      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select({
-        profile: 'p.*',
-      });
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-          LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
-
-      const res = await q;
-
-      assertType<typeof res, { profile: ProfileRecord | undefined }[]>();
-
-      expect(res).toEqual([
-        {
-          profile: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
-            createdAt: expect.any(Date),
-            updatedAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select right joined table as json', async () => {
-      await insertUserAndProfile();
-
-      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
-        'name',
-        'p.*',
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-          RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
-
-      const res = await q;
-
-      assertType<typeof res, { name: string | null; p: ProfileRecord }[]>();
-
-      expect(res).toEqual([
-        {
-          name: 'name',
-          p: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
-            createdAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select right joined table as json with alias', async () => {
-      await insertUserAndProfile();
-
-      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
-        'name',
-        { profile: 'p.*' },
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-          RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
-
-      const res = await q;
-
-      assertType<
-        typeof res,
-        { name: string | null; profile: ProfileRecord }[]
-      >();
-
-      expect(res).toEqual([
-        {
-          name: 'name',
-          profile: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
-            createdAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select full joined table as json', async () => {
-      await insertUserAndProfile();
-
-      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
-        'name',
-        'p.*',
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-          FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
-
-      const res = await q;
-
-      assertType<
-        typeof res,
-        { name: string | null; p: ProfileRecord | undefined }[]
-      >();
-
-      expect(res).toEqual([
-        {
-          name: 'name',
-          p: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
-            createdAt: expect.any(Date),
-          },
-        },
-      ]);
-    });
-
-    it('should select full joined table as json with alias', async () => {
-      await insertUserAndProfile();
-
-      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
-        'name',
-        { profile: 'p.*' },
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-          FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
-        `,
-      );
-
-      const res = await q;
-
-      assertType<
-        typeof res,
-        { name: string | null; profile: ProfileRecord | undefined }[]
-      >();
-
-      expect(res).toEqual([
-        {
-          name: 'name',
-          profile: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
-            createdAt: expect.any(Date),
-          },
-        },
-      ]);
     });
 
     it('should not apply table column parsers to a selected expression with the same name as a table column', async () => {
@@ -1104,6 +814,314 @@ describe('select', () => {
 
         expect(res).toEqual([{ withParsers: null, withoutParsers: null }]);
       });
+    });
+  });
+
+  describe('select implicit json', () => {
+    it('should select joined table as json', async () => {
+      await insertUserAndProfile();
+
+      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
+        .select('p.*')
+        .where({
+          'p.bio': profileData.bio,
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${profileJsonBuildObjectSql} "p"
+          FROM "user"
+          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          WHERE "p"."bio" = $1
+        `,
+        [profileData.bio],
+      );
+
+      const res = await q;
+
+      assertType<typeof res, { p: ProfileRecord }[]>();
+
+      expect(res).toEqual([
+        {
+          p: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
+      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
+        .select({
+          profile: 'p.*',
+        })
+        .where({
+          'p.bio': profileData.bio,
+        });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${profileJsonBuildObjectSql} "profile"
+          FROM "user"
+                 JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          WHERE "p"."bio" = $1
+        `,
+        [profileData.bio],
+      );
+
+      const res = await q;
+
+      assertType<Awaited<typeof res>, { profile: ProfileRecord }[]>();
+
+      expect(res).toEqual([
+        {
+          profile: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select left joined table as json', async () => {
+      await insertUserAndProfile();
+
+      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'p.*',
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${profileJsonBuildObjectSql} "p"
+          FROM "user"
+                 LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
+      assertType<typeof res, { p: ProfileRecord | undefined }[]>();
+
+      expect(res).toEqual([
+        {
+          p: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select left joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
+      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select({
+        profile: 'p.*',
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT ${profileJsonBuildObjectSql} "profile"
+          FROM "user"
+                 LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
+      assertType<typeof res, { profile: ProfileRecord | undefined }[]>();
+
+      expect(res).toEqual([
+        {
+          profile: {
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            bio: profileData.bio,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select right joined table as json', async () => {
+      await insertUserAndProfile();
+
+      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        'p.*',
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
+          FROM "user"
+                 RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
+      assertType<typeof res, { name: string | null; p: ProfileRecord }[]>();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          p: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select right joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
+      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        { profile: 'p.*' },
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
+          FROM "user"
+                 RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        { name: string | null; profile: ProfileRecord }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          profile: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select full joined table as json', async () => {
+      await insertUserAndProfile();
+
+      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        'p.*',
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
+          FROM "user"
+                 FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        { name: string | null; p: ProfileRecord | undefined }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          p: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select full joined table as json with alias', async () => {
+      await insertUserAndProfile();
+
+      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+        'name',
+        { profile: 'p.*' },
+      );
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
+          FROM "user"
+          FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        { name: string | null; profile: ProfileRecord | undefined }[]
+      >();
+
+      expect(res).toEqual([
+        {
+          name: 'name',
+          profile: {
+            ...profileData,
+            id: expect.any(Number),
+            userId: expect.any(Number),
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        },
+      ]);
+    });
+
+    it('should select a single null value properly', async () => {
+      await db.user.insert({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const res = await db.profile.select({
+        user: (q) => q.user.select('Age'),
+      });
+
+      assertType<typeof res, { user: { Age: string | null } | undefined }[]>();
+
+      expect(res).toEqual([{ user: { Age: null } }]);
     });
   });
 

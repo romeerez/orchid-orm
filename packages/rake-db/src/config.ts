@@ -14,6 +14,7 @@ import {
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrationsSet';
+import { getCliParam } from './common';
 
 export interface CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> {
   (
@@ -53,6 +54,10 @@ export interface PickRenameMigrations {
 
 export interface PickMigrationsTable {
   migrationsTable: string;
+}
+
+export interface PickTransactionSetting {
+  transaction: 'single' | 'per-migration';
 }
 
 export interface PickMigrationCallbacks {
@@ -98,7 +103,8 @@ export interface RakeDbConfig<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<DefaultSchemaConfig>,
 > extends RakeDbBaseConfig<SchemaConfig, CT>,
-    PickBasePath {
+    PickBasePath,
+    PickTransactionSetting {
   columnTypes: CT;
   dbScript: string;
   recurrentPath: string;
@@ -358,6 +364,7 @@ export const processRakeDbConfig = <
   CT,
 >(
   config: InputRakeDbConfig<SchemaConfig, CT>,
+  args?: string[],
 ): RakeDbConfig<SchemaConfig, CT> => {
   const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<
     SchemaConfig,
@@ -398,6 +405,18 @@ export const processRakeDbConfig = <
 
   if (config.migrationId === 'serial') {
     result.migrationId = { serial: 4 };
+  }
+
+  const transaction = getCliParam(args, 'transaction');
+  if (transaction) {
+    if (transaction !== 'single' && transaction !== 'per-migration') {
+      throw new Error(
+        `Unsupported transaction param ${transaction}, expected single or per-migration`,
+      );
+    }
+    result.transaction = transaction;
+  } else if (!result.transaction) {
+    result.transaction = 'single';
   }
 
   return result as RakeDbConfig<SchemaConfig, CT>;

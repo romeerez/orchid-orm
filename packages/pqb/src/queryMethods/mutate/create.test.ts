@@ -1583,6 +1583,23 @@ describe('create functions', () => {
           ['name', 'password', 'default'],
         );
       });
+
+      it('should not merge runtime default columns', async () => {
+        const q = RuntimeDefaultTable.insert({ password: 'password' })
+          .onConflict('id')
+          .merge();
+
+        expectSql(
+          q.toSQL(),
+          `
+            INSERT INTO "user"("password", "name")
+            VALUES ($1, $2)
+            ON CONFLICT ("id")
+            DO UPDATE SET "password" = excluded."password"
+          `,
+          ['password', 'runtime text'],
+        );
+      });
     });
   });
 });

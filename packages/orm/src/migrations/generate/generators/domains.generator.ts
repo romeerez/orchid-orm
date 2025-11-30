@@ -21,7 +21,7 @@ import {
   compareSqlExpressions,
   TableExpression,
 } from './generators.utils';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
 
 interface ComparableDomainCompare
   extends Omit<DbStructure.Domain, 'schemaName' | 'name'> {
@@ -53,6 +53,7 @@ export const processDomains = async (
     currentSchema,
     internal: { generatorIgnore },
   }: ComposeMigrationParams,
+  pendingDbTypes: PendingDbTypes,
 ) => {
   const codeDomains: ComparableDomain[] = [];
   if (domains) {
@@ -155,6 +156,7 @@ export const processDomains = async (
           toSchema: first.schemaName,
           to: first.name,
         });
+        pendingDbTypes.add(first.schemaName, first.name);
       }
 
       codeDomains.splice(i, 1);
@@ -166,6 +168,7 @@ export const processDomains = async (
   for (const codeDomain of codeDomains) {
     if (!holdCodeDomains.has(codeDomain)) {
       ast.push(createAst(codeDomain));
+      pendingDbTypes.add(codeDomain.schemaName, codeDomain.name);
     }
   }
 
@@ -175,6 +178,7 @@ export const processDomains = async (
     if (holdCodeDomains.size) {
       for (const codeDomain of holdCodeDomains.keys()) {
         ast.push(createAst(codeDomain));
+        pendingDbTypes.add(codeDomain.schemaName, codeDomain.name);
       }
     }
   }

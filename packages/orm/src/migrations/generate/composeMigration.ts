@@ -22,6 +22,19 @@ export interface ComposeMigrationParams {
   verifying?: boolean;
 }
 
+/**
+ * This is needed to compare SQLs of table expressions.
+ * Need to exclude table columns of pending types, such as enums or domains,
+ * that aren't created yet from the SQL comparison.
+ * Otherwise, the comparison fails because of the unknown types.
+ */
+export class PendingDbTypes {
+  set = new Set<string>();
+  add(schemaName: string | undefined = 'public', name: string) {
+    this.set.add(`"${schemaName}"."${name}"`);
+  }
+}
+
 export const composeMigration = async (
   adapter: AdapterBase,
   config: AnyRakeDbConfig,
@@ -35,9 +48,28 @@ export const composeMigration = async (
 
   await processSchemas(ast, dbStructure, params);
   processExtensions(ast, dbStructure, params);
-  await processDomains(ast, adapter, domainsMap, dbStructure, params);
-  await processEnums(ast, dbStructure, params);
-  await processTables(ast, domainsMap, adapter, dbStructure, config, params);
+
+  const pendingDbTypes = new PendingDbTypes();
+
+  await processDomains(
+    ast,
+    adapter,
+    domainsMap,
+    dbStructure,
+    params,
+    pendingDbTypes,
+  );
+  await processEnums(ast, dbStructure, params, pendingDbTypes);
+
+  await processTables(
+    ast,
+    domainsMap,
+    adapter,
+    dbStructure,
+    config,
+    params,
+    pendingDbTypes,
+  );
 
   return astToMigration(currentSchema, config, ast);
 };

@@ -23,6 +23,7 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   migrationsPath: string;
 } = {
   ...migrationConfigDefaults,
+  transaction: 'single',
   basePath: __dirname,
   dbScript: 'dbScript.ts',
   columnTypes: makeColumnTypes(defaultSchemaConfig),

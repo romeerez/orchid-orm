@@ -1,5 +1,36 @@
 # rake-db
 
+## 2.27.21
+
+### Patch Changes
+
+- b024695: Fix migration gen handling of array types in SQLs (#590)
+
+## 2.27.20
+
+### Patch Changes
+
+- Updated dependencies [449985e]
+- Updated dependencies [4428542]
+- Updated dependencies [5376a01]
+  - pqb@0.57.5
+
+## 2.27.19
+
+### Patch Changes
+
+- 4163993: Support transaction: 'per-migration' config (#594)
+- Updated dependencies [95c535e]
+- Updated dependencies [8e59669]
+  - pqb@0.57.4
+
+## 2.27.18
+
+### Patch Changes
+
+- Updated dependencies [66ca9fb]
+  - pqb@0.57.3
+
 ## 2.27.17
 
 ### Patch Changes
