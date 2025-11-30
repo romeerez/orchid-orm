@@ -86,32 +86,29 @@ describe('indexes', () => {
     assert.migration();
   });
 
-  it('should be able to remove enum values when there is a primary key referencing it', async () => {
+  it('should properly quote an array type, not detect any changes', async () => {
     await arrange({
       async prepareDb(db) {
-        await db.createEnum('status', ['active', 'inactive']);
-
-        await db.createTable('table', (t) => ({
-          status: t.enum('status').primaryKey(),
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t
+            .array(t.integer())
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
         }));
       },
       tables: [
         table((t) => ({
-          status: t.enum('status', ['active']).primaryKey(),
+          colUmn: t
+            .array(t.integer())
+            .nullable()
+            .index({ where: `"col_umn" IS NOT NULL` }),
         })),
       ],
     });
 
     await act();
 
-    assert.migration(`import { change } from '../src/migrations/dbScript';
-
-change(async (db) => {
-  await db.dropEnumValues('public.status', ['inactive']);
-});
-`);
-
-    assert.report(`${red('- remove values from enum')} status: inactive`);
+    assert.migration();
   });
 
   it('should not be dropped in ignored tables', async () => {

@@ -503,19 +503,23 @@ const astEncoders: {
     addCode(code, ');');
     return code;
   },
-  enum(ast) {
+  enum(ast, _, currentSchema) {
     return `await db.${
       ast.action === 'create' ? 'createEnum' : 'dropEnum'
-    }(${quoteSchemaTable(ast)}, [${ast.values.map(singleQuote).join(', ')}]);`;
+    }(${quoteSchemaTable(ast, currentSchema)}, [${ast.values
+      .map(singleQuote)
+      .join(', ')}]);`;
   },
-  enumValues(ast) {
+  enumValues(ast, _, currentSchema) {
     return `await db.${ast.action}EnumValues(${quoteSchemaTable(
       ast,
+      currentSchema,
     )}, [${ast.values.map(singleQuote).join(', ')}]);`;
   },
-  renameEnumValues(ast, config) {
+  renameEnumValues(ast, config, currentSchema) {
     return `await db.renameEnumValues(${quoteSchemaTable(
       ast,
+      currentSchema,
     )}, { ${Object.entries(ast.values)
       .map(
         ([from, to]) =>
@@ -523,9 +527,10 @@ const astEncoders: {
       )
       .join(', ')} });`;
   },
-  changeEnumValues(ast) {
+  changeEnumValues(ast, _, currentSchema) {
     return `await db.changeEnumValues(${quoteSchemaTable(
       ast,
+      currentSchema,
     )}, [${ast.fromValues.map(singleQuote).join(', ')}], [${ast.toValues
       .map(singleQuote)
       .join(', ')}]);`;

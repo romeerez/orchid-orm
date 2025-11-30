@@ -90,18 +90,24 @@ export const quoteCustomType = (s: string) => {
   return schema ? '"' + schema + '".' + type : type;
 };
 
-export const quoteSchemaTable = (arg: { schema?: string; name: string }) => {
-  return singleQuote(concatSchemaAndName(arg));
+export const quoteSchemaTable = (
+  arg: { schema?: string; name: string },
+  excludeCurrentSchema?: string,
+) => {
+  return singleQuote(concatSchemaAndName(arg, excludeCurrentSchema));
 };
 
-export const concatSchemaAndName = ({
-  schema,
-  name,
-}: {
-  schema?: string;
-  name: string;
-}) => {
-  return schema ? `${schema}.${name}` : name;
+export const concatSchemaAndName = (
+  {
+    schema,
+    name,
+  }: {
+    schema?: string;
+    name: string;
+  },
+  excludeCurrentSchema?: string,
+) => {
+  return schema && schema !== excludeCurrentSchema ? `${schema}.${name}` : name;
 };
 
 export const makePopulateEnumQuery = (

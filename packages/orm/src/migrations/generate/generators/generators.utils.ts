@@ -22,54 +22,61 @@ export const compareSqlExpressions = async (
   if (!tableExpressions.length) return;
 
   let id = 1;
-  await Promise.all(
-    tableExpressions.map(async ({ source, compare, handle }) => {
-      const viewName = `orchidTmpView${id++}`;
-      const values: unknown[] = [];
+  for (const { source, compare, handle } of tableExpressions) {
+    const viewName = `orchidTmpView${id++}`;
+    const values: unknown[] = [];
 
-      // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
-      // that's why SQLs are combined into a single query.
-      const combinedQueries = [
-        `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
-          .map(
-            ({ inDb, inCode }, i): string =>
-              `${inDb} AS "*inDb-${i}*", ${inCode
-                .map(
-                  (s, j) =>
-                    `(${
-                      typeof s === 'string' ? s : s.toSQL({ values })
-                    }) "*inCode-${i}-${j}*"`,
-                )
-                .join(', ')}`,
-          )
-          .join(', ')} FROM ${source})`,
-        `SELECT pg_get_viewdef('${viewName}') v`,
-        `DROP VIEW ${viewName}`,
-      ].join('; ');
+    // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
+    // that's why SQLs are combined into a single query.
+    const combinedQueries = [
+      `SAVEPOINT "${viewName}"`,
+      `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
+        .map(
+          ({ inDb, inCode }, i): string =>
+            `${inDb} AS "*inDb-${i}*", ${inCode
+              .map(
+                (s, j) =>
+                  `(${
+                    typeof s === 'string' ? s : s.toSQL({ values })
+                  }) "*inCode-${i}-${j}*"`,
+              )
+              .join(', ')}`,
+        )
+        .join(', ')} FROM ${source})`,
+      `SELECT pg_get_viewdef('${viewName}') v`,
+      `DROP VIEW ${viewName}`,
+      `RELEASE SAVEPOINT "${viewName}"`,
+    ].join('; ');
 
-      const result = await adapter.query(combinedQueries, values).then(
-        (res) => (res as unknown as QueryResult[])[1],
-        (err) => {
-          // ignore the "type ... does not exist" because the type may be added in the same migration,
-          // but throw on other errors
-          if (err.code !== '42704') {
-            throw err;
-          }
-        },
-      );
+    const result = await adapter.query(combinedQueries, values).then(
+      (res) => {
+        const results = res as unknown as QueryResult[];
+        // postgres-js ignores non-returning queries and has length 2,
+        // node-postgres gives a result for every query.
+        return results.length === 2 ? results[1] : results[2];
+      },
+      async (err) => {
+        await adapter.query(`ROLLBACK TO SAVEPOINT "${viewName}"`);
 
-      if (!result) {
-        handle();
-        return;
-      }
+        // ignore the "type ... does not exist" because the type may be added in the same migration,
+        // but throw on other errors
+        if (err.code !== '42704') {
+          throw err;
+        }
+      },
+    );
 
-      const match = compareSqlExpressionResult(
-        result.rows[0].v,
-        compare[0].inCode,
-      );
-      handle(match);
-    }),
-  );
+    if (!result) {
+      handle();
+      return;
+    }
+
+    const match = compareSqlExpressionResult(
+      result.rows[0].v,
+      compare[0].inCode,
+    );
+    handle(match);
+  }
 };
 
 export const compareSqlExpressionResult = (

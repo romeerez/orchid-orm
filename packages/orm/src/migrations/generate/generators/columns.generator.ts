@@ -566,7 +566,7 @@ export const getColumnDbType = (
     const [schema = currentSchema, name] = getSchemaAndTableFromName(
       column.enumName,
     );
-    return (column.enumName = `${schema}.${name}`);
+    return `${schema}.${name}`;
   } else if (column instanceof ArrayColumn) {
     const { item } = column.data;
     let type = item instanceof EnumColumn ? item.enumName : item.dataType;
@@ -576,7 +576,7 @@ export const getColumnDbType = (
       : type;
 
     return type + '[]'.repeat(column.data.arrayDims);
-  } else {
+  } else if (column.data.isOfCustomType) {
     let type = column.dataType;
 
     const i = type.indexOf('(');
@@ -584,22 +584,10 @@ export const getColumnDbType = (
       type = type.slice(0, i);
     }
 
-    return column.data.isOfCustomType
-      ? type.includes('.')
-        ? type
-        : currentSchema + '.' + type
-      : type;
+    return type.includes('.') ? type : currentSchema + '.' + type;
+  } else {
+    return column.dataType;
   }
-};
-
-export const getColumnDbTypeQuoted = (
-  column: ColumnTypeBase,
-  currentSchema: string,
-) => {
-  const [schema, type] = getSchemaAndTableFromName(
-    getColumnDbType(column, currentSchema),
-  );
-  return schema ? `"${schema}"."${type}"` : `"${type}"`;
 };
 
 const renameColumn = (columns: string[], from: string, to: string) => {

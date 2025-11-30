@@ -5,6 +5,9 @@ import {
   VirtualColumn,
   DbStructureDomainsMap,
   AdapterBase,
+  ColumnTypeBase,
+  EnumColumn,
+  ArrayColumn,
 } from 'pqb';
 import {
   DbStructure,
@@ -25,11 +28,7 @@ import {
 } from './generators.utils';
 import { processPrimaryKey } from './primaryKey.generator';
 import { processIndexesAndExcludes } from './indexesAndExcludes.generator';
-import {
-  getColumnDbTypeQuoted,
-  processColumns,
-  TypeCastsCache,
-} from './columns.generator';
+import { processColumns, TypeCastsCache } from './columns.generator';
 import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
@@ -292,7 +291,7 @@ const applyChangeTables = async (
         if (!column.dataType) continue;
 
         const name = column.data.name ?? key;
-        const type = getColumnDbTypeQuoted(column, currentSchema);
+        const type = getColumnDbTypeForComparison(column, currentSchema);
         if (!pendingDbTypes.set.has(type)) {
           names.push(name);
           types.push(type);
@@ -310,6 +309,41 @@ const applyChangeTables = async (
         ...compareExpressions.map((x) => ({ ...x, source })),
       );
     }
+  }
+};
+
+const getColumnDbTypeForComparison = (
+  column: ColumnTypeBase,
+  currentSchema: string,
+): string => {
+  if (column instanceof EnumColumn) {
+    // text supports all the same operations as enums, texts can be type-casted to enum if needed
+    return 'text';
+  }
+
+  if (column instanceof ArrayColumn) {
+    return (
+      getColumnDbTypeForComparison(column.data.item, currentSchema) +
+      '[]'.repeat(column.data.arrayDims)
+    );
+  }
+
+  let type = column.dataType;
+
+  const i = type.indexOf('(');
+  let append = '';
+  if (i !== -1) {
+    type = type.slice(0, i);
+    append = type.slice(i);
+  }
+
+  const j = type.indexOf('.');
+  if (j === -1) {
+    let result = `"${type}"${append}`;
+    if (column.data.isOfCustomType) result = `"${currentSchema}".${result}`;
+    return result;
+  } else {
+    return `"${type.slice(j)}"."${type.slice(0, j)}"${append}`;
   }
 };
 

@@ -377,7 +377,7 @@ change(async (db) => {
       noPrimaryKey: true,
     },
     (t) => ({
-      column: t.enum('public.mood'),
+      column: t.enum('mood'),
     }),
   );
 });

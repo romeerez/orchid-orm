@@ -180,7 +180,7 @@ export class OneTable extends BaseTable {
         name: 'two_idx',
       }),
       snakeCase: t.name('snake_case').boolean(),
-      numbers: t.enum('public.numbers', ['one', 'two']),
+      numbers: t.enum('numbers', ['one', 'two']),
       domain: t.domain('public.domain').as(t.integer().nullable()),
     }),
     (t) => [
