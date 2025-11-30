@@ -305,7 +305,7 @@ describe('upsert', () => {
     assertType<typeof res, void>();
     expect(res).toBe(undefined);
 
-    expect(beforeUpdate).toHaveBeenCalledTimes(2);
+    expect(beforeUpdate).toHaveBeenCalledTimes(1);
     expect(afterUpdate).toHaveBeenCalledWith(
       [
         {
@@ -324,8 +324,7 @@ describe('upsert', () => {
       ],
       expect.any(Object),
     );
-    // TODO
-    // expect(beforeCreate).toHaveBeenCalledTimes(1);
+    expect(beforeCreate).toHaveBeenCalledTimes(1);
     expect(afterCreate).not.toHaveBeenCalled();
     expect(afterCreateCommit).not.toHaveBeenCalled();
   });
@@ -358,7 +357,7 @@ describe('upsert', () => {
     assertType<typeof res, { id: number }>();
     expect(res).toEqual({ id: expect.any(Number) });
 
-    expect(beforeUpdate).toHaveBeenCalledTimes(2);
+    expect(beforeUpdate).toHaveBeenCalledTimes(1);
     expect(afterUpdate).toHaveBeenCalledWith(
       [
         {
@@ -377,8 +376,7 @@ describe('upsert', () => {
       ],
       expect.any(Object),
     );
-    // TODO
-    // expect(beforeCreate).toHaveBeenCalledTimes(1);
+    expect(beforeCreate).toHaveBeenCalledTimes(1);
     expect(afterCreate).not.toHaveBeenCalled();
     expect(afterCreateCommit).not.toHaveBeenCalled();
   });
@@ -406,7 +404,7 @@ describe('upsert', () => {
     assertType<typeof res, void>();
     expect(res).toBe(undefined);
 
-    expect(beforeUpdate).toHaveBeenCalledTimes(2);
+    expect(beforeUpdate).toHaveBeenCalledTimes(1);
     expect(afterUpdate).not.toHaveBeenCalled();
     expect(afterUpdateCommit).not.toHaveBeenCalled();
     // TODO

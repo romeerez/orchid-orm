@@ -14,6 +14,7 @@ import { getShapeFromSelect } from '../../queryMethods/select/select';
 import { _queryUnion } from '../../queryMethods/union';
 import { CteItem, CteOptions } from './cte.sql';
 import { Column } from '../../columns';
+import { prepareSubQueryForSql } from '../to-sql/sub-query-for-sql';
 
 // `with` method options
 // - `columns`: true to get all columns from the query, or array of column names
@@ -240,7 +241,11 @@ export class CteQuery {
       };
     }
 
-    _addCte(q, { n: name, o: options as CteOptions, q: query });
+    _addCte(q, {
+      n: name,
+      o: options as CteOptions,
+      q: prepareSubQueryForSql(q, query),
+    });
 
     const shape = getShapeFromSelect(query, true);
     return setQueryObjectValueImmutable(q, 'withShapes', name, {
@@ -390,7 +395,11 @@ export class CteQuery {
       };
     }
 
-    _addCte(q, { n: name, o: options as CteOptions, q: query });
+    _addCte(q, {
+      n: name,
+      o: options as CteOptions,
+      q: prepareSubQueryForSql(q, query),
+    });
 
     return setQueryObjectValueImmutable(q, 'withShapes', name, withConfig);
   }

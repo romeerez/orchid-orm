@@ -14,13 +14,8 @@ import {
   SelectableOrExpression,
   SelectableOrExpressions,
 } from '../common/utils';
-import {
-  OrderTsQueryConfig,
-  SortDir,
-  toSQL,
-  ToSQLOptions,
-  ToSQLQuery,
-} from '../sql';
+import { ToSQLQuery } from '../sql/to-sql';
+import { OrderTsQueryConfig, SortDir } from '../sql/types';
 import {
   _clone,
   _queryAll,
@@ -111,6 +106,7 @@ import { _chain } from './chain';
 import { QueryOrCreate } from './mutate/orCreate';
 import { WithDataItems } from '../query/cte/cte.sql';
 import { Column } from '../columns';
+import { toSql } from '../sql';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -531,8 +527,8 @@ export class QueryMethods<ColumnTypes> {
    * };
    * ```
    */
-  toSQL(this: ToSQLQuery, options?: ToSQLOptions): Sql {
-    return toSQL(this, options);
+  toSQL(this: ToSQLQuery): Sql {
+    return toSql(this, this.q.type);
   }
 
   /**

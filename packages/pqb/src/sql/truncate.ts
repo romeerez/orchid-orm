@@ -1,5 +1,5 @@
 import { quoteSchemaAndTable } from './common';
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx } from './to-sql';
 import { QueryData } from './data';
 
 export const pushTruncateSql = (

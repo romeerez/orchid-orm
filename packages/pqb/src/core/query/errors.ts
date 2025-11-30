@@ -1,4 +1,4 @@
-import { QueryBase } from './query';
+import { IsQuery, QueryBase } from './query';
 import { queryColumnNameToKey } from './column-name-to-key';
 import { RecordUnknown } from '../utils';
 import { PickQueryShape } from './pick-query-types';
@@ -17,9 +17,9 @@ export class NotFoundError extends OrchidOrmError {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
   readonly #query: QueryBase;
 
-  constructor(query: QueryBase, message = 'Record is not found') {
+  constructor(query: IsQuery, message = 'Record is not found') {
     super(message);
-    this.#query = query;
+    this.#query = query as QueryBase;
   }
 
   get query() {
@@ -31,9 +31,9 @@ export class OrchidOrmInternalError extends Error {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
   readonly #query: QueryBase;
 
-  constructor(query: QueryBase, message?: string, public data?: RecordUnknown) {
+  constructor(query: IsQuery, message?: string, public data?: RecordUnknown) {
     super(message);
-    this.#query = query;
+    this.#query = query as QueryBase;
   }
 
   get query() {
@@ -123,13 +123,13 @@ export abstract class QueryError<
 }
 
 export class MoreThanOneRowError extends OrchidOrmInternalError {
-  constructor(query: QueryBase, message?: string) {
+  constructor(query: IsQuery, message?: string) {
     super(query, message);
   }
 }
 
 export class UnhandledTypeError extends OrchidOrmInternalError {
-  constructor(query: QueryBase, value: never) {
+  constructor(query: IsQuery, value: never) {
     super(query, `Unhandled type: ${JSON.stringify(value)} received`);
   }
 }

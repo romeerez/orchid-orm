@@ -1,68 +1,72 @@
-import { Query, QueryInternal, queryTypeWithLimitOne } from '../query/query';
-import { columnToSql, makeRowToJson } from './common';
-import { JoinItem } from './types';
-import { pushDistinctSql } from './distinct';
-import { pushSelectSql } from './select';
-import { windowToSql } from './window';
-import { pushJoinSql } from './join';
-import { pushWhereStatementSql } from './where';
-import { pushHavingSql } from './having';
-import { pushFromAndAs } from './fromAndAs';
-import { makeInsertSql } from './insert';
-import { pushUpdateSql } from './update';
-import { pushDeleteSql } from './delete';
-import { pushTruncateSql } from './truncate';
-import { pushColumnInfoSql } from './columnInfo';
-import { pushOrderBySql } from './orderBy';
+import { Query, QueryInternal } from '../query/query';
 import { QueryData } from './data';
-import { pushCopySql } from './copy';
 import {
   addValue,
   DelayedRelationSelect,
-  isExpression,
-  Sql,
   HasCteHooks,
-  CteTableHook,
+  isExpression,
   MoreThanOneRowError,
+  Sql,
+  TableHook,
 } from '../core';
 import { QueryBuilder } from '../query/db';
-import { getSqlText } from './utils';
 import {
   addWithToSql,
   ctesToSql,
   moveMutativeQueryToCte,
   TopCTE,
 } from '../query/cte/cte.sql';
-import { getQueryAs } from '../common/utils';
-import { _clone } from '../query';
-import { _queryWhereNotExists } from '../queryMethods';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+import { pushTruncateSql } from './truncate';
+import { pushColumnInfoSql } from './columnInfo';
+import { makeInsertSql } from './insert';
+import { pushUpdateSql } from './update';
+import { pushDeleteSql } from './delete';
+import { pushCopySql } from './copy';
 import { RunAfterQuery } from '../core/query/query';
-import { Column } from '../columns';
+import { _clone } from '../query';
+import { moveMutativeQueryToCteBase } from '../query/cte/move-mutative-query-to-cte-base.sql';
+import { _queryWhereNotExists } from '../queryMethods';
+import { pushDistinctSql } from './distinct';
+import { setSqlCtxSelectList } from './select';
+import { pushFromAndAs } from './fromAndAs';
+import { pushJoinSql } from './join';
+import { JoinItem } from './types';
+import { pushWhereStatementSql } from './where';
+import { columnToSql, makeRowToJson } from './common';
+import { pushHavingSql } from './having';
+import { windowToSql } from './window';
+import { pushOrderBySql } from './orderBy';
+import { pushLimitSQL } from './limit';
+import { addTableHook } from '../query/hooks/hooks.sql';
 
-interface ToSqlOptionsInternal extends ToSQLOptions, HasCteHooks {
+interface ToSqlOptionsInternal extends HasCteHooks {
+  values?: unknown[];
+  hasNonSelect?: boolean;
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
   aliasValue?: true;
   // for insert batching logic: skip a batch check when is inside a WITH subquery
   skipBatchCheck?: true;
   selectedCount?: number;
-  topCTE?: TopCTE;
+  selectList?: string[];
 }
 
-export interface ToSQLCtx extends ToSqlOptionsInternal, ToSQLOptions {
+export interface TopToSqlCtx extends ToSqlOptionsInternal {
+  topCTE?: TopCTE;
+  values: unknown[];
+  tableHook?: TableHook;
+  delayedRelationSelect?: DelayedRelationSelect;
+}
+
+export interface ToSQLCtx extends ToSqlOptionsInternal {
+  topCtx: TopToSqlCtx;
   qb: QueryBuilder;
   q: QueryData;
   sql: string[];
   values: unknown[];
-  delayedRelationSelect?: DelayedRelationSelect;
   selectedCount: number;
-  topCTE?: TopCTE;
   cteSqls?: string[];
-  inCte?: boolean;
-}
-
-export interface ToSQLOptions {
-  values?: unknown[];
-  hasNonSelect?: boolean;
+  cteName?: string;
 }
 
 export interface ToSQLQuery {
@@ -81,86 +85,41 @@ export interface ToSQLQuery {
   shape: Query['shape'];
 }
 
-export const toCteSubSqlText = (
-  options: ToSqlOptionsInternal,
-  q: ToSQLQuery,
-  cteName: string,
-  type: QueryData['type'],
-): string => getSqlText(subToSql(options, q, cteName, type));
-
-export const toSubSqlText = (
-  options: ToSqlOptionsInternal,
-  q: ToSQLQuery,
-  type?: QueryData['type'],
-): string => getSqlText(subToSql(options, q, undefined, type));
-
-const subToSql = (
-  options: ToSqlOptionsInternal,
-  q: ToSQLQuery,
-  cteName?: string,
-  type = q.q.type,
-): Sql => {
-  const sql = queryTypeToSQL(q, type, options, true, !!cteName);
-  if (sql.tableHook && (sql.tableHook.after || sql.tableHook.afterCommit)) {
-    const shape: Column.Shape.Data = {};
-    if (sql.tableHook.select) {
-      for (const key of sql.tableHook.select.keys()) {
-        shape[key] = q.shape[key] as unknown as Column.Pick.Data;
-      }
-    }
-
-    const item: CteTableHook = {
-      table: q.table!,
-      shape,
-      tableHook: sql.tableHook,
-    };
-
-    cteName ??= getQueryAs(q);
-    if (options.cteHooks) {
-      if (sql.tableHook.select) options.cteHooks.hasSelect = true;
-      options.cteHooks.tableHooks[cteName] ??= item;
-    } else {
-      options.cteHooks = {
-        hasSelect: !!sql.tableHook.select,
-        tableHooks: { [cteName]: item },
-      };
-    }
-  }
-  return sql;
-};
-
-export const toSQL = (table: ToSQLQuery, options?: ToSqlOptionsInternal): Sql =>
-  queryTypeToSQL(table, table.q.type, options);
-
-const queryTypeToSQL = (
+export const toSql = (
   table: ToSQLQuery,
   type: QueryData['type'],
-  options?: ToSqlOptionsInternal,
+  topCtx?: TopToSqlCtx,
   isSubSql?: boolean,
-  inCte?: boolean,
+  cteName?: string,
 ): Sql => {
   const query = table.q;
   const sql: string[] = [];
-  const values = options?.values || [];
+  const values = topCtx?.values || [];
   const ctx: ToSQLCtx = {
+    topCtx: topCtx!,
     qb: table.qb,
     q: query,
     sql,
     values,
-    aliasValue: options?.aliasValue,
-    skipBatchCheck: options?.skipBatchCheck,
-    hasNonSelect: options?.hasNonSelect,
-    cteHooks: options?.cteHooks,
+    aliasValue: topCtx?.aliasValue,
+    skipBatchCheck: topCtx?.skipBatchCheck,
+    hasNonSelect: topCtx?.hasNonSelect,
+    cteHooks: topCtx?.cteHooks,
     selectedCount: 0,
-    topCTE: options?.topCTE,
-    inCte,
+    cteName,
   };
 
-  const cteSqls = query.with && ctesToSql(ctx, query.with);
+  if (topCtx) {
+    if (type) topCtx.hasNonSelect = true;
+  } else if (!topCtx) {
+    ctx.topCtx = ctx as TopToSqlCtx;
+  }
+
+  const cteSqls = query.with && ctesToSql(ctx.topCtx, query.with);
 
   let result: Sql;
 
-  let fromQuery: Query | undefined;
+  let fromQuery: SubQueryForSql | undefined;
   if (type && type !== 'upsert') {
     const tableName = table.table ?? query.as;
     if (!tableName) throw new Error(`Table is missing for ${type}`);
@@ -188,6 +147,7 @@ const queryTypeToSQL = (
       }
     }
   } else {
+    let selectSqlPos: number | undefined;
     let runAfterQuery: RunAfterQuery | undefined;
     let skipSelect: boolean | undefined;
     if (type === 'upsert') {
@@ -195,11 +155,11 @@ const queryTypeToSQL = (
         skipSelect = true;
 
         const upsertOrCreate = _clone(table as Query);
-        const { as, makeSql: makeFirstSql } = moveMutativeQueryToCte(
+        const { as, makeSql: makeFirstSql } = moveMutativeQueryToCteBase(
           ctx,
-          upsertOrCreate,
-          query.updateData ? 'u' : 'f',
-          query.updateData ? 'update' : null,
+          upsertOrCreate as unknown as SubQueryForSql,
+          query.upsertUpdate ? 'u' : 'f',
+          query.upsertUpdate && query.updateData ? 'update' : null,
         );
 
         upsertOrCreate.q.and =
@@ -213,17 +173,19 @@ const queryTypeToSQL = (
           [],
         );
 
-        const { makeSql: makeSecondSql } = moveMutativeQueryToCte(
+        const { makeSql: makeSecondSql } = moveMutativeQueryToCteBase(
           ctx,
-          upsertOrCreate,
+          upsertOrCreate as unknown as SubQueryForSql,
           'c',
           'insert',
         );
 
-        sql.push(makeFirstSql(), 'UNION ALL', makeSecondSql());
+        sql.push(makeFirstSql(isSubSql), 'UNION ALL', makeSecondSql(isSubSql));
       } else {
         const second = _clone(table);
         second.q.upsertSecond = true;
+        // let's call before hooks only once for upsert
+        second.q.before = undefined;
         runAfterQuery = (queryResult) => {
           if (queryResult.rowCount) {
             second.q.upsertSecond = undefined;
@@ -244,7 +206,7 @@ const queryTypeToSQL = (
         };
 
         if (query.updateData) {
-          const result = queryTypeToSQL(table, 'update', options, isSubSql);
+          const result = toSql(table, 'update', topCtx, isSubSql);
           if ('text' in result) {
             result.runAfterQuery = runAfterQuery;
           }
@@ -257,15 +219,14 @@ const queryTypeToSQL = (
       (query.as || table.table) && `"${query.as || table.table}"`;
 
     if (query.union) {
-      const firstSql = subToSql(ctx, query.union.b);
-      ctx.delayedRelationSelect = firstSql.delayedRelationSelect;
-      const s = getSqlText(firstSql);
+      const { b } = query.union;
+      const s = moveMutativeQueryToCte(ctx, b);
       sql.push(query.union.p ? s : `(${s})`);
 
       for (const u of query.union.u) {
         const s = isExpression(u.a)
           ? u.a.toSQL(ctx, quotedAs)
-          : toSubSqlText(ctx, u.a);
+          : moveMutativeQueryToCte(ctx, u.a);
         sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
       }
     } else if (!skipSelect) {
@@ -275,8 +236,10 @@ const queryTypeToSQL = (
         pushDistinctSql(ctx, table, query.distinct, quotedAs);
       }
 
+      selectSqlPos = sql.length - 1;
+
       const aliases = query.group ? [] : undefined;
-      pushSelectSql(ctx, table, query, quotedAs, isSubSql, aliases);
+      setSqlCtxSelectList(ctx, table, query, quotedAs, isSubSql, aliases);
 
       fromQuery =
         ((table.table || query.from) &&
@@ -365,19 +328,28 @@ const queryTypeToSQL = (
       if (query.for.mode) sql.push(query.for.mode);
     }
 
+    addTableHook(ctx, table, query.hookSelect && { select: query.hookSelect });
+
+    // compose select in the last moment because NULL for CTE selects
+    // can be added by sub queries added in where or in other places
+    if (selectSqlPos !== undefined && ctx.selectList?.length) {
+      sql[selectSqlPos] += ' ' + ctx.selectList.join(', ');
+    }
+
     result = {
       text: sql.join(' '),
       values,
-      tableHook: query.hookSelect && {
-        select: query.hookSelect,
-      },
-      delayedRelationSelect: ctx.delayedRelationSelect,
       runAfterQuery,
     };
   }
 
-  if (options && (type || ctx.hasNonSelect)) {
-    options.hasNonSelect = true;
+  if (!ctx.cteName) {
+    result.tableHook = ctx.topCtx.tableHook;
+    if (!topCtx) {
+      result.delayedRelationSelect = ctx.topCtx.delayedRelationSelect;
+    }
+  } else if (topCtx) {
+    topCtx.cteHooks = ctx.cteHooks;
   }
 
   if (!isSubSql && ctx.cteHooks && 'text' in result) {
@@ -402,19 +374,5 @@ const queryTypeToSQL = (
 
   if ('text' in result) addWithToSql(ctx, result, cteSqls, isSubSql);
 
-  if (options && ctx.topCTE) {
-    options.topCTE = ctx.topCTE;
-  }
-
   return result;
 };
-
-export function pushLimitSQL(sql: string[], values: unknown[], q: QueryData) {
-  if (!q.returnsOne) {
-    if (queryTypeWithLimitOne[q.returnType as string] && !q.returning) {
-      sql.push(`LIMIT 1`);
-    } else if (q.limit) {
-      sql.push(`LIMIT ${addValue(values, q.limit)}`);
-    }
-  }
-}

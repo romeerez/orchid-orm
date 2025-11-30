@@ -23,6 +23,7 @@ import {
   queryTypeWithLimitOne,
 } from '../../query/query';
 import { InsertQueryDataObjectValues, QueryData } from '../../sql/data';
+import { SubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
 
 export type CreateFromMethodNames =
   | 'createOneFrom'
@@ -124,7 +125,7 @@ const insertFrom = (
  */
 export const getFromSelectColumns = (
   q: CreateSelf,
-  from: CreateSelf,
+  from: SubQueryForSql,
   obj?: {
     columns: string[];
     values: QueryData['values'];
@@ -135,14 +136,14 @@ export const getFromSelectColumns = (
   queryColumnsCount: number;
   values: InsertQueryDataObjectValues;
 } => {
-  if (!many && !queryTypeWithLimitOne[(from as Query).q.returnType as string]) {
+  if (!many && !queryTypeWithLimitOne[from.q.returnType as string]) {
     throw new Error(
       'Cannot create based on a query which returns multiple records',
     );
   }
 
   const queryColumns = new Set<string>();
-  (from as Query).q.select?.forEach((item) => {
+  from.q.select?.forEach((item) => {
     if (typeof item === 'string') {
       const index = item.indexOf('.');
       queryColumns.add(index === -1 ? item : item.slice(index + 1));

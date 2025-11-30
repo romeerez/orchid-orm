@@ -3,6 +3,7 @@ import {
   Expression,
   ExpressionData,
   isExpression,
+  IsQuery,
   PickQueryColumTypes,
   PickQueryMeta,
   PickQueryMetaResultRelationsWindowsColumnTypes,
@@ -11,7 +12,8 @@ import {
   ValExpression,
 } from '../core';
 import { Column } from '../columns/column';
-import { getSqlText, QueryData, ToSQLCtx } from '../sql';
+import { ToSQLCtx } from '../sql/to-sql';
+import { QueryData } from '../sql/data';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {
   Query,
@@ -21,9 +23,15 @@ import {
 import { SelectableOrExpressions } from '../common/utils';
 import { AggregateOptions, makeFnExpression } from '../common/fn';
 import { BooleanQueryColumn } from './aggregate';
-import { Operators, OperatorsBoolean } from '../columns/operators';
+import {
+  Operators,
+  OperatorsBoolean,
+  prepareOpArg,
+} from '../columns/operators';
 import { _clone, getFullColumnTable } from '../query/queryUtils';
 import { UnknownColumn } from '../columns';
+import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<
@@ -80,12 +88,20 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
   declare result: { value: BooleanQueryColumn };
   q: ExpressionData;
 
-  constructor(public args: [OrExpressionArg, ...OrExpressionArg[]]) {
+  constructor(
+    q: IsQuery,
+    public args: [OrExpressionArg, ...OrExpressionArg[]],
+  ) {
     super();
     this.q = { expr: this };
+
+    args.forEach((arg, i) => {
+      const val = prepareOpArg(q, arg);
+      if (val) args[i] = val as never;
+    });
   }
 
-  makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     const res: string[] = [];
     for (const arg of this.args) {
       if (arg) {
@@ -93,7 +109,12 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
           const sql = arg.toSQL(ctx, quotedAs);
           if (sql) res.push(sql);
         } else {
-          res.push(`(${getSqlText((arg as unknown as Query).toSQL(ctx))})`);
+          res.push(
+            `(${moveMutativeQueryToCte(
+              ctx,
+              arg as unknown as SubQueryForSql,
+            )})`,
+          );
         }
       }
     }
@@ -274,6 +295,6 @@ export class ExpressionMethods {
   }
 
   or(...args: [OrExpressionArg, ...OrExpressionArg[]]): OrExpression {
-    return new OrExpression(args);
+    return new OrExpression(this as never, args);
   }
 }

@@ -54,6 +54,7 @@ import {
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { joinQueryChainHOF } from './common/joinQueryChain';
+import { prepareSubQueryForSql } from 'pqb';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -382,7 +383,7 @@ export const makeHasOneMethod = (
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
         const q = (relationQuery as unknown as PickQueryQ).q;
-        q.insertFrom = baseQuery;
+        q.insertFrom = prepareSubQueryForSql(q as never, baseQuery);
         q.values = [];
       };
     },

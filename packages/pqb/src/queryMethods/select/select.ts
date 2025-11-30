@@ -65,6 +65,7 @@ import {
   finalizeNestedHookSelect,
 } from '../../common/query-result-processing';
 import { cloneQueryBaseUnscoped } from '../queryMethods.utils';
+import { prepareSubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
 
 export interface SelectSelf {
   shape: Column.QueryColumns;
@@ -550,10 +551,13 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             let renames: RecordString | undefined;
             for (const column of hookSelect.keys()) {
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              const as = hookSelect!.get(column)!.as;
-              if (as) (renames ??= {})[column] = as;
+              const select = hookSelect!.get(column)!;
 
-              (tempColumns ??= new Set())?.add(as || column);
+              if (select.as) (renames ??= {})[column] = select.as;
+
+              if (select.temp) {
+                (tempColumns ??= new Set())?.add(select.as || column);
+              }
             }
 
             if (renames) {
@@ -695,73 +699,76 @@ export const processSelectArg = <T extends SelectSelf>(
         }
       }
 
-      if (
-        !isExpression(value) &&
-        isRelationQuery(value) &&
-        // `subQuery = 1` case is when callback returns the same query as it gets,
-        // for example `q => q.get('name')`.
-        (value as unknown as Query).q.subQuery !== 1
-      ) {
-        query.q.selectRelation = joinQuery = true;
+      if (!isExpression(value)) {
+        if (
+          isRelationQuery(value) &&
+          // `subQuery = 1` case is when callback returns the same query as it gets,
+          // for example `q => q.get('name')`.
+          (value as unknown as Query).q.subQuery !== 1
+        ) {
+          query.q.selectRelation = joinQuery = true;
 
-        value = value.joinQuery(value, q as unknown as IsQuery);
+          value = value.joinQuery(value, q as unknown as IsQuery);
 
-        let subQuery;
-        const { returnType, innerJoinLateral } = value.q;
-        if (!returnType || returnType === 'all') {
-          subQuery = value.json(false);
+          let subQuery;
+          const { returnType, innerJoinLateral } = value.q;
+          if (!returnType || returnType === 'all') {
+            subQuery = value.json(false);
 
-          // no need to coalesce in case of inner lateral join.
-          if (!innerJoinLateral) {
-            value.q.coalesceValue = emptyArrSQL;
-          }
-        } else if (returnType === 'pluck') {
-          // no select in case of plucking a computed
-          subQuery = value.q.select
-            ? value
-                .wrap(cloneQueryBaseUnscoped(value))
-                .jsonAgg(value.q.select[0])
-            : value.json(false);
-
-          value.q.coalesceValue = emptyArrSQL;
-        } else {
-          if (returnType === 'value' || returnType === 'valueOrThrow') {
-            if (value.q.select) {
-              // todo: investigate what is this for
-              if (typeof value.q.select[0] === 'string') {
-                value.q.select[0] = {
-                  selectAs: { r: value.q.select[0] },
-                };
-              }
-
-              subQuery = value;
-            } else {
-              subQuery = value.json(false);
+            // no need to coalesce in case of inner lateral join.
+            if (!innerJoinLateral) {
+              value.q.coalesceValue = emptyArrSQL;
             }
+          } else if (returnType === 'pluck') {
+            // no select in case of plucking a computed
+            subQuery = value.q.select
+              ? value
+                  .wrap(cloneQueryBaseUnscoped(value))
+                  .jsonAgg(value.q.select[0])
+              : value.json(false);
+
+            value.q.coalesceValue = emptyArrSQL;
           } else {
-            subQuery = value;
+            if (returnType === 'value' || returnType === 'valueOrThrow') {
+              if (value.q.select) {
+                // todo: investigate what is this for
+                if (typeof value.q.select[0] === 'string') {
+                  value.q.select[0] = {
+                    selectAs: { r: value.q.select[0] },
+                  };
+                }
+
+                subQuery = value;
+              } else {
+                subQuery = value.json(false);
+              }
+            } else {
+              subQuery = value;
+            }
+          }
+
+          const as = _joinLateral(
+            q,
+            innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
+            subQuery,
+            key,
+            // no need for `ON p.r IS NOT NULL` check when joining a single record,
+            // `JOIN` will handle it on itself.
+            innerJoinLateral &&
+              returnType !== 'one' &&
+              returnType !== 'oneOrThrow',
+          );
+
+          if (as) {
+            value.q.joinedForSelect = _copyQueryAliasToQuery(
+              value,
+              q as unknown as QueryBase,
+              as,
+            );
           }
         }
 
-        const as = _joinLateral(
-          q,
-          innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
-          subQuery,
-          key,
-          // no need for `ON p.r IS NOT NULL` check when joining a single record,
-          // `JOIN` will handle it on itself.
-          innerJoinLateral &&
-            returnType !== 'one' &&
-            returnType !== 'oneOrThrow',
-        );
-
-        if (as) {
-          value.q.joinedForSelect = _copyQueryAliasToQuery(
-            value,
-            q as unknown as QueryBase,
-            as,
-          );
-        }
+        value = prepareSubQueryForSql(q as never, value);
       }
     }
 

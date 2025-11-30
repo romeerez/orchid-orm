@@ -2,6 +2,7 @@ export * from './columns';
 export * from './sql';
 export * from './sql/rawSql';
 export * from './query';
+export * from './query/to-sql/sub-query-for-sql';
 export * from './queryMethods';
 export * from './quote';
 export * from './common/utils';

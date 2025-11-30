@@ -38,8 +38,10 @@ import {
 } from '../core';
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
-import { Column, ColumnsShape } from '../columns';
+import { Column } from '../columns/column';
+import { ColumnsShape } from '../columns/columns-shape';
 import { CteItem } from '../query/cte/cte.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: Column.Shape.QueryInit;
@@ -83,7 +85,7 @@ export interface QueryScopeData {
   or?: WhereItem[][];
 }
 
-export type QueryDataFromItem = string | Query | Expression;
+export type QueryDataFromItem = string | SubQueryForSql | Expression;
 
 export interface QueryDataJoinTo extends PickQueryTable, PickQueryQ {}
 
@@ -168,6 +170,8 @@ export interface QueryData extends QueryDataBase {
   runtimeComputeds?: ComputedColumns;
   // selected computed columns
   selectedComputeds?: ComputedColumns;
+  // a set for deduplication of hooks added dynamically from the sub queries
+  beforeSet?: Set<QueryBeforeHookInternal>;
   // run functions before any query
   before?: QueryBeforeHookInternal[];
   // run functions after any query
@@ -247,7 +251,7 @@ export interface QueryData extends QueryDataBase {
   having?: HavingItem[];
   window?: WindowItem[];
   union?: {
-    b: Query;
+    b: SubQueryForSql;
     u: UnionItem[];
     // true to not wrap the first union query into parens.
     p?: boolean;
@@ -270,7 +274,7 @@ export interface QueryData extends QueryDataBase {
   /** insert **/
 
   columns: string[];
-  insertFrom?: Query;
+  insertFrom?: SubQueryForSql;
   insertValuesAs?: string;
   queryColumnsCount?: number;
   values: InsertQueryDataObjectValues;

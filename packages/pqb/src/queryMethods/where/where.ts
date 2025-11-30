@@ -16,6 +16,7 @@ import {
   _setSubQueryAliases,
   EmptyObject,
   Expression,
+  isExpression,
   isIterable,
   IsQuery,
   MaybeArray,
@@ -26,6 +27,7 @@ import {
   PickQueryMetaShapeRelationsWithData,
   PickQueryRelations,
   pushQueryValueImmutable,
+  RecordUnknown,
   SQLQueryArgs,
 } from '../../core';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
@@ -36,6 +38,8 @@ import {
   getClonedQueryData,
   resolveSubQueryCallbackV2,
 } from '../../common/utils';
+import { prepareSubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
+import { prepareOpArg } from '../../columns/operators';
 
 /*
 Argument of `where`:
@@ -225,6 +229,38 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       _setSubQueryAliases(qb);
 
       args[i] = resolveSubQueryCallbackV2(qb, arg as never) as never;
+    } else if (arg.constructor === Object) {
+      const copy = ((args as RecordUnknown[])[i] = {
+        ...(arg as RecordUnknown),
+      });
+      for (const key in arg) {
+        const value = arg[key as never] as RecordUnknown;
+        if (typeof value === 'function') {
+          let resolved = (value as (q: unknown) => unknown)(q);
+          if (!isExpression(resolved)) {
+            resolved = prepareSubQueryForSql(
+              q as unknown as Query,
+              resolved as unknown as Query,
+            );
+          }
+          copy[key] = resolved;
+        } else {
+          for (const op in value) {
+            const param = value[op];
+            if (param && typeof param === 'object') {
+              if (Array.isArray(param)) {
+                param.forEach((item, i) => {
+                  const val = prepareOpArg(q, item);
+                  if (val) param[i] = val;
+                });
+              } else {
+                const val = prepareOpArg(q, param);
+                if (val) value[op] = val;
+              }
+            }
+          }
+        }
+      }
     }
   }
 };
@@ -398,6 +434,10 @@ export const _queryWhereIn = <T>(
       return _queryNone(q) as WhereResult<T>;
     }
 
+    if (values instanceof (q as Query).constructor) {
+      values = prepareSubQueryForSql(q as Query, values as Query);
+    }
+
     if (Array.isArray(arg)) {
       item = {
         IN: {
@@ -411,12 +451,18 @@ export const _queryWhereIn = <T>(
   } else {
     item = {} as { [K: string]: { in: Iterable<unknown> } };
     for (const key in arg as { [K: string]: Iterable<unknown> }) {
-      const values = (arg as { [K: string]: Iterable<unknown> })[key];
+      let values = (arg as { [K: string]: Iterable<unknown> })[key];
+
       if (
         ('length' in values && !values.length) ||
         ('size' in values && !values.size)
       ) {
         return _queryNone(q) as WhereResult<T>;
+      }
+
+      if (values instanceof (q as Query).constructor) {
+        // TODO: add a test, not sure if `in` expects a query in this case
+        values = prepareSubQueryForSql(q as Query, values as never) as never;
       }
 
       item[key] = { in: values };

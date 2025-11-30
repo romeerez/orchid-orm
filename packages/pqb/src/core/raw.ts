@@ -1,12 +1,13 @@
 import { addValue, emptyObject, EmptyObject, RecordUnknown } from './utils';
 import { Column } from '../columns/column';
 import { OperatorToSQL } from '../columns/operators';
+import { HasBeforeSet } from '../query/to-sql/sub-query-for-sql';
 
 // The chain array is used to store a sequence of operators and their arguments, one be one.
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
 export type ExpressionChain = (OperatorToSQL | unknown)[];
 
-export interface ExpressionData {
+export interface ExpressionData extends HasBeforeSet {
   chain?: ExpressionChain;
   expr?: Expression;
 }

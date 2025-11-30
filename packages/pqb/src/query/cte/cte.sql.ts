@@ -1,14 +1,13 @@
 import { emptyObject, RecordUnknown, setFreeAlias } from '../../core/utils';
 import { Expression } from '../../core/raw';
-import { Query } from '../query';
-import { toCteSubSqlText, ToSQLCtx, toSubSqlText } from '../../sql/toSQL';
+import { TopToSqlCtx, ToSQLCtx } from '../../sql/to-sql';
 import { QueryData, WithItems } from '../../sql/data';
 import { SingleSql, SingleSqlItem } from '../../core/query/query';
-import { _clone } from '../queryUtils';
-import { getQueryAs } from '../../common/utils';
-import { getShapeFromSelect } from '../../queryMethods/select/select';
-import { SelectItemExpression } from '../../common/select-item-expression';
 import { Column } from '../../columns';
+import { SubQueryForSql } from '../to-sql/sub-query-for-sql';
+import { moveMutativeQueryToCteBase } from './move-mutative-query-to-cte-base.sql';
+import { setMoveMutativeQueryToCte } from '../../columns/operators';
+import { getSqlText, toSql } from '../../sql';
 
 export interface WithDataItem {
   table: string;
@@ -25,7 +24,7 @@ export interface CteItem {
   // options
   o?: CteOptions;
   // query
-  q?: Query;
+  q?: SubQueryForSql;
   // sql
   s?: Expression;
 }
@@ -54,36 +53,46 @@ const newTopCte = (ctx: ToSQLCtx): TopCTE => ({
   append: [],
 });
 
-export const getTopCteSize = (ctx: ToSQLCtx): TopCteSize | undefined =>
-  ctx.topCTE && {
-    prepend: ctx.topCTE.prepend.length,
-    append: ctx.topCTE.append.length,
+export const getTopCteSize = ({
+  topCtx: { topCTE },
+}: ToSQLCtx): TopCteSize | undefined =>
+  topCTE && {
+    prepend: topCTE.prepend.length,
+    append: topCTE.append.length,
   };
 
-export const setTopCteSize = (ctx: ToSQLCtx, size?: TopCteSize) => {
-  if (ctx.topCTE) {
+export const setTopCteSize = ({ topCtx }: ToSQLCtx, size?: TopCteSize) => {
+  if (topCtx.topCTE) {
     if (size) {
-      ctx.topCTE.prepend.length = size.prepend;
-      ctx.topCTE.append.length = size.append;
+      topCtx.topCTE.prepend.length = size.prepend;
+      topCtx.topCTE.append.length = size.append;
     } else {
-      ctx.topCTE = undefined;
+      topCtx.topCTE = undefined;
     }
   }
 };
 
-export const ctesToSql = (ctx: ToSQLCtx, ctes: WithItems): string[] =>
-  ctes?.map((item) => cteToSql(ctx, item));
+export const ctesToSql = (topCtx: TopToSqlCtx, ctes: WithItems): string[] =>
+  ctes?.map((item) => cteToSql(topCtx, item));
 
 export const cteToSql = (
-  ctx: ToSQLCtx,
+  topCtx: TopToSqlCtx,
   item: CteItem,
   type?: QueryData['type'],
 ): string => {
   let inner: string;
   if (item.q) {
-    inner = toCteSubSqlText(ctx, item.q, item.n, type);
+    inner = getSqlText(
+      toSql(
+        item.q,
+        type === undefined ? item.q.q.type : type,
+        topCtx,
+        true,
+        item.n,
+      ),
+    );
   } else {
-    inner = (item.s as Expression).toSQL(ctx, `"${item.n}"`);
+    inner = (item.s as Expression).toSQL(topCtx, `"${item.n}"`);
   }
 
   const o = item.o ?? (emptyObject as CteOptions);
@@ -100,7 +109,7 @@ export const cteToSql = (
 
 export const prependTopCte = (
   ctx: ToSQLCtx,
-  q: Query,
+  q: SubQueryForSql,
   as?: string,
   type?: QueryData['type'],
 ) => addTopCte('prepend', ctx, q, as, type);
@@ -108,21 +117,16 @@ export const prependTopCte = (
 export const addTopCte = (
   key: 'prepend' | 'append',
   ctx: ToSQLCtx,
-  q: Query,
+  q: SubQueryForSql,
   as?: string,
   type?: QueryData['type'],
 ): string => {
-  const topCTE = (ctx.topCTE ??= newTopCte(ctx));
+  const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
 
   as ??= setFreeAlias(topCTE.names, 'q', true);
-  topCTE[key].push(cteToSql(ctx, { n: as, q }, type));
+  // TODO: remove as
+  topCTE[key].push(cteToSql(ctx as TopToSqlCtx, { n: as, q }, type));
   return as;
-};
-
-export const addTopCteSql = (ctx: ToSQLCtx, as: string, sql: string): void => {
-  const topCTE = (ctx.topCTE ??= newTopCte(ctx));
-  topCTE.names[as] = true;
-  topCTE.append.push(sql);
 };
 
 export const addWithToSql = (
@@ -131,11 +135,11 @@ export const addWithToSql = (
   cteSqls?: string[],
   isSubSql?: boolean,
 ): void => {
-  if (cteSqls || (!isSubSql && ctx.topCTE) || ctx.cteSqls) {
+  if (cteSqls || (!isSubSql && ctx.topCtx.topCTE) || ctx.cteSqls) {
     const sqls: string[] = [];
-    if (!isSubSql && ctx.topCTE) sqls.push(...ctx.topCTE.prepend);
+    if (!isSubSql && ctx.topCtx.topCTE) sqls.push(...ctx.topCtx.topCTE.prepend);
     if (cteSqls) sqls.push(...cteSqls);
-    if (!isSubSql && ctx.topCTE) sqls.push(...ctx.topCTE.append);
+    if (!isSubSql && ctx.topCtx.topCTE) sqls.push(...ctx.topCtx.topCTE.append);
     if (ctx.cteSqls) sqls.push(...ctx.cteSqls);
 
     sql.text = 'WITH ' + sqls.join(', ') + ' ' + sql.text;
@@ -151,68 +155,13 @@ export const composeCteSingleSql = (ctx: ToSQLCtx): SingleSqlItem => {
   return result;
 };
 
-export const moveMutativeQueryToCte = (
-  ctx: ToSQLCtx,
-  query: Query,
-  cteName?: string,
-  type = query.q.type,
-): { as: string; makeSql: (isSubSql?: boolean) => string } => {
-  if (!query.q.type) {
-    return {
-      as: getQueryAs(query),
-      makeSql: () => toSubSqlText(ctx, query, type),
-    };
-  }
+export interface MoveMutativeQueryToCte {
+  (ctx: ToSQLCtx, query: SubQueryForSql): string;
+}
 
-  const { returnType } = query.q;
-
-  let valueAs: string | undefined;
-  if (
-    returnType === 'value' ||
-    returnType === 'valueOrThrow' ||
-    returnType === 'pluck'
-  ) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const first = query.q.select![0];
-    if (
-      first instanceof SelectItemExpression &&
-      typeof first.item === 'string'
-    ) {
-      valueAs = first.item;
-    } else {
-      query = _clone(query);
-      query.q.returnType = 'one';
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      query.q.select = [{ selectAs: { value: query.q.select![0] as never } }];
-      valueAs = 'value';
-    }
-  }
-
-  const as = prependTopCte(ctx, query, cteName, type);
-
-  return {
-    as,
-    // need to be called lazily for the upsert case because `ctx.cteHooks?.hasSelect` can change after the first query
-    makeSql(isSubSql) {
-      const list: string[] = [];
-
-      let selectedCount = 0;
-      if (valueAs) {
-        selectedCount = 1;
-        list.push(`"${as}"."${valueAs}"`);
-      } else if (returnType !== 'void') {
-        const shape = getShapeFromSelect(query, true);
-        const keys = Object.keys(shape);
-        selectedCount = keys.length;
-        list.push(...keys.map((key) => `"${as}"."${key}"`));
-      }
-
-      if (!isSubSql && ctx.cteHooks?.hasSelect) {
-        list.push('NULL::json');
-        ctx.selectedCount = selectedCount;
-      }
-
-      return 'SELECT ' + list.join(', ') + ` FROM "${as}"`;
-    },
-  };
+export const moveMutativeQueryToCte: MoveMutativeQueryToCte = (ctx, query) => {
+  const { makeSql } = moveMutativeQueryToCteBase(ctx, query);
+  return makeSql(true);
 };
+
+setMoveMutativeQueryToCte(moveMutativeQueryToCte);

@@ -12,7 +12,6 @@ import {
   RelationConfigBase,
   setObjectValueImmutable,
 } from '../../core';
-import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select/select';
 import { _clone, throwIfJoinLateral } from '../../query/queryUtils';
 import {
@@ -30,6 +29,8 @@ import { addColumnParserToQuery } from '../../columns/column.utils';
 import { getSqlText } from '../../sql/utils';
 import { JoinItemArgs, SelectItem } from '../../sql/types';
 import { Column } from '../../columns/column';
+import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
+import { prepareSubQueryForSql } from 'pqb';
 
 export const _joinReturningArgs = <
   T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -326,7 +327,8 @@ export const _joinLateral = (
   as?: string,
   innerJoinLateral?: boolean,
 ): string | undefined => {
-  const q = self as unknown as Query;
+  const q = self as Query;
+  arg = prepareSubQueryForSql(self as Query, arg) as never;
 
   arg.q.joinTo = q;
   const joinedAs = getQueryAs(q);

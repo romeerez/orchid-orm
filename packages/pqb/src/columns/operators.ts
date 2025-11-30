@@ -3,8 +3,6 @@ import {
   Query,
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
-import { ToSQLCtx } from '../sql';
-import { getSqlText } from '../sql/utils';
 import {
   addValue,
   emptyArray,
@@ -23,6 +21,26 @@ import {
 import { BooleanQueryColumn } from '../queryMethods';
 import { addColumnParserToQuery } from './column.utils';
 import { Column } from './column';
+import { ToSQLCtx } from '../sql/to-sql';
+import { MoveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { PrepareSubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+import { Db } from '../query';
+
+// workaround for circular dependencies between columns and sql
+let moveMutativeQueryToCte: MoveMutativeQueryToCte;
+export const setMoveMutativeQueryToCte = (fn: MoveMutativeQueryToCte) => {
+  moveMutativeQueryToCte = fn;
+};
+
+let prepareSubQueryForSql: PrepareSubQueryForSql;
+export const setPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
+  prepareSubQueryForSql = fn;
+};
+
+let dbClass: typeof Db;
+export const setDb = (db: typeof Db) => {
+  dbClass = db;
+};
 
 /**
  * Function to turn the operator expression into SQL.
@@ -82,7 +100,9 @@ const make = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: PickQueryQ, value: any) {
       const { q } = this;
-      (q.chain ??= []).push(_op, value);
+
+      const val = prepareOpArg(this, value);
+      (q.chain ??= []).push(_op, val || value);
 
       // parser might be set by a previous type, but is not needed for boolean
       if (q.parsers?.[getValueKey]) {
@@ -109,6 +129,12 @@ const makeVarArg = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: PickQueryQ, ...args: any[]) {
       const { q } = this;
+
+      args.forEach((arg, i) => {
+        const val = prepareOpArg(this, arg);
+        if (val) args[i] = val;
+      });
+
       (q.chain ??= []).push(_op, args);
 
       // parser might be set by a previous type, but is not needed for boolean
@@ -124,6 +150,12 @@ const makeVarArg = (
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as never;
+};
+
+export const prepareOpArg = (q: unknown, arg: unknown) => {
+  return arg instanceof dbClass
+    ? prepareSubQueryForSql(q as Query, arg as Query)
+    : undefined;
 };
 
 // Handles array, expression object, query object to insert into sql.
@@ -146,7 +178,7 @@ const quoteValue = (
     }
 
     if ('toSQL' in arg) {
-      return `(${getSqlText((arg as Query).toSQL(ctx))})`;
+      return `(${moveMutativeQueryToCte(ctx, arg as never)})`;
     }
 
     if (!(arg instanceof Date) && !Array.isArray(arg)) {
@@ -173,8 +205,9 @@ const quoteLikeValue = (
     }
 
     if ('toSQL' in arg) {
-      return `replace(replace((${getSqlText(
-        (arg as Query).toSQL(ctx),
+      return `replace(replace((${moveMutativeQueryToCte(
+        ctx,
+        arg as never,
       )}), '%', '\\\\%'), '_', '\\\\_')`;
     }
   }
@@ -577,7 +610,7 @@ const quoteJsonValue = (
     }
 
     if ('toSQL' in arg) {
-      return `to_jsonb((${getSqlText((arg as Query).toSQL(ctx))}))`;
+      return `to_jsonb((${moveMutativeQueryToCte(ctx, arg as never)}))`;
     }
   }
 
@@ -595,7 +628,7 @@ const serializeJsonValue = (
     }
 
     if ('toSQL' in arg) {
-      return `to_jsonb((${getSqlText((arg as Query).toSQL(ctx))}))`;
+      return `to_jsonb((${moveMutativeQueryToCte(ctx, arg as never)}))`;
     }
   }
 

@@ -27,7 +27,7 @@ import {
   QueryResult,
   OrchidOrmInternalError,
 } from '../../core';
-import { resolveSubQueryCallbackV2 } from '../../common/utils';
+import { joinSubQuery, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { JoinArgs, JoinFirstArg, JoinResultFromArgs } from '../join/join';
 import { _joinReturningArgs } from '../join/_join';
 import { _queryNone } from '../none';
@@ -228,7 +228,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
           );
         }
 
-        set[key] = value;
+        set[key] = joinSubQuery(query, value as Query);
       }
 
       if (value !== null && value !== undefined && !isExpression(value)) {

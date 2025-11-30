@@ -7,7 +7,6 @@ import {
   SimpleJoinItemNonSubQueryArgs,
   QueryData,
 } from '../../sql';
-import { getIsJoinSubQuery } from '../../sql/join';
 import {
   IsQuery,
   PickQueryRelationQueries,
@@ -18,6 +17,8 @@ import {
 import { _clone, pushQueryArrayImmutable } from '../../query/queryUtils';
 import { ColumnsShape } from '../../columns/columns-shape';
 import { Column } from '../../columns/column';
+import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
+import { prepareSubQueryForSql } from 'pqb';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -84,19 +85,22 @@ export const processJoinArgs = (
         [(joinToQ.as || joinTo.table) as string]: joinTo.shape,
       } as JoinedShapes;
 
-      const r = args[0](
-        makeJoinQueryBuilder(
-          j,
-          j.q.joinedShapes
-            ? {
-                ...j.q.joinedShapes,
-                ...joinedShapes,
-              }
-            : joinedShapes,
-          joinTo,
-          shape,
-        ),
-      ) as Query;
+      const r = prepareSubQueryForSql(
+        joinTo,
+        args[0](
+          makeJoinQueryBuilder(
+            j,
+            j.q.joinedShapes
+              ? {
+                  ...j.q.joinedShapes,
+                  ...joinedShapes,
+                }
+              : joinedShapes,
+            joinTo,
+            shape,
+          ),
+        ) as Query,
+      );
 
       return {
         w: first,
@@ -175,19 +179,21 @@ export const preprocessJoinArg = (
   q: PickQueryRelations,
   arg: JoinFirstArg<never>,
 ) => {
-  if (typeof arg !== 'function') return arg;
+  if (typeof arg === 'function') {
+    arg = arg(
+      (q as unknown as PickQueryRelationQueries).relationQueries as never,
+    );
 
-  arg = arg(
-    (q as unknown as PickQueryRelationQueries).relationQueries as never,
-  );
+    (
+      arg as unknown as { joinQueryAfterCallback: unknown }
+    ).joinQueryAfterCallback = (
+      arg as unknown as { joinQuery: unknown }
+    ).joinQuery;
+  }
 
-  (
-    arg as unknown as { joinQueryAfterCallback: unknown }
-  ).joinQueryAfterCallback = (
-    arg as unknown as { joinQuery: unknown }
-  ).joinQuery;
-
-  return arg;
+  return typeof arg === 'object'
+    ? prepareSubQueryForSql(q as Query, arg as Query)
+    : arg;
 };
 
 /**

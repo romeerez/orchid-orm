@@ -1,6 +1,6 @@
 import { SelectableOrExpression } from '../common/utils';
 import { PickQueryDataShapeAndJoinedShapes, QueryData } from './data';
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx } from './to-sql';
 import {
   _getQueryAliasOrName,
   ColumnsParsers,

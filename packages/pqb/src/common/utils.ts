@@ -9,6 +9,10 @@ import {
 import { _clone } from '../query/queryUtils';
 import { _chain } from '../queryMethods/chain';
 import { Column } from '../columns';
+import {
+  prepareSubQueryForSql,
+  SubQueryForSql,
+} from '../query/to-sql/sub-query-for-sql';
 
 export type SelectableOrExpression<
   T extends PickQueryMeta = PickQueryMeta,
@@ -98,5 +102,8 @@ export const resolveSubQueryCallbackV2 = (
  * @param q - main query object
  * @param sub - sub-query query object
  */
-export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): Query =>
-  (isRelationQuery(sub) ? sub.joinQuery(sub, q) : sub) as never;
+export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): SubQueryForSql =>
+  prepareSubQueryForSql(
+    q as Query,
+    (isRelationQuery(sub) ? sub.joinQuery(sub, q) : sub) as never,
+  );

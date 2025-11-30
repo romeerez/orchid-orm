@@ -338,7 +338,7 @@ describe('createFrom functions', () => {
             LIMIT 1
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "chat".*, v."author_id"::int4, v."text"::text
+          SELECT "chat"."chatId", v."author_id"::int4, v."text"::text
           FROM "chat", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
           RETURNING ${messageColumnsSql}
         `,
@@ -370,7 +370,7 @@ describe('createFrom functions', () => {
             LIMIT 1
           )
           INSERT INTO "snake"("snake_name", "tail_length")
-          SELECT "user".*, v."tail_length"::int4
+          SELECT "user"."snakeName", v."tail_length"::int4
           FROM "user", (VALUES ($2), ($3)) v("tail_length")
           RETURNING ${snakeSelectAll}
         `,
@@ -401,7 +401,7 @@ describe('createFrom functions', () => {
             LIMIT 1
           )
           INSERT INTO "user"("password", "id", "name")
-          SELECT "user".*, v."id"::int4, v."name"::text
+          SELECT "user"."password", v."id"::int4, v."name"::text
           FROM "user", (VALUES ($2, $3), ($4, $5)) v("id", "name")
           RETURNING *
         `,
@@ -450,7 +450,7 @@ describe('createFrom functions', () => {
             LIMIT 1
           )
           INSERT INTO "user"("name", "password")
-          SELECT "user".*, v."password"::text
+          SELECT "user"."name", v."password"::text
           FROM "user", (VALUES ($2), ($3)) v("password")
           RETURNING "user"."name"
         `,
@@ -502,7 +502,7 @@ describe('createFrom functions', () => {
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
           SELECT
-            "chat".*,
+            "chat"."chatId",
             v."author_id"::int4,
             v."text"::text
           FROM "chat", (VALUES ((SELECT "q"."id" FROM "q"), 'text 1'), ((SELECT "q2"."id" FROM "q2"), 'text 2')) v("author_id", "text")
@@ -544,7 +544,7 @@ describe('createFrom functions', () => {
             RETURNING "user"."id", "user"."name"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "chat".*, v."author_id"::int4, v."text"::text
+          SELECT "chat"."chatId", v."author_id"::int4, v."text"::text
           FROM "chat", (VALUES
             ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)),
             ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1))

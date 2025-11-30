@@ -10,8 +10,10 @@ import {
   StaticSQLArgs,
   TemplateLiteralArgs,
 } from '../core/raw';
-import { Column, ColumnSchemaConfig, DefaultColumnTypes } from '../columns';
-import { ToSQLCtx } from './toSQL';
+import { Column } from '../columns/column';
+import { ColumnSchemaConfig } from '../columns/column-schema';
+import { DefaultColumnTypes } from '../columns/column-types';
+import { ToSQLCtx } from './to-sql';
 import { emptyObject, RecordUnknown } from '../core/utils';
 import { SQLQueryArgs } from '../core/db';
 

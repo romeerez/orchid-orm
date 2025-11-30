@@ -78,6 +78,7 @@ import {
 } from '../modules/computed';
 import { DbSqlQuery, performQuery } from './dbSqlQuery';
 import { snakeCaseKey } from '../columns/types';
+import { setDb } from '../columns/operators';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -597,6 +598,8 @@ export class Db<
     return performQuery<QueryArraysResult<R>>(this, args, 'arrays');
   }
 }
+
+setDb(Db);
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;

@@ -1,7 +1,7 @@
 import { quoteSchemaAndTable } from './common';
 import { makeReturningSql } from './insert';
 import { pushWhereStatementSql, whereToSql } from './where';
-import { pushLimitSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryData, UpdateQueryDataItem, UpdateQueryDataObject } from './data';
 import {
   addValue,
@@ -14,12 +14,13 @@ import {
   Sql,
 } from '../core';
 import { Db } from '../query/db';
-import { joinSubQuery } from '../common/utils';
 import { selectToSql } from './select';
 import { countSelect } from './rawSql';
 import { Query } from '../query/query';
 import { processJoinItem } from './join';
 import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+import { pushLimitSQL } from './limit';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -50,7 +51,6 @@ export const pushUpdateSql = (
     applySet(ctx, table, set, hookSet, emptyObject, quotedAs);
   }
 
-  let tableHook;
   const delayedRelationSelect: DelayedRelationSelect | undefined =
     query.selectRelation ? newDelayedRelationSelect(table) : undefined;
 
@@ -60,7 +60,7 @@ export const pushUpdateSql = (
       query.select = countSelect;
     }
 
-    tableHook = pushUpdateReturning(
+    pushUpdateReturning(
       ctx,
       table,
       query,
@@ -135,7 +135,7 @@ export const pushUpdateSql = (
       ctx.sql.push('WHERE', whereSql);
     }
 
-    tableHook = pushUpdateReturning(
+    pushUpdateReturning(
       ctx,
       table,
       query,
@@ -146,9 +146,11 @@ export const pushUpdateSql = (
     );
   }
 
+  if (delayedRelationSelect) {
+    ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
+  }
+
   return {
-    tableHook,
-    delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
   };
@@ -163,7 +165,7 @@ const pushUpdateReturning = (
   delayedRelationSelect: DelayedRelationSelect | undefined,
   isSubSql?: boolean,
 ) => {
-  const { select, tableHook } = makeReturningSql(
+  const returning = makeReturningSql(
     ctx,
     table,
     query,
@@ -174,9 +176,7 @@ const pushUpdateReturning = (
     isSubSql,
   );
 
-  if (select) ctx.sql.push(keyword, select);
-
-  return tableHook;
+  if (returning) ctx.sql.push(keyword, returning);
 };
 
 const processData = (
@@ -246,12 +246,10 @@ const processValue = (
         return selectToSql(ctx, table, query.q, quotedAs);
       }
 
-      const { makeSql } = moveMutativeQueryToCte(
+      return `(${moveMutativeQueryToCte(
         ctx,
-        joinSubQuery(table, query),
-      );
-
-      return `(${makeSql(true)})`;
+        query as unknown as SubQueryForSql,
+      )})`;
     } else if ('op' in value && 'arg' in value) {
       return `"${table.q.shape[key].data.name || key}" ${
         (value as { op: string }).op

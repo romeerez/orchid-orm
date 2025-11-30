@@ -1,4 +1,3 @@
-import { createDbWithAdapter } from '../query/db';
 import { userData } from '../test-utils/test-utils';
 import { logColors } from '../core/log';
 import { noop } from '../core/utils';
@@ -8,6 +7,7 @@ import {
   testDbOptions,
   useTestDatabase,
 } from 'test-utils';
+import { createDbWithAdapter } from '../query/db';
 
 const hrtime = jest.spyOn(process, 'hrtime');
 hrtime.mockReturnValue([0, 0]);

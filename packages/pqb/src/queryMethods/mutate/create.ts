@@ -36,7 +36,7 @@ import {
   OrchidOrmInternalError,
 } from '../../core';
 import { isSelectingCount } from '../aggregate';
-import { resolveSubQueryCallbackV2 } from '../../common/utils';
+import { joinSubQuery, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { _clone } from '../../query/queryUtils';
 import {
   CreateFromMethodNames,
@@ -44,6 +44,8 @@ import {
   getFromSelectColumns,
 } from './createFrom';
 import { _querySelectAll } from '../select/select';
+import { Db } from '../../query';
+import { prepareSubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
 
 export interface CreateSelf
   extends IsQuery,
@@ -324,6 +326,13 @@ const processCreateItem = (
         q as unknown as ToSQLQuery,
         value as (q: ToSQLQuery) => ToSQLQuery,
       );
+
+      if (value && typeof value === 'object' && value instanceof Db) {
+        value = item[key] = joinSubQuery(
+          q as Query,
+          prepareSubQueryForSql(q as Query, value as Query),
+        );
+      }
     }
 
     if (
@@ -468,7 +477,9 @@ export const insert = (
 
   q.type = 'insert';
 
-  insertFrom = insertFrom ? (q.insertFrom = insertFrom as Query) : q.insertFrom;
+  insertFrom = insertFrom
+    ? (q.insertFrom = prepareSubQueryForSql(self as never, insertFrom as Query))
+    : q.insertFrom;
 
   if (insertFrom) {
     if (q.insertFrom) {

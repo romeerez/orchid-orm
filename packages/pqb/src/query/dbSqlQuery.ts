@@ -12,6 +12,7 @@ import { QueryBuilder } from './db';
 import { QueryData } from '../sql/data';
 import { QueryInternal } from './query';
 import { templateLiteralToSQL } from '../sql/rawSql';
+import { TopToSqlCtx, ToSQLCtx } from '../sql';
 
 export interface DbSqlQuery {
   <T extends QueryResultRow = QueryResultRow>(...args: SQLQueryArgs): Promise<
@@ -111,14 +112,19 @@ export const performQuery = async <Result = QueryResult>(
     };
   } else {
     const values: unknown[] = [];
+
+    const ctx: ToSQLCtx = {
+      topCtx: undefined as never,
+      qb: q.qb,
+      q: q.q,
+      sql: [],
+      values,
+      selectedCount: 0,
+    };
+    ctx.topCtx = ctx as TopToSqlCtx;
+
     sql = {
-      text: templateLiteralToSQL(args as TemplateLiteralArgs, {
-        qb: q.qb,
-        q: q.q,
-        sql: [],
-        values,
-        selectedCount: 0,
-      }),
+      text: templateLiteralToSQL(args as TemplateLiteralArgs, ctx),
       values,
     };
   }

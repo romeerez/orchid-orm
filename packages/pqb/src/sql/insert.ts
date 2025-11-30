@@ -1,7 +1,6 @@
 import { pushWhereStatementSql } from './where';
-import { Query } from '../query/query';
 import { selectToSql } from './select';
-import { ToSQLCtx, ToSQLQuery, toSubSqlText } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { InsertQueryDataObjectValues, QueryData } from './data';
 import {
   addValue,
@@ -20,22 +19,23 @@ import {
   RecordUnknown,
   SingleSqlItem,
   Sql,
-  TableHook,
 } from '../core';
-import { getQueryAs, joinSubQuery } from '../common/utils';
+import { getQueryAs } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
 import { OnConflictTarget, SelectAsValue, SelectItem } from './types';
 import { MAX_BINDING_PARAMS } from './constants';
 import { _clone } from '../query/queryUtils';
 import {
-  prependTopCte,
   getTopCteSize,
   setTopCteSize,
   composeCteSingleSql,
   moveMutativeQueryToCte,
 } from '../query/cte/cte.sql';
 import { Column } from '../columns/column';
+import { addTableHook } from '../query/hooks/hooks.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+import { moveQueryToCte } from '../query/cte/move-mutative-query-to-cte-base.sql';
 
 interface InsertSqlState {
   ctx: ToSQLCtx;
@@ -53,11 +53,6 @@ interface InsertValuesSqlState extends InsertSqlState {
   valuesPrepend: string;
   valuesSql: string[];
   valuesAppend: string;
-}
-
-interface SelectAndTableHook {
-  select?: string;
-  tableHook?: TableHook;
 }
 
 export const makeInsertSql = (
@@ -121,10 +116,6 @@ export const makeInsertSql = (
   // `insertWith` queries are applied only once, need to ignore if `ctx.hasNonSelect` is changed below.
   const hasNonSelect = ctx.hasNonSelect;
 
-  if (insertFrom && values.length > 1) {
-    prependTopCte(ctx, insertFrom, getQueryAs(insertFrom));
-  }
-
   const sqlState: InsertSqlState = {
     ctx,
     q,
@@ -165,7 +156,6 @@ export const makeInsertSql = (
             encodeRow(
               ctx,
               ctx.values,
-              q,
               QueryClass,
               values[0],
               runtimeDefaults,
@@ -175,21 +165,32 @@ export const makeInsertSql = (
         );
       }
 
-      ctx.sql[1] = toSubSqlText(ctx, q);
+      ctx.sql[1] = moveMutativeQueryToCte(ctx, q);
     } else {
+      const { makeSelectList } = moveQueryToCte(
+        ctx,
+        insertFrom,
+        getQueryAs(insertFrom),
+      );
+
+      const selectList = makeSelectList(true);
+
       insertManyFromValuesAs = query.insertValuesAs;
-      const queryAs = getQueryAs(insertFrom);
-      sqlState.selectFromSql = ` SELECT "${queryAs}".*, ${columns
-        .slice(queryColumnsCount || 0)
-        .map((key) => {
+      selectList.push(
+        ...columns.slice(queryColumnsCount || 0).map((key) => {
           const column = shape[key];
           return column
             ? `${insertManyFromValuesAs}."${column.data.name || key}"::${
                 column.dataType
               }`
             : `${insertManyFromValuesAs}."${key}"`;
-        })
-        .join(', ')} FROM "${queryAs}",`;
+        }),
+      );
+
+      const queryAs = getQueryAs(insertFrom);
+      sqlState.selectFromSql = ` SELECT ${selectList.join(
+        ', ',
+      )} FROM "${queryAs}",`;
     }
   }
 
@@ -218,7 +219,6 @@ export const makeInsertSql = (
       let encodedRow = encodeRow(
         ctx,
         ctxValues,
-        q,
         QueryClass,
         (values as InsertQueryDataObjectValues)[i],
         runtimeDefaults,
@@ -247,7 +247,7 @@ export const makeInsertSql = (
           batch = pushOrNewArray(batch, composeCteSingleSql(ctx));
 
           // reset sql and values for the next batch, repeat the last cycle
-          ctx.topCTE = undefined;
+          ctx.topCtx.topCTE = undefined;
           ctxValues = ctx.values = [];
           valuesSqlState.valuesSql.length = 0;
           i--;
@@ -267,23 +267,27 @@ export const makeInsertSql = (
         );
       }
 
-      const tableHook = applySqlState(sqlState);
+      applySqlState(sqlState);
 
       batch.push(composeCteSingleSql(ctx));
 
+      if (sqlState.delayedRelationSelect) {
+        ctx.topCtx.delayedRelationSelect = sqlState.delayedRelationSelect;
+      }
+
       return {
-        tableHook,
-        delayedRelationSelect: sqlState.delayedRelationSelect,
         batch,
       };
     }
   }
 
-  const tableHook = applySqlState(sqlState);
+  applySqlState(sqlState);
+
+  if (sqlState.delayedRelationSelect) {
+    ctx.topCtx.delayedRelationSelect = sqlState.delayedRelationSelect;
+  }
 
   return {
-    tableHook,
-    delayedRelationSelect: sqlState.delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
   };
@@ -363,7 +367,7 @@ const pushOnConflictSql = (
 
 const applySqlState = (
   sqlState: InsertSqlState | InsertValuesSqlState,
-): TableHook | undefined => {
+): void => {
   const { ctx } = sqlState;
 
   const insertSql = sqlState.selectFromSql
@@ -373,7 +377,6 @@ const applySqlState = (
   const wrapForCteHookAs =
     !sqlState.isSubSql &&
     ctx.cteHooks &&
-    !sqlState.selectFromSql &&
     getFreeAlias(sqlState.query.withShapes, 'i');
 
   if ('valuesSql' in sqlState) {
@@ -396,8 +399,8 @@ const applySqlState = (
 
   const addNull = !sqlState.isSubSql && sqlState.ctx.cteHooks?.hasSelect;
 
-  if (returning.select) {
-    ctx.sql[sqlState.returningPos] = 'RETURNING ' + returning.select;
+  if (returning) {
+    ctx.sql[sqlState.returningPos] = 'RETURNING ' + returning;
   }
 
   ctx.sql[0] = insertSql;
@@ -409,8 +412,6 @@ const applySqlState = (
 
     ctx.sql = [`SELECT *${addNull ? ', NULL' : ''} FROM ${wrapForCteHookAs}`];
   }
-
-  return returning.tableHook;
 };
 
 const processHookSet = (
@@ -424,7 +425,7 @@ const processHookSet = (
 ): {
   hookSetSql?: string | undefined;
   columns: string[];
-  insertFrom?: Query;
+  insertFrom?: SubQueryForSql;
   queryColumnsCount?: number;
   values: InsertQueryDataObjectValues;
 } => {
@@ -442,7 +443,7 @@ const processHookSet = (
     const newColumns = new Set<string>();
     const originalSelect = insertFrom.q.select;
     if (originalSelect) {
-      insertFrom = _clone(insertFrom);
+      insertFrom = _clone(insertFrom) as unknown as SubQueryForSql;
       const select: SelectItem[] = [];
       for (const s of originalSelect) {
         if (typeof s === 'string' && !hookSet[s]) {
@@ -495,7 +496,6 @@ const processHookSet = (
           fromHook: encodeValue(
             ctx,
             ctx.values,
-            q,
             QueryClass,
             hookSet[column],
             quotedAs,
@@ -517,7 +517,6 @@ const processHookSet = (
             fromHook: encodeValue(
               ctx,
               ctx.values,
-              q,
               QueryClass,
               hookSet[key],
               quotedAs,
@@ -543,7 +542,6 @@ const processHookSet = (
         fromHook: encodeValue(
           ctx,
           ctx.values,
-          q,
           QueryClass,
           hookSet[column],
           quotedAs,
@@ -560,7 +558,6 @@ const processHookSet = (
       encodeValue(
         ctx,
         ctx.values,
-        q,
         QueryClass,
         (hookSet as RecordUnknown)[key],
         quotedAs,
@@ -616,7 +613,6 @@ const mergeColumnsSql = (
 const encodeRow = (
   ctx: ToSQLCtx,
   values: unknown[],
-  q: ToSQLQuery,
   QueryClass: Db,
   row: unknown[],
   runtimeDefaults?: (() => unknown)[],
@@ -624,7 +620,7 @@ const encodeRow = (
   hookSetSql?: string,
 ) => {
   const arr = row.map((value) =>
-    encodeValue(ctx, values, q, QueryClass, value, quotedAs),
+    encodeValue(ctx, values, QueryClass, value, quotedAs),
   );
 
   if (runtimeDefaults) {
@@ -641,7 +637,6 @@ const encodeRow = (
 const encodeValue = (
   ctx: ToSQLCtx,
   values: unknown[],
-  q: ToSQLQuery,
   QueryClass: Db,
   value: unknown,
   quotedAs?: string,
@@ -650,12 +645,7 @@ const encodeValue = (
     if (value instanceof Expression) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
-      const { makeSql } = moveMutativeQueryToCte(
-        ctx,
-        joinSubQuery(q, value as Query),
-      );
-
-      return `(${makeSql(true)})`;
+      return `(${moveMutativeQueryToCte(ctx, value as SubQueryForSql)})`;
     } else if ('fromHook' in value) {
       return value.fromHook as string;
     }
@@ -675,18 +665,16 @@ export const makeReturningSql = (
   hookPurpose?: HookPurpose,
   addHookPurpose?: HookPurpose,
   isSubSql?: boolean,
-): SelectAndTableHook => {
+): string | undefined => {
   const hookSelect = hookPurpose && data[`after${hookPurpose}Select`];
 
   const { select } = data;
   if (!q.q.hookSelect && !hookSelect?.size && !select?.length && !hookPurpose) {
     const select = hookSelect && new Map();
-    return {
-      select: isSubSql && ctx.inCte ? 'NULL' : undefined,
-      tableHook: select && {
-        select,
-      },
-    };
+
+    addTableHook(ctx, q, select && { select });
+
+    return isSubSql && ctx.cteName ? 'NULL' : undefined;
   }
 
   const otherCTEHookSelect =
@@ -738,17 +726,15 @@ export const makeReturningSql = (
   const after = hookPurpose && data[`after${hookPurpose}`];
   const afterCommit = hookPurpose && data[`after${hookPurpose}Commit`];
 
-  return {
-    select: sql || (isSubSql && ctx.inCte ? 'NULL' : undefined),
-    tableHook: (tempSelect || after || afterCommit) && {
+  addTableHook(
+    ctx,
+    q,
+    (tempSelect || after || afterCommit) && {
       select: tempSelect,
-      after:
-        data.after && after
-          ? [...data.after, ...after]
-          : after
-          ? after
-          : data.after,
+      after,
       afterCommit,
     },
-  };
+  );
+
+  return sql || (isSubSql && ctx.cteName ? 'NULL' : undefined);
 };

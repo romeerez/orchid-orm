@@ -96,29 +96,40 @@ function maybeWrappedThen(
 ): Promise<unknown> {
   const { q } = this;
 
-  let beforeHooks: QueryBeforeHookInternal[] | undefined;
+  let beforeActionHooks: QueryBeforeHookInternal[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
   if (q.type) {
     if (q.type === 'insert') {
-      beforeHooks = q.beforeCreate;
+      beforeActionHooks = q.beforeCreate;
       afterHooks = q.afterCreate;
       afterCommitHooks = q.afterCreateCommit;
-    } else if (
-      q.type === 'update' ||
-      (q.type === 'upsert' && q.upsertUpdate && q.updateData)
-    ) {
-      beforeHooks = q.beforeUpdate;
-      if (!q.upsertSecond) {
+    } else if (q.type === 'update') {
+      beforeActionHooks = q.beforeUpdate;
+      afterHooks = q.afterUpdate;
+      afterCommitHooks = q.afterUpdateCommit;
+    } else if (q.type === 'upsert') {
+      if (q.upsertSecond) {
+        beforeActionHooks = q.beforeCreate;
+      } else if (q.upsertUpdate && q.updateData) {
+        beforeActionHooks = q.beforeUpdate;
         afterHooks = q.afterUpdate;
         afterCommitHooks = q.afterUpdateCommit;
       }
     } else if (q.type === 'delete') {
-      beforeHooks = q.beforeDelete;
+      beforeActionHooks = q.beforeDelete;
       afterHooks = q.afterDelete;
       afterCommitHooks = q.afterDeleteCommit;
     }
   }
+
+  const { before } = q;
+  const beforeHooks =
+    before && beforeActionHooks
+      ? [...before, ...beforeActionHooks]
+      : before
+      ? before
+      : beforeActionHooks;
 
   const trx = this.internal.transactionStorage.getStore();
   if (
@@ -190,21 +201,17 @@ const then = async (
   const localError = queryError;
 
   try {
-    if (beforeHooks || query.before) {
-      await Promise.all(
-        [...(beforeHooks || emptyArray), ...(query.before || emptyArray)].map(
-          callWithThis,
-          q,
-        ),
-      );
+    if (beforeHooks) {
+      await Promise.all(beforeHooks.map(callWithThis, q));
     }
 
     const localSql = (sql = q.toSQL());
 
-    const { tableHook, delayedRelationSelect } = sql;
+    const { tableHook, cteHooks, delayedRelationSelect } = sql;
     const { returnType = 'all' } = query;
     const tempReturnType =
       tableHook?.select ||
+      cteHooks?.hasSelect ||
       (returnType === 'rows' && q.q.batchParsers) ||
       delayedRelationSelect?.value
         ? 'all'
@@ -424,7 +431,7 @@ const then = async (
       }
     }
 
-    const queryAfter = !query.upsertSecond && query.after;
+    const queryAfter = query.after;
     const hasAfterHook =
       afterHooks ||
       afterCommitHooks ||
@@ -433,82 +440,80 @@ const then = async (
       cteAfterCommitHooks;
     if (hasAfterHook) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      if (queryResult!.rowCount) {
-        if (afterHooks || queryAfter || cteAfterHooks) {
-          const args = [result, q];
-          await Promise.all(
-            [
-              ...(afterHooks || emptyArray),
-              ...(queryAfter || emptyArray),
-              ...(cteAfterHooks || emptyArray),
-            ].map(callAfterHook, args),
-          );
-        }
+      if (!queryResult!.rowCount) {
+        afterHooks = afterCommitHooks = undefined;
+      }
 
-        // afterCommitHooks are executed later after transaction commit,
-        // or, if we don't have transaction, they are executed intentionally after other after hooks
-        if (afterCommitHooks || cteAfterCommitHooks) {
-          if (isInUserTransaction(trx)) {
+      if (afterHooks || queryAfter || cteAfterHooks) {
+        const args = [result, q];
+        await Promise.all(
+          [
+            ...(afterHooks || emptyArray),
+            ...(queryAfter || emptyArray),
+            ...(cteAfterHooks || emptyArray),
+          ].map(callAfterHook, args),
+        );
+      }
+
+      // afterCommitHooks are executed later after transaction commit,
+      // or, if we don't have transaction, they are executed intentionally after other after hooks
+      if (afterCommitHooks || cteAfterCommitHooks) {
+        if (isInUserTransaction(trx)) {
+          if (afterCommitHooks) {
+            (trx.afterCommit ??= []).push(
+              result as unknown[],
+              q,
+              afterCommitHooks,
+            );
+          }
+
+          if (cteAfterCommitHooks) {
+            (trx.afterCommit ??= []).push(
+              result as unknown[],
+              q,
+              cteAfterCommitHooks,
+            );
+          }
+        } else {
+          // result can be transformed later, reference the current form to use it in hook.
+          const localResult = result as unknown[];
+          // to suppress throws of sync afterCommit hooks.
+          queueMicrotask(async () => {
+            const promises: (unknown | Promise<unknown>)[] = [];
             if (afterCommitHooks) {
-              (trx.afterCommit ??= []).push(
-                result as unknown[],
-                q,
-                afterCommitHooks,
-              );
+              for (const fn of afterCommitHooks) {
+                try {
+                  promises.push(
+                    (fn as unknown as AfterCommitHook)(localResult, q),
+                  );
+                } catch (err) {
+                  promises.push(Promise.reject(err));
+                }
+              }
             }
 
             if (cteAfterCommitHooks) {
-              (trx.afterCommit ??= []).push(
-                result as unknown[],
-                q,
-                cteAfterCommitHooks,
-              );
+              for (const fn of cteAfterCommitHooks) {
+                try {
+                  promises.push(fn());
+                } catch (err) {
+                  promises.push(Promise.reject(err));
+                }
+              }
             }
-          } else {
-            // result can be transformed later, reference the current form to use it in hook.
-            const localResult = result as unknown[];
-            // to suppress throws of sync afterCommit hooks.
-            queueMicrotask(async () => {
-              const promises: (unknown | Promise<unknown>)[] = [];
-              if (afterCommitHooks) {
-                for (const fn of afterCommitHooks) {
-                  try {
-                    promises.push(
-                      (fn as unknown as AfterCommitHook)(localResult, q),
-                    );
-                  } catch (err) {
-                    promises.push(Promise.reject(err));
-                  }
-                }
-              }
 
-              if (cteAfterCommitHooks) {
-                for (const fn of cteAfterCommitHooks) {
-                  try {
-                    promises.push(fn());
-                  } catch (err) {
-                    promises.push(Promise.reject(err));
-                  }
-                }
-              }
-
-              await _runAfterCommitHooks(
-                localResult,
-                promises,
-                () =>
-                  [
-                    ...(afterCommitHooks || emptyArray),
-                    ...(cteAfterCommitHooks || emptyArray),
-                  ].map((h) => h.name),
-                q.q.catchAfterCommitErrors,
-              );
-            });
-          }
+            await _runAfterCommitHooks(
+              localResult,
+              promises,
+              () =>
+                [
+                  ...(afterCommitHooks || emptyArray),
+                  ...(cteAfterCommitHooks || emptyArray),
+                ].map((h) => h.name),
+              q.q.catchAfterCommitErrors,
+            );
+          });
         }
-      } else if (query.after) {
-        // TODO: why only query.after is called?
-        const args = [result, q];
-        await Promise.all(query.after.map(callAfterHook, args));
       }
     }
 
