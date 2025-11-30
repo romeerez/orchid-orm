@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.58.7
+
+### Patch Changes
+
+- b024695: Fix migration gen handling of array types in SQLs (#590)
+- Updated dependencies [b024695]
+  - rake-db@2.27.21
+
 ## 1.58.6
 
 ### Patch Changes

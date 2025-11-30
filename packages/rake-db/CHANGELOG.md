@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.27.21
+
+### Patch Changes
+
+- b024695: Fix migration gen handling of array types in SQLs (#590)
+
 ## 2.27.20
 
 ### Patch Changes
