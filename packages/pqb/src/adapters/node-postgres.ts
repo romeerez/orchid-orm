@@ -4,10 +4,12 @@ import {
   AdapterConfigBase,
   ColumnSchemaConfig,
   emptyObject,
+  noop,
   QueryArraysResult,
   QueryError,
   QueryResult,
   QueryResultRow,
+  RecordUnknown,
   returnArg,
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
@@ -175,16 +177,30 @@ export class NodePostgresAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return performQuery(this, text, values) as never;
+    return performQuery(
+      this,
+      text,
+      values,
+      undefined,
+      catchingSavepoint,
+    ) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return performQuery(this, text, values, 'array') as never;
+    return performQuery(
+      this,
+      text,
+      values,
+      'array',
+      catchingSavepoint,
+    ) as never;
   }
 
   async transaction<Result>(
@@ -265,31 +281,85 @@ const performQuery = async (
   text: string,
   values?: unknown[],
   rowMode?: 'array',
+  catchingSavepoint?: string,
 ) => {
   const client = await adapter.connect();
   try {
     await setSearchPath(client, adapter.schema);
-    return await performQueryOnClient(client, text, values, rowMode);
+    return await performQueryOnClient(
+      client,
+      text,
+      values,
+      rowMode,
+      catchingSavepoint,
+    );
   } finally {
     client.release();
   }
 };
 
-const performQueryOnClient = (
+const performQueryOnClient = async (
   client: PoolClient,
   text: string,
   values?: unknown[],
   rowMode?: 'array',
+  catchingSavepoint?: string,
 ) => {
-  const params = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: any = {
     text,
     values,
     rowMode,
     types: defaultTypesConfig,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return client.query(params as any);
+  // When using save points (it's in transaction), need to perform a single query at a time.
+  // stating 1 then 2 then releasing 1 would fail.
+  // Start 1, release 1, start 2, release 2, and so on.
+  const { __lock } = client as unknown as { __lock?: Promise<unknown> };
+  if (__lock) {
+    let resolve: () => void | undefined;
+    (client as unknown as RecordUnknown).__lock = new Promise<void>((res) => {
+      resolve = () => {
+        res();
+      };
+    });
+
+    return __lock.then(() => {
+      const promise = catchingSavepoint
+        ? performQueryOnClientWithSavepoint(client, catchingSavepoint, params)
+        : client.query(params);
+      promise.then(resolve, resolve);
+      return promise;
+    });
+  }
+
+  const promise = catchingSavepoint
+    ? performQueryOnClientWithSavepoint(client, catchingSavepoint, params)
+    : client.query(params);
+
+  (client as unknown as { __lock?: Promise<unknown> }).__lock =
+    promise.catch(noop);
+
+  return promise;
+};
+
+const performQueryOnClientWithSavepoint = (
+  client: PoolClient,
+  catchingSavepoint: string,
+  params: unknown,
+) => {
+  return client.query(`SAVEPOINT "${catchingSavepoint}"`).then(async () => {
+    let result;
+    try {
+      result = await client.query(params as never);
+    } catch (err) {
+      await client.query(`ROLLBACK TO SAVEPOINT "${catchingSavepoint}"`);
+      throw err;
+    }
+    await client.query(`RELEASE SAVEPOINT "${catchingSavepoint}"`);
+    return result;
+  });
 };
 
 export class NodePostgresTransactionAdapter implements AdapterBase {
@@ -336,16 +406,30 @@ export class NodePostgresTransactionAdapter implements AdapterBase {
   async query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return await performQueryOnClient(this.client, text, values);
+    return await performQueryOnClient(
+      this.client,
+      text,
+      values,
+      undefined,
+      catchingSavepoint,
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return await performQueryOnClient(this.client, text, values, 'array');
+    return await performQueryOnClient(
+      this.client,
+      text,
+      values,
+      'array',
+      catchingSavepoint,
+    );
   }
 
   async transaction<Result>(

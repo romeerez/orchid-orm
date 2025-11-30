@@ -123,9 +123,50 @@ try {
 Error classes on the table interface are extending the common `QueryError`,
 it has all the same properties as `DatabaseError` from `pg`.
 
+## catch
+
+`catch` has a special ability in transactions, consider the following:
+
+```ts
+db.$transaction(async () => {
+  try {
+    await db.table.create({ key: 'some key' });
+  } catch (err) {
+    // if the key 'one' already exists, create with a different key:
+    if (err instanceof QueryError && err.isUnique) {
+      await db.table.create({ key: 'other key' });
+    }
+  }
+});
+```
+
+A transaction won't let performing any queries once one of them has failed.
+The second `create` won't work because the transaction is in the failed state.
+
+Use the `catch` method to make it possible:
+
+```ts
+db.$transaction(async () => {
+  await db.table.create({ key: 'some key' }).catch(async (err) => {
+    if (err instanceof QueryError && err.isUnique) {
+      await db.table.create({ key: 'other key' });
+    }
+  });
+});
+```
+
+`catch` wraps the query with `SAVEPOINT` and `RELEASE SAVEPOINT`.
+If the query fails, it does `ROLLBACK TO SAVEPOINT` to recover the transaction from the failed state and to continue.
+
+`postgres-js` sends the save-point and the query SQLs simultaneously, without introducing additional round-trips.
+
+But the same is not possible with `node-postgres` and in case of using it the `catch` adds additional round-trips.
+
 ## catchUniqueError
 
-`catchUniqueError` is a helper to catch duplicated unique key exceptions with ease:
+`catchUniqueError` is a helper to catch duplicated unique key exceptions with ease.
+
+In the same way as the `catch`, it wraps the query with save-points when inside a transaction.
 
 ```ts
 db.table.create(...data).catchUniqueError((error) => {

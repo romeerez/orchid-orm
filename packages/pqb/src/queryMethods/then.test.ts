@@ -1,5 +1,5 @@
-import { User, userData } from '../test-utils/test-utils';
-import { NotFoundError, QueryError } from '../core';
+import { User, userData, UserRecord } from '../test-utils/test-utils';
+import { NotFoundError, QueryError, QueryResultRow } from '../core';
 import {
   assertType,
   db,
@@ -51,6 +51,58 @@ describe('then', () => {
       expect(user.name).toBe(userData.name);
       expect(fn).not.toHaveBeenCalled();
     });
+
+    it('should not mutate the query', async () => {
+      await User.catch(() => 'ok');
+
+      expect(User.q.catch).toBe(undefined);
+    });
+
+    it('should catch error in transaction using a save-points', async () => {
+      const transactionCatch = jest.fn(() => {
+        throw new Error('should not be called');
+      });
+
+      const res = await testDb
+        .transaction(async () => {
+          const failedThenResult = await User.get('invalid' as 'name').then(
+            () => {
+              throw new Error('should not be called');
+            },
+            () => 'caught',
+          );
+
+          const failedCatchResult = await User.get('invalid' as 'name').catch(
+            () => 'caught',
+          );
+
+          const subsequentQueryResult = await testDb.query`SELECT 'ok' ok`;
+
+          return {
+            failedThenResult,
+            failedCatchResult,
+            subsequentQueryResult: subsequentQueryResult.rows[0],
+          };
+        })
+        .catch(transactionCatch);
+
+      expect(transactionCatch).not.toBeCalled();
+
+      assertType<
+        typeof res,
+        {
+          failedThenResult: string;
+          failedCatchResult: string;
+          subsequentQueryResult: QueryResultRow;
+        }
+      >();
+
+      expect(res).toEqual({
+        failedThenResult: 'caught',
+        failedCatchResult: 'caught',
+        subsequentQueryResult: { ok: 'ok' },
+      });
+    });
   });
 
   describe('catchUniqueError', () => {
@@ -100,6 +152,45 @@ describe('then', () => {
       expect(anyCatcher).toBeCalled();
 
       expect(err).toEqual({ err: expect.any(QueryError) });
+    });
+
+    it('should catch error in transaction using a save-points', async () => {
+      const id = await User.get('id').create(userData);
+
+      const transactionCatch = jest.fn(() => {
+        throw new Error('should not be called');
+      });
+
+      const res = await testDb
+        .transaction(async () => {
+          const failedResult = await User.create({
+            ...userData,
+            id,
+          }).catchUniqueError(() => 'caught');
+
+          const subsequentQueryResult = await testDb.query`SELECT 'ok' ok`;
+
+          return {
+            failedResult,
+            subsequentQueryResult: subsequentQueryResult.rows[0],
+          };
+        })
+        .catch(transactionCatch);
+
+      expect(transactionCatch).not.toBeCalled();
+
+      assertType<
+        typeof res,
+        {
+          failedResult: string | UserRecord;
+          subsequentQueryResult: QueryResultRow;
+        }
+      >();
+
+      expect(res).toEqual({
+        failedResult: 'caught',
+        subsequentQueryResult: { ok: 'ok' },
+      });
     });
   });
 
@@ -216,10 +307,12 @@ describe('batch queries', () => {
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
+        '1',
       ],
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
         [2],
+        '2',
       ],
     ]);
 

@@ -120,6 +120,10 @@ export interface QueryData extends QueryDataBase {
     queryResult: QueryResult,
   ): Promise<void>;
   handleResult: HandleResult;
+  // When executed in a transaction,
+  // the query will be wrapped with a `SAVEPOINT x; *query*; ROLLBACK TO SAVEPOINT x (if fails)`.
+  // This allows to continue working with the transaction, otherwise it would be in a failed state and wouldn't accept more queries.
+  catch?: boolean;
   returnType: QueryReturnType;
   returning?: boolean;
   returningMany?: boolean;

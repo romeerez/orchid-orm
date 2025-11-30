@@ -39,6 +39,7 @@ import {
   commitSql,
 } from './transaction';
 import { processComputedResult } from '../modules/computed';
+import { _clone } from '../query/queryUtils';
 
 export const queryMethodByReturnType: {
   [K in string]: 'query' | 'arrays';
@@ -70,11 +71,15 @@ export interface QueryCatchers {
 export class Then implements QueryCatchers {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch(this: Query, fn: (reason: any) => unknown) {
-    return this.then(undefined, fn);
+    const q = _clone(this as unknown as Query);
+    q.q.catch = true;
+    return q.then(undefined, fn);
   }
 
   catchUniqueError(fn: (reason: QueryError) => unknown) {
-    return (this as unknown as Query).then(undefined, (err) => {
+    const q = _clone(this as unknown as Query);
+    q.q.catch = true;
+    return q.then(undefined, (err) => {
       if (err instanceof QueryError && err.isUnique) {
         return fn(err);
       } else {
@@ -112,6 +117,8 @@ function maybeWrappedThen(
   reject?: Reject,
 ): Promise<unknown> {
   const { q } = this;
+
+  const shouldCatch = q.catch || !!reject;
 
   let beforeHooks: QueryBeforeHookInternal[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
@@ -151,6 +158,7 @@ function maybeWrappedThen(
             afterCommitHooks,
             resolve,
             reject,
+            shouldCatch,
           );
         }),
     ).then(resolve, reject);
@@ -164,6 +172,7 @@ function maybeWrappedThen(
       afterCommitHooks,
       resolve,
       reject,
+      shouldCatch,
     );
   }
 }
@@ -191,6 +200,7 @@ const then = async (
   resolve?: (result: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reject?: (error: any) => any,
+  shouldCatch?: boolean,
 ): Promise<unknown> => {
   const { q: query } = q;
 
@@ -241,6 +251,7 @@ const then = async (
         adapter,
         queryMethodByReturnType[tempReturnType],
         sql,
+        shouldCatch && trx,
       );
 
       if (log) {
@@ -284,7 +295,12 @@ const then = async (
             logData = log.beforeQuery(sql);
           }
 
-          const result = await execQuery(adapter, queryMethod, sql);
+          const result = await execQuery(
+            adapter,
+            queryMethod,
+            sql,
+            shouldCatch && trx,
+          );
 
           if (queryResult) {
             queryResult.rowCount += result.rowCount;
@@ -639,9 +655,18 @@ const execQuery = (
   adapter: AdapterBase,
   method: 'query' | 'arrays',
   sql: SingleSql,
+  catchTrx: TransactionState | false | undefined,
 ) => {
+  const catchingSavepoint = catchTrx
+    ? String((catchTrx.catchI = (catchTrx.catchI || 0) + 1))
+    : undefined;
+
   return (
-    adapter[method as 'query'](sql.text, sql.values) as Promise<QueryResult>
+    adapter[method as 'query'](
+      sql.text,
+      sql.values,
+      catchingSavepoint,
+    ) as Promise<QueryResult>
   ).then((result) => {
     if (result.rowCount && !result.rows.length) {
       result.rows.length = result.rowCount;

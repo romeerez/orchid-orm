@@ -395,6 +395,7 @@ const skipQueryKeysForSubQuery: RecordBoolean = {
   log: true,
   logger: true,
   autoPreparedStatements: true,
+  catch: true,
 };
 
 export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {

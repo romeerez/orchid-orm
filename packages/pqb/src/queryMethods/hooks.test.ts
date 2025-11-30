@@ -552,7 +552,7 @@ describe('hooks', () => {
       //  so that INSERT can be wrapped in additional WITH that's needed for the UNION.
       // TODO: every batch can have own returning, need to generate returning dynamically per batch
       it.todo('should work for createOneFrom');
-      // it.only('should work for createOneFrom', async () => {
+      // it('should work for createOneFrom', async () => {
       //   const q = Profile.insertMany([
       //     {
       //       ...profileData,
