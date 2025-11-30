@@ -1,5 +1,13 @@
 # pqb
 
+## 0.57.5
+
+### Patch Changes
+
+- 449985e: Fix catchUniqueError returning type and result (#596)
+- 4428542: Wrap computed SQL columns with (parens) (#598)
+- 5376a01: Catch queries in transactions with savepoints (#597)
+
 ## 0.57.4
 
 ### Patch Changes
