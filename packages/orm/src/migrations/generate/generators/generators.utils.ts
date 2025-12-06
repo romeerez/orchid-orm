@@ -29,7 +29,6 @@ export const compareSqlExpressions = async (
     // It is important to run `CREATE TEMPORARY VIEW` and `DROP VIEW` on the same db connection,
     // that's why SQLs are combined into a single query.
     const combinedQueries = [
-      `SAVEPOINT "${viewName}"`,
       `CREATE TEMPORARY VIEW ${viewName} AS (SELECT ${compare
         .map(
           ({ inDb, inCode }, i): string =>
@@ -45,16 +44,10 @@ export const compareSqlExpressions = async (
         .join(', ')} FROM ${source})`,
       `SELECT pg_get_viewdef('${viewName}') v`,
       `DROP VIEW ${viewName}`,
-      `RELEASE SAVEPOINT "${viewName}"`,
     ].join('; ');
 
-    const result = await adapter.query(combinedQueries, values).then(
-      (res) => {
-        const results = res as unknown as QueryResult[];
-        // postgres-js ignores non-returning queries and has length 2,
-        // node-postgres gives a result for every query.
-        return results.length === 2 ? results[1] : results[2];
-      },
+    const result = await adapter.query(combinedQueries, values, viewName).then(
+      (res) => (res as unknown as QueryResult[])[1],
       async (err) => {
         await adapter.query(`ROLLBACK TO SAVEPOINT "${viewName}"`);
 

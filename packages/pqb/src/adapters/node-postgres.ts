@@ -177,30 +177,16 @@ export class NodePostgresAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return performQuery(
-      this,
-      text,
-      values,
-      undefined,
-      catchingSavepoint,
-    ) as never;
+    return performQuery(this, text, values, undefined) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return performQuery(
-      this,
-      text,
-      values,
-      'array',
-      catchingSavepoint,
-    ) as never;
+    return performQuery(this, text, values, 'array') as never;
   }
 
   async transaction<Result>(
