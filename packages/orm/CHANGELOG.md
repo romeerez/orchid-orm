@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.58.8
+
+### Patch Changes
+
+- eaffb38: Fix savepoint in migration gen (#590)
+- Updated dependencies [eaffb38]
+  - pqb@0.57.6
+  - rake-db@2.27.22
+
 ## 1.58.7
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.57.6
+
+### Patch Changes
+
+- eaffb38: Fix savepoint in migration gen (#590)
+
 ## 0.57.5
 
 ### Patch Changes
