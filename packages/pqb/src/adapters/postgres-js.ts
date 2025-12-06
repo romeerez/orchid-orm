@@ -225,17 +225,15 @@ export class PostgresJsAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return query(this.sql, text, values, catchingSavepoint);
+    return query(this.sql, text, values);
   }
 
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return arrays(this.sql, text, values, catchingSavepoint);
+    return arrays(this.sql, text, values);
   }
 
   async transaction<Result>(

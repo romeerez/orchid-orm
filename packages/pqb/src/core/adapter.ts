@@ -126,12 +126,14 @@ export interface AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    // only has effect in a transaction
     catchingSavepoint?: string,
   ): Promise<QueryResult<T>>;
   // make a query to get rows as array of column values
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    // only has effect in a transaction
     catchingSavepoint?: string,
   ): Promise<QueryArraysResult<R>>;
   /**
