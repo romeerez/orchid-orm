@@ -407,8 +407,7 @@ describe('upsert', () => {
     expect(beforeUpdate).toHaveBeenCalledTimes(1);
     expect(afterUpdate).not.toHaveBeenCalled();
     expect(afterUpdateCommit).not.toHaveBeenCalled();
-    // TODO
-    // expect(beforeCreate).toHaveBeenCalledTimes(1);
+    expect(beforeCreate).toHaveBeenCalledTimes(1);
     expect(afterCreate).toHaveBeenCalledWith(
       [
         {

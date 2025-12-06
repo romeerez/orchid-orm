@@ -124,8 +124,9 @@ export const addTopCte = (
   const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
 
   as ??= setFreeAlias(topCTE.names, 'q', true);
-  // TODO: remove as
-  topCTE[key].push(cteToSql(ctx as TopToSqlCtx, { n: as, q }, type));
+
+  topCTE[key].push(cteToSql(ctx.topCtx, { n: as, q }, type));
+
   return as;
 };
 

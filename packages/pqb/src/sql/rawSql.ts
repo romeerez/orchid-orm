@@ -16,6 +16,12 @@ import { DefaultColumnTypes } from '../columns/column-types';
 import { ToSQLCtx } from './to-sql';
 import { emptyObject, RecordUnknown } from '../core/utils';
 import { SQLQueryArgs } from '../core/db';
+import { PrepareSubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+
+let prepareSubQueryForSql: PrepareSubQueryForSql;
+export const setRawSqlPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
+  prepareSubQueryForSql = fn;
+};
 
 // reuse array to track which variables were used in the SQL, to throw when there are some unused.
 const used: string[] = [];
@@ -140,6 +146,7 @@ export class DynamicRawSQL<
   declare columnTypes: ColumnTypes;
   result: { value: T } = emptyObject as { value: T };
   q: ExpressionData;
+  dynamicBefore = true;
 
   constructor(public fn: DynamicSQLArg<T>) {
     super();
@@ -148,7 +155,13 @@ export class DynamicRawSQL<
 
   // Calls the given function to get SQL from it.
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return this.fn(raw as never).toSQL(ctx, quotedAs);
+    const expr = this.fn(raw as never);
+    this.q.beforeSet = this.q.before = undefined;
+    const prepared = prepareSubQueryForSql(
+      this,
+      expr as never,
+    ) as unknown as Expression;
+    return prepared.toSQL(ctx, quotedAs);
   }
 }
 

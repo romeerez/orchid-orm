@@ -34,7 +34,7 @@ import {
   moveMutativeQueryToCte,
 } from '../query/cte/cte.sql';
 import { Column } from '../columns/column';
-import { addTableHook } from '../query/hooks/hooks.sql';
+import { addTableHook, HookPurpose } from '../query/hooks/hooks.sql';
 import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 import { moveQueryToCte } from '../query/cte/move-mutative-query-to-cte-base.sql';
 
@@ -396,7 +396,7 @@ const applySqlState = (
 
   const wrapForCteHookAs =
     !sqlState.isSubSql &&
-    ctx.cteHooks &&
+    ctx.topCtx.cteHooks &&
     getFreeAlias(sqlState.query.withShapes, 'i');
 
   if ('valuesSql' in sqlState) {
@@ -414,10 +414,10 @@ const applySqlState = (
     sqlState.delayedRelationSelect,
     'Create',
     undefined,
-    true,
+    sqlState.isSubSql || !!ctx.topCtx.cteHooks,
   );
 
-  const addNull = !sqlState.isSubSql && sqlState.ctx.cteHooks?.hasSelect;
+  const addNull = !sqlState.isSubSql && sqlState.ctx.topCtx.cteHooks?.hasSelect;
 
   if (returning) {
     ctx.sql[sqlState.returningPos] = 'RETURNING ' + returning;
@@ -674,8 +674,6 @@ const encodeValue = (
   return value === undefined ? 'DEFAULT' : addValue(values, value);
 };
 
-type HookPurpose = 'Create' | 'Update' | 'Delete';
-
 export const makeReturningSql = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
@@ -692,9 +690,10 @@ export const makeReturningSql = (
   if (!q.q.hookSelect && !hookSelect?.size && !select?.length && !hookPurpose) {
     const select = hookSelect && new Map();
 
-    addTableHook(ctx, q, select && { select });
+    addTableHook(ctx, q, q.q, select);
 
-    return isSubSql && ctx.cteName ? 'NULL' : undefined;
+    ctx.selectedCount = 1;
+    return isSubSql ? 'NULL' : undefined;
   }
 
   const otherCTEHookSelect =
@@ -743,18 +742,9 @@ export const makeReturningSql = (
     );
   }
 
-  const after = hookPurpose && data[`after${hookPurpose}`];
-  const afterCommit = hookPurpose && data[`after${hookPurpose}Commit`];
+  addTableHook(ctx, q, data, tempSelect, hookPurpose);
 
-  addTableHook(
-    ctx,
-    q,
-    (tempSelect || after || afterCommit) && {
-      select: tempSelect,
-      after,
-      afterCommit,
-    },
-  );
+  if (!sql) ctx.selectedCount = 1;
 
-  return sql || (isSubSql && ctx.cteName ? 'NULL' : undefined);
+  return sql || (isSubSql ? 'NULL' : undefined);
 };

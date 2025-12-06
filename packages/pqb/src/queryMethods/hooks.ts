@@ -31,7 +31,7 @@ export type HookSelectArg<T extends PickQueryShape> = (keyof T['shape'] &
   string)[];
 
 // Possible action types to attach hook for.
-export type HookAction = 'Create' | 'Update' | 'Delete';
+export type HookAction = 'Create' | 'Update' | 'Save' | 'Delete';
 
 // Save `before` hook into the query.
 const before = <T>(q: T, key: HookAction, cb: QueryBeforeHookInternal): T =>
@@ -159,7 +159,7 @@ export const _queryHookAfterSave = <
   select: S,
   cb: AfterHook<S, T['shape']>,
 ): T => {
-  return after(after(q, 'Create', select, cb), 'Update', select, cb);
+  return after(q, 'Save', select, cb);
 };
 
 export const _queryAfterSaveCommit = <
@@ -170,13 +170,7 @@ export const _queryAfterSaveCommit = <
   select: S,
   cb: AfterHook<S, T['shape']>,
 ): T => {
-  return after(
-    after(q, 'Create', select, cb, true),
-    'Update',
-    select,
-    cb,
-    true,
-  );
+  return after(q, 'Save', select, cb, true);
 };
 
 export const _queryHookBeforeDelete = <T extends PickQueryShape>(

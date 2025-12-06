@@ -37,6 +37,7 @@ import { Column } from '../columns/column';
 import { IntegerBaseColumn } from '../columns/column-types/number';
 import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
 import { SubQueryForSql } from 'pqb';
+import { SelectItemExpression } from '../common/select-item-expression';
 
 export const setSqlCtxSelectList = (
   ctx: ToSQLCtx,
@@ -67,7 +68,7 @@ export const setSqlCtxSelectList = (
       undefined,
     );
 
-    if (!isSubSql && ctx.cteHooks?.hasSelect) {
+    if (!isSubSql && ctx.topCtx.cteHooks?.hasSelect) {
       ctx.selectList.push('NULL');
     }
   }
@@ -217,6 +218,30 @@ export const selectToSqlList = (
           // selecting a single value from expression
           ctx.selectedCount++;
           const sql = item.toSQL(ctx, quotedAs);
+
+          // `get` column
+          if (
+            hookSelect &&
+            item instanceof SelectItemExpression &&
+            typeof item.item === 'string' &&
+            item.item !== '*'
+          ) {
+            const i = item.item.indexOf('.');
+            let key: string | undefined;
+            if (i !== -1) {
+              if (item.item.slice(0, i) === table.table) {
+                key = item.item.slice(i + 1);
+              }
+            } else {
+              key = item.item;
+            }
+
+            if (key) {
+              const column = item.q.shape[key];
+              (selectedAs ??= {})[key] = column?.data.name || key;
+            }
+          }
+
           list.push(ctx.aliasValue ? `${sql} ${quotedAs}` : sql);
           aliases?.push('');
         }

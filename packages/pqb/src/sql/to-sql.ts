@@ -40,7 +40,7 @@ import { pushOrderBySql } from './orderBy';
 import { pushLimitSQL } from './limit';
 import { addTableHook } from '../query/hooks/hooks.sql';
 
-interface ToSqlOptionsInternal extends HasCteHooks {
+interface ToSqlOptionsInternal {
   values?: unknown[];
   hasNonSelect?: boolean;
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
@@ -51,11 +51,13 @@ interface ToSqlOptionsInternal extends HasCteHooks {
   selectList?: string[];
 }
 
-export interface TopToSqlCtx extends ToSqlOptionsInternal {
+export interface TopToSqlCtx extends ToSqlOptionsInternal, HasCteHooks {
+  topCtx: TopToSqlCtx;
   topCTE?: TopCTE;
   values: unknown[];
   tableHook?: TableHook;
   delayedRelationSelect?: DelayedRelationSelect;
+  cteHookTopNullSelectAppended?: boolean;
 }
 
 export interface ToSQLCtx extends ToSqlOptionsInternal {
@@ -104,7 +106,6 @@ export const toSql = (
     aliasValue: topCtx?.aliasValue,
     skipBatchCheck: topCtx?.skipBatchCheck,
     hasNonSelect: topCtx?.hasNonSelect,
-    cteHooks: topCtx?.cteHooks,
     selectedCount: 0,
     cteName,
   };
@@ -119,7 +120,10 @@ export const toSql = (
 
   let result: Sql;
 
+  let selectKeywordPos: number | undefined;
+
   let fromQuery: SubQueryForSql | undefined;
+
   if (type && type !== 'upsert') {
     const tableName = table.table ?? query.as;
     if (!tableName) throw new Error(`Table is missing for ${type}`);
@@ -230,6 +234,7 @@ export const toSql = (
         sql.push(`${u.k} ${u.p ? s : '(' + s + ')'}`);
       }
     } else if (!skipSelect) {
+      selectKeywordPos = sql.length;
       sql.push('SELECT');
 
       if (query.distinct) {
@@ -328,12 +333,16 @@ export const toSql = (
       if (query.for.mode) sql.push(query.for.mode);
     }
 
-    addTableHook(ctx, table, query.hookSelect && { select: query.hookSelect });
+    addTableHook(ctx, table, query, query.hookSelect);
 
     // compose select in the last moment because NULL for CTE selects
     // can be added by sub queries added in where or in other places
     if (selectSqlPos !== undefined && ctx.selectList?.length) {
       sql[selectSqlPos] += ' ' + ctx.selectList.join(', ');
+    }
+
+    if (selectKeywordPos !== undefined && !isSubSql && ctx.topCtx.cteHooks) {
+      sql[selectKeywordPos] = '(' + sql[selectKeywordPos];
     }
 
     result = {
@@ -348,17 +357,19 @@ export const toSql = (
     if (!topCtx) {
       result.delayedRelationSelect = ctx.topCtx.delayedRelationSelect;
     }
-  } else if (topCtx) {
-    topCtx.cteHooks = ctx.cteHooks;
   }
 
-  if (!isSubSql && ctx.cteHooks && 'text' in result) {
-    result.cteHooks = ctx.cteHooks;
+  if (!isSubSql && ctx.topCtx.cteHooks && 'text' in result) {
+    result.cteHooks = ctx.topCtx.cteHooks;
 
-    if (ctx.cteHooks.hasSelect) {
+    if (ctx.topCtx.cteHooks.hasSelect) {
+      if (selectKeywordPos !== undefined) {
+        result.text += ')';
+      }
+
       result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
         ctx.selectedCount || 0,
-      )}json_build_object(${Object.entries(ctx.cteHooks.tableHooks)
+      )}json_build_object(${Object.entries(ctx.topCtx.cteHooks.tableHooks)
         .map(
           ([cteName, data]) =>
             `'${cteName}', (SELECT json_agg(${makeRowToJson(

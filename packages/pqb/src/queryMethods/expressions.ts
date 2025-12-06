@@ -3,7 +3,6 @@ import {
   Expression,
   ExpressionData,
   isExpression,
-  IsQuery,
   PickQueryColumTypes,
   PickQueryMeta,
   PickQueryMetaResultRelationsWindowsColumnTypes,
@@ -88,15 +87,12 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
   declare result: { value: BooleanQueryColumn };
   q: ExpressionData;
 
-  constructor(
-    q: IsQuery,
-    public args: [OrExpressionArg, ...OrExpressionArg[]],
-  ) {
+  constructor(public args: [OrExpressionArg, ...OrExpressionArg[]]) {
     super();
     this.q = { expr: this };
 
     args.forEach((arg, i) => {
-      const val = prepareOpArg(q, arg);
+      const val = prepareOpArg(this, arg);
       if (val) args[i] = val as never;
     });
   }
@@ -295,6 +291,6 @@ export class ExpressionMethods {
   }
 
   or(...args: [OrExpressionArg, ...OrExpressionArg[]]): OrExpression {
-    return new OrExpression(this as never, args);
+    return new OrExpression(args);
   }
 }

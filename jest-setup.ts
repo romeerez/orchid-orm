@@ -3,6 +3,7 @@ import path from 'path';
 import { QueryData, RecordUnknown } from 'pqb';
 import { skipQueryKeysForSubQuery } from './packages/pqb/src/sql/get-is-join-sub-query';
 import { setPrepareSubQueryForSql } from './packages/pqb/src/columns/operators';
+import { setRawSqlPrepareSubQueryForSql } from './packages/pqb/src/sql/rawSql';
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
@@ -90,6 +91,7 @@ jest.mock('./packages/pqb/src/query/to-sql/sub-query-for-sql', () => {
   };
 
   setPrepareSubQueryForSql(result.prepareSubQueryForSql);
+  setRawSqlPrepareSubQueryForSql(result.prepareSubQueryForSql);
 
   return result;
 });

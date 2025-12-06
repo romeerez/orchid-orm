@@ -1,31 +1,46 @@
-import { PickQueryQ, Query } from '../query';
+import { PickQueryQ } from '../query';
 import { pushQueryArrayImmutable } from '../queryUtils';
-import { QueryData, ToSQLQuery } from '../../sql';
-import { IsQuery } from '../../core';
+import { QueryBeforeHookInternal, QueryData } from '../../sql/data';
+import { ToSQLQuery } from '../../sql/to-sql';
+import { IsQuery, pushQueryValueImmutable } from '../../core/query/query';
 import { setPrepareSubQueryForSql } from '../../columns/operators';
+import { setRawSqlPrepareSubQueryForSql } from '../../sql/rawSql';
 
 export interface SubQueryForSql extends IsQuery, ToSQLQuery {
   __forSql: true;
 }
 
-export interface HasBeforeSet {
+export interface HasBeforeAndBeforeSet {
+  before?: QueryBeforeHookInternal[];
   beforeSet?: QueryData['beforeSet'];
 }
 
-export interface ArgWithBeforeSet {
-  q: HasBeforeSet;
+export interface ArgWithBeforeAndBeforeSet {
+  q: HasBeforeAndBeforeSet;
+}
+
+export interface PrepareSubQueryForSqlArg extends PickQueryQ {
+  dynamicBefore?: boolean;
 }
 
 export interface PrepareSubQueryForSql {
-  (mainQuery: ArgWithBeforeSet, subQuery: Query): SubQueryForSql;
+  (
+    mainQuery: ArgWithBeforeAndBeforeSet,
+    subQuery: PrepareSubQueryForSqlArg,
+  ): SubQueryForSql;
 }
 
 export const prepareSubQueryForSql: PrepareSubQueryForSql = (
   mainQuery,
   subQuery,
 ) => {
-  let beforeAction =
-    subQuery.q.type === 'insert'
+  if (subQuery.dynamicBefore) {
+    pushQueryValueImmutable(mainQuery as never, 'dynamicBefore', subQuery.q);
+    return subQuery as never;
+  }
+
+  let beforeAction = subQuery.q.type
+    ? subQuery.q.type === 'insert'
       ? subQuery.q.beforeCreate
       : subQuery.q.type === 'update'
       ? subQuery.q.beforeUpdate
@@ -37,7 +52,16 @@ export const prepareSubQueryForSql: PrepareSubQueryForSql = (
         : subQuery.q.beforeCreate
       : subQuery.q.type === 'delete'
       ? subQuery.q.beforeDelete
-      : undefined;
+      : undefined
+    : undefined;
+
+  const { beforeSet } = subQuery.q;
+  beforeAction =
+    beforeAction && beforeSet
+      ? [...beforeAction, ...beforeSet]
+      : beforeSet
+      ? [...beforeSet]
+      : beforeAction;
 
   if (beforeAction) {
     const newSet = new Set(mainQuery.q.beforeSet);
@@ -55,7 +79,7 @@ export const prepareSubQueryForSql: PrepareSubQueryForSql = (
       pushQueryArrayImmutable(
         mainQuery as PickQueryQ,
         'before',
-        beforeAction.map((fn) => () => fn(subQuery)),
+        beforeAction.map((fn) => () => fn(subQuery as never)),
       );
     }
   }
@@ -64,3 +88,4 @@ export const prepareSubQueryForSql: PrepareSubQueryForSql = (
 };
 
 setPrepareSubQueryForSql(prepareSubQueryForSql);
+setRawSqlPrepareSubQueryForSql(prepareSubQueryForSql);

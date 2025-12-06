@@ -59,7 +59,7 @@ export const moveQueryToCte = (
       list.push(...keys.map((key) => `"${as}"."${key}"`));
     }
 
-    if (!isSubSql && ctx.cteHooks?.hasSelect) {
+    if (!isSubSql && ctx.topCtx.cteHooks?.hasSelect) {
       list.push('NULL::json');
       ctx.selectedCount = selectedCount;
     }

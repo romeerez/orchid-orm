@@ -41,7 +41,10 @@ import { AfterCommitErrorHandler } from '../queryMethods';
 import { Column } from '../columns/column';
 import { ColumnsShape } from '../columns/columns-shape';
 import { CteItem } from '../query/cte/cte.sql';
-import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+import {
+  HasBeforeAndBeforeSet,
+  SubQueryForSql,
+} from '../query/to-sql/sub-query-for-sql';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: Column.Shape.QueryInit;
@@ -176,6 +179,10 @@ export interface QueryData extends QueryDataBase {
   selectedComputeds?: ComputedColumns;
   // a set for deduplication of hooks added dynamically from the sub queries
   beforeSet?: Set<QueryBeforeHookInternal>;
+  // regular before are executed before SQL is generated,
+  // but in some cases (dynamic aka lazy SQL) this is impossible,
+  // such queries need a second round of `before` hooks to execute after SQL generation.
+  dynamicBefore?: HasBeforeAndBeforeSet[];
   // run functions before any query
   before?: QueryBeforeHookInternal[];
   // run functions after any query
@@ -196,6 +203,12 @@ export interface QueryData extends QueryDataBase {
   afterUpdateCommit?: QueryAfterHook[];
   // additional select for afterUpdate hooks
   afterUpdateSelect?: Set<string>;
+  // run functions after create or update in transaction
+  afterSave?: QueryAfterHook[];
+  // run functions after create or update commit
+  afterSaveCommit?: QueryAfterHook[];
+  // additional select for afterSave hooks
+  afterSaveSelect?: Set<string>;
   // run functions before delete
   beforeDelete?: QueryBeforeHookInternal[];
   // run functions after delete in transaction

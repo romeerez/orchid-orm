@@ -228,7 +228,8 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       qb.q.subQuery = 1;
       _setSubQueryAliases(qb);
 
-      args[i] = resolveSubQueryCallbackV2(qb, arg as never) as never;
+      const resolved = resolveSubQueryCallbackV2(qb, arg as never) as never;
+      args[i] = prepareSubQueryForSql(q as never, resolved) as never;
     } else if (arg.constructor === Object) {
       const copy = ((args as RecordUnknown[])[i] = {
         ...(arg as RecordUnknown),

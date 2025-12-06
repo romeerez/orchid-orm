@@ -1,14 +1,59 @@
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { Column } from '../../columns/column';
-import { CteTableHook, TableHook } from '../../core/query/hook-select';
+import {
+  CteTableHook,
+  HookSelect,
+  TableHook,
+} from '../../core/query/hook-select';
+import { QueryData } from '../../sql/data';
+
+export type HookPurpose = 'Create' | 'Update' | 'Delete';
 
 export const addTableHook = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
-  tableHook?: TableHook,
+  data: QueryData,
+  select?: HookSelect,
+  hookPurpose?: HookPurpose,
 ): void => {
+  const afterCreate = data.afterCreate;
+  const afterUpdate = data.afterUpdate;
+  const afterSave = data.afterSave;
+  const afterDelete = data.afterDelete;
+  const afterCreateCommit = data.afterCreateCommit;
+  const afterUpdateCommit = data.afterUpdateCommit;
+  const afterSaveCommit = data.afterSaveCommit;
+  const afterDeleteCommit = data.afterDeleteCommit;
+
+  const hasAfterHook =
+    afterCreate ||
+    afterUpdate ||
+    afterSave ||
+    afterDelete ||
+    afterCreateCommit ||
+    afterUpdateCommit ||
+    afterSaveCommit ||
+    afterDeleteCommit;
+
+  if (!select && !hasAfterHook) {
+    return;
+  }
+
+  const tableHook: TableHook = {
+    hookPurpose,
+    select,
+    afterCreate,
+    afterUpdate,
+    afterSave,
+    afterDelete,
+    afterCreateCommit,
+    afterUpdateCommit,
+    afterSaveCommit,
+    afterDeleteCommit,
+  };
+
   if (ctx.cteName) {
-    if (tableHook && (tableHook.after || tableHook.afterCommit)) {
+    if (tableHook && hasAfterHook) {
       const shape: Column.Shape.Data = {};
       if (tableHook.select) {
         for (const key of tableHook.select.keys()) {
@@ -23,18 +68,20 @@ export const addTableHook = (
       };
 
       if (
-        !ctx.cteHooks?.hasSelect &&
         tableHook.select &&
-        ctx.topCtx.selectList
+        ctx.topCtx.selectList &&
+        ctx.topCtx === ctx.topCtx.topCtx &&
+        !ctx.topCtx.cteHookTopNullSelectAppended
       ) {
         ctx.topCtx.selectList.push('NULL');
+        ctx.topCtx.cteHookTopNullSelectAppended = true;
       }
 
-      if (ctx.cteHooks) {
-        if (tableHook.select) ctx.cteHooks.hasSelect = true;
-        ctx.cteHooks.tableHooks[ctx.cteName] ??= item;
+      if (ctx.topCtx.cteHooks) {
+        if (tableHook.select) ctx.topCtx.cteHooks.hasSelect = true;
+        ctx.topCtx.cteHooks.tableHooks[ctx.cteName] ??= item;
       } else {
-        ctx.cteHooks = {
+        ctx.topCtx.cteHooks = {
           hasSelect: !!tableHook.select,
           tableHooks: { [ctx.cteName]: item },
         };

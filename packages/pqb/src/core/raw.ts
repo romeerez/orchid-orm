@@ -1,15 +1,18 @@
 import { addValue, emptyObject, EmptyObject, RecordUnknown } from './utils';
 import { Column } from '../columns/column';
 import { OperatorToSQL } from '../columns/operators';
-import { HasBeforeSet } from '../query/to-sql/sub-query-for-sql';
+import { HasBeforeAndBeforeSet } from '../query/to-sql/sub-query-for-sql';
+import { QueryBeforeHookInternal } from '../sql';
 
 // The chain array is used to store a sequence of operators and their arguments, one be one.
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
 export type ExpressionChain = (OperatorToSQL | unknown)[];
 
-export interface ExpressionData extends HasBeforeSet {
+export interface ExpressionData extends HasBeforeAndBeforeSet {
   chain?: ExpressionChain;
   expr?: Expression;
+  before?: QueryBeforeHookInternal[];
+  dynamicBefore?: boolean;
 }
 
 // Base class for the raw SQL and other classes that can produce SQL

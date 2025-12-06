@@ -23,7 +23,10 @@ import { addColumnParserToQuery } from './column.utils';
 import { Column } from './column';
 import { ToSQLCtx } from '../sql/to-sql';
 import { MoveMutativeQueryToCte } from '../query/cte/cte.sql';
-import { PrepareSubQueryForSql } from '../query/to-sql/sub-query-for-sql';
+import {
+  ArgWithBeforeAndBeforeSet,
+  PrepareSubQueryForSql,
+} from '../query/to-sql/sub-query-for-sql';
 import { Db } from '../query';
 
 // workaround for circular dependencies between columns and sql
@@ -32,7 +35,7 @@ export const setMoveMutativeQueryToCte = (fn: MoveMutativeQueryToCte) => {
   moveMutativeQueryToCte = fn;
 };
 
-let prepareSubQueryForSql: PrepareSubQueryForSql;
+export let prepareSubQueryForSql: PrepareSubQueryForSql;
 export const setPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
   prepareSubQueryForSql = fn;
 };
@@ -154,7 +157,7 @@ const makeVarArg = (
 
 export const prepareOpArg = (q: unknown, arg: unknown) => {
   return arg instanceof dbClass
-    ? prepareSubQueryForSql(q as Query, arg as Query)
+    ? prepareSubQueryForSql(q as ArgWithBeforeAndBeforeSet, arg as Query)
     : undefined;
 };
 

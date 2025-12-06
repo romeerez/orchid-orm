@@ -1,18 +1,17 @@
 import { Query } from '../query/query';
 import {
-  emptyObject,
   PickQueryInputType,
   PickQueryShape,
   QueryBaseCommon,
-  QueryHookUtils,
-  RawSQLBase,
   RawSQLValues,
   RecordString,
   RecordUnknown,
   StaticSQLArgs,
   TemplateLiteralArgs,
-  templateLiteralSQLToCode,
 } from '../core';
+import { emptyObject } from '../core/utils';
+import { QueryHookUtils } from '../core/hooks';
+import { RawSQLBase, templateLiteralSQLToCode } from '../core/raw';
 import { raw } from '../sql/rawSql';
 import { TableData } from '../tableData';
 import { ColumnTypeSchemaArg } from './column-schema';
