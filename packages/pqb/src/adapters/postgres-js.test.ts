@@ -9,10 +9,6 @@ const testAdapter = new PostgresJsAdapter({
 
 testDb.adapter = testAdapter;
 
-jest.mock('timers/promises', () => ({
-  setTimeout: jest.fn(),
-}));
-
 describe('postgres-js', () => {
   afterEach(() => jest.clearAllMocks());
 

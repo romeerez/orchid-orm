@@ -88,7 +88,7 @@ export const _joinReturningArgs = <
     const relation = query.relations[joinKey];
     if (relation) {
       shape = getShapeFromSelect(relation.query as never);
-      const r = relation.query as Query;
+      const r = prepareSubQueryForSql(query as never, relation.query as Query);
       parsers = getQueryParsers(r);
       batchParsers = r.q.batchParsers;
       computeds = r.q.runtimeComputeds;

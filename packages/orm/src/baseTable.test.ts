@@ -16,7 +16,6 @@ import {
   QueryHookUtils,
 } from 'pqb';
 import { useTestORM } from './test-utils/orm.test-utils';
-import path from 'path';
 import {
   BaseTable,
   db,
@@ -31,18 +30,6 @@ import {
 import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
-
-jest.mock('../../pqb/src/core/utils', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require('path');
-  const actual = jest.requireActual('../../pqb/src/core/utils');
-  return {
-    ...actual,
-    getCallerFilePath: jest.fn(() =>
-      path.join(__dirname, 'test-utils', 'test-db.ts'),
-    ),
-  };
-});
 
 describe('baseTable', () => {
   useTestORM();
@@ -68,9 +55,9 @@ describe('baseTable', () => {
   });
 
   it('should support getFilePath to return a path where the baseTable is defined', () => {
-    expect(BaseTable.getFilePath()).toBe(
-      path.join(__dirname, 'test-utils', 'test-db.ts'),
-    );
+    asMock(getCallerFilePath).mockReturnValueOnce('path');
+
+    expect(BaseTable.getFilePath()).toBe('path');
   });
 
   it('should throw if cannot determine file path and calling `getFilePath', () => {

@@ -18,7 +18,7 @@ import { _clone, pushQueryArrayImmutable } from '../../query/queryUtils';
 import { ColumnsShape } from '../../columns/columns-shape';
 import { Column } from '../../columns/column';
 import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
-import { prepareSubQueryForSql } from 'pqb';
+import { Db, prepareSubQueryForSql } from 'pqb';
 
 /**
  * Processes arguments of join {@link JoinArgs} into {@link JoinItemArgs} type for building sql.
@@ -191,7 +191,7 @@ export const preprocessJoinArg = (
     ).joinQuery;
   }
 
-  return typeof arg === 'object'
+  return typeof arg === 'object' && arg instanceof Db
     ? prepareSubQueryForSql(q as Query, arg as Query)
     : arg;
 };

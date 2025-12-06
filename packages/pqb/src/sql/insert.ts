@@ -133,7 +133,14 @@ export const makeInsertSql = (
   };
   ctx.sql.push(null as never, null as never);
 
-  pushOnConflictSql(ctx, query, quotedAs, columns, quotedColumns);
+  pushOnConflictSql(
+    ctx,
+    query,
+    quotedAs,
+    columns,
+    quotedColumns,
+    runtimeDefaultColumns,
+  );
 
   const upsert = query.type === 'upsert';
 

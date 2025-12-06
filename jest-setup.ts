@@ -1,10 +1,14 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { Query, QueryData, RecordUnknown } from 'pqb';
+import { QueryData, RecordUnknown } from 'pqb';
 import { skipQueryKeysForSubQuery } from './packages/pqb/src/sql/get-is-join-sub-query';
 import { setPrepareSubQueryForSql } from './packages/pqb/src/columns/operators';
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+jest.mock('timers/promises', () => ({
+  setTimeout: jest.fn(),
+}));
 
 jest.mock('orchid-orm', () => require('./packages/orm/src'), {
   virtual: true,
@@ -52,6 +56,23 @@ jest.mock(
 
 jest.mock('test-utils', () => require('./packages/test-utils/src'), {
   virtual: true,
+});
+
+jest.mock('./packages/pqb/src/core/utils', () => {
+  const actual = jest.requireActual('./packages/pqb/src/core/utils');
+  return {
+    ...actual,
+    getStackTrace: jest.fn(() => {
+      const result = actual.getStackTrace();
+      return result.filter((file: { getFileName(): string | null }) => {
+        const fileName = file.getFileName();
+        return (
+          fileName && fileName !== __filename && !fileName.includes('jest-mock')
+        );
+      });
+    }),
+    getCallerFilePath: jest.fn(() => 'path'),
+  };
 });
 
 jest.mock('./packages/pqb/src/query/to-sql/sub-query-for-sql', () => {

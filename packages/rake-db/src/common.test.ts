@@ -11,12 +11,6 @@ import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'pqb';
 import { processRakeDbConfig } from './config';
 
-jest.mock('../../pqb/src/core/utils', () => ({
-  ...jest.requireActual('../../pqb/src/core/utils'),
-  getStackTrace: jest.fn(),
-  getCallerFilePath: jest.fn(),
-}));
-
 describe('common', () => {
   describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
@@ -50,6 +44,7 @@ describe('common', () => {
 
     it(`should throw when no basePath and can't get it automatically`, () => {
       asMock(getCallerFilePath).mockReturnValueOnce(undefined);
+      asMock(getStackTrace).mockReturnValueOnce([]);
 
       expect(() =>
         processRakeDbConfig({
