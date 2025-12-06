@@ -1,5 +1,11 @@
 # pqb
 
+## 0.57.7
+
+### Patch Changes
+
+- 16ae87a: Ignore savepoint if not in transaction (#590)
+
 ## 0.57.6
 
 ### Patch Changes
