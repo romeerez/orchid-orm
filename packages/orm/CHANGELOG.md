@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.58.10
+
+### Patch Changes
+
+- c148cb9: Fix enum column type in migration generator when combining table types to compare SQLs (#590)
+
 ## 1.58.9
 
 ### Patch Changes
