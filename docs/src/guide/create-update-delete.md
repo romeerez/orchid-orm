@@ -174,9 +174,9 @@ const oneRecord = await db.table.create({
   password: '1234',
 });
 
-// When using `.onConflictIgnore()`,
+// When using `.onConflictDoNothing()`,
 // the record may be not created and the `createdCount` will be 0.
-const createdCount = await db.table.insert(data).onConflictIgnore();
+const createdCount = await db.table.insert(data).onConflictDoNothing();
 
 await db.table.create({
   // raw SQL
@@ -454,12 +454,35 @@ A conflict occurs when a table has a primary key or a unique index on a column,
 or a composite primary key unique index on a set of columns,
 and a row being created has the same value as a row that already exists in the table in this column(s).
 
-Use [onConflictIgnore](#onconflictignore) to suppress the error and continue without updating the record,
+Use [onConflictDoNothing](#onconflictdonothing) to suppress the error and continue without updating the record,
 or the [merge](#onconflict-merge) to update the record with new values automatically,
 or the [set](#onconflict-set) to specify own values for the update.
 
 `onConflict` only accepts column names that are defined in `primaryKey` or `unique` in the table definition.
 To specify a constraint, its name also must be explicitly set in `primaryKey` or `unique` in the table code.
+
+`onConflict` can accept:
+- No arguments to handle any conflict
+- A column name or array of column names to target a specific unique constraint
+- A constraint name using the `{ constraint: 'name' }` syntax
+- A raw SQL expression for complex conditions
+
+```ts
+// Handle any conflict
+db.table.create(data).onConflictDoNothing();
+
+// Target a specific column
+db.table.create(data).onConflict('email').merge();
+
+// Target multiple columns
+db.table.create(data).onConflict(['email', 'name']).merge();
+
+// Target a specific constraint
+db.table.create(data).onConflict({ constraint: 'unique_index_name' }).merge();
+
+// Use raw SQL expression
+db.table.create(data).onConflict(sql`(email) where active`).merge();
+```
 
 Postgres has a limitation that a single `INSERT` query can have only a single `ON CONFLICT` clause that can target only a single unique constraint
 for updating the record.
@@ -469,7 +492,7 @@ consider using [upsert](#upsert) instead.
 
 ```ts
 // leave `onConflict` without argument to ignore or merge on any conflict
-db.table.create(data).onConflictIgnore();
+db.table.create(data).onConflictDoNothing();
 
 // single column:
 db.table.create(data).onConflict('email').merge();
@@ -549,11 +572,11 @@ db.table
   .where({ updatedAt: { lt: timestamp } });
 ```
 
-### onConflictIgnore
+### onConflictDoNothing
 
 [//]: # 'has JSDoc'
 
-Use `onConflictIgnore` to suppress unique constraint violation error when creating a record.
+Use `onConflictDoNothing` to suppress unique constraint violation error when creating a record.
 
 Adds `ON CONFLICT (columns) DO NOTHING` clause to the insert statement, columns are optional.
 
@@ -566,31 +589,31 @@ db.table
     name: 'John Doe',
   })
   // on any conflict:
-  .onConflictIgnore()
+  .onConflictDoNothing()
   // or, for a specific column:
-  .onConflictIgnore('email')
+  .onConflictDoNothing('email')
   // or, for a specific constraint:
-  .onConflictIgnore({ constraint: 'unique_index_name' });
+  .onConflictDoNothing({ constraint: 'unique_index_name' });
 ```
 
-When there is a conflict, nothing can be returned from the database, so `onConflictIgnore` adds `| undefined` part to the response type.
+When there is a conflict, nothing can be returned from the database, so `onConflictDoNothing` adds `| undefined` part to the response type.
 
 ```ts
 const maybeRecord: RecordType | undefined = await db.table
   .create(data)
-  .onConflictIgnore();
+  .onConflictDoNothing();
 
 const maybeId: number | undefined = await db.table
   .get('id')
   .create(data)
-  .onConflictIgnore();
+  .onConflictDoNothing();
 ```
 
 When creating multiple records, only created records will be returned. If no records were created, array will be empty:
 
 ```ts
 // array can be empty
-const arr = await db.table.createMany([data, data, data]).onConflictIgnore();
+const arr = await db.table.createMany([data, data, data]).onConflictDoNothing();
 ```
 
 ### onConflict merge
