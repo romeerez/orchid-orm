@@ -977,18 +977,18 @@ export class Join {
    * ```ts
    * // joinLateral messages relation, alias it as `m`
    * // without aliasing you can refer to the message by a table name
-   * db.user.joinLateral('messages', (q) =>
-   *   q
-   *     .as('m') // alias to 'm'
-   *     // select message columns
-   *     .select('text')
-   *     // join the message to the user, column names can be prefixed with table names
-   *     .on('authorId', 'user.id')
-   *     // message columns are available without prefixing,
-   *     // outer table columns are available with a table name
-   *     .where({ text: 'some text', 'user.name': 'name' })
-   *     .order({ createdAt: 'DESC' }),
-   * )
+   * db.user
+   *   .joinLateral(db.message.as('m'), (q) =>
+   *     q
+   *       // select message columns
+   *       .select('text')
+   *       // join the message to the user, column names can be prefixed with table names
+   *       .on('authorId', 'user.id')
+   *       // message columns are available without prefixing,
+   *       // outer table columns are available with a table name
+   *       .where({ text: 'some text', 'user.name': 'name' })
+   *       .order({ createdAt: 'DESC' }),
+   *   )
    *   // only selected message columns are available in select and where
    *   .select('id', 'name', 'm.text')
    *   .where({ 'm.text': messageData.text });
