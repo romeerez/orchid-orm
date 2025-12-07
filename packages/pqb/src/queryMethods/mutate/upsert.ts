@@ -55,7 +55,8 @@ export interface QueryUpsert {
    * No values are returned by default, place `select` or `selectAll` before `upsert` to specify returning columns.
    *
    * ```ts
-   * await User.selectAll()
+   * await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     data: {
@@ -77,7 +78,8 @@ export interface QueryUpsert {
    *   });
    *
    * // the same as above but using `update` and `create`
-   * await User.selectAll()
+   * await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     update: {
@@ -94,7 +96,8 @@ export interface QueryUpsert {
    * The data for `create` may be returned from a function, it won't be called if a record was updated:
    *
    * ```ts
-   * await User.selectAll()
+   * await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     update: {
@@ -107,7 +110,8 @@ export interface QueryUpsert {
    *   });
    *
    * // the same as above using `data`
-   * await User.selectAll()
+   * await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     data: {
@@ -124,7 +128,8 @@ export interface QueryUpsert {
    * Data from `data` or `update` is passed to the `create` function and can be used:
    *
    * ```ts
-   * const user = await User.selectAll()
+   * const user = await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .upsert({
    *     data: {

@@ -167,7 +167,8 @@ export interface QueryOrCreate {
    * The data can be returned from a function, it won't be called if the record was found:
    *
    * ```ts
-   * const user = await User.selectAll()
+   * const user = await db.user
+   *   .selectAll()
    *   .findBy({ email: 'some@email.com' })
    *   .orCreate(() => ({
    *     email: 'some@email.com',
