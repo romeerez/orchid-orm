@@ -26,6 +26,7 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   migrationsPath: string;
 } = {
   ...migrationConfigDefaults,
+  transaction: 'single',
   basePath: path.join(__dirname),
   baseTable: BaseTable as unknown as AnyRakeDbConfig['baseTable'],
   dbPath: 'src/db/db.ts',

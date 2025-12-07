@@ -49,8 +49,6 @@ export const compareSqlExpressions = async (
     const result = await adapter.query(combinedQueries, values, viewName).then(
       (res) => (res as unknown as QueryResult[])[1],
       async (err) => {
-        await adapter.query(`ROLLBACK TO SAVEPOINT "${viewName}"`);
-
         // ignore the "type ... does not exist" because the type may be added in the same migration,
         // but throw on other errors
         if (err.code !== '42704') {

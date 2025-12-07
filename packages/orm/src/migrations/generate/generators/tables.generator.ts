@@ -316,11 +316,6 @@ const getColumnDbTypeForComparison = (
   column: ColumnTypeBase,
   currentSchema: string,
 ): string => {
-  if (column instanceof EnumColumn) {
-    // text supports all the same operations as enums, texts can be type-casted to enum if needed
-    return 'text';
-  }
-
   if (column instanceof ArrayColumn) {
     return (
       getColumnDbTypeForComparison(column.data.item, currentSchema) +
@@ -328,7 +323,7 @@ const getColumnDbTypeForComparison = (
     );
   }
 
-  let type = column.dataType;
+  let type = column instanceof EnumColumn ? column.enumName : column.dataType;
 
   const i = type.indexOf('(');
   let append = '';
@@ -340,7 +335,9 @@ const getColumnDbTypeForComparison = (
   const j = type.indexOf('.');
   if (j === -1) {
     let result = `"${type}"${append}`;
-    if (column.data.isOfCustomType) result = `"${currentSchema}".${result}`;
+    if (column.data.isOfCustomType || column instanceof EnumColumn) {
+      result = `"${currentSchema}".${result}`;
+    }
     return result;
   } else {
     return `"${type.slice(j)}"."${type.slice(0, j)}"${append}`;
