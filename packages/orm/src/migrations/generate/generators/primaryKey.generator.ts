@@ -1,5 +1,5 @@
 import { AnyRakeDbConfig } from 'rake-db';
-import { ColumnType, toArray, toSnakeCase } from 'pqb';
+import { Column, toArray, toSnakeCase } from 'pqb';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
 
@@ -11,7 +11,7 @@ export const processPrimaryKey = (
 
   const columnsPrimaryKey: { key: string; name: string }[] = [];
   for (const key in codeTable.shape) {
-    const column = codeTable.shape[key] as ColumnType;
+    const column = codeTable.shape[key] as Column;
     if (column.data.primaryKey) {
       columnsPrimaryKey.push({ key, name: column.data.name ?? key });
     }

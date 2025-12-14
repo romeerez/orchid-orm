@@ -1,7 +1,7 @@
+import postgres, { Error, Row, RowList } from 'postgres';
 import {
   AdapterBase,
   AdapterConfigBase,
-  ColumnSchemaConfig,
   emptyObject,
   MaybeArray,
   QueryArraysResult,
@@ -11,14 +11,12 @@ import {
   returnArg,
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
-} from '../core';
-import postgres, { Error, Row, RowList } from 'postgres';
-import {
   DbOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
   createDbWithAdapter,
   DbResult,
+  ColumnSchemaConfig,
 } from 'pqb';
 
 export interface CreatePostgresJsDbOptions<
@@ -120,7 +118,10 @@ export class PostgresJsAdapter implements AdapterBase {
 
   constructor(config: PostgresJsAdapterOptions) {
     this.config = { ...config, types };
+    this.sql = this.configure(config);
+  }
 
+  private configure(config: PostgresJsAdapterOptions): postgres.Sql {
     this.schema = config.schema;
     if (this.schema) {
       this.config.connection = {
@@ -129,6 +130,7 @@ export class PostgresJsAdapter implements AdapterBase {
       };
     }
 
+    let sql;
     if (this.config.databaseURL) {
       const urlString = this.config.databaseURL;
       const url = new URL(urlString);
@@ -148,9 +150,9 @@ export class PostgresJsAdapter implements AdapterBase {
         };
       }
 
-      this.sql = postgres(url.toString(), this.config);
+      sql = postgres(url.toString(), this.config);
     } else {
-      this.sql = postgres(this.config);
+      sql = postgres(this.config);
     }
 
     if (config.connectRetry) {
@@ -162,12 +164,19 @@ export class PostgresJsAdapter implements AdapterBase {
       this.query = wrapAdapterFnWithConnectRetry(this, this.query);
       this.arrays = wrapAdapterFnWithConnectRetry(this, this.arrays);
     }
+
+    return sql;
   }
 
   private getURL(): URL | undefined {
     return this.config.databaseURL
       ? new URL(this.config.databaseURL)
       : undefined;
+  }
+
+  async updateConfig(config: PostgresJsAdapterOptions): Promise<void> {
+    await this.close();
+    this.sql = this.configure({ ...this.config, ...config });
   }
 
   reconfigure(params: {
@@ -330,6 +339,10 @@ export class PostgresJsTransactionAdapter implements AdapterBase {
   errorClass = postgres.PostgresError;
 
   constructor(public adapter: PostgresJsAdapter, public sql: postgres.Sql) {}
+
+  updateConfig(config: PostgresJsAdapterOptions): Promise<void> {
+    return this.adapter.updateConfig(config);
+  }
 
   reconfigure(params: {
     database?: string;

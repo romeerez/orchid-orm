@@ -39,7 +39,9 @@ import {
   commitSql,
 } from './transaction';
 import { processComputedResult } from '../modules/computed';
+import { Column } from '../columns';
 import { _clone } from '../query/queryUtils';
+import { HookPurpose } from '../query/hooks/hooks.sql';
 
 export const queryMethodByReturnType: {
   [K in string]: 'query' | 'arrays';
@@ -120,24 +122,48 @@ function maybeWrappedThen(
 
   const shouldCatch = q.catch || !!reject;
 
-  let beforeHooks: QueryBeforeHookInternal[] | undefined;
+  let beforeActionHooks: QueryBeforeHookInternal[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
+  let afterSaveHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
+  let afterSaveCommitHooks: QueryAfterHook[] | undefined;
   if (q.type) {
-    if (q.type === 'insert' || q.type === 'upsert') {
-      beforeHooks = q.beforeCreate;
+    if (q.type === 'insert') {
+      beforeActionHooks = q.beforeCreate;
       afterHooks = q.afterCreate;
+      afterSaveHooks = q.afterSave;
       afterCommitHooks = q.afterCreateCommit;
+      afterSaveCommitHooks = q.afterSaveCommit;
     } else if (q.type === 'update') {
-      beforeHooks = q.beforeUpdate;
+      beforeActionHooks = q.beforeUpdate;
       afterHooks = q.afterUpdate;
+      afterSaveHooks = q.afterSave;
       afterCommitHooks = q.afterUpdateCommit;
+      afterSaveCommitHooks = q.afterSaveCommit;
+    } else if (q.type === 'upsert') {
+      if (q.upsertSecond) {
+        beforeActionHooks = q.beforeCreate;
+      } else if (q.upsertUpdate && q.updateData) {
+        beforeActionHooks = q.beforeUpdate;
+        afterHooks = q.afterUpdate;
+        afterSaveHooks = q.afterSave;
+        afterCommitHooks = q.afterUpdateCommit;
+        afterSaveCommitHooks = q.afterSaveCommit;
+      }
     } else if (q.type === 'delete') {
-      beforeHooks = q.beforeDelete;
+      beforeActionHooks = q.beforeDelete;
       afterHooks = q.afterDelete;
       afterCommitHooks = q.afterDeleteCommit;
     }
   }
+
+  const { before } = q;
+  const beforeHooks =
+    before && beforeActionHooks
+      ? [...before, ...beforeActionHooks]
+      : before
+      ? before
+      : beforeActionHooks;
 
   const trx = this.internal.transactionStorage.getStore();
   if (
@@ -155,7 +181,9 @@ function maybeWrappedThen(
             trx,
             beforeHooks,
             afterHooks,
+            afterSaveHooks,
             afterCommitHooks,
+            afterSaveCommitHooks,
             resolve,
             reject,
             shouldCatch,
@@ -169,7 +197,9 @@ function maybeWrappedThen(
       trx,
       beforeHooks,
       afterHooks,
+      afterSaveHooks,
       afterCommitHooks,
+      afterSaveCommitHooks,
       resolve,
       reject,
       shouldCatch,
@@ -195,7 +225,9 @@ const then = async (
   trx?: TransactionState,
   beforeHooks?: QueryBeforeHookInternal[],
   afterHooks?: QueryAfterHook[],
+  afterSaveHooks?: QueryAfterHook[],
   afterCommitHooks?: QueryAfterHook[],
+  afterSaveCommitHooks?: QueryAfterHook[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   resolve?: (result: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,21 +244,32 @@ const then = async (
   const localError = queryError;
 
   try {
-    if (beforeHooks || query.before) {
-      await Promise.all(
-        [...(beforeHooks || emptyArray), ...(query.before || emptyArray)].map(
-          callWithThis,
-          q,
-        ),
-      );
+    if (beforeHooks) {
+      await Promise.all(beforeHooks.map(callWithThis, q));
     }
 
     const localSql = (sql = q.toSQL());
 
-    const { tableHook, delayedRelationSelect } = sql;
+    if (q.q.dynamicBefore) {
+      let promises: Promise<unknown>[] | undefined;
+
+      for (const data of q.q.dynamicBefore) {
+        if (data.before) {
+          for (const before of data.before) {
+            const promise = before(q);
+            if (promise) (promises ??= []).push(promise);
+          }
+        }
+      }
+
+      if (promises) await Promise.all(promises);
+    }
+
+    const { tableHook, cteHooks, delayedRelationSelect } = sql;
     const { returnType = 'all' } = query;
     const tempReturnType =
       tableHook?.select ||
+      cteHooks?.hasSelect ||
       (returnType === 'rows' && q.q.batchParsers) ||
       delayedRelationSelect?.value
         ? 'all'
@@ -247,12 +290,9 @@ const then = async (
         logData = log.beforeQuery(sql);
       }
 
-      queryResult = await execQuery(
-        adapter,
-        queryMethodByReturnType[tempReturnType],
-        sql,
-        shouldCatch && trx,
-      );
+      const method = queryMethodByReturnType[tempReturnType];
+      queryResult = await execQuery(adapter, method, sql, shouldCatch && trx);
+      const { runAfterQuery } = sql;
 
       if (log) {
         log.afterQuery(sql, logData);
@@ -260,18 +300,10 @@ const then = async (
         sql = undefined;
       }
 
-      if (localSql.cteHooks?.hasSelect) {
-        const lastRowI = queryResult.rows.length - 1;
-        const lastFieldI = queryResult.fields.length - 1;
-
-        const fieldName = queryResult.fields[lastFieldI].name;
-        cteData = queryResult.rows[lastRowI][fieldName];
-        queryResult.fields.length = lastFieldI;
-        queryResult.rowCount--;
-        queryResult.rows.length = lastRowI;
-
-        for (const row of queryResult.rows) {
-          delete row[fieldName];
+      if (runAfterQuery) {
+        const r = await runAfterQuery(queryResult);
+        if (r) {
+          return resolve ? resolve(r.result) : r.result;
         }
       }
 
@@ -279,6 +311,28 @@ const then = async (
       // Useful for `upsert` and `orCreate`.
       if (query.patchResult) {
         await query.patchResult(q, tableHook?.select, queryResult);
+      }
+
+      if (localSql.cteHooks?.hasSelect) {
+        const lastRowI = queryResult.rows.length - 1;
+        const lastFieldI = queryResult.fields.length - 1;
+
+        const fieldName =
+          method === 'query' ? queryResult.fields[lastFieldI].name : lastFieldI;
+        cteData = queryResult.rows[lastRowI][fieldName];
+        queryResult.fields.length = lastFieldI;
+        queryResult.rowCount--;
+        queryResult.rows.length = lastRowI;
+
+        if (method === 'query') {
+          for (const row of queryResult.rows) {
+            delete row[fieldName];
+          }
+        } else {
+          for (const row of queryResult.rows) {
+            row.length = lastFieldI;
+          }
+        }
       }
 
       result = query.handleResult(q, tempReturnType, queryResult, localSql);
@@ -333,6 +387,9 @@ const then = async (
         if (log) log.afterQuery(commitSql, logData);
       }
 
+      // runAfterQuery is not called because it's only for upsert,
+      // while this batch branch is for batch insert
+
       if (query.patchResult) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await query.patchResult(q, tableHook?.select, queryResult!);
@@ -377,17 +434,48 @@ const then = async (
     let cteAfterHooks: (() => unknown)[] | undefined;
     let cteAfterCommitHooks: (() => unknown)[] | undefined;
     if (localSql.cteHooks) {
+      const addedAfterHooks = new Set<(data: unknown, query: any) => unknown>();
+      const addedAfterCommitHooks = new Set<
+        (data: unknown, query: any) => unknown
+      >();
+
+      interface TableData {
+        data: {
+          [K in HookPurpose | 'Save']?: unknown[];
+        };
+      }
+
+      const dataPerSubQuery = new Map<string, TableData>();
+
       for (const cteName in localSql.cteHooks.tableHooks) {
         const hook = localSql.cteHooks.tableHooks[cteName];
 
+        const purpose = hook.tableHook.hookPurpose as HookPurpose | undefined;
+        if (!purpose) continue;
+
+        let tableData = dataPerSubQuery.get(hook.table);
+        if (!tableData) {
+          tableData = { data: {} };
+          dataPerSubQuery.set(hook.table, tableData);
+        }
+
         const data = cteData?.[cteName];
         if (data) {
+          const existing = tableData.data[purpose];
+          tableData.data[purpose] = existing ? [...existing, ...data] : data;
+
+          if (purpose === 'Create' || purpose === 'Update') {
+            tableData.data.Save = tableData.data.Save
+              ? [...tableData.data.Save, ...data]
+              : data;
+          }
+
           let hasParsers: boolean | undefined;
           const parsers: ColumnsParsers = {};
           for (const key in hook.shape) {
-            if (hook.shape[key]._parse) {
+            if ((hook.shape[key] as Column)._parse) {
               hasParsers = true;
-              parsers[key] = hook.shape[key]._parse;
+              parsers[key] = (hook.shape[key] as Column)._parse;
             }
           }
 
@@ -397,109 +485,145 @@ const then = async (
             }
           }
         }
+      }
 
-        if (hook.tableHook.after) {
-          (cteAfterHooks ??= []).push(
-            ...hook.tableHook.after.map(
-              (fn) => () => fn(cteData?.[cteName], q),
-            ),
-          );
-        }
+      for (const cteName in localSql.cteHooks.tableHooks) {
+        const hook = localSql.cteHooks.tableHooks[cteName];
+        const { tableHook } = hook;
 
-        if (hook.tableHook.afterCommit) {
-          (cteAfterCommitHooks ??= []).push(
-            ...hook.tableHook.afterCommit.map(
-              (fn) => () => fn(cteData?.[cteName], q),
-            ),
-          );
+        const purpose = tableHook.hookPurpose as HookPurpose | undefined;
+        const tableData = dataPerSubQuery.get(hook.table);
+        if (!purpose || !tableData) continue;
+
+        for (const purpose of ['Create', 'Update', 'Delete', 'Save'] as const) {
+          const data = tableData.data[purpose];
+          if (!data) continue;
+
+          const afterKey = `after${purpose}` as const;
+          const after = tableHook[afterKey];
+          if (after) {
+            const arr = (cteAfterHooks ??= []);
+            for (const fn of after) {
+              const hookData = addedAfterHooks.has(fn);
+              if (!hookData) {
+                addedAfterHooks.add(fn);
+                arr.push(() => fn(data, q));
+              }
+            }
+          }
+
+          const afterCommitKey = `after${purpose}Commit` as const;
+          const afterCommit = tableHook[afterCommitKey];
+          if (afterCommit) {
+            const arr = (cteAfterHooks ??= []);
+            for (const fn of afterCommit) {
+              const hookData = addedAfterCommitHooks.has(fn);
+              if (!hookData) {
+                addedAfterCommitHooks.add(fn);
+                arr.push(() => fn(data, q));
+              }
+            }
+          }
         }
       }
     }
 
+    const queryAfter = query.after;
     const hasAfterHook =
       afterHooks ||
+      afterSaveHooks ||
       afterCommitHooks ||
-      query.after ||
+      afterSaveCommitHooks ||
+      queryAfter ||
       cteAfterHooks ||
       cteAfterCommitHooks;
     if (hasAfterHook) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      if (queryResult!.rowCount) {
-        if (afterHooks || query.after || cteAfterHooks) {
-          const args = [result, q];
-          await Promise.all(
-            [
-              ...(afterHooks || emptyArray),
-              ...(query.after || emptyArray),
-              ...(cteAfterHooks || emptyArray),
-            ].map(callAfterHook, args),
-          );
-        }
+      if (!queryResult!.rowCount) {
+        afterHooks =
+          afterSaveHooks =
+          afterCommitHooks =
+          afterSaveCommitHooks =
+            undefined;
+      }
 
-        // afterCommitHooks are executed later after transaction commit,
-        // or, if we don't have transaction, they are executed intentionally after other after hooks
-        if (afterCommitHooks || cteAfterCommitHooks) {
-          if (isInUserTransaction(trx)) {
-            if (afterCommitHooks) {
-              (trx.afterCommit ??= []).push(
-                result as unknown[],
-                q,
-                afterCommitHooks,
-              );
+      if (afterHooks || afterSaveHooks || queryAfter || cteAfterHooks) {
+        const args = [result, q];
+        await Promise.all(
+          [
+            ...(afterHooks || emptyArray),
+            ...(afterSaveHooks || emptyArray),
+            ...(queryAfter || emptyArray),
+            ...(cteAfterHooks || emptyArray),
+          ].map(callAfterHook, args),
+        );
+      }
+
+      // afterCommitHooks are executed later after transaction commit,
+      // or, if we don't have transaction, they are executed intentionally after other after hooks
+      if (afterCommitHooks || afterSaveCommitHooks || cteAfterCommitHooks) {
+        const afterActionAndSaveCommit = (afterCommitHooks ||
+          afterSaveCommitHooks) && [
+          ...(afterCommitHooks || emptyArray),
+          ...(afterSaveCommitHooks || emptyArray),
+        ];
+
+        if (isInUserTransaction(trx)) {
+          if (afterActionAndSaveCommit) {
+            (trx.afterCommit ??= []).push(
+              result as unknown[],
+              q,
+              afterActionAndSaveCommit,
+            );
+          }
+
+          if (cteAfterCommitHooks) {
+            (trx.afterCommit ??= []).push(
+              result as unknown[],
+              q,
+              cteAfterCommitHooks,
+            );
+          }
+        } else {
+          // result can be transformed later, reference the current form to use it in hook.
+          const localResult = result as unknown[];
+          // to suppress throws of sync afterCommit hooks.
+          queueMicrotask(async () => {
+            const promises: (unknown | Promise<unknown>)[] = [];
+            if (afterActionAndSaveCommit) {
+              for (const fn of afterActionAndSaveCommit) {
+                try {
+                  promises.push(
+                    (fn as unknown as AfterCommitHook)(localResult, q),
+                  );
+                } catch (err) {
+                  promises.push(Promise.reject(err));
+                }
+              }
             }
 
             if (cteAfterCommitHooks) {
-              (trx.afterCommit ??= []).push(
-                result as unknown[],
-                q,
-                cteAfterCommitHooks,
-              );
+              for (const fn of cteAfterCommitHooks) {
+                try {
+                  promises.push(fn());
+                } catch (err) {
+                  promises.push(Promise.reject(err));
+                }
+              }
             }
-          } else {
-            // result can be transformed later, reference the current form to use it in hook.
-            const localResult = result as unknown[];
-            // to suppress throws of sync afterCommit hooks.
-            queueMicrotask(async () => {
-              const promises: (unknown | Promise<unknown>)[] = [];
-              if (afterCommitHooks) {
-                for (const fn of afterCommitHooks) {
-                  try {
-                    promises.push(
-                      (fn as unknown as AfterCommitHook)(localResult, q),
-                    );
-                  } catch (err) {
-                    promises.push(Promise.reject(err));
-                  }
-                }
-              }
 
-              if (cteAfterCommitHooks) {
-                for (const fn of cteAfterCommitHooks) {
-                  try {
-                    promises.push(fn());
-                  } catch (err) {
-                    promises.push(Promise.reject(err));
-                  }
-                }
-              }
-
-              await _runAfterCommitHooks(
-                localResult,
-                promises,
-                () =>
-                  [
-                    ...(afterCommitHooks || emptyArray),
-                    ...(cteAfterCommitHooks || emptyArray),
-                  ].map((h) => h.name),
-                q.q.catchAfterCommitErrors,
-              );
-            });
-          }
+            await _runAfterCommitHooks(
+              localResult,
+              promises,
+              () =>
+                [
+                  ...(afterCommitHooks || emptyArray),
+                  ...(cteAfterCommitHooks || emptyArray),
+                ].map((h) => h.name),
+              q.q.catchAfterCommitErrors,
+            );
+          });
         }
-      } else if (query.after) {
-        // TODO: why only query.after is called?
-        const args = [result, q];
-        await Promise.all(query.after.map(callAfterHook, args));
       }
     }
 
@@ -614,8 +738,17 @@ const then = async (
   } catch (err) {
     let error;
     if (err instanceof adapter.errorClass) {
-      error = new (q.error as unknown as new () => QueryError)();
-      adapter.assignError(error, err);
+      if (
+        // a special not found error thrown by 'not-found'::int
+        'code' in err &&
+        err.code === '22P02' &&
+        err.message.endsWith(`"not-found"`)
+      ) {
+        error = new NotFoundError(q);
+      } else {
+        error = new (q.error as unknown as new () => QueryError)();
+        adapter.assignError(error, err);
+      }
       error.cause = localError;
     } else {
       error = err;

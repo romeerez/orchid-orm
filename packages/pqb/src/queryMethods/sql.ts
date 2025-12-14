@@ -1,10 +1,6 @@
-import {
-  DynamicSQLArg,
-  PickQueryColumnTypes,
-  QueryColumn,
-  StaticSQLArgs,
-} from '../core';
+import { DynamicSQLArg, PickQueryColumTypes, StaticSQLArgs } from '../core';
 import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
+import { Column } from '../columns';
 
 export class SqlMethod<ColumnTypes> {
   /**
@@ -149,14 +145,14 @@ export class SqlMethod<ColumnTypes> {
    * @return object that has `type` and `values` methods
    */
   sql<T = unknown>(
-    this: PickQueryColumnTypes,
+    this: PickQueryColumTypes,
     ...args: StaticSQLArgs
-  ): RawSQL<QueryColumn<T>, ColumnTypes>;
+  ): RawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   sql<T = unknown>(
-    this: PickQueryColumnTypes,
-    ...args: [DynamicSQLArg<QueryColumn<T>>]
-  ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
-  sql(this: PickQueryColumnTypes, ...args: unknown[]) {
+    this: PickQueryColumTypes,
+    ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
+  ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  sql(this: PickQueryColumTypes, ...args: unknown[]) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sql = (raw as any)(...args);
     sql.columnTypes = this.columnTypes;

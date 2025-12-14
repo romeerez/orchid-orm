@@ -29,22 +29,8 @@ import {
   UpdateCtx,
   VirtualColumn,
   WhereArg,
-} from 'pqb';
-import {
-  addAutoForeignKey,
-  hasRelationHandleCreate,
-  hasRelationHandleUpdate,
-  NestedInsertManyConnect,
-  NestedInsertManyConnectOrCreate,
-  NestedInsertManyItems,
-  RelJoin,
-} from './common/utils';
-import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
-import {
   ColumnSchemaConfig,
-  ColumnShapeInputPartial,
-  ColumnsShapeBase,
-  ColumnTypeBase,
+  ColumnsShape,
   getPrimaryKeys,
   MaybeArray,
   NotFoundError,
@@ -58,7 +44,18 @@ import {
   toArray,
   toSnakeCase,
   defaultSchemaConfig,
+  Column,
 } from 'pqb';
+import {
+  addAutoForeignKey,
+  hasRelationHandleCreate,
+  hasRelationHandleUpdate,
+  NestedInsertManyConnect,
+  NestedInsertManyConnectOrCreate,
+  NestedInsertManyItems,
+  RelJoin,
+} from './common/utils';
+import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasAndBelongsToMany extends RelationThunkBase {
@@ -67,7 +64,7 @@ export interface HasAndBelongsToMany extends RelationThunkBase {
 }
 
 export interface HasAndBelongsToManyOptions<
-  Columns extends ColumnsShapeBase = ColumnsShapeBase,
+  Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
   Related extends TableClass = TableClass,
 > {
   required?: boolean;
@@ -80,7 +77,7 @@ export interface HasAndBelongsToManyOptions<
     references: (keyof InstanceType<Related>['columns']['shape'])[];
     foreignKey?: boolean | TableData.References.Options;
   };
-  on?: ColumnShapeInputPartial<InstanceType<Related>['columns']['shape']>;
+  on?: ColumnsShape.InputPartial<InstanceType<Related>['columns']['shape']>;
 }
 
 export type HasAndBelongsToManyParams<
@@ -171,7 +168,7 @@ interface State {
   foreignKeysFull: string[];
   throughForeignKeysFull: string[];
   throughPrimaryKeysFull: string[];
-  primaryKeysShape: ColumnsShapeBase;
+  primaryKeysShape: Column.Shape.Data;
   on?: RecordUnknown;
 }
 
@@ -214,7 +211,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
   }
 }
 
-const removeColumnName = (column: ColumnTypeBase) => {
+const removeColumnName = (column: Column.Pick.Data) => {
   if (!column.data.name) return column;
 
   const cloned = Object.create(column);
@@ -272,20 +269,22 @@ export const makeHasAndBelongsToManyMethod = (
   baseQuery.baseQuery = baseQuery;
   baseQuery.table = joinTable;
 
-  const shape: ColumnsShapeBase = {};
-  const primaryKeysShape: ColumnsShapeBase = {};
+  const shape: Column.Shape.Data = {};
+  const primaryKeysShape: Column.Shape.Data = {};
 
   for (let i = 0; i < len; i++) {
     const pk = primaryKeys[i];
 
-    shape[foreignKeys[i]] = removeColumnName(table.shape[pk] as ColumnTypeBase);
+    shape[foreignKeys[i]] = removeColumnName(
+      table.shape[pk] as unknown as Column.Pick.Data,
+    );
 
-    primaryKeysShape[pk] = table.shape[pk] as ColumnTypeBase;
+    primaryKeysShape[pk] = table.shape[pk] as unknown as Column.Pick.Data;
   }
 
   for (let i = 0; i < throughLen; i++) {
     shape[throughForeignKeys[i]] = removeColumnName(
-      query.shape[throughPrimaryKeys[i]] as ColumnTypeBase,
+      query.shape[throughPrimaryKeys[i]] as unknown as Column.Pick.Data,
     );
   }
 
@@ -818,8 +817,8 @@ const nestedUpdate = (state: State) => {
                     key,
                     state.primaryKeysShape[key],
                   ]),
-                ),
-              data.map((x) => pick(x, state.primaryKeys)),
+                ) as never,
+              data.map((x) => pick(x, state.primaryKeys)) as never,
             ),
           )
           // do update on conflict to increase the resulting counter

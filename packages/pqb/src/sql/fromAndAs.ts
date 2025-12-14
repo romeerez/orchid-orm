@@ -1,20 +1,21 @@
 import { columnToSql, quoteSchemaAndTable } from './common';
 import { checkIfASimpleQuery, QuerySourceItem } from './types';
-import { toSQL, ToSQLCtx } from './toSQL';
+import { ToSQLCtx } from './to-sql';
 import { QueryData, QueryDataFromItem } from './data';
 import { addValue, isExpression, IsQuery, isRawSQL, MaybeArray } from '../core';
-import { getSqlText } from './utils';
 import { Query } from '../query/query';
 import { getQueryAs } from '../common/utils';
+import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
-let fromQuery: Query | undefined;
+let fromQuery: SubQueryForSql | undefined;
 
 export const pushFromAndAs = (
   ctx: ToSQLCtx,
   table: IsQuery,
   data: QueryData,
   quotedAs?: string,
-): Query | undefined => {
+): SubQueryForSql | undefined => {
   let sql = 'FROM ';
 
   const from = getFrom(ctx, table, data, quotedAs);
@@ -108,11 +109,11 @@ const fromToSql = (
       only = from.q.only;
 
       if (!from.table) {
-        sql = `(${getSqlText(toSQL(from, ctx))})`;
+        sql = `(${moveMutativeQueryToCte(ctx, from)})`;
       }
       // if the query contains more than just schema return (SELECT ...)
       else if (!checkIfASimpleQuery(from)) {
-        sql = `(${getSqlText(toSQL(from, ctx))}) ${
+        sql = `(${moveMutativeQueryToCte(ctx, from)}) ${
           quotedAs || `"${getQueryAs(from)}"`
         }`;
       } else {
@@ -122,15 +123,6 @@ const fromToSql = (
       fromQuery = from;
     }
   } else {
-    if (data.with) {
-      for (const w of data.with) {
-        if (w?.n === from && w.q?.q.inCTE) {
-          ctx.delayedRelationSelect = w.q.q.inCTE.delayedRelationSelect;
-          break;
-        }
-      }
-    }
-
     sql = quoteSchemaAndTable(data.schema, from);
   }
 

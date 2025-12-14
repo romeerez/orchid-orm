@@ -15,11 +15,11 @@ import {
   VirtualColumn,
   WhereArg,
   ColumnSchemaConfig,
-  ColumnsShapeBase,
   IsQuery,
   RecordUnknown,
   RelationJoinQuery,
   RelationsBase,
+  Column,
 } from 'pqb';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {
@@ -100,7 +100,7 @@ export type RelationTableToQuery<Relation extends RelationThunkBase> =
   ORMTableInputToQueryBuilder<InstanceType<ReturnType<Relation['fn']>>>;
 
 export interface RelationConfigSelf {
-  columns: { shape: ColumnsShapeBase };
+  columns: { shape: Column.Shape.QueryInit };
   relations: RelationThunks;
 }
 

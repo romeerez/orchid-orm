@@ -1,23 +1,15 @@
 import {
-  AsTypeArg,
   ColumnSchemaGetterColumns,
   ColumnSchemaGetterTableClass,
-  ColumnTypeBase,
-  EncodeColumn,
-  NullableColumn,
-  ParseColumn,
   makeColumnNullable,
-  ErrorMessage,
   setDataValue,
-  StringTypeData,
-  ParseNullColumn,
-  ColumnInputOutputQueryTypesWithSchemas,
+  StringData,
   ArrayColumn,
   ArrayColumnValue,
   BigIntColumn,
   BigSerialColumn,
   CitextColumn,
-  ColumnType,
+  Column,
   DateColumn,
   DecimalColumn,
   DoublePrecisionColumn,
@@ -25,7 +17,6 @@ import {
   IntegerColumn,
   JSONColumn,
   MoneyColumn,
-  PickColumnData,
   RealColumn,
   SerialColumn,
   setColumnEncode,
@@ -113,14 +104,19 @@ class ValibotJSONColumn<Schema extends BaseSchema> extends JSONColumn<
   }
 }
 
-function applyMethod<T extends ColumnTypeBase>(
-  column: T,
+function applyMethod(
+  column: unknown,
   key: string,
   value: unknown,
   validation: (value: never, params?: string) => BaseValidation,
-  params?: ErrorMessage,
+  params?: Column.Error.StringOrMessage,
 ) {
-  const cloned = setDataValue(column, key, value, params);
+  const cloned = setDataValue(
+    column as Column.Pick.Data,
+    key,
+    value,
+    params,
+  ) as Column;
 
   const v = validation(
     value as never,
@@ -131,17 +127,22 @@ function applyMethod<T extends ColumnTypeBase>(
   cloned.outputSchema.pipe.push(v);
   cloned.querySchema.pipe.push(v);
 
-  return cloned;
+  return cloned as never;
 }
 
-function applySimpleMethod<T extends ColumnTypeBase>(
-  column: T,
+function applySimpleMethod(
+  column: unknown,
   key: string,
   validation: (...args: never[]) => BaseValidation | BaseTransformation,
-  params?: ErrorMessage,
+  params?: Column.Error.StringOrMessage,
   ...args: unknown[]
 ) {
-  const cloned = setDataValue(column, key, true, params);
+  const cloned = setDataValue(
+    column as Column.Pick.Data,
+    key,
+    true,
+    params,
+  ) as Column;
 
   const v = validation(
     ...(args as never[]),
@@ -152,33 +153,21 @@ function applySimpleMethod<T extends ColumnTypeBase>(
   cloned.outputSchema.pipe.push(v);
   cloned.querySchema.pipe.push(v);
 
-  return cloned;
+  return cloned as never;
 }
 
 interface ArrayMethods<Value> {
   // Require a minimum length (inclusive)
-  min<T extends ColumnTypeBase>(
-    this: T,
-    value: Value,
-    params?: ErrorMessage,
-  ): T;
+  min<T>(this: T, value: Value, params?: Column.Error.StringOrMessage): T;
 
   // Require a maximum length (inclusive)
-  max<T extends ColumnTypeBase>(
-    this: T,
-    value: Value,
-    params?: ErrorMessage,
-  ): T;
+  max<T>(this: T, value: Value, params?: Column.Error.StringOrMessage): T;
 
   // Require a specific length
-  length<T extends ColumnTypeBase>(
-    this: T,
-    value: Value,
-    params?: ErrorMessage,
-  ): T;
+  length<T>(this: T, value: Value, params?: Column.Error.StringOrMessage): T;
 
   // Require a value to be non-empty
-  nonEmpty<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  nonEmpty<T>(this: T, params?: Column.Error.StringOrMessage): T;
 }
 
 const arrayMethods: ArrayMethods<number> = {
@@ -221,48 +210,20 @@ class ValibotArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
 Object.assign(ValibotArrayColumn.prototype, arrayMethods);
 
 interface NumberMethods {
-  lt<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  lte<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  max<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  gt<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  gte<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  min<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  positive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  nonNegative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  negative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  nonPositive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  step<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  int<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  finite<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  safe<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  lt<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  lte<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  max<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  gt<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  gte<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  min<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  positive<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  nonNegative<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  negative<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  nonPositive<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  step<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  int<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  finite<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  safe<T>(this: T, params?: Column.Error.StringOrMessage): T;
 }
 
 export type GtValidation<
@@ -511,77 +472,68 @@ Object.assign(SerialColumnValibot.prototype, numberMethods);
 
 interface StringMethods extends ArrayMethods<number> {
   // Check a value to be a valid email
-  email<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  email<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid url
-  url<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  url<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be an emoji
-  emoji<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  emoji<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid uuid
-  uuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  uuid<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid cuid2
-  cuid2<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  cuid2<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid ulid
-  ulid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  ulid<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Validate the value over the given regular expression
-  regex<T extends ColumnTypeBase>(
-    this: T,
-    value: RegExp,
-    params?: ErrorMessage,
-  ): T;
+  regex<T>(this: T, value: RegExp, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to include a given string
-  includes<T extends ColumnTypeBase, Value extends string>(
+  includes<T, Value extends string>(
     this: T,
     value: Value,
-    params?: ErrorMessage,
+    params?: Column.Error.StringOrMessage,
   ): T;
 
   // Check a value to start with a given string
-  startsWith<T extends ColumnTypeBase, Value extends string>(
+  startsWith<T, Value extends string>(
     this: T,
     value: Value,
-    params?: ErrorMessage,
+    params?: Column.Error.StringOrMessage,
   ): T;
 
   // Check a value to end with a given string
-  endsWith<T extends ColumnTypeBase, Value extends string>(
+  endsWith<T, Value extends string>(
     this: T,
     value: Value,
-    params?: ErrorMessage,
+    params?: Column.Error.StringOrMessage,
   ): T;
 
   // Check a value have a valid datetime string
-  datetime<T extends ColumnTypeBase>(
+  datetime<T>(
     this: T,
-    params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
+    params?: StringData['datetime'] &
+      Exclude<Column.Error.StringOrMessage, string>,
   ): T;
 
   // Check a value to be a valid ipv4 address
-  ipv4<T extends ColumnTypeBase>(
-    this: T,
-    params?: Exclude<ErrorMessage, string>,
-  ): T;
+  ipv4<T>(this: T, params?: Exclude<Column.Error.StringOrMessage, string>): T;
 
   // Check a value to be a valid ipv6 address
-  ipv6<T extends ColumnTypeBase>(
-    this: T,
-    params?: Exclude<ErrorMessage, string>,
-  ): T;
+  ipv6<T>(this: T, params?: Exclude<Column.Error.StringOrMessage, string>): T;
 
   // Trim the value during a validation
-  trim<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  trim<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Transform value to a lower case during a validation
-  toLowerCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  toLowerCase<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Transform value to an upper case during a validation
-  toUpperCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  toUpperCase<T>(this: T, params?: Column.Error.StringOrMessage): T;
 }
 
 const stringMethods: StringMethods = {
@@ -717,10 +669,10 @@ Object.assign(CitextColumnValibot.prototype, stringMethods);
 
 interface DateMethods {
   // Require a value to be greater than or equal to a given Date object
-  min<T extends ColumnTypeBase>(this: T, value: Date, params?: ErrorMessage): T;
+  min<T>(this: T, value: Date, params?: Column.Error.StringOrMessage): T;
 
   // Require a value to be lower than or equal to a given Date object
-  max<T extends ColumnTypeBase>(this: T, value: Date, params?: ErrorMessage): T;
+  max<T>(this: T, value: Date, params?: Column.Error.StringOrMessage): T;
 }
 
 const dateMethods: DateMethods = {
@@ -765,24 +717,24 @@ export interface ValibotSchemaConfig {
   type: BaseSchema;
 
   parse<
-    T extends ColumnTypeBase,
+    T extends Column.Pick.ForParse,
     OutputSchema extends BaseSchema,
     Out = Output<OutputSchema>,
   >(
     this: T,
     _schema: OutputSchema,
     fn: (input: T['type']) => Out,
-  ): ParseColumn<T, OutputSchema, Out>;
+  ): Column.Modifiers.Parse<T, OutputSchema, Out>;
 
   parseNull<
-    T extends ColumnTypeBase,
+    T extends Column.Pick.ForParseNull,
     NullSchema extends BaseSchema,
     NullType = Output<NullSchema>,
   >(
     this: T,
     _schema: NullSchema,
     fn: () => NullType,
-  ): ParseNullColumn<T, NullSchema, NullType>;
+  ): Column.Modifiers.ParseNull<T, NullSchema, NullType>;
 
   encode<
     T extends { type: unknown },
@@ -792,14 +744,14 @@ export interface ValibotSchemaConfig {
     this: T,
     _schema: InputSchema,
     fn: (input: In) => unknown,
-  ): EncodeColumn<T, InputSchema, In>;
+  ): Column.Modifiers.Encode<T, InputSchema, In>;
 
   /**
    * @deprecated use narrowType instead
    */
   asType<
     T,
-    Types extends AsTypeArg<BaseSchema>,
+    Types extends Column.AsTypeArg<BaseSchema>,
     TypeSchema extends BaseSchema = Types extends { type: BaseSchema }
       ? Types['type']
       : never,
@@ -838,7 +790,7 @@ export interface ValibotSchemaConfig {
   };
 
   narrowType<
-    T extends ColumnInputOutputQueryTypesWithSchemas,
+    T extends Column.InputOutputQueryTypesWithSchemas,
     Type extends BaseSchema<
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any,
@@ -866,7 +818,7 @@ export interface ValibotSchemaConfig {
   };
 
   narrowAllTypes<
-    T extends ColumnInputOutputQueryTypesWithSchemas,
+    T extends Column.InputOutputQueryTypesWithSchemas,
     Types extends {
       input?: { _types?: { output: T['inputType'] } };
       output?: { _types?: { output: T['outputType'] } };
@@ -903,13 +855,13 @@ export interface ValibotSchemaConfig {
       : T[K];
   };
 
-  dateAsNumber<T extends ColumnType<ValibotSchemaConfig>>(
+  dateAsNumber<T extends Column<ValibotSchemaConfig>>(
     this: T,
-  ): ParseColumn<T, NumberSchema, number>;
+  ): Column.Modifiers.Parse<T, NumberSchema, number>;
 
-  dateAsDate<T extends ColumnType<ValibotSchemaConfig>>(
+  dateAsDate<T extends Column<ValibotSchemaConfig>>(
     this: T,
-  ): ParseColumn<T, DateSchema, Date>;
+  ): Column.Modifiers.Parse<T, DateSchema, Date>;
 
   enum<T extends readonly string[]>(
     dataType: string,
@@ -918,9 +870,9 @@ export interface ValibotSchemaConfig {
 
   array<Item extends ArrayColumnValue>(item: Item): ValibotArrayColumn<Item>;
 
-  nullable<T extends ColumnTypeBase>(
+  nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): NullableColumn<
+  ): Column.Modifiers.Nullable<
     T,
     NullableSchema<T['inputSchema']>,
     T['nullSchema'] extends BaseSchema
@@ -975,10 +927,7 @@ export interface ValibotSchemaConfig {
 
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T): PkeySchema<T>;
 
-  error<T extends ColumnTypeBase<ValibotSchemaConfig>>(
-    this: T,
-    message: string,
-  ): T;
+  error<T>(this: T, message: string): T;
 
   smallint(): SmallIntColumnValibot;
   integer(): IntegerColumnValibot;
@@ -1022,7 +971,7 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   },
   narrowType(type) {
     const c = Object.create(this);
-    if ((c as PickColumnData).data.generated) {
+    if ((c as Column.Pick.Data).data.generated) {
       c.outputSchema = c.querySchema = type;
     } else {
       c.inputSchema = c.outputSchema = c.querySchema = type;
@@ -1056,7 +1005,7 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   },
   nullable() {
     return makeColumnNullable(
-      this,
+      this as never,
       nullable(this.inputSchema),
       this.nullSchema
         ? union([this.outputSchema, this.nullSchema])
@@ -1159,11 +1108,12 @@ export const valibotSchemaConfig: ValibotSchemaConfig = {
   },
 
   error(message: string) {
-    this.inputSchema.message =
-      this.outputSchema.message =
-      this.querySchema.message =
+    const c = this as Column;
+    c.inputSchema.message =
+      c.outputSchema.message =
+      c.querySchema.message =
         message;
-    return this;
+    return c as never;
   },
 
   smallint: () => new SmallIntColumnValibot(valibotSchemaConfig),

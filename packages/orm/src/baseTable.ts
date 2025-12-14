@@ -31,12 +31,7 @@ import {
   ComputedOptionsConfig,
   applyMixins,
   ColumnSchemaConfig,
-  ColumnShapeInput,
-  ColumnShapeInputPartial,
-  ColumnShapeOutput,
-  ColumnsShapeBase,
   CoreQueryScopes,
-  DefaultSelectColumns,
   DynamicSQLArg,
   emptyArray,
   EmptyObject,
@@ -45,8 +40,6 @@ import {
   getStackTrace,
   IsQuery,
   MaybeArray,
-  QueryColumn,
-  QueryColumns,
   QueryOrExpression,
   RecordUnknown,
   RelationsBase,
@@ -54,6 +47,8 @@ import {
   snakeCaseKey,
   StaticSQLArgs,
   toSnakeCase,
+  ColumnsShape,
+  Column,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -184,7 +179,10 @@ export interface ORMTableInput {
   // table name
   table: string;
   // columns shape and the record type
-  columns: { shape: ColumnsShapeBase; data: MaybeArray<TableDataItem> };
+  columns: {
+    shape: Column.Shape.QueryInit;
+    data: MaybeArray<TableDataItem>;
+  };
   // database schema containing this table
   schema?: string;
   // column types defined in base table to use in `setColumns`
@@ -215,10 +213,7 @@ export type Queryable<T extends ORMTableInput> = ShallowSimplify<{
 }>;
 
 export type DefaultSelect<T extends ORMTableInput> = ShallowSimplify<
-  Pick<
-    ColumnShapeOutput<T['columns']['shape']>,
-    DefaultSelectColumns<T['columns']['shape']>
-  >
+  ColumnsShape.DefaultOutput<T['columns']['shape']>
 >;
 
 // Object type of table's record that's returned from database and is parsed.
@@ -226,26 +221,26 @@ export type Selectable<T extends ORMTableInput> = T['computed'] extends ((
   t: never,
 ) => infer R extends ComputedOptionsConfig)
   ? ShallowSimplify<
-      ColumnShapeOutput<T['columns']['shape']> & {
+      ColumnsShape.Output<T['columns']['shape']> & {
         [K in keyof R]: R[K] extends QueryOrExpression<unknown>
           ? R[K]['result']['value']['outputType']
           : R[K] extends () => {
-              result: { value: infer Value extends QueryColumn };
+              result: { value: infer Value extends Column.Pick.QueryColumn };
             }
           ? Value['outputType']
           : never;
       }
     >
-  : ShallowSimplify<ColumnShapeOutput<T['columns']['shape']>>;
+  : ShallowSimplify<ColumnsShape.Output<T['columns']['shape']>>;
 
 // Object type that conforms `create` method of the table.
 export type Insertable<T extends ORMTableInput> = ShallowSimplify<
-  ColumnShapeInput<T['columns']['shape']>
+  ColumnsShape.Input<T['columns']['shape']>
 >;
 
 // Object type that conforms `update` method of the table.
 export type Updatable<T extends ORMTableInput> = ShallowSimplify<
-  ColumnShapeInputPartial<T['columns']['shape']>
+  ColumnsShape.InputPartial<T['columns']['shape']>
 >;
 
 // type of before hook function for the table
@@ -256,7 +251,7 @@ type AfterHookMethod = (cb: QueryAfterHook) => void;
 
 // type of after hook function that allows selecting columns for the table
 type AfterSelectableHookMethod = <
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
   S extends (keyof Shape)[],
 >(
   this: { columns: { shape: Shape } },
@@ -265,7 +260,7 @@ type AfterSelectableHookMethod = <
 ) => void;
 
 export interface SetColumnsResult<
-  Shape extends ColumnsShapeBase,
+  Shape extends Column.Shape.QueryInit,
   Data extends MaybeArray<MaybeArray<TableDataItem>>,
 > {
   shape: Shape;
@@ -274,7 +269,7 @@ export interface SetColumnsResult<
 
 export interface BaseTableInstance<ColumnTypes> {
   table: string;
-  columns: { shape: ColumnsShapeBase; data: MaybeArray<TableDataItem> };
+  columns: { shape: Column.Shape.QueryInit; data: MaybeArray<TableDataItem> };
   schema?: string;
   noPrimaryKey?: boolean;
   snakeCase?: boolean;
@@ -282,11 +277,11 @@ export interface BaseTableInstance<ColumnTypes> {
   q: QueryData;
   language?: string;
   filePath: string;
-  result: ColumnsShapeBase;
+  result: Column.Shape.QueryInit;
   clone<T extends IsQuery>(this: T): T;
   getFilePath(): string;
   setColumns<
-    Shape extends ColumnsShapeBase,
+    Shape extends Column.Shape.QueryInit,
     Data extends MaybeArray<TableDataItem>,
   >(
     fn: (t: ColumnTypes) => Shape,
@@ -384,7 +379,7 @@ export interface BaseTableInstance<ColumnTypes> {
    * @param computed - object where keys are column names and values are functions returning raw SQL
    */
   setComputed<
-    Shape extends ColumnsShapeBase,
+    Shape extends Column.Shape.QueryInit,
     Computed extends ComputedOptionsFactory<ColumnTypes, Shape>,
   >(
     this: { columns: { shape: Shape } },
@@ -396,7 +391,7 @@ export interface BaseTableInstance<ColumnTypes> {
    */
   setScopes<
     Table extends string,
-    Shape extends ColumnsShapeBase,
+    Shape extends Column.Shape.QueryInit,
     Keys extends string,
   >(
     this: { table: Table; columns: { shape: Shape } },
@@ -404,7 +399,7 @@ export interface BaseTableInstance<ColumnTypes> {
   ): CoreQueryScopes<Keys>;
 
   belongsTo<
-    Columns extends ColumnsShapeBase,
+    Columns extends Column.Shape.QueryInit,
     Related extends TableClass,
     Options extends BelongsToOptions<Columns, Related>,
   >(
@@ -418,7 +413,7 @@ export interface BaseTableInstance<ColumnTypes> {
   };
 
   hasOne<
-    Columns extends ColumnsShapeBase,
+    Columns extends Column.Shape.QueryInit,
     Related extends TableClass,
     Through extends string,
     Source extends string,
@@ -434,7 +429,7 @@ export interface BaseTableInstance<ColumnTypes> {
   };
 
   hasMany<
-    Columns extends ColumnsShapeBase,
+    Columns extends Column.Shape.QueryInit,
     Related extends TableClass,
     Through extends string,
     Source extends string,
@@ -450,7 +445,7 @@ export interface BaseTableInstance<ColumnTypes> {
   };
 
   hasAndBelongsToMany<
-    Columns extends ColumnsShapeBase,
+    Columns extends Column.Shape.QueryInit,
     Related extends TableClass,
     Options extends HasAndBelongsToManyOptions<Columns, Related>,
   >(
@@ -488,10 +483,12 @@ export interface BaseTableClass<
   columnTypes: ColumnTypes;
   getFilePath(): string;
 
-  sql<T>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>, ColumnTypes>;
   sql<T>(
-    ...args: [DynamicSQLArg<QueryColumn<T>>]
-  ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
+    ...args: StaticSQLArgs
+  ): RawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  sql<T>(
+    ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
+  ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
 
   new (): BaseTableInstance<ColumnTypes>;
   instance(): BaseTableInstance<ColumnTypes>;
@@ -572,7 +569,7 @@ export function createBaseTable<
   let filePath: string | undefined;
 
   const defaultColumns: {
-    shape: ColumnsShapeBase;
+    shape: Column.Shape.QueryInit;
     data: MaybeArray<TableDataItem>;
   } = {
     shape: emptyObject,
@@ -596,7 +593,7 @@ export function createBaseTable<
       this.instance();
       // Nullish coalescing assignment (??=), for some reason, compiles to != null and miss undefined
       return this._inputSchema === undefined
-        ? (this._inputSchema = schemaConfig.inputSchema.call(this))
+        ? (this._inputSchema = schemaConfig.inputSchema.call(this as never))
         : this._inputSchema;
     }
 
@@ -604,7 +601,7 @@ export function createBaseTable<
     static outputSchema() {
       this.instance();
       return this._outputSchema === undefined
-        ? (this._outputSchema = schemaConfig.outputSchema.call(this))
+        ? (this._outputSchema = schemaConfig.outputSchema.call(this as never))
         : this._outputSchema;
     }
 
@@ -612,7 +609,7 @@ export function createBaseTable<
     static querySchema() {
       this.instance();
       return this._querySchema === undefined
-        ? (this._querySchema = schemaConfig.querySchema.call(this))
+        ? (this._querySchema = schemaConfig.querySchema.call(this as never))
         : this._querySchema;
     }
 
@@ -620,7 +617,7 @@ export function createBaseTable<
     static createSchema() {
       this.instance();
       return this._createSchema === undefined
-        ? (this._createSchema = schemaConfig.createSchema.call(this))
+        ? (this._createSchema = schemaConfig.createSchema.call(this as never))
         : this._createSchema;
     }
 
@@ -628,7 +625,7 @@ export function createBaseTable<
     static updateSchema() {
       this.instance();
       return this._updateSchema === undefined
-        ? (this._updateSchema = schemaConfig.updateSchema.call(this))
+        ? (this._updateSchema = schemaConfig.updateSchema.call(this as never))
         : this._updateSchema;
     }
 
@@ -636,7 +633,7 @@ export function createBaseTable<
     static pkeySchema() {
       this.instance();
       return this._pkeySchema === undefined
-        ? (this._pkeySchema = schemaConfig.pkeySchema.call(this))
+        ? (this._pkeySchema = schemaConfig.pkeySchema.call(this as never))
         : this._pkeySchema;
     }
 
@@ -668,7 +665,7 @@ export function createBaseTable<
     q: QueryData = {} as QueryData;
     language = language;
     declare filePath: string;
-    declare result: ColumnsShapeBase;
+    declare result: Column.Shape.QueryInit;
     declare autoForeignKeys?: TableData.References.BaseOptions;
 
     clone<T extends IsQuery>(this: T): T {
@@ -689,7 +686,7 @@ export function createBaseTable<
     }
 
     setColumns<
-      Shape extends ColumnsShapeBase,
+      Shape extends Column.Shape.QueryInit,
       Data extends MaybeArray<TableDataItem>,
     >(
       fn: (t: ColumnTypes) => Shape,

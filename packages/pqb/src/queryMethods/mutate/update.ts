@@ -7,25 +7,27 @@ import {
 import { _clone, throwIfNoWhere } from '../../query/queryUtils';
 import { _queryWhereIn, WhereResult } from '../where/where';
 import { ToSQLQuery } from '../../sql';
-import { anyShape, VirtualColumn } from '../../columns';
+import {
+  anyShape,
+  Column,
+  ColumnSchemaConfig,
+  VirtualColumn,
+} from '../../columns';
 import { Db } from '../../query/db';
 import {
   isExpression,
   callWithThis,
   RecordUnknown,
   EmptyObject,
-  ColumnTypeBase,
   pushQueryValueImmutable,
   QueryOrExpression,
-  ColumnSchemaConfig,
   requirePrimaryKeys,
   RelationConfigBase,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   QueryResult,
   OrchidOrmInternalError,
 } from '../../core';
-import { resolveSubQueryCallbackV2 } from '../../common/utils';
-import { moveQueryValueToWith } from '../with';
+import { joinSubQuery, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { JoinArgs, JoinFirstArg, JoinResultFromArgs } from '../join/join';
 import { _joinReturningArgs } from '../join/_join';
 import { _queryNone } from '../none';
@@ -122,7 +124,7 @@ export interface UpdateCtxCollect {
   data: RecordUnknown;
 }
 
-const throwOnReadOnly = (q: unknown, column: ColumnTypeBase, key: string) => {
+const throwOnReadOnly = (q: unknown, column: Column.Pick.Data, key: string) => {
   if (column.data.appReadOnly || column.data.readOnly) {
     throw new OrchidOrmInternalError(
       q as Query,
@@ -159,7 +161,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 
       const column = self.shape[key];
       if (column) {
-        throwOnReadOnly(self, column as ColumnTypeBase, key);
+        throwOnReadOnly(self, column as unknown as Column.Pick.Data, key);
       }
     }
   } else {
@@ -167,7 +169,11 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 
     const column = self.shape[data as string];
     if (column) {
-      throwOnReadOnly(self, column as ColumnTypeBase, data as string);
+      throwOnReadOnly(
+        self,
+        column as unknown as Column.Pick.Data,
+        data as string,
+      );
     }
   }
 
@@ -222,14 +228,11 @@ export const _queryUpdate = <T extends UpdateSelf>(
           );
         }
 
-        set[key] = value;
+        set[key] = joinSubQuery(query, value as Query);
       }
 
       if (value !== null && value !== undefined && !isExpression(value)) {
-        if (value instanceof Db) {
-          moveQueryValueToWith(query, q, value, 'with', set, key);
-        } else {
-          // encode if not a query object
+        if (!(value instanceof Db)) {
           const encode = item?.data.encode;
           if (encode) set[key] = encode(value);
         }

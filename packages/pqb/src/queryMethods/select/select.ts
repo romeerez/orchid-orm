@@ -6,13 +6,11 @@ import {
 } from '../../query/query';
 import {
   addColumnParserToQuery,
-  ColumnsShapeToNullableObject,
-  ColumnsShapeToObject,
-  ColumnsShapeToObjectArray,
-  ColumnsShapeToPluck,
+  Column,
+  ColumnsShape,
   UnknownColumn,
 } from '../../columns';
-import { JSONTextColumn } from '../../columns/json';
+import { JSONTextColumn } from '../../columns/column-types/json';
 import {
   _clone,
   getFullColumnTable,
@@ -24,7 +22,6 @@ import {
   _addToHookSelectWithTable,
   _copyQueryAliasToQuery,
   BatchParser,
-  ColumnTypeBase,
   EmptyObject,
   Expression,
   getQueryParsers,
@@ -38,7 +35,6 @@ import {
   PickQueryWithData,
   pushQueryValueImmutable,
   QueryBase,
-  QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
   QueryReturnType,
@@ -46,20 +42,20 @@ import {
   RecordString,
   RecordUnknown,
   RelationsBase,
-  setColumnData,
   setObjectValueImmutable,
   setParserToQuery,
   spreadObjectValues,
   UnionToIntersection,
   NotFoundError,
 } from '../../core';
+import { setColumnData } from '../../columns/column';
 import { _joinLateral } from '../join/_join';
 import {
   resolveSubQueryCallbackV2,
   SelectableOrExpression,
 } from '../../common/utils';
 import { RawSQL } from '../../sql/rawSql';
-import { defaultSchemaConfig } from '../../columns/defaultSchemaConfig';
+import { defaultSchemaConfig } from '../../columns/default-schema-config';
 import { parseRecord } from '../then';
 import { _queryNone, isQueryNone } from '../none';
 
@@ -67,13 +63,14 @@ import { processComputedBatches } from '../../modules/computed';
 import {
   applyBatchTransforms,
   finalizeNestedHookSelect,
-} from '../../common/queryResultProcessing';
+} from '../../common/query-result-processing';
 import { cloneQueryBaseUnscoped } from '../queryMethods.utils';
+import { prepareSubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
 
 export interface SelectSelf {
-  shape: QueryColumns;
+  shape: Column.QueryColumns;
   relations: RelationsBase;
-  result: QueryColumns;
+  result: Column.QueryColumns;
   meta: QueryMetaBase;
   returnType: QueryReturnType;
   withData: EmptyObject;
@@ -116,7 +113,10 @@ export interface SelectAsArg<T extends SelectSelf> {
 }
 
 type SelectAsFnReturnType =
-  | { result: QueryColumns; returnType: Exclude<QueryReturnType, 'rows'> }
+  | {
+      result: Column.QueryColumns;
+      returnType: Exclude<QueryReturnType, 'rows'>;
+    }
   | Expression;
 
 interface SelectAsCheckReturnTypes {
@@ -271,7 +271,7 @@ type SelectResultColumnsAndObj<
 // To allow where-ing on a relation that returns a single record.
 // Where-ing is allowed because relation is joined and the row is not JSON-ed unlike selecting multiple rows.
 interface AllowedRelationOneQueryForSelectable extends QueryMetaIsSubQuery {
-  result: QueryColumns;
+  result: Column.QueryColumns;
   returnType: 'value' | 'valueOrThrow' | 'one' | 'oneOrThrow';
 }
 
@@ -329,14 +329,14 @@ type SelectAsValueResult<
 // query that returns a single record becomes an object column, possibly nullable
 export type SelectSubQueryResult<Arg extends SelectSelf> =
   Arg['returnType'] extends undefined | 'all'
-    ? ColumnsShapeToObjectArray<Arg['result']>
+    ? ColumnsShape.MapToObjectArrayColumn<Arg['result']>
     : Arg['returnType'] extends 'value' | 'valueOrThrow'
     ? Arg['result']['value']
     : Arg['returnType'] extends 'pluck'
-    ? ColumnsShapeToPluck<Arg['result']>
+    ? ColumnsShape.MapToPluckColumn<Arg['result']>
     : Arg['returnType'] extends 'one'
-    ? ColumnsShapeToNullableObject<Arg['result']>
-    : ColumnsShapeToObject<Arg['result']>;
+    ? ColumnsShape.MapToNullableObjectColumn<Arg['result']>
+    : ColumnsShape.MapToObjectColumn<Arg['result']>;
 
 // add a parser for a raw expression column
 // is used by .select and .get methods
@@ -503,7 +503,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             case 'value':
             case 'valueOrThrow': {
               const notNullable = !(
-                query.getColumn as ColumnTypeBase | undefined
+                query.getColumn as Column.Pick.Data | undefined
               )?.data.isNullable;
 
               const parse = parsers?.[getValueKey];
@@ -551,10 +551,13 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             let renames: RecordString | undefined;
             for (const column of hookSelect.keys()) {
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              const as = hookSelect!.get(column)!.as;
-              if (as) (renames ??= {})[column] = as;
+              const select = hookSelect!.get(column)!;
 
-              (tempColumns ??= new Set())?.add(as || column);
+              if (select.as) (renames ??= {})[column] = select.as;
+
+              if (select.temp) {
+                (tempColumns ??= new Set())?.add(select.as || column);
+              }
             }
 
             if (renames) {
@@ -696,73 +699,76 @@ export const processSelectArg = <T extends SelectSelf>(
         }
       }
 
-      if (
-        !isExpression(value) &&
-        isRelationQuery(value) &&
-        // `subQuery = 1` case is when callback returns the same query as it gets,
-        // for example `q => q.get('name')`.
-        (value as unknown as Query).q.subQuery !== 1
-      ) {
-        query.q.selectRelation = joinQuery = true;
+      if (!isExpression(value)) {
+        if (
+          isRelationQuery(value) &&
+          // `subQuery = 1` case is when callback returns the same query as it gets,
+          // for example `q => q.get('name')`.
+          (value as unknown as Query).q.subQuery !== 1
+        ) {
+          query.q.selectRelation = joinQuery = true;
 
-        value = value.joinQuery(value, q as unknown as IsQuery);
+          value = value.joinQuery(value, q as unknown as IsQuery);
 
-        let subQuery;
-        const { returnType, innerJoinLateral } = value.q;
-        if (!returnType || returnType === 'all') {
-          subQuery = value.json(false);
+          let subQuery;
+          const { returnType, innerJoinLateral } = value.q;
+          if (!returnType || returnType === 'all') {
+            subQuery = value.json(false);
 
-          // no need to coalesce in case of inner lateral join.
-          if (!innerJoinLateral) {
-            value.q.coalesceValue = emptyArrSQL;
-          }
-        } else if (returnType === 'pluck') {
-          // no select in case of plucking a computed
-          subQuery = value.q.select
-            ? value
-                .wrap(cloneQueryBaseUnscoped(value))
-                .jsonAgg(value.q.select[0])
-            : value.json(false);
-
-          value.q.coalesceValue = emptyArrSQL;
-        } else {
-          if (returnType === 'value' || returnType === 'valueOrThrow') {
-            if (value.q.select) {
-              // todo: investigate what is this for
-              if (typeof value.q.select[0] === 'string') {
-                value.q.select[0] = {
-                  selectAs: { r: value.q.select[0] },
-                };
-              }
-
-              subQuery = value;
-            } else {
-              subQuery = value.json(false);
+            // no need to coalesce in case of inner lateral join.
+            if (!innerJoinLateral) {
+              value.q.coalesceValue = emptyArrSQL;
             }
+          } else if (returnType === 'pluck') {
+            // no select in case of plucking a computed
+            subQuery = value.q.select
+              ? value
+                  .wrap(cloneQueryBaseUnscoped(value))
+                  .jsonAgg(value.q.select[0])
+              : value.json(false);
+
+            value.q.coalesceValue = emptyArrSQL;
           } else {
-            subQuery = value;
+            if (returnType === 'value' || returnType === 'valueOrThrow') {
+              if (value.q.select) {
+                // todo: investigate what is this for
+                if (typeof value.q.select[0] === 'string') {
+                  value.q.select[0] = {
+                    selectAs: { r: value.q.select[0] },
+                  };
+                }
+
+                subQuery = value;
+              } else {
+                subQuery = value.json(false);
+              }
+            } else {
+              subQuery = value;
+            }
+          }
+
+          const as = _joinLateral(
+            q,
+            innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
+            subQuery,
+            key,
+            // no need for `ON p.r IS NOT NULL` check when joining a single record,
+            // `JOIN` will handle it on itself.
+            innerJoinLateral &&
+              returnType !== 'one' &&
+              returnType !== 'oneOrThrow',
+          );
+
+          if (as) {
+            value.q.joinedForSelect = _copyQueryAliasToQuery(
+              value,
+              q as unknown as QueryBase,
+              as,
+            );
           }
         }
 
-        const as = _joinLateral(
-          q,
-          innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
-          subQuery,
-          key,
-          // no need for `ON p.r IS NOT NULL` check when joining a single record,
-          // `JOIN` will handle it on itself.
-          innerJoinLateral &&
-            returnType !== 'one' &&
-            returnType !== 'oneOrThrow',
-        );
-
-        if (as) {
-          value.q.joinedForSelect = _copyQueryAliasToQuery(
-            value,
-            q as unknown as QueryBase,
-            as,
-          );
-        }
+        value = prepareSubQueryForSql(q as never, value);
       }
     }
 
@@ -874,7 +880,10 @@ const selectColumn = (
 // when isSubQuery is true, it will remove data.name of columns,
 // so that outside of the sub-query the columns are named with app-side names,
 // while db column names are encapsulated inside the sub-query
-export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
+export const getShapeFromSelect = (
+  q: IsQuery,
+  isSubQuery?: boolean,
+): Column.QueryColumns => {
   const query = (q as Query).q;
   const { shape } = query;
   let select: SelectItem[] | undefined;
@@ -888,10 +897,13 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
     select = query.select;
   }
 
-  let result: QueryColumns;
+  let result: Column.QueryColumns;
   if (!select) {
-    // when no select, and it is a sub-query, return the table shape with unnamed columns
-    if (isSubQuery) {
+    if (query.type) {
+      // mutative queries with no select are returning nothing
+      result = {};
+    } else if (isSubQuery) {
+      // when no select, and it is a sub-query, return the table shape with unnamed columns
       result = {};
       for (const key in shape) {
         const column = shape[key];
@@ -931,7 +943,10 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
             if (returnType === 'value' || returnType === 'valueOrThrow') {
               const type = it.q.getColumn;
               result[key] = type
-                ? mapSubSelectColumn(type as ColumnTypeBase, isSubQuery)
+                ? mapSubSelectColumn(
+                    type as unknown as Column.Pick.Data,
+                    isSubQuery,
+                  )
                 : UnknownColumn.instance;
             } else {
               result[key] = new JSONTextColumn(defaultSchemaConfig);
@@ -950,9 +965,9 @@ export const getShapeFromSelect = (q: IsQuery, isSubQuery?: boolean) => {
 const addColumnToShapeFromSelect = (
   q: IsQuery,
   arg: string,
-  shape: QueryColumns,
+  shape: Column.QueryColumns,
   query: QueryData,
-  result: QueryColumns,
+  result: Column.QueryColumns,
   isSubQuery?: boolean,
   key?: string,
 ) => {
@@ -967,29 +982,29 @@ const addColumnToShapeFromSelect = (
       const it = query.joinedShapes?.[table]?.[column];
       if (it)
         result[key || column] = mapSubSelectColumn(
-          it as ColumnTypeBase,
+          it as unknown as Column.Pick.Data,
           isSubQuery,
         );
     }
   } else if (arg === '*') {
     for (const key in shape) {
-      if (!(shape[key] as ColumnTypeBase).data.explicitSelect) {
+      if (!(shape[key] as unknown as Column.Pick.Data).data.explicitSelect) {
         result[key] = mapSubSelectColumn(
-          shape[key] as ColumnTypeBase,
+          shape[key] as unknown as Column.Pick.Data,
           isSubQuery,
         );
       }
     }
   } else {
     result[key || arg] = mapSubSelectColumn(
-      shape[arg] as ColumnTypeBase,
+      shape[arg] as unknown as Column.Pick.Data,
       isSubQuery,
     );
   }
 };
 
 // un-name a column if `isSubQuery` is true
-const mapSubSelectColumn = (column: ColumnTypeBase, isSubQuery?: boolean) => {
+const mapSubSelectColumn = (column: Column.Pick.Data, isSubQuery?: boolean) => {
   // `!column` is needed for case when wrong column is passed to subquery (see issue #236)
   if (
     !isSubQuery ||

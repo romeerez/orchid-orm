@@ -1,9 +1,8 @@
 import {
   ColumnsShape,
-  ColumnType,
+  Column as QbColumn,
   NoPrimaryKeyOption,
   TableData,
-  ColumnDataCheckBase,
   MaybeArray,
   RawSQLBase,
   RecordString,
@@ -62,7 +61,7 @@ export namespace RakeDbAst {
   export namespace ChangeTableItem {
     export interface Column {
       type: 'add' | 'drop';
-      item: ColumnType;
+      item: QbColumn;
       dropMode?: DropMode;
     }
 
@@ -86,7 +85,7 @@ export namespace RakeDbAst {
   }
 
   export interface ColumnChange {
-    column?: ColumnType;
+    column?: QbColumn;
     type?: string;
     collate?: string;
     default?: unknown | RawSQLBase;
@@ -94,7 +93,7 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
-    checks?: ColumnDataCheckBase[];
+    checks?: QbColumn.Data.Check[];
     foreignKeys?: TableData.ColumnReferences[];
     indexes?: TableData.ColumnIndex[];
     excludes?: TableData.ColumnExclude[];
@@ -177,7 +176,7 @@ export namespace RakeDbAst {
     action: 'create' | 'drop';
     schema?: string;
     name: string;
-    baseType: ColumnType;
+    baseType: QbColumn;
   }
 
   // Database collation.

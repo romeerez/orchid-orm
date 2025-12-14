@@ -336,7 +336,7 @@ export const ensureBasePathAndDbScript = <
   // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
   // when called from processRakeDbConfig, 1 call is added.
   // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
-  let filePath = getStackTrace()?.[3 + intermediateCallers].getFileName();
+  let filePath = getStackTrace()?.[3 + intermediateCallers]?.getFileName();
   if (!filePath) {
     throw new Error(
       'Failed to determine path to db script. Please set basePath option of rakeDb',

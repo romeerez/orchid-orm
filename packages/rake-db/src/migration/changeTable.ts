@@ -1,5 +1,5 @@
 import {
-  ColumnType,
+  Column,
   EnumColumn,
   parseTableDataInput,
   escapeString,
@@ -9,7 +9,6 @@ import {
   UnknownColumn,
   DomainColumn,
   ArrayColumn,
-  ColumnTypeBase,
   consumeColumnName,
   deepCompare,
   EmptyObject,
@@ -77,26 +76,23 @@ const resetChangeTableData = () => {
 const addOrDropChanges: RakeDbAst.ChangeTableItem.Column[] = [];
 
 // add column
-function add(
-  item: ColumnType,
-  options?: { dropMode?: DropMode },
-): SpecialChange;
+function add(item: Column, options?: { dropMode?: DropMode }): SpecialChange;
 // add primary key, index, etc
 function add(emptyObject: EmptyObject): SpecialChange;
 // add timestamps
 function add(
-  items: Record<string, ColumnType>,
+  items: Record<string, Column>,
   options?: { dropMode?: DropMode },
 ): Record<string, RakeDbAst.ChangeTableItem.Column>;
 function add(
   this: TableChangeMethods,
-  item: ColumnType | EmptyObject | Record<string, ColumnType>,
+  item: Column | EmptyObject | Record<string, Column>,
   options?: { dropMode?: DropMode },
 ): undefined | EmptyObject | Record<string, RakeDbAst.ChangeTableItem.Column> {
   consumeColumnName();
   setName(this, item);
 
-  if (item instanceof ColumnType) {
+  if (item instanceof Column) {
     const result = addOrDrop('add', item, options);
     if (result.type === 'change') return result;
     addOrDropChanges.push(result);
@@ -107,13 +103,13 @@ function add(
     // ...t.timestamps() case
     if (
       (item as Record<string, RakeDbAst.ChangeTableItem.Column>)[key] instanceof
-      ColumnTypeBase
+      Column
     ) {
       const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
       for (const key in item) {
         result[key] = {
           type: 'add',
-          item: (item as Record<string, ColumnType>)[key],
+          item: (item as Record<string, Column>)[key],
           dropMode: options?.dropMode,
         };
       }
@@ -131,7 +127,7 @@ const drop = function (this: TableChangeMethods, item, options) {
   consumeColumnName();
   setName(this, item);
 
-  if (item instanceof ColumnType) {
+  if (item instanceof Column) {
     const result = addOrDrop('drop', item, options);
     if (result.type === 'change') return result;
     addOrDropChanges.push(result);
@@ -143,13 +139,13 @@ const drop = function (this: TableChangeMethods, item, options) {
     if (
       (item as unknown as Record<string, RakeDbAst.ChangeTableItem.Column>)[
         key
-      ] instanceof ColumnTypeBase
+      ] instanceof Column
     ) {
       const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
       for (const key in item as any) {
         result[key] = {
           type: 'drop',
-          item: (item as Record<string, ColumnType>)[key],
+          item: (item as Record<string, Column>)[key],
           dropMode: options?.dropMode,
         };
       }
@@ -165,7 +161,7 @@ const drop = function (this: TableChangeMethods, item, options) {
 
 const addOrDrop = (
   type: 'add' | 'drop',
-  item: ColumnType,
+  item: Column,
   options?: { dropMode?: DropMode },
 ): RakeDbAst.ChangeTableItem.Column | RakeDbAst.ChangeTableItem.Change => {
   if (item instanceof UnknownColumn) {
@@ -211,10 +207,10 @@ interface OneWayChange {
 }
 
 const columnTypeToColumnChange = (
-  item: ColumnType | OneWayChange,
+  item: Column | OneWayChange,
   name?: string,
 ): RakeDbAst.ColumnChange => {
-  if (item instanceof ColumnType) {
+  if (item instanceof Column) {
     let column = item;
     const foreignKeys = column.data.foreignKeys;
     if (foreignKeys?.some((it) => 'fn' in it)) {
@@ -243,15 +239,15 @@ const nameKey = Symbol('name');
 
 const setName = (
   self: TableChangeMethods,
-  item: RakeDbAst.ColumnChange | ColumnType,
+  item: RakeDbAst.ColumnChange | Column,
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const name = (self as any)[nameKey];
   if (!name) return;
 
-  if ('column' in item && item.column instanceof ColumnType) {
+  if ('column' in item && item.column instanceof Column) {
     item.column.data.name ??= name;
-  } else if (item instanceof ColumnType) {
+  } else if (item instanceof Column) {
     item.data.name ??= name;
   } else {
     (item as RecordUnknown).name ??= name;
@@ -271,8 +267,8 @@ const tableChangeMethods = {
   add,
   drop,
   change(
-    from: ColumnType | OneWayChange,
-    to: ColumnType | OneWayChange,
+    from: Column | OneWayChange,
+    to: Column | OneWayChange,
     using?: ChangeOptions,
   ): Change {
     consumeColumnName();
@@ -340,7 +336,7 @@ export type TableChangeData = Record<
   | RakeDbAst.ChangeTableItem.Rename
   | Change
   | SpecialChange
-  | ColumnTypeBase
+  | Column.Pick.Data
 >;
 
 export const changeTable = async <CT>(
@@ -397,7 +393,7 @@ const makeAst = (
     if (typeof item === 'number') {
       consumedChanges[item] = true;
       item = addOrDropChanges[item];
-    } else if (item instanceof ColumnType) {
+    } else if (item instanceof Column) {
       item = addOrDrop('add', item);
     }
 

@@ -17,6 +17,9 @@ import {
 import { QueryData, QueryScopes } from '../sql';
 import {
   anyShape,
+  Column,
+  ColumnSchemaConfig,
+  ColumnsShape,
   DefaultColumnTypes,
   getColumnTypes,
   makeColumnTypes,
@@ -28,13 +31,7 @@ import {
   QueryError,
   QueryErrorName,
   applyMixins,
-  ColumnSchemaConfig,
-  ColumnShapeInput,
-  ColumnShapeOutput,
   ColumnsParsers,
-  ColumnTypeBase,
-  DefaultSelectColumns,
-  DefaultSelectOutput,
   DynamicSQLArg,
   EmptyObject,
   emptyObject,
@@ -42,15 +39,11 @@ import {
   MaybeArray,
   pushOrNewArray,
   QueryCatch,
-  QueryColumn,
-  QueryColumns,
-  QueryColumnsInit,
   QueryLogOptions,
   QueryMetaBase,
   QueryThenShallowSimplifyArr,
   RecordString,
   RecordUnknown,
-  snakeCaseKey,
   SQLQueryArgs,
   StaticSQLArgs,
   toSnakeCase,
@@ -63,7 +56,7 @@ import { ScopeArgumentQuery } from '../queryMethods/scope';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from '../columns/defaultSchemaConfig';
+} from '../columns/default-schema-config';
 import {
   enableSoftDelete,
   SoftDeleteOption,
@@ -84,8 +77,10 @@ import {
   ComputedOptionsFactory,
 } from '../modules/computed';
 import { DbSqlQuery, performQuery } from './dbSqlQuery';
+import { snakeCaseKey } from '../columns/types';
+import { setDb } from '../columns/operators';
 
-export type ShapeColumnPrimaryKeys<Shape extends QueryColumnsInit> = {
+export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
     [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
       ? K
@@ -93,7 +88,7 @@ export type ShapeColumnPrimaryKeys<Shape extends QueryColumnsInit> = {
   }[keyof Shape]]: UniqueQueryTypeOrExpression<Shape[K]['queryType']>;
 };
 
-export type ShapeUniqueColumns<Shape extends QueryColumnsInit> = {
+export type ShapeUniqueColumns<Shape extends Column.QueryColumnsInit> = {
   [K in keyof Shape]: Shape[K]['data']['unique'] extends string
     ? {
         [C in K]: UniqueQueryTypeOrExpression<Shape[K]['queryType']>;
@@ -101,7 +96,7 @@ export type ShapeUniqueColumns<Shape extends QueryColumnsInit> = {
     : never;
 }[keyof Shape];
 
-export type UniqueConstraints<Shape extends QueryColumnsInit> =
+export type UniqueConstraints<Shape extends Column.QueryColumnsInit> =
   | {
       [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
         ? string extends Shape[K]['data']['primaryKey']
@@ -152,7 +147,7 @@ export interface DbOptionsWithAdapter<
 export interface DbTableOptions<
   ColumnTypes,
   Table extends string | undefined,
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
 > extends QueryLogOptions {
   schema?: string;
   /**
@@ -193,20 +188,14 @@ export interface DbTableOptions<
  */
 export type DbTableOptionScopes<
   Table extends string | undefined,
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
   Keys extends string = string,
 > = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => IsQuery };
 
-// Type of data returned from the table query by default, doesn't include computed columns.
-// `const user: User[] = await db.user;`
-export type QueryDefaultReturnData<Shape extends QueryColumnsInit> = {
-  [K in DefaultSelectColumns<Shape>]: Shape[K]['outputType'];
-};
-
 interface TableMeta<
   Table extends string | undefined,
-  Shape extends QueryColumnsInit,
-  ShapeWithComputed extends QueryColumnsInit,
+  Shape extends Column.QueryColumnsInit,
+  ShapeWithComputed extends Column.QueryColumnsInit,
   Scopes extends RecordUnknown | undefined,
 > extends QueryMetaBase<{ [K in keyof Scopes]: true }> {
   kind: 'select';
@@ -216,7 +205,7 @@ interface TableMeta<
       : K]: true;
   };
   selectable: SelectableFromShape<ShapeWithComputed, Table>;
-  defaultSelect: DefaultSelectColumns<Shape>;
+  defaultSelect: ColumnsShape.DefaultSelectKeys<Shape>;
 }
 
 export interface QueryBuilder extends Query {
@@ -225,13 +214,13 @@ export interface QueryBuilder extends Query {
 
 export class Db<
     Table extends string | undefined = undefined,
-    Shape extends QueryColumnsInit = QueryColumnsInit,
+    Shape extends Column.QueryColumnsInit = Column.QueryColumnsInit,
     PrimaryKeys = never,
     UniqueColumns = never,
     UniqueColumnTuples = never,
     UniqueConstraints = never,
     ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
-    ShapeWithComputed extends QueryColumnsInit = Shape,
+    ShapeWithComputed extends Column.QueryColumnsInit = Shape,
     Scopes extends RecordUnknown | undefined = EmptyObject,
   >
   extends QueryMethods<ColumnTypes>
@@ -241,11 +230,11 @@ export class Db<
   declare __isQuery: true;
   baseQuery: Query;
   columns: (keyof Shape)[];
-  declare outputType: DefaultSelectOutput<Shape>;
-  declare inputType: ColumnShapeInput<Shape>;
-  declare result: Pick<Shape, DefaultSelectColumns<Shape>>; // Pick is optimal
+  declare outputType: ColumnsShape.DefaultSelectOutput<Shape>;
+  declare inputType: ColumnsShape.Input<Shape>;
+  declare result: Pick<Shape, ColumnsShape.DefaultSelectKeys<Shape>>; // Pick is optimal
   declare returnType: undefined;
-  declare then: QueryThenShallowSimplifyArr<QueryDefaultReturnData<Shape>>;
+  declare then: QueryThenShallowSimplifyArr<ColumnsShape.DefaultOutput<Shape>>;
   declare windows: EmptyObject;
   relations: EmptyObject;
   relationQueries: EmptyObject;
@@ -308,9 +297,10 @@ export class Db<
     let prepareSelectAll = false;
     let hasHookSetters: true | undefined;
     let runtimeDefaultColumns: string[] | undefined;
+    let selectAllCount = 0;
     const { snakeCase } = options;
     for (const key in shape) {
-      const column = shape[key] as unknown as ColumnTypeBase;
+      const column = shape[key] as unknown as Column;
       column.data.key = key;
 
       if (column._parse) {
@@ -330,6 +320,8 @@ export class Db<
 
       if (column.data.explicitSelect) {
         prepareSelectAll = true;
+      } else {
+        selectAllCount++;
       }
 
       const { modifyQuery: mq } = column.data;
@@ -370,11 +362,12 @@ export class Db<
       comment: options.comment,
       nowSQL: options.nowSQL,
       tableData,
+      selectAllCount,
     } as QueryInternal;
 
     this.q = {
       adapter,
-      shape: shape as QueryColumnsInit,
+      shape: shape as Column.QueryColumnsInit,
       handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),
@@ -411,9 +404,9 @@ export class Db<
 
     const columns = Object.keys(
       shape,
-    ) as unknown as (keyof ColumnShapeOutput<Shape>)[];
+    ) as unknown as (keyof ColumnsShape.Output<Shape>)[];
 
-    this.columns = columns as (keyof ColumnShapeOutput<Shape>)[];
+    this.columns = columns as (keyof ColumnsShape.Output<Shape>)[];
 
     if (options.computed) applyComputedColumns(this, options.computed);
 
@@ -421,7 +414,7 @@ export class Db<
       const selectAllShape: RecordUnknown = (this.q.selectAllShape = {});
       const list: string[] = [];
       for (const key in shape) {
-        const column = shape[key] as unknown as ColumnTypeBase;
+        const column = shape[key] as unknown as Column;
         if (!column.data.explicitSelect) {
           list.push(
             column.data.name ? `"${column.data.name}" "${key}"` : `"${key}"`,
@@ -473,7 +466,7 @@ export class Db<
       };
 
       for (const key in shape) {
-        const { data } = shape[key] as unknown as ColumnTypeBase;
+        const { data } = shape[key] as unknown as Column;
 
         for (const hookKey in hooks) {
           const fn = data[hookKey as 'setOnCreate'];
@@ -606,6 +599,8 @@ export class Db<
   }
 }
 
+setDb(Db);
+
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
 
@@ -613,7 +608,7 @@ Db.prototype.constructor = Db;
 export interface DbTableConstructor<ColumnTypes> {
   <
     Table extends string,
-    Shape extends QueryColumnsInit,
+    Shape extends Column.QueryColumnsInit,
     Data extends MaybeArray<TableDataItem>,
     Options extends DbTableOptions<ColumnTypes, Table, Shape>,
   >(
@@ -651,10 +646,12 @@ export interface DbResult<ColumnTypes>
     DbTableConstructor<ColumnTypes> {
   adapter: AdapterBase;
   close: AdapterBase['close'];
-  sql<T = unknown>(...args: StaticSQLArgs): RawSQL<QueryColumn<T>, ColumnTypes>;
   sql<T = unknown>(
-    ...args: [DynamicSQLArg<QueryColumn<T>>]
-  ): DynamicRawSQL<QueryColumn<T>, ColumnTypes>;
+    ...args: StaticSQLArgs
+  ): RawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  sql<T = unknown>(
+    ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
+  ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
 }
 {
 }
@@ -821,7 +818,7 @@ export const _initQueryBuilder = (
   adapter: AdapterBase,
   columnTypes: unknown,
   transactionStorage: AsyncLocalStorage<TransactionState>,
-  commonOptions: DbTableOptions<unknown, undefined, QueryColumns>,
+  commonOptions: DbTableOptions<unknown, undefined, Column.QueryColumns>,
   options: DbSharedOptions,
 ): Db => {
   const qb = new Db(

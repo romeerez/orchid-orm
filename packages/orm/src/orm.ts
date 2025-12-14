@@ -13,11 +13,11 @@ import {
   _initQueryBuilder,
   AdapterBase,
   ColumnSchemaConfig,
-  ColumnsShapeBase,
   MaybeArray,
   QueryLogOptions,
   RecordUnknown,
   TransactionState,
+  Column,
 } from 'pqb';
 import {
   ORMTableInputToQueryBuilder,
@@ -206,11 +206,14 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     const table = tableClass.instance();
     tableInstances[key] = table;
 
-    const options: DbTableOptions<unknown, string, ColumnsShapeBase> = {
+    const options: DbTableOptions<unknown, string, Column.Shape.QueryInit> = {
       ...commonOptions,
       schema: table.schema,
       language: table.language,
-      scopes: table.scopes as DbTableOptionScopes<string, ColumnsShapeBase>,
+      scopes: table.scopes as DbTableOptionScopes<
+        string,
+        Column.Shape.QueryInit
+      >,
       softDelete: table.softDelete,
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
       comment: table.comment,

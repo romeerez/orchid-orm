@@ -3,7 +3,7 @@ import { rawOrColumnToSql } from './common';
 import { orderByToSql } from './orderBy';
 import { QueryData } from './data';
 import { Expression, isExpression } from '../core';
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx } from './to-sql';
 
 export const windowToSql = (
   ctx: ToSQLCtx,

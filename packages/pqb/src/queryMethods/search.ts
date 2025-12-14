@@ -8,10 +8,10 @@ import {
   addValue,
   emptyObject,
   Expression,
+  ExpressionData,
   MaybeArray,
   PickQueryMeta,
   pushQueryValueImmutable,
-  QueryColumn,
 } from '../core';
 import {
   OrderTsQueryConfig,
@@ -29,6 +29,7 @@ import { getSearchLang, getSearchText } from '../sql/fromAndAs';
 import { OrchidOrmInternalError } from '../core';
 import { columnToSql } from '../sql/common';
 import { Operators } from '../columns/operators';
+import { Column } from '../columns';
 
 // `headline` first argument is a name of the search.
 type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
@@ -40,7 +41,7 @@ type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
 // - text: column name or a raw SQL with the full text to select headline from.
 // - options: string or an expression returning Postgres headline options (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
 interface HeadlineParams<T extends PickQueryMeta> {
-  text?: SelectableOrExpressionOfType<T, QueryColumn<string>>;
+  text?: SelectableOrExpressionOfType<T, Column.Pick.QueryColumnOfType<string>>;
   options?: string | Expression;
 }
 
@@ -121,7 +122,7 @@ declare module './aggregate' {
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,
-    ): SetQueryReturnsColumnOrThrow<T, QueryColumn<string>>;
+    ): SetQueryReturnsColumnOrThrow<T, Column.Pick.QueryColumnOfType<string>>;
   }
 }
 
@@ -186,11 +187,11 @@ export type WhereSearchResult<T, As extends string> = T & {
   meta: { tsQuery: string extends As ? never : As };
 };
 
-class Headline extends Expression<QueryColumn<string>> {
-  result = emptyObject as { value: QueryColumn<string> };
+class Headline extends Expression<Column.Pick.QueryColumnOfType<string>> {
+  result = emptyObject as { value: Column.Pick.QueryColumnOfType<string> };
 
   constructor(
-    public q: QueryData,
+    public q: ExpressionData,
     public source: QuerySourceItem,
     public params?: HeadlineParams<Query>,
   ) {
@@ -199,7 +200,8 @@ class Headline extends Expression<QueryColumn<string>> {
   }
 
   makeSQL(ctx: ToSQLCtx, quotedAs: string | undefined): string {
-    const { q, source, params } = this;
+    const { source, params } = this;
+    const q = this.q as QueryData;
     const lang = getSearchLang(ctx, q, source, quotedAs);
 
     const text = params?.text
@@ -233,7 +235,7 @@ AggregateMethods.prototype.headline = function (
     throw new OrchidOrmInternalError(q, `Search \`${search}\` is not defined`);
 
   return new Headline(
-    q.q,
+    q.q as ExpressionData,
     source,
     params as HeadlineParams<Query> | undefined,
   ) as never;

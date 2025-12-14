@@ -13,18 +13,20 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../../query/query';
 import { OnConflictMerge, QueryData, ToSQLQuery } from '../../sql';
-import { anyShape, VirtualColumn } from '../../columns';
+import {
+  anyShape,
+  Column,
+  ColumnSchemaConfig,
+  VirtualColumn,
+} from '../../columns';
 import {
   Expression,
-  ColumnSchemaConfig,
   RecordUnknown,
   PickQueryUniqueProperties,
-  QueryColumn,
   FnUnknownToUnknown,
   isExpression,
   EmptyObject,
   IsQuery,
-  ColumnTypeBase,
   QueryOrExpression,
   RelationConfigDataForCreate,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -34,16 +36,16 @@ import {
   OrchidOrmInternalError,
 } from '../../core';
 import { isSelectingCount } from '../aggregate';
-import { resolveSubQueryCallbackV2 } from '../../common/utils';
+import { joinSubQuery, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { _clone } from '../../query/queryUtils';
-import { Db } from '../../query';
-import { moveQueryValueToWith } from '../with';
 import {
   CreateFromMethodNames,
   CreateManyFromMethodNames,
   getFromSelectColumns,
 } from './createFrom';
 import { _querySelectAll } from '../select/select';
+import { Db } from '../../query';
+import { prepareSubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
 
 export interface CreateSelf
   extends IsQuery,
@@ -218,7 +220,7 @@ type NarrowCreateResult<T extends CreateSelf> =
     ? T['result']
     : {
         [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
-          ? QueryColumn<
+          ? Column.Pick.QueryColumnOfTypeAndOps<
               Exclude<T['result'][K]['type'], null>,
               T['result'][K]['operators']
             >
@@ -326,13 +328,9 @@ const processCreateItem = (
       );
 
       if (value && typeof value === 'object' && value instanceof Db) {
-        moveQueryValueToWith(
+        value = item[key] = joinSubQuery(
           q as Query,
-          ((q as Query).q.insertWith ??= {}),
-          value,
-          rowIndex,
-          item,
-          key,
+          prepareSubQueryForSql(q as Query, value as Query),
         );
       }
     }
@@ -350,7 +348,7 @@ const processCreateItem = (
 
 export const throwOnReadOnly = (
   q: unknown,
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   key: string,
 ) => {
   if (column.data.appReadOnly || column.data.readOnly) {
@@ -385,9 +383,7 @@ export const handleOneData = (
   const encoders: RecordEncoder = {};
   const defaults = (q as Query).q.defaults;
 
-  if (defaults) {
-    data = { ...defaults, ...data };
-  }
+  data = defaults ? { ...defaults, ...data } : { ...data };
 
   processCreateItem(q, data, 0, ctx, encoders);
 
@@ -421,9 +417,9 @@ export const handleManyData = (
   const encoders: RecordEncoder = {};
   const defaults = (q as Query).q.defaults;
 
-  if (defaults) {
-    data = data.map((item) => ({ ...defaults, ...item }));
-  }
+  data = data.map(
+    defaults ? (item) => ({ ...defaults, ...item }) : (item) => ({ ...item }),
+  );
 
   data.forEach((item, i) => {
     processCreateItem(q, item, i, ctx, encoders);
@@ -477,13 +473,11 @@ export const insert = (
     q.returning = true;
   }
 
-  delete q.and;
-  delete q.or;
-  delete q.scopes;
-
   q.type = 'insert';
 
-  insertFrom = insertFrom ? (q.insertFrom = insertFrom as Query) : q.insertFrom;
+  insertFrom = insertFrom
+    ? (q.insertFrom = prepareSubQueryForSql(self as never, insertFrom as Query))
+    : q.insertFrom;
 
   if (insertFrom) {
     if (q.insertFrom) {
@@ -957,7 +951,7 @@ export class OnConflictQueryBuilder<
   set(set: OnConflictSet<T>): T {
     let resolved: RecordUnknown | undefined;
     for (const key in set) {
-      const column = this.query.shape[key] as ColumnTypeBase;
+      const column = this.query.shape[key] as unknown as Column.Pick.Data;
       if (column) throwOnReadOnly(this.query, column, key);
 
       if (typeof set[key] === 'function') {

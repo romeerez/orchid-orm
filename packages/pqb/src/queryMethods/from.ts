@@ -1,4 +1,4 @@
-import { Query, SelectableFromShape, PickQueryQ } from '../query/query';
+import { SelectableFromShape, PickQueryQ } from '../query/query';
 import { JoinedParsers, WithConfig, WithConfigs } from '../sql';
 import {
   PickQueryTableMetaResult,
@@ -9,7 +9,6 @@ import {
   ColumnsParsers,
   QueryThenByQuery,
   UnionToIntersection,
-  WithDataItems,
   PickQueryMetaTableShapeReturnTypeWithData,
   SetQueryTableAlias,
   AliasOrTable,
@@ -17,9 +16,14 @@ import {
 } from '../core';
 import { getShapeFromSelect } from './select/select';
 import { sqlQueryArgsToExpression } from '../sql/rawSql';
-import { anyShape, ColumnsShape } from '../columns';
+import { anyShape, Column, ColumnsShape } from '../columns';
 import { _clone } from '../query/queryUtils';
 import { getQueryAs } from '../common/utils';
+import { WithDataItems } from '../query';
+import {
+  prepareSubQueryForSql,
+  SubQueryForSql,
+} from '../query/to-sql/sub-query-for-sql';
 
 export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
 
@@ -110,7 +114,7 @@ export type FromResult<
 
 const addWithParsers = (w: WithConfig, parsers: ColumnsParsers) => {
   for (const key in w.shape) {
-    const { _parse } = w.shape[key];
+    const { _parse } = w.shape[key] as Column;
     if (_parse) parsers[key] = _parse;
   }
 };
@@ -156,14 +160,14 @@ export function queryFrom<
 
     data.joinedParsers = joinedParsers;
   } else {
-    const q = arg as Query;
+    const q = prepareSubQueryForSql(self as never, arg as never);
     data.as ||= q.q.as || q.table || 't';
     data.shape = getShapeFromSelect(q, true) as ColumnsShape;
     data.defaultParsers = getQueryParsers(q);
     data.batchParsers = q.q.batchParsers;
   }
 
-  data.from = arg as Query;
+  data.from = arg as SubQueryForSql;
   data.selectAllColumns = data.scopes = undefined;
 
   return self as never;

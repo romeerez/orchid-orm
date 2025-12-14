@@ -1,43 +1,33 @@
-import {
-  ColumnsParsers,
-  ColumnTypeBase,
-  getValueKey,
-  QueryColumn,
-  setObjectValueImmutable,
-} from '../core';
-import { ColumnType } from './columnType';
-import { DomainColumn } from './customType';
-import { EnumColumn } from './enum';
+import { ColumnsParsers, getValueKey, setObjectValueImmutable } from '../core';
+import { Column } from './column';
+import { DomainColumn } from './column-types/custom-type';
+import { EnumColumn } from './column-types/enum';
 
 export interface DbStructureDomainsMap {
-  [K: string]: ColumnType;
+  [K: string]: Column;
 }
 
 export const addColumnParserToQuery = (
   q: { parsers?: ColumnsParsers },
   key: string | getValueKey,
-  column: QueryColumn,
+  column: Column.Pick.QueryColumn,
 ) => {
-  if ((column as ColumnTypeBase)._parse) {
-    setObjectValueImmutable(
-      q,
-      'parsers',
-      key,
-      (column as ColumnTypeBase)._parse,
-    );
+  if ((column as Column)._parse) {
+    setObjectValueImmutable(q, 'parsers', key, (column as Column)._parse);
   }
 };
 
 export const setColumnDefaultParse = (
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   parse: (input: any) => unknown, // eslint-disable-line @typescript-eslint/no-explicit-any
 ) => {
   column.data.parse = parse;
-  column._parse = (input: unknown) => (input === null ? null : parse(input));
+  (column as Column)._parse = (input: unknown) =>
+    input === null ? null : parse(input);
 };
 
 export const setColumnParse = (
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fn: (input: any) => unknown,
   outputSchema?: unknown,
@@ -55,7 +45,7 @@ export const setColumnParse = (
 };
 
 export const setColumnParseNull = (
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fn: () => unknown,
   nullSchema?: unknown,
@@ -73,7 +63,7 @@ export const setColumnParseNull = (
 };
 
 export const setColumnEncode = (
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fn: (input: any) => unknown,
   inputSchema?: unknown,
@@ -85,7 +75,7 @@ export const setColumnEncode = (
 };
 
 export const getColumnBaseType = (
-  column: ColumnTypeBase,
+  column: Column.Pick.Data,
   domainsMap: DbStructureDomainsMap,
   type: string,
 ) => {

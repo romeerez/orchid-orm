@@ -10,7 +10,7 @@ import {
   ColumnFromDbParams,
   ColumnsByType,
   ColumnsShape,
-  ColumnType,
+  Column,
   CustomTypeColumn,
   DbStructureDomainsMap,
   DomainColumn,
@@ -232,7 +232,7 @@ export const instantiateDbColumn = (
     dbColumn = { ...dbColumn, default: undefined };
   }
 
-  let column: ColumnType;
+  let column: Column;
 
   const col = instantiateColumnByDbType(ctx, dbColumn.type, isSerial, dbColumn);
   if (col) {
@@ -301,7 +301,7 @@ const instantiateColumnByDbType = (
   type: string,
   isSerial: boolean,
   params: ColumnFromDbParams,
-): ColumnType | undefined => {
+): Column | undefined => {
   let columnFn =
     ctx.columnsByType[
       !isSerial
@@ -323,7 +323,7 @@ const instantiateColumnByDbType = (
   }
 
   return columnFn
-    ? (assignDbDataToColumn(columnFn(), params) as ColumnType)
+    ? (assignDbDataToColumn(columnFn(), params) as Column)
     : undefined;
 };
 
@@ -580,7 +580,7 @@ export const dbColumnToAst = (
   table?: DbStructure.Table,
   tableData?: StructureToAstTableData,
   checks?: ColumnChecks,
-): [key: string, column: ColumnType] => {
+): [key: string, column: Column] => {
   let column = instantiateDbColumn(ctx, data, domains, item);
   column.data.name = item.name;
 
@@ -650,7 +650,7 @@ export const dbColumnToAst = (
 
 const collectColumnIndexesOrExcludes = (
   dbColumn: DbStructure.Column,
-  column: ColumnType,
+  column: Column,
   tableName: string,
   tableData: StructureToAstTableData | undefined,
   key: 'indexes' | 'excludes',

@@ -14,13 +14,8 @@ import {
   SelectableOrExpression,
   SelectableOrExpressions,
 } from '../common/utils';
-import {
-  OrderTsQueryConfig,
-  SortDir,
-  toSQL,
-  ToSQLOptions,
-  ToSQLQuery,
-} from '../sql';
+import { ToSQLQuery } from '../sql/to-sql';
+import { OrderTsQueryConfig, SortDir } from '../sql/types';
 import {
   _clone,
   _queryAll,
@@ -35,7 +30,7 @@ import { AggregateMethods } from './aggregate';
 import { addParserForSelectItem, Select } from './select/select';
 import { FromMethods, FromQuerySelf } from './from';
 import { Join, JoinResultRequireMain, OnMethods } from './join/join';
-import { WithMethods } from './with';
+import { CteQuery } from '../query/cte/cte.query';
 import { Union } from './union';
 import { JsonMethods } from './json';
 import { QueryCreate } from './mutate/create';
@@ -84,7 +79,6 @@ import {
   PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
   PickQueryTableMetaShape,
   pushQueryValueImmutable,
-  QueryColumns,
   QueryMetaBase,
   QueryMetaIsSubQuery,
   QueryReturnType,
@@ -97,7 +91,6 @@ import {
   SetQueryTableAlias,
   Sql,
   SQLQueryArgs,
-  WithDataItems,
   OrchidOrmInternalError,
 } from '../core';
 import { QueryAsMethods } from './as';
@@ -111,6 +104,9 @@ import { ExpressionMethods } from './expressions';
 import { _queryNone } from './none';
 import { _chain } from './chain';
 import { QueryOrCreate } from './mutate/orCreate';
+import { WithDataItems } from '../query/cte/cte.sql';
+import { Column } from '../columns';
+import { toSql } from '../sql';
 
 // argument of the window method
 // it is an object where keys are name of windows
@@ -188,7 +184,7 @@ interface QueryHelperQuery<T extends PickQueryMetaShape> {
       `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
     >;
   };
-  result: QueryColumns;
+  result: Column.QueryColumns;
   windows: EmptyObject;
   withData: WithDataItems;
   then: unknown;
@@ -250,7 +246,7 @@ type NarrowInvalidKeys<T extends PickQueryResult, Narrow> = {
 }[keyof Narrow];
 
 interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
-  extends QueryColumns {
+  extends Column.QueryColumns {
   value: {
     [K in keyof T['result']['value']]: K extends 'outputType'
       ? Narrow
@@ -259,7 +255,7 @@ interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
 }
 
 interface NarrowPluckTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
-  extends QueryColumns {
+  extends Column.QueryColumns {
   pluck: {
     [K in keyof T['result']['pluck']]: K extends 'outputType'
       ? Narrow extends unknown[]
@@ -363,7 +359,7 @@ export interface QueryMethods<ColumnTypes>
     Select,
     FromMethods,
     Join,
-    WithMethods,
+    CteQuery,
     Union,
     JsonMethods,
     QueryCreate,
@@ -532,8 +528,8 @@ export class QueryMethods<ColumnTypes> {
    * };
    * ```
    */
-  toSQL(this: ToSQLQuery, options?: ToSQLOptions): Sql {
-    return toSQL(this, options);
+  toSQL(this: ToSQLQuery): Sql {
+    return toSql(this, this.q.type);
   }
 
   /**
@@ -1319,7 +1315,7 @@ applyMixins(QueryMethods, [
   FromMethods,
   Join,
   OnMethods,
-  WithMethods,
+  CteQuery,
   Union,
   JsonMethods,
   QueryCreate,

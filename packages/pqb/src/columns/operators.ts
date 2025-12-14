@@ -3,11 +3,8 @@ import {
   Query,
   SetQueryReturnsColumnOrThrow,
 } from '../query/query';
-import { ToSQLCtx } from '../sql';
-import { getSqlText } from '../sql/utils';
 import {
   addValue,
-  ColumnTypeBase,
   emptyArray,
   Expression,
   getValueKey,
@@ -15,16 +12,50 @@ import {
   isIterable,
   IsQuery,
   MaybeArray,
-  PickOutputTypeAndOperators,
-  PickQueryColumnTypes,
+  PickQueryColumTypes,
   PickQueryResult,
   PickQueryResultColumnTypes,
-  QueryColumn,
   RecordUnknown,
   setObjectValueImmutable,
 } from '../core';
 import { BooleanQueryColumn } from '../queryMethods';
 import { addColumnParserToQuery } from './column.utils';
+import { Column } from './column';
+import { ToSQLCtx } from '../sql/to-sql';
+import { MoveMutativeQueryToCte } from '../query/cte/cte.sql';
+import {
+  ArgWithBeforeAndBeforeSet,
+  PrepareSubQueryForSql,
+} from '../query/to-sql/sub-query-for-sql';
+import { Db } from '../query';
+
+// workaround for circular dependencies between columns and sql
+let moveMutativeQueryToCte: MoveMutativeQueryToCte;
+export const setMoveMutativeQueryToCte = (fn: MoveMutativeQueryToCte) => {
+  moveMutativeQueryToCte = fn;
+};
+
+let prepareSubQueryForSql: PrepareSubQueryForSql;
+export const setPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
+  prepareSubQueryForSql = fn;
+};
+
+let dbClass: typeof Db;
+export const setDb = (db: typeof Db) => {
+  dbClass = db;
+};
+
+/**
+ * Function to turn the operator expression into SQL.
+ *
+ * @param key - SQL of the target to apply operator for, can be a quoted column name or an SQL expression wrapped with parens.
+ * @param args - arguments of operator function.
+ * @param ctx - context object for SQL conversions, for collecting query variables.
+ * @param quotedAs - quoted table name.
+ */
+export interface OperatorToSQL {
+  (key: string, args: [unknown], ctx: unknown, quotedAs?: string): string;
+}
 
 // Operator function type.
 // Table.count().gt(10) <- here `.gt(10)` is this operator function.
@@ -32,7 +63,7 @@ import { addColumnParserToQuery } from './column.utils';
 // for a case when operator gives a different column type.
 export interface Operator<
   Value,
-  Column extends PickOutputTypeAndOperators = PickOutputTypeAndOperators,
+  Column extends Column.Pick.OutputTypeAndOperators = Column.Pick.OutputTypeAndOperators,
 > {
   <T extends PickQueryResult>(this: T, arg: Value):
     | Omit<
@@ -72,7 +103,9 @@ const make = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: PickQueryQ, value: any) {
       const { q } = this;
-      (q.chain ??= []).push(_op, value);
+
+      const val = prepareOpArg(this, value);
+      (q.chain ??= []).push(_op, val || value);
 
       // parser might be set by a previous type, but is not needed for boolean
       if (q.parsers?.[getValueKey]) {
@@ -99,6 +132,12 @@ const makeVarArg = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (this: PickQueryQ, ...args: any[]) {
       const { q } = this;
+
+      args.forEach((arg, i) => {
+        const val = prepareOpArg(this, arg);
+        if (val) args[i] = val;
+      });
+
       (q.chain ??= []).push(_op, args);
 
       // parser might be set by a previous type, but is not needed for boolean
@@ -114,6 +153,12 @@ const makeVarArg = (
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ) as never;
+};
+
+export const prepareOpArg = (q: unknown, arg: unknown) => {
+  return arg instanceof dbClass
+    ? prepareSubQueryForSql(q as ArgWithBeforeAndBeforeSet, arg as Query)
+    : undefined;
 };
 
 // Handles array, expression object, query object to insert into sql.
@@ -136,7 +181,7 @@ const quoteValue = (
     }
 
     if ('toSQL' in arg) {
-      return `(${getSqlText((arg as Query).toSQL(ctx))})`;
+      return `(${moveMutativeQueryToCte(ctx, arg as never)})`;
     }
 
     if (!(arg instanceof Date) && !Array.isArray(arg)) {
@@ -163,8 +208,9 @@ const quoteLikeValue = (
     }
 
     if ('toSQL' in arg) {
-      return `replace(replace((${getSqlText(
-        (arg as Query).toSQL(ctx),
+      return `replace(replace((${moveMutativeQueryToCte(
+        ctx,
+        arg as never,
       )}), '%', '\\\\%'), '_', '\\\\_')`;
     }
   }
@@ -325,8 +371,8 @@ interface JsonPathQueryOptions {
 }
 
 interface JsonPathQueryTypeOptions<
-  T extends PickQueryColumnTypes,
-  C extends QueryColumn,
+  T extends PickQueryColumTypes,
+  C extends Column.Pick.QueryColumn,
 > extends JsonPathQueryOptions {
   type?: (types: T['columnTypes']) => C;
 }
@@ -389,7 +435,10 @@ interface JsonPathQuery {
    */
   <
     T extends PickQueryResultColumnTypes,
-    C extends QueryColumn = QueryColumn<unknown, OperatorsAny>,
+    C extends Column.Pick.QueryColumn = Column.Pick.QueryColumnOfTypeAndOps<
+      unknown,
+      OperatorsAny
+    >,
   >(
     this: T,
     path: string,
@@ -564,7 +613,7 @@ const quoteJsonValue = (
     }
 
     if ('toSQL' in arg) {
-      return `to_jsonb((${getSqlText((arg as Query).toSQL(ctx))}))`;
+      return `to_jsonb((${moveMutativeQueryToCte(ctx, arg as never)}))`;
     }
   }
 
@@ -582,7 +631,7 @@ const serializeJsonValue = (
     }
 
     if ('toSQL' in arg) {
-      return `to_jsonb((${getSqlText((arg as Query).toSQL(ctx))}))`;
+      return `to_jsonb((${moveMutativeQueryToCte(ctx, arg as never)}))`;
     }
   }
 
@@ -613,7 +662,10 @@ const json = {
     function (
       this: IsQuery,
       path: string,
-      options?: JsonPathQueryTypeOptions<PickQueryColumnTypes, ColumnTypeBase>,
+      options?: JsonPathQueryTypeOptions<
+        PickQueryColumTypes,
+        Column.Pick.QueryColumn
+      >,
     ) {
       const { q, columnTypes } = this as Query;
       const chain = (q.chain ??= []);

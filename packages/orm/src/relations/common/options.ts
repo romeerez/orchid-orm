@@ -1,14 +1,14 @@
-import { TableData, ColumnShapeInputPartial, ColumnsShapeBase } from 'pqb';
+import { TableData, ColumnsShape, Column } from 'pqb';
 
 export interface RelationRefsOptions<
   Column extends PropertyKey = string,
-  Shape extends ColumnsShapeBase = ColumnsShapeBase,
+  Shape extends Column.Shape.QueryInit = Column.Shape.QueryInit,
 > {
   required?: boolean;
   columns: Column[];
   references: (keyof Shape)[];
   foreignKey?: boolean | TableData.References.Options;
-  on?: ColumnShapeInputPartial<Shape>;
+  on?: ColumnsShape.InputPartial<Shape>;
 }
 
 export interface RelationThroughOptions<

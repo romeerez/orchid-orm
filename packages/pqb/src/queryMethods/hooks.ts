@@ -3,7 +3,6 @@ import {
   IsQuery,
   PickQueryShape,
   pushQueryValueImmutable,
-  QueryColumns,
   QueryHookUtils,
 } from '../core';
 import {
@@ -13,11 +12,12 @@ import {
 } from '../sql';
 import { PickQueryQ } from '../query/query';
 import { AfterCommitErrorHandler } from './transaction';
+import { Column } from '../columns';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
 export type AfterHook<
   Select extends PropertyKey[],
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
 > = QueryAfterHook<
   {
     [K in Select[number]]: K extends keyof Shape
@@ -31,7 +31,7 @@ export type HookSelectArg<T extends PickQueryShape> = (keyof T['shape'] &
   string)[];
 
 // Possible action types to attach hook for.
-export type HookAction = 'Create' | 'Update' | 'Delete';
+export type HookAction = 'Create' | 'Update' | 'Save' | 'Delete';
 
 // Save `before` hook into the query.
 const before = <T>(q: T, key: HookAction, cb: QueryBeforeHookInternal): T =>
@@ -159,7 +159,7 @@ export const _queryHookAfterSave = <
   select: S,
   cb: AfterHook<S, T['shape']>,
 ): T => {
-  return after(after(q, 'Create', select, cb), 'Update', select, cb);
+  return after(q, 'Save', select, cb);
 };
 
 export const _queryAfterSaveCommit = <
@@ -170,13 +170,7 @@ export const _queryAfterSaveCommit = <
   select: S,
   cb: AfterHook<S, T['shape']>,
 ): T => {
-  return after(
-    after(q, 'Create', select, cb, true),
-    'Update',
-    select,
-    cb,
-    true,
-  );
+  return after(q, 'Save', select, cb, true);
 };
 
 export const _queryHookBeforeDelete = <T extends PickQueryShape>(

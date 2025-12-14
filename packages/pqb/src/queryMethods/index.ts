@@ -25,6 +25,7 @@ export {
   _queryCreateForEachFrom,
   _queryInsertForEachFrom,
 } from './mutate/createFrom';
+export { _orCreate } from './mutate/orCreate';
 export * from './mutate/delete';
 export * from './for';
 export * from './from';
@@ -45,7 +46,6 @@ export * from './mutate/update';
 export * from './mutate/upsert';
 export * from './where/where';
 export * from './search';
-export * from './with';
 export * from './get.utils';
 export * from './json.utils';
 export * from './queryMethods.utils';

@@ -5,12 +5,8 @@ import {
   SetQueryReturnsColumnOptional,
 } from '../query/query';
 import { ToSQLCtx } from '../sql';
-import {
-  ColumnTypeBase,
-  Expression,
-  ExpressionData,
-  QueryColumn,
-} from '../core';
+import { Expression, ExpressionData } from '../core';
+import { Column } from '../columns/column';
 import { cloneQueryBaseUnscoped, queryWrap } from './queryMethods.utils';
 import { UnknownColumn } from '../columns';
 import { selectToSql } from '../sql/select';
@@ -32,7 +28,7 @@ class RowToJsonExpression extends Expression {
   makeSQL(ctx: ToSQLCtx) {
     const q = this.from;
     const aliases: string[] = [];
-    const jsonList: { [K: string]: ColumnTypeBase | undefined } = {};
+    const jsonList: { [K: string]: Column | undefined } = {};
     const select = selectToSql(
       ctx,
       q,
@@ -41,7 +37,6 @@ class RowToJsonExpression extends Expression {
       q.q.hookSelect,
       undefined,
       aliases,
-      undefined,
       jsonList,
     );
     q.q.selectCache = { sql: select, aliases };
@@ -71,7 +66,7 @@ class RowToJsonExpression extends Expression {
 export function queryJson<T>(
   self: T,
   coalesce?: boolean,
-): SetQueryReturnsColumnOptional<T, QueryColumn<string>> {
+): SetQueryReturnsColumnOptional<T, Column.Pick.QueryColumnOfType<string>> {
   const inner = (self as Query).clone();
 
   const q = queryWrap(inner, cloneQueryBaseUnscoped(inner)) as unknown as Query;

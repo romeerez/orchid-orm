@@ -3,12 +3,12 @@ import {
   addValue,
   emptyObject,
   Expression,
+  ExpressionData,
   ExpressionTypeMethod,
   getValueKey,
   PickQueryMeta,
   PickQueryMetaResultRelationsWindows,
   PickQueryMetaResultWindows,
-  QueryColumn,
   toArray,
 } from '../core';
 import { SelectableOrExpression } from './utils';
@@ -25,7 +25,7 @@ import {
   WindowArgDeclaration,
 } from '../queryMethods';
 import { extendQuery } from '../query/queryUtils';
-import { addColumnParserToQuery } from '../columns';
+import { addColumnParserToQuery, Column } from '../columns';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
@@ -73,10 +73,10 @@ export interface FnExpressionArgsValue {
 // Expression for SQL function calls.
 export class FnExpression<
   Q extends Query = Query,
-  T extends QueryColumn = QueryColumn,
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
 > extends Expression<T> {
   result: { value: T };
-  q: QueryData;
+  q: ExpressionData;
 
   /**
    * @param query - query object.
@@ -94,7 +94,8 @@ export class FnExpression<
   ) {
     super();
     this.result = { value };
-    (this.q = query.q).expr = this;
+    this.q = query.q as ExpressionData;
+    this.q.expr = this;
     Object.assign(query, value.operators);
 
     // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
@@ -115,13 +116,14 @@ export class FnExpression<
 
     if (options.distinct && !options.withinGroup) sql.push('DISTINCT ');
 
+    const q = this.q as QueryData;
     sql.push(
       this.args
         .map((arg) => {
           if (typeof arg === 'string') {
             return arg === '*'
               ? '*'
-              : columnToSql(ctx, this.q, this.q.shape, arg, quotedAs);
+              : columnToSql(ctx, q, q.shape, arg, quotedAs);
           } else if (arg instanceof Expression) {
             return arg.toSQL(ctx, quotedAs);
           } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {
@@ -132,7 +134,7 @@ export class FnExpression<
                 // ::text is needed to bypass "could not determine data type of parameter" postgres error
                 `${addValue(values, key)}::text, ${rawOrColumnToSql(
                   ctx,
-                  this.q,
+                  q,
                   pairs[key as keyof typeof pairs] as never,
                   quotedAs,
                 )}`,
@@ -152,7 +154,7 @@ export class FnExpression<
     if (options.order) {
       pushOrderBySql(
         { ...ctx, sql },
-        this.q,
+        q,
         quotedAs,
         toArray(options.order) as OrderItem[],
       );
@@ -167,8 +169,8 @@ export class FnExpression<
         {
           and: options.filter ? ([options.filter] as WhereItem[]) : undefined,
           or: options.filterOr?.map((item) => [item]) as WhereItem[][],
-          shape: this.q.shape,
-          joinedShapes: this.q.joinedShapes,
+          shape: q.shape,
+          joinedShapes: q.joinedShapes,
         },
         quotedAs,
       );
@@ -179,7 +181,7 @@ export class FnExpression<
 
     if (options.over) {
       sql.push(
-        ` OVER ${windowToSql(ctx, this.q, options.over as string, quotedAs)}`,
+        ` OVER ${windowToSql(ctx, q, options.over as string, quotedAs)}`,
       );
     }
 
@@ -190,7 +192,7 @@ export class FnExpression<
 // Applies a function expression to the query.
 export function makeFnExpression<
   T extends PickQueryMetaResultRelationsWindows,
-  C extends QueryColumn,
+  C extends Column.Pick.QueryColumn,
 >(
   self: T,
   type: C,
@@ -202,7 +204,7 @@ export function makeFnExpression<
   (q.baseQuery as unknown as ExpressionTypeMethod).type =
     ExpressionTypeMethod.prototype.type;
 
-  new FnExpression<Query, QueryColumn>(
+  new FnExpression<Query, Column.Pick.QueryColumn>(
     q,
     fn,
     args,

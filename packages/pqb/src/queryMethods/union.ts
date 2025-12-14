@@ -2,6 +2,7 @@ import { Expression, PickQueryResult } from '../core';
 import { PickQueryQ, Query } from '../query/query';
 import { UnionItem, UnionKind } from '../sql';
 import { _clone } from '../query/queryUtils';
+import { prepareSubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
 // argument of `union`-like query methods.
 // it supports query objects with the same result as in the previous query,
@@ -29,7 +30,10 @@ export const _queryUnion = <T extends PickQueryResult>(
   const u = args.map(
     (a) =>
       ({
-        a: typeof a === 'function' ? a(query as never) : a,
+        a: prepareSubQueryForSql(
+          base as never,
+          (typeof a === 'function' ? a(query as never) : a) as never,
+        ),
         k,
         m,
       } as UnionItem),

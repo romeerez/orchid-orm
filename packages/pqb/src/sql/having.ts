@@ -1,4 +1,4 @@
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx } from './to-sql';
 import { templateLiteralToSQL } from './rawSql';
 import { Expression, TemplateLiteralArgs } from '../core';
 import { QueryData } from '../sql/data';

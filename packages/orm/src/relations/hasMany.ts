@@ -35,6 +35,7 @@ import {
   RelationConfigBase,
   RelationJoinQuery,
   toArray,
+  prepareSubQueryForSql,
 } from 'pqb';
 import {
   addAutoForeignKey,
@@ -344,7 +345,7 @@ export const makeHasManyMethod = (
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
         const q = (relationQuery as unknown as PickQueryQ).q;
-        q.insertFrom = baseQuery;
+        q.insertFrom = prepareSubQueryForSql(q as never, baseQuery);
         q.values = [];
       };
     },

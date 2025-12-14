@@ -1,8 +1,8 @@
-import { quoteSchemaAndTable, rawOrColumnToSql, columnToSql } from './common';
+import { columnToSql, quoteSchemaAndTable, rawOrColumnToSql } from './common';
 import { JoinItem, JoinItemArgs, SimpleJoinItemNonSubQueryArgs } from './types';
-import { PickQueryQAndBaseQuery, Query } from '../query/query';
+import { Query } from '../query/query';
 import { whereToSql } from './where';
-import { ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import {
   JoinedShapes,
   PickQueryDataShapeAndJoinedShapes,
@@ -14,13 +14,12 @@ import {
   addValue,
   Expression,
   isExpression,
-  QueryColumns,
-  RecordBoolean,
-  RecordUnknown,
 } from '../core';
 import { RawSQL } from './rawSql';
-import { getSqlText } from './utils';
 import { getQueryAs } from '../common/utils';
+import { Column } from '../columns/column';
+import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from 'pqb';
 
 type ItemOf2Or3Length =
   | [leftColumn: string | Expression, rightColumn: string | Expression]
@@ -52,7 +51,7 @@ export const processJoinItem = (
     const { aliasValue } = ctx;
     ctx.aliasValue = true;
 
-    target = `(${getSqlText(args.l.toSQL(ctx))}) "${_getQueryAliasOrName(
+    target = `(${moveMutativeQueryToCte(ctx, args.l)}) "${_getQueryAliasOrName(
       query,
       args.a,
     )}"`;
@@ -62,7 +61,7 @@ export const processJoinItem = (
     ctx.aliasValue = aliasValue;
   } else if ('j' in args) {
     const { j, s, r } = args as {
-      j: Query;
+      j: SubQueryForSql;
       s: boolean;
       r?: Query;
     };
@@ -93,12 +92,12 @@ export const processJoinItem = (
       const { s, r } = args as {
         w: string;
         s: boolean;
-        r: Query;
+        r: SubQueryForSql;
       };
       if (s) {
         target = subJoinToSql(ctx, r, target, !forbidLateral, target);
       } else {
-        on = whereToSql(ctx, r as Query, r.q, target);
+        on = whereToSql(ctx, r as unknown as Query, r.q, target);
       }
     } else {
       on = processArgs(
@@ -131,7 +130,7 @@ export const processJoinItem = (
                     : value,
                 ) +
                 '::' +
-                column.dataType
+                (column as Column).dataType
               );
             })
             .join(', ') +
@@ -143,7 +142,7 @@ export const processJoinItem = (
       .join(', ')})`;
   } else {
     const { q, s } = args as {
-      q: Query;
+      q: SubQueryForSql;
       s: boolean;
     };
     let joinAs;
@@ -199,7 +198,7 @@ export const processJoinItem = (
 
 const getArgQueryTarget = (
   ctx: ToSQLCtx,
-  first: Query,
+  first: SubQueryForSql,
   lateral: boolean,
   joinSubQuery: boolean,
   cloned?: boolean,
@@ -233,7 +232,7 @@ const getArgQueryTarget = (
 
 const subJoinToSql = (
   ctx: ToSQLCtx,
-  jq: Query,
+  jq: SubQueryForSql,
   innerAs: string,
   lateral: boolean,
   outerAs?: string,
@@ -244,7 +243,7 @@ const subJoinToSql = (
     jq.q.select = [new RawSQL(`${innerAs}.*`)];
   }
 
-  const sql = `(${getSqlText(jq.toSQL(ctx))}) ${outerAs || innerAs}`;
+  const sql = `(${moveMutativeQueryToCte(ctx, jq)}) ${outerAs || innerAs}`;
   return lateral ? `LATERAL ${sql}` : sql;
 };
 
@@ -253,7 +252,7 @@ const processArgs = (
   ctx: ToSQLCtx,
   query: PickQueryDataShapeAndJoinedShapes,
   joinAs: string,
-  joinShape: QueryColumns,
+  joinShape: Column.QueryColumns,
   quotedAs?: string,
 ): string | undefined => {
   return args.length
@@ -283,7 +282,7 @@ const getConditionsFor3Or4LengthItem = (
   target: string,
   quotedAs: string | undefined,
   args: ItemOf2Or3Length,
-  joinShape: QueryColumns,
+  joinShape: Column.QueryColumns,
 ): string => {
   const [leftColumn, opOrRightColumn, maybeRightColumn] = args;
 
@@ -305,7 +304,7 @@ const getObjectOrRawConditions = (
   data: { [K: string]: string | Expression } | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
-  joinShape: QueryColumns,
+  joinShape: Column.QueryColumns,
 ): string => {
   if (data === true) {
     return 'true';
@@ -361,56 +360,4 @@ export const pushJoinSql = (
 
     ctx.sql.push(sql);
   }
-};
-
-const skipQueryKeysForSubQuery: RecordBoolean = {
-  adapter: true,
-  updateData: true,
-  parsers: true,
-  as: true,
-  and: true,
-  or: true,
-  returnType: true,
-  joinedShapes: true,
-  returnsOne: true,
-  aliases: true,
-  defaults: true,
-  transform: true,
-  throwOnNotFound: true,
-  before: true,
-  after: true,
-  beforeCreate: true,
-  afterCreate: true,
-  afterCreateCommit: true,
-  afterCreateSelect: true,
-  beforeUpdate: true,
-  afterUpdate: true,
-  afterUpdateCommit: true,
-  afterUpdateSelect: true,
-  beforeDelete: true,
-  afterDelete: true,
-  afterDeleteCommit: true,
-  afterDeleteSelect: true,
-  catchAfterCommitErrors: true,
-  log: true,
-  logger: true,
-  autoPreparedStatements: true,
-  catch: true,
-};
-
-export const getIsJoinSubQuery = (query: PickQueryQAndBaseQuery) => {
-  const {
-    q,
-    baseQuery: { q: baseQ },
-  } = query;
-  for (const key in q) {
-    if (
-      !skipQueryKeysForSubQuery[key] &&
-      (q as never as RecordUnknown)[key] !==
-        (baseQ as never as RecordUnknown)[key]
-    ) {
-      return true;
-    }
-  }
-  return false;
 };

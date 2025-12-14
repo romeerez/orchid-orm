@@ -1,8 +1,7 @@
 import {
-  ColumnDataCheckBase,
   getFreeSetAlias,
   TemplateLiteralArgs,
-  ColumnType,
+  Column,
   RawSQL,
   TableData,
 } from 'pqb';
@@ -11,7 +10,7 @@ import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';
 
 interface CodeCheck {
-  check: ColumnDataCheckBase;
+  check: Column.Data.Check;
   name: string;
   column?: string;
 }
@@ -128,7 +127,7 @@ const collectCodeChecks = ({
 
   const codeChecks: CodeCheck[] = [];
   for (const key in codeTable.shape) {
-    const column = codeTable.shape[key] as ColumnType;
+    const column = codeTable.shape[key] as Column;
     if (!column.data.checks) continue;
 
     const columnName = column.data.name ?? key;

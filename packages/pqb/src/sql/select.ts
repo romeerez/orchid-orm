@@ -9,54 +9,54 @@ import {
 } from './common';
 import {
   getFreeAlias,
+  isObjectEmpty,
   isRelationQuery,
   OrchidOrmInternalError,
   UnhandledTypeError,
 } from '../core';
-import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryData } from './data';
 import { SelectableOrExpression } from '../common/utils';
 import {
   addValue,
   ColumnsParsers,
-  ColumnsShapeBase,
-  ColumnTypeBase,
-  ColumnTypesBase,
   DelayedRelationSelect,
   HookSelect,
   HookSelectValue,
   isExpression,
-  QueryColumns,
   RecordString,
   RecordUnknown,
   setDelayedRelation,
 } from '../core';
-import { Query } from '../query/query';
 import { _queryGetOptional } from '../queryMethods/get.utils';
 import { queryJson } from '../queryMethods/json.utils';
 import { queryWrap } from '../queryMethods/queryMethods.utils';
 import { isQueryNone } from '../queryMethods/none';
-import { ColumnType, IntegerBaseColumn } from '../columns';
-import { getSqlText } from './utils';
-import { makeReturningSql } from './insert';
+import { anyShape } from '../columns/any-shape';
+import { Column } from '../columns/column';
+import { IntegerBaseColumn } from '../columns/column-types/number';
+import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from 'pqb';
+import { SelectItemExpression } from '../common/select-item-expression';
 
-export const pushSelectSql = (
+export const setSqlCtxSelectList = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: {
-    shape: QueryColumns;
+    shape: Column.QueryColumns;
     hookSelect?: HookSelect;
     selectCache?: QueryData['selectCache'];
+    returnType?: QueryData['returnType'];
   },
   quotedAs?: string,
   isSubSql?: boolean,
   aliases?: string[],
-) => {
+): void => {
   if (query.selectCache) {
-    ctx.sql.push(query.selectCache.sql);
     if (aliases) aliases.push(...query.selectCache.aliases);
+    ctx.selectList = [query.selectCache.sql];
   } else {
-    const sql = selectToSql(
+    ctx.selectList = selectToSqlList(
       ctx,
       table,
       query,
@@ -64,53 +64,43 @@ export const pushSelectSql = (
       query.hookSelect,
       isSubSql,
       aliases,
+      undefined,
+      undefined,
     );
-    if (sql) ctx.sql.push(sql);
+
+    if (!isSubSql && ctx.topCtx.cteHooks?.hasSelect) {
+      ctx.selectList.push('NULL');
+    }
   }
 };
 
-export const selectToSql = (
+export const selectToSqlList = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: {
-    inCTE?: QueryData['inCTE'];
     select?: QueryData['select'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
     join?: QueryData['join'];
     hookSelect?: HookSelect;
-    shape: QueryColumns;
+    shape: Column.QueryColumns;
     parsers?: ColumnsParsers;
     joinedShapes?: QueryData['joinedShapes'];
+    returnType?: QueryData['returnType'];
   },
   quotedAs: string | undefined,
   hookSelect: HookSelect | undefined = query.hookSelect,
   isSubSql?: boolean,
   aliases?: string[],
-  skipCTE?: boolean,
-  jsonList?: { [K: string]: ColumnTypeBase | undefined },
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
   delayedRelationSelect?: DelayedRelationSelect,
-): string => {
-  if (query.inCTE && !skipCTE) {
-    const { select } = makeReturningSql(
-      ctx,
-      table,
-      query as never,
-      quotedAs as never,
-      query.inCTE.delayedRelationSelect,
-    );
-
-    return query.inCTE.selectNum || !select
-      ? select
-        ? '0, ' + select
-        : '0'
-      : select;
-  }
-
+): string[] => {
   let selected: RecordUnknown | undefined;
   let selectedAs: RecordString | undefined;
 
-  const list: string[] = [];
+  let list: string[] = [];
+
+  ctx.selectedCount = 0;
 
   if (query.select) {
     for (const item of query.select) {
@@ -126,8 +116,10 @@ export const selectToSql = (
             }
           }
 
-          sql = selectAllSql(query, quotedAs, jsonList);
+          sql = internalSelectAllSql(ctx, query, quotedAs, jsonList).join(', ');
         } else {
+          ctx.selectedCount++;
+
           const index = item.indexOf('.');
           if (index !== -1) {
             const tableName = item.slice(0, index);
@@ -172,9 +164,11 @@ export const selectToSql = (
       } else if (item) {
         if ('selectAs' in item) {
           const obj = item.selectAs as {
-            [K: string]: SelectableOrExpression | ToSQLQuery;
+            [K: string]: SelectableOrExpression | SubQueryForSql;
           };
           for (const as in obj) {
+            ctx.selectedCount++;
+
             if (hookSelect) {
               (selected ??= {})[as] = true;
             }
@@ -184,7 +178,8 @@ export const selectToSql = (
               if (isExpression(value)) {
                 list.push(`${value.toSQL(ctx, quotedAs)} "${as}"`);
                 if (jsonList) {
-                  jsonList[as] = value.result.value as ColumnTypeBase;
+                  jsonList[as] = value.result
+                    .value as unknown as Column.Pick.Data;
                 }
                 aliases?.push(as);
               } else if (delayedRelationSelect && isRelationQuery(value)) {
@@ -196,7 +191,7 @@ export const selectToSql = (
                     value.q.returnType === 'value' ||
                     value.q.returnType === 'valueOrThrow'
                       ? ((value.q.expr?.result.value ||
-                          value.result?.value) as ColumnTypeBase)
+                          value.result?.value) as unknown as Column.Pick.Data)
                       : undefined;
                 }
               }
@@ -221,7 +216,32 @@ export const selectToSql = (
           }
         } else {
           // selecting a single value from expression
+          ctx.selectedCount++;
           const sql = item.toSQL(ctx, quotedAs);
+
+          // `get` column
+          if (
+            hookSelect &&
+            item instanceof SelectItemExpression &&
+            typeof item.item === 'string' &&
+            item.item !== '*'
+          ) {
+            const i = item.item.indexOf('.');
+            let key: string | undefined;
+            if (i !== -1) {
+              if (item.item.slice(0, i) === table.table) {
+                key = item.item.slice(i + 1);
+              }
+            } else {
+              key = item.item;
+            }
+
+            if (key) {
+              const column = (item.q as QueryData).shape[key];
+              (selectedAs ??= {})[key] = column?.data.name || key;
+            }
+          }
+
           list.push(ctx.aliasValue ? `${sql} ${quotedAs}` : sql);
           aliases?.push('');
         }
@@ -245,7 +265,7 @@ export const selectToSql = (
           quotedTable = `"${tableName}"`;
           columnName = select.slice(index + 1);
           col = table.q.joinedShapes?.[tableName]?.[columnName] as
-            | ColumnType
+            | Column
             | undefined;
           sql = col?.data.computed
             ? col.data.computed.toSQL(ctx, `"${tableName}"`)
@@ -253,7 +273,7 @@ export const selectToSql = (
         } else {
           quotedTable = quotedAs;
           columnName = select;
-          col = query.shape[select] as ColumnType | undefined;
+          col = query.shape[select] as Column | undefined;
           sql = simpleColumnToSQL(ctx, select, col, quotedAs);
         }
       } else {
@@ -264,7 +284,9 @@ export const selectToSql = (
       let name = columnName;
       if (selected?.[columnName]) {
         if (selected?.[columnName] === quotedTable) {
-          hookSelect.delete(column);
+          if (!isSubSql) {
+            hookSelect.delete(column);
+          }
           continue;
         }
 
@@ -285,55 +307,119 @@ export const selectToSql = (
       }
 
       if (jsonList) jsonList[name] = col;
+
+      ctx.selectedCount++;
       list.push(sql);
     }
   }
 
-  if (!isSubSql && ctx.cteHooks?.hasSelect) {
-    const count = (ctx.selectedCount =
-      list.length || query.selectAllColumns?.length || 0);
-
-    return count
-      ? (list.length
-          ? list.join(', ')
-          : selectAllSql(query, quotedAs, jsonList)) + ', NULL'
-      : '';
+  if (!list.length && !query.select && query.returnType !== 'void') {
+    list = internalSelectAllSql(ctx, query, quotedAs, jsonList);
   }
 
-  return list.length
-    ? list.join(', ')
-    : query.select
-    ? ''
-    : selectAllSql(query, quotedAs, jsonList);
+  return list;
 };
 
-export const selectAllSql = (
+export const selectToSql = (
+  ctx: ToSQLCtx,
+  table: ToSQLQuery,
+  query: {
+    select?: QueryData['select'];
+    selectAllColumns?: string[];
+    selectAllShape?: RecordUnknown;
+    join?: QueryData['join'];
+    hookSelect?: HookSelect;
+    shape: Column.QueryColumns;
+    parsers?: ColumnsParsers;
+    joinedShapes?: QueryData['joinedShapes'];
+    returnType?: QueryData['returnType'];
+  },
+  quotedAs: string | undefined,
+  hookSelect: HookSelect | undefined = query.hookSelect,
+  isSubSql?: boolean,
+  aliases?: string[],
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
+  delayedRelationSelect?: DelayedRelationSelect,
+): string => {
+  const list = selectToSqlList(
+    ctx,
+    table,
+    query,
+    quotedAs,
+    hookSelect,
+    isSubSql,
+    aliases,
+    jsonList,
+    delayedRelationSelect,
+  );
+
+  return list.join(', ');
+};
+
+const internalSelectAllSql = (
+  ctx: ToSQLCtx,
   query: {
     updateFrom?: unknown;
     join?: QueryData['join'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
-    shape?: QueryColumns;
+    shape: Column.QueryColumns;
   },
   quotedAs?: string,
-  jsonList?: { [K: string]: ColumnTypeBase | undefined },
-) => {
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
+): string[] => {
   if (jsonList) {
-    Object.assign(jsonList, query.selectAllShape as ColumnTypesBase);
+    Object.assign(jsonList, query.selectAllShape);
   }
 
-  return query.join?.length || query.updateFrom
-    ? query.selectAllColumns?.map((item) => `${quotedAs}.${item}`).join(', ') ||
-        `${quotedAs}.*`
-    : query.selectAllColumns?.join(', ') || '*';
+  let columnsCount: number | undefined;
+  if (query.shape !== anyShape) {
+    let columnsCount = 0;
+    for (const key in query.shape) {
+      if (!(query.shape[key] as Column).data.explicitSelect) {
+        columnsCount++;
+      }
+    }
+    ctx.selectedCount += columnsCount;
+  }
+
+  return selectAllSql(query, quotedAs, columnsCount);
 };
+
+export const selectAllSql = (
+  q: {
+    updateFrom?: unknown;
+    join?: QueryData['join'];
+    selectAllColumns?: string[];
+    selectAllShape?: RecordUnknown;
+    shape: Column.QueryColumns;
+  },
+  quotedAs?: string,
+  columnsCount?: number,
+): string[] => {
+  return q.join?.length || q.updateFrom
+    ? q.selectAllColumns?.map((item) => `${quotedAs}.${item}`) ||
+        (isEmptySelect(q.shape, columnsCount) ? [] : [`${quotedAs}.*`])
+    : q.selectAllColumns
+    ? [...q.selectAllColumns]
+    : isEmptySelect(q.shape, columnsCount)
+    ? []
+    : ['*'];
+};
+
+const isEmptySelect = (shape: Column.QueryColumns, columnsCount?: number) =>
+  columnsCount === undefined
+    ? shape === anyShape
+      ? false
+      : isObjectEmpty(shape)
+    : !columnsCount;
 
 const pushSubQuerySql = (
   ctx: ToSQLCtx,
   mainQuery: {
     joinedShapes?: QueryData['joinedShapes'];
   },
-  query: ToSQLQuery,
+  query: SubQueryForSql,
   as: string,
   list: string[],
   quotedAs?: string,
@@ -365,7 +451,7 @@ const pushSubQuerySql = (
         sql = `'[]'::json`;
         break;
       default:
-        throw new UnhandledTypeError(query as Query, returnType);
+        throw new UnhandledTypeError(query, returnType);
     }
     list.push(`${sql} "${as}"`);
     aliases?.push(as);
@@ -378,7 +464,9 @@ const pushSubQuerySql = (
       case 'one':
       case 'oneOrThrow': {
         const table = query.q.joinedForSelect;
-        const shape = mainQuery.joinedShapes?.[as] as ColumnsShapeBase;
+        const shape = mainQuery.joinedShapes?.[
+          as
+        ] as unknown as Column.Shape.Data;
         sql = makeRowToJson(table, shape, false);
         break;
       }
@@ -395,7 +483,7 @@ const pushSubQuerySql = (
       case 'void':
         return;
       default:
-        throw new UnhandledTypeError(query as Query, returnType);
+        throw new UnhandledTypeError(query, returnType);
     }
 
     if (sql) {
@@ -418,13 +506,16 @@ const pushSubQuerySql = (
         query = queryJson(query) as unknown as typeof query;
       } else if (!first) {
         throw new OrchidOrmInternalError(
-          query as Query,
+          query,
           `Nothing was selected for pluck`,
         );
       } else {
         const cloned = query.clone();
         cloned.q.select = [{ selectAs: { c: first } }] as SelectItem[];
-        query = queryWrap(cloned, cloned.baseQuery.clone());
+        query = queryWrap(
+          cloned,
+          cloned.baseQuery.clone(),
+        ) as unknown as SubQueryForSql;
         _queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
       }
       break;
@@ -439,14 +530,14 @@ const pushSubQuerySql = (
     case 'void':
       break;
     default:
-      throw new UnhandledTypeError(query as Query, returnType);
+      throw new UnhandledTypeError(query, returnType);
   }
 
   list.push(
     `${coalesce(
       ctx,
       query,
-      `(${getSqlText(toSQL(query, ctx))})`,
+      `(${moveMutativeQueryToCte(ctx, query)})`,
       quotedAs,
     )} "${as}"`,
   );

@@ -1,6 +1,6 @@
 import { OrderItem, OrderTsQueryConfig, SortDir } from './types';
 import { maybeSelectedColumnToSql } from './common';
-import { ToSQLCtx } from './toSQL';
+import { ToSQLCtx } from './to-sql';
 import { QueryData } from './data';
 import { addValue, emptyObject, isExpression } from '../core';
 

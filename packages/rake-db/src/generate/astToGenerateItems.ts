@@ -8,7 +8,7 @@ import {
 import {
   ArrayColumn,
   ArrayColumnValue,
-  ColumnType,
+  Column,
   EnumColumn,
   TableData,
   ColumnTypeSchemaArg,
@@ -238,7 +238,7 @@ const analyzeTableColumns = (
             unknown,
             unknown
           >
-        ).data.item as ColumnType;
+        ).data.item as Column;
       }
 
       let type: string;

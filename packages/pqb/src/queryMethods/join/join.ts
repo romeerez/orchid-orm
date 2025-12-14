@@ -2,8 +2,6 @@ import { PickQueryQ, SelectableFromShape } from '../../query/query';
 import { _clone } from '../../query/queryUtils';
 import {
   AliasOrTable,
-  ColumnShapeInput,
-  ColumnTypesBase,
   EmptyTuple,
   Expression,
   PickQueryMeta,
@@ -20,19 +18,15 @@ import {
   PickQueryTableMetaShape,
   pushOrNewArrayToObjectImmutable,
   pushQueryValueImmutable,
-  QueryColumns,
-  QueryColumnToNullable,
   QueryMetaBase,
   QueryThenByQuery,
   SelectableBase,
   setObjectValueImmutable,
-  WithDataItem,
 } from '../../core';
+import { Column } from '../../columns/column';
 import { _join, _joinLateral, _joinLateralProcessArg } from './_join';
-import {
-  ColumnsShapeToNullableObject,
-  ColumnsShapeToObject,
-} from '../../columns';
+import { ColumnsShape } from '../../columns';
+import { WithDataItem } from '../../query';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
@@ -175,7 +169,7 @@ export type JoinResult<
               ? {
                   [K in keyof T['meta']['selectable']]: {
                     as: T['meta']['selectable'][K]['as'];
-                    column: QueryColumnToNullable<
+                    column: Column.Modifiers.QueryColumnToNullable<
                       T['meta']['selectable'][K]['column']
                     >;
                   };
@@ -185,14 +179,18 @@ export type JoinResult<
         : K extends 'result'
         ? // nullable result: inlined for optimization
           {
-            [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+            [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
+              T['result'][K]
+            >;
           }
         : K extends 'then'
         ? QueryThenByQuery<
             T,
             // nullable result: inlined for optimization
             {
-              [K in keyof T['result']]: QueryColumnToNullable<T['result'][K]>;
+              [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
+                T['result'][K]
+              >;
             }
           >
         : T[K];
@@ -276,7 +274,7 @@ export type JoinLateralResult<
   T extends PickQueryMeta,
   Table extends string,
   Meta extends QueryMetaBase,
-  Result extends QueryColumns,
+  Result extends Column.QueryColumns,
   RequireJoined,
 > = JoinAddSelectable<
   T,
@@ -300,7 +298,7 @@ export type JoinLateralResult<
  */
 export type JoinResultSelectable<
   // Interestingly, accepting T and inlining T['result'] adds a LOT (~823k) instantiations
-  Result extends QueryColumns,
+  Result extends Column.QueryColumns,
   As extends string,
   RequireJoined,
 > = (RequireJoined extends true
@@ -313,14 +311,14 @@ export type JoinResultSelectable<
   : {
       [K in keyof Result & string as `${As}.${K}`]: {
         as: K;
-        column: QueryColumnToNullable<Result[K]>;
+        column: Column.Modifiers.QueryColumnToNullable<Result[K]>;
       };
     }) & {
   [K in As as `${As}.*`]: {
     as: K;
     column: RequireJoined extends true
-      ? ColumnsShapeToObject<Result>
-      : ColumnsShapeToNullableObject<Result>;
+      ? ColumnsShape.MapToObjectColumn<Result>
+      : ColumnsShape.MapToNullableObjectColumn<Result>;
   };
 };
 
@@ -1034,7 +1032,7 @@ export class Join {
     Arg extends JoinFirstArg<T>,
     Table extends string,
     Meta extends QueryMetaBase,
-    Result extends QueryColumns,
+    Result extends Column.QueryColumns,
   >(
     this: T,
     arg: Arg,
@@ -1073,7 +1071,7 @@ export class Join {
     Arg extends JoinFirstArg<T>,
     Table extends string,
     Meta extends QueryMetaBase,
-    Result extends QueryColumns,
+    Result extends Column.QueryColumns,
   >(
     this: T,
     arg: Arg,
@@ -1129,8 +1127,8 @@ export class Join {
   joinData<
     T extends PickQueryMetaColumnTypes,
     As extends string,
-    RecordType extends ColumnTypesBase,
-    Item extends ColumnShapeInput<RecordType>,
+    RecordType extends Column.QueryColumnsInit,
+    Item extends ColumnsShape.Input<RecordType>,
   >(
     this: T,
     as: As,
@@ -1155,7 +1153,10 @@ export class Join {
     const query = _clone(this);
 
     const parsers = Object.fromEntries(
-      Object.entries(shape).map(([key, column]) => [key, column._parse]),
+      Object.entries(shape).map(([key, column]) => [
+        key,
+        (column as Column)._parse,
+      ]),
     );
 
     const { q } = query;

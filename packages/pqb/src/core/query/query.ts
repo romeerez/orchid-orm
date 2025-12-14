@@ -1,16 +1,17 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TransactionState } from '../adapter';
+import { QueryResult, TransactionState } from '../adapter';
 import {
   EmptyObject,
   pushOrNewArrayToObjectImmutable,
   RecordKeyTrue,
   RecordUnknown,
 } from '../utils';
-import { QueryColumn, QueryColumns } from '../columns';
 import { DelayedRelationSelect } from './delayed-relational-select';
 import { QueryInternalColumnNameToKey } from './column-name-to-key';
 import { QueryDataBase } from './query-data';
 import { HasCteHooks, HasTableHook } from './hook-select';
+import { PickQueryShape } from './pick-query-types';
+import { Column } from '../../columns/column';
 
 export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
   delayedRelationSelect?: DelayedRelationSelect;
@@ -21,6 +22,13 @@ export interface SingleSqlItem {
   text: string;
   // bind values passed along with SQL string
   values?: unknown[];
+  runAfterQuery?: RunAfterQuery;
+}
+
+// is executed immediately after querying SQL.
+// `then` early returns its result if `runAfterQuery` returns a result.
+export interface RunAfterQuery {
+  (queryResult: QueryResult): void | Promise<{ result: unknown }>;
 }
 
 export interface SingleSql extends SingleSqlItem, SqlCommonOptions {}
@@ -121,9 +129,8 @@ export interface IsQueries {
   [K: string]: IsQuery;
 }
 
-export interface QueryBase extends IsQuery {
+export interface QueryBase extends IsQuery, PickQueryShape {
   internal: QueryInternalBase;
-  shape: QueryColumns;
   q: QueryDataBase;
   table?: string;
 }
@@ -137,7 +144,7 @@ export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
 }
 
 export interface SelectableBase {
-  [K: PropertyKey]: { as: string; column: QueryColumn };
+  [K: PropertyKey]: { as: string; column: Column.Pick.QueryColumn };
 }
 
 // Symbol that is used in the parsers in the query data for a column that doesn't have a name
@@ -211,5 +218,5 @@ export const pushQueryValueImmutable = <T extends IsQuery>(
 };
 
 export interface QueryOrExpression<T> {
-  result: { value: QueryColumn<T> };
+  result: { value: Column.Pick.QueryColumnOfType<T> };
 }

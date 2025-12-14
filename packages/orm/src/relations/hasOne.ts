@@ -19,6 +19,16 @@ import {
   UpdateData,
   VirtualColumn,
   WhereArg,
+  defaultSchemaConfig,
+  CreateManyMethodsNames,
+  ColumnSchemaConfig,
+  EmptyObject,
+  getPrimaryKeys,
+  RecordString,
+  RecordUnknown,
+  RelationConfigBase,
+  RelationJoinQuery,
+  Column,
 } from 'pqb';
 import { ORMTableInput, TableClass } from '../baseTable';
 import {
@@ -43,19 +53,8 @@ import {
   RelJoin,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
-import {
-  defaultSchemaConfig,
-  CreateManyMethodsNames,
-  ColumnSchemaConfig,
-  ColumnsShapeBase,
-  EmptyObject,
-  getPrimaryKeys,
-  RecordString,
-  RecordUnknown,
-  RelationConfigBase,
-  RelationJoinQuery,
-} from 'pqb';
 import { joinQueryChainHOF } from './common/joinQueryChain';
+import { prepareSubQueryForSql } from 'pqb';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';
@@ -70,7 +69,7 @@ interface RelationHasOneThroughOptions<
 }
 
 export type HasOneOptions<
-  Columns extends ColumnsShapeBase = ColumnsShapeBase,
+  Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
   Related extends TableClass = TableClass,
   Through extends string = string,
   Source extends string = string,
@@ -384,7 +383,7 @@ export const makeHasOneMethod = (
         const baseQuery = (query as Query).clone();
         baseQuery.q.select = fromQuerySelect;
         const q = (relationQuery as unknown as PickQueryQ).q;
-        q.insertFrom = baseQuery;
+        q.insertFrom = prepareSubQueryForSql(q as never, baseQuery);
         q.values = [];
       };
     },

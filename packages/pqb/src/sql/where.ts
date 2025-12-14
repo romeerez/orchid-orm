@@ -15,7 +15,7 @@ import {
 } from './common';
 import { getQueryAs, joinSubQuery } from '../common/utils';
 import { processJoinItem } from './join';
-import { toSQL, ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import {
   PickQueryDataShapeAndJoinedShapes,
   QueryData,
@@ -25,19 +25,18 @@ import {
   _getQueryOuterAliases,
   addValue,
   ColumnsParsers,
-  ColumnTypeBase,
   Expression,
   isExpression,
-  IsQuery,
   MaybeArray,
-  OperatorToSQL,
-  QueryColumns,
   QueryDataAliases,
   RecordUnknown,
   toArray,
 } from '../core';
-import { getSqlText } from './utils';
+import { Column } from '../columns/column';
 import { selectToSql } from './select';
+import { OperatorToSQL } from '../columns/operators';
+import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
 interface QueryDataForWhere extends QueryDataAliases {
   and?: QueryData['and'];
@@ -160,7 +159,7 @@ const processWhere = (
       } else {
         const q = joinSubQuery(table, query);
         q.q.select = [query.q.expr];
-        ands.push(`(${getSqlText(toSQL(q as Query, ctx))})`);
+        ands.push(`(${moveMutativeQueryToCte(ctx, q)})`);
       }
     } else {
       pushWhereToSql(
@@ -287,81 +286,82 @@ const processWhere = (
       !(value instanceof Date) &&
       !Array.isArray(value)
     ) {
-      if (isExpression(value)) {
-        ands.push(
-          `${columnToSql(
-            ctx,
-            query,
-            query.shape,
-            key,
-            quotedAs,
-          )} = ${value.toSQL(ctx, quotedAs)}`,
-        );
-      } else {
-        let column: ColumnTypeBase | undefined = query.shape[key];
-        let quotedColumn: string | undefined;
-        if (column) {
-          quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
-        } else if (!column) {
-          const index = key.indexOf('.');
-          if (index !== -1) {
-            const table = key.slice(0, index);
-            const quoted = `"${table}"`;
-            const name = key.slice(index + 1);
-
-            column = (
-              quotedAs === quoted
-                ? query.shape[name]
-                : query.joinedShapes?.[table]?.[name]
-            ) as typeof column;
-
-            quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
-          } else {
-            column = query.joinedShapes?.[key]?.value;
-            quotedColumn = `"${key}"."${key}"`;
-          }
-
-          if (!column || !quotedColumn) {
-            throw new Error(`Unknown column ${key} provided to condition`);
-          }
-        }
-
-        if (value instanceof ctx.qb.constructor) {
-          ands.push(
-            `${quotedColumn} = (${getSqlText((value as Query).toSQL(ctx))})`,
-          );
-        } else {
-          for (const op in value) {
-            const operator = (column.operators as RecordUnknown)[op];
-            if (!operator) {
-              throw new Error(`Unknown operator ${op} provided to condition`);
-            }
-
-            if (value[op as keyof typeof value] === undefined) continue;
-
-            ands.push(
-              `${(
-                operator as unknown as { _op: OperatorToSQL<any, ToSQLCtx> }
-              )._op(
-                quotedColumn as string,
-                value[op as keyof typeof value],
-                ctx,
-                quotedAs,
-              )}`,
-            );
-          }
-        }
-      }
+      whereExprOrQuery(ctx, ands, query, key, value, quotedAs);
     } else {
       const column = columnToSql(ctx, query, query.shape, key, quotedAs);
-      if (typeof value === 'function') {
-        const expr = value(table);
-        ands.push(`${column} = ${expr.toSQL(ctx, quotedAs)}`);
+      ands.push(
+        `${column} ${
+          value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
+        }`,
+      );
+    }
+  }
+};
+
+const whereExprOrQuery = (
+  ctx: ToSQLCtx,
+  ands: string[],
+  query: QueryDataForWhere,
+  key: string,
+  value: object,
+  quotedAs?: string,
+) => {
+  if (isExpression(value)) {
+    ands.push(
+      `${columnToSql(ctx, query, query.shape, key, quotedAs)} = ${value.toSQL(
+        ctx,
+        quotedAs,
+      )}`,
+    );
+  } else {
+    let column: Column.Pick.QueryColumn | undefined = query.shape[key];
+    let quotedColumn: string | undefined;
+    if (column) {
+      quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
+    } else if (!column) {
+      const index = key.indexOf('.');
+      if (index !== -1) {
+        const table = key.slice(0, index);
+        const quoted = `"${table}"`;
+        const name = key.slice(index + 1);
+
+        column = (
+          quotedAs === quoted
+            ? query.shape[name]
+            : query.joinedShapes?.[table]?.[name]
+        ) as typeof column;
+
+        quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
       } else {
+        column = query.joinedShapes?.[key]?.value;
+        quotedColumn = `"${key}"."${key}"`;
+      }
+
+      if (!column || !quotedColumn) {
+        throw new Error(`Unknown column ${key} provided to condition`);
+      }
+    }
+
+    if (value instanceof ctx.qb.constructor) {
+      const subQuerySql = moveMutativeQueryToCte(ctx, value as SubQueryForSql);
+
+      ands.push(`${quotedColumn} = (${subQuerySql})`);
+    } else {
+      for (const op in value) {
+        const operator = (column.operators as RecordUnknown)[op];
+        if (!operator) {
+          throw new Error(`Unknown operator ${op} provided to condition`);
+        }
+
+        if (value[op as keyof typeof value] === undefined) continue;
+
         ands.push(
-          `${column} ${
-            value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
-          }`,
+          `${(operator as unknown as { _op: OperatorToSQL })._op(
+            quotedColumn as string,
+            value[op as keyof typeof value],
+            ctx,
+            quotedAs,
+          )}`,
         );
       }
     }
@@ -371,7 +371,7 @@ const processWhere = (
 interface OnColumnToSQLQuery {
   joinedShapes?: QueryData['joinedShapes'];
   aliases?: QueryData['aliases'];
-  shape: QueryColumns;
+  shape: Column.QueryColumns;
 }
 
 const onColumnToSql = (
@@ -392,7 +392,7 @@ const pushIn = (
   quotedAs: string | undefined,
   arg: {
     columns: string[];
-    values: unknown[][] | IsQuery | Expression;
+    values: unknown[][] | SubQueryForSql | Expression;
   },
 ) => {
   // if there are multiple columns, make `(col1, col2) IN ((1, 2), (3, 4))`,
@@ -416,7 +416,7 @@ const pushIn = (
   } else if (isExpression(arg.values)) {
     value = arg.values.toSQL(ctx, quotedAs);
   } else {
-    value = `(${getSqlText(toSQL(arg.values as never, ctx))})`;
+    value = `(${moveMutativeQueryToCte(ctx, arg.values)})`;
   }
 
   const columnsSql = arg.columns

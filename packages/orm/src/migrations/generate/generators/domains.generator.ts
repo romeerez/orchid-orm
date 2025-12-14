@@ -1,10 +1,9 @@
 import {
   ArrayColumn,
-  ColumnType,
+  Column,
   DbStructureDomainsMap,
   RawSQL,
   AdapterBase,
-  ColumnDataCheckBase,
   deepCompare,
   emptyArray,
   TemplateLiteralArgs,
@@ -33,14 +32,14 @@ interface ComparableDomainCompare
 interface ComparableDomain {
   schemaName: string;
   name: string;
-  column: ColumnType;
+  column: Column;
   compare: ComparableDomainCompare;
 }
 
 export interface CodeDomain {
   schemaName: string;
   name: string;
-  column: ColumnType;
+  column: Column;
 }
 
 export const processDomains = async (
@@ -189,7 +188,7 @@ const makeComparableDomain = (
   currentSchema: string,
   schemaName: string,
   name: string,
-  column: ColumnType,
+  column: Column,
 ): ComparableDomain => {
   let arrayDims = 0;
   const isNullable = column.data.isNullable ?? false;
@@ -231,8 +230,8 @@ const pushCompareDefault = (
       inDb: domain.default,
       inCode: found.map((codeDomain) => {
         const value = codeDomain.column.data.default;
-        if ('sql' in (value as ColumnDataCheckBase)) {
-          return (value as ColumnDataCheckBase).sql;
+        if ('sql' in (value as Column.Data.Check)) {
+          return (value as Column.Data.Check).sql;
         }
         return value as string;
       }),

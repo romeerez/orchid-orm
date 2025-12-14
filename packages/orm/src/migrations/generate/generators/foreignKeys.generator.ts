@@ -6,7 +6,7 @@ import {
   getConstraintName,
   AnyRakeDbConfig,
 } from 'rake-db';
-import { ColumnType, TableData, deepCompare, toSnakeCase } from 'pqb';
+import { Column, TableData, deepCompare, toSnakeCase } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
 
@@ -195,7 +195,7 @@ const collectCodeFkeys = (
 ): CodeForeignKey[] => {
   const codeForeignKeys: CodeForeignKey[] = [];
   for (const key in codeTable.shape) {
-    const column = codeTable.shape[key] as ColumnType;
+    const column = codeTable.shape[key] as Column;
     if (!column.data.foreignKeys) continue;
 
     const name = column.data.name ?? key;

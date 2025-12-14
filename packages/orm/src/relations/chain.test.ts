@@ -352,41 +352,38 @@ describe('relations chain', () => {
 
     it('should support chaining with query query', async () => {
       const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const [userAId, userBId, userCId] = await db.user.pluck('Id').createMany([
+        { ...UserData, Name: 'user a' },
+        { ...UserData, Name: 'user b' },
+        { ...UserData, Name: 'user c' },
+      ]);
       await db.message.createMany([
         {
           ...MessageData,
           Text: 'message c',
           Decimal: 1,
-          sender: {
-            create: { ...UserData, Name: 'user a' },
-          },
+          AuthorId: userAId,
           ChatId: chatId,
         },
         {
           ...MessageData,
           Text: 'message c',
           Decimal: 2,
-          sender: {
-            create: { ...UserData, Name: 'user b' },
-          },
+          AuthorId: userBId,
           ChatId: chatId,
         },
         {
           ...MessageData,
           Text: 'message b',
           Decimal: 3,
-          sender: {
-            connect: { Name: 'user b' },
-          },
+          AuthorId: userBId,
           ChatId: chatId,
         },
         {
           ...MessageData,
           Text: 'message a',
           Decimal: 4,
-          sender: {
-            create: { ...UserData, Name: 'user c' },
-          },
+          AuthorId: userCId,
           ChatId: chatId,
         },
       ]);

@@ -1,5 +1,5 @@
 import { rawOrColumnToSql } from './common';
-import { ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryData } from './data';
 
 export const pushDistinctSql = (

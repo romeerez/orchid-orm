@@ -1,15 +1,11 @@
 import {
-  ColumnNameOfTable,
-  EmptyObject,
   EmptyTuple,
   Expression,
-  ForeignKeyTable,
   MaybeArray,
-  QueryColumn,
-  QueryColumns,
   RawSQLBase,
   RecordUnknown,
 } from './core';
+import { Column } from './columns/column';
 import { SearchWeight } from './sql';
 import { sqlFn, SqlFn } from './sql/rawSql';
 import OptionsArg = TableData.Index.OptionsArg;
@@ -191,7 +187,7 @@ export namespace TableData {
   }
 
   export namespace References {
-    export type FnOrTable = (() => ForeignKeyTable) | string;
+    export type FnOrTable = (() => Column.ForeignKey.TableParam) | string;
 
     /**
      * - MATCH FULL will not allow one column of a multicolumn foreign key to be null unless all foreign key columns are null;
@@ -247,7 +243,7 @@ export interface NonUniqDataItem extends TableDataItem {
 }
 
 export interface UniqueTableDataItem<
-  Shape extends QueryColumns = QueryColumns,
+  Shape extends Column.QueryColumns = Column.QueryColumns,
 > {
   columns: (keyof Shape)[];
   name: string;
@@ -371,18 +367,16 @@ export interface TableDataMethods<Key extends PropertyKey> {
     options?: TableData.Exclude.Options,
   ): NonUniqDataItem;
 
-  foreignKey<
-    ForeignTable extends (() => ForeignKeyTable) | string,
-    ForeignColumns extends ForeignTable extends () => ForeignKeyTable
-      ? [
-          ColumnNameOfTable<ReturnType<ForeignTable>>,
-          ...ColumnNameOfTable<ReturnType<ForeignTable>>[],
-        ]
-      : [string, ...string[]],
-  >(
+  foreignKey<Shape>(
     columns: [string, ...string[]],
-    fnOrTable: ForeignTable,
-    foreignColumns: ForeignColumns,
+    fnOrTable: () => new () => { columns: { shape: Shape } },
+    foreignColumns: [keyof Shape, ...(keyof Shape)[]],
+    options?: TableData.References.Options,
+  ): NonUniqDataItem;
+  foreignKey(
+    columns: [string, ...string[]],
+    fnOrTable: string,
+    foreignColumns: [string, ...string[]],
     options?: TableData.References.Options,
   ): NonUniqDataItem;
 
@@ -392,7 +386,7 @@ export interface TableDataMethods<Key extends PropertyKey> {
 }
 
 export type TableDataItemsUniqueColumns<
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
   T extends MaybeArray<TableDataItem>,
 > = MaybeArray<TableDataItem> extends T
   ? never
@@ -407,7 +401,7 @@ export type TableDataItemsUniqueColumns<
   : never;
 
 type ItemUniqueColumns<
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
   T extends UniqueTableDataItem<Shape>,
 > = {
   [Column in T['columns'][number]]: UniqueQueryTypeOrExpression<
@@ -416,7 +410,7 @@ type ItemUniqueColumns<
 };
 
 export type TableDataItemsUniqueColumnTuples<
-  Shape extends QueryColumns,
+  Shape extends Column.QueryColumns,
   T extends MaybeArray<TableDataItem>,
 > = MaybeArray<TableDataItem> extends T
   ? never
@@ -428,7 +422,7 @@ export type TableDataItemsUniqueColumnTuples<
 
 export type UniqueQueryTypeOrExpression<T> =
   | T
-  | Expression<QueryColumn<T, EmptyObject>>;
+  | Expression<Column.Pick.QueryColumnOfType<T>>;
 
 export type TableDataItemsUniqueConstraints<
   T extends MaybeArray<TableDataItem>,
@@ -507,7 +501,12 @@ export const tableDataMethods: TableDataMethods<string> = {
       } as never;
     }
   },
-  foreignKey(columns, fnOrTable, foreignColumns, options) {
+  foreignKey(
+    columns: [string, ...string[]],
+    fnOrTable: (() => new () => { columns: { shape: unknown } }) | string,
+    foreignColumns: [string, ...string[]],
+    options?: TableData.References.Options,
+  ) {
     return {
       constraint: {
         name: options?.name,

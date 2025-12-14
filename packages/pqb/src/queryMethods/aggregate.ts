@@ -10,8 +10,6 @@ import {
   Expression,
   PickQueryMeta,
   PickQueryMetaResultRelationsWindows,
-  QueryColumn,
-  QueryColumnOfDataType,
 } from '../core';
 import {
   AggregateOptions,
@@ -29,7 +27,6 @@ import {
 import { RawSQL } from '../sql/rawSql';
 import {
   BooleanColumn,
-  ColumnType,
   DecimalColumn,
   IntegerColumn,
   JSONTextColumn,
@@ -39,7 +36,8 @@ import {
   TextColumn,
   XMLColumn,
 } from '../columns';
-import { defaultSchemaConfig } from '../columns/defaultSchemaConfig';
+import { Column } from '../columns/column';
+import { defaultSchemaConfig } from '../columns/default-schema-config';
 import {
   _getSelectableColumn,
   _queryGetOptional,
@@ -83,7 +81,7 @@ const stringAsNumberNullable =
 const numericResultColumn = (
   q: unknown,
   arg: PropertyKey | Expression,
-): ColumnType => {
+): Column => {
   const type =
     typeof arg === 'string'
       ? _getSelectableColumn(q as Query, arg)
@@ -96,7 +94,7 @@ const numericResultColumn = (
 
 type QueryReturnsAgg<T, C, Op> = SetQueryReturnsColumnOrThrow<
   T,
-  QueryColumn<C, Op>
+  Column.Pick.QueryColumnOfTypeAndOps<C, Op>
 > &
   Op;
 
@@ -110,9 +108,12 @@ type SelectableDataType<T extends PickQueryMeta, DataType extends string> =
         ? K
         : never;
     }[keyof T['meta']['selectable']]
-  | Expression<QueryColumnOfDataType<DataType>>;
+  | Expression<Column.Pick.QueryColumnOfDataType<DataType>>;
 
-type NumberNullable = QueryColumn<number | null, OperatorsNumber>;
+type NumberNullable = Column.Pick.QueryColumnOfTypeAndOps<
+  number | null,
+  OperatorsNumber
+>;
 
 type NumericReturn<
   T extends PickQueryMeta,
@@ -120,7 +121,7 @@ type NumericReturn<
 > = Arg extends keyof T['meta']['selectable']
   ? SetQueryReturnsColumnOrThrow<
       T,
-      QueryColumn<
+      Column.Pick.QueryColumnOfTypeAndOps<
         T['meta']['selectable'][Arg]['column']['type'] | null,
         OperatorsNumber
       >
@@ -129,7 +130,10 @@ type NumericReturn<
   : Arg extends Expression
   ? SetQueryReturnsColumnOrThrow<
       T,
-      QueryColumn<Arg['result']['value']['type'] | null, OperatorsNumber>
+      Column.Pick.QueryColumnOfTypeAndOps<
+        Arg['result']['value']['type'] | null,
+        OperatorsNumber
+      >
     > &
       OperatorsNumber
   : never;
@@ -137,9 +141,15 @@ type NumericReturn<
 type NullableNumberReturn<T> = SetQueryReturnsColumnOrThrow<T, NumberNullable> &
   OperatorsNumber;
 
-export type BooleanQueryColumn = QueryColumn<boolean, OperatorsBoolean>;
+export type BooleanQueryColumn = Column.Pick.QueryColumnOfTypeAndOps<
+  boolean,
+  OperatorsBoolean
+>;
 
-type BooleanNullable = QueryColumn<boolean | null, OperatorsBoolean>;
+type BooleanNullable = Column.Pick.QueryColumnOfTypeAndOps<
+  boolean | null,
+  OperatorsBoolean
+>;
 
 type NullableBooleanReturn<T> = SetQueryReturnsColumnOrThrow<
   T,
@@ -193,9 +203,12 @@ type NullableJSONObjectReturn<
 > &
   OperatorsAny;
 
-type StringColumn = QueryColumn<string, OperatorsText>;
+type StringColumn = Column.Pick.QueryColumnOfTypeAndOps<string, OperatorsText>;
 
-type StringNullable = QueryColumn<string | null, OperatorsText>;
+type StringNullable = Column.Pick.QueryColumnOfTypeAndOps<
+  string | null,
+  OperatorsText
+>;
 
 type NullableStringReturn<T> = SetQueryReturnsColumnOrThrow<T, StringNullable> &
   OperatorsText;
@@ -734,7 +747,7 @@ export class AggregateMethods {
       'string_agg',
       [arg, { value: delimiter }],
       options,
-    ) as NullableStringReturn<T>;
+    ) as never;
   }
 
   /**
@@ -765,7 +778,7 @@ export class AggregateMethods {
       'xmlagg',
       [arg],
       options,
-    ) as NullableStringReturn<T>;
+    ) as never;
   }
 
   /**

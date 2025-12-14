@@ -5,10 +5,10 @@ import {
   getShapeFromSelect,
   Query,
   RawSQL,
-  ColumnsShapeBase,
   HookSelectValue,
   isExpression,
   RelationJoinQuery,
+  Column,
 } from 'pqb';
 
 export const joinQueryChainHOF =
@@ -108,7 +108,9 @@ const selectRowNumber = (
   const as = `"${getQueryAs(result)}"`;
   const partitionColumns = relPKeys.map(
     (key) =>
-      `${as}."${(result.shape as ColumnsShapeBase)[key]?.data.name || key}"`,
+      `${as}."${
+        (result.shape as Column.Shape.QueryInit)[key]?.data.name || key
+      }"`,
   );
   const item = {
     select: {

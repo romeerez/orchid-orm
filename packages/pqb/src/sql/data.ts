@@ -12,22 +12,18 @@ import {
   UnionItem,
   WhereItem,
   WindowItem,
-  WithItem,
 } from './types';
 import { SelectableOrExpression } from '../common/utils';
 import {
   AdapterBase,
   BatchParsers,
   ColumnsParsers,
-  ColumnsShapeBase,
-  DelayedRelationSelect,
   Expression,
   ExpressionChain,
   HookSelect,
   MaybeArray,
   PickQueryInputType,
   PickQueryTable,
-  QueryColumn,
   QueryDataAliases,
   QueryDataBase,
   QueryDataTransform,
@@ -42,10 +38,16 @@ import {
 } from '../core';
 import { ComputedColumns } from '../modules/computed';
 import { AfterCommitErrorHandler } from '../queryMethods';
-import { ColumnsShape } from '../columns';
+import { Column } from '../columns/column';
+import { ColumnsShape } from '../columns/columns-shape';
+import { CteItem } from '../query/cte/cte.sql';
+import {
+  HasBeforeAndBeforeSet,
+  SubQueryForSql,
+} from '../query/to-sql/sub-query-for-sql';
 
 export interface RecordOfColumnsShapeBase {
-  [K: string]: ColumnsShapeBase;
+  [K: string]: Column.Shape.QueryInit;
 }
 
 export interface WithConfigs {
@@ -53,7 +55,7 @@ export interface WithConfigs {
 }
 
 export interface WithConfig {
-  shape: ColumnsShapeBase;
+  shape: Column.Shape.QueryInit;
   computeds?: ComputedColumns;
 }
 
@@ -86,7 +88,7 @@ export interface QueryScopeData {
   or?: WhereItem[][];
 }
 
-export type QueryDataFromItem = string | Query | Expression;
+export type QueryDataFromItem = string | SubQueryForSql | Expression;
 
 export interface QueryDataJoinTo extends PickQueryTable, PickQueryQ {}
 
@@ -100,11 +102,13 @@ export interface HandleResult {
   ): unknown;
 }
 
-export type WithItems = (WithItem | undefined)[];
+export type WithItems = CteItem[];
 
 export interface QueryData extends QueryDataBase {
   type:
     | undefined
+    // the same as undefined, used only in SQL composer to override default value
+    | null
     | 'upsert'
     | 'insert'
     | 'update'
@@ -130,9 +134,6 @@ export interface QueryData extends QueryDataBase {
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   with?: WithItems;
-  // Inserting lots of records may be automatically batched.
-  // For this case, the insert logic handles `with` statements on its own.
-  insertWith?: { [rowIndex: number]: WithItems };
   withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;
   joinedShapes?: JoinedShapes;
@@ -154,7 +155,7 @@ export interface QueryData extends QueryDataBase {
    * column type for query with 'value' or 'valueOrThrow' return type
    * Is needed in {@link getShapeFromSelect} to get shape of sub-select that returns a single value.
    */
-  getColumn?: QueryColumn;
+  getColumn?: Column.Pick.QueryColumn;
   // expr when a single value is returned from the query, when using `get`, or functions.
   expr?: Expression;
   from?: MaybeArray<QueryDataFromItem>;
@@ -176,6 +177,12 @@ export interface QueryData extends QueryDataBase {
   runtimeComputeds?: ComputedColumns;
   // selected computed columns
   selectedComputeds?: ComputedColumns;
+  // a set for deduplication of hooks added dynamically from the sub queries
+  beforeSet?: Set<QueryBeforeHookInternal>;
+  // regular before are executed before SQL is generated,
+  // but in some cases (dynamic aka lazy SQL) this is impossible,
+  // such queries need a second round of `before` hooks to execute after SQL generation.
+  dynamicBefore?: HasBeforeAndBeforeSet[];
   // run functions before any query
   before?: QueryBeforeHookInternal[];
   // run functions after any query
@@ -196,6 +203,12 @@ export interface QueryData extends QueryDataBase {
   afterUpdateCommit?: QueryAfterHook[];
   // additional select for afterUpdate hooks
   afterUpdateSelect?: Set<string>;
+  // run functions after create or update in transaction
+  afterSave?: QueryAfterHook[];
+  // run functions after create or update commit
+  afterSaveCommit?: QueryAfterHook[];
+  // additional select for afterSave hooks
+  afterSaveSelect?: Set<string>;
   // run functions before delete
   beforeDelete?: QueryBeforeHookInternal[];
   // run functions after delete in transaction
@@ -238,16 +251,6 @@ export interface QueryData extends QueryDataBase {
 
   chain?: ExpressionChain;
 
-  inCTE?: {
-    selectNum: boolean;
-    returning?: {
-      select?: string;
-      hookSelect?: HookSelect;
-    };
-    targetHookSelect: HookSelect;
-    delayedRelationSelect: DelayedRelationSelect;
-  };
-
   // It is used by `joinQueryChainHOF` to customize the outer query of a chained relation.
   outerQuery?: Query;
 
@@ -265,7 +268,7 @@ export interface QueryData extends QueryDataBase {
   having?: HavingItem[];
   window?: WindowItem[];
   union?: {
-    b: Query;
+    b: SubQueryForSql;
     u: UnionItem[];
     // true to not wrap the first union query into parens.
     p?: boolean;
@@ -278,10 +281,17 @@ export interface QueryData extends QueryDataBase {
     mode?: 'NO WAIT' | 'SKIP LOCKED';
   };
 
+  /** upsert **/
+
+  // upsert does 2 queries: simple find/update, then a union of find/update and insert.
+  // this signals SQL code to run the second query for the same query object.
+  upsertUpdate?: boolean;
+  upsertSecond?: boolean;
+
   /** insert **/
 
   columns: string[];
-  insertFrom?: Query;
+  insertFrom?: SubQueryForSql;
   insertValuesAs?: string;
   queryColumnsCount?: number;
   values: InsertQueryDataObjectValues;
@@ -344,7 +354,7 @@ export type CopyOptions<Column = string> = {
 );
 
 export interface PickQueryDataShapeAndJoinedShapes {
-  shape: ColumnsShapeBase;
+  shape: Column.Shape.QueryInit;
   joinedShapes?: JoinedShapes;
 }
 

@@ -1,18 +1,12 @@
-import { PickQueryQ, Query } from '../../query/query';
-import { CreateData } from './create';
+import { PickQueryQ } from '../../query/query';
+import { _queryInsert, CreateData } from './create';
 import {
-  MoreThanOneRowError,
   PickQueryMetaResultReturnType,
   FnUnknownToUnknown,
-  newDelayedRelationSelect,
-  QueryBase,
   RecordUnknown,
 } from '../../core';
 import { _clone } from '../../query/queryUtils';
-import { queryFrom } from '../from';
-import { _queryUnion } from '../union';
-import { QueryAfterHook } from '../../sql';
-import { UpsertResult, UpsertThis } from 'pqb';
+import { UpsertResult, UpsertThis } from './upsert';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -20,7 +14,7 @@ export type OrCreateArg<Data> = Data | (() => Data);
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.
-export function orCreate<T extends PickQueryMetaResultReturnType>(
+export function _orCreate<T extends PickQueryMetaResultReturnType>(
   query: T,
   data: unknown | FnUnknownToUnknown,
   updateData?: unknown,
@@ -32,112 +26,17 @@ export function orCreate<T extends PickQueryMetaResultReturnType>(
     q.returnType = 'void';
   }
 
-  const { handleResult } = q;
-  let result: unknown;
-  let created = false;
-  q.handleResult = (q, t, r, s, i) => {
-    return created ? result : handleResult(q, t, r, s, i);
-  };
+  if (typeof data === 'function') {
+    data = data(updateData);
+  }
 
-  q.hookSelect = new Map(q.hookSelect);
-  q.patchResult = async (q, hookSelect, queryResult) => {
-    if (queryResult.rowCount === 0) {
-      if (typeof data === 'function') {
-        data = data(updateData);
-      }
+  if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
 
-      if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
+  _queryInsert(query as never, data as never);
 
-      let hasAfterCallback = q.q.afterCreate;
-      let hasAfterCommitCallback = q.q.afterCreateCommit;
+  q.type = 'upsert';
 
-      if (updateData) {
-        hasAfterCallback = hasAfterCallback || q.q.afterUpdate;
-        hasAfterCommitCallback =
-          hasAfterCommitCallback || q.q.afterUpdateCommit;
-      }
-
-      const inCTE = {
-        selectNum: !!(hasAfterCallback || hasAfterCommitCallback),
-        targetHookSelect: hookSelect,
-        delayedRelationSelect: newDelayedRelationSelect(
-          query as unknown as QueryBase,
-        ),
-      };
-
-      q = q.clone();
-      q.q.inCTE = inCTE as never;
-
-      const c = q.create(data as CreateData<Query>);
-      c.q.select = q.q.select;
-
-      let q2 = q.qb.with('f', q).with('c', c);
-
-      q2.q.returnsOne = true;
-      queryFrom(q2, 'f');
-      q2 = _queryUnion(
-        q2,
-        [q.qb.from('c' as never)],
-        'UNION ALL',
-        true,
-        true,
-      ) as never;
-
-      let afterHooks: QueryAfterHook[] | undefined;
-      let afterCommitHooks: QueryAfterHook[] | undefined;
-      q2.q.handleResult = (a, t, r, s, i) => {
-        if (hasAfterCallback || hasAfterCommitCallback) {
-          const fieldName = r.fields[0].name;
-          if (r.rows[0][fieldName]) {
-            afterHooks = q.q.afterCreate;
-            afterCommitHooks = q.q.afterCreateCommit;
-          } else {
-            afterHooks = q.q.afterUpdate;
-            afterCommitHooks = q.q.afterUpdateCommit;
-          }
-          delete r.rows[0][fieldName];
-        }
-
-        result = handleResult(a, t, r, s, i);
-        return a.q.hookSelect
-          ? (result as RecordUnknown[]).map((row) => ({ ...row }))
-          : result;
-      };
-
-      q2.q.log = q.q.log;
-      q2.q.logger = q.q.logger;
-
-      q2.q.type = 'upsert';
-      q2.q.beforeCreate = q.q.beforeCreate?.map((cb) => () => cb(c));
-
-      if (hasAfterCallback) {
-        (q2.q.afterCreate ??= []).push(
-          (data, query) =>
-            afterHooks &&
-            Promise.all([...afterHooks].map((fn) => fn(data, query))),
-        );
-      }
-
-      if (hasAfterCommitCallback) {
-        (q2.q.afterCreateCommit ??= []).push(
-          (data, query) =>
-            afterCommitHooks &&
-            Promise.all([...afterCommitHooks].map((fn) => fn(data, query))),
-        );
-      }
-
-      await q2;
-
-      created = true;
-    } else if (queryResult.rowCount > 1) {
-      throw new MoreThanOneRowError(
-        q,
-        `Only one row was expected to find, found ${queryResult.rowCount} rows.`,
-      );
-    }
-  };
-
-  return query as unknown as UpsertResult<T>;
+  return query as never;
 }
 
 export interface QueryOrCreate {
@@ -215,6 +114,6 @@ export interface QueryOrCreate {
 
 export const QueryOrCreate: QueryOrCreate = {
   orCreate(data) {
-    return orCreate(_clone(this) as never, data);
+    return _orCreate(_clone(this) as never, data);
   },
 };

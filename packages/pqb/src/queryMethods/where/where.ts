@@ -16,6 +16,7 @@ import {
   _setSubQueryAliases,
   EmptyObject,
   Expression,
+  isExpression,
   isIterable,
   IsQuery,
   MaybeArray,
@@ -26,6 +27,7 @@ import {
   PickQueryMetaShapeRelationsWithData,
   PickQueryRelations,
   pushQueryValueImmutable,
+  RecordUnknown,
   SQLQueryArgs,
 } from '../../core';
 import { sqlQueryArgsToExpression } from '../../sql/rawSql';
@@ -36,6 +38,8 @@ import {
   getClonedQueryData,
   resolveSubQueryCallbackV2,
 } from '../../common/utils';
+import { prepareSubQueryForSql } from '../../query/to-sql/sub-query-for-sql';
+import { prepareOpArg } from '../../columns/operators';
 
 /*
 Argument of `where`:
@@ -77,7 +81,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
             | {
                 result: {
                   value: {
-                    // simplified QueryColumn
+                    // simplified Column.Pick.QueryColumn
                     queryType:
                       | T['meta']['selectable'][K]['column']['queryType']
                       | null;
@@ -88,7 +92,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
             | ((q: T) => {
                 result: {
                   value: {
-                    // simplified QueryColumn
+                    // simplified Column.Pick.QueryColumn
                     queryType:
                       | T['meta']['selectable'][K]['column']['queryType']
                       | null;
@@ -224,7 +228,40 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
       qb.q.subQuery = 1;
       _setSubQueryAliases(qb);
 
-      args[i] = resolveSubQueryCallbackV2(qb, arg as never) as never;
+      const resolved = resolveSubQueryCallbackV2(qb, arg as never) as never;
+      args[i] = prepareSubQueryForSql(q as never, resolved) as never;
+    } else if (arg.constructor === Object) {
+      const copy = ((args as RecordUnknown[])[i] = {
+        ...(arg as RecordUnknown),
+      });
+      for (const key in arg) {
+        const value = arg[key as never] as RecordUnknown;
+        if (typeof value === 'function') {
+          let resolved = (value as (q: unknown) => unknown)(q);
+          if (!isExpression(resolved)) {
+            resolved = prepareSubQueryForSql(
+              q as unknown as Query,
+              resolved as unknown as Query,
+            );
+          }
+          copy[key] = resolved;
+        } else {
+          for (const op in value) {
+            const param = value[op];
+            if (param && typeof param === 'object') {
+              if (Array.isArray(param)) {
+                param.forEach((item, i) => {
+                  const val = prepareOpArg(q, item);
+                  if (val) param[i] = val;
+                });
+              } else {
+                const val = prepareOpArg(q, param);
+                if (val) value[op] = val;
+              }
+            }
+          }
+        }
+      }
     }
   }
 };
@@ -317,6 +354,13 @@ export const _queryWhereNotSql = <T>(q: T, args: SQLQueryArgs): T => {
   }) as never;
 };
 
+/**
+ * Mutative {@link Where.prototype.whereNotExists}
+ */
+export const _queryWhereNotExists = (q: Query, arg: unknown, args: unknown) => {
+  return _queryWhereNot(q, existsArgs(q, arg as never, args as never)) as never;
+};
+
 export const _queryWhereOneOf = <T extends PickQueryMetaRelations>(
   q: T,
   args: WhereArgs<T>,
@@ -391,6 +435,10 @@ export const _queryWhereIn = <T>(
       return _queryNone(q) as WhereResult<T>;
     }
 
+    if (values instanceof (q as Query).constructor) {
+      values = prepareSubQueryForSql(q as Query, values as Query);
+    }
+
     if (Array.isArray(arg)) {
       item = {
         IN: {
@@ -404,12 +452,18 @@ export const _queryWhereIn = <T>(
   } else {
     item = {} as { [K: string]: { in: Iterable<unknown> } };
     for (const key in arg as { [K: string]: Iterable<unknown> }) {
-      const values = (arg as { [K: string]: Iterable<unknown> })[key];
+      let values = (arg as { [K: string]: Iterable<unknown> })[key];
+
       if (
         ('length' in values && !values.length) ||
         ('size' in values && !values.size)
       ) {
         return _queryNone(q) as WhereResult<T>;
+      }
+
+      if (values instanceof (q as Query).constructor) {
+        // TODO: add a test, not sure if `in` expects a query in this case
+        values = prepareSubQueryForSql(q as Query, values as never) as never;
       }
 
       item[key] = { in: values };
@@ -1174,10 +1228,7 @@ export class Where {
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);
-    return _queryWhereNot(
-      q,
-      existsArgs(q, arg as never, args as never),
-    ) as never;
+    return _queryWhereNotExists(q, arg, args);
   }
 
   /**

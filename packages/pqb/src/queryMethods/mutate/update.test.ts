@@ -24,7 +24,7 @@ import {
 } from 'test-utils';
 import { addQueryOn } from '../join/join';
 import { PickQueryMeta, RelationConfigBase } from '../../core';
-import { Query } from 'pqb';
+import { Query } from '../../query/query';
 
 const TableWithReadOnly = testDb('table', (t) => ({
   id: t.identity().primaryKey(),

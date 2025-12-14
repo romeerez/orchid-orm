@@ -1,7 +1,7 @@
 import { pushWhereStatementSql } from './where';
 import { makeReturningSql } from './insert';
 import { processJoinItem } from './join';
-import { ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryData } from './data';
 import {
   isRelationQuery,
@@ -87,11 +87,13 @@ export const pushDeleteSql = (
     undefined,
     isSubSql,
   );
-  if (returning.select) ctx.sql.push('RETURNING', returning.select);
+  if (returning) ctx.sql.push('RETURNING', returning);
+
+  if (delayedRelationSelect) {
+    ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
+  }
 
   return {
-    tableHook: returning.tableHook,
-    delayedRelationSelect,
     text: ctx.sql.join(' '),
     values: ctx.values,
   };

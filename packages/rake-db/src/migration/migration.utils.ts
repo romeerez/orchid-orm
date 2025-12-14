@@ -1,12 +1,9 @@
 import {
   ArrayColumn,
-  ColumnType,
+  Column,
   DomainColumn,
   escapeForMigration,
   TableData,
-  ColumnDataCheckBase,
-  ColumnTypeBase,
-  ForeignKeyTable,
   isRawSQL,
   RawSQLBase,
   SingleSql,
@@ -34,12 +31,12 @@ export const versionToString = (
     ? `${version}`
     : `${version}`.padStart(config.migrationId.serial, '0');
 
-export const columnTypeToSql = (item: ColumnTypeBase) => {
+export const columnTypeToSql = (item: Column.Pick.Data) => {
   return item.data.isOfCustomType
     ? item instanceof DomainColumn
       ? quoteNameFromString(item.dataType)
-      : quoteCustomType(item.toSQL())
-    : item.toSQL();
+      : quoteCustomType((item as Column).toSQL())
+    : (item as Column).toSQL();
 };
 
 export const getColumnName = (
@@ -52,7 +49,7 @@ export const getColumnName = (
 
 export const columnToSql = (
   name: string,
-  item: ColumnType,
+  item: Column,
   values: unknown[],
   hasMultiplePrimaryKeys: boolean,
   snakeCase: boolean | undefined,
@@ -127,7 +124,7 @@ export const columnToSql = (
 export const encodeColumnDefault = (
   def: unknown,
   values: unknown[],
-  column?: ColumnTypeBase,
+  column?: Column.Pick.Data,
 ): string | null => {
   if (def !== undefined && def !== null && typeof def !== 'function') {
     if (isRawSQL(def)) {
@@ -177,7 +174,7 @@ const sequenceOptionsToSql = (item: TableData.SequenceOptions) => {
 export const addColumnIndex = (
   indexes: TableData.Index[],
   name: string,
-  item: ColumnType,
+  item: Column,
 ) => {
   if (item.data.indexes) {
     indexes.push(
@@ -192,7 +189,7 @@ export const addColumnIndex = (
 export const addColumnExclude = (
   excludes: TableData.Exclude[],
   name: string,
-  item: ColumnType,
+  item: Column,
 ) => {
   if (item.data.excludes) {
     excludes.push(
@@ -207,7 +204,7 @@ export const addColumnExclude = (
 export const addColumnComment = (
   comments: ColumnComment[],
   name: string,
-  item: ColumnType,
+  item: Column,
 ) => {
   if (item.data.comment) {
     comments.push({ column: name, comment: item.data.comment });
@@ -215,7 +212,7 @@ export const addColumnComment = (
 };
 
 export const getForeignKeyTable = (
-  fnOrTable: (() => ForeignKeyTable) | string,
+  fnOrTable: (() => Column.ForeignKey.TableParam) | string,
 ): [string | undefined, string] => {
   if (typeof fnOrTable === 'string') {
     return getSchemaAndTableFromName(fnOrTable);
@@ -629,14 +626,14 @@ export const interpolateSqlValues = ({ text, values }: TableQuery): string => {
     : text;
 };
 
-export interface ColumnNamedCheck extends ColumnDataCheckBase {
+export interface ColumnNamedCheck extends Column.Data.Check {
   name: string;
 }
 
 export const nameColumnChecks = (
   table: string,
   column: string,
-  checks: ColumnDataCheckBase[],
+  checks: Column.Data.Check[],
 ): ColumnNamedCheck[] =>
   checks.map((check, i) => ({
     ...check,

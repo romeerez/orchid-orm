@@ -951,9 +951,9 @@ describe('create functions', () => {
               values: ['0', '1', '2', '3', '4'],
             },
             {
-              text: `WITH "q6" AS (${insert(
+              text: `WITH "q" AS (${insert(
                 1,
-              )}) INSERT INTO "tag"("tag") VALUES ((SELECT "q6"."tag" FROM "q6"))`,
+              )}) INSERT INTO "tag"("tag") VALUES ((SELECT "q"."tag" FROM "q"))`,
               values: ['5'],
             },
           ],

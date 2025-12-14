@@ -13,8 +13,6 @@ import {
   returnArg,
   setConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
-} from '../core';
-import {
   DefaultColumnTypes,
   DefaultSchemaConfig,
   DbOptions,
@@ -75,6 +73,10 @@ export class NodePostgresAdapter implements AdapterBase {
   errorClass = DatabaseError;
 
   constructor(public config: NodePostgresAdapterOptions) {
+    this.pool = this.configure(config);
+  }
+
+  private configure(config: NodePostgresAdapterOptions): Pool {
     let schema = config.schema;
     if (config.databaseURL) {
       const url = new URL(config.databaseURL);
@@ -97,8 +99,7 @@ export class NodePostgresAdapter implements AdapterBase {
 
     if (schema) this.schema = schema === 'public' ? undefined : schema;
 
-    this.config = config;
-    this.pool = new pg.Pool(config);
+    const pool = new pg.Pool(config);
 
     if (config.connectRetry) {
       setConnectRetryConfig(
@@ -110,12 +111,19 @@ export class NodePostgresAdapter implements AdapterBase {
         this.pool.connect(),
       );
     }
+
+    return pool;
   }
 
   private getURL(): URL | undefined {
     return this.config.databaseURL
       ? new URL(this.config.databaseURL)
       : undefined;
+  }
+
+  async updateConfig(config: NodePostgresAdapterOptions): Promise<void> {
+    await this.close();
+    this.configure({ ...this.config, ...config });
   }
 
   reconfigure(params: {
@@ -358,6 +366,10 @@ export class NodePostgresTransactionAdapter implements AdapterBase {
     this.pool = adapter.pool;
     this.config = adapter.config;
     this.schema = adapter.schema;
+  }
+
+  updateConfig(config: NodePostgresAdapterOptions): Promise<void> {
+    return this.adapter.updateConfig(config);
   }
 
   reconfigure(params: {

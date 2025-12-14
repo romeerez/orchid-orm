@@ -1,27 +1,239 @@
-import { ColumnData, ColumnType } from './columnType';
+import { Column } from './column';
 import {
-  addCode,
-  Code,
-  columnDefaultArgumentToCode,
-  columnErrorMessagesToCode,
-  ColumnsShapeBase,
-  ColumnTypeBase,
+  emptyArray,
+  emptyObject,
   objectHasValues,
   quoteObjectKey,
+  RecordKeyTrue,
+  RecordString,
   singleQuote,
   singleQuoteArray,
   toArray,
-  RawSQLBase,
-  ColumnDataCheckBase,
-  Codes,
-  emptyObject,
-  ColumnToCodeCtx,
   toSnakeCase,
-  emptyArray,
-} from '../core';
+} from '../core/utils';
 import { TableData } from '../tableData';
+import {
+  arrayMethodNames,
+  ArrayMethodsDataForBaseColumn,
+  BaseNumberData,
+  DateColumnData,
+  dateMethodNames,
+  numberMethodNames,
+  StringData,
+  stringMethodNames,
+} from './column-data-types';
+import { isRawSQL, RawSQLBase } from '../core/raw';
 
-export const isDefaultTimeStamp = (item: ColumnTypeBase) => {
+// Type for composing code pieces for the code generation
+export type Code = string | Codes;
+export type Codes = Code[];
+
+export interface ColumnToCodeCtx {
+  t: string;
+  table: string;
+  currentSchema: string;
+  migration?: boolean;
+  snakeCase?: boolean;
+}
+
+/**
+ * Push code: this will append a code string to the last code array element when possible.
+ * @param code - array of code to push into
+ * @param add - code to push
+ */
+export const addCode = (code: Code[], add: Code) => {
+  if (typeof add === 'object') {
+    code.push(add);
+  } else {
+    const last = code.length - 1;
+    if (typeof code[last] === 'string') {
+      code[last] = code[last] + add;
+    } else {
+      code.push(add);
+    }
+  }
+};
+
+/**
+ * Convert the code item into string.
+ *
+ * @param code - code item
+ * @param tabs - each new line will be prefixed with the tabs. Each element of the code represents a new line
+ * @param shift - array elements of the given code will be shifted with this sting
+ */
+export const codeToString = (
+  code: Code,
+  tabs: string,
+  shift: string,
+): string => {
+  if (typeof code === 'string') return `${tabs}${code}`;
+
+  const lines: string[] = [];
+  for (const item of code) {
+    if (typeof item === 'string') {
+      lines.push(`${tabs}${item}`);
+    } else {
+      lines.push(codeToString(item, tabs + shift, shift));
+    }
+  }
+
+  return lines.length ? lines.join('\n') : '';
+};
+
+/**
+ * Convert a column default value into code string.
+ *
+ * @param t - column types variable name
+ * @param value - column default
+ */
+export const columnDefaultArgumentToCode = (
+  t: string,
+  value: unknown,
+): string => {
+  if (typeof value === 'object' && value && isRawSQL(value)) {
+    return value.toCode(t);
+  } else if (typeof value === 'function') {
+    return value.toString();
+  } else if (typeof value === 'string') {
+    return singleQuote(value);
+  } else {
+    return JSON.stringify(value);
+  }
+};
+
+/**
+ * Build a function that will generate a code for a specific column type.
+ *
+ * @param methodNames - array of column method names to convert to code
+ * @param skip - allows skipping some methods
+ * @param aliases - provide aliases for specific methods
+ */
+export const columnMethodsToCode = <T extends Column.Data>(
+  methodNames: (keyof T)[],
+  skip?: RecordKeyTrue,
+  aliases?: RecordString,
+) => {
+  return (
+    data: T,
+    migration: boolean | undefined,
+    skipLocal?: RecordKeyTrue,
+  ) => {
+    return migration
+      ? ''
+      : methodNames
+          .map((key) =>
+            (skipLocal || skip)?.[key as string] ||
+            (key === 'min' &&
+              (data as { nonEmpty?: boolean }).nonEmpty &&
+              (data as { min?: number }).min === 1)
+              ? ''
+              : columnMethodToCode(data, key, aliases?.[key as string]),
+          )
+          .join('');
+  };
+};
+
+/**
+ * Converts a single column method into code
+ *
+ * @param data - column `data` object that has info about applied methods
+ * @param key - name of the method
+ * @param name - optional alias for this method
+ */
+const columnMethodToCode = <T extends Column.Data, K extends keyof T>(
+  data: T,
+  key: K,
+  name: string = key as string,
+): string => {
+  const param = data[key];
+  if (param === undefined) return '';
+
+  const error = data.errors?.[key as string];
+
+  let params;
+  if (typeof param === 'object' && param && param?.constructor === Object) {
+    const props: string[] = [];
+    for (const key in param) {
+      if (key === 'message') continue;
+
+      const value = (param as T)[key as keyof T];
+      if (value !== undefined) {
+        props.push(
+          `${key}: ${typeof value === 'string' ? singleQuote(value) : value}`,
+        );
+      }
+    }
+
+    if (error) props.push(`message: ${singleQuote(error)}`);
+
+    params = props.length ? `{ ${props.join(', ')} }` : '';
+  } else {
+    params =
+      param === true
+        ? ''
+        : typeof param === 'string'
+        ? singleQuote(param)
+        : param instanceof Date
+        ? `new Date('${param.toISOString()}')`
+        : param;
+
+    if (error) {
+      if (param !== true) params += ', ';
+      params += singleQuote(error);
+    }
+  }
+
+  return `.${name}(${params})`;
+};
+
+// Function to encode string column methods
+export const stringDataToCode =
+  columnMethodsToCode<StringData>(stringMethodNames);
+
+// Function to encode numeric column methods.
+// `int` method is skipped because it's defined by the column type itself.
+// Alias `lte` and `gte` to `max` and `min` for readability.
+export const numberDataToCode = columnMethodsToCode<BaseNumberData>(
+  numberMethodNames,
+  undefined,
+  { lte: 'max', gte: 'min' },
+);
+
+// Function to encode date column methods
+export const dateDataToCode =
+  columnMethodsToCode<DateColumnData>(dateMethodNames);
+// Function to encode array column methods
+export const arrayDataToCode =
+  columnMethodsToCode<ArrayMethodsDataForBaseColumn>(arrayMethodNames);
+
+/**
+ * Converts column type and JSON type custom errors into code
+ *
+ * @param errors - custom error messages
+ */
+export const columnErrorMessagesToCode = (errors: RecordString): Code => {
+  const props: Code[] = [];
+
+  if (errors.required) {
+    props.push(`required: ${singleQuote(errors.required)},`);
+  }
+
+  if (errors.invalidType) {
+    props.push(`invalidType: ${singleQuote(errors.invalidType)},`);
+  }
+
+  const code: Code[] = [];
+
+  if (!props.length) return code;
+
+  addCode(code, '.error({');
+  code.push(props);
+  addCode(code, '})');
+
+  return code;
+};
+
+export const isDefaultTimeStamp = (item: Column.Pick.DataAndDataType) => {
   if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
@@ -53,13 +265,17 @@ const combineCodeElements = (input: Code): Code => {
 
 export const columnsShapeToCode = (
   ctx: ColumnToCodeCtx,
-  shape: ColumnsShapeBase,
+  shape: Column.Shape.QueryInit,
 ): Codes => {
   const hasTimestamps =
     'createdAt' in shape &&
-    isDefaultTimeStamp(shape.createdAt) &&
+    isDefaultTimeStamp(
+      shape.createdAt as unknown as Column.Pick.DataAndDataType,
+    ) &&
     'updatedAt' in shape &&
-    isDefaultTimeStamp(shape.updatedAt);
+    isDefaultTimeStamp(
+      shape.updatedAt as unknown as Column.Pick.DataAndDataType,
+    );
 
   const code: Code = [];
 
@@ -73,7 +289,7 @@ export const columnsShapeToCode = (
     code.push(
       ...combineCodeElements([
         `${quoteObjectKey(key, ctx.snakeCase)}: `,
-        ...toArray(shape[key].toCode(ctx, key)),
+        ...toArray((shape[key] as Column).toCode(ctx, key)),
         ',',
       ]),
     );
@@ -464,7 +680,7 @@ export const foreignKeyArgumentToCode = (
 };
 
 export const columnIndexesToCode = (
-  items: Exclude<ColumnData['indexes'], undefined>,
+  items: Exclude<Column.Data['indexes'], undefined>,
 ): Codes => {
   const code: Codes = [];
   for (const { options } of items) {
@@ -500,7 +716,7 @@ export const columnIndexesToCode = (
 };
 
 export const columnExcludesToCode = (
-  items: Exclude<ColumnData['excludes'], undefined>,
+  items: Exclude<Column.Data['excludes'], undefined>,
 ): Codes => {
   const code: Codes = [];
   for (const { options, with: w } of items) {
@@ -536,7 +752,7 @@ export const columnExcludesToCode = (
 
 export const columnCheckToCode = (
   ctx: ColumnToCodeCtx,
-  checks: ColumnDataCheckBase[],
+  checks: Column.Data.Check[],
 ): string => {
   return checks
     .map(
@@ -581,7 +797,7 @@ export const identityToCode = (
 };
 
 export const columnCode = (
-  type: ColumnType,
+  type: Column,
   ctx: ColumnToCodeCtx,
   key: string,
   code: Code,
@@ -630,7 +846,7 @@ export const columnCode = (
   if (data.isNullable) addCode(code, '.nullable()');
 
   if (data.as && !ctx.migration) {
-    addCode(code, `.as(${data.as.toCode(ctx, key)})`);
+    addCode(code, `.as(${(data.as as Column).toCode(ctx, key)})`);
   }
 
   if (

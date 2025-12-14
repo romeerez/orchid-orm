@@ -1,13 +1,14 @@
 import {
   PickQueryReturnType,
   pushQueryValueImmutable,
-  QueryColumn,
   QueryReturnTypeAll,
   QueryReturnTypeOptional,
   QueryThen,
   RecordUnknown,
 } from '../core';
 import { _clone } from '../query/queryUtils';
+import { Query } from '../query/query';
+import { Column } from '../columns/column';
 
 export class QueryMap {
   /**
@@ -70,7 +71,7 @@ export class QueryMap {
   Result extends RecordUnknown
     ? {
         [K in keyof T]: K extends 'result'
-          ? { [K in keyof Result]: QueryColumn<Result[K]> }
+          ? { [K in keyof Result]: Column.Pick.QueryColumnOfType<Result[K]> }
           : K extends 'then'
           ? QueryThen<
               T['returnType'] extends QueryReturnTypeAll
@@ -91,11 +92,11 @@ export class QueryMap {
             : 'valueOrThrow'
           : K extends 'result'
           ? T['returnType'] extends QueryReturnTypeAll | 'pluck'
-            ? { pluck: QueryColumn<Result> }
+            ? { pluck: Column.Pick.QueryColumnOfType<Result> }
             : T['returnType'] extends QueryReturnTypeOptional
-            ? { value: QueryColumn<Result | undefined> }
+            ? { value: Column.Pick.QueryColumnOfType<Result | undefined> }
             : {
-                value: QueryColumn<
+                value: Column.Pick.QueryColumnOfType<
                   T extends {
                     returnType: 'valueOrThrow';
                     then: QueryThen<unknown | null>;

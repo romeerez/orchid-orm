@@ -1,11 +1,10 @@
 import {
   AdapterBase,
   PickQueryShape,
-  QueryColumn,
   toCamelCase,
   ArrayColumn,
   ColumnsShape,
-  ColumnType,
+  Column,
   defaultSchemaConfig,
   DomainColumn,
   PickQueryInternal,
@@ -346,7 +345,7 @@ const getActualItems = async (
     }
 
     for (const key in table.shape) {
-      const column = table.shape[key] as ColumnType;
+      const column = table.shape[key] as Column;
       // remove computed columns from the shape
       if (column.data.computed) {
         delete table.shape[key];
@@ -358,7 +357,7 @@ const getActualItems = async (
           schemaName,
           name,
           column: (column.data.as ??
-            new UnknownColumn(defaultSchemaConfig)) as ColumnType,
+            new UnknownColumn(defaultSchemaConfig)) as Column,
         });
       } else {
         const en =
@@ -405,7 +404,7 @@ const getActualItems = async (
 };
 
 const processEnumColumn = (
-  column: QueryColumn,
+  column: Column.Pick.QueryColumn,
   currentSchema: string,
   codeItems: CodeItems,
 ) => {
@@ -426,7 +425,7 @@ const processEnumColumn = (
 };
 
 const processHasAndBelongsToManyColumn = (
-  column: QueryColumn & { joinTable: unknown },
+  column: Column.Pick.QueryColumn & { joinTable: unknown },
   habtmTables: Map<string, CodeTable>,
   codeItems: CodeItems,
 ) => {

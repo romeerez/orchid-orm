@@ -1,19 +1,18 @@
 import {
-  ColumnTypeBase,
   emptyObject,
   Expression,
   ExpressionData,
   isExpression,
-  PickOutputType,
-  PickQueryColumnTypes,
+  PickQueryColumTypes,
   PickQueryMeta,
   PickQueryMetaResultRelationsWindowsColumnTypes,
   PickQueryShape,
-  QueryColumn,
   QueryThen,
   ValExpression,
 } from '../core';
-import { getSqlText, QueryData, ToSQLCtx } from '../sql';
+import { Column } from '../columns/column';
+import { ToSQLCtx } from '../sql/to-sql';
+import { QueryData } from '../sql/data';
 import { columnToSql, simpleExistingColumnToSQL } from '../sql/common';
 import {
   Query,
@@ -23,12 +22,20 @@ import {
 import { SelectableOrExpressions } from '../common/utils';
 import { AggregateOptions, makeFnExpression } from '../common/fn';
 import { BooleanQueryColumn } from './aggregate';
-import { Operators, OperatorsBoolean } from '../columns/operators';
+import {
+  Operators,
+  OperatorsBoolean,
+  prepareOpArg,
+} from '../columns/operators';
 import { _clone, getFullColumnTable } from '../query/queryUtils';
 import { UnknownColumn } from '../columns';
+import { moveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
-export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
+export class ColumnRefExpression<
+  T extends Column.Pick.QueryColumn,
+> extends Expression<T> {
   result: { value: T };
   q: ExpressionData;
 
@@ -49,22 +56,26 @@ export class ColumnRefExpression<T extends QueryColumn> extends Expression<T> {
   }
 }
 
-export class RefExpression<T extends QueryColumn> extends Expression<T> {
+export class RefExpression<
+  T extends Column.Pick.QueryColumn,
+> extends Expression<T> {
   result: { value: T };
-  q: QueryData;
+  q: ExpressionData;
   table?: string;
 
   constructor(value: T, query: Query, public ref: string) {
     super();
     this.result = { value };
-    (this.q = query.q).expr = this;
+    this.q = query.q as ExpressionData;
+    this.q.expr = this;
     this.table = query.table;
     Object.assign(this, value.operators);
   }
 
   makeSQL(ctx: ToSQLCtx): string {
-    const as = this.q.as || this.table;
-    return columnToSql(ctx, this.q, this.q.shape, this.ref, as && `"${as}"`);
+    const q = this.q as QueryData;
+    const as = q.as || this.table;
+    return columnToSql(ctx, q, q.shape, this.ref, as && `"${as}"`);
   }
 }
 
@@ -81,9 +92,14 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
   constructor(public args: [OrExpressionArg, ...OrExpressionArg[]]) {
     super();
     this.q = { expr: this };
+
+    args.forEach((arg, i) => {
+      const val = prepareOpArg(this, arg);
+      if (val) args[i] = val as never;
+    });
   }
 
-  makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
     const res: string[] = [];
     for (const arg of this.args) {
       if (arg) {
@@ -91,7 +107,12 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
           const sql = arg.toSQL(ctx, quotedAs);
           if (sql) res.push(sql);
         } else {
-          res.push(`(${getSqlText((arg as unknown as Query).toSQL(ctx))})`);
+          res.push(
+            `(${moveMutativeQueryToCte(
+              ctx,
+              arg as unknown as SubQueryForSql,
+            )})`,
+          );
         }
       }
     }
@@ -102,9 +123,9 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
 
 Object.assign(OrExpression.prototype, Operators.boolean);
 
-interface QueryReturnsFnAdd<T extends PickQueryColumnTypes>
+interface QueryReturnsFnAdd<T extends PickQueryColumTypes>
   extends QueryMetaHasSelect {
-  type<C extends QueryColumn>(
+  type<C extends Column.Pick.QueryColumn>(
     fn: (types: T['columnTypes']) => C,
   ): {
     [K in keyof T]: K extends 'result'
@@ -118,8 +139,8 @@ interface QueryReturnsFnAdd<T extends PickQueryColumnTypes>
 }
 
 type SetQueryReturnsFn<
-  T extends PickQueryColumnTypes,
-  C extends PickOutputType,
+  T extends PickQueryColumTypes,
+  C extends Column.Pick.OutputType,
 > = {
   [K in keyof T]: K extends 'result'
     ? { value: C }
@@ -155,7 +176,7 @@ export class ExpressionMethods {
     this: T,
     name: K,
   ): ColumnRefExpression<T['shape'][K]> & T['shape'][K]['operators'] {
-    const column = (this.shape as { [K: PropertyKey]: ColumnTypeBase })[name];
+    const column = (this.shape as { [K: PropertyKey]: Column })[name];
     return new ColumnRefExpression(
       (column || UnknownColumn.instance) as T['shape'][K],
       name as string,
@@ -199,7 +220,7 @@ export class ExpressionMethods {
     const q = _clone(this);
 
     const { shape } = q.q;
-    let column: QueryColumn | undefined;
+    let column: Column.Pick.QueryColumn | undefined;
 
     const index = arg.indexOf('.');
     if (index !== -1) {
@@ -261,7 +282,7 @@ export class ExpressionMethods {
   fn<
     T extends PickQueryMetaResultRelationsWindowsColumnTypes,
     Type = unknown,
-    C extends QueryColumn = QueryColumn<Type>,
+    C extends Column.Pick.QueryColumn = Column.Pick.QueryColumnOfType<Type>,
   >(
     this: T,
     fn: string,

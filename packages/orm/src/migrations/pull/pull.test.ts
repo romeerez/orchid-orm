@@ -5,6 +5,7 @@ import {
   AdapterBase,
   AdapterConfigBase,
   noop,
+  getCallerFilePath,
 } from 'pqb';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
@@ -18,7 +19,12 @@ jest.mock('fs/promises', () => ({
   mkdir: jest.fn(),
   readdir: jest.fn(() => Promise.resolve([])),
 }));
+
 jest.mock('../generate/generate');
+
+asMock(getCallerFilePath).mockReturnValue(
+  path.join(__dirname, '..', 'migrations.test-utils'),
+);
 
 const options: AdapterConfigBase[] = [
   {

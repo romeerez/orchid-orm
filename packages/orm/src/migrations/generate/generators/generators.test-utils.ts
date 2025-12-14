@@ -5,10 +5,10 @@ import {
   TableDataFn,
   TableDataItem,
   AdapterBase,
-  ColumnsShapeBase,
   emptyArray,
   MaybeArray,
   noop,
+  Column,
 } from 'pqb';
 import {
   ChangeCallback,
@@ -146,7 +146,7 @@ const assert = {
   },
 };
 
-const table = <Shape extends ColumnsShapeBase>(
+const table = <Shape extends Column.Shape.QueryInit>(
   columns?: (t: typeof BaseTable.columnTypes) => Shape,
   dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
   options?: { noPrimaryKey?: boolean; name?: string; schema?: string },

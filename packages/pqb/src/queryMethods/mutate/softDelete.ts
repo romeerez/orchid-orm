@@ -1,8 +1,6 @@
 import {
   IsQuery,
   PickQueryMetaResultReturnType,
-  QueryColumns,
-  QueryColumnsInit,
   QueryMetaBase,
   RecordUnknown,
   setObjectValueImmutable,
@@ -17,13 +15,16 @@ import {
 import { RawSQL } from '../../sql/rawSql';
 import { _queryDelete, _queryUpdate, DeleteArgs, DeleteResult } from '../index';
 import { _clone } from '../../query/queryUtils';
+import { Column } from '../../columns/column';
 
-export type SoftDeleteOption<Shape extends QueryColumns> = true | keyof Shape;
+export type SoftDeleteOption<Shape extends Column.QueryColumns> =
+  | true
+  | keyof Shape;
 
 export function enableSoftDelete(
   query: IsQuery,
   table: string | undefined,
-  shape: QueryColumnsInit,
+  shape: Column.QueryColumnsInit,
   softDelete: true | PropertyKey,
   scopes: QueryScopes,
 ) {

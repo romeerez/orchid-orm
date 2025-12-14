@@ -1,27 +1,17 @@
 import {
-  AsTypeArg,
   ColumnSchemaGetterColumns,
   ColumnSchemaGetterTableClass,
-  ColumnTypeBase,
-  EncodeColumn,
-  NullableColumn,
-  ParseColumn,
   makeColumnNullable,
-  ErrorMessage,
   setDataValue,
-  StringTypeData,
-  ErrorMessages,
+  StringData,
   setColumnData,
-  ColumnDataBase,
-  ParseNullColumn,
   RecordUnknown,
-  ColumnInputOutputQueryTypesWithSchemas,
   ArrayColumn,
   ArrayColumnValue,
   BigIntColumn,
   BigSerialColumn,
   CitextColumn,
-  ColumnType,
+  Column,
   DateColumn,
   DecimalColumn,
   DoublePrecisionColumn,
@@ -29,7 +19,6 @@ import {
   IntegerColumn,
   JSONColumn,
   MoneyColumn,
-  PickColumnData,
   RealColumn,
   SerialColumn,
   setColumnEncode,
@@ -80,78 +69,55 @@ class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends JSONColumn<
   }
 }
 
-type NumberMethodSchema<Key extends string> = {
-  [K in Key]: (
-    value: unknown,
-    params?: ErrorMessage,
-  ) => NumberMethodSchema<Key>;
-};
-
-function applyMethod<
-  Key extends string,
-  T extends {
-    data: ColumnDataBase;
-    inputSchema: NumberMethodSchema<Key>;
-    outputSchema: NumberMethodSchema<Key>;
-    querySchema: NumberMethodSchema<Key>;
-  },
->(column: T, key: Key, value: unknown, params?: ErrorMessage) {
-  const cloned = setDataValue(column, key, value, params);
+function applyMethod<T, Key extends string>(
+  column: T,
+  key: Key,
+  value: unknown,
+  params?: Column.Error.StringOrMessage,
+) {
+  const cloned = setDataValue(
+    column as Column.Pick.Data,
+    key,
+    value,
+    params,
+  ) as Column;
 
   // Prevent zod from mutating `value` and `params`. It overwrites `message` to `error`.
   const p = typeof params === 'object' ? { ...params } : params;
   const v = value === params ? p : value;
 
-  cloned.inputSchema = column.inputSchema[key](v, p);
-  cloned.outputSchema = column.outputSchema[key](v, p);
-  cloned.querySchema = column.querySchema[key](v, p);
-  return cloned;
+  const c = column as Column;
+  cloned.inputSchema = c.inputSchema[key](v, p);
+  cloned.outputSchema = c.outputSchema[key](v, p);
+  cloned.querySchema = c.querySchema[key](v, p);
+  return cloned as never;
 }
 
-type NumberMethodSimpleSchema<Key extends string> = {
-  [K in Key]: (params?: ErrorMessage) => NumberMethodSimpleSchema<Key>;
-};
-
-function applySimpleMethod<
-  Key extends string,
-  T extends {
-    data: ColumnDataBase;
-    inputSchema: NumberMethodSimpleSchema<Key>;
-    outputSchema: NumberMethodSimpleSchema<Key>;
-    querySchema: NumberMethodSimpleSchema<Key>;
-  },
->(column: T, key: Key, params?: ErrorMessage) {
-  const cloned = setDataValue(column, key, true, params);
-  column.inputSchema = column.inputSchema[key](params);
-  column.outputSchema = column.outputSchema[key](params);
-  column.querySchema = column.querySchema[key](params);
-  return cloned;
+function applySimpleMethod<T, Key extends string>(
+  column: T,
+  key: Key,
+  params?: Column.Error.StringOrMessage,
+) {
+  const c = column as Column;
+  const cloned = setDataValue(c, key, true, params) as Column;
+  cloned.inputSchema = c.inputSchema[key](params);
+  cloned.outputSchema = c.outputSchema[key](params);
+  cloned.querySchema = c.querySchema[key](params);
+  return cloned as never;
 }
 
 interface ArrayMethods<Value> {
   // Require a minimum length (inclusive)
-  min<T extends ColumnTypeBase>(
-    this: T,
-    value: Value,
-    params?: ErrorMessage,
-  ): T;
+  min<T>(this: T, value: Value, params?: Column.Error.StringOrMessage): T;
 
   // Require a maximum length (inclusive)
-  max<T extends ColumnTypeBase>(
-    this: T,
-    value: Value,
-    params?: ErrorMessage,
-  ): T;
+  max<T>(this: T, value: Value, params?: Column.Error.StringOrMessage): T;
 
   // Require a specific length
-  length<T extends ColumnTypeBase>(
-    this: T,
-    value: Value,
-    params?: ErrorMessage,
-  ): T;
+  length<T>(this: T, value: Value, params?: Column.Error.StringOrMessage): T;
 
   // Require a value to be non-empty
-  nonEmpty<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  nonEmpty<T>(this: T, params?: Column.Error.StringOrMessage): T;
 }
 
 const arrayMethods: ArrayMethods<Date> = {
@@ -165,11 +131,12 @@ const arrayMethods: ArrayMethods<Date> = {
     return applyMethod(this, 'length', value, params);
   },
   nonEmpty(params) {
-    const cloned = setDataValue(this, 'nonEmpty', true, params);
-    this.inputSchema = this.inputSchema.nonempty(params);
-    this.outputSchema = this.outputSchema.nonempty(params);
-    this.querySchema = this.querySchema.nonempty(params);
-    return cloned;
+    const column = this as Column;
+    const cloned = setDataValue(column, 'nonEmpty', true, params) as Column;
+    cloned.inputSchema = column.inputSchema.nonempty(params);
+    cloned.outputSchema = column.outputSchema.nonempty(params);
+    cloned.querySchema = column.querySchema.nonempty(params);
+    return cloned as never;
   },
 };
 
@@ -198,48 +165,20 @@ class ZodArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
 Object.assign(ZodArrayColumn.prototype, arrayMethods);
 
 interface NumberMethods {
-  lt<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  lte<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  max<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  gt<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  gte<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  min<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  positive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  nonNegative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  negative<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  nonPositive<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  step<T extends ColumnTypeBase>(
-    this: T,
-    value: number,
-    params?: ErrorMessage,
-  ): T;
-  int<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  finite<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
-  safe<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  lt<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  lte<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  max<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  gt<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  gte<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  min<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  positive<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  nonNegative<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  negative<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  nonPositive<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  step<T>(this: T, value: number, params?: Column.Error.StringOrMessage): T;
+  int<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  finite<T>(this: T, params?: Column.Error.StringOrMessage): T;
+  safe<T>(this: T, params?: Column.Error.StringOrMessage): T;
 }
 
 const numberMethods: NumberMethods = {
@@ -349,80 +288,71 @@ Object.assign(SerialColumnZod.prototype, numberMethods);
 
 interface StringMethods extends ArrayMethods<number> {
   // Check a value to be a valid email
-  email<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  email<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid url
-  url<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  url<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be an emoji
-  emoji<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  emoji<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid uuid
-  uuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  uuid<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid cuid
-  cuid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  cuid<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid cuid2
-  cuid2<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  cuid2<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to be a valid ulid
-  ulid<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  ulid<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Validate the value over the given regular expression
-  regex<T extends ColumnTypeBase>(
-    this: T,
-    value: RegExp,
-    params?: ErrorMessage,
-  ): T;
+  regex<T>(this: T, value: RegExp, params?: Column.Error.StringOrMessage): T;
 
   // Check a value to include a given string
-  includes<T extends ColumnTypeBase, Value extends string>(
+  includes<T, Value extends string>(
     this: T,
     value: Value,
-    params?: ErrorMessage,
+    params?: Column.Error.StringOrMessage,
   ): T;
 
   // Check a value to start with a given string
-  startsWith<T extends ColumnTypeBase, Value extends string>(
+  startsWith<T, Value extends string>(
     this: T,
     value: Value,
-    params?: ErrorMessage,
+    params?: Column.Error.StringOrMessage,
   ): T;
 
   // Check a value to end with a given string
-  endsWith<T extends ColumnTypeBase, Value extends string>(
+  endsWith<T, Value extends string>(
     this: T,
     value: Value,
-    params?: ErrorMessage,
+    params?: Column.Error.StringOrMessage,
   ): T;
 
   // Check a value have a valid datetime string
-  datetime<T extends ColumnTypeBase>(
+  datetime<T>(
     this: T,
-    params?: StringTypeData['datetime'] & Exclude<ErrorMessage, string>,
+    params?: StringData['datetime'] &
+      Exclude<Column.Error.StringOrMessage, string>,
   ): T;
 
   // Check a value to be a valid ipv4 address
-  ipv4<T extends ColumnTypeBase>(
-    this: T,
-    params?: Exclude<ErrorMessage, string>,
-  ): T;
+  ipv4<T>(this: T, params?: Exclude<Column.Error.StringOrMessage, string>): T;
 
   // Check a value to be a valid ipv6 address
-  ipv6<T extends ColumnTypeBase>(
-    this: T,
-    params?: Exclude<ErrorMessage, string>,
-  ): T;
+  ipv6<T>(this: T, params?: Exclude<Column.Error.StringOrMessage, string>): T;
 
   // Trim the value during a validation
-  trim<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  trim<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Transform value to a lower case during a validation
-  toLowerCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  toLowerCase<T>(this: T, params?: Column.Error.StringOrMessage): T;
 
   // Transform value to an upper case during a validation
-  toUpperCase<T extends ColumnTypeBase>(this: T, params?: ErrorMessage): T;
+  toUpperCase<T>(this: T, params?: Column.Error.StringOrMessage): T;
 }
 
 const stringMethods: StringMethods = {
@@ -558,10 +488,10 @@ Object.assign(CitextColumnZod.prototype, stringMethods);
 
 interface DateMethods {
   // Require a value to be greater than or equal to a given Date object
-  min<T extends ColumnTypeBase>(this: T, value: Date, params?: ErrorMessage): T;
+  min<T>(this: T, value: Date, params?: Column.Error.StringOrMessage): T;
 
   // Require a value to be lower than or equal to a given Date object
-  max<T extends ColumnTypeBase>(this: T, value: Date, params?: ErrorMessage): T;
+  max<T>(this: T, value: Date, params?: Column.Error.StringOrMessage): T;
 }
 
 const dateMethods: DateMethods = {
@@ -608,24 +538,24 @@ export interface ZodSchemaConfig {
   type: ZodTypeAny;
 
   parse<
-    T extends ColumnTypeBase,
+    T extends Column.Pick.ForParse,
     OutputSchema extends ZodTypeAny,
     Output = OutputSchema['_output'],
   >(
     this: T,
     _schema: OutputSchema,
     fn: (input: T['type']) => Output,
-  ): ParseColumn<T, OutputSchema, Output>;
+  ): Column.Modifiers.Parse<T, OutputSchema, Output>;
 
   parseNull<
-    T extends ColumnTypeBase,
+    T extends Column.Pick.ForParseNull,
     NullSchema extends ZodTypeAny,
     NullType = NullSchema['_output'],
   >(
     this: T,
     _schema: NullSchema,
     fn: () => NullType,
-  ): ParseNullColumn<T, NullSchema, NullType>;
+  ): Column.Modifiers.ParseNull<T, NullSchema, NullType>;
 
   encode<
     T extends { type: unknown },
@@ -635,14 +565,14 @@ export interface ZodSchemaConfig {
     this: T,
     _schema: InputSchema,
     fn: (input: Input) => unknown,
-  ): EncodeColumn<T, InputSchema, Input>;
+  ): Column.Modifiers.Encode<T, InputSchema, Input>;
 
   /**
    * @deprecated use narrowType instead
    */
   asType<
     T,
-    Types extends AsTypeArg<ZodTypeAny>,
+    Types extends Column.AsTypeArg<ZodTypeAny>,
     TypeSchema extends ZodTypeAny = Types extends { type: ZodTypeAny }
       ? Types['type']
       : never,
@@ -681,7 +611,7 @@ export interface ZodSchemaConfig {
   };
 
   narrowType<
-    T extends ColumnInputOutputQueryTypesWithSchemas,
+    T extends Column.InputOutputQueryTypesWithSchemas,
     Type extends {
       _output: T['inputType'] extends never
         ? T['outputType'] & T['queryType']
@@ -707,7 +637,7 @@ export interface ZodSchemaConfig {
   };
 
   narrowAllTypes<
-    T extends ColumnInputOutputQueryTypesWithSchemas,
+    T extends Column.InputOutputQueryTypesWithSchemas,
     Types extends {
       input?: { _output: T['inputType'] };
       output?: { _output: T['outputType'] };
@@ -744,13 +674,13 @@ export interface ZodSchemaConfig {
       : T[K];
   };
 
-  dateAsNumber<T extends ColumnType<ZodSchemaConfig>>(
+  dateAsNumber<T extends Column<ZodSchemaConfig>>(
     this: T,
-  ): ParseColumn<T, ZodNumber, number>;
+  ): Column.Modifiers.Parse<T, ZodNumber, number>;
 
-  dateAsDate<T extends ColumnType<ZodSchemaConfig>>(
+  dateAsDate<T extends Column<ZodSchemaConfig>>(
     this: T,
-  ): ParseColumn<T, ZodDate, Date>;
+  ): Column.Modifiers.Parse<T, ZodDate, Date>;
 
   enum<T extends readonly string[]>(
     dataType: string,
@@ -759,9 +689,9 @@ export interface ZodSchemaConfig {
 
   array<Item extends ArrayColumnValue>(item: Item): ZodArrayColumn<Item>;
 
-  nullable<T extends ColumnTypeBase>(
+  nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): NullableColumn<
+  ): Column.Modifiers.Nullable<
     T,
     ZodNullable<T['inputSchema']>,
     T['nullSchema'] extends ZodTypeAny
@@ -816,7 +746,7 @@ export interface ZodSchemaConfig {
 
   pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T): PkeySchema<T>;
 
-  error<T extends ColumnTypeBase>(this: T, error: ErrorMessages): T;
+  error<T>(this: T, error: Column.Error.Messages): T;
 
   smallint(): SmallIntColumnZod;
   integer(): IntegerColumnZod;
@@ -860,7 +790,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
   narrowType(type) {
     const c = Object.create(this);
-    if ((c as PickColumnData).data.generated) {
+    if ((c as Column.Pick.Data).data.generated) {
       c.outputSchema = c.querySchema = type;
     } else {
       c.inputSchema = c.outputSchema = c.querySchema = type;
@@ -899,7 +829,7 @@ export const zodSchemaConfig: ZodSchemaConfig = {
   },
   nullable() {
     return makeColumnNullable(
-      this,
+      this as never,
       z.nullable(this.inputSchema),
       this.nullSchema
         ? this.outputSchema.or(this.nullSchema)
@@ -957,8 +887,9 @@ export const zodSchemaConfig: ZodSchemaConfig = {
     const { shape: columns } = this.prototype.columns;
 
     for (const key in columns) {
+      const column = columns[key] as Column;
       if (columns[key].dataType) {
-        shape[key] = columns[key].querySchema.optional();
+        shape[key] = column.querySchema.optional();
       }
     }
 
@@ -1070,7 +1001,8 @@ export const zodSchemaConfig: ZodSchemaConfig = {
    * @param errors - object, key is either 'required' or 'invalidType', value is an error message
    */
   error(errors) {
-    const { errors: old } = this.data;
+    const c = this as Column;
+    const { errors: old } = c.data;
     const newErrors = old ? { ...old, ...errors } : errors;
     const { required, invalidType } = newErrors;
 
@@ -1083,12 +1015,12 @@ export const zodSchemaConfig: ZodSchemaConfig = {
       return;
     };
 
-    (this.inputSchema as ZodTypeAny).def.error =
-      (this.outputSchema as ZodTypeAny).def.error =
-      (this.querySchema as ZodTypeAny).def.error =
+    (c.inputSchema as ZodTypeAny).def.error =
+      (c.outputSchema as ZodTypeAny).def.error =
+      (c.querySchema as ZodTypeAny).def.error =
         errorMap;
 
-    return setColumnData(this, 'errors', newErrors);
+    return setColumnData(c, 'errors', newErrors as never) as never;
   },
 
   smallint: () => new SmallIntColumnZod(zodSchemaConfig),

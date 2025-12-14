@@ -1,19 +1,18 @@
-import { Query } from '../query/query';
+import { PickQueryQ, Query } from '../query/query';
 import { SelectableOrExpression } from '../common/utils';
 import {
-  ColumnTypesBase,
   Expression,
   IsQuery,
   MaybeArray,
-  QueryColumns,
   RecordUnknown,
-  RelationConfigBase,
   TemplateLiteralArgs,
 } from '../core';
+import { Column } from '../columns/column';
 import { QueryData } from './data';
+import { SubQueryForSql } from '../query/to-sql/sub-query-for-sql';
 
 // used in `from` logic to decide if convert query to sql or just write table name
-export const checkIfASimpleQuery = (q: Query) => {
+export const checkIfASimpleQuery = (q: PickQueryQ) => {
   if (
     (q.q.returnType && q.q.returnType !== 'all') ||
     q.q.selectAllColumns ||
@@ -44,24 +43,6 @@ const queryKeysOfNotSimpleQuery: (keyof QueryData)[] = [
   'offset',
   'for',
 ];
-
-export interface WithItem {
-  // name
-  n: string;
-  // options
-  o?: WithOptions;
-  // query
-  q?: Query;
-  // sql
-  s?: Expression;
-}
-
-export interface WithOptions {
-  columns?: string[];
-  recursive?: true;
-  materialized?: true;
-  notMaterialized?: true;
-}
 
 export type SelectItem = string | SelectAs | Expression | undefined;
 
@@ -136,9 +117,9 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // lateral join query
-      l: Query;
+      l: SubQueryForSql;
       // as
       a: string;
       // "inner join" by checking `IS NOT NULL` in the `ON`
@@ -147,7 +128,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // relation query from `relation.joinQuery`
       j: IsQuery;
       // join a sub query, is not applicable in whereExists
@@ -158,7 +139,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // `with` item name
       w: string;
       // callback result
@@ -169,7 +150,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // `with` item name
       w: string;
       // join arguments
@@ -178,7 +159,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // joining query
       q: IsQuery;
       // join a sub query, is not applicable in whereExists
@@ -187,7 +168,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // joining query
       q: IsQuery;
       // callback result
@@ -198,7 +179,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c?: QueryColumns;
+      c?: Column.QueryColumns;
       // joining query
       q: IsQuery;
       // join arguments
@@ -209,7 +190,7 @@ export type JoinItemArgs =
   | {
       // `updateFrom`: forbid LATERAL
       u?: true;
-      c: ColumnTypesBase;
+      c: Column.Shape.Data;
       // alias
       a: string;
       // array of values, item is a record
@@ -225,7 +206,7 @@ export type WhereItem =
   | {
       [K: string]:
         | unknown
-        | { [K: string]: unknown | Query | Expression }
+        | { [K: string]: unknown | SubQueryForSql | Expression }
         | Expression;
 
       NOT?: MaybeArray<WhereItem>;
@@ -236,13 +217,12 @@ export type WhereItem =
       ON?: WhereOnItem | WhereJsonPathEqualsItem;
       SEARCH?: MaybeArray<WhereSearchItem>;
     }
-  | ((q: unknown) => RelationConfigBase | Expression)
   | Query
   | Expression;
 
 export interface WhereInItem {
   columns: string[];
-  values: unknown[][] | Query | Expression;
+  values: unknown[][] | SubQueryForSql | Expression;
 }
 
 export type WhereJsonPathEqualsItem = [
@@ -290,7 +270,7 @@ export interface WindowDeclaration {
 }
 
 export interface UnionItem {
-  a: Query | Expression;
+  a: SubQueryForSql | Expression;
   k: UnionKind;
   // true to not wrap the union member into parens.
   p?: boolean;

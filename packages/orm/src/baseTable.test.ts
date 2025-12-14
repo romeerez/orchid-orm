@@ -8,7 +8,7 @@ import {
 } from './baseTable';
 import { orchidORMWithAdapter } from './orm';
 import {
-  ColumnType,
+  Column,
   makeColumnTypes,
   Operators,
   TextColumn,
@@ -16,7 +16,6 @@ import {
   QueryHookUtils,
 } from 'pqb';
 import { useTestORM } from './test-utils/orm.test-utils';
-import path from 'path';
 import {
   BaseTable,
   db,
@@ -31,18 +30,6 @@ import {
 import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
-
-jest.mock('../../pqb/src/core/utils', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require('path');
-  const actual = jest.requireActual('../../pqb/src/core/utils');
-  return {
-    ...actual,
-    getCallerFilePath: jest.fn(() =>
-      path.join(__dirname, 'test-utils', 'test-db.ts'),
-    ),
-  };
-});
 
 describe('baseTable', () => {
   useTestORM();
@@ -68,9 +55,9 @@ describe('baseTable', () => {
   });
 
   it('should support getFilePath to return a path where the baseTable is defined', () => {
-    expect(BaseTable.getFilePath()).toBe(
-      path.join(__dirname, 'test-utils', 'test-db.ts'),
-    );
+    asMock(getCallerFilePath).mockReturnValueOnce('path');
+
+    expect(BaseTable.getFilePath()).toBe('path');
   });
 
   it('should throw if cannot determine file path and calling `getFilePath', () => {
@@ -118,7 +105,7 @@ describe('baseTable', () => {
 
   describe('overriding column types', () => {
     it('should have .sql with overridden types', () => {
-      class Type extends ColumnType {
+      class Type extends Column {
         dataType = 'type';
         operators = Operators.any;
         constructor() {
@@ -403,13 +390,16 @@ describe('baseTable', () => {
         before: [fns.beforeQuery],
         after: [fns.afterQuery],
         // beforeCreate: [fns.beforeCreate, fns.beforeSave],
-        afterCreate: [fns.afterCreate, fns.afterSave],
-        afterCreateCommit: [fns.afterCreateCommit, fns.afterSaveCommit],
-        afterCreateSelect: new Set(['one', 'two', 'seven', 'eight']),
+        afterCreate: [fns.afterCreate],
+        afterCreateCommit: [fns.afterCreateCommit],
+        afterCreateSelect: new Set(['one', 'two']),
         // beforeUpdate: [fns.beforeUpdate, fns.beforeSave],
-        afterUpdate: [fns.afterUpdate, fns.afterSave],
-        afterUpdateCommit: [fns.afterUpdateCommit, fns.afterSaveCommit],
-        afterUpdateSelect: new Set(['three', 'four', 'seven', 'eight']),
+        afterUpdate: [fns.afterUpdate],
+        afterUpdateCommit: [fns.afterUpdateCommit],
+        afterUpdateSelect: new Set(['three', 'four']),
+        afterSave: [fns.afterSave],
+        afterSaveCommit: [fns.afterSaveCommit],
+        afterSaveSelect: new Set(['seven', 'eight']),
         beforeDelete: [fns.beforeDelete],
         afterDelete: [fns.afterDelete],
         afterDeleteCommit: [fns.afterDeleteCommit],

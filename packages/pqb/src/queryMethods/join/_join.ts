@@ -2,19 +2,16 @@ import { PickQueryQ, Query } from '../../query/query';
 import {
   BatchParsers,
   ColumnsParsers,
-  ColumnsShapeBase,
   getQueryParsers,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
   PickQueryMetaShape,
   PickQueryRelationsWithData,
   PickQueryTableMetaResult,
   pushQueryValueImmutable,
-  QueryColumns,
   QueryMetaBase,
   RelationConfigBase,
   setObjectValueImmutable,
 } from '../../core';
-import { getIsJoinSubQuery } from '../../sql/join';
 import { getShapeFromSelect } from '../select/select';
 import { _clone, throwIfJoinLateral } from '../../query/queryUtils';
 import {
@@ -28,9 +25,12 @@ import { getQueryAs, resolveSubQueryCallbackV2 } from '../../common/utils';
 import { preprocessJoinArg, processJoinArgs } from './processJoinArgs';
 import { _queryNone, isQueryNone } from '../none';
 import { ComputedColumns } from '../../modules/computed';
-import { addColumnParserToQuery } from '../../columns';
+import { addColumnParserToQuery } from '../../columns/column.utils';
 import { getSqlText } from '../../sql/utils';
 import { JoinItemArgs, SelectItem } from '../../sql/types';
+import { Column } from '../../columns/column';
+import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
+import { prepareSubQueryForSql } from 'pqb';
 
 export const _joinReturningArgs = <
   T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
@@ -46,7 +46,7 @@ export const _joinReturningArgs = <
   forbidLateral?: boolean,
 ): JoinItemArgs | undefined => {
   let joinKey: string | undefined;
-  let shape: QueryColumns | undefined;
+  let shape: Column.QueryColumns | undefined;
   let parsers: ColumnsParsers | undefined;
   let batchParsers: BatchParsers | undefined;
   let computeds: ComputedColumns | undefined;
@@ -79,7 +79,7 @@ export const _joinReturningArgs = <
 
       if (joinSubQuery) {
         first = q.clone() as JoinFirstArg<Query>;
-        (first as Query).shape = shape as ColumnsShapeBase;
+        (first as Query).shape = shape as never;
       }
     }
   } else {
@@ -88,7 +88,7 @@ export const _joinReturningArgs = <
     const relation = query.relations[joinKey];
     if (relation) {
       shape = getShapeFromSelect(relation.query as never);
-      const r = relation.query as Query;
+      const r = prepareSubQueryForSql(query as never, relation.query as Query);
       parsers = getQueryParsers(r);
       batchParsers = r.q.batchParsers;
       computeds = r.q.runtimeComputeds;
@@ -233,7 +233,7 @@ export const _join = <
 const addAllShapesAndParsers = (
   query: unknown,
   joinKey?: string,
-  shape?: QueryColumns,
+  shape?: Column.QueryColumns,
   parsers?: ColumnsParsers,
   batchParsers?: BatchParsers,
   computeds?: ComputedColumns,
@@ -268,7 +268,7 @@ export const _joinLateralProcessArg = (
   ) => {
     table: string;
     meta: QueryMetaBase;
-    result: QueryColumns;
+    result: Column.QueryColumns;
   },
 ): Query => {
   let relation: RelationConfigBase | undefined;
@@ -327,7 +327,8 @@ export const _joinLateral = (
   as?: string,
   innerJoinLateral?: boolean,
 ): string | undefined => {
-  const q = self as unknown as Query;
+  const q = self as Query;
+  arg = prepareSubQueryForSql(self as Query, arg) as never;
 
   arg.q.joinTo = q;
   const joinedAs = getQueryAs(q);

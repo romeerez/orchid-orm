@@ -1,5 +1,8 @@
 import { IsQuery, QueryBase } from './query';
-import { ColumnsShapeBase } from '../columns';
+
+import { Column } from '../../columns/column';
+import { QueryAfterHook } from '../../sql';
+import { HookPurpose } from '../../query/hooks/hooks.sql';
 
 export interface HasCteHooks {
   cteHooks?: CteHooks;
@@ -15,20 +18,22 @@ export interface CteTableHooks {
 }
 
 export interface CteTableHook {
-  shape: ColumnsShapeBase;
+  table: string;
+  shape: Column.Shape.Data;
   tableHook: TableHook;
 }
 
 export interface TableHook {
+  hookPurpose?: HookPurpose;
   select?: HookSelect;
-  // TODO: unify types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  after?: ((data: unknown, query: any) => unknown | Promise<unknown>)[];
-  afterCommit?: ((
-    data: unknown,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    query: any,
-  ) => unknown | Promise<unknown>)[];
+  afterCreate?: QueryAfterHook[];
+  afterUpdate?: QueryAfterHook[];
+  afterSave?: QueryAfterHook[];
+  afterDelete?: QueryAfterHook[];
+  afterCreateCommit?: QueryAfterHook[];
+  afterUpdateCommit?: QueryAfterHook[];
+  afterSaveCommit?: QueryAfterHook[];
+  afterDeleteCommit?: QueryAfterHook[];
 }
 
 export type HookSelect = Map<string, HookSelectValue>;

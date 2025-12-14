@@ -4,10 +4,6 @@ import pg from 'pg';
 import { setTimeout } from 'timers/promises';
 import { QueryError, RecordUnknown } from '../core';
 
-jest.mock('timers/promises', () => ({
-  setTimeout: jest.fn(),
-}));
-
 const testAdapter = new NodePostgresAdapter(testDbOptions);
 
 describe('adapter', () => {

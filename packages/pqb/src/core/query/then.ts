@@ -1,7 +1,8 @@
 import { ShallowSimplify } from '../utils';
 import { QueryReturnType } from './query';
-import { ColumnShapeOutput, QueryColumns } from '../columns';
 import { PickQueryReturnType } from './pick-query-types';
+import { Column } from '../../columns/column';
+import { ColumnsShape } from '../../columns/columns-shape';
 
 // This is a standard Promise['then'] method
 // copied from TS standard library because the original `then` is not decoupled from the Promise
@@ -23,38 +24,38 @@ export type QueryThenShallowSimplifyOptional<T> = QueryThen<
 
 export type QueryThenByQuery<
   T extends PickQueryReturnType,
-  Result extends QueryColumns,
+  Result extends Column.QueryColumns,
 > = T['returnType'] extends undefined | 'all'
-  ? QueryThenShallowSimplifyArr<ColumnShapeOutput<Result>>
+  ? QueryThenShallowSimplifyArr<ColumnsShape.Output<Result>>
   : T['returnType'] extends 'one'
-  ? QueryThenShallowSimplifyOptional<ColumnShapeOutput<Result>>
+  ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<Result>>
   : T['returnType'] extends 'oneOrThrow'
-  ? QueryThenShallowSimplify<ColumnShapeOutput<Result>>
+  ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
   : T['returnType'] extends 'value'
   ? QueryThen<Result['value']['outputType'] | undefined>
   : T['returnType'] extends 'valueOrThrow'
   ? QueryThen<Result['value']['outputType']>
   : T['returnType'] extends 'rows'
-  ? QueryThen<ColumnShapeOutput<Result>[keyof Result][][]>
+  ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
   : T['returnType'] extends 'pluck'
   ? QueryThen<Result['pluck']['outputType'][]>
   : QueryThen<void>;
 
 export type QueryThenByReturnType<
   T extends QueryReturnType,
-  Result extends QueryColumns,
+  Result extends Column.QueryColumns,
 > = T extends undefined | 'all'
-  ? QueryThenShallowSimplifyArr<ColumnShapeOutput<Result>>
+  ? QueryThenShallowSimplifyArr<ColumnsShape.Output<Result>>
   : T extends 'one'
-  ? QueryThenShallowSimplifyOptional<ColumnShapeOutput<Result>>
+  ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<Result>>
   : T extends 'oneOrThrow'
-  ? QueryThenShallowSimplify<ColumnShapeOutput<Result>>
+  ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
   : T extends 'value'
   ? QueryThen<Result['value']['outputType'] | undefined>
   : T extends 'valueOrThrow'
   ? QueryThen<Result['value']['outputType']>
   : T extends 'rows'
-  ? QueryThen<ColumnShapeOutput<Result>[keyof Result][][]>
+  ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
   : T extends 'pluck'
   ? QueryThen<Result['pluck']['outputType'][]>
   : QueryThen<void>;

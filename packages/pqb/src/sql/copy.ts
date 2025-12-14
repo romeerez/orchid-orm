@@ -1,4 +1,4 @@
-import { ToSQLCtx, ToSQLQuery } from './toSQL';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryData } from './data';
 import { escapeString } from '../quote';
 import { pushWhereStatementSql } from './where';

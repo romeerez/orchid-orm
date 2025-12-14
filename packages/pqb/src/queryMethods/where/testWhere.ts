@@ -1,8 +1,9 @@
 import { Query } from '../../query/query';
-import { ColumnTypeBase, Sql } from '../../core';
+import { Sql } from '../../core';
 import { expectSql, testDb } from 'test-utils';
 import { getSqlText } from '../../sql';
 import { userColumnsSql } from '../../test-utils/test-utils';
+import { Column } from '../../columns/column';
 
 export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   const index = key.indexOf('.');
@@ -10,14 +11,15 @@ export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   if (index !== -1) {
     const table = key.slice(0, index);
     const name = key.slice(index + 1);
-    const column = (shape[name] as ColumnTypeBase).data.name || name;
+    const column =
+      (shape[name] as unknown as Column.Pick.Data).data.name || name;
     return [
       `"${table}"."${column}"`,
       column === name ? '' : ` "${name}"`,
       column,
     ];
   } else {
-    const column = (shape[key] as ColumnTypeBase).data.name || key;
+    const column = (shape[key] as unknown as Column.Pick.Data).data.name || key;
     return [
       `"${table}"."${column}"`,
       column === key ? '' : ` "${key}"`,
@@ -1633,7 +1635,8 @@ export const testWhereExists = ({
   const index = pkey.indexOf('.');
   const pkeyColumn = index === -1 ? pkey : pkey.slice(index + 1);
   const pkeySql =
-    (joinTo.shape[pkeyColumn] as ColumnTypeBase).data.name || pkeyColumn;
+    (joinTo.shape[pkeyColumn] as unknown as Column.Pick.Data).data.name ||
+    pkeyColumn;
 
   describe('whereExists', () => {
     testWhereExistsCase({

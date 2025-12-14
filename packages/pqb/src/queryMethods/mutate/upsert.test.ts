@@ -1,32 +1,16 @@
-import { User, userData, UserRecord } from '../../test-utils/test-utils';
 import {
-  assertType,
-  sql,
-  testDb,
-  TestTransactionAdapter,
-  useTestDatabase,
-} from 'test-utils';
+  emulateReturnNoRowsOnce,
+  User,
+  userData,
+  UserRecord,
+} from '../../test-utils/test-utils';
+import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
 
 const TableWithReadOnly = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
   name: t.string(),
   password: t.integer().readOnly(),
 }));
-
-const emulateReturnNoRowsOnce = () => {
-  // emulate the edge case when first query doesn't find the record, and then in CTE it appears
-  const { query } = TestTransactionAdapter.prototype;
-  TestTransactionAdapter.prototype.query = async function (
-    this: unknown,
-    text: string,
-    values?: unknown[],
-  ) {
-    const result = await query.call(this, text, values);
-    result.rowCount = 0;
-    TestTransactionAdapter.prototype.query = query;
-    return result;
-  } as never;
-};
 
 describe('upsert', () => {
   useTestDatabase();
@@ -56,7 +40,7 @@ describe('upsert', () => {
   });
 
   it('should not allow using appReadOnly columns in create', async () => {
-    await expect(() =>
+    expect(() =>
       TableWithReadOnly.find(1).upsert({
         update: { name: 'name' },
         create: {
@@ -65,7 +49,7 @@ describe('upsert', () => {
           password: 'password',
         },
       }),
-    ).rejects.toThrow('Trying to insert a readonly column');
+    ).toThrow('Trying to insert a readonly column');
   });
 
   it('should return void by default', () => {
@@ -327,8 +311,6 @@ describe('upsert', () => {
         {
           id: expect.any(Number),
           name: 'name',
-          password: 'password',
-          age: null,
         },
       ],
       expect.any(Object),
@@ -338,8 +320,6 @@ describe('upsert', () => {
         {
           id: expect.any(Number),
           name: 'name',
-          password: 'password',
-          age: null,
         },
       ],
       expect.any(Object),
@@ -383,8 +363,6 @@ describe('upsert', () => {
         {
           id: expect.any(Number),
           name: 'name',
-          password: 'password',
-          age: null,
         },
       ],
       expect.any(Object),
@@ -394,8 +372,6 @@ describe('upsert', () => {
         {
           id: expect.any(Number),
           name: 'name',
-          password: 'password',
-          age: null,
         },
       ],
       expect.any(Object),
@@ -435,8 +411,6 @@ describe('upsert', () => {
     expect(afterCreate).toHaveBeenCalledWith(
       [
         {
-          id: expect.any(Number),
-          name: 'name',
           password: 'password',
           age: null,
         },
@@ -446,13 +420,34 @@ describe('upsert', () => {
     expect(afterCreateCommit).toHaveBeenCalledWith(
       [
         {
-          id: expect.any(Number),
-          name: 'name',
           password: 'password',
           age: null,
         },
       ],
       expect.any(Object),
     );
+  });
+
+  it('should name updating and creating CTEs uniquely', async () => {
+    const result = await testDb
+      .with('a', () =>
+        User.find(1)
+          .upsert({ update: { name: 'name' }, create: userData })
+          .select('id'),
+      )
+      .with('b', () =>
+        User.find(1)
+          .upsert({ update: { name: 'name' }, create: userData })
+          .select('id'),
+      )
+      .from(['a', 'b'])
+      .select({ a: 'a.id', b: 'b.id' });
+
+    expect(result).toEqual([
+      {
+        a: expect.any(Number),
+        b: expect.any(Number),
+      },
+    ]);
   });
 });

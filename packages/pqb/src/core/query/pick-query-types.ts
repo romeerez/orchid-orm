@@ -1,8 +1,8 @@
-import { QueryColumns } from '../columns';
 import { EmptyObject } from '../utils';
 import { IsQueries, QueryMetaBase, QueryReturnType } from './query';
-import { WithDataItems } from './with';
 import { RelationsBase } from './relations';
+import { WithDataItems } from '../../query';
+import { Column } from '../../columns/column';
 
 export interface PickQueryTable {
   table?: string;
@@ -13,11 +13,11 @@ export interface PickQueryMeta {
 }
 
 export interface PickQueryResult {
-  result: QueryColumns;
+  result: Column.QueryColumns;
 }
 
 export interface PickQueryShape {
-  shape: QueryColumns;
+  shape: Column.QueryColumns;
 }
 
 export interface PickQueryReturnType {
@@ -131,30 +131,30 @@ export interface PickQueryMetaResultRelationsWindows
   extends PickQueryMetaResultRelations,
     PickQueryWindows {}
 
-export interface PickQueryColumnTypes {
+export interface PickQueryColumTypes {
   columnTypes: unknown;
 }
 
 export interface PickQueryMetaColumnTypes
   extends PickQueryMeta,
-    PickQueryColumnTypes {}
+    PickQueryColumTypes {}
 
 export interface PickQueryMetaResultRelationsWindowsColumnTypes
   extends PickQueryMetaResultRelationsWindows,
-    PickQueryColumnTypes {}
+    PickQueryColumTypes {}
 
 export interface PickQueryWithDataColumnTypes
   extends PickQueryWithData,
-    PickQueryColumnTypes {}
+    PickQueryColumTypes {}
 
 export interface PickQueryResultColumnTypes
   extends PickQueryResult,
-    PickQueryColumnTypes {}
+    PickQueryColumTypes {}
 
 export interface PickQueryMetaWithDataColumnTypes
   extends PickQueryMeta,
     PickQueryWithData,
-    PickQueryColumnTypes {}
+    PickQueryColumTypes {}
 
 export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
 

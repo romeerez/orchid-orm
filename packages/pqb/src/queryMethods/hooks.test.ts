@@ -1,5 +1,11 @@
-import { expectSql, testDb, useTestDatabase } from 'test-utils';
-import { User as UserNoHooks, userData } from '../test-utils/test-utils';
+import { expectSql, sql, testDb, useTestDatabase } from 'test-utils';
+import {
+  emulateReturnNoRowsOnce,
+  Profile,
+  profileData,
+  User as UserNoHooks,
+  userData,
+} from '../test-utils/test-utils';
 import { QueryCreate } from './mutate/create';
 import { Update } from './mutate/update';
 import { QueryUpsert } from './mutate/upsert';
@@ -31,38 +37,44 @@ const hookSetUpdateValues = {
 };
 
 const hooksWithNoDeps = {
-  beforeQuery: { fn: jest.fn() },
+  beforeQuery: { fn: jest.fn().mockName('beforeQuery') },
   beforeCreate: {
-    fn: jest.fn(({ set }) => {
-      set(hookSet.beforeCreate);
-    }),
+    fn: jest
+      .fn(({ set }) => {
+        set(hookSet.beforeCreate);
+      })
+      .mockName('beforeCreate'),
   },
   beforeUpdate: {
-    fn: jest.fn(({ set }) => {
-      set(hookSet.beforeUpdate);
-    }),
+    fn: jest
+      .fn(({ set }) => {
+        set(hookSet.beforeUpdate);
+      })
+      .mockName('beforeUpdate'),
   },
   beforeSave: {
-    fn: jest.fn(({ set }) => {
-      set(hookSet.beforeSave);
-    }),
+    fn: jest
+      .fn(({ set }) => {
+        set(hookSet.beforeSave);
+      })
+      .mockName('beforeSave'),
   },
-  beforeDelete: { fn: jest.fn() },
-  afterQuery: { fn: jest.fn() },
+  beforeDelete: { fn: jest.fn().mockName('beforeDelete') },
+  afterQuery: { fn: jest.fn().mockName('afterQuery') },
 };
 
 const deps: ('name' | 'age')[] = ['name', 'age'];
 const depData = { name: 'name', age: null };
 
 const hooksWithDeps = {
-  afterCreate: { deps, fn: jest.fn() },
-  afterUpdate: { deps, fn: jest.fn() },
-  afterSave: { deps, fn: jest.fn() },
-  afterDelete: { deps, fn: jest.fn() },
-  afterCreateCommit: { deps, fn: jest.fn() },
-  afterUpdateCommit: { deps, fn: jest.fn() },
-  afterSaveCommit: { deps, fn: jest.fn() },
-  afterDeleteCommit: { deps, fn: jest.fn() },
+  afterCreate: { deps, fn: jest.fn().mockName('afterCreate') },
+  afterUpdate: { deps, fn: jest.fn().mockName('afterUpdate') },
+  afterSave: { deps, fn: jest.fn().mockName('afterSave') },
+  afterDelete: { deps, fn: jest.fn().mockName('afterDelete') },
+  afterCreateCommit: { deps, fn: jest.fn().mockName('afterCreateCommit') },
+  afterUpdateCommit: { deps, fn: jest.fn().mockName('afterUpdateCommit') },
+  afterSaveCommit: { deps, fn: jest.fn().mockName('afterSaveCommit') },
+  afterDeleteCommit: { deps, fn: jest.fn().mockName('afterDeleteCommit') },
 };
 
 const hookMap = { ...hooksWithNoDeps, ...hooksWithDeps };
@@ -79,170 +91,193 @@ for (const k in hookMap) {
   }
 }
 
+const toDataArr = (data?: unknown[], arg?: number | unknown[]) =>
+  arg
+    ? typeof arg === 'number'
+      ? Array.from({ length: arg }, () => data)
+      : arg
+    : [];
+
 const assert = {
-  hooksBeingCalled({
-    noDepsHooks,
-    noDepsHooksCalledTwice,
-    withUtilsHooks,
-    withUtilsHooksCalledTwice,
-    depsHooks,
-    depsHooksCalledTwice,
-    data,
-  }: {
-    noDepsHooks: (keyof typeof hookMap)[];
-    noDepsHooksCalledTwice?: (keyof typeof hookMap)[];
-    withUtilsHooks?: (keyof typeof hookMap)[];
-    withUtilsHooksCalledTwice?: (keyof typeof hookMap)[];
-    depsHooks: (keyof typeof hookMap)[];
-    depsHooksCalledTwice?: (keyof typeof hookMap)[];
-    data: unknown[];
+  hooksBeingCalledV2(params: {
+    data?: unknown[];
+    beforeQuery?: number;
+    beforeCreate?: number;
+    beforeUpdate?: number;
+    beforeDelete?: number;
+    beforeSave?: number;
+    afterQuery?: number;
+    afterCreate?: number | unknown[];
+    afterUpdate?: number | unknown[];
+    afterDelete?: number | unknown[];
+    afterSave?: number | unknown[];
+    afterCreateCommit?: number | unknown[];
+    afterUpdateCommit?: number | unknown[];
+    afterDeleteCommit?: number | unknown[];
+    afterSaveCommit?: number | unknown[];
   }) {
-    for (const key of noDepsHooks) {
-      const calls = hookMap[key].fn.mock.calls;
-      expect(calls).toEqual([[expect.any(Object)]]);
-    }
+    const data = params?.data?.map((item) => expect.objectContaining(item));
 
-    if (noDepsHooksCalledTwice) {
-      for (const key of noDepsHooksCalledTwice) {
-        const calls = hookMap[key].fn.mock.calls;
-        expect(calls).toEqual([[expect.any(Object)], [expect.any(Object)]]);
-      }
-    }
+    const expected = {
+      beforeQuery: params.beforeQuery || 0,
+      beforeCreate: params.beforeCreate || 0,
+      beforeUpdate: params.beforeUpdate || 0,
+      beforeDelete: params.beforeDelete || 0,
+      beforeSave: params.beforeSave || 0,
+      afterQuery: params.afterQuery || 0,
+      afterCreate: toDataArr(data, params.afterCreate),
+      afterUpdate: toDataArr(data, params.afterUpdate),
+      afterDelete: toDataArr(data, params.afterDelete),
+      afterSave: toDataArr(data, params.afterSave),
+      afterCreateCommit: toDataArr(data, params.afterCreateCommit),
+      afterUpdateCommit: toDataArr(data, params.afterUpdateCommit),
+      afterDeleteCommit: toDataArr(data, params.afterDeleteCommit),
+      afterSaveCommit: toDataArr(data, params.afterSaveCommit),
+    };
 
-    if (withUtilsHooks) {
-      for (const key of withUtilsHooks) {
-        const calls = hookMap[key].fn.mock.calls;
-        expect(calls).toEqual([[expect.any(Object)]]);
-      }
-    }
+    const actual = {
+      beforeQuery: hookMap.beforeQuery.fn.mock.calls.length,
+      beforeCreate: hookMap.beforeCreate.fn.mock.calls.length,
+      beforeUpdate: hookMap.beforeUpdate.fn.mock.calls.length,
+      beforeDelete: hookMap.beforeDelete.fn.mock.calls.length,
+      beforeSave: hookMap.beforeSave.fn.mock.calls.length,
+      afterQuery: hookMap.afterQuery.fn.mock.calls.length,
+      afterCreate: hookMap.afterCreate.fn.mock.calls.map((call) => call[0]),
+      afterUpdate: hookMap.afterUpdate.fn.mock.calls.map((call) => call[0]),
+      afterDelete: hookMap.afterDelete.fn.mock.calls.map((call) => call[0]),
+      afterSave: hookMap.afterSave.fn.mock.calls.map((call) => call[0]),
+      afterCreateCommit: hookMap.afterCreateCommit.fn.mock.calls.map(
+        (call) => call[0],
+      ),
+      afterUpdateCommit: hookMap.afterUpdateCommit.fn.mock.calls.map(
+        (call) => call[0],
+      ),
+      afterDeleteCommit: hookMap.afterDeleteCommit.fn.mock.calls.map(
+        (call) => call[0],
+      ),
+      afterSaveCommit: hookMap.afterSaveCommit.fn.mock.calls.map(
+        (call) => call[0],
+      ),
+    };
 
-    if (withUtilsHooksCalledTwice) {
-      for (const key of withUtilsHooksCalledTwice) {
-        const calls = hookMap[key].fn.mock.calls;
-        expect(calls).toEqual([[expect.any(Object)], [expect.any(Object)]]);
-      }
-    }
-
-    for (const key of depsHooks) {
-      const calls = hookMap[key].fn.mock.calls.map(([data]) => data);
-      expect(calls).toEqual([data.map((x) => expect.objectContaining(x))]);
-    }
-
-    if (depsHooksCalledTwice) {
-      for (const _key of depsHooksCalledTwice) {
-        const key = 'afterQuery';
-        const calls = hookMap[key].fn.mock.calls;
-        expect(calls).toEqual([
-          [data.map((x) => expect.objectContaining(x)), expect.any(Object)],
-          [data.map((x) => expect.objectContaining(x)), expect.any(Object)],
-        ]);
-      }
-    }
-
-    for (const k in hookMap) {
-      const key = k as keyof typeof hookMap;
-      if (
-        !noDepsHooks.includes(key) &&
-        !withUtilsHooks?.includes(key) &&
-        !withUtilsHooksCalledTwice?.includes(key) &&
-        !depsHooks.includes(key) &&
-        !noDepsHooksCalledTwice?.includes(key)
-      ) {
-        expect(hookMap[key].fn).not.toBeCalled();
-      }
-    }
+    expect(actual).toEqual(expected);
   },
-  createHooksBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: ['beforeQuery'],
-      withUtilsHooks: ['beforeCreate', 'beforeSave'],
-      depsHooks: [
-        'afterQuery',
-        'afterCreate',
-        'afterSave',
-        'afterCreateCommit',
-        'afterSaveCommit',
-      ],
+  createHooksBeingCalled({ data, cte }: { data: unknown[]; cte?: boolean }) {
+    assert.hooksBeingCalledV2({
       data,
+      beforeQuery: cte ? 0 : 1,
+      afterQuery: cte ? 0 : 1,
+      beforeCreate: 1,
+      beforeSave: 1,
+      afterCreate: 1,
+      afterSave: 1,
+      afterCreateCommit: 1,
+      afterSaveCommit: 1,
     });
   },
-  cteCreateHooksBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: [],
-      withUtilsHooks: [],
-      depsHooks: [
-        'afterQuery',
-        'afterCreate',
-        'afterSave',
-        'afterCreateCommit',
-        'afterSaveCommit',
-      ],
+  updateHooksBeingCalled({ data, cte }: { data: unknown[]; cte?: boolean }) {
+    assert.hooksBeingCalledV2({
       data,
+      beforeQuery: cte ? 0 : 1,
+      afterQuery: cte ? 0 : 1,
+      beforeUpdate: 1,
+      beforeSave: 1,
+      afterUpdate: 1,
+      afterSave: 1,
+      afterUpdateCommit: 1,
+      afterSaveCommit: 1,
     });
   },
-  updateHooksBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: ['beforeQuery'],
-      withUtilsHooks: ['beforeUpdate', 'beforeSave'],
-      depsHooks: [
-        'afterQuery',
-        'afterUpdate',
-        'afterSave',
-        'afterUpdateCommit',
-        'afterSaveCommit',
-      ],
+  upsertCreateHookBeingCalled({
+    data,
+    cte,
+  }: {
+    data: unknown[];
+    cte?: boolean;
+  }) {
+    assert.hooksBeingCalledV2({
       data,
+      beforeQuery: cte ? 0 : 1,
+      afterQuery: cte ? 0 : 1,
+      beforeUpdate: 1,
+      beforeCreate: 1,
+      beforeSave: 2,
+      afterCreate: 1,
+      afterSave: 1,
+      afterCreateCommit: 1,
+      afterSaveCommit: 1,
     });
   },
-  upsertCreateHookBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: ['beforeQuery'],
-      withUtilsHooks: ['beforeUpdate', 'beforeCreate'],
-      noDepsHooksCalledTwice: ['beforeSave'],
-      depsHooks: [
-        'afterQuery',
-        'afterCreate',
-        'afterSave',
-        'afterCreateCommit',
-        'afterSaveCommit',
-      ],
+  upsertUpdateHookBeingCalled({
+    data,
+    cte,
+  }: {
+    data: unknown[];
+    cte?: boolean;
+  }) {
+    assert.hooksBeingCalledV2({
       data,
-    });
-  },
-  upsertUpdateHookBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: ['beforeQuery'],
-      withUtilsHooks: ['beforeUpdate', 'beforeSave'],
-      depsHooks: [
-        'afterQuery',
-        'afterUpdate',
-        'afterSave',
-        'afterUpdateCommit',
-        'afterSaveCommit',
-      ],
-      data,
+      beforeQuery: cte ? 0 : 1,
+      afterQuery: cte ? 0 : 1,
+      beforeUpdate: 1,
+      beforeCreate: cte ? 1 : 0,
+      beforeSave: cte ? 2 : 1,
+      afterUpdate: 1,
+      afterSave: 1,
+      afterUpdateCommit: 1,
+      afterSaveCommit: 1,
     });
   },
   upsertUpdateIn2ndQueryHooksBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: ['beforeQuery'],
-      withUtilsHooks: ['beforeUpdate', 'beforeCreate'],
-      withUtilsHooksCalledTwice: ['beforeSave'],
-      depsHooks: [
-        'afterQuery',
-        'afterUpdate',
-        'afterSave',
-        'afterUpdateCommit',
-        'afterSaveCommit',
-      ],
+    assert.hooksBeingCalledV2({
       data,
+      beforeQuery: 1,
+      afterQuery: 1,
+      beforeUpdate: 1,
+      beforeCreate: 1,
+      beforeSave: 2,
+      afterUpdate: 1,
+      afterSave: 1,
+      afterUpdateCommit: 1,
+      afterSaveCommit: 1,
+    });
+  },
+  orCreateCreateHooksBeingCalled({ data }: { data: unknown[] }) {
+    assert.hooksBeingCalledV2({
+      data,
+      beforeQuery: 1,
+      afterQuery: 1,
+      beforeCreate: 1,
+      beforeSave: 1,
+      afterCreate: 1,
+      afterSave: 1,
+      afterCreateCommit: 1,
+      afterSaveCommit: 1,
     });
   },
   queryHooksBeingCalled({ data }: { data: unknown[] }) {
-    assert.hooksBeingCalled({
-      noDepsHooks: ['beforeQuery'],
-      depsHooks: ['afterQuery'],
+    assert.hooksBeingCalledV2({
       data,
+      beforeQuery: 1,
+      afterQuery: 1,
+    });
+  },
+  orCreateFindCteHooksBeingCalled({ data }: { data: unknown[] }) {
+    assert.hooksBeingCalledV2({
+      data,
+      beforeCreate: 1,
+      beforeSave: 1,
+    });
+  },
+  orCreateCreateCteHooksBeingCalled({ data }: { data: unknown[] }) {
+    assert.hooksBeingCalledV2({
+      data,
+      beforeCreate: 1,
+      beforeSave: 1,
+      afterCreate: 1,
+      afterSave: 1,
+      afterCreateCommit: 1,
+      afterSaveCommit: 1,
     });
   },
 };
@@ -356,6 +391,167 @@ describe('hooks', () => {
       await User;
 
       assert.queryHooksBeingCalled({ data: [] });
+    });
+  });
+
+  describe('cte', () => {
+    it('supports nesting cte queries one in another', async () => {
+      const [updateId, deleteId] = await UserNoHooks.pluck('id').insertMany([
+        userData,
+        { ...userData, name: 'deleted' },
+      ]);
+
+      await testDb
+        .with(
+          'cte',
+          User.get('id').where({
+            id: () =>
+              User.get('id').insert({
+                ...userData,
+                name: 'created',
+                age: () =>
+                  User.get('age')
+                    .find(updateId)
+                    .update({ name: 'updated', age: 123 })
+                    .whereNot({
+                      name: () => User.find(deleteId).get('name').delete(),
+                    }),
+              }),
+          }),
+        )
+        .from('cte');
+
+      const created = [{ name: 'created', age: 123 }];
+      const updated = [{ name: 'updated', age: 123 }];
+      const deleted = [{ name: 'deleted', age: null }];
+      assert.hooksBeingCalledV2({
+        beforeCreate: 1,
+        beforeUpdate: 1,
+        beforeDelete: 1,
+        beforeSave: 2,
+        afterCreate: [created],
+        afterUpdate: [updated],
+        afterSave: [[...updated, ...created]],
+        afterDelete: [deleted],
+        afterCreateCommit: [created],
+        afterUpdateCommit: [updated],
+        afterSaveCommit: [[...updated, ...created]],
+        afterDeleteCommit: [deleted],
+      });
+    });
+
+    it('supports having multiple cte-hook queries in a select query', async () => {
+      await UserNoHooks.getOptional('id').where({
+        id: () => User.get('id').insert(userData),
+        name: () => User.get('name').insert(userData),
+      });
+
+      assert.createHooksBeingCalled({
+        data: [depData, depData],
+        cte: true,
+      });
+    });
+
+    it('properly separates data of different hooks, combines data for afterSave hook', async () => {
+      const userId = await UserNoHooks.get('id').insert(userData);
+
+      await UserNoHooks.getOptional('id').where({
+        id: () => User.get('id').insert({ ...userData, name: 'created' }),
+        name: () =>
+          User.get('name')
+            .find(userId)
+            .update({ ...userData, name: 'updated' }),
+      });
+
+      assert.hooksBeingCalledV2({
+        beforeCreate: 1,
+        beforeUpdate: 1,
+        beforeSave: 2,
+        afterCreate: [[{ ...depData, name: 'created' }]],
+        afterUpdate: [[{ ...depData, name: 'updated' }]],
+        afterSave: [
+          [
+            { ...depData, name: 'created' },
+            { ...depData, name: 'updated' },
+          ],
+        ],
+        afterCreateCommit: [[{ ...depData, name: 'created' }]],
+        afterUpdateCommit: [[{ ...depData, name: 'updated' }]],
+        afterSaveCommit: [
+          [
+            { ...depData, name: 'created' },
+            { ...depData, name: 'updated' },
+          ],
+        ],
+      });
+    });
+
+    it('should support cte-hook queries nested inside a select query', async () => {
+      await UserNoHooks.getOptional('id').where({
+        id: () =>
+          User.get('id').insert({
+            ...userData,
+            name: 'created',
+          }),
+      });
+
+      assert.createHooksBeingCalled({
+        data: [{ ...depData, name: 'created' }],
+        cte: true,
+      });
+    });
+
+    it('automatic cte in `select`', async () => {
+      await UserNoHooks.select({
+        id: () => User.get('id').insert(userData),
+      });
+
+      assert.createHooksBeingCalled({
+        data: [depData],
+        cte: true,
+      });
+    });
+
+    it('automatic cte in `where` for key-value callback', async () => {
+      await UserNoHooks.where({
+        id: () => User.get('id').insert(userData),
+      });
+
+      assert.createHooksBeingCalled({
+        data: [depData],
+        cte: true,
+      });
+    });
+
+    it('automatic cte in `where` for a function arg', async () => {
+      await UserNoHooks.where(() => User.get('active').insert(userData));
+
+      assert.createHooksBeingCalled({
+        data: [depData],
+        cte: true,
+      });
+    });
+
+    it('automatic cte for a query in expression', async () => {
+      await UserNoHooks.where((q) =>
+        q.or(User.get('active').insert(userData)).equals(false),
+      );
+
+      assert.createHooksBeingCalled({
+        data: [depData],
+        cte: true,
+      });
+    });
+
+    it('supports nested expressions with cte query', async () => {
+      await UserNoHooks.where((q) =>
+        sql(() => q.or(User.get('active').insert(userData)).equals(false)),
+      );
+
+      assert.createHooksBeingCalled({
+        data: [depData],
+        cte: true,
+      });
     });
   });
 
@@ -513,61 +709,212 @@ describe('hooks', () => {
     );
 
     describe('cte', () => {
-      it('should call cte hooks for create', async () => {
-        const createQuery = User.create({ ...userData, age: 1 }).select('id');
+      describe('create methods in cte', () => {
+        it('insert', async () => {
+          await testDb
+            .with('cte', User.insert({ ...userData, age: 123 }))
+            .from('cte');
 
-        const res = await UserNoHooks.with('name', createQuery)
-          .from('name')
-          .select({ name: 'id' });
+          assert.createHooksBeingCalled({
+            data: [{ name: 'name', age: 123 }],
+            cte: true,
+          });
+        });
 
-        expect(res).toEqual([{ name: expect.any(Number) }]);
+        it('create', async () => {
+          const createQuery = User.create({ ...userData, age: 1 }).select('id');
 
-        assert.cteCreateHooksBeingCalled({ data: [{ name: 'name', age: 1 }] });
-      });
+          const res = await UserNoHooks.with('name', createQuery)
+            .from('name')
+            .select({ name: 'id' });
 
-      it('should call cte hooks for createMany', async () => {
-        const createQuery = User.createMany([
-          { ...userData, age: 1 },
-          { ...userData, age: 1 },
-        ]).select('id');
+          expect(res).toEqual([{ name: expect.any(Number) }]);
 
-        const res = await UserNoHooks.with('name', createQuery)
-          .from('name')
-          .select({ name: 'id' });
+          assert.createHooksBeingCalled({
+            data: [{ name: 'name', age: 1 }],
+            cte: true,
+          });
+        });
 
-        expect(res).toEqual([
-          { name: expect.any(Number) },
-          { name: expect.any(Number) },
-        ]);
+        it('createMany', async () => {
+          const createQuery = User.createMany([
+            { ...userData, age: 1 },
+            { ...userData, age: 1 },
+          ]).select('id');
 
-        assert.cteCreateHooksBeingCalled({
-          data: [
+          const res = await UserNoHooks.with('name', createQuery)
+            .from('name')
+            .select({ name: 'id' });
+
+          expect(res).toEqual([
+            { name: expect.any(Number) },
+            { name: expect.any(Number) },
+          ]);
+
+          assert.createHooksBeingCalled({
+            data: [
+              { name: 'name', age: 1 },
+              { name: 'name', age: 1 },
+            ],
+            cte: true,
+          });
+        });
+
+        it('createOneFrom', async () => {
+          await UserNoHooks.insert({ ...userData, age: 123 });
+
+          const res = await testDb
+            .with(
+              'cte',
+              User.createOneFrom(User.select('name', 'password', 'age').take()),
+            )
+            .from('cte')
+            .select('name', 'age');
+
+          expect(res).toMatchObject([{ name: 'name', age: 123 }]);
+
+          assert.createHooksBeingCalled({
+            data: [{ name: 'name', age: 123 }],
+            cte: true,
+          });
+        });
+
+        it('createOneFrom create', async () => {
+          await UserNoHooks.createOneFrom(
+            User.create(userData).select('name', 'password'),
+          );
+
+          assert.createHooksBeingCalled({
+            data: [depData],
+            cte: true,
+          });
+        });
+
+        it('createManyFrom', async () => {
+          await UserNoHooks.insert(userData);
+
+          const res = await testDb
+            .with(
+              'cte',
+              User.createManyFrom(User.select('name', 'password').take(), [
+                { age: 1 },
+                { age: 2 },
+              ]),
+            )
+            .from('cte')
+            .select('name', 'age');
+
+          expect(res).toMatchObject([
             { name: 'name', age: 1 },
+            { name: 'name', age: 2 },
+          ]);
+
+          assert.createHooksBeingCalled({
+            data: [
+              { name: 'name', age: 1 },
+              { name: 'name', age: 2 },
+            ],
+            cte: true,
+          });
+        });
+
+        it('createManyFrom create', async () => {
+          await UserNoHooks.createManyFrom(
+            User.create(userData).select('name', 'password'),
+            [{ age: 1 }, { age: 2 }],
+          );
+
+          assert.createHooksBeingCalled({
+            data: [depData],
+            cte: true,
+          });
+        });
+
+        it('createForEachFrom', async () => {
+          await UserNoHooks.insertMany([
+            { ...userData, age: 1 },
+            { ...userData, age: 2 },
+          ]);
+
+          const res = await testDb
+            .with(
+              'cte',
+              User.createForEachFrom(User.select('name', 'password', 'age')),
+            )
+            .from('cte')
+            .select('name', 'age');
+
+          expect(res).toMatchObject([
             { name: 'name', age: 1 },
-          ],
+            { name: 'name', age: 2 },
+          ]);
+
+          assert.createHooksBeingCalled({
+            data: [
+              { name: 'name', age: 1 },
+              { name: 'name', age: 2 },
+            ],
+            cte: true,
+          });
         });
       });
 
-      // TODO: in insert sql logic need to untangle WITH from INSERT,
-      //  so that INSERT can be wrapped in additional WITH that's needed for the UNION.
-      // TODO: every batch can have own returning, need to generate returning dynamically per batch
-      it.todo('should work for createOneFrom');
-      // it('should work for createOneFrom', async () => {
-      //   const q = Profile.insertMany([
-      //     {
-      //       ...profileData,
-      //       userId: () => User.create(userData).get('id'),
-      //     },
-      //     // {
-      //     //   ...userData,
-      //     //   name: () => User.create(userData).get('name'),
-      //     // },
-      //   ]);
-      //
-      //   console.log(q.toSQL().text);
-      //
-      //   await q;
-      // });
+      describe('nested create methods', () => {
+        it('create in create', async () => {
+          const res = await Profile.create({
+            ...profileData,
+            userId: () => User.create({ ...userData, age: 123 }).get('id'),
+          });
+
+          expect(res).toMatchObject({
+            ...profileData,
+            userId: expect.any(Number),
+          });
+
+          assert.createHooksBeingCalled({
+            data: [{ name: 'name', age: 123 }],
+            cte: true,
+          });
+        });
+
+        it('create in createMany', async () => {
+          const res = await Profile.createMany([
+            {
+              ...profileData,
+              userId: () => User.create({ ...userData, age: 20 }).get('id'),
+            },
+            {
+              ...profileData,
+              userId: () => User.create({ ...userData, age: 30 }).get('id'),
+            },
+          ]);
+
+          expect(res).toMatchObject([
+            { ...profileData, userId: expect.any(Number) },
+            { ...profileData, userId: expect.any(Number) },
+          ]);
+
+          assert.createHooksBeingCalled({
+            data: [
+              { name: 'name', age: 20 },
+              { name: 'name', age: 30 },
+            ],
+            cte: true,
+          });
+        });
+      });
+
+      it('should have empty returning if has no hooks and moved to CTE', async () => {
+        await UserNoHooks.insert({
+          ...userData,
+          name: () => User.get('name').insert({ ...userData, name: 'inner' }),
+        });
+
+        assert.createHooksBeingCalled({
+          data: [{ name: 'inner' }],
+          cte: true,
+        });
+      });
     });
   });
 
@@ -596,13 +943,28 @@ describe('hooks', () => {
       }
     });
 
+    it('should not select the same column twice when using get', async () => {
+      const q = User.find(0).get('age').update({ name: 'updated' });
+
+      expectSql(
+        q.toSQL(),
+        `
+          UPDATE "user" SET "name" = $1, "updated_at" = now()
+          WHERE "user"."id" = $2
+          RETURNING "user"."age", "user"."name"
+        `,
+        ['updated', 0],
+      );
+    });
+
     it('should not call afterUpdate hooks when did not update', async () => {
       await User.find(0).update({ name: 'new name' });
 
-      assert.hooksBeingCalled({
-        noDepsHooks: ['beforeQuery', 'beforeUpdate', 'beforeSave'],
-        depsHooks: ['afterQuery'],
-        data: [],
+      assert.hooksBeingCalledV2({
+        beforeQuery: 1,
+        beforeUpdate: 1,
+        beforeSave: 1,
+        afterQuery: 1,
       });
     });
 
@@ -653,10 +1015,11 @@ describe('hooks', () => {
           name: 'new name',
         });
 
-        assert.hooksBeingCalled({
-          noDepsHooks: ['beforeQuery', 'beforeUpdate', 'beforeSave'],
-          depsHooks: ['afterQuery'],
-          data: [],
+        assert.hooksBeingCalledV2({
+          beforeQuery: 1,
+          beforeUpdate: 1,
+          beforeSave: 1,
+          afterQuery: 1,
         });
       });
 
@@ -681,6 +1044,56 @@ describe('hooks', () => {
         });
       });
     });
+
+    describe('cte', () => {
+      describe('update methods in cte', () => {
+        it('update', async () => {
+          const id = await User.get('id').insert(userData);
+          jest.clearAllMocks();
+
+          await testDb
+            .with('cte', User.find(id).update({ name: 'new name', age: 123 }))
+            .from('cte');
+
+          assert.updateHooksBeingCalled({
+            data: [{ name: 'new name', age: 123 }],
+            cte: true,
+          });
+        });
+
+        it('updateFrom', async () => {
+          await User.get('id').insert(userData);
+          jest.clearAllMocks();
+
+          await testDb
+            .with(
+              'cte',
+              User.updateFrom(() => User.as('u').take()).set({
+                name: 'new name',
+                age: 123,
+              }),
+            )
+            .from('cte');
+
+          assert.updateHooksBeingCalled({
+            data: [{ name: 'new name', age: 123 }],
+            cte: true,
+          });
+        });
+
+        it.each(['increment', 'decrement'] as const)('%s', async (method) => {
+          const id = await User.get('id').insert({ ...userData, age: 20 });
+          jest.clearAllMocks();
+
+          await testDb.with('cte', User.find(id)[method]('age')).from('cte');
+
+          assert.updateHooksBeingCalled({
+            data: [{ name: 'name', age: method === 'increment' ? 21 : 19 }],
+            cte: true,
+          });
+        });
+      });
+    });
   });
 
   describe('upsert', () => {
@@ -690,12 +1103,16 @@ describe('hooks', () => {
       const res = await User.find(1)
         .upsert({
           update: { name: 'new name' },
-          create: userData,
+          create: { ...userData, name: 'created' },
         })
         .select('*', 'password');
+
+      expect(res).toMatchObject({ name: 'created' });
       expect(res).toMatchObject(hookSetCreateValues);
 
-      assert.upsertCreateHookBeingCalled({ data: [depData] });
+      assert.upsertCreateHookBeingCalled({
+        data: [{ ...depData, name: 'created' }],
+      });
     });
 
     it('should work for upsert update', async () => {
@@ -724,11 +1141,7 @@ describe('hooks', () => {
         })
         .select('*', 'password');
 
-      const orig = q.q.patchResult!;
-      q.q.patchResult = (q, hookResult, queryResult) => {
-        queryResult.rowCount = 0;
-        return orig(q, hookResult, queryResult);
-      };
+      emulateReturnNoRowsOnce();
 
       const res = await q;
 
@@ -739,41 +1152,137 @@ describe('hooks', () => {
       });
     });
 
+    describe('cte', () => {
+      it('should update existing record', async () => {
+        const id = await UserNoHooks.get('id').create(userData);
+        jest.clearAllMocks();
+
+        const res = await testDb
+          .with(
+            'cte',
+            User.find(id)
+              .upsert({
+                update: { name: 'new name' },
+                create: userData,
+              })
+              .select('*', 'password'),
+          )
+          .from('cte');
+
+        expect(res).toMatchObject([hookSetUpdateValues]);
+
+        assert.upsertUpdateHookBeingCalled({
+          data: [{ name: 'new name' }],
+          cte: true,
+        });
+      });
+
+      it('should create a new record', async () => {
+        const res = await testDb
+          .with(
+            'cte',
+            User.find(0)
+              .upsert({
+                update: { name: 'updated' },
+                create: { ...userData, name: 'created' },
+              })
+              .select('*', 'password'),
+          )
+          .from('cte');
+
+        expect(res).toMatchObject([{ name: 'created' }]);
+        expect(res).toMatchObject([hookSetCreateValues]);
+
+        assert.upsertCreateHookBeingCalled({
+          data: [{ name: 'created' }],
+          cte: true,
+        });
+      });
+    });
+  });
+
+  describe('orCreate', () => {
+    tested.orCreate = true;
+
     it('should work for orCreate when the record is found', async () => {
       const id = await UserNoHooks.get('id').create(userData);
-      jest.clearAllMocks();
 
       const res = await User.find(id)
         .orCreate(userData)
         .select('*', 'password');
+
       expect(res).not.toMatchObject(hookSetCreateValues);
 
       assert.queryHooksBeingCalled({ data: [depData] });
     });
 
     it('should work for orCreate when the record is not found', async () => {
-      tested.orCreate = true;
-
       const res = await User.find(1).orCreate(userData).select('*', 'password');
+
       expect(res).toMatchObject(hookSetCreateValues);
 
-      assert.createHooksBeingCalled({ data: [depData] });
+      assert.orCreateCreateHooksBeingCalled({ data: [depData] });
+    });
+
+    describe('cte', () => {
+      it('should find existing record', async () => {
+        const existing = await UserNoHooks.create(userData);
+
+        const [res] = await testDb
+          .with('cte', User.find(existing.id).orCreate(userData).selectAll())
+          .from('cte')
+          .selectAll();
+
+        expect(res).toEqual(existing);
+
+        assert.orCreateFindCteHooksBeingCalled({ data: [depData] });
+      });
+
+      it('should create a record', async () => {
+        const [res] = await testDb
+          .with('cte', User.find(0).orCreate(userData).select('*', 'password'))
+          .from('cte')
+          .selectAll();
+
+        expect(res).toMatchObject(hookSetCreateValues);
+
+        assert.orCreateCreateCteHooksBeingCalled({ data: [depData] });
+      });
     });
   });
 
   describe('delete', () => {
-    it('should work for delete', async () => {
-      tested.delete = true;
+    tested.delete = true;
 
+    it('should work for delete', async () => {
       const id = await User.get('id').create(userData);
       jest.clearAllMocks();
 
       await User.find(id).delete();
 
-      assert.hooksBeingCalled({
-        noDepsHooks: ['beforeQuery', 'beforeDelete'],
-        depsHooks: ['afterQuery', 'afterDelete', 'afterDeleteCommit'],
+      assert.hooksBeingCalledV2({
         data: [depData],
+        beforeQuery: 1,
+        beforeDelete: 1,
+        afterQuery: 1,
+        afterDelete: 1,
+        afterDeleteCommit: 1,
+      });
+    });
+
+    describe('cte', () => {
+      it('should delete a record', async () => {
+        const id = await User.get('id').create(userData);
+        jest.clearAllMocks();
+
+        await testDb.with('cte', User.find(id).delete()).from('cte');
+
+        assert.hooksBeingCalledV2({
+          data: [depData],
+          beforeDelete: 1,
+          afterDelete: 1,
+          afterDeleteCommit: 1,
+        });
       });
     });
   });
