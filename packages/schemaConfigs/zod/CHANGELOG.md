@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.37
+
+### Patch Changes
+
+- 962df21: Update zod dependency to v4
+
 ## 1.0.36
 
 ### Patch Changes
