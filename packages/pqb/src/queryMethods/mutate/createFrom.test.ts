@@ -331,15 +331,15 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          WITH "chat" AS (
+          WITH "q" AS (
             SELECT "chat"."id_of_chat" "chatId"
             FROM "chat"
             WHERE "chat"."id_of_chat" = $1
             LIMIT 1
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "chat"."chatId", v."author_id"::int4, v."text"::text
-          FROM "chat", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
+          SELECT "q"."chatId", v."author_id"::int4, v."text"::text
+          FROM "q", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
           RETURNING ${messageColumnsSql}
         `,
         [1, 1, 2],
@@ -363,15 +363,15 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          WITH "user" AS (
+          WITH "q" AS (
             SELECT "user"."name" "snakeName"
             FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
           )
           INSERT INTO "snake"("snake_name", "tail_length")
-          SELECT "user"."snakeName", v."tail_length"::int4
-          FROM "user", (VALUES ($2), ($3)) v("tail_length")
+          SELECT "q"."snakeName", v."tail_length"::int4
+          FROM "q", (VALUES ($2), ($3)) v("tail_length")
           RETURNING ${snakeSelectAll}
         `,
         [1, 5, 6],
@@ -394,15 +394,15 @@ describe('createFrom functions', () => {
       expectSql(
         q.toSQL(),
         `
-          WITH "user" AS (
+          WITH "q" AS (
             SELECT "user"."password"
             FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
           )
           INSERT INTO "user"("password", "id", "name")
-          SELECT "user"."password", v."id"::int4, v."name"::text
-          FROM "user", (VALUES ($2, $3), ($4, $5)) v("id", "name")
+          SELECT "q"."password", v."id"::int4, v."name"::text
+          FROM "q", (VALUES ($2, $3), ($4, $5)) v("id", "name")
           RETURNING *
         `,
         [123, 456, 'runtime text', 789, 'runtime text'],
@@ -443,15 +443,15 @@ describe('createFrom functions', () => {
       expectSql(
         q.toSQL(),
         `
-          WITH "user" AS (
+          WITH "q" AS (
             SELECT "user"."name"
             FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
           )
           INSERT INTO "user"("name", "password")
-          SELECT "user"."name", v."password"::text
-          FROM "user", (VALUES ($2), ($3)) v("password")
+          SELECT "q"."name", v."password"::text
+          FROM "q", (VALUES ($2), ($3)) v("password")
           RETURNING "user"."name"
         `,
         [user.id, 'one', 'two'],
@@ -486,26 +486,26 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          WITH "chat" AS (
+          WITH "q" AS (
             SELECT "chat"."id_of_chat" "chatId"
             FROM "chat"
             WHERE "chat"."id_of_chat" = $1
             LIMIT 1
-          ), "q" AS (
+          ), "q2" AS (
             INSERT INTO "user"("name", "password")
             VALUES ($2, $3)
             RETURNING "user"."id"
-          ), "q2" AS (
+          ), "q3" AS (
             INSERT INTO "user"("name", "password")
             VALUES ($4, $5)
             RETURNING "user"."id"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
           SELECT
-            "chat"."chatId",
+            "q"."chatId",
             v."author_id"::int4,
             v."text"::text
-          FROM "chat", (VALUES ((SELECT "q"."id" FROM "q"), 'text 1'), ((SELECT "q2"."id" FROM "q2"), 'text 2')) v("author_id", "text")
+          FROM "q", (VALUES ((SELECT "q2"."id" FROM "q2"), 'text 1'), ((SELECT "q3"."id" FROM "q3"), 'text 2')) v("author_id", "text")
           RETURNING ${messageColumnsSql}
         `,
         [1, 'name', 'password', 'name', 'password'],
@@ -533,7 +533,7 @@ describe('createFrom functions', () => {
       expectSql(
         q.toSQL(),
         `
-          WITH "chat" AS (
+          WITH "q" AS (
             SELECT "chat"."id_of_chat" "chatId"
             FROM "chat"
             WHERE "chat"."id_of_chat" = $3
@@ -544,8 +544,8 @@ describe('createFrom functions', () => {
             RETURNING "user"."id", "user"."name"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "chat"."chatId", v."author_id"::int4, v."text"::text
-          FROM "chat", (VALUES
+          SELECT "q"."chatId", v."author_id"::int4, v."text"::text
+          FROM "q", (VALUES
             ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)),
             ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1))
           ) v("author_id", "text")

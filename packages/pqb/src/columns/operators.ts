@@ -35,7 +35,7 @@ export const setMoveMutativeQueryToCte = (fn: MoveMutativeQueryToCte) => {
   moveMutativeQueryToCte = fn;
 };
 
-export let prepareSubQueryForSql: PrepareSubQueryForSql;
+let prepareSubQueryForSql: PrepareSubQueryForSql;
 export const setPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
   prepareSubQueryForSql = fn;
 };

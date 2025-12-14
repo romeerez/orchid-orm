@@ -9,6 +9,7 @@ dist
 coverage-summary.json
 .pnpm-debug.log
 trace/
+packages/benchmarks
 
 # created in CI
 .pnpm-store/

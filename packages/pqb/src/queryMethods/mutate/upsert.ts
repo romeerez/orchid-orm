@@ -12,7 +12,7 @@ import {
   QueryMetaBase,
 } from '../../core';
 import { _clone } from '../../query/queryUtils';
-import { orCreate } from './orCreate';
+import { _orCreate } from './orCreate';
 
 type UpsertCreate<DataKey extends PropertyKey, CD> = {
   [K in keyof CD as K extends DataKey ? never : K]: CD[K];
@@ -175,6 +175,6 @@ export const QueryUpsert: QueryUpsert = {
       _queryUpdate(q, updateData as never);
     }
 
-    return orCreate(q as Query, data.create, updateData, mergeData) as never;
+    return _orCreate(q as Query, data.create, updateData, mergeData) as never;
   },
 };

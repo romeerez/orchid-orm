@@ -25,6 +25,7 @@ export {
   _queryCreateForEachFrom,
   _queryInsertForEachFrom,
 } from './mutate/createFrom';
+export { _orCreate } from './mutate/orCreate';
 export * from './mutate/delete';
 export * from './for';
 export * from './from';

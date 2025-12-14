@@ -980,21 +980,17 @@ describe('hasOne', () => {
       });
 
       it('should support connect in batch create', async () => {
+        const user = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.profile.createMany([
           {
             Bio: 'profile 1',
-            user: {
-              create: {
-                ...UserData,
-                Name: 'tmp',
-              },
-            },
+            UserId: user.Id,
+            ProfileKey: user.UserKey,
           },
           {
             Bio: 'profile 2',
-            user: {
-              connect: { Name: 'tmp' },
-            },
+            UserId: user.Id,
+            ProfileKey: user.UserKey,
           },
         ]);
 

@@ -237,7 +237,7 @@ export const selectToSqlList = (
             }
 
             if (key) {
-              const column = item.q.shape[key];
+              const column = (item.q as QueryData).shape[key];
               (selectedAs ??= {})[key] = column?.data.name || key;
             }
           }

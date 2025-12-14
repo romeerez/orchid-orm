@@ -427,4 +427,27 @@ describe('upsert', () => {
       expect.any(Object),
     );
   });
+
+  it('should name updating and creating CTEs uniquely', async () => {
+    const result = await testDb
+      .with('a', () =>
+        User.find(1)
+          .upsert({ update: { name: 'name' }, create: userData })
+          .select('id'),
+      )
+      .with('b', () =>
+        User.find(1)
+          .upsert({ update: { name: 'name' }, create: userData })
+          .select('id'),
+      )
+      .from(['a', 'b'])
+      .select({ a: 'a.id', b: 'b.id' });
+
+    expect(result).toEqual([
+      {
+        a: expect.any(Number),
+        b: expect.any(Number),
+      },
+    ]);
+  });
 });

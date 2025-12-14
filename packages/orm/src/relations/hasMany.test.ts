@@ -1264,15 +1264,18 @@ describe('hasMany', () => {
     describe('nested connect', () => {
       it('should support connect', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const sender = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...UserData, Name: 'tmp' } },
+            AuthorId: sender.Id,
+            MessageKey: sender.UserKey,
             Text: 'message 1',
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
+            MessageKey: sender.UserKey,
             Text: 'message 2',
           },
         ]);
@@ -1306,16 +1309,17 @@ describe('hasMany', () => {
 
       it('should support connect using `on`', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const sender = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...UserData, Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 1',
             Active: true,
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 2',
             Active: true,
           },
@@ -1350,25 +1354,26 @@ describe('hasMany', () => {
 
       it('should support connect in batch create', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const sender = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...UserData, Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 1',
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 2',
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 3',
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 4',
           },
         ]);
@@ -1427,28 +1432,29 @@ describe('hasMany', () => {
 
       it('should support connect in batch create using `on`', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const sender = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.message.createMany([
           {
             ChatId,
-            sender: { create: { ...UserData, Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 1',
             Active: true,
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 2',
             Active: true,
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 3',
             Active: true,
           },
           {
             ChatId,
-            sender: { connect: { Name: 'tmp' } },
+            AuthorId: sender.Id,
             Text: 'message 4',
             Active: true,
           },

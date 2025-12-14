@@ -738,8 +738,17 @@ const then = async (
   } catch (err) {
     let error;
     if (err instanceof adapter.errorClass) {
-      error = new (q.error as unknown as new () => QueryError)();
-      adapter.assignError(error, err);
+      if (
+        // a special not found error thrown by 'not-found'::int
+        'code' in err &&
+        err.code === '22P02' &&
+        err.message.endsWith(`"not-found"`)
+      ) {
+        error = new NotFoundError(q);
+      } else {
+        error = new (q.error as unknown as new () => QueryError)();
+        adapter.assignError(error, err);
+      }
       error.cause = localError;
     } else {
       error = err;

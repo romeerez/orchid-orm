@@ -108,6 +108,9 @@ export interface AdapterBase {
   errorClass: new (...args: any[]) => Error;
   assignError(to: QueryError, from: Error): void;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  updateConfig(config: any): Promise<void>;
+
   reconfigure(params: {
     database?: string;
     user?: string;

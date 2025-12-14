@@ -8,6 +8,7 @@ import {
   addValue,
   emptyObject,
   Expression,
+  ExpressionData,
   MaybeArray,
   PickQueryMeta,
   pushQueryValueImmutable,
@@ -190,7 +191,7 @@ class Headline extends Expression<Column.Pick.QueryColumnOfType<string>> {
   result = emptyObject as { value: Column.Pick.QueryColumnOfType<string> };
 
   constructor(
-    public q: QueryData,
+    public q: ExpressionData,
     public source: QuerySourceItem,
     public params?: HeadlineParams<Query>,
   ) {
@@ -199,7 +200,8 @@ class Headline extends Expression<Column.Pick.QueryColumnOfType<string>> {
   }
 
   makeSQL(ctx: ToSQLCtx, quotedAs: string | undefined): string {
-    const { q, source, params } = this;
+    const { source, params } = this;
+    const q = this.q as QueryData;
     const lang = getSearchLang(ctx, q, source, quotedAs);
 
     const text = params?.text
@@ -233,7 +235,7 @@ AggregateMethods.prototype.headline = function (
     throw new OrchidOrmInternalError(q, `Search \`${search}\` is not defined`);
 
   return new Headline(
-    q.q,
+    q.q as ExpressionData,
     source,
     params as HeadlineParams<Query> | undefined,
   ) as never;

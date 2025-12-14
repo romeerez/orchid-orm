@@ -14,7 +14,7 @@ export type OrCreateArg<Data> = Data | (() => Data);
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.
-export function orCreate<T extends PickQueryMetaResultReturnType>(
+export function _orCreate<T extends PickQueryMetaResultReturnType>(
   query: T,
   data: unknown | FnUnknownToUnknown,
   updateData?: unknown,
@@ -113,6 +113,6 @@ export interface QueryOrCreate {
 
 export const QueryOrCreate: QueryOrCreate = {
   orCreate(data) {
-    return orCreate(_clone(this) as never, data);
+    return _orCreate(_clone(this) as never, data);
   },
 };

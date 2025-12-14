@@ -15,6 +15,7 @@ import {
 } from 'test-utils';
 import { emptyObject, Expression, getValueKey, noop } from '../core';
 import { ComputedColumn } from '../modules/computed';
+import { prepareSubQueryForSql } from 'pqb';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -367,8 +368,14 @@ describe('merge queries', () => {
       q1.having = [sum];
       q2.having = [avg];
 
-      q1.union = { b: User, u: [{ a: testDb.sql`a`, k: 'UNION' }] };
-      q2.union = { b: User, u: [{ a: testDb.sql`b`, k: 'EXCEPT' }] };
+      q1.union = {
+        b: prepareSubQueryForSql(User, User),
+        u: [{ a: testDb.sql`a`, k: 'UNION' }],
+      };
+      q2.union = {
+        b: prepareSubQueryForSql(User, User),
+        u: [{ a: testDb.sql`b`, k: 'EXCEPT' }],
+      };
       q1.order = [{ id: 'ASC' }];
       q2.order = [{ name: 'DESC' }];
       q1.limit = 1;

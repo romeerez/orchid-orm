@@ -13,7 +13,6 @@ import { prependTopCte } from './cte.sql';
 export const moveQueryToCte = (
   ctx: ToSQLCtx,
   query: SubQueryForSql,
-  cteName?: string,
   type = query.q.type,
 ): {
   as: string;
@@ -43,7 +42,7 @@ export const moveQueryToCte = (
     }
   }
 
-  const as = prependTopCte(ctx, query, cteName, type);
+  const as = prependTopCte(ctx, query, undefined, type);
 
   const makeSelectList = (isSubSql?: boolean) => {
     const list: string[] = [];
@@ -76,7 +75,6 @@ export const moveQueryToCte = (
 export const moveMutativeQueryToCteBase = (
   ctx: ToSQLCtx,
   query: SubQueryForSql,
-  cteName?: string,
   type = query.q.type,
 ): {
   as: string;
@@ -90,7 +88,7 @@ export const moveMutativeQueryToCteBase = (
     };
   }
 
-  const { as, makeSelectList } = moveQueryToCte(ctx, query, cteName, type);
+  const { as, makeSelectList } = moveQueryToCte(ctx, query, type);
 
   return {
     as,

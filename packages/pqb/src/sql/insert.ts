@@ -21,7 +21,6 @@ import {
   Sql,
   toArray,
 } from '../core';
-import { getQueryAs } from '../common/utils';
 import { Db } from '../query/db';
 import { RawSQL } from './rawSql';
 import { OnConflictTarget, SelectAsValue, SelectItem } from './types';
@@ -178,11 +177,7 @@ export const makeInsertSql = (
 
       ctx.sql[1] = moveMutativeQueryToCte(ctx, q);
     } else {
-      const { makeSelectList } = moveQueryToCte(
-        ctx,
-        insertFrom,
-        getQueryAs(insertFrom),
-      );
+      const { as, makeSelectList } = moveQueryToCte(ctx, insertFrom);
 
       const selectList = makeSelectList(true);
 
@@ -198,10 +193,7 @@ export const makeInsertSql = (
         }),
       );
 
-      const queryAs = getQueryAs(insertFrom);
-      sqlState.selectFromSql = ` SELECT ${selectList.join(
-        ', ',
-      )} FROM "${queryAs}",`;
+      sqlState.selectFromSql = ` SELECT ${selectList.join(', ')} FROM "${as}",`;
     }
   }
 

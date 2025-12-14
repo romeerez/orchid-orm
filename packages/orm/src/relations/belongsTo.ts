@@ -1,7 +1,6 @@
 import { ORMTableInput, TableClass } from '../baseTable';
 import {
   _queryCreate,
-  _queryCreateMany,
   _queryDefaults,
   _queryDelete,
   _queryFindBy,
@@ -33,13 +32,17 @@ import {
   emptyArray,
   EmptyObject,
   getPrimaryKeys,
-  pushQueryValueImmutable,
   QueryResult,
   RecordUnknown,
   RelationConfigBase,
   RelationJoinQuery,
   ColumnsShape,
   Column,
+  getFreeAlias,
+  _with,
+  RawSQL,
+  RawSQLBase,
+  _orCreate,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -49,8 +52,6 @@ import {
 } from './relations';
 import {
   addAutoForeignKey,
-  NestedInsertOneItem,
-  NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
   RelJoin,
@@ -164,11 +165,6 @@ interface State {
   on?: RecordUnknown;
 }
 
-type BelongsToNestedInsert = (
-  query: Query,
-  relationData: NestedInsertOneItem[],
-) => Promise<RecordUnknown[]>;
-
 type BelongsToNestedUpdate = (
   q: Query,
   update: RecordUnknown,
@@ -180,7 +176,6 @@ type BelongsToNestedUpdate = (
 ) => void;
 
 class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
-  private readonly nestedInsert: BelongsToNestedInsert;
   private readonly nestedUpdate: BelongsToNestedUpdate;
 
   constructor(
@@ -189,79 +184,62 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     private state: State,
   ) {
     super(schema);
-    this.nestedInsert = nestedInsert(this.state);
     this.nestedUpdate = nestedUpdate(this.state);
   }
 
-  create(q: Query, ctx: CreateCtx, item: RecordUnknown, rowIndex: number) {
+  create(q: Query, ctx: CreateCtx, item: RecordUnknown) {
     const {
       key,
-      state: { primaryKeys, foreignKeys },
+      state: { query, primaryKeys, foreignKeys },
     } = this;
 
-    const columnIndexes = foreignKeys.map((key) => {
-      let index = ctx.columns.get(key);
-      if (index === undefined) {
-        ctx.columns.set(key, (index = ctx.columns.size));
+    for (const key of foreignKeys) {
+      if (!ctx.columns.has(key)) {
+        ctx.columns.set(key, ctx.columns.size);
       }
-      return index;
-    });
-
-    // TODO: belongs nested creates can be done via a single query once hooks are called for sub queries
-    // const value = item[key] as NestedInsertOneItemCreate;
-    // if ('create' in value) {
-    //   const as = moveQueryValueToWith(
-    //     q,
-    //     (q.q.insertWith ??= {}),
-    //     _queryCreate(query.select(...primaryKeys), value.create as never),
-    //     rowIndex,
-    //   );
-    //
-    //   foreignKeys.map((foreignKey, i) => {
-    //     item[foreignKey] = new RawSQL(
-    //       `(SELECT "${primaryKeys[i]}" FROM "${as}")`,
-    //     );
-    //   });
-    //   return;
-    // }
-
-    const store = ctx as unknown as {
-      belongsTo?: Record<string, [number, number[], unknown][]>;
-    };
-
-    if (!store.belongsTo) store.belongsTo = {};
-
-    const values = [rowIndex, columnIndexes, item[key]] as [
-      number,
-      number[],
-      unknown,
-    ];
-
-    if (store.belongsTo[key]) {
-      store.belongsTo[key].push(values);
-      return;
     }
 
-    const relationData = [values];
-    store.belongsTo[key] = relationData;
-    q.q.wrapInTransaction = true;
+    const value = item[key] as NestedInsertOneItemCreate;
+    if ('create' in value || 'connectOrCreate' in value) {
+      foreignKeys.forEach((foreignKey) => (item[foreignKey] = new RawSQL('')));
 
-    pushQueryValueImmutable(q, 'beforeCreate', async (q: Query) => {
-      const inserted = await this.nestedInsert(
+      const selectPKeys = query.select(...primaryKeys);
+
+      _with(
         q,
-        relationData.map(([, , data]) => data as NestedInsertOneItem),
+        (as) => {
+          foreignKeys.forEach((foreignKey, i) => {
+            (
+              item[foreignKey] as RawSQLBase
+            )._sql = `(SELECT "${as}"."${primaryKeys[i]}" FROM "${as}")`;
+          });
+        },
+        'create' in value
+          ? _queryCreate(selectPKeys, value.create as never)
+          : _orCreate(
+              _queryWhere(selectPKeys, [
+                (value.connectOrCreate as { where: never }).where,
+              ]),
+              (value.connectOrCreate as { create: never }).create,
+            ),
       );
 
-      const { values } = q.q;
-      for (let i = 0, len = relationData.length; i < len; i++) {
-        const [rowIndex, columnIndexes] = relationData[i];
-        const row = (values as unknown[][])[rowIndex];
+      return;
+    } else if ('connect' in value) {
+      const as = getFreeAlias(q.q.withShapes, 'q');
+      _with(q, as, query.select(...primaryKeys).findBy(value.connect));
 
-        for (let c = 0, len = columnIndexes.length; c < len; c++) {
-          row[columnIndexes[c]] = inserted[i][primaryKeys[c]];
-        }
-      }
-    });
+      foreignKeys.map((foreignKey, i) => {
+        const selectColumn = `(SELECT "${as}"."${primaryKeys[i]}" FROM "${as}")`;
+        item[foreignKey] = new RawSQL(
+          i === 0
+            ? `CASE WHEN (SELECT count(*) FROM "${as}") = 0 AND (SELECT 'not-found')::int = 0 THEN NULL ELSE ${selectColumn} END`
+            : selectColumn,
+        );
+      });
+
+      return;
+    }
   }
 
   update(q: Query, ctx: UpdateCtx, set: RecordUnknown) {
@@ -360,103 +338,6 @@ export const makeBelongsToMethod = (
     ),
     reverseJoin,
   };
-};
-
-const nestedInsert = ({ query, primaryKeys, on }: State) => {
-  return (async (_, data) => {
-    const t = query.clone();
-
-    // array to store specific items will be reused
-    const items: NestedInsertOneItem[] = [];
-    for (const item of data) {
-      if (item.connectOrCreate) {
-        items.push(
-          on
-            ? {
-                ...item,
-                connectOrCreate: {
-                  ...item.connectOrCreate,
-                  where: { ...item.connectOrCreate.where, ...on },
-                },
-              }
-            : item,
-        );
-      }
-    }
-
-    let connectOrCreated: unknown[];
-    if (items.length) {
-      for (let i = 0, len = items.length; i < len; i++) {
-        items[i] = t.findByOptional(
-          (items[i].connectOrCreate as NestedInsertOneItemConnectOrCreate)
-            .where as never,
-        ) as never;
-      }
-
-      connectOrCreated = await Promise.all(items);
-    } else {
-      connectOrCreated = emptyArray;
-    }
-
-    let connectOrCreatedI = 0;
-    items.length = 0;
-    for (const item of data) {
-      if (item.connectOrCreate) {
-        if (!connectOrCreated[connectOrCreatedI++]) items.push(item);
-      } else if (item.create) {
-        items.push(item);
-      }
-    }
-
-    let created: unknown[];
-    if (items.length) {
-      for (let i = 0, len = items.length; i < len; i++) {
-        items[i] =
-          'create' in items[i]
-            ? (items[i].create as NestedInsertOneItemCreate)
-            : (items[i].connectOrCreate as NestedInsertOneItemConnectOrCreate)
-                .create;
-      }
-
-      created = (await _queryCreateMany(
-        t.select(...primaryKeys),
-        items as never,
-      )) as never;
-    } else {
-      created = emptyArray;
-    }
-
-    items.length = 0;
-    for (const item of data) {
-      if (item.connect) {
-        items.push(
-          on ? { ...item, connect: { ...item.connect, ...on } } : item,
-        );
-      }
-    }
-
-    let connected: unknown[];
-    if (items.length) {
-      for (let i = 0, len = items.length; i < len; i++) {
-        items[i] = t.findBy(items[i].connect as WhereArg<Query>) as never;
-      }
-
-      connected = await Promise.all(items);
-    } else {
-      connected = emptyArray;
-    }
-
-    let createdI = 0;
-    let connectedI = 0;
-    connectOrCreatedI = 0;
-    return data.map((item) => {
-      return item.connectOrCreate
-        ? connectOrCreated[connectOrCreatedI++] || created[createdI++]
-        : item.connect
-        ? connected[connectedI++]
-        : created[createdI++];
-    }) as RecordUnknown[];
-  }) as BelongsToNestedInsert;
 };
 
 const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {

@@ -1,5 +1,37 @@
 # Breaking changes
 
+## orchid-orm 1.59
+
+`belongsTo` relation's nested `create`, `connect`, `connectOrCreate` were drastically optimized.
+
+Previously, such nested inserts were done by executing multiple queries, and now they're combined into a single CTE-based query.
+
+Connecting to a record that was created in the same `createMany` array no longer works:
+
+```ts
+// no longer works:
+await db.book.createMany([
+  {
+    title: 'book 1',
+    author: {
+      // creating an author
+      create: {
+        name: 'Petro',
+      },
+    },
+  },
+  {
+    title: 'book 2',
+    author: {
+      // connecting to the author that was created above:
+      connect: {
+        name: 'Petro',
+      },
+    },
+  },
+]);
+```
+
 ## orchid-orm 1.58
 
 Rename `modify` that takes a helper made with `makeHelper` to `useHelper`.

@@ -383,9 +383,7 @@ export const handleOneData = (
   const encoders: RecordEncoder = {};
   const defaults = (q as Query).q.defaults;
 
-  if (defaults) {
-    data = { ...defaults, ...data };
-  }
+  data = defaults ? { ...defaults, ...data } : { ...data };
 
   processCreateItem(q, data, 0, ctx, encoders);
 
@@ -419,9 +417,9 @@ export const handleManyData = (
   const encoders: RecordEncoder = {};
   const defaults = (q as Query).q.defaults;
 
-  if (defaults) {
-    data = data.map((item) => ({ ...defaults, ...item }));
-  }
+  data = data.map(
+    defaults ? (item) => ({ ...defaults, ...item }) : (item) => ({ ...item }),
+  );
 
   data.forEach((item, i) => {
     processCreateItem(q, item, i, ctx, encoders);

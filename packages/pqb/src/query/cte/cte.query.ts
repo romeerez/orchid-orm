@@ -86,6 +86,48 @@ export type CteSqlResult<
 const _addCte = (query: Query, item: CteItem) =>
   pushOrNewArrayToObjectImmutable(query.q, 'with', item);
 
+export const _with = (
+  q: Query,
+  name: string | ((as: string) => void),
+  queryArg:
+    | PickQueryResult
+    | ((q: CteQueryBuilder<PickQueryWithDataColumnTypes>) => PickQueryResult),
+  options?: CteArgsOptions,
+) => {
+  let query: Query;
+  if (typeof queryArg === 'function') {
+    const arg = q.qb.clone();
+    arg.q.withShapes = q.q.withShapes;
+    query = queryArg(arg) as Query;
+  } else {
+    query = queryArg as Query;
+  }
+
+  if (options?.columns === true) {
+    options = {
+      ...options,
+      columns: Object.keys(query.shape),
+    };
+  }
+
+  _addCte(q, {
+    n: name,
+    o: options as CteOptions,
+    q: prepareSubQueryForSql(q, query),
+  });
+
+  const shape = getShapeFromSelect(query, true);
+
+  if (typeof name === 'string') {
+    setQueryObjectValueImmutable(q, 'withShapes', name, {
+      shape: shape as Column.Shape.QueryInit,
+      computeds: query.q.runtimeComputeds,
+    });
+  }
+
+  return q;
+};
+
 export class CteQuery {
   /**
    * Use `with` to add a Common Table Expression (CTE) to the query.
@@ -225,33 +267,7 @@ export class CteQuery {
       ? [second as CteArgsOptions, third]
       : [undefined, second];
 
-    let query: Query;
-    if (typeof queryArg === 'function') {
-      const arg = q.qb.clone();
-      arg.q.withShapes = q.q.withShapes;
-      query = queryArg(arg) as Query;
-    } else {
-      query = queryArg as Query;
-    }
-
-    if (options?.columns === true) {
-      options = {
-        ...options,
-        columns: Object.keys(query.shape),
-      };
-    }
-
-    _addCte(q, {
-      n: name,
-      o: options as CteOptions,
-      q: prepareSubQueryForSql(q, query),
-    });
-
-    const shape = getShapeFromSelect(query, true);
-    return setQueryObjectValueImmutable(q, 'withShapes', name, {
-      shape: shape as Column.Shape.QueryInit,
-      computeds: query.q.runtimeComputeds,
-    });
+    return _with(q, name, queryArg as never, options);
   }
 
   /**

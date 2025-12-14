@@ -19,6 +19,8 @@ import {
   ChatData,
   ProfileData,
   UserData,
+  TestAdapter,
+  TestTransactionAdapter,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 
@@ -26,8 +28,31 @@ const ormParams = { db: db.$qb };
 
 const activeUserData = { ...UserData, Active: true };
 
+let querySpies: jest.SpyInstance[] | undefined;
+const useQueryCounter = () => {
+  querySpies = [
+    jest.spyOn(TestAdapter.prototype, 'query'),
+    jest.spyOn(TestAdapter.prototype, 'arrays'),
+    jest.spyOn(TestTransactionAdapter.prototype, 'query'),
+    jest.spyOn(TestTransactionAdapter.prototype, 'arrays'),
+  ];
+
+  beforeEach(resetQueriesCount);
+};
+
+const resetQueriesCount = () => querySpies?.forEach((spy) => spy.mockClear());
+
+const getQueriesCount = () => {
+  if (!querySpies) {
+    throw new Error('Must use useQueryCounter');
+  }
+
+  return querySpies.reduce((acc, spy) => acc + spy.mock.calls.length, 0);
+};
+
 describe('belongsTo', () => {
   useTestORM();
+  useQueryCounter();
 
   it('should define foreign keys under autoForeignKeys option', () => {
     const BaseTable = createBaseTable({
@@ -792,39 +817,9 @@ describe('belongsTo', () => {
           sender: senderData,
         });
 
-        // TODO: belongs nested creates can be done via a single query once hooks are called for sub queries
-        // expectSql(
-        //   q.toSQL(),
-        //   `
-        //     WITH "q" AS (
-        //       INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
-        //       VALUES ($1, $2, $3, $4)
-        //       RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
-        //     ),
-        //     "q2" AS (
-        //       INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
-        //       VALUES ($5, $6, $7, $8, $9)
-        //       RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
-        //     )
-        //     INSERT INTO "message"("created_at", "updated_at", "text", "chat_id", "message_key", "author_id")
-        //     VALUES (
-        //       $10, $11, $12,
-        //       (SELECT "IdOfChat" FROM "q"),
-        //       (SELECT "UserKey" FROM "q2"),
-        //       (SELECT "Id" FROM "q2")
-        //     )
-        //     RETURNING "message"."id" "Id", "message"."chat_id" "ChatId", "message"."author_id" "AuthorId"
-        //   `,
-        //   [
-        //     ...Object.values(chatData.create),
-        //     ...Object.values(senderData.create),
-        //     messageData.createdAt,
-        //     messageData.updatedAt,
-        //     'message',
-        //   ],
-        // );
-
         const { Id: messageId, ChatId, AuthorId } = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
         await assert.chat({ ChatId, Title: 'chat' });
@@ -1070,6 +1065,7 @@ describe('belongsTo', () => {
       it('should support connect', async () => {
         await db.chat.create({ ...ChatData, Title: 'chat' });
         await db.user.create({ ...UserData, Name: 'user' });
+        resetQueriesCount();
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           createdAt: MessageData.createdAt,
@@ -1084,6 +1080,8 @@ describe('belongsTo', () => {
         });
 
         const { Id: messageId, ChatId, AuthorId } = await q;
+
+        expect(getQueriesCount()).toBe(1);
 
         await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
         await assert.chat({ ChatId, Title: 'chat' });
@@ -1198,7 +1196,7 @@ describe('belongsTo', () => {
           Title: 'chat',
         });
 
-        const q = await db.message.select('Id', 'ChatId', 'AuthorId').create({
+        const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           updatedAt: MessageData.updatedAt,
           createdAt: MessageData.createdAt,
           Text: 'message',

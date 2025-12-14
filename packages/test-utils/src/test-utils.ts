@@ -9,6 +9,7 @@ import {
   Sql,
   toArray,
   Column,
+  noop,
 } from 'pqb';
 import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
@@ -65,6 +66,8 @@ export type TestSchemaConfig = ZodSchemaConfig;
 export const testDbOptions = {
   databaseURL: process.env.PG_URL,
   columnSchema: zodSchemaConfig,
+  // ignore db notifications, they're logged by default
+  onnotice: noop,
 };
 
 export const testSchemaConfig = zodSchemaConfig;

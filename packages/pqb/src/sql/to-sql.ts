@@ -116,7 +116,7 @@ export const toSql = (
     ctx.topCtx = ctx as TopToSqlCtx;
   }
 
-  const cteSqls = query.with && ctesToSql(ctx.topCtx, query.with);
+  const cteSqls = ctesToSql(ctx, query.with);
 
   let result: Sql;
 
@@ -162,7 +162,6 @@ export const toSql = (
         const { as, makeSql: makeFirstSql } = moveMutativeQueryToCteBase(
           ctx,
           upsertOrCreate as unknown as SubQueryForSql,
-          query.upsertUpdate ? 'u' : 'f',
           query.upsertUpdate && query.updateData ? 'update' : null,
         );
 
@@ -180,7 +179,6 @@ export const toSql = (
         const { makeSql: makeSecondSql } = moveMutativeQueryToCteBase(
           ctx,
           upsertOrCreate as unknown as SubQueryForSql,
-          'c',
           'insert',
         );
 
