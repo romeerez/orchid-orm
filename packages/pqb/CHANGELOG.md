@@ -1,5 +1,11 @@
 # pqb
 
+## 0.58.0
+
+### Minor Changes
+
+- f4d3a7d: Optimize nested create/connect/connectOrCreate for belongsTo (#550)
+
 ## 0.57.7
 
 ### Patch Changes

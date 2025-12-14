@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.59.0
+
+### Minor Changes
+
+- f4d3a7d: Optimize nested create/connect/connectOrCreate for belongsTo (#550)
+
+### Patch Changes
+
+- Updated dependencies [f4d3a7d]
+  - pqb@0.58.0
+  - rake-db@2.27.24
+
 ## 1.58.10
 
 ### Patch Changes

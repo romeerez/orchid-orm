@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.27.24
+
+### Patch Changes
+
+- f4d3a7d: Optimize nested create/connect/connectOrCreate for belongsTo (#550)
+- Updated dependencies [f4d3a7d]
+  - pqb@0.58.0
+
 ## 2.27.23
 
 ### Patch Changes
