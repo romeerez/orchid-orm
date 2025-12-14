@@ -84,6 +84,12 @@ importers:
         specifier: ^5.4.5
         version: 5.4.5
 
+  packages/benchmarks:
+    devDependencies:
+      tinybench:
+        specifier: ^6.0.0
+        version: 6.0.0
+
   packages/create-orm:
     dependencies:
       prompts:
@@ -125,8 +131,8 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: ^3.25.42
-        version: 3.25.42
+        specifier: ^4.0.0
+        version: 4.1.13
 
   packages/pqb:
     dependencies:
@@ -144,8 +150,8 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: ^3.25.42
-        version: 3.25.42
+        specifier: ^4.0.0
+        version: 4.1.13
 
   packages/rake-db:
     dependencies:
@@ -185,8 +191,8 @@ importers:
         specifier: workspace:*
         version: link:../../pqb
       zod:
-        specifier: ^3.25.42
-        version: 3.25.42
+        specifier: ^4.0.0
+        version: 4.1.13
     devDependencies:
       test-utils:
         specifier: workspace:*
@@ -216,8 +222,8 @@ importers:
         specifier: ^0.29.0
         version: 0.29.0
       zod:
-        specifier: ^3.25.42
-        version: 3.25.42
+        specifier: ^4.0.0
+        version: 4.1.13
 
   packages/test-factory:
     dependencies:
@@ -238,14 +244,14 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: ^3.25.42
-        version: 3.25.42
+        specifier: ^4.0.0
+        version: 4.1.13
 
   packages/test-utils:
     devDependencies:
       zod:
-        specifier: ^3.22.4
-        version: 3.23.8
+        specifier: ^4.0.0
+        version: 4.1.13
 
 packages:
 
@@ -2784,6 +2790,10 @@ packages:
   text-table@0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}
 
+  tinybench@6.0.0:
+    resolution: {integrity: sha512-BWlWpVbbZXaYjRV0twGLNQO00Zj4HA/sjLOQP2IvzQqGwRGp+2kh7UU3ijyJ3ywFRogYDRbiHDMrUOfaMnN56g==}
+    engines: {node: '>=20.0.0'}
+
   tmp@0.0.33:
     resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
     engines: {node: '>=0.6.0'}
@@ -3042,11 +3052,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod@3.23.8:
-    resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
-
-  zod@3.25.42:
-    resolution: {integrity: sha512-PcALTLskaucbeHc41tU/xfjfhcz8z0GdhhDcSgrCTmSazUuqnYqiXO63M0QUBVwpBlsLsNVn5qHSC5Dw3KZvaQ==}
+  zod@4.1.13:
+    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
 
 snapshots:
 
@@ -6017,6 +6024,8 @@ snapshots:
 
   text-table@0.2.0: {}
 
+  tinybench@6.0.0: {}
+
   tmp@0.0.33:
     dependencies:
       os-tmpdir: 1.0.2
@@ -6294,6 +6303,4 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod@3.23.8: {}
-
-  zod@3.25.42: {}
+  zod@4.1.13: {}

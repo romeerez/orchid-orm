@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "test-utils": "workspace:*",
-    "zod": "^3.25.42"
+    "zod": "^4.0.0"
   },
   "peerDependencies": {
     "pg": ">=8",

@@ -442,7 +442,7 @@ describe('zod schema config', () => {
         type,
         'min',
         '',
-        'Too small: expected string to have >1 characters',
+        'Too small: expected string to have >=1 characters',
         [1],
       );
 
@@ -450,7 +450,7 @@ describe('zod schema config', () => {
         type,
         'max',
         '123',
-        'Too big: expected string to have <1 characters',
+        'Too big: expected string to have <=1 characters',
         [1],
       );
 
@@ -458,7 +458,7 @@ describe('zod schema config', () => {
         type,
         'length',
         '',
-        'Too small: expected string to have >1 characters',
+        'Too small: expected string to have >=1 characters',
         [1],
       );
 
@@ -466,7 +466,7 @@ describe('zod schema config', () => {
         type,
         'length',
         '123',
-        'Too big: expected string to have <1 characters',
+        'Too big: expected string to have <=1 characters',
         [1],
       );
 
@@ -486,7 +486,7 @@ describe('zod schema config', () => {
         type,
         'nonEmpty',
         '',
-        'Too small: expected string to have >1 characters',
+        'Too small: expected string to have >=1 characters',
       );
 
       testTypeMethod(
@@ -540,13 +540,13 @@ describe('zod schema config', () => {
       expectAllThrow(
         type,
         '',
-        'Too small: expected string to have >3 characters',
+        'Too small: expected string to have >=3 characters',
       );
 
       expectAllThrow(
         type,
         '1234',
-        'Too big: expected string to have <3 characters',
+        'Too big: expected string to have <=3 characters',
       );
     });
   });
@@ -558,7 +558,7 @@ describe('zod schema config', () => {
       expectError(
         type.inputSchema,
         'asdf',
-        'Too big: expected string to have <3 characters',
+        'Too big: expected string to have <=3 characters',
       );
     });
   });
@@ -570,13 +570,13 @@ describe('zod schema config', () => {
       expectError(
         type.inputSchema,
         'a',
-        'Too small: expected string to have >2 characters',
+        'Too small: expected string to have >=2 characters',
       );
 
       expectError(
         type.inputSchema,
         'asdf',
-        'Too big: expected string to have <3 characters',
+        'Too big: expected string to have <=3 characters',
       );
     });
   });
@@ -828,7 +828,7 @@ describe('zod schema config', () => {
       expectAllThrow(
         type,
         '101010',
-        'Too big: expected string to have <5 characters',
+        'Too big: expected string to have <=5 characters',
       );
     });
   });
@@ -921,7 +921,7 @@ describe('zod schema config', () => {
         type,
         'min',
         [],
-        'Too small: expected array to have >1 items',
+        'Too small: expected array to have >=1 items',
         [1],
       );
 
@@ -929,7 +929,7 @@ describe('zod schema config', () => {
         type,
         'max',
         [1, 2],
-        'Too big: expected array to have <1 items',
+        'Too big: expected array to have <=1 items',
         [1],
       );
 
@@ -937,7 +937,7 @@ describe('zod schema config', () => {
         type,
         'length',
         [],
-        'Too small: expected array to have >1 items',
+        'Too small: expected array to have >=1 items',
         [1],
       );
 
@@ -945,7 +945,7 @@ describe('zod schema config', () => {
         type,
         'length',
         [1, 2],
-        'Too big: expected array to have <1 items',
+        'Too big: expected array to have <=1 items',
         [1],
       );
 
@@ -953,7 +953,7 @@ describe('zod schema config', () => {
         type,
         'nonEmpty',
         [],
-        'Too small: expected array to have >1 items',
+        'Too small: expected array to have >=1 items',
       );
     });
   });

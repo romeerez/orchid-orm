@@ -63,8 +63,8 @@ import {
   optional,
   core,
 } from 'zod/v4';
-import { $ZodErrorMap, $ZodType } from 'zod/dist/types/v4/core';
-import { ToEnum } from 'zod/dist/types/v4/core/util';
+import { $ZodErrorMap, $ZodType } from 'zod/v4/core';
+import { ToEnum } from 'zod/v4/core/util';
 
 interface ZodShape {
   [K: string]: $ZodType;
