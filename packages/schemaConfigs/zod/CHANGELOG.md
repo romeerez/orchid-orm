@@ -1,5 +1,11 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.38
+
+### Patch Changes
+
+- ef7ddf2: Test publish from CI
+
 ## 1.0.37
 
 ### Patch Changes
