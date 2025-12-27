@@ -1,6 +1,6 @@
 import { Column } from './column';
 import { OperatorsAny } from './operators';
-import { ShallowSimplify } from '../core';
+import { ShallowSimplify } from '../utils';
 
 export interface ColumnsShape {
   [K: string]: Column;

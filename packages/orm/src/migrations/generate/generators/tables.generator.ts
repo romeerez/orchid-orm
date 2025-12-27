@@ -5,7 +5,6 @@ import {
   VirtualColumn,
   DbStructureDomainsMap,
   AdapterBase,
-  ColumnTypeBase,
   EnumColumn,
   ArrayColumn,
 } from 'pqb';
@@ -313,7 +312,7 @@ const applyChangeTables = async (
 };
 
 const getColumnDbTypeForComparison = (
-  column: ColumnTypeBase,
+  column: Column.Pick.DataAndDataType,
   currentSchema: string,
 ): string => {
   if (column instanceof ArrayColumn) {

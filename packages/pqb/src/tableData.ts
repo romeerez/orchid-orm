@@ -1,14 +1,9 @@
-import {
-  EmptyTuple,
-  Expression,
-  MaybeArray,
-  RawSQLBase,
-  RecordUnknown,
-} from './core';
 import { Column } from './columns/column';
-import { SearchWeight } from './sql';
-import { sqlFn, SqlFn } from './sql/rawSql';
+import { RawSQLBase, sqlFn, SqlFn } from './query/expressions/raw-sql';
 import OptionsArg = TableData.Index.OptionsArg;
+import { Expression } from './query/expressions/expression';
+import { EmptyTuple, MaybeArray, RecordUnknown } from './utils';
+import { SearchWeight } from './query';
 
 export interface TableData {
   primaryKey?: TableData.PrimaryKey;

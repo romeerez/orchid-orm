@@ -1,4 +1,4 @@
-import { User, userData } from '../test-utils/test-utils';
+import { User, userData } from '../test-utils/pqb.test-utils';
 import { createDbWithAdapter } from './db';
 import {
   assertType,
@@ -12,13 +12,15 @@ import {
   testingWithPostgresJS,
   useTestDatabase,
 } from 'test-utils';
-import { QueryLogger, RecordUnknown, TransactionState } from '../core';
-import { raw } from '../sql/rawSql';
+import { raw } from './expressions/raw-sql';
 import {
   DefaultSchemaConfig,
   defaultSchemaConfig,
   VirtualColumn,
 } from '../columns';
+import { TransactionState } from '../adapters/adapter';
+import { RecordUnknown } from '../utils';
+import { QueryLogger } from 'pqb';
 
 describe('db connection', () => {
   // not supported by postgres.js

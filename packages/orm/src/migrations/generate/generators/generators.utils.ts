@@ -1,5 +1,5 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSQLBase, colors, QueryResult, AdapterBase } from 'pqb';
+import { RawSQLBase, QueryResult, AdapterBase, colors } from 'pqb';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {

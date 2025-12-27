@@ -1,33 +1,30 @@
-import {
-  PickQueryQ,
-  Query,
-  SetQueryReturnsColumnOrThrow,
-} from '../query/query';
-import {
-  addValue,
-  emptyArray,
-  Expression,
-  getValueKey,
-  isExpression,
-  isIterable,
-  IsQuery,
-  MaybeArray,
-  PickQueryColumTypes,
-  PickQueryResult,
-  PickQueryResultColumnTypes,
-  RecordUnknown,
-  setObjectValueImmutable,
-} from '../core';
-import { BooleanQueryColumn } from '../queryMethods';
+import { IsQuery, Query, SetQueryReturnsColumnOrThrow } from '../query/query';
 import { addColumnParserToQuery } from './column.utils';
 import { Column } from './column';
-import { ToSQLCtx } from '../sql/to-sql';
-import { MoveMutativeQueryToCte } from '../query/cte/cte.sql';
+import { ToSQLCtx } from '../query/sql/to-sql';
+import { MoveMutativeQueryToCte } from '../query/basic-features/cte/cte.sql';
 import {
   ArgWithBeforeAndBeforeSet,
   PrepareSubQueryForSql,
-} from '../query/to-sql/sub-query-for-sql';
-import { Db } from '../query';
+} from '../query/sub-query/sub-query-for-sql';
+import { Db } from '../query/db';
+import {
+  PickQueryColumTypes,
+  PickQueryQ,
+  PickQueryResult,
+  PickQueryResultColumnTypes,
+} from '../query/pick-query-types';
+import {
+  addValue,
+  emptyArray,
+  isIterable,
+  MaybeArray,
+  RecordUnknown,
+  setObjectValueImmutable,
+} from '../utils';
+import { Expression, isExpression } from '../query/expressions/expression';
+import { BooleanQueryColumn } from '../query/basic-features/aggregate/aggregate';
+import { getValueKey } from '../query/basic-features/get/get-value-key';
 
 // workaround for circular dependencies between columns and sql
 let moveMutativeQueryToCte: MoveMutativeQueryToCte;

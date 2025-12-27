@@ -5,7 +5,7 @@ import {
   ColumnToCodeCtx,
 } from './code';
 import { testZodColumnTypes as t } from 'test-utils';
-import { RawSQL } from '../sql/rawSql';
+import { RawSQL } from '../query/expressions/raw-sql';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',

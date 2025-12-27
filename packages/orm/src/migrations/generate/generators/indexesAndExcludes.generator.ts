@@ -7,7 +7,6 @@ import {
 } from 'rake-db';
 import {
   Column,
-  SearchWeight,
   TableData,
   deepCompare,
   MaybeArray,

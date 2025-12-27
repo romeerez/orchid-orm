@@ -1,4 +1,3 @@
-import { MaybeArray, noop } from '../core';
 import {
   DateColumn,
   TimestampColumn,
@@ -28,6 +27,7 @@ import {
 import { Column, setColumnData } from './column';
 import { setColumnParse, setColumnParseNull } from './column.utils';
 import { ColumnSchemaConfig } from './column-schema';
+import { MaybeArray, noop } from '../utils';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
   parse<T extends Column.Pick.ForParse, Output>(

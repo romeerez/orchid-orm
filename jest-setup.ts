@@ -1,9 +1,9 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { QueryData, RecordUnknown } from 'pqb';
-import { skipQueryKeysForSubQuery } from './packages/pqb/src/sql/get-is-join-sub-query';
+import { skipQueryKeysForSubQuery } from './packages/pqb/src/query/sql/get-is-join-sub-query';
 import { setPrepareSubQueryForSql } from './packages/pqb/src/columns/operators';
-import { setRawSqlPrepareSubQueryForSql } from './packages/pqb/src/sql/rawSql';
+import { setRawSqlPrepareSubQueryForSql } from './packages/pqb/src/query/expressions/raw-sql';
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
@@ -59,8 +59,8 @@ jest.mock('test-utils', () => require('./packages/test-utils/src'), {
   virtual: true,
 });
 
-jest.mock('./packages/pqb/src/core/utils', () => {
-  const actual = jest.requireActual('./packages/pqb/src/core/utils');
+jest.mock('./packages/pqb/src/utils', () => {
+  const actual = jest.requireActual('./packages/pqb/src/utils');
   return process.env.RUNNING_BENCHMARKS
     ? actual
     : {
@@ -80,9 +80,9 @@ jest.mock('./packages/pqb/src/core/utils', () => {
       };
 });
 
-jest.mock('./packages/pqb/src/query/to-sql/sub-query-for-sql', () => {
+jest.mock('./packages/pqb/src/query/sub-query/sub-query-for-sql', () => {
   const actual = jest.requireActual(
-    './packages/pqb/src/query/to-sql/sub-query-for-sql',
+    './packages/pqb/src/query/sub-query/sub-query-for-sql',
   );
 
   if (process.env.RUNNING_BENCHMARKS) {
@@ -104,10 +104,8 @@ jest.mock('./packages/pqb/src/query/to-sql/sub-query-for-sql', () => {
   return result;
 });
 
-jest.mock('./packages/pqb/src/queryMethods/queryMethods.utils', () => {
-  const actual = jest.requireActual(
-    './packages/pqb/src/queryMethods/queryMethods.utils',
-  );
+jest.mock('./packages/pqb/src/query/basic-features/wrap/wrap', () => {
+  const actual = jest.requireActual('./packages/pqb/src/query/basic-features/wrap/wrap');
 
   return process.env.RUNNING_BENCHMARKS
     ? actual
@@ -139,8 +137,8 @@ jest.mock('./packages/pqb/src/queryMethods/queryMethods.utils', () => {
       };
 });
 
-jest.mock('./packages/pqb/src/sql/to-sql', () => {
-  const actual = jest.requireActual('./packages/pqb/src/sql/to-sql');
+jest.mock('./packages/pqb/src/query/sql/to-sql', () => {
+  const actual = jest.requireActual('./packages/pqb/src/query/sql/to-sql');
   const { toSql } = actual;
   return process.env.RUNNING_BENCHMARKS
     ? actual
@@ -182,10 +180,10 @@ jest.mock('./packages/pqb/src/sql/to-sql', () => {
 });
 
 jest.mock(
-  './packages/pqb/src/query/cte/move-mutative-query-to-cte-base.sql',
+  './packages/pqb/src/query/basic-features/cte/move-mutative-query-to-cte-base.sql',
   () => {
     const actual = jest.requireActual(
-      './packages/pqb/src/query/cte/move-mutative-query-to-cte-base.sql',
+      './packages/pqb/src/query/basic-features/cte/move-mutative-query-to-cte-base.sql',
     );
     return process.env.RUNNING_BENCHMARKS
       ? actual
@@ -197,7 +195,7 @@ jest.mock(
             return actual.moveQueryToCte(...args);
           },
           moveMutativeQueryToCteBase(...args: unknown[]) {
-            const q = (args[1] as { q: RecordUnknown }).q;
+            const q = (args[2] as { q: RecordUnknown }).q;
             q.__consideredMovingSubQueryToCte = true;
             return actual.moveMutativeQueryToCteBase(...args);
           },
@@ -205,8 +203,8 @@ jest.mock(
   },
 );
 
-jest.mock('./packages/pqb/src/query/cte/cte.query', () => {
-  const actual = jest.requireActual('./packages/pqb/src/query/cte/cte.query');
+jest.mock('./packages/pqb/src/query/basic-features/cte/cte.query', () => {
+  const actual = jest.requireActual('./packages/pqb/src/query/basic-features/cte/cte.query');
   return process.env.RUNNING_BENCHMARKS
     ? actual
     : {

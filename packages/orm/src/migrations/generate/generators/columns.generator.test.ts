@@ -1,6 +1,6 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { DbMigration } from 'rake-db';
-import { DefaultColumnTypes, DefaultSchemaConfig, colors } from 'pqb';
+import { colors, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import { sql } from 'test-utils';
 
 jest.mock('rake-db', () => {

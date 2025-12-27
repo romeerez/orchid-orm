@@ -2,19 +2,12 @@ import {
   DbDomainArg,
   DbExtension,
   GeneratorIgnore,
+  IsQuery,
   Query,
   QueryInternal,
   SelectableFromShape,
 } from './query';
-import {
-  _queryHookBeforeCreate,
-  _queryHookBeforeSave,
-  _queryHookBeforeUpdate,
-  handleResult,
-  logParamToLogObject,
-  QueryMethods,
-} from '../queryMethods';
-import { QueryData, QueryScopes } from '../sql';
+import { QueryMethods } from './query-methods';
 import {
   anyShape,
   Column,
@@ -24,43 +17,15 @@ import {
   getColumnTypes,
   makeColumnTypes,
 } from '../columns';
-import {
-  AdapterBase,
-  NotFoundError,
-  QueryArraysResult,
-  QueryError,
-  QueryErrorName,
-  applyMixins,
-  ColumnsParsers,
-  DynamicSQLArg,
-  EmptyObject,
-  emptyObject,
-  IsQuery,
-  MaybeArray,
-  pushOrNewArray,
-  QueryCatch,
-  QueryLogOptions,
-  QueryMetaBase,
-  QueryThenShallowSimplifyArr,
-  RecordString,
-  RecordUnknown,
-  SQLQueryArgs,
-  StaticSQLArgs,
-  toSnakeCase,
-  TransactionState,
-} from '../core';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { DynamicRawSQL, raw, RawSQL } from '../sql/rawSql';
-import { ScopeArgumentQuery } from '../queryMethods/scope';
+import { DynamicRawSQL, raw, RawSQL } from './expressions/raw-sql';
+import { ScopeArgumentQuery } from './extra-features/scope/scope.query';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
 } from '../columns/default-schema-config';
-import {
-  enableSoftDelete,
-  SoftDeleteOption,
-} from '../queryMethods/mutate/softDelete';
+import { enableSoftDelete, SoftDeleteOption } from './basic-features/mutate/soft-delete';
 import {
   parseTableData,
   TableData,
@@ -75,10 +40,41 @@ import {
   applyComputedColumns,
   ComputedColumnsFromOptions,
   ComputedOptionsFactory,
-} from '../modules/computed';
-import { DbSqlQuery, performQuery } from './dbSqlQuery';
+} from './extra-features/computed/computed';
+import { DbSqlQuery, performQuery, SQLQueryArgs } from './db-sql-query';
 import { snakeCaseKey } from '../columns/types';
 import { setDb } from '../columns/operators';
+import { QueryMetaBase } from './query-meta';
+import {
+  applyMixins,
+  emptyObject,
+  EmptyObject,
+  pushOrNewArray,
+  RecordString,
+  RecordUnknown,
+  toSnakeCase,
+} from '../utils';
+import {
+  AdapterBase,
+  QueryArraysResult,
+  TransactionState,
+} from '../adapters/adapter';
+import { NotFoundError, QueryError, QueryErrorName } from './errors';
+import { ColumnsParsers } from './query-columns/query-column-parsers';
+import { MaybeArray } from 'rollup';
+import { DynamicSQLArg, StaticSQLArgs } from './expressions/expression';
+import { logParamToLogObject, QueryLogOptions } from './basic-features/log/log';
+import {
+  handleResult,
+  QueryCatch,
+  QueryThenShallowSimplifyArr,
+} from './then/then';
+import {
+  _queryHookBeforeCreate,
+  _queryHookBeforeSave,
+  _queryHookBeforeUpdate,
+} from './extra-features/hooks/hooks';
+import { QueryData, QueryDataScopes } from './query-data';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -283,7 +279,7 @@ export class Db<
     const { softDelete } = options;
     const scopes = (
       options.scopes || softDelete ? {} : emptyObject
-    ) as QueryScopes;
+    ) as QueryDataScopes;
 
     this.baseQuery = this as Query;
     this.relations = {};
@@ -603,6 +599,7 @@ setDb(Db);
 
 applyMixins(Db, [QueryMethods]);
 Db.prototype.constructor = Db;
+Db.prototype.__isQuery = true;
 
 // Function to build a new table instance.
 export interface DbTableConstructor<ColumnTypes> {

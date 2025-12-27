@@ -1,13 +1,9 @@
 import { Column } from '../column';
-import {
-  CreateCtx,
-  CreateSelf,
-  UpdateCtx,
-  UpdateSelf,
-} from '../../queryMethods';
 import { Operators, OperatorsAny } from '../operators';
-import { RecordUnknown } from '../../core';
 import { ColumnSchemaConfig } from '../column-schema';
+import { RecordUnknown } from '../../utils';
+import { CreateCtx, CreateSelf } from '../../query/basic-features/mutate/create';
+import { UpdateCtx, UpdateSelf } from '../../query/basic-features/mutate/update';
 
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,

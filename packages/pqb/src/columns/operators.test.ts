@@ -6,7 +6,7 @@ import {
   User,
   userColumnsSql,
   UserDataType,
-} from '../test-utils/test-utils';
+} from '../test-utils/pqb.test-utils';
 import {
   assertType,
   columnTypes,

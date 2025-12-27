@@ -1,6 +1,6 @@
-import { UniqueTable, User } from './test-utils/test-utils';
-import { QueryError } from './core';
+import { UniqueTable, User } from './test-utils/pqb.test-utils';
 import { testDb, useTestDatabase } from 'test-utils';
+import { QueryError } from './query';
 
 describe('errors', () => {
   useTestDatabase();

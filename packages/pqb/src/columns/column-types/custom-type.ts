@@ -1,4 +1,4 @@
-import { singleQuote } from '../../core/utils';
+import { singleQuote } from '../../utils';
 import { Column, setColumnData } from '../column';
 import { Code, columnCode, ColumnToCodeCtx } from '../code';
 import { Operators, OperatorsAny } from '../operators';

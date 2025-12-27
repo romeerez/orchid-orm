@@ -1,23 +1,19 @@
-import { Query } from '../query/query';
+import { Query, QueryBaseCommon } from '../query/query';
+import { emptyObject, RecordString, RecordUnknown } from '../utils';
 import {
-  PickQueryInputType,
-  PickQueryShape,
-  QueryBaseCommon,
   RawSQLValues,
-  RecordString,
-  RecordUnknown,
   StaticSQLArgs,
   TemplateLiteralArgs,
-} from '../core';
-import { emptyObject } from '../core/utils';
-import { QueryHookUtils } from '../core/hooks';
-import { RawSQLBase, templateLiteralSQLToCode } from '../core/raw';
-import { raw } from '../sql/rawSql';
+  templateLiteralSQLToCode,
+} from '../query/expressions/expression';
+import { raw, RawSQLBase } from '../query/expressions/raw-sql';
 import { TableData } from '../tableData';
 import { ColumnTypeSchemaArg } from './column-schema';
 import { Code, ColumnToCodeCtx } from './code';
 
 import { Operator } from './operators';
+import { PickQueryInputType, PickQueryShape } from '../query/pick-query-types';
+import { QueryHookUtils } from '../query/extra-features/hooks/hooks';
 
 export namespace Column {
   export namespace Modifiers {

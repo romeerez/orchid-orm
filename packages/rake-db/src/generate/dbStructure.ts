@@ -1,4 +1,4 @@
-import { SearchWeight, AdapterBase, EmptyObject, RecordUnknown } from 'pqb';
+import { AdapterBase, EmptyObject, RecordUnknown, SearchWeight } from 'pqb';
 import { RakeDbAst } from '../ast';
 
 export namespace DbStructure {

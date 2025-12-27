@@ -10,7 +10,7 @@ import {
   singleQuoteArray,
   toArray,
   toSnakeCase,
-} from '../core/utils';
+} from '../utils';
 import { TableData } from '../tableData';
 import {
   arrayMethodNames,
@@ -22,7 +22,7 @@ import {
   StringData,
   stringMethodNames,
 } from './column-data-types';
-import { isRawSQL, RawSQLBase } from '../core/raw';
+import { isRawSQL, RawSQLBase } from '../query/expressions/raw-sql';
 
 // Type for composing code pieces for the code generation
 export type Code = string | Codes;

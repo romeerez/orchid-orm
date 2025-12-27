@@ -9,9 +9,9 @@ import {
   AdapterBase,
   noop,
   pathToLog,
-  Sql,
   DefaultColumnTypes,
   DefaultSchemaConfig,
+  Sql,
 } from 'pqb';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock, TestAdapter, TestTransactionAdapter } from 'test-utils';

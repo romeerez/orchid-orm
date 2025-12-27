@@ -6,8 +6,8 @@ import {
   useTestDatabase,
   sql,
 } from 'test-utils';
-import { raw } from '../../sql/rawSql';
-import { User, userData } from '../../test-utils/test-utils';
+import { raw } from '../../query/expressions/raw-sql';
+import { User, userData } from '../../test-utils/pqb.test-utils';
 import { z } from 'zod/v4';
 import { ColumnToCodeCtx } from '../code';
 

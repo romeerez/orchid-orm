@@ -1,5 +1,5 @@
 import { testDb, testingWithPostgresJS, useTestDatabase } from 'test-utils';
-import { User, userData } from './test-utils/test-utils';
+import { User, userData } from './test-utils/pqb.test-utils';
 import { testTransaction } from './testTransaction';
 
 describe('testTransaction', () => {

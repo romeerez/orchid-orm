@@ -1,5 +1,5 @@
 import { VirtualColumn } from './virtual';
-import { RawSQL } from '../../sql/rawSql';
+import { RawSQL } from '../../query/expressions/raw-sql';
 import { defaultSchemaConfig } from '../default-schema-config';
 import { ColumnSchemaConfig } from '../column-schema';
 

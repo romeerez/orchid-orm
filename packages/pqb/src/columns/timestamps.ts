@@ -1,6 +1,7 @@
-import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../core/utils';
-import { RawSQLBase } from '../core/raw';
+import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../utils';
 import { Column, getDefaultNowFn } from './column';
+
+import { RawSQLBase } from '../query/expressions/raw-sql';
 
 // Column types returned by `...t.timestamps()` and variations.
 export interface Timestamps<T extends Column.Pick.Data> {

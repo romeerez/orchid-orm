@@ -4,7 +4,7 @@ import {
   User,
   userData,
   UserRecord,
-} from '../test-utils/test-utils';
+} from '../test-utils/pqb.test-utils';
 import { createDbWithAdapter } from '../query/db';
 import { columnCode, ColumnToCodeCtx } from './code';
 import { Code } from './code';
@@ -19,7 +19,7 @@ import {
   useTestDatabase,
   testZodColumnTypes as t,
 } from 'test-utils';
-import { raw } from '../sql/rawSql';
+import { raw } from '../query/expressions/raw-sql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod/v4';
 import { assignDbDataToColumn } from './column-from-db.utils';

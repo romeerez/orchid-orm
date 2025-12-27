@@ -1,7 +1,9 @@
-import { ColumnsParsers, getValueKey, setObjectValueImmutable } from '../core';
 import { Column } from './column';
 import { DomainColumn } from './column-types/custom-type';
 import { EnumColumn } from './column-types/enum';
+import { getValueKey } from '../query/basic-features/get/get-value-key';
+import { ColumnsParsers } from '../query/query-columns/query-column-parsers';
+import { setObjectValueImmutable } from '../utils';
 
 export interface DbStructureDomainsMap {
   [K: string]: Column;

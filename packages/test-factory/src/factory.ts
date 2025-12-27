@@ -52,10 +52,8 @@ import {
   ColumnSchemaConfig,
   emptyObject,
   EmptyObject,
-  getPrimaryKeys,
   MaybePromise,
   PickQueryShape,
-  QueryBase,
   RecordUnknown,
   StringData,
 } from 'pqb';

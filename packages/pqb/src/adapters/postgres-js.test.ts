@@ -1,7 +1,7 @@
 import { PostgresJsAdapter } from './postgres-js';
 import { asMock, testDb, testDbOptions } from 'test-utils';
 import { setTimeout } from 'timers/promises';
-import { QueryError } from '../core';
+import { QueryError } from '../query/errors';
 
 const testAdapter = new PostgresJsAdapter({
   databaseURL: process.env.PG_URL,

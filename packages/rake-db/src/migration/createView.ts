@@ -1,5 +1,5 @@
 import { Migration } from './migration';
-import { RawSQLBase, singleQuote, SingleSql, raw } from 'pqb';
+import { RawSQLBase, singleQuote, raw, SingleSql } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { interpolateSqlValues } from './migration.utils';
 

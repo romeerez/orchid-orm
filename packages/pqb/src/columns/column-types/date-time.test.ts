@@ -1,4 +1,4 @@
-import { userData } from '../../test-utils/test-utils';
+import { userData } from '../../test-utils/pqb.test-utils';
 import { TimestampColumn, TimestampTZColumn } from './date-time';
 import {
   assertType,

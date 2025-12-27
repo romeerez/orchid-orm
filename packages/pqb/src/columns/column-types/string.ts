@@ -1,17 +1,8 @@
 import { Column, getDefaultLanguage, setColumnData } from '../column';
 import { NumberColumnData } from './number';
-import {
-  joinTruthy,
-  RawSQLBase,
-  StaticSQLArgs,
-  toSnakeCase,
-  quoteObjectKey,
-  RecordString,
-} from '../../core';
 import { Code, ColumnToCodeCtx, stringDataToCode } from '../code';
 import { columnCode } from '../code';
-import { RawSQL } from '../../sql/rawSql';
-import { SearchWeightRecord } from '../../sql';
+import { RawSQL, RawSQLBase } from '../../query/expressions/raw-sql';
 import {
   Operators,
   OperatorsNumber,
@@ -25,6 +16,14 @@ import {
 } from '../default-schema-config';
 import { StringData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
+import {
+  joinTruthy,
+  quoteObjectKey,
+  RecordString,
+  toSnakeCase,
+} from '../../utils';
+import { StaticSQLArgs } from '../../query/expressions/expression';
+import { SearchWeightRecord } from '../../query';
 
 export type TextColumnData = StringData;
 

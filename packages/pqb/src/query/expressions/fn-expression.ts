@@ -1,0 +1,216 @@
+import { Query, SetQueryReturnsColumnOrThrow } from '../query';
+import { columnToSql, rawOrColumnToSql } from '../sql/column-to-sql';
+import { OrderItem, pushOrderBySql } from '../basic-features/order/order.sql';
+import { WhereItem, whereToSql } from '../basic-features/where/where.sql';
+import { windowToSql } from '../basic-features/window/window.sql';
+import { extendQuery } from '../query.utils';
+import { addColumnParserToQuery, Column } from '../../columns';
+import {
+  PickQueryMeta,
+  PickQueryMetaResultRelationsWindows,
+  PickQueryMetaResultWindows,
+} from '../pick-query-types';
+import {
+  Expression,
+  ExpressionData,
+  ExpressionTypeMethod,
+  SelectableOrExpression,
+} from './expression';
+import { addValue, emptyObject, toArray } from '../../utils';
+import { getValueKey } from '../basic-features/get/get-value-key';
+import { WhereArg, WhereArgs } from '../basic-features/where/where';
+import { OrderArg, OrderArgs } from '../basic-features/order/order';
+import { WindowArgDeclaration } from '../basic-features/window/window';
+import { ToSQLCtx } from '../sql/to-sql';
+import { QueryData } from '../query-data';
+
+// Additional SQL options that can be accepted by any aggregate function.
+export interface AggregateOptions<
+  T extends PickQueryMetaResultRelationsWindows,
+> {
+  // Add DISTINCT inside of function call.
+  distinct?: boolean;
+  // The same argument as in .order() to be set inside of function call.
+  order?: OrderArg<T> | OrderArgs<T>;
+  // The same argument as in .where() to be set inside of function call.
+  filter?: WhereArg<T>;
+  // The same argument as in .orWhere() to support OR logic of the filter clause.
+  filterOr?: WhereArgs<T>;
+  // Adds WITHIN GROUP SQL statement.
+  withinGroup?: boolean;
+  // defines OVER clause.
+  // Can be the name of a window defined by calling the .window() method,
+  // or object the same as the .window() method takes to define a window.
+  over?: Over<T>;
+}
+
+// Window definition or name.
+export type Over<T extends PickQueryMetaResultWindows> =
+  | keyof T['windows']
+  | WindowArgDeclaration<T>;
+
+// Arguments of function.
+// It can be a column name, expression,
+// `pairs` is for { key: value } which is translated to ('key', value) (used by `jsonObjectAgg`),
+// `value` is for a query variable (used by `stringAgg` for a delimiter).
+export type FnExpressionArgs<Q extends PickQueryMeta> = (
+  | SelectableOrExpression<Q>
+  | FnExpressionArgsPairs<Q>
+  | FnExpressionArgsValue
+)[];
+
+export interface FnExpressionArgsPairs<Q extends PickQueryMeta> {
+  pairs: { [K: string]: SelectableOrExpression<Q> };
+}
+
+export interface FnExpressionArgsValue {
+  value: unknown;
+}
+
+// Expression for SQL function calls.
+export class FnExpression<
+  Q extends Query = Query,
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
+> extends Expression<T> {
+  result: { value: T };
+  q: ExpressionData;
+
+  /**
+   * @param query - query object.
+   * @param fn - SQL function name.
+   * @param args - arguments of the function.
+   * @param options - aggregate options.
+   * @param value - column type of the function result.
+   */
+  constructor(
+    public query: Q,
+    public fn: string,
+    public args: FnExpressionArgs<Q>,
+    public options: AggregateOptions<Q> = emptyObject,
+    value: T,
+  ) {
+    super();
+    this.result = { value };
+    this.q = query.q as ExpressionData;
+    this.q.expr = this;
+    Object.assign(query, value.operators);
+
+    // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
+    query.q.returnType = 'valueOrThrow';
+    query.q.returnsOne = true;
+    query.q.getColumn = value;
+    query.q.select = [this];
+
+    addColumnParserToQuery(query.q, getValueKey, value);
+  }
+
+  // Builds function SQL.
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
+    const sql: string[] = [`${this.fn}(`];
+
+    const { values } = ctx;
+    const { options } = this;
+
+    if (options.distinct && !options.withinGroup) sql.push('DISTINCT ');
+
+    const q = this.q as QueryData;
+    sql.push(
+      this.args
+        .map((arg) => {
+          if (typeof arg === 'string') {
+            return arg === '*'
+              ? '*'
+              : columnToSql(ctx, q, q.shape, arg, quotedAs);
+          } else if (arg instanceof Expression) {
+            return arg.toSQL(ctx, quotedAs);
+          } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {
+            const args: string[] = [];
+            const { pairs } = arg as FnExpressionArgsPairs<Query>;
+            for (const key in pairs) {
+              args.push(
+                // ::text is needed to bypass "could not determine data type of parameter" postgres error
+                `${addValue(values, key)}::text, ${rawOrColumnToSql(
+                  ctx,
+                  q,
+                  pairs[key as keyof typeof pairs] as never,
+                  quotedAs,
+                )}`,
+              );
+            }
+            return args.join(', ');
+          } else {
+            return addValue(values, (arg as FnExpressionArgsValue).value);
+          }
+        })
+        .join(', '),
+    );
+
+    if (options.withinGroup) sql.push(') WITHIN GROUP (');
+    else if (options.order) sql.push(' ');
+
+    if (options.order) {
+      pushOrderBySql(
+        { ...ctx, sql },
+        q,
+        quotedAs,
+        toArray(options.order) as OrderItem[],
+      );
+    }
+
+    sql.push(')');
+
+    if (options.filter || options.filterOr) {
+      const whereSql = whereToSql(
+        ctx,
+        this.query,
+        {
+          and: options.filter ? ([options.filter] as WhereItem[]) : undefined,
+          or: options.filterOr?.map((item) => [item]) as WhereItem[][],
+          shape: q.shape,
+          joinedShapes: q.joinedShapes,
+        },
+        quotedAs,
+      );
+      if (whereSql) {
+        sql.push(` FILTER (WHERE ${whereSql})`);
+      }
+    }
+
+    if (options.over) {
+      sql.push(
+        ` OVER ${windowToSql(ctx, q, options.over as string, quotedAs)}`,
+      );
+    }
+
+    return sql.join('');
+  }
+}
+
+// Applies a function expression to the query.
+export function makeFnExpression<
+  T extends PickQueryMetaResultRelationsWindows,
+  C extends Column.Pick.QueryColumn,
+>(
+  self: T,
+  type: C,
+  fn: string,
+  args: FnExpressionArgs<Query>,
+  options?: AggregateOptions<T>,
+): SetQueryReturnsColumnOrThrow<T, C> & C['operators'] {
+  const q = extendQuery(self as unknown as Query, type.operators);
+  (q.baseQuery as unknown as ExpressionTypeMethod).type =
+    ExpressionTypeMethod.prototype.type;
+
+  new FnExpression<Query, Column.Pick.QueryColumn>(
+    q,
+    fn,
+    args,
+    options as AggregateOptions<Query> | undefined,
+    type,
+  );
+
+  // discard 'map` and 'transform' when applying aggregations
+  q.q.transform = undefined;
+
+  return q as never;
+}

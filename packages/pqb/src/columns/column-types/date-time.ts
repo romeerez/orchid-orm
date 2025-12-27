@@ -1,5 +1,5 @@
 import { Column } from '../column';
-import { joinTruthy } from '../../core/utils';
+import { joinTruthy } from '../../utils';
 import { TimeInterval } from '../types';
 import { Code, ColumnToCodeCtx, dateDataToCode } from '../code';
 import { columnCode } from '../code';

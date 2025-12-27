@@ -1,6 +1,5 @@
 import { AnyRakeDbConfig, RakeDbAst, getSchemaAndTableFromName } from 'rake-db';
 import {
-  colors,
   exhaustive,
   pluralize,
   addCode,
@@ -9,6 +8,7 @@ import {
   ColumnToCodeCtx,
   toArray,
   toCamelCase,
+  colors,
 } from 'pqb';
 import { getColumnDbType } from './generators/columns.generator';
 import { fnOrTableToString } from './generators/foreignKeys.generator';

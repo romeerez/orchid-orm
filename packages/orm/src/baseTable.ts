@@ -31,7 +31,7 @@ import {
   ComputedOptionsConfig,
   applyMixins,
   ColumnSchemaConfig,
-  CoreQueryScopes,
+  QueryScopes,
   DynamicSQLArg,
   emptyArray,
   EmptyObject,
@@ -396,7 +396,7 @@ export interface BaseTableInstance<ColumnTypes> {
   >(
     this: { table: Table; columns: { shape: Shape } },
     scopes: DbTableOptionScopes<Table, Shape, Keys>,
-  ): CoreQueryScopes<Keys>;
+  ): QueryScopes<Keys>;
 
   belongsTo<
     Columns extends Column.Shape.QueryInit,

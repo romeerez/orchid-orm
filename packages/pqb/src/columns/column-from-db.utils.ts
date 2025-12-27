@@ -1,6 +1,7 @@
-import { RawSQL } from '../sql/rawSql';
+import { RawSQL } from '../query/expressions/raw-sql';
 import { Column } from './column';
-import { RecordString, TemplateLiteralArgs } from '../core';
+import { RecordString } from '../utils';
+import { TemplateLiteralArgs } from '../query/expressions/expression';
 
 export interface ColumnFromDbParams {
   isNullable?: boolean;

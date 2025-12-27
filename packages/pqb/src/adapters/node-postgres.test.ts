@@ -2,7 +2,8 @@ import { asMock, testDbOptions } from 'test-utils';
 import { NodePostgresAdapter } from './node-postgres';
 import pg from 'pg';
 import { setTimeout } from 'timers/promises';
-import { QueryError, RecordUnknown } from '../core';
+import { QueryError } from '../query/errors';
+import { RecordUnknown } from '../utils';
 
 const testAdapter = new NodePostgresAdapter(testDbOptions);
 

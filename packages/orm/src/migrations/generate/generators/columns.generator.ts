@@ -21,8 +21,8 @@ import {
   deepCompare,
   RecordUnknown,
   toSnakeCase,
-  colors,
   AdapterBase,
+  colors,
 } from 'pqb';
 import { promptCreateOrRename } from './generators.utils';
 import { ChangeTableData, CompareSql } from './tables.generator';

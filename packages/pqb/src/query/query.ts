@@ -1,37 +1,34 @@
-import { GetStringArg, QueryMetaHasWhere, QueryMethods } from '../queryMethods';
-import { QueryData } from '../sql';
+import { QueryMethods } from './query-methods';
+import { QueryData, QueryDataBase } from './query-data';
 import { QueryBuilder } from './db';
+import { Column } from '../columns/column';
+import { TableData } from '../tableData';
+import { WithDataItems } from './basic-features/cte/cte.sql';
+import { ColumnsShape } from '../columns';
+import { QueryMetaBase } from './query-meta';
+import { QueryInternalBase } from './query-internal';
 import {
-  EmptyObject,
-  Expression,
-  IsQueries,
-  IsQuery,
   PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaReturnType,
   PickQueryResult,
   PickQueryResultReturnType,
-  QueryBase,
+  PickQueryShape,
+} from './pick-query-types';
+import { EmptyObject, RecordKeyTrue, RecordUnknown } from '../utils';
+import { RelationsBase } from './relations';
+import { QueryError, QueryErrorName } from './errors';
+import { Expression } from './expressions/expression';
+import { GetStringArg } from './basic-features/get/get.utils';
+import { QueryMetaHasWhere } from './basic-features/where/where';
+import {
   QueryCatch,
-  QueryError,
-  QueryErrorName,
-  QueryInternalBase,
-  QueryMetaBase,
-  QueryOrExpression,
-  QueryReturnType,
   QueryThen,
   QueryThenByQuery,
   QueryThenShallowSimplify,
   QueryThenShallowSimplifyArr,
   QueryThenShallowSimplifyOptional,
-  RecordKeyTrue,
-  RecordUnknown,
-  RelationsBase,
-} from '../core';
-import { Column } from '../columns/column';
-import { TableData } from '../tableData';
-import { WithDataItems } from './cte/cte.sql';
-import { ColumnsShape } from '../columns';
+} from './then/then';
 
 export interface DbExtension {
   name: string;
@@ -93,6 +90,46 @@ export type SelectableFromShape<
   };
 };
 
+export type QueryReturnType =
+  | QueryReturnTypeAll
+  | 'one'
+  | 'oneOrThrow'
+  | 'rows'
+  | 'pluck'
+  | 'value'
+  | 'valueOrThrow'
+  | 'void';
+
+export type QueryReturnTypeAll = undefined | 'all';
+
+export type QueryReturnTypeOptional = 'one' | 'value';
+
+export interface IsQuery {
+  __isQuery: true;
+}
+
+export interface IsQueries {
+  [K: string]: IsQuery;
+}
+
+export interface QueryBase extends IsQuery, PickQueryShape {
+  internal: QueryInternalBase;
+  q: QueryDataBase;
+  table?: string;
+}
+
+// It is a generic interface that covers any query:
+// both the table query objects
+// and the lightweight queries inside `where` and `on` callbacks
+export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
+  extends QueryBase {
+  meta: QueryMetaBase<Scopes>;
+}
+
+export interface QueryOrExpression<T> {
+  result: { value: Column.Pick.QueryColumnOfType<T> };
+}
+
 export interface Query extends QueryBase, QueryMethods<unknown> {
   __isQuery: true;
   result: Column.QueryColumns;
@@ -117,27 +154,6 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
   ) => QueryError;
 }
 
-export interface PickQueryQ {
-  q: QueryData;
-}
-
-export interface PickQueryInternal {
-  internal: QueryInternal;
-}
-
-export interface PickQueryBaseQuery {
-  baseQuery: Query;
-}
-
-export interface PickQueryQAndInternal
-  extends IsQuery,
-    PickQueryQ,
-    PickQueryInternal {}
-
-export interface PickQueryQAndBaseQuery
-  extends PickQueryQ,
-    PickQueryBaseQuery {}
-
 export type SelectableOfType<T extends PickQueryMeta, Type> = {
   [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null
     ? K
@@ -157,9 +173,6 @@ export const queryTypeWithLimitOne: RecordKeyTrue = {
   value: true,
   valueOrThrow: true,
 };
-
-export const isQueryReturnsAll = (q: Query) =>
-  !q.q.returnType || q.q.returnType === 'all';
 
 // Merge { hasSelect: true } into 'meta' if it's not true yet.
 export interface QueryMetaHasSelect {
@@ -537,3 +550,9 @@ export interface ReturnsQueryOrExpression<T> {
 export interface QueryOrExpressionBooleanOrNullResult {
   result: { value: Column.Pick.QueryColumnOfType<boolean | null> };
 }
+
+export const isQueryReturnsAll = (q: Query) =>
+  !q.q.returnType || q.q.returnType === 'all';
+
+export const isQuery = (q: unknown): q is IsQuery =>
+  !!q && typeof q === 'object' && '__isQuery' in q && q.__isQuery === true;
