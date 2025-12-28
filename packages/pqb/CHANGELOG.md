@@ -1,5 +1,11 @@
 # pqb
 
+## 0.58.1
+
+### Patch Changes
+
+- 60760a2: Fix selecting value from a relation deduplication issue (#603)
+
 ## 0.58.0
 
 ### Minor Changes

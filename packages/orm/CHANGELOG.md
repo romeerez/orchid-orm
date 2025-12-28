@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.59.1
+
+### Patch Changes
+
+- 60760a2: Fix selecting value from a relation deduplication issue (#603)
+- Updated dependencies [60760a2]
+  - pqb@0.58.1
+  - rake-db@2.27.25
+
 ## 1.59.0
 
 ### Minor Changes

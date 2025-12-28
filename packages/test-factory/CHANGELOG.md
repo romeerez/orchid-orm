@@ -1,5 +1,13 @@
 # orchid-orm-test-factory
 
+## 1.0.81
+
+### Patch Changes
+
+- 60760a2: Fix selecting value from a relation deduplication issue (#603)
+- Updated dependencies [60760a2]
+  - pqb@0.58.1
+
 ## 1.0.80
 
 ### Patch Changes
