@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Transactions
 
 All queries within a transaction are executed on the same database connection and run the entire set of queries as a single unit of work.
@@ -149,31 +153,85 @@ db.$transaction(async () => {
 
 ## $afterCommit
 
-[//]: # (has JSDoc)
+[//]: # 'has JSDoc'
 
 Schedules a hook to run after the outermost transaction commits:
 
 ```ts
 await db.$transaction(async () => {
-  await db.table.create(data)
-  await db.table.where({ ...conditions }).update({ key: 'value' })
- 
-  db.$afterCommit(() => { // can be sync or async
-    console.log('after commit')
-  })
-})
+  await db.table.create(data);
+  await db.table.where({ ...conditions }).update({ key: 'value' });
+
+  db.$afterCommit(() => {
+    // can be sync or async
+    console.log('after commit');
+  });
+});
 ```
 
 If used outside the transaction, the hook will be executed almost immediately, on the next microtask:
 
 ```ts
-db.$afterCommit(async () => { // can be sync or async
-  console.log('after commit')
-})
+db.$afterCommit(async () => {
+  // can be sync or async
+  console.log('after commit');
+});
 ```
 
 If the callback has no `try/catch` and throws an error,
 this will cause `uncaughtException` if the callback is sync and `unhandledRejection` if it is async.
+
+## recoverable query
+
+[//]: # 'has JSDoc'
+
+Whenever a query in a transaction fails, the transaction is transitioned to a failed state, no further queries are possible.
+
+Use [catchUniqueError](/guide/error-handling.html#catchuniqueerror) to handle uniqueness errors,
+the following examples do not use it to illustrate error handling.
+
+```ts
+// This transaction is going to fail
+db.$transaction(async () => {
+  try {
+    // imagine it fails because the username is already taken
+    await db.user.insert({ username: 'taken' });
+  } catch (err) {
+    // even though the query is wrapped in a try-catch, the transaction fails anyway
+  }
+});
+```
+
+You can use `catch` method on a query instead of `try-catch` to surpass the problem.
+The following transaction won't fail:
+
+```ts
+// Transaction succeeds
+db.$transaction(async () => {
+  const result = await db.user
+    .insert({ username: 'taken' })
+    .catch(() => 'failed');
+
+  if (result === 'failed') {
+    await db.user.insert({ username: 'another' });
+  }
+});
+```
+
+This is because when using `catch` method, `OrchidORM` will wrap the query with a savepoint.
+
+Alternatively, you can use the `recoverable()` method:
+
+```ts
+// Transaction succeeds
+db.$transaction(async () => {
+  try {
+    await db.user.insert({ username: 'taken' }).recoverable();
+  } catch (err) {
+    await db.user.insert({ username: 'another' });
+  }
+});
+```
 
 ## testTransaction
 
@@ -278,7 +336,9 @@ describe('outer', () => {
 
 Check out [test factories](/guide/test-factories), a perfect pair with `testTransaction` to use for testing.
 
-## isolation level
+## transaction options
+
+### isolation level
 
 By default, transaction isolation level is `SERIALIZABLE`, it is the strictest level and suites most cases.
 
@@ -297,7 +357,7 @@ db.$transaction('REPEATABLE READ', async () => {
 });
 ```
 
-## read only, deferrable
+### read only, deferrable
 
 Transactions in Postgres can accept `READ WRITE` | `READ ONLY` and `[ NOT ] DEFERRABLE` options ([Postgres docs](https://www.postgresql.org/docs/current/sql-set-transaction.html)).
 
@@ -317,7 +377,23 @@ db.$transaction(
 );
 ```
 
-## forUpdate
+### log transaction queries
+
+Pass `{ log: true }` to the transaction to turn logging on for all its queries, including `BEGIN` and `COMMIT`.
+
+Note that setting log on a transaction will override the log setting of a particular query.
+
+```ts
+await db.$transaction({ log: true }, async () => {
+  await db.table.insert(data);
+  // raw SQL queries will also be logged
+  await db.$query`SELECT 1`;
+});
+```
+
+## query for
+
+### forUpdate
 
 To be used in select queries inside the transaction adds the `FOR UPDATE` table lock modifier.
 
@@ -330,7 +406,7 @@ await db.$transaction(async () => {
 });
 ```
 
-## forNoKeyUpdate
+### forNoKeyUpdate
 
 To be used in select queries inside the transaction adds the `FOR NO KEY UPDATE` table lock modifier.
 
@@ -343,7 +419,7 @@ await db.$transaction(async () => {
 });
 ```
 
-## forShare
+### forShare
 
 To be used in select queries inside the transaction adds the `FOR SHARE` table lock modifier.
 
@@ -356,7 +432,7 @@ await db.$transaction(async () => {
 });
 ```
 
-## forKeyShare
+### forKeyShare
 
 To be used in select queries inside the transaction adds the `FOR KEY SHARE` table lock modifier.
 
@@ -369,7 +445,7 @@ await db.$transaction(async () => {
 });
 ```
 
-## skipLocked
+### skipLocked
 
 This method can be used after a lock mode has been specified with either `forUpdate` or `forShare`, and will cause the query to skip any locked rows, returning an empty set if none are available.
 
@@ -379,26 +455,12 @@ await db.$transaction(async () => {
 });
 ```
 
-## noWait
+### noWait
 
 This method can be used after a lock mode has been specified with either forUpdate or forShare, and will cause the query to fail immediately if any selected rows are currently locked.
 
 ```ts
 await db.$transaction(async () => {
   await db.table.forUpdate().noWait();
-});
-```
-
-## log transaction queries
-
-Pass `{ log: true }` to the transaction to turn logging on for all its queries, including `BEGIN` and `COMMIT`.
-
-Note that setting log on a transaction will override the log setting of a particular query.
-
-```ts
-await db.$transaction({ log: true }, async () => {
-  await db.table.insert(data);
-  // raw SQL queries will also be logged
-  await db.$query`SELECT 1`;
 });
 ```

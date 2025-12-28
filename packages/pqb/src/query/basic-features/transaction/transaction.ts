@@ -11,6 +11,7 @@ import { emptyArray, emptyObject } from '../../../utils';
 import { SingleSqlItem } from '../../sql/sql';
 import { OrchidOrmError } from '../../errors';
 import { PickQueryQAndInternal } from '../../pick-query-types';
+import { _clone } from '../clone/clone';
 
 export const commitSql: SingleSqlItem = {
   text: 'COMMIT',
@@ -345,7 +346,7 @@ export class Transaction {
       return result;
     } else {
       try {
-        sql.text = `SAVEPOINT "${transactionId}"`;
+        sql.text = `SAVEPOINT "t${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
 
         const { adapter } = trx;
@@ -355,14 +356,14 @@ export class Transaction {
         try {
           result = await callback(adapter);
         } catch (err) {
-          sql.text = `ROLLBACK TO SAVEPOINT "${transactionId}"`;
+          sql.text = `ROLLBACK TO SAVEPOINT "t${transactionId}"`;
           if (log) logData = log.beforeQuery(sql);
           await adapter.arrays(sql.text, sql.values);
           if (log) log.afterQuery(sql, logData);
           throw err;
         }
 
-        sql.text = `RELEASE SAVEPOINT "${transactionId}"`;
+        sql.text = `RELEASE SAVEPOINT "t${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
         await adapter.arrays(sql.text, sql.values);
         if (log) log.afterQuery(sql, logData);
@@ -454,6 +455,59 @@ export class Transaction {
     } else {
       queueMicrotask(hook);
     }
+  }
+
+  /**
+   * Whenever a query in a transaction fails, the transaction is transitioned to a failed state, no further queries are possible.
+   *
+   * Use [catchUniqueError](/guide/error-handling.html#catchuniqueerror) to handle uniqueness errors,
+   * the following examples do not use it to illustrate error handling.
+   *
+   * ```ts
+   * // This transaction is going to fail
+   * db.$transaction(async () => {
+   *   try {
+   *     // imagine it fails because the username is already taken
+   *     await db.user.insert({ username: 'taken' });
+   *   } catch (err) {
+   *     // even though the query is wrapped in a try-catch, the transaction fails anyway
+   *   }
+   * });
+   * ```
+   *
+   * You can use `catch` method on a query instead of `try-catch` to surpass the problem.
+   * The following transaction won't fail:
+   *
+   * ```ts
+   * // Transaction succeeds
+   * db.$transaction(async () => {
+   *   const result = await db.user.insert({ username: 'taken' }).catch(() => 'failed');
+   *
+   *   if (result === 'failed') {
+   *     await db.user.insert({ username: 'another' });
+   *   }
+   * });
+   * ```
+   *
+   * This is because when using `catch` method, `OrchidORM` will wrap the query with a savepoint.
+   *
+   * Alternatively, you can use the `recoverable()` method:
+   *
+   * ```ts
+   * // Transaction succeeds
+   * db.$transaction(async () => {
+   *   try {
+   *     await db.user.insert({ username: 'taken' }).recoverable();
+   *   } catch (err) {
+   *     await db.user.insert({ username: 'another' });
+   *   }
+   * });
+   * ```
+   */
+  recoverable<T>(this: T): T {
+    const q = _clone(this);
+    q.q.catch = true;
+    return q as T;
   }
 }
 

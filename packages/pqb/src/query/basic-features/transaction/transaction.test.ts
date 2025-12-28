@@ -118,9 +118,9 @@ describe('transaction', () => {
 
     expect(transactionSpy).toBeCalledTimes(1);
     expect(arraysSpy.mock.calls.map((call) => call[0])).toEqual([
-      'SAVEPOINT "1"',
+      'SAVEPOINT "t1"',
       'SELECT 123 LIMIT 1',
-      'RELEASE SAVEPOINT "1"',
+      'RELEASE SAVEPOINT "t1"',
     ]);
   });
 
@@ -139,8 +139,8 @@ describe('transaction', () => {
 
     expect(transactionSpy).toBeCalledTimes(1);
     expect(arraysSpy.mock.calls.map((call) => call[0])).toEqual([
-      'SAVEPOINT "1"',
-      'ROLLBACK TO SAVEPOINT "1"',
+      'SAVEPOINT "t1"',
+      'ROLLBACK TO SAVEPOINT "t1"',
     ]);
   });
 

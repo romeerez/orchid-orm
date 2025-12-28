@@ -184,7 +184,7 @@ function maybeWrappedThen(
 ): Promise<unknown> {
   const { q } = this;
 
-  const shouldCatch = q.catch || !!reject;
+  const shouldCatch = q.catch;
 
   let beforeActionHooks: QueryBeforeHookInternal[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
@@ -855,7 +855,7 @@ const execQuery = (
   catchTrx: TransactionState | false | undefined,
 ) => {
   const catchingSavepoint = catchTrx
-    ? String((catchTrx.catchI = (catchTrx.catchI || 0) + 1))
+    ? `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`
     : undefined;
 
   return (

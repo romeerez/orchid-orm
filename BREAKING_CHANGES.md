@@ -1,5 +1,37 @@
 # Breaking changes
 
+## orchid-orm 1.60
+
+Since orchid-orm 1.55 all queries inside a transaction were issues with a `SAVEPOINT`,
+a query would rollback to its savepoint if it fails, allowing for smooth error handling inside transactions.
+
+```ts
+// transaction is going to fail since 1.60
+db.$transaction(async () => {
+  try {
+    await db.table.insert(data);
+  } catch {
+    // handle error, potentially perform new queries
+  }
+});
+```
+
+The same still applies when using `.catch((err) => ...)` method on a given query,
+but by default the transaction in the example above would fail and won't accept new queries after the given query fails.
+
+Without `.catch((err) => ...)`, you need to append `.recoverable()` to the query you want to handle errors for:
+
+```ts
+// transaction does not fail
+db.$transaction(async () => {
+  try {
+    await db.table.insert(data).recoverable();
+  } catch {
+    // handle error, potentially perform new queries
+  }
+});
+```
+
 ## orchid-orm 1.59
 
 `belongsTo` relation's nested `create`, `connect`, `connectOrCreate` were drastically optimized.

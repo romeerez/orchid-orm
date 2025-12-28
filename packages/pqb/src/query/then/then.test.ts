@@ -59,19 +59,19 @@ describe('then', () => {
       expect(User.q.catch).toBe(undefined);
     });
 
-    it('should catch error in transaction using a save-points', async () => {
+    it('should catch error in transaction using save-points', async () => {
       const transactionCatch = jest.fn(() => {
         throw new Error('should not be called');
       });
 
       const res = await testDb
         .transaction(async () => {
-          const failedThenResult = await User.get('invalid' as 'name').then(
-            () => {
+          const failedThenResult = await User.get('invalid' as 'name')
+            .recoverable()
+            .then(() => {
               throw new Error('should not be called');
-            },
-            () => 'caught',
-          );
+            })
+            .catch(() => 'caught');
 
           const failedCatchResult = await User.get('invalid' as 'name').catch(
             () => 'caught',
@@ -299,7 +299,7 @@ describe('batch queries', () => {
         Table.internal.transactionStorage.getStore() as TransactionState;
       const queryArrays = jest.spyOn(trx.adapter, 'arrays');
 
-      const result = await q;
+      const result = await q.recoverable();
 
       return { queryArrays, result };
     });
@@ -308,12 +308,12 @@ describe('batch queries', () => {
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
-        '1',
+        's1',
       ],
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
         [2],
-        '2',
+        's2',
       ],
     ]);
 
