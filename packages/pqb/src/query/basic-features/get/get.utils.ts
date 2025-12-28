@@ -92,14 +92,21 @@ const _get = <
 
   q.returnType = returnType;
 
-  let type: Column.Pick.QueryColumn | undefined;
+  let type: Column | undefined;
   if (typeof arg === 'string') {
-    type = _getSelectableColumn(query as never, arg);
+    const joinedAs = q.valuesJoinedAs?.[arg];
+
+    type = (
+      joinedAs
+        ? q.joinedShapes?.[joinedAs]?.value
+        : _getSelectableColumn(query as never, arg)
+    ) as Column | undefined;
+
     q.getColumn = type;
 
     const selected = setParserForSelectedString(
       query as never,
-      arg,
+      joinedAs ? joinedAs + '.' + arg : arg,
       getQueryAs(query as never),
       getValueKey,
     );
@@ -108,7 +115,7 @@ const _get = <
       ? [(q.expr = new SelectItemExpression(query as never, selected, type))]
       : undefined;
   } else {
-    type = arg.result.value;
+    type = arg.result.value as Column | undefined;
     q.getColumn = type;
     addParserForRawExpression(query as never, getValueKey, arg);
     q.select = [(q.expr = arg)];

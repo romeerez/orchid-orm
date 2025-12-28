@@ -85,25 +85,33 @@ const numericResultColumn = (
   q: unknown,
   arg: PropertyKey | Expression,
 ): Column => {
+  const query = q as Query;
+
   const type =
     typeof arg === 'string'
-      ? _getSelectableColumn(q as Query, arg)
+      ? _getSelectableColumn(query, arg)
       : (arg as Expression).result.value;
 
-  return type instanceof NumberBaseColumn
-    ? floatNullable
-    : stringAsNumberNullable;
+  let column =
+    type instanceof NumberBaseColumn ? floatNullable : stringAsNumberNullable;
+
+  const parse = typeof arg === 'string' && query.q.parsers?.[arg];
+  if (parse) column = column.parse(parse) as typeof column;
+  return column;
 };
 
-type QueryReturnsAgg<T, C, Op> = SetQueryReturnsColumnOrThrow<
-  T,
-  Column.Pick.QueryColumnOfTypeAndOps<C, Op>
-> &
-  Op;
-
-type CountReturn<T> = QueryReturnsAgg<T, number, OperatorsNumber> & {
+interface OperatorsCount extends OperatorsNumber {
   isCount: true;
-};
+}
+
+type CountColumn = Column.Pick.QueryColumnOfTypeAndOps<
+  'int8',
+  number,
+  OperatorsCount
+>;
+
+type CountReturn<T> = SetQueryReturnsColumnOrThrow<T, CountColumn> &
+  OperatorsCount;
 
 type SelectableDataType<T extends PickQueryMeta, DataType extends string> =
   | {
@@ -113,11 +121,6 @@ type SelectableDataType<T extends PickQueryMeta, DataType extends string> =
     }[keyof T['meta']['selectable']]
   | Expression<Column.Pick.QueryColumnOfDataType<DataType>>;
 
-type NumberNullable = Column.Pick.QueryColumnOfTypeAndOps<
-  number | null,
-  OperatorsNumber
->;
-
 type NumericReturn<
   T extends PickQueryMeta,
   Arg,
@@ -125,6 +128,7 @@ type NumericReturn<
   ? SetQueryReturnsColumnOrThrow<
       T,
       Column.Pick.QueryColumnOfTypeAndOps<
+        T['meta']['selectable'][Arg]['column']['dataType'],
         T['meta']['selectable'][Arg]['column']['type'] | null,
         OperatorsNumber
       >
@@ -134,6 +138,7 @@ type NumericReturn<
   ? SetQueryReturnsColumnOrThrow<
       T,
       Column.Pick.QueryColumnOfTypeAndOps<
+        Arg['result']['value']['dataType'],
         Arg['result']['value']['type'] | null,
         OperatorsNumber
       >
@@ -141,15 +146,20 @@ type NumericReturn<
       OperatorsNumber
   : never;
 
-type NullableNumberReturn<T> = SetQueryReturnsColumnOrThrow<T, NumberNullable> &
+type NullableNumberReturn<T, DataType> = SetQueryReturnsColumnOrThrow<
+  T,
+  Column.Pick.QueryColumnOfTypeAndOps<DataType, number | null, OperatorsNumber>
+> &
   OperatorsNumber;
 
 export type BooleanQueryColumn = Column.Pick.QueryColumnOfTypeAndOps<
+  'bool',
   boolean,
   OperatorsBoolean
 >;
 
 type BooleanNullable = Column.Pick.QueryColumnOfTypeAndOps<
+  'bool',
   boolean | null,
   OperatorsBoolean
 >;
@@ -206,9 +216,14 @@ type NullableJSONObjectReturn<
 > &
   OperatorsAny;
 
-type StringColumn = Column.Pick.QueryColumnOfTypeAndOps<string, OperatorsText>;
+type StringColumn = Column.Pick.QueryColumnOfTypeAndOps<
+  string,
+  string,
+  OperatorsText
+>;
 
 type StringNullable = Column.Pick.QueryColumnOfTypeAndOps<
+  string,
   string | null,
   OperatorsText
 >;
@@ -805,7 +820,7 @@ export class AggregateMethods {
   rowNumber<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
     over?: Over<T>,
-  ): NullableNumberReturn<T> {
+  ): NullableNumberReturn<T, 'int8'> {
     return makeFnExpression(this, intNullable, 'row_number', emptyArray, {
       over,
     }) as never;
@@ -832,7 +847,7 @@ export class AggregateMethods {
   rank<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
     over?: Over<T>,
-  ): NullableNumberReturn<T> {
+  ): NullableNumberReturn<T, 'int8'> {
     return makeFnExpression(this, intNullable, 'rank', emptyArray, {
       over,
     }) as never;
@@ -859,7 +874,7 @@ export class AggregateMethods {
   denseRank<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
     over?: Over<T>,
-  ): NullableNumberReturn<T> {
+  ): NullableNumberReturn<T, 'int8'> {
     return makeFnExpression(this, intNullable, 'dense_rank', emptyArray, {
       over,
     }) as never;
@@ -886,7 +901,7 @@ export class AggregateMethods {
   percentRank<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
     over?: Over<T>,
-  ): NullableNumberReturn<T> {
+  ): NullableNumberReturn<T, 'float8'> {
     return makeFnExpression(this, intNullable, 'percent_rank', emptyArray, {
       over,
     }) as never;
@@ -913,7 +928,7 @@ export class AggregateMethods {
   cumeDist<T extends PickQueryMetaResultRelationsWindows>(
     this: T,
     over?: Over<T>,
-  ): NullableNumberReturn<T> {
+  ): NullableNumberReturn<T, 'float8'> {
     return makeFnExpression(this, floatNullable, 'cume_dist', emptyArray, {
       over,
     }) as never;

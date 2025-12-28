@@ -42,10 +42,14 @@ export type BatchParsers = BatchParser[];
 export const setParserToQuery = (
   query: { parsers?: ColumnsParsers },
   key: string | getValueKey,
-  parser: ColumnParser,
+  parser?: ColumnParser,
 ) => {
-  if (query.parsers) query.parsers[key] = parser;
-  else query.parsers = { [key]: parser };
+  if (parser) {
+    if (query.parsers) query.parsers[key] = parser;
+    else query.parsers = { [key]: parser };
+  } else if (query.parsers) {
+    delete query.parsers[key];
+  }
 };
 
 /**

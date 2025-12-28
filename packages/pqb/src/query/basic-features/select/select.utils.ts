@@ -93,7 +93,7 @@ export interface QueryBatchResult {
 
 // add parser for a single key-value pair of selected object
 export const addParserForSelectItem = <T extends PickQueryMeta>(
-  q: T,
+  query: T,
   as: string | getValueKey | undefined,
   key: string,
   arg: SelectableOrExpression<T> | Query,
@@ -101,13 +101,13 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
   joinQuery?: boolean,
 ): string | Expression | Query | undefined => {
   if (typeof arg === 'object') {
-    const { q: query } = arg as Query;
+    const { q: q } = arg as Query;
 
-    if (query.batchParsers) {
+    if (q.batchParsers) {
       pushQueryArrayImmutable(
-        q as unknown as Query,
+        query as unknown as Query,
         'batchParsers',
-        query.batchParsers.map((bp) => ({
+        q.batchParsers.map((bp) => ({
           path: [key, ...bp.path],
           fn: bp.fn,
         })),
@@ -120,20 +120,20 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
 
     if (
       parsers ||
-      query.hookSelect ||
-      query.transform ||
-      query.returnType === 'oneOrThrow' ||
-      query.returnType === 'valueOrThrow' ||
-      query.returnType === 'one' ||
-      query.returnType === 'value'
+      q.hookSelect ||
+      q.transform ||
+      q.returnType === 'oneOrThrow' ||
+      q.returnType === 'valueOrThrow' ||
+      q.returnType === 'one' ||
+      q.returnType === 'value'
     ) {
-      pushQueryValueImmutable(q as unknown as Query, 'batchParsers', {
+      pushQueryValueImmutable(query as unknown as Query, 'batchParsers', {
         path: [key],
         fn: (path, queryResult) => {
           const { rows } = queryResult;
-          const originalReturnType = query.returnType || 'all';
+          const originalReturnType = q.returnType || 'all';
           let returnType = originalReturnType;
-          const { hookSelect } = query;
+          const { hookSelect } = q;
           const batches: QueryBatchResult[] = [];
 
           const last = path.length;
@@ -213,18 +213,15 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             }
             case 'value':
             case 'valueOrThrow': {
-              const notNullable = !(
-                query.getColumn as Column.Pick.Data | undefined
-              )?.data.isNullable;
+              const notNullable = !(q.getColumn as Column.Pick.Data | undefined)
+                ?.data.isNullable;
 
               const parse = parsers?.[getValueKey];
               if (parse) {
                 if (returnType === 'value') {
                   for (const item of batches) {
                     item.parent[item.key] = item.data =
-                      item.data === null
-                        ? query.notFoundDefault
-                        : parse(item.data);
+                      item.data === null ? q.notFoundDefault : parse(item.data);
                   }
                 } else {
                   for (const item of batches) {
@@ -238,7 +235,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
               } else if (returnType === 'value') {
                 for (const item of batches) {
                   if (item.data === null) {
-                    item.parent[item.key] = item.data = query.notFoundDefault;
+                    item.parent[item.key] = item.data = q.notFoundDefault;
                   }
                 }
               } else if (notNullable) {
@@ -285,9 +282,9 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
               }
             }
 
-            if (query.selectedComputeds) {
+            if (q.selectedComputeds) {
               const maybePromise = processComputedBatches(
-                query,
+                q,
                 batches,
                 originalReturnType,
                 returnType,
@@ -307,7 +304,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
             );
           }
 
-          applyBatchTransforms(query, batches);
+          applyBatchTransforms(q, batches);
           return;
         },
       } as BatchParser);
@@ -318,7 +315,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
     }
 
     if (isExpression(arg)) {
-      addParserForRawExpression(q as never, key, arg);
+      addParserForRawExpression(query as never, key, arg);
       return arg;
     }
 
@@ -326,7 +323,7 @@ export const addParserForSelectItem = <T extends PickQueryMeta>(
   }
 
   return setParserForSelectedString(
-    q as never,
+    query as never,
     arg as string,
     as,
     key,

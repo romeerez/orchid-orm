@@ -16,7 +16,7 @@ import {
 } from '../../../test-utils/pqb.test-utils';
 import { testWhere, testWhereExists } from '../where/test-where';
 import { testJoin } from './test-join';
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import { assertType, db, expectSql, useTestDatabase } from 'test-utils';
 import { isQueryNone } from '../../extra-features/none/none';
 
 const insertMessage = async () => {
@@ -55,6 +55,34 @@ describe('using db', () => {
     const res = await q;
 
     expect(res).toEqual([{ updatedAt: expect.any(Date) }]);
+  });
+
+  it('should properly reference de-duplicated join value in get', async () => {
+    await insertMessage();
+
+    const q = db.user
+      .select({
+        firstJoinName: (q) => q.messages.count(),
+        messagesCount: (q) => q.messages.count(),
+      })
+      .get('messagesCount');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "firstJoinName"."messagesCount" FROM "user"
+        LEFT JOIN LATERAL (
+          SELECT count(*) "firstJoinName", count(*) "messagesCount"
+          FROM "message" "messages"
+          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            AND ("messages"."deleted_at" IS NULL)
+        ) "firstJoinName" ON true
+        LIMIT 1
+      `,
+    );
+
+    const res = await q;
+    expect(res).toBe(0);
   });
 });
 

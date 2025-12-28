@@ -33,6 +33,7 @@ import {
   BatchParsers,
   ColumnsParsers,
   getQueryParsers,
+  setParserToQuery,
 } from '../../query-columns/query-column-parsers';
 import { preprocessJoinArg, processJoinArgs } from './process-join-args';
 import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
@@ -43,12 +44,13 @@ import { isRelationQuery, RelationConfigBase } from '../../relations';
 import { ComputedColumns } from '../../extra-features/computed/computed';
 import { throwIfJoinLateral } from '../../query.utils';
 import { resolveSubQueryCallback } from '../../sub-query/sub-query';
-import { SelectItem } from '../select/select.sql';
+import { SelectAs, SelectAsValue, SelectItem } from '../select/select.sql';
 import { JoinItemArgs } from './join.sql';
 import { getSqlText } from '../../sql/sql';
-import { pushQueryValueImmutable } from '../../query-data';
+import { JoinValueDedupItem, pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { QueryThenByQuery } from '../../then/then';
+import { getValueKey } from '../get/get-value-key';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
@@ -731,86 +733,135 @@ export const _joinLateralProcessArg = (
  *
  * @param self - query object to join to
  * @param type - SQL of the JOIN kind: JOIN or LEFT JOIN
- * @param arg - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
+ * @param joinQuery - join target: a query, or a relation name, or a `with` table name, or a callback returning a query.
  * @param as - alias of the joined table, it is set the join lateral happens when selecting a relation in `select`
  * @param innerJoinLateral - add `ON p.r IS NOT NULL` check to have INNER JOIN like experience when sub-selecting arrays.
  */
 export const _joinLateral = (
   self: PickQueryMetaResultRelationsWithDataReturnTypeShape,
   type: string,
-  arg: Query,
+  joinQuery: Query,
   as?: string,
   innerJoinLateral?: boolean,
 ): string | undefined => {
-  const q = self as Query;
-  arg = prepareSubQueryForSql(self as Query, arg) as never;
+  const query = self as Query;
 
-  arg.q.joinTo = q;
-  const joinedAs = getQueryAs(q);
-  setObjectValueImmutable(arg.q, 'joinedShapes', joinedAs, q.q.shape);
+  joinQuery = prepareSubQueryForSql(self as Query, joinQuery) as never;
+  joinQuery.q.joinTo = query;
 
-  const joinKey = as || arg.q.as || arg.table;
-  if (joinKey) {
-    const shape = getShapeFromSelect(arg, true);
-    setObjectValueImmutable(q.q, 'joinedShapes', joinKey, shape);
-
-    setObjectValueImmutable(
-      q.q,
-      'joinedParsers',
-      joinKey,
-      getQueryParsers(arg),
-    );
-
-    if (arg.q.batchParsers) {
-      setObjectValueImmutable(
-        q.q,
-        'joinedBatchParsers',
-        joinKey,
-        arg.q.batchParsers,
-      );
-    }
-  }
-
-  as ||= getQueryAs(arg);
-  setObjectValueImmutable(q.q, 'joinedComputeds', as, arg.q.runtimeComputeds);
+  as ||= getQueryAs(joinQuery);
+  setObjectValueImmutable(
+    query.q,
+    'joinedComputeds',
+    as,
+    joinQuery.q.runtimeComputeds,
+  );
 
   const joinArgs = {
-    l: arg,
+    l: joinQuery,
     a: as,
     i: innerJoinLateral,
   };
 
-  if (arg.q.returnType === 'value' || arg.q.returnType === 'valueOrThrow') {
-    const map = q.q.joinValueDedup ? new Map(q.q.joinValueDedup) : new Map();
-    q.q.joinValueDedup = map;
+  const joinAs = (as || joinQuery.q.as || joinQuery.table) as string;
 
-    const select = (arg.q.select as SelectItem[])[0];
-    arg.q.select = [];
-    const dedupKey = getSqlText(arg.toSQL());
+  const joinValue =
+    joinQuery.q.returnType === 'value' ||
+    joinQuery.q.returnType === 'valueOrThrow';
 
-    const existing = map.get(dedupKey);
-    if (existing) {
-      existing.q.q.select = [
-        {
-          selectAs: {
-            ...existing.q.q.select[0].selectAs,
-            [joinKey as string]: select as string,
-          },
-        },
-      ];
-      return existing.a;
+  let joinValueAs: string | undefined;
+  let joinValueSelect: SelectItem | undefined;
+  let existingValue: JoinValueDedupItem | undefined;
+
+  if (joinValue) {
+    const map = query.q.joinValueDedup
+      ? new Map(query.q.joinValueDedup)
+      : new Map<string, JoinValueDedupItem>();
+    query.q.joinValueDedup = map;
+
+    const select = joinQuery.q.select as SelectItem[];
+    joinValueSelect = select[0];
+    joinQuery.q.select = [];
+    const dedupKey = getSqlText(joinQuery.toSQL());
+    joinQuery.q.select = select;
+
+    existingValue = map.get(dedupKey);
+    if (existingValue) {
+      joinValueAs = existingValue.a as string;
     } else {
-      arg.q.select = [{ selectAs: { [joinKey as string]: select as string } }];
-      map.set(dedupKey, { q: arg, a: as });
+      joinValueAs = joinAs;
+      map.set(dedupKey, { q: joinQuery, a: as });
     }
   }
 
-  pushQueryValueImmutable(q, 'join', {
+  if (!existingValue) {
+    const joinedAs = getQueryAs(query);
+    setObjectValueImmutable(
+      joinQuery.q,
+      'joinedShapes',
+      joinedAs,
+      query.q.shape,
+    );
+  }
+
+  const shape = getShapeFromSelect(joinQuery, true);
+  setObjectValueImmutable(query.q, 'joinedShapes', joinAs, shape);
+
+  const parsers = getQueryParsers(joinQuery);
+
+  if (joinValue) {
+    setObjectValueImmutable(query.q, 'valuesJoinedAs', joinAs, joinValueAs);
+
+    const parse = parsers && getValueKey in parsers;
+    if (parse) {
+      const parse = parsers[getValueKey];
+      setParserToQuery(query.q, joinAs, parse);
+      parsers[joinAs] = parse;
+    }
+  }
+
+  setObjectValueImmutable(
+    query.q,
+    'joinedParsers',
+    joinValueAs || joinAs,
+    getQueryParsers(joinQuery),
+  );
+
+  if (joinQuery.q.batchParsers) {
+    setObjectValueImmutable(
+      query.q,
+      'joinedBatchParsers',
+      joinAs,
+      joinQuery.q.batchParsers,
+    );
+  }
+
+  if (joinValueAs) {
+    if (existingValue) {
+      existingValue.q.q.select = [
+        {
+          selectAs: {
+            ...((existingValue.q.q.select?.[0] as SelectAs)
+              .selectAs as SelectAsValue),
+            [joinAs]: joinValueSelect as never,
+          },
+        },
+      ];
+
+      return joinValueAs;
+    }
+
+    joinQuery.q.select = [
+      { selectAs: { [joinValueAs]: joinValueSelect as string } },
+    ];
+  }
+
+  pushQueryValueImmutable(query, 'join', {
     type: `${type} LATERAL`,
     args: joinArgs,
   });
 
-  return joinKey;
+  return joinAs;
 };
 
 export class QueryJoin {

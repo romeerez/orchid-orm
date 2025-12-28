@@ -13,6 +13,7 @@ import {
   RecordUnknown,
   toArray,
   toSnakeCase,
+  SearchWeight,
 } from 'pqb';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';

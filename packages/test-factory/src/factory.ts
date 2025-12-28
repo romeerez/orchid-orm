@@ -56,6 +56,8 @@ import {
   PickQueryShape,
   RecordUnknown,
   StringData,
+  getPrimaryKeys,
+  QueryBase,
 } from 'pqb';
 import { faker } from '@faker-js/faker';
 import randexp from 'randexp';

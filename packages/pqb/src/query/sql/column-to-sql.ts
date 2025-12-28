@@ -41,6 +41,7 @@ export function simpleExistingColumnToSQL(
 export const columnToSql = (
   ctx: ToSQLCtx,
   data: {
+    valuesJoinedAs?: RecordString;
     aliases?: RecordString;
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
@@ -50,7 +51,15 @@ export const columnToSql = (
   quotedAs?: string,
   select?: true,
 ): string => {
-  const index = column.indexOf('.');
+  let index = column.indexOf('.');
+  if (index === -1) {
+    const joinAs = data.valuesJoinedAs?.[column];
+    if (joinAs) {
+      column = joinAs + '.' + column;
+      index = joinAs.length;
+    }
+  }
+
   if (index !== -1) {
     return columnWithDotToSql(
       ctx,

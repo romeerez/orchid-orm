@@ -226,8 +226,8 @@ export namespace Column {
       operators: any;
     }
 
-    export interface QueryColumnOfTypeAndOps<T, Ops> {
-      dataType: string;
+    export interface QueryColumnOfTypeAndOps<DataType, T, Ops> {
+      dataType: DataType;
       type: T;
       outputType: T;
       queryType: T;

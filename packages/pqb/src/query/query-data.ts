@@ -27,6 +27,7 @@ import { HasHookSelect, HookSelect } from './basic-features/select/hook-select';
 import {
   MaybeArray,
   pushOrNewArrayToObjectImmutable,
+  RecordString,
   RecordUnknown,
 } from '../utils';
 import { RelationConfigBase } from './relations';
@@ -118,6 +119,11 @@ export interface QueryDataBase
   select?: unknown;
 }
 
+export interface JoinValueDedupItem {
+  q: Query;
+  a: string;
+}
+
 export interface QueryData extends QueryDataBase {
   type:
     | undefined
@@ -156,6 +162,9 @@ export interface QueryData extends QueryDataBase {
   joinedComputeds?: { [K: string]: ComputedColumns | undefined };
   joinedForSelect?: string;
   innerJoinLateral?: true;
+  // to select values with `get` or aggregate them when they were joined inside `select`.
+  // joined table name is implicit in such a case.
+  valuesJoinedAs?: RecordString;
   schema?: string;
   select?: SelectItem[];
   selectRelation?: boolean;
@@ -277,7 +286,7 @@ export interface QueryData extends QueryDataBase {
   distinct?: SelectableOrExpression[];
   only?: boolean;
   join?: JoinItem[];
-  joinValueDedup?: Map<string, { q: Query; a: string }>;
+  joinValueDedup?: Map<string, JoinValueDedupItem>;
   group?: (string | Expression)[];
   having?: HavingItem[];
   window?: WindowItem[];

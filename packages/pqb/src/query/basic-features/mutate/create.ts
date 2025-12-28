@@ -221,6 +221,7 @@ type NarrowCreateResult<T extends CreateSelf> =
     : {
         [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
           ? Column.Pick.QueryColumnOfTypeAndOps<
+              string,
               Exclude<T['result'][K]['type'], null>,
               T['result'][K]['operators']
             >

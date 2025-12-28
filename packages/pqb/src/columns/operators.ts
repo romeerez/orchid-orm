@@ -433,6 +433,7 @@ interface JsonPathQuery {
   <
     T extends PickQueryResultColumnTypes,
     C extends Column.Pick.QueryColumn = Column.Pick.QueryColumnOfTypeAndOps<
+      string,
       unknown,
       OperatorsAny
     >,

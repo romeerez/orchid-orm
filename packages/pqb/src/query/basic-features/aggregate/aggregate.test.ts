@@ -5,7 +5,16 @@ import {
   Message,
   Product,
 } from '../../../test-utils/pqb.test-utils';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  ChatData,
+  db,
+  expectSql,
+  MessageData,
+  testDb,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 import { Operators } from '../../../columns/operators';
 import {
   BooleanColumn,
@@ -258,6 +267,38 @@ describe('aggregate', () => {
         `,
       );
     });
+
+    it('should select a number from a sub-query with a column data type appropriate for the following `sum` aggregation', async () => {
+      const AuthorId = await db.user.get('Id').insert(UserData);
+      const ChatId = await db.chat.get('IdOfChat').insert(ChatData);
+      await db.message.insert({ ...MessageData, AuthorId, ChatId });
+
+      const q = db.user
+        .select({
+          first: (q) => q.messages.count(),
+          messagesCount: (q) => q.messages.count(),
+        })
+        .sum('messagesCount');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT sum("first"."messagesCount")
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT count(*) "first", count(*) "messagesCount"
+            FROM "message" "messages"
+            WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
+          ) "first" ON true
+        `,
+      );
+
+      const res = await q;
+      assertType<typeof res, number | null>();
+
+      expect(res).toBe(1);
+    });
   });
 
   describe('numeric aggregations', () => {
@@ -282,6 +323,38 @@ describe('aggregate', () => {
       assertType<typeof value, string | null>();
 
       expect(typeof value).toBe('string');
+    });
+
+    it('should select a number from a sub-query with a column data type appropriate for the following `sum` aggregation', async () => {
+      const AuthorId = await db.user.get('Id').insert(UserData);
+      const ChatId = await db.chat.get('IdOfChat').insert(ChatData);
+      await db.message.insert({ ...MessageData, AuthorId, ChatId });
+
+      const q = db.user
+        .select({
+          first: (q) => q.messages.sum('Id'),
+          messagesSum: (q) => q.messages.sum('Id'),
+        })
+        .sum('messagesSum');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT sum("first"."messagesSum")
+          FROM "user"
+          LEFT JOIN LATERAL (
+            SELECT sum("messages"."id") "first", sum("messages"."id") "messagesSum"
+            FROM "message" "messages"
+            WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
+          ) "first" ON true
+        `,
+      );
+
+      const res = await q;
+      assertType<typeof res, number | null>();
+
+      expect(typeof res).toBe('number');
     });
   });
 
