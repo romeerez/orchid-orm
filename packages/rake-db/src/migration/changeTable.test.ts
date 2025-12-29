@@ -1697,6 +1697,28 @@ describe('changeTable', () => {
             `),
         );
       });
+
+      it('should drop uuid default', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.uuid().primaryKey(),
+                t.uuid().primaryKey().default(null),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ALTER COLUMN "col_umn" DROP DEFAULT
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ALTER COLUMN "col_umn" SET DEFAULT gen_random_uuid()
+            `),
+        );
+      });
     });
 
     it('should change column null', async () => {

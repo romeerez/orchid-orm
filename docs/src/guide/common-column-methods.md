@@ -301,6 +301,10 @@ The type of `input` argument will be used as the type of the column when creatin
 If you have a validation library [installed and configured](/guide/columns-validation-methods),
 first argument is a schema to validate the input.
 
+:::warning
+For JSON column type you should place `JSON.stringify` in the encode function.
+:::
+
 ```ts
 import { z } from 'zod';
 

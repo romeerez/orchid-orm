@@ -438,12 +438,7 @@ const compareColumns = async (
     return 'change';
   }
 
-  if (
-    dbData.default !== undefined &&
-    dbData.default !== null &&
-    codeData.default !== undefined &&
-    codeData.default !== null
-  ) {
+  if (dbData.default !== undefined && codeData.default !== undefined) {
     const valuesBeforeLen = compareSql.values.length;
     const dbDefault = encodeColumnDefault(
       dbData.default,

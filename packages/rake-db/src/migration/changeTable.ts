@@ -593,6 +593,19 @@ const astToQueries = (
   const prependAlterTable: string[] = [];
 
   if (
+    dropPrimaryKeys.change &&
+    addPrimaryKeys.change &&
+    dropPrimaryKeys.name === addPrimaryKeys.name &&
+    dropPrimaryKeys.columns.length === addPrimaryKeys.columns.length &&
+    dropPrimaryKeys.columns.every(
+      (column, i) => column === addPrimaryKeys.columns[i],
+    )
+  ) {
+    dropPrimaryKeys.change = addPrimaryKeys.change = undefined;
+    dropPrimaryKeys.columns.length = addPrimaryKeys.columns.length = 0;
+  }
+
+  if (
     ast.drop.primaryKey ||
     dropPrimaryKeys.change ||
     dropPrimaryKeys.columns.length > 1

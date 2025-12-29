@@ -17,6 +17,32 @@ const { green, red, yellow } = colors;
 describe('primaryKey', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('supports dropping a uuid default', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', (t) => ({
+          id: t.uuid().primaryKey(),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          id: t.uuid().primaryKey().default(null),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    id: t.change(t.uuid().default(t.sql\`gen_random_uuid()\`), t.uuid().default(null)),
+  }));
+});
+`);
+  });
+
   it('should not be dropped in ignored tables', async () => {
     await arrange({
       async prepareDb(db) {
