@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-schema-to-zod",
-  "version": "1.0.41",
+  "version": "1.0.42",
   "description": "Orchid-ORM columns schema to Zod converter",
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
   "repository": {

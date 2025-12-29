@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.27.27
+
+### Patch Changes
+
+- 452a485: Prevent recreating a primary key for an unrelated column change (#609)
+- Updated dependencies [e4a6d1f]
+  - pqb@0.58.3
+
 ## 2.27.26
 
 ### Patch Changes

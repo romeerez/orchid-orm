@@ -1,5 +1,11 @@
 # pqb
 
+## 0.58.3
+
+### Patch Changes
+
+- e4a6d1f: Omit FOR UPDATE from UPDATE and INSERT statements in upsert and orCreate (#610)
+
 ## 0.58.2
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.59.3
+
+### Patch Changes
+
+- 452a485: Prevent recreating a primary key for an unrelated column change (#609)
+- 39fd9af: Exclude `log` param from driver options (#607)
+- Updated dependencies [e4a6d1f]
+- Updated dependencies [452a485]
+  - pqb@0.58.3
+  - rake-db@2.27.27
+
 ## 1.59.2
 
 ### Patch Changes
