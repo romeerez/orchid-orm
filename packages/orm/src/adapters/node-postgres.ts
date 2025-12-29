@@ -16,13 +16,17 @@ export const Adapter = NodePostgresAdapter;
 export const createDb = cdb;
 
 export const orchidORM = <T extends TableClasses>(
-  options: OrchidOrmParam<NodePostgresAdapterOptions & DbSharedOptions>,
+  {
+    log,
+    ...options
+  }: OrchidOrmParam<NodePostgresAdapterOptions & DbSharedOptions>,
   tables: T,
 ): OrchidORM<T> => {
   return orchidORMWithAdapter(
     {
       ...options,
       adapter: new NodePostgresAdapter(options),
+      log,
     },
     tables,
   );
