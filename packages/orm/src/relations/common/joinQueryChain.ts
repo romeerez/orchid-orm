@@ -4,7 +4,7 @@ import {
   getQueryAs,
   getShapeFromSelect,
   Query,
-  RawSQL,
+  RawSql,
   HookSelectValue,
   isExpression,
   RelationJoinQuery,
@@ -151,7 +151,7 @@ const wrapQuery = (
   const baseOuterQuery = cloneQueryBaseUnscoped(joiningQuery);
   const outer = baseOuterQuery.clone();
 
-  outer.q.and = [new DynamicRawSQL(() => new RawSQL(`${item.as || 'r'} = 1`))];
+  outer.q.and = [new DynamicRawSQL(() => new RawSql(`${item.as || 'r'} = 1`))];
   outer.q.useFromLimitOffset = true;
   outer.shape = getShapeFromSelect(result, true);
   outer.q.select = Object.keys(outer.shape);

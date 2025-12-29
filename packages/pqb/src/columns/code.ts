@@ -22,7 +22,7 @@ import {
   StringData,
   stringMethodNames,
 } from './column-data-types';
-import { isRawSQL, RawSQLBase } from '../query/expressions/raw-sql';
+import { isRawSQL, rawSqlToCode } from '../query/expressions/raw-sql';
 
 // Type for composing code pieces for the code generation
 export type Code = string | Codes;
@@ -91,7 +91,7 @@ export const columnDefaultArgumentToCode = (
   value: unknown,
 ): string => {
   if (typeof value === 'object' && value && isRawSQL(value)) {
-    return value.toCode(t);
+    return rawSqlToCode(value, t);
   } else if (typeof value === 'function') {
     return value.toString();
   } else if (typeof value === 'string') {
@@ -237,7 +237,7 @@ export const isDefaultTimeStamp = (item: Column.Pick.DataAndDataType) => {
   if (item.dataType !== 'timestamptz') return false;
 
   const def = item.data.default;
-  if (!(def instanceof RawSQLBase)) return false;
+  if (!isRawSQL(def)) return false;
 
   return typeof def._sql === 'string' && def._sql.startsWith('now()');
 };
@@ -571,7 +571,7 @@ export const constraintInnerToCode = (
   }
 
   return [
-    `${t}.check(${(item.check as TableData.Check).toCode(t)}${
+    `${t}.check(${rawSqlToCode(item.check as TableData.Check, t)}${
       item.name ? `, ${singleQuote(item.name)}` : ''
     })`,
   ];
@@ -757,7 +757,7 @@ export const columnCheckToCode = (
   return checks
     .map(
       ({ sql, name }) =>
-        `.check(${sql.toCode(ctx.t)}${name ? `, '${name}'` : ''})`,
+        `.check(${rawSqlToCode(sql, ctx.t)}${name ? `, '${name}'` : ''})`,
     )
     .join('');
 };

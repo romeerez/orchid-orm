@@ -6,7 +6,7 @@ import {
   TemplateLiteralArgs,
   templateLiteralSQLToCode,
 } from '../query/expressions/expression';
-import { raw, RawSQLBase } from '../query/expressions/raw-sql';
+import { raw, RawSqlBase } from '../query/expressions/raw-sql';
 import { TableData } from '../tableData';
 import { ColumnTypeSchemaArg } from './column-schema';
 import { Code, ColumnToCodeCtx } from './code';
@@ -472,7 +472,7 @@ export namespace Column {
 
   export namespace Data {
     export interface Check {
-      sql: RawSQLBase;
+      sql: RawSqlBase;
       name?: string;
     }
 
@@ -724,7 +724,7 @@ export abstract class Column<
    */
   default<
     T extends Column.Pick.DataAndInputType,
-    Value extends T['inputType'] | null | RawSQLBase | (() => T['inputType']),
+    Value extends T['inputType'] | null | RawSqlBase | (() => T['inputType']),
   >(this: T, value: Value): Column.Modifiers.Default<T, Value> {
     return setColumnData(this, 'default', value) as Column.Modifiers.Default<
       T,
@@ -739,8 +739,8 @@ export abstract class Column<
    */
   hasDefault<T extends Column.Pick.Data>(
     this: T,
-  ): Column.Modifiers.Default<T, RawSQLBase> {
-    return this as Column.Modifiers.Default<T, RawSQLBase>;
+  ): Column.Modifiers.Default<T, RawSqlBase> {
+    return this as Column.Modifiers.Default<T, RawSqlBase>;
   }
 
   /**
@@ -769,7 +769,7 @@ export abstract class Column<
    */
   check<T extends Column.Pick.Data>(
     this: T,
-    sql: RawSQLBase,
+    sql: RawSqlBase,
     name?: string,
   ): T {
     return pushColumnData(this, 'checks', { sql, name });

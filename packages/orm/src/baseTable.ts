@@ -17,7 +17,7 @@ import {
   QueryBeforeHookInternal,
   QueryData,
   QueryHooks,
-  RawSQL,
+  RawSql,
   ShapeColumnPrimaryKeys,
   ShapeUniqueColumns,
   TableData,
@@ -485,7 +485,7 @@ export interface BaseTableClass<
 
   sql<T>(
     ...args: StaticSQLArgs
-  ): RawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   sql<T>(
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
   ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;

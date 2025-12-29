@@ -19,13 +19,16 @@ import {
 } from '../columns';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { DynamicRawSQL, raw, RawSQL } from './expressions/raw-sql';
+import { DynamicRawSQL, raw, RawSql } from './expressions/raw-sql';
 import { ScopeArgumentQuery } from './extra-features/scope/scope.query';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
 } from '../columns/default-schema-config';
-import { enableSoftDelete, SoftDeleteOption } from './basic-features/mutate/soft-delete';
+import {
+  enableSoftDelete,
+  SoftDeleteOption,
+} from './basic-features/mutate/soft-delete';
 import {
   parseTableData,
   TableData,
@@ -645,7 +648,7 @@ export interface DbResult<ColumnTypes>
   close: AdapterBase['close'];
   sql<T = unknown>(
     ...args: StaticSQLArgs
-  ): RawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   sql<T = unknown>(
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
   ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;

@@ -3,7 +3,7 @@ import { QueryData } from './query-data';
 import { QueryInternal } from './query';
 import {
   isRawSQL,
-  RawSQLBase,
+  RawSqlBase,
   templateLiteralToSQL,
 } from './expressions/raw-sql';
 import { Sql } from './sql/sql';
@@ -13,7 +13,7 @@ import { RecordUnknown } from '../utils';
 import { TopToSqlCtx, ToSQLCtx } from './sql/to-sql';
 
 // Argument for `query` and `queryArrays`, it can be a SQL template literal, or a raw SQL object.
-export type SQLQueryArgs = TemplateLiteralArgs | [RawSQLBase];
+export type SQLQueryArgs = TemplateLiteralArgs | [RawSqlBase];
 
 export interface DbSqlQuery {
   <T extends QueryResultRow = QueryResultRow>(...args: SQLQueryArgs): Promise<

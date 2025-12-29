@@ -2,7 +2,7 @@ import { Column, getDefaultLanguage, setColumnData } from '../column';
 import { NumberColumnData } from './number';
 import { Code, ColumnToCodeCtx, stringDataToCode } from '../code';
 import { columnCode } from '../code';
-import { RawSQL, RawSQLBase } from '../../query/expressions/raw-sql';
+import { RawSql, RawSqlBase } from '../../query/expressions/raw-sql';
 import {
   Operators,
   OperatorsNumber,
@@ -646,7 +646,7 @@ export class TsQueryColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 const uuidDefaultSQL = 'gen_random_uuid()';
-const uuidDefault = new RawSQL(uuidDefaultSQL);
+const uuidDefault = new RawSql(uuidDefaultSQL);
 
 // uuid stores Universally Unique Identifiers (UUID)
 export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column<
@@ -671,7 +671,7 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column<
     name?: Name,
   ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
   T & {
-    data: { primaryKey: Name; default: RawSQLBase };
+    data: { primaryKey: Name; default: RawSqlBase };
   } {
     const column = super.primaryKey(name);
     if (!column.data.default) column.data.default = uuidDefault;

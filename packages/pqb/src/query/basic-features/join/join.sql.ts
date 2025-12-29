@@ -8,7 +8,7 @@ import {
   PickQueryDataShapeAndJoinedShapesAndAliases,
   QueryData,
 } from '../../query-data';
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import { Column } from '../../../columns/column';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { Expression, isExpression } from '../../expressions/expression';
@@ -334,7 +334,7 @@ const subJoinToSql = (
 ) => {
   if (!jq.q.select && jq.q.selectAllColumns) {
     if (!cloned) jq = jq.clone();
-    jq.q.select = [new RawSQL(`${innerAs}.*`)];
+    jq.q.select = [new RawSql(`${innerAs}.*`)];
   }
 
   const sql = `(${moveMutativeQueryToCte(ctx, jq)}) ${outerAs || innerAs}`;

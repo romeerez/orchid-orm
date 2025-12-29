@@ -4,6 +4,7 @@ import { OperatorToSQL } from '../../columns/operators';
 import { HasBeforeAndBeforeSet } from '../sub-query/sub-query-for-sql';
 import { PickQueryMeta } from '../pick-query-types';
 import { QueryBeforeHookInternal } from '../query-data';
+import { ToSqlValues } from '../sql/to-sql';
 
 export type SelectableOrExpression<
   T extends PickQueryMeta = PickQueryMeta,
@@ -51,7 +52,7 @@ export abstract class Expression<
   declare meta: { kind: 'select' };
 
   // Produce SQL string by calling `makeSQL` and applying operators from the `q.chain`, push query variables into given `values` array.
-  toSQL(ctx: { values: unknown[] }, quotedAs?: string): string {
+  toSQL(ctx: ToSqlValues, quotedAs?: string): string {
     let sql = this.makeSQL(ctx, quotedAs);
     if (this.q.chain) {
       const { chain: chain } = this.q;
@@ -69,7 +70,7 @@ export abstract class Expression<
 
   // `makeSQL` should be implemented on subclasses of Expression to return SQL of the expression.
   // Result of `makeSQL` will be chained with operators by `toSQL`.
-  abstract makeSQL(ctx: { values: unknown[] }, quotedAs?: string): string;
+  abstract makeSQL(ctx: ToSqlValues, quotedAs?: string): string;
 }
 
 // Check if the unknown thing is an Expression
@@ -105,7 +106,7 @@ export type StaticSQLArgs =
   | TemplateLiteralArgs
   | [{ raw: string; values?: RawSQLValues }];
 
-// Record of values to pass and store in a RawSQL instance.
+// Record of values to pass and store in a RawSql instance.
 export type RawSQLValues = RecordUnknown;
 
 // `type` method to be used in both static and dynamic variants of SQL expressions.

@@ -23,7 +23,7 @@ import { processComputedBatches } from '../../extra-features/computed/computed';
 import { isQueryNone } from '../../extra-features/none/none';
 import { cloneQueryBaseUnscoped } from '../wrap/wrap';
 import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import { SelectArg, SelectAsArg, SelectSelf } from './select';
 import { _joinLateral } from '../join/join';
 import {
@@ -376,7 +376,7 @@ const collectNestedSelectBatches = (
 };
 
 // reuse SQL for empty array for JSON agg expressions
-const emptyArrSQL = new RawSQL("'[]'");
+const emptyArrSQL = new RawSql("'[]'");
 
 // process select argument: add parsers, join relations when needed
 export const processSelectArg = <T extends SelectSelf>(

@@ -1,5 +1,5 @@
 import { Column } from './columns/column';
-import { RawSQLBase, sqlFn, SqlFn } from './query/expressions/raw-sql';
+import { RawSqlBase, sqlFn, SqlFn } from './query/expressions/raw-sql';
 import OptionsArg = TableData.Index.OptionsArg;
 import { Expression } from './query/expressions/expression';
 import { EmptyTuple, MaybeArray, RecordUnknown } from './utils';
@@ -47,7 +47,7 @@ export namespace TableData {
     dropMode?: TableData.DropMode;
   }
 
-  export type Check = RawSQLBase;
+  export type Check = RawSqlBase;
 
   export interface ColumnReferences {
     fnOrTable: TableData.References.FnOrTable;
@@ -375,7 +375,7 @@ export interface TableDataMethods<Key extends PropertyKey> {
     options?: TableData.References.Options,
   ): NonUniqDataItem;
 
-  check(check: RawSQLBase, name?: string): NonUniqDataItem;
+  check(check: RawSqlBase, name?: string): NonUniqDataItem;
 
   sql: SqlFn;
 }

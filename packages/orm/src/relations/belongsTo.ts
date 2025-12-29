@@ -40,8 +40,7 @@ import {
   Column,
   getFreeAlias,
   _with,
-  RawSQL,
-  RawSQLBase,
+  RawSql,
   _orCreate,
 } from 'pqb';
 import {
@@ -201,7 +200,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
     const value = item[key] as NestedInsertOneItemCreate;
     if ('create' in value || 'connectOrCreate' in value) {
-      foreignKeys.forEach((foreignKey) => (item[foreignKey] = new RawSQL('')));
+      foreignKeys.forEach((foreignKey) => (item[foreignKey] = new RawSql('')));
 
       const selectPKeys = query.select(...primaryKeys);
 
@@ -210,7 +209,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         (as) => {
           foreignKeys.forEach((foreignKey, i) => {
             (
-              item[foreignKey] as RawSQLBase
+              item[foreignKey] as RawSql
             )._sql = `(SELECT "${as}"."${primaryKeys[i]}" FROM "${as}")`;
           });
         },
@@ -231,7 +230,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
       foreignKeys.map((foreignKey, i) => {
         const selectColumn = `(SELECT "${as}"."${primaryKeys[i]}" FROM "${as}")`;
-        item[foreignKey] = new RawSQL(
+        item[foreignKey] = new RawSql(
           i === 0
             ? `CASE WHEN (SELECT count(*) FROM "${as}") = 0 AND (SELECT 'not-found')::int = 0 THEN NULL ELSE ${selectColumn} END`
             : selectColumn,

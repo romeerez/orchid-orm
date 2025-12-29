@@ -1,6 +1,7 @@
 import { addValue, emptyObject } from '../../utils';
 import { Column } from '../../columns';
 import { Expression, ExpressionData } from './expression';
+import { ToSqlValues } from '../sql/to-sql';
 
 export class ValExpression extends Expression {
   // TODO: move unknown column to core and use it here
@@ -12,7 +13,7 @@ export class ValExpression extends Expression {
     this.q = { expr: this };
   }
 
-  makeSQL(ctx: { values: unknown[] }): string {
+  makeSQL(ctx: ToSqlValues): string {
     return addValue(ctx.values, this.value);
   }
 }

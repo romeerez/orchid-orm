@@ -5,7 +5,7 @@ import {
   escapeForMigration,
   TableData,
   isRawSQL,
-  RawSQLBase,
+  RawSqlBase,
   SingleSql,
   toArray,
   toCamelCase,
@@ -271,7 +271,7 @@ export const constraintToSql = (
   return sql.join(' ');
 };
 
-const checkToSql = (check: RawSQLBase, values: unknown[]) => {
+const checkToSql = (check: RawSqlBase, values: unknown[]) => {
   return `CHECK (${check.toSQL({ values })})`;
 };
 
@@ -640,7 +640,7 @@ export const nameColumnChecks = (
     name: check.name || `${table}_${column}_check${i === 0 ? '' : i}`,
   }));
 
-export const cmpRawSql = (a: RawSQLBase, b: RawSQLBase) => {
+export const cmpRawSql = (a: RawSqlBase, b: RawSqlBase) => {
   const values: unknown[] = [];
 
   const aSql = a.makeSQL({ values });

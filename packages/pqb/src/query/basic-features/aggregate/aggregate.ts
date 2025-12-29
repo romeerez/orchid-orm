@@ -16,7 +16,7 @@ import {
   OperatorsNumber,
   OperatorsText,
 } from '../../../columns/operators';
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import {
   BooleanColumn,
   DecimalColumn,
@@ -278,9 +278,9 @@ export class AggregateMethods {
   exists<T extends QueryGetSelf>(
     this: T,
   ): SetQueryReturnsColumnOrThrow<T, BooleanQueryColumn> {
-    const q = _queryGetOptional(_clone(this), new RawSQL('true'));
+    const q = _queryGetOptional(_clone(this), new RawSql('true'));
     q.q.notFoundDefault = false;
-    q.q.coalesceValue = new RawSQL('false');
+    q.q.coalesceValue = new RawSql('false');
     return q as never;
   }
 

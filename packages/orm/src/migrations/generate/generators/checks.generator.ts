@@ -2,7 +2,7 @@ import {
   getFreeSetAlias,
   TemplateLiteralArgs,
   Column,
-  RawSQL,
+  RawSql,
   TableData,
 } from 'pqb';
 import { DbStructure, RakeDbAst } from 'rake-db';
@@ -173,7 +173,7 @@ const dropCheck = (
   dbCheck: DbStructure.Check,
   name: string,
 ) => {
-  const sql = new RawSQL([
+  const sql = new RawSql([
     [dbCheck.expression],
   ] as unknown as TemplateLiteralArgs);
 

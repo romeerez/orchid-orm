@@ -1,4 +1,4 @@
-import { RawSQL } from '../query/expressions/raw-sql';
+import { RawSql } from '../query/expressions/raw-sql';
 import { Column } from './column';
 import { RecordString } from '../utils';
 import { TemplateLiteralArgs } from '../query/expressions/expression';
@@ -23,7 +23,7 @@ const knownDefaults: RecordString = {
 
 const simplifyColumnDefault = (value?: string) => {
   if (typeof value === 'string') {
-    return new RawSQL([
+    return new RawSql([
       [knownDefaults[value.toLowerCase()] || value],
     ] as unknown as TemplateLiteralArgs);
   }

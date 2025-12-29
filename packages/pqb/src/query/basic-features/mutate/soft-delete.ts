@@ -1,5 +1,5 @@
 import { IsQuery, Query } from '../../query';
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import { Column } from '../../../columns/column';
 import { RecordUnknown, setObjectValueImmutable } from '../../../utils';
 import { QueryMetaBase } from '../../query-meta';
@@ -54,10 +54,10 @@ export function enableSoftDelete(
   };
 }
 
-const nowSql = new RawSQL('now()');
+const nowSql = new RawSql('now()');
 
 const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
-  const set = { [column]: customNowSQL ? new RawSQL(customNowSQL) : nowSql };
+  const set = { [column]: customNowSQL ? new RawSql(customNowSQL) : nowSql };
   return function (this: unknown) {
     return _queryUpdate(this as never, set as never);
   };

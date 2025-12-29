@@ -2,7 +2,7 @@ import {
   ArrayColumn,
   Column,
   DbStructureDomainsMap,
-  RawSQL,
+  RawSql,
   AdapterBase,
   deepCompare,
   emptyArray,
@@ -98,7 +98,7 @@ export const processDomains = async (
 
     if (domain.checks) {
       dbColumn.data.checks = domain.checks.map((check) => ({
-        sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
+        sql: new RawSql([[check]] as unknown as TemplateLiteralArgs),
       }));
     }
 

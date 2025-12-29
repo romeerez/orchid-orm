@@ -12,7 +12,7 @@ import {
   consumeColumnName,
   deepCompare,
   EmptyObject,
-  RawSQLBase,
+  RawSqlBase,
   RecordKeyTrue,
   RecordUnknown,
   setCurrentColumnName,
@@ -286,7 +286,7 @@ const tableChangeMethods = {
       using,
     };
   },
-  default(value: unknown | RawSQLBase): OneWayChange {
+  default(value: unknown | RawSqlBase): OneWayChange {
     return { type: 'change', to: { default: value } };
   },
   nullable(): OneWayChange {

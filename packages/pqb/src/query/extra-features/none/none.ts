@@ -1,6 +1,6 @@
 import { Query, QueryReturnType } from '../../query';
 import { extendQuery } from '../../query.utils';
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import { NotFoundError } from '../../errors';
 import { applyTransforms } from '../data-transform/transform';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
@@ -55,7 +55,7 @@ export const _queryNone = <T>(q: T): T => {
 
   q = extendQuery(q as Query, noneMethods) as T;
 
-  pushQueryValueImmutable(q as Query, 'and', new RawSQL('false'));
+  pushQueryValueImmutable(q as Query, 'and', new RawSql('false'));
 
   pushQueryValueImmutable(
     q as Query,

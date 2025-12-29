@@ -1,4 +1,4 @@
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import {
   columnToSqlWithAs,
   ownColumnToSqlWithAs,
@@ -527,7 +527,7 @@ const pushSubQuerySql = (
           cloned,
           cloned.baseQuery.clone(),
         ) as unknown as SubQueryForSql;
-        _queryGetOptional(query, new RawSQL(`COALESCE(json_agg("c"), '[]')`));
+        _queryGetOptional(query, new RawSql(`COALESCE(json_agg("c"), '[]')`));
       }
       break;
     }

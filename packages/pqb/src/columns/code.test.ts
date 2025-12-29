@@ -5,7 +5,7 @@ import {
   ColumnToCodeCtx,
 } from './code';
 import { testZodColumnTypes as t } from 'test-utils';
-import { RawSQL } from '../query/expressions/raw-sql';
+import { RawSql } from '../query/expressions/raw-sql';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',
@@ -29,7 +29,7 @@ describe('code', () => {
       expect(
         columnDefaultArgumentToCode(
           't',
-          new RawSQL('sql = $key', { key: 'value' }),
+          new RawSql('sql = $key', { key: 'value' }),
         ),
       ).toBe(`t.sql({ raw: 'sql = $key' }).values({"key":"value"})`);
     });

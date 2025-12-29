@@ -1,9 +1,12 @@
-import { HasCteHooks, HasTableHook } from '../basic-features/select/hook-select';
+import {
+  HasCteHooks,
+  HasTableHook,
+} from '../basic-features/select/hook-select';
 import { DelayedRelationSelect } from '../basic-features/select/delayed-relational-select';
 import { QueryResult } from '../../adapters/adapter';
 import { PickQueryColumTypes } from '../pick-query-types';
 import { DynamicSQLArg, StaticSQLArgs } from '../expressions/expression';
-import { DynamicRawSQL, raw, RawSQL } from '../expressions/raw-sql';
+import { DynamicRawSQL, raw, RawSql } from '../expressions/raw-sql';
 import { Column } from '../../columns';
 
 export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
@@ -225,7 +228,7 @@ export class QuerySql<ColumnTypes> {
   sql<T = unknown>(
     this: PickQueryColumTypes,
     ...args: StaticSQLArgs
-  ): RawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   sql<T = unknown>(
     this: PickQueryColumTypes,
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]

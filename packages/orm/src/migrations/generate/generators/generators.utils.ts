@@ -1,11 +1,11 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSQLBase, QueryResult, AdapterBase, colors } from 'pqb';
+import { RawSqlBase, QueryResult, AdapterBase, colors } from 'pqb';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
   compare: {
     inDb: string;
-    inCode: (string | RawSQLBase)[];
+    inCode: (string | RawSqlBase)[];
   }[];
 
   handle(i?: number): void;

@@ -16,7 +16,7 @@ import {
   VarCharColumn,
   DefaultSchemaConfig,
   defaultSchemaConfig,
-  RawSQL,
+  RawSql,
   isRawSQL,
   TemplateLiteralArgs,
 } from 'pqb';
@@ -240,12 +240,12 @@ describe('structureToAst', () => {
 
       expect(ast.shape.column.data.checks).toEqual([
         {
-          sql: new RawSQL([
+          sql: new RawSql([
             [check.check.expression],
           ] as unknown as TemplateLiteralArgs),
         },
         {
-          sql: new RawSQL([
+          sql: new RawSql([
             [check.check.expression],
           ] as unknown as TemplateLiteralArgs),
         },

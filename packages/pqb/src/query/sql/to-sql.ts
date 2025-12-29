@@ -36,7 +36,6 @@ import { isExpression } from '../expressions/expression';
 import { pushUnionSql } from '../basic-features/union/union.sql';
 
 interface ToSqlOptionsInternal {
-  values?: unknown[];
   hasNonSelect?: boolean;
   // selected value in JOIN LATERAL will have an alias to reference it from SELECT
   aliasValue?: true;
@@ -46,21 +45,26 @@ interface ToSqlOptionsInternal {
   selectList?: string[];
 }
 
-export interface TopToSqlCtx extends ToSqlOptionsInternal, HasCteHooks {
+export interface ToSqlValues {
+  values: unknown[];
+}
+
+export interface TopToSqlCtx
+  extends ToSqlOptionsInternal,
+    HasCteHooks,
+    ToSqlValues {
   topCtx: TopToSqlCtx;
   topCTE?: TopCTE;
-  values: unknown[];
   tableHook?: TableHook;
   delayedRelationSelect?: DelayedRelationSelect;
   cteHookTopNullSelectAppended?: boolean;
 }
 
-export interface ToSQLCtx extends ToSqlOptionsInternal {
+export interface ToSQLCtx extends ToSqlOptionsInternal, ToSqlValues {
   topCtx: TopToSqlCtx;
   qb: QueryBuilder;
   q: QueryData;
   sql: string[];
-  values: unknown[];
   selectedCount: number;
   cteSqls?: string[];
   cteName?: string;

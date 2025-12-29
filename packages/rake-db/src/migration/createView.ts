@@ -1,5 +1,5 @@
 import { Migration } from './migration';
-import { RawSQLBase, singleQuote, raw, SingleSql } from 'pqb';
+import { singleQuote, raw, SingleSql, RawSqlBase } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { interpolateSqlValues } from './migration.utils';
 
@@ -8,7 +8,7 @@ export const createView = async <CT>(
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,
-  sql: string | RawSQLBase,
+  sql: string | RawSqlBase,
 ): Promise<void> => {
   const ast = makeAst(up, name, options, sql);
   const query = astToQuery(ast);
@@ -20,7 +20,7 @@ const makeAst = (
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,
-  sql: string | RawSQLBase,
+  sql: string | RawSqlBase,
 ): RakeDbAst.View => {
   if (typeof sql === 'string') {
     sql = raw({ raw: sql });

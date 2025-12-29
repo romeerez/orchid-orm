@@ -7,7 +7,7 @@ import {
   QueryData,
 } from '../../query-data';
 import { Db } from '../../db';
-import { RawSQL } from '../../expressions/raw-sql';
+import { RawSql } from '../../expressions/raw-sql';
 import { MAX_BINDING_PARAMS } from '../../sql/sql-constants';
 import {
   composeCteSingleSql,
@@ -16,7 +16,10 @@ import {
   setTopCteSize,
 } from '../cte/cte.sql';
 import { Column } from '../../../columns/column';
-import { addTableHook, HookPurpose } from '../../extra-features/hooks/hooks.sql';
+import {
+  addTableHook,
+  HookPurpose,
+} from '../../extra-features/hooks/hooks.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { moveQueryToCte } from '../cte/move-mutative-query-to-cte-base.sql';
 import {
@@ -174,7 +177,7 @@ export const makeInsertSql = (
         pushQueryValueImmutable(
           q,
           'select',
-          new RawSQL(
+          new RawSql(
             encodeRow(
               ctx,
               ctx.values,

@@ -18,7 +18,7 @@ import {
   makeColumnsByType,
   PostgisGeographyPointColumn,
   raw,
-  RawSQL,
+  RawSql,
   TableData,
   AdapterBase,
   ColumnSchemaConfig,
@@ -191,7 +191,7 @@ export const makeDomainsMap = (
 
     if (it.checks) {
       column.data.checks = it.checks.map((check) => ({
-        sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
+        sql: new RawSql([[check]] as unknown as TemplateLiteralArgs),
       }));
     }
 
@@ -631,7 +631,7 @@ export const dbColumnToAst = (
   const columnChecks = checks?.[item.name];
   if (columnChecks) {
     column.data.checks = columnChecks.map((check) => ({
-      sql: new RawSQL([[check]] as unknown as TemplateLiteralArgs),
+      sql: new RawSql([[check]] as unknown as TemplateLiteralArgs),
     }));
   }
 

@@ -1,5 +1,5 @@
 import { VirtualColumn } from './virtual';
-import { RawSQL } from '../../query/expressions/raw-sql';
+import { RawSql } from '../../query/expressions/raw-sql';
 import { defaultSchemaConfig } from '../default-schema-config';
 import { ColumnSchemaConfig } from '../column-schema';
 
@@ -21,4 +21,4 @@ export class UnknownColumn<
   }
 }
 
-RawSQL.prototype.result = { value: UnknownColumn.instance };
+RawSql.prototype.result = { value: UnknownColumn.instance };

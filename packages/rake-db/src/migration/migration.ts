@@ -17,7 +17,7 @@ import {
   MaybeArray,
   QueryLogObject,
   QueryLogOptions,
-  RawSQLBase,
+  RawSqlBase,
   RecordString,
   RecordUnknown,
   singleQuote,
@@ -674,7 +674,7 @@ export class Migration<CT> {
    * @param tableName - name of the table to add the check into
    * @param check - raw SQL for the check
    */
-  addCheck(tableName: string, check: RawSQLBase): Promise<void> {
+  addCheck(tableName: string, check: RawSqlBase): Promise<void> {
     return addCheck(this, this.up, tableName, check);
   }
 
@@ -684,7 +684,7 @@ export class Migration<CT> {
    * @param tableName - name of the table to add the check into
    * @param check - raw SQL for the check
    */
-  dropCheck(tableName: string, check: RawSQLBase): Promise<void> {
+  dropCheck(tableName: string, check: RawSqlBase): Promise<void> {
     return addCheck(this, !this.up, tableName, check);
   }
 
@@ -1270,7 +1270,7 @@ export class Migration<CT> {
   createView(
     name: string,
     options: RakeDbAst.ViewOptions,
-    sql: string | RawSQLBase,
+    sql: string | RawSqlBase,
   ): Promise<void>;
   /**
    * See {@link createView}
@@ -1278,7 +1278,7 @@ export class Migration<CT> {
    * @param name - name of the view
    * @param sql - SQL to create the view with
    */
-  createView(name: string, sql: string | RawSQLBase): Promise<void>;
+  createView(name: string, sql: string | RawSqlBase): Promise<void>;
   createView(name: string, ...args: unknown[]): Promise<void> {
     const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
 
@@ -1287,7 +1287,7 @@ export class Migration<CT> {
       this.up,
       name,
       options as RakeDbAst.ViewOptions,
-      sql as string | RawSQLBase,
+      sql as string | RawSqlBase,
     );
   }
 
@@ -1301,7 +1301,7 @@ export class Migration<CT> {
   dropView(
     name: string,
     options: RakeDbAst.ViewOptions,
-    sql: string | RawSQLBase,
+    sql: string | RawSqlBase,
   ): Promise<void>;
   /**
    * Drop the view, create it on rollback. See {@link createView}.
@@ -1309,7 +1309,7 @@ export class Migration<CT> {
    * @param name - name of the view
    * @param sql - SQL to create the view with
    */
-  dropView(name: string, sql: string | RawSQLBase): Promise<void>;
+  dropView(name: string, sql: string | RawSqlBase): Promise<void>;
   dropView(name: string, ...args: unknown[]): Promise<void> {
     const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
 
@@ -1318,7 +1318,7 @@ export class Migration<CT> {
       !this.up,
       name,
       options as RakeDbAst.ViewOptions,
-      sql as string | RawSQLBase,
+      sql as string | RawSqlBase,
     );
   }
 
@@ -1499,7 +1499,7 @@ const addCheck = (
   migration: Migration<unknown>,
   up: boolean,
   tableName: string,
-  check: RawSQLBase,
+  check: RawSqlBase,
 ): Promise<void> => {
   return changeTable(migration, up, tableName, {}, (t) => ({
     ...t.add(t.check(check)),

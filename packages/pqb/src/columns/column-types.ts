@@ -24,7 +24,7 @@ import { BooleanColumn } from './column-types/boolean';
 import { JSONTextColumn } from './column-types/json';
 import { timestampHelpers, TimestampHelpers } from './timestamps';
 import { CustomTypeColumn, DomainColumn } from './column-types/custom-type';
-import { RawSQL, sqlFn, SqlFn } from '../query/expressions/raw-sql';
+import { RawSql, sqlFn, SqlFn } from '../query/expressions/raw-sql';
 import { TableData } from '../tableData';
 import { PostgisGeographyPointColumn } from './column-types/postgis';
 import { ColumnSchemaConfig } from './column-schema';
@@ -234,4 +234,4 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
   };
 };
 
-RawSQL.prototype.columnTypes = makeColumnTypes;
+RawSql.prototype.columnTypes = makeColumnTypes;

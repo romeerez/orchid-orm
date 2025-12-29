@@ -21,6 +21,7 @@ import {
   singleQuote,
   toArray,
   exhaustive,
+  rawSqlToCode,
 } from 'pqb';
 import { quoteSchemaTable } from '../common';
 import { AnyRakeDbConfig } from '../config';
@@ -385,10 +386,12 @@ const astEncoders: {
             addCode(line, ', {');
             const u: string[] = [];
             if (change.using.usingUp) {
-              u.push(`usingUp: ${change.using.usingUp.toCode('t')},`);
+              u.push(`usingUp: ${rawSqlToCode(change.using.usingUp, 't')},`);
             }
             if (change.using.usingDown) {
-              u.push(`usingDown: ${change.using.usingDown.toCode('t')},`);
+              u.push(
+                `usingDown: ${rawSqlToCode(change.using.usingDown, 't')},`,
+              );
             }
             addCode(line, u);
             addCode(line, '}');
@@ -573,7 +576,7 @@ const astEncoders: {
     const check = ast.check as TableData.Check;
 
     return [
-      `await db.addCheck(${table}, ${check.toCode('t')}${
+      `await db.addCheck(${table}, ${rawSqlToCode(check, 't')}${
         ast.name ? `, ${singleQuote(ast.name)}` : ''
       });`,
     ];
@@ -625,7 +628,7 @@ const astEncoders: {
 
       addCode(code, backtickQuote(sql));
     } else {
-      addCode(code, ast.sql.toCode('db'));
+      addCode(code, rawSqlToCode(ast.sql, 'db'));
     }
 
     addCode(code, ');');

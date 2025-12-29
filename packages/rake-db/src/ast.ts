@@ -4,8 +4,8 @@ import {
   NoPrimaryKeyOption,
   TableData,
   MaybeArray,
-  RawSQLBase,
   RecordString,
+  RawSqlBase,
 } from 'pqb';
 import { DropMode } from './migration/migration';
 
@@ -74,8 +74,8 @@ export namespace RakeDbAst {
     }
 
     export interface ChangeUsing {
-      usingUp?: RawSQLBase;
-      usingDown?: RawSQLBase;
+      usingUp?: RawSqlBase;
+      usingDown?: RawSqlBase;
     }
 
     export interface Rename {
@@ -88,7 +88,7 @@ export namespace RakeDbAst {
     column?: QbColumn;
     type?: string;
     collate?: string;
-    default?: unknown | RawSQLBase;
+    default?: unknown | RawSqlBase;
     nullable?: boolean;
     comment?: string | null;
     compression?: string;
@@ -245,7 +245,7 @@ export namespace RakeDbAst {
     schema?: string;
     name: string;
     shape: ColumnsShape;
-    sql: RawSQLBase;
+    sql: RawSqlBase;
     options: ViewOptions;
     deps: { schemaName: string; name: string }[];
   }

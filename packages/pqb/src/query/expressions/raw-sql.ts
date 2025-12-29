@@ -13,7 +13,7 @@ import {
 import { Column } from '../../columns/column';
 import { ColumnSchemaConfig } from '../../columns/column-schema';
 import { DefaultColumnTypes } from '../../columns/column-types';
-import { ToSQLCtx } from '../sql/to-sql';
+import { ToSQLCtx, ToSqlValues } from '../sql/to-sql';
 import { emptyObject, RecordUnknown } from '../../utils';
 import { PrepareSubQueryForSql } from '../sub-query/sub-query-for-sql';
 import { SQLQueryArgs } from '../db-sql-query';
@@ -23,73 +23,13 @@ export const setRawSqlPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
   prepareSubQueryForSql = fn;
 };
 
-// RawSQLBase extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
-export interface RawSQLBase<
-  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
-  ColumnTypes = unknown,
-> extends Expression<T>,
-    ExpressionTypeMethod {}
-
-// Base class for raw SQL
-// TODO: to be merged into a single RawSQL class
-export abstract class RawSQLBase<
-  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
-  ColumnTypes = unknown,
-> extends Expression<T> {
-  // Column type instance, it is assigned directly to the prototype of RawSQL class.
-  declare result: { value: T };
-  q: ExpressionData;
-
-  // Column types are stored to be passed to the `type` callback.
-  abstract columnTypes: ColumnTypes;
-
-  // Produce SQL string, push query variables into given `values` array.
-  abstract makeSQL(ctx: { values: unknown[] }): string;
-
-  constructor(
-    public _sql: string | TemplateLiteralArgs,
-    public _values?: RawSQLValues,
-  ) {
-    super();
-    this.q = { expr: this };
-  }
-
-  // Attach query variables to the raw SQL.
-  values<Self extends RawSQLBase>(this: Self, values: RawSQLValues): Self {
-    this._values = values;
-    return this;
-  }
-
-  // Convert raw SQL to code for a code generator.
-  toCode(t: string): string {
-    const { _sql: sql, _values: values } = this;
-    let code = `${t}.sql`;
-
-    code +=
-      typeof sql === 'string'
-        ? `({ raw: '${sql.replace(/'/g, "\\'")}' })`
-        : templateLiteralSQLToCode(sql);
-
-    if (values) {
-      code += `.values(${JSON.stringify(values)})`;
-    }
-
-    return code;
-  }
-}
-
-RawSQLBase.prototype.type = ExpressionTypeMethod.prototype.type;
-// Check if something is a raw SQL.
-export const isRawSQL = (arg: unknown): arg is RawSQLBase =>
-  arg instanceof RawSQLBase;
-
 // reuse array to track which variables were used in the SQL, to throw when there are some unused.
 const used: string[] = [];
 const literalValues: number[] = [];
 
 export const templateLiteralToSQL = (
   template: TemplateLiteralArgs,
-  ctx: ToSQLCtx,
+  ctx: ToSqlValues,
   quotedAs?: string,
 ): string => {
   let sql = '';
@@ -114,25 +54,52 @@ export const templateLiteralToSQL = (
   return sql + parts[i];
 };
 
-export class RawSQL<
-  T extends Column.Pick.QueryColumn,
+export interface RawSqlBase extends Expression {
+  _sql: string | TemplateLiteralArgs;
+  _values?: RawSQLValues;
+}
+
+// RawSql extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
+export interface RawSql<T extends Column.Pick.QueryColumn, ColumnTypes>
+  extends Expression<T>,
+    RawSqlBase,
+    ExpressionTypeMethod {}
+
+export class RawSql<
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
-> extends RawSQLBase<T, ColumnTypes> {
+> extends Expression<T> {
+  // Column type instance, it is assigned directly to the prototype of RawSql class.
+  declare result: { value: T };
+  // Column types are stored to be passed to the `type` callback.
   declare columnTypes: ColumnTypes;
+  q: ExpressionData;
+  _sql: string | TemplateLiteralArgs;
+  _values?: RawSQLValues;
 
   constructor(
     sql: string | TemplateLiteralArgs,
     values?: RawSQLValues,
     type?: T,
   ) {
-    super(sql, values);
+    super();
+    this.q = { expr: this };
+    this._sql = sql;
+    this._values = values;
     this.result = { value: type as T };
     if (type) {
       Object.assign(this, type.operators);
     }
   }
 
-  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
+  // Attach query variables to the raw SQL.
+  values<Self extends RawSqlBase>(this: Self, values: RawSQLValues): Self {
+    this._values = values;
+    return this;
+  }
+
+  // Produce SQL string, push query variables into given `values` array.
+  makeSQL(ctx: ToSqlValues, quotedAs?: string): string {
     let sql;
     const isTemplate = typeof this._sql !== 'string';
 
@@ -193,6 +160,29 @@ export class RawSQL<
   }
 }
 
+// Check if something is a raw SQL.
+export const isRawSQL = (arg: unknown): arg is RawSqlBase =>
+  arg instanceof RawSql;
+
+RawSql.prototype.type = ExpressionTypeMethod.prototype.type;
+
+// Convert raw SQL to code for a code generator.
+export const rawSqlToCode = (rawSql: RawSqlBase, t: string): string => {
+  const { _sql: sql, _values: values } = rawSql;
+  let code = `${t}.sql`;
+
+  code +=
+    typeof sql === 'string'
+      ? `({ raw: '${sql.replace(/'/g, "\\'")}' })`
+      : templateLiteralSQLToCode(sql);
+
+  if (values) {
+    code += `.values(${JSON.stringify(values)})`;
+  }
+
+  return code;
+};
+
 // `DynamicRawSQL` extends both `Expression` and `ExpressionTypeMethod`, so it needs a separate interface.
 export interface DynamicRawSQL<T extends Column.Pick.QueryColumn>
   extends Expression<T>,
@@ -229,26 +219,24 @@ DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
 export function raw<T = never>(
   ...args: StaticSQLArgs
-): RawSQL<Column.Pick.QueryColumnOfType<T>>;
+): RawSql<Column.Pick.QueryColumnOfType<T>>;
 export function raw<T = never>(
   ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
 ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>>;
 export function raw(...args: SQLArgs) {
   return isTemplateLiteralArgs(args)
-    ? new RawSQL(args)
+    ? new RawSql(args)
     : typeof args[0] === 'function'
     ? new DynamicRawSQL(args[0])
-    : new RawSQL(args[0].raw, args[0].values);
+    : new RawSql(args[0].raw, args[0].values);
 }
 
 // Raw SQL count(*) to apply directly to `QueryData.select`.
-export const countSelect = [new RawSQL('count(*)')];
+export const countSelect = [new RawSql('count(*)')];
 
-export function sqlQueryArgsToExpression(
-  args: SQLQueryArgs,
-): RawSQL<Column.Pick.QueryColumn> {
+export function sqlQueryArgsToExpression(args: SQLQueryArgs): RawSqlBase {
   return Array.isArray(args[0])
-    ? new RawSQL(args as TemplateLiteralArgs)
+    ? new RawSql(args as TemplateLiteralArgs)
     : (args[0] as never);
 }
 
@@ -263,25 +251,25 @@ export interface SqlFn {
     this: T,
     ...args: Args
   ): Args extends [RecordUnknown]
-    ? (...sql: TemplateLiteralArgs) => RawSQLBase<Column.Pick.QueryColumn, T>
-    : RawSQLBase<Column.Pick.QueryColumn, T>;
+    ? (...sql: TemplateLiteralArgs) => RawSql<Column.Pick.QueryColumn, T>
+    : RawSql<Column.Pick.QueryColumn, T>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const sqlFn: SqlFn = (...args: any[]): any => {
   const arg = args[0];
   if (Array.isArray(arg)) {
-    return new RawSQL(args as TemplateLiteralArgs);
+    return new RawSql(args as TemplateLiteralArgs);
   }
 
   if (typeof args[0] === 'string') {
-    return new RawSQL(args[0]);
+    return new RawSql(args[0]);
   }
 
   if (args[1] !== undefined) {
-    return new RawSQL(args[1], arg);
+    return new RawSql(args[1], arg);
   }
 
   return (...args: TemplateLiteralArgs) =>
-    new RawSQL(args, arg as RecordUnknown);
+    new RawSql(args, arg as RecordUnknown);
 };

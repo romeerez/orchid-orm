@@ -1,21 +1,17 @@
 import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../utils';
 import { Column, getDefaultNowFn } from './column';
-
-import { RawSQLBase } from '../query/expressions/raw-sql';
+import { RawSql, RawSqlBase } from '../query/expressions/raw-sql';
 
 // Column types returned by `...t.timestamps()` and variations.
 export interface Timestamps<T extends Column.Pick.Data> {
   // Timestamp column with a `now()` default
-  createdAt: Column.Modifiers.Default<T, RawSQLBase>;
+  createdAt: Column.Modifiers.Default<T, RawSqlBase>;
   // Timestamp column with a `now()` default, and it's being updated on every record update.
-  updatedAt: Column.Modifiers.Default<T, RawSQLBase>;
+  updatedAt: Column.Modifiers.Default<T, RawSqlBase>;
 }
 
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.
-class SimpleRawSQL extends RawSQLBase {
-  // Column types are stored to be passed to the `type` callback.
-  columnTypes!: unknown;
-
+class SimpleRawSQL extends RawSql {
   // Simply returning SQL provided in the constructor.
   makeSQL(): string {
     return this._sql as string;
