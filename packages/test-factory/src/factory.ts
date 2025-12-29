@@ -265,7 +265,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     } else {
       const promises: Promise<void>[] = [];
 
-      for (const key in fns) {
+      for (const key in pick) {
         if (key in result) continue;
 
         promises.push(
