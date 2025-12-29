@@ -1,5 +1,11 @@
 # pqb
 
+## 0.58.2
+
+### Patch Changes
+
+- a8d35b5: Stop using implicit savepoints in transaction, add `recoverable` (#606)
+
 ## 0.58.1
 
 ### Patch Changes

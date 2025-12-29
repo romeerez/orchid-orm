@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.59.2
+
+### Patch Changes
+
+- a8d35b5: Stop using implicit savepoints in transaction, add `recoverable` (#606)
+- Updated dependencies [a8d35b5]
+  - pqb@0.58.2
+  - rake-db@2.27.26
+
 ## 1.59.1
 
 ### Patch Changes
