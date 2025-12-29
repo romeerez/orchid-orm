@@ -34,6 +34,7 @@ import { HasCteHooks, TableHook } from '../basic-features/select/hook-select';
 import { DelayedRelationSelect } from '../basic-features/select/delayed-relational-select';
 import { isExpression } from '../expressions/expression';
 import { pushUnionSql } from '../basic-features/union/union.sql';
+import { pushForSql } from '../basic-features/for/for.sql';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -158,6 +159,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     let runAfterQuery: RunAfterQuery | undefined;
     let skipSelect: boolean | undefined;
     if (type === 'upsert') {
+      const upsertUpdate = query.upsertUpdate && query.updateData;
       if (isSubSql || query.upsertSecond) {
         skipSelect = true;
 
@@ -166,7 +168,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
           toSql,
           ctx,
           upsertOrCreate as unknown as SubQueryForSql,
-          query.upsertUpdate && query.updateData ? 'update' : null,
+          upsertUpdate ? 'update' : null,
         );
 
         upsertOrCreate.q.and =
@@ -212,7 +214,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
             });
         };
 
-        if (query.updateData) {
+        if (upsertUpdate) {
           const result = toSql(table, 'update', topCtx, isSubSql);
           if ('text' in result) {
             result.runAfterQuery = runAfterQuery;
@@ -299,19 +301,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
     pushLimitOffsetSql(ctx, query, fromQuery);
 
-    if (query.for) {
-      sql.push('FOR', query.for.type);
-      const { tableNames } = query.for;
-      if (tableNames) {
-        sql.push(
-          'OF',
-          isExpression(tableNames)
-            ? tableNames.toSQL(ctx, quotedAs)
-            : tableNames.map((x) => `"${x}"`).join(', '),
-        );
-      }
-      if (query.for.mode) sql.push(query.for.mode);
-    }
+    pushForSql(ctx, query, type, quotedAs);
 
     addTableHook(ctx, table, query, query.hookSelect);
 

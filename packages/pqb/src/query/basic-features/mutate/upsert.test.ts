@@ -4,7 +4,13 @@ import {
   userData,
   UserRecord,
 } from '../../../test-utils/pqb.test-utils';
-import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  sql,
+  testDb,
+  TestTransactionAdapter,
+  useTestDatabase,
+} from 'test-utils';
 
 const TableWithReadOnly = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
@@ -153,6 +159,25 @@ describe('upsert', () => {
     assertType<typeof user, UserRecord>();
 
     expect(user.name).toBe('created');
+  });
+
+  // FOR UPDATE only makes sense for SELECT queries, it should be omitted for both the update and insert parts
+  it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
+    const spy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+
+    await User.find(123).upsert({ update: {}, create: userData }).forUpdate();
+
+    expect(spy.mock.calls).toEqual([
+      ['UPDATE "user" SET "updated_at" = now() WHERE "user"."id" = $1', [123]],
+      [
+        'WITH "q" AS (' +
+          'UPDATE "user" SET "updated_at" = now() WHERE "user"."id" = $1 RETURNING NULL' +
+          '), "q2" AS (' +
+          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE NOT EXISTS (SELECT 1 FROM "q") RETURNING NULL' +
+          ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
+        [123, ...Object.values(userData)],
+      ],
+    ]);
   });
 
   describe('empty update', () => {

@@ -4,7 +4,13 @@ import {
   userData,
   UserRecord,
 } from '../../../test-utils/pqb.test-utils';
-import { assertType, sql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  sql,
+  testDb,
+  TestTransactionAdapter,
+  useTestDatabase,
+} from 'test-utils';
 
 const TableWithReadOnly = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
@@ -88,74 +94,95 @@ describe('orCreate', () => {
     expect(user.name).toBe('created');
   });
 
-  it('should not call after create hooks when not created, should return void by default', async () => {
-    await User.create(userData);
+  // FOR UPDATE only makes sense for SELECT queries
+  it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
+    const spy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
 
-    const afterCreate = jest.fn();
-    const afterCreateCommit = jest.fn();
+    await User.find(123).orCreate(userData).forUpdate();
 
-    emulateReturnNoRowsOnce('arrays');
-
-    const res = await User.findBy({ name: 'name' })
-      .orCreate(userData)
-      .afterCreate(['password'], afterCreate)
-      .afterCreateCommit(['age'], afterCreateCommit);
-
-    assertType<typeof res, void>();
-    expect(res).toBe(undefined);
-
-    expect(afterCreate).not.toHaveBeenCalled();
-    expect(afterCreateCommit).not.toHaveBeenCalled();
+    expect(spy.mock.calls).toEqual([
+      ['SELECT FROM "user" WHERE "user"."id" = $1 FOR UPDATE', [123]],
+      [
+        'WITH "q" AS (' +
+          'SELECT FROM "user" WHERE "user"."id" = $1 FOR UPDATE' +
+          '), "q2" AS (' +
+          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE NOT EXISTS (SELECT 1 FROM "q") RETURNING NULL' +
+          ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
+        [123, ...Object.values(userData)],
+      ],
+    ]);
   });
 
-  it('should not call after create hooks when not created, should return only the selected columns', async () => {
-    await User.create(userData);
+  describe('hooks', () => {
+    it('should not call after create hooks when not created, should return void by default', async () => {
+      await User.create(userData);
 
-    const afterCreate = jest.fn();
-    const afterCreateCommit = jest.fn();
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
 
-    emulateReturnNoRowsOnce();
+      emulateReturnNoRowsOnce('arrays');
 
-    const res = await User.select('id')
-      .findBy({ name: 'name' })
-      .orCreate(userData)
-      .afterCreate(['password'], afterCreate)
-      .afterCreateCommit(['age'], afterCreateCommit);
+      const res = await User.findBy({ name: 'name' })
+        .orCreate(userData)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
 
-    assertType<typeof res, { id: number }>();
-    expect(res).toEqual({ id: expect.any(Number) });
+      assertType<typeof res, void>();
+      expect(res).toBe(undefined);
 
-    expect(afterCreate).not.toHaveBeenCalled();
-    expect(afterCreateCommit).not.toHaveBeenCalled();
-  });
+      expect(afterCreate).not.toHaveBeenCalled();
+      expect(afterCreateCommit).not.toHaveBeenCalled();
+    });
 
-  it('should call after create hooks when created', async () => {
-    const afterCreate = jest.fn();
-    const afterCreateCommit = jest.fn();
+    it('should not call after create hooks when not created, should return only the selected columns', async () => {
+      await User.create(userData);
 
-    await User.findBy({ name: 'name' })
-      .orCreate(userData)
-      .afterCreate(['password'], afterCreate)
-      .afterCreateCommit(['age'], afterCreateCommit);
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
 
-    expect(afterCreate).toHaveBeenCalledWith(
-      [
-        {
-          password: 'password',
-          age: null,
-        },
-      ],
-      expect.any(Object),
-    );
-    expect(afterCreateCommit).toHaveBeenCalledWith(
-      [
-        {
-          password: 'password',
-          age: null,
-        },
-      ],
-      expect.any(Object),
-    );
+      emulateReturnNoRowsOnce();
+
+      const res = await User.select('id')
+        .findBy({ name: 'name' })
+        .orCreate(userData)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      assertType<typeof res, { id: number }>();
+      expect(res).toEqual({ id: expect.any(Number) });
+
+      expect(afterCreate).not.toHaveBeenCalled();
+      expect(afterCreateCommit).not.toHaveBeenCalled();
+    });
+
+    it('should call after create hooks when created', async () => {
+      const afterCreate = jest.fn();
+      const afterCreateCommit = jest.fn();
+
+      await User.findBy({ name: 'name' })
+        .orCreate(userData)
+        .afterCreate(['password'], afterCreate)
+        .afterCreateCommit(['age'], afterCreateCommit);
+
+      expect(afterCreate).toHaveBeenCalledWith(
+        [
+          {
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+      expect(afterCreateCommit).toHaveBeenCalledWith(
+        [
+          {
+            password: 'password',
+            age: null,
+          },
+        ],
+        expect.any(Object),
+      );
+    });
   });
 
   describe('cte', () => {
