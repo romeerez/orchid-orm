@@ -1,5 +1,11 @@
 # orchid-orm-test-factory
 
+## 1.0.84
+
+### Patch Changes
+
+- 226eb18: Don't use fake values for identity and serial columns in test-factory when creating records (#605)
+
 ## 1.0.83
 
 ### Patch Changes
