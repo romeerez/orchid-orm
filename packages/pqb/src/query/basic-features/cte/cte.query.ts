@@ -48,9 +48,7 @@ export type CteResult<
   Name extends string,
   Q extends PickQueryResult,
 > = {
-  [K in keyof T]: K extends 'meta'
-    ? { [K in keyof T['meta']]: K extends 'kind' ? 'select' : T['meta'][K] }
-    : K extends 'withData'
+  [K in keyof T]: K extends 'withData'
     ? {
         [K in keyof T['withData'] | Name]: K extends Name
           ? {

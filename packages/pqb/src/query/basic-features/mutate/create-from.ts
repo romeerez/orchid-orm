@@ -11,15 +11,14 @@ import {
 } from './create';
 import {
   Query,
-  SetQueryKind,
-  SetQueryReturnsAllKind,
-  SetQueryReturnsColumnKind,
-  SetQueryReturnsOneKind,
-  SetQueryReturnsPluckColumnKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
   queryTypeWithLimitOne,
   IsQuery,
+  SetQueryReturnsAll,
+  SetQueryReturnsOne,
+  SetQueryReturnsColumn,
+  SetValueQueryReturnsPluckColumn,
 } from '../../query';
 import { InsertQueryDataObjectValues, QueryData } from '../../query-data';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
@@ -43,40 +42,40 @@ interface QueryReturningOne extends IsQuery {
 }
 
 type CreateRawOrFromResult<T extends CreateSelf> = T extends { isCount: true }
-  ? SetQueryKind<T, 'create'>
+  ? T
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsOneKind<T, 'create'>
+  ? SetQueryReturnsOne<T>
   : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumnKind<T, 'create'>
-  : SetQueryKind<T, 'create'>;
+  ? SetQueryReturnsColumn<T>
+  : T;
 
 type InsertRawOrFromResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
     ? T['returnType'] extends undefined | 'all'
-      ? SetQueryReturnsOneKind<T, 'create'>
+      ? SetQueryReturnsOne<T>
       : T['returnType'] extends 'pluck'
-      ? SetQueryReturnsColumnKind<T, 'create'>
-      : SetQueryKind<T, 'create'>
-    : SetQueryReturnsRowCount<T, 'create'>;
+      ? SetQueryReturnsColumn<T>
+      : T
+    : SetQueryReturnsRowCount<T>;
 
 type CreateManyFromResult<T extends CreateSelf> = T extends {
   isCount: true;
 }
-  ? SetQueryKind<T, 'create'>
+  ? T
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAllKind<T, 'create'>
+  ? SetQueryReturnsAll<T>
   : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetQueryReturnsPluckColumnKind<T, 'create'>
-  : SetQueryKind<T, 'create'>;
+  ? SetValueQueryReturnsPluckColumn<T>
+  : T;
 
 type InsertManyFromResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
     ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? SetQueryReturnsAllKind<T, 'create'>
+      ? SetQueryReturnsAll<T>
       : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsPluckColumnKind<T, 'create'>
-      : SetQueryKind<T, 'create'>
-    : SetQueryReturnsRowCountMany<T, 'create'>;
+      ? SetValueQueryReturnsPluckColumn<T>
+      : T
+    : SetQueryReturnsRowCountMany<T>;
 
 /**
  * Is used by all create from queries methods.

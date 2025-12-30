@@ -1,8 +1,8 @@
 import {
   Query,
-  SetQueryReturnsOneKind,
-  SetQueryReturnsValueOrThrowKind,
-  SetQueryReturnsVoidKind,
+  SetQueryReturnsOne,
+  SetQueryReturnsVoid,
+  SetValueQueryReturnsValueOrThrow,
 } from '../../query';
 import { _queryUpdate, UpdateData, UpdateSelf } from './update';
 import { CreateData, CreateSelf } from './create';
@@ -22,9 +22,9 @@ type UpsertCreate<DataKey extends PropertyKey, CD> = {
 export type UpsertResult<T extends PickQueryMetaResultReturnType> =
   T['meta']['hasSelect'] extends true
     ? T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsValueOrThrowKind<T, 'upsert'>
-      : SetQueryReturnsOneKind<T, 'upsert'>
-    : SetQueryReturnsVoidKind<T, 'upsert'>;
+      ? SetValueQueryReturnsValueOrThrow<T>
+      : SetQueryReturnsOne<T>
+    : SetQueryReturnsVoid<T>;
 
 // Require type of query object to query only one record
 // because upserting multiple isn't possible

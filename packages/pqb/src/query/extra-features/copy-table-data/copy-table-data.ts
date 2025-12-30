@@ -1,17 +1,9 @@
-import { SetQueryKind } from '../../query';
-import {
-  PickQueryMeta,
-  PickQueryMetaShape,
-  PickQueryShape,
-} from '../../pick-query-types';
+import { PickQueryMetaShape, PickQueryShape } from '../../pick-query-types';
 import { _clone } from '../../basic-features/clone/clone';
 import { CopyOptions } from './copy-table-data.sql';
 
 // argument of the `copy` function can accept various options
 type CopyArg<T extends PickQueryShape> = CopyOptions<keyof T['shape']>;
-
-// Result type for the `copy` method, simply setting a query kind.
-type CopyResult<T extends PickQueryMeta> = SetQueryKind<T, 'copy'>;
 
 /**
  * `copyTableData` is a function to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
@@ -64,7 +56,7 @@ type CopyResult<T extends PickQueryMeta> = SetQueryKind<T, 'copy'>;
 export function copyTableData<T extends PickQueryMetaShape>(
   query: T,
   arg: CopyArg<T>,
-): CopyResult<T> {
+): T {
   const q = _clone(query);
   Object.assign(q.q, {
     type: 'copy',

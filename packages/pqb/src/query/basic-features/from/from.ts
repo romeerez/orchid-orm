@@ -43,8 +43,6 @@ export type FromResult<
                 ? string | undefined
                 : K extends 'selectable'
                 ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
-                : K extends 'kind'
-                ? 'select'
                 : T['meta'][K];
             }
           : K extends 'result'
@@ -62,8 +60,6 @@ export type FromResult<
               ? AliasOrTable<Arg>
               : K extends 'selectable'
               ? SelectableFromShape<Arg['result'], AliasOrTable<Arg>>
-              : K extends 'kind'
-              ? 'select'
               : K extends 'defaultSelect'
               ? keyof Arg['result']
               : T['meta'][K];

@@ -1,19 +1,18 @@
 import {
   Query,
-  SetQueryKind,
-  SetQueryKindResult,
-  SetQueryReturnsAllKindResult,
-  SetQueryReturnsColumnKindResult,
   SetQueryReturnsColumnOptional,
-  SetQueryReturnsOneKindResult,
   QueryTakeOptional,
-  SetQueryReturnsPluckColumnKindResult,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
   QueryOrExpression,
   QueryBase,
   IsQuery,
   isQuery,
+  SetQueryReturnsAllResult,
+  SetQueryReturnsOneResult,
+  SetQueryReturnsColumnResult,
+  SetQueryResult,
+  SetQueryReturnsPluckColumnResult,
 } from '../../query';
 import {
   anyShape,
@@ -164,12 +163,12 @@ export type CreateRelationsDataOmittingFKeys<
 // - If the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
 export type CreateResult<T extends CreateSelf> = T extends { isCount: true }
-  ? SetQueryKind<T, 'create'>
+  ? T
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T>>
+  ? SetQueryReturnsOneResult<T, NarrowCreateResult<T>>
   : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T>>
-  : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>;
+  ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T>>
+  : SetQueryResult<T, NarrowCreateResult<T>>;
 
 // `insert` method output type
 // - query returns inserted row count by default.
@@ -178,23 +177,23 @@ export type CreateResult<T extends CreateSelf> = T extends { isCount: true }
 // - if it is a `pluck` query, forces it to return a single value
 type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
   ? T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsOneKindResult<T, 'create', NarrowCreateResult<T>>
+    ? SetQueryReturnsOneResult<T, NarrowCreateResult<T>>
     : T['returnType'] extends 'pluck'
-    ? SetQueryReturnsColumnKindResult<T, 'create', NarrowCreateResult<T>>
-    : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>
-  : SetQueryReturnsRowCount<T, 'create'>;
+    ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T>>
+    : SetQueryResult<T, NarrowCreateResult<T>>
+  : SetQueryReturnsRowCount<T>;
 
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns a single record, forces it to return multiple.
 // - otherwise, query result remains as is.
 type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
-  ? SetQueryKindResult<T, 'create', NarrowCreateResult<T>>
+  ? SetQueryResult<T, NarrowCreateResult<T>>
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAllKindResult<T, 'create', NarrowCreateResult<T>>
+  ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
   : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T>>
-  : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>;
+  ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
+  : SetQueryResult<T, NarrowCreateResult<T>>;
 
 // `insertMany` method output type
 // - query returns inserted row count by default.
@@ -203,11 +202,11 @@ type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
 type InsertManyResult<T extends CreateSelf> =
   T['meta']['hasSelect'] extends true
     ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? SetQueryReturnsAllKindResult<T, 'create', NarrowCreateResult<T>>
+      ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
       : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsPluckColumnKindResult<T, 'create', NarrowCreateResult<T>>
-      : SetQueryKindResult<T, 'create', NarrowCreateResult<T>>
-    : SetQueryReturnsRowCountMany<T, 'create'>;
+      ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
+      : SetQueryResult<T, NarrowCreateResult<T>>
+    : SetQueryReturnsRowCountMany<T>;
 
 /**
  * When creating a record with a *belongs to* nested record,

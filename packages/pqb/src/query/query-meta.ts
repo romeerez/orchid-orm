@@ -7,8 +7,6 @@ export interface QuerySelectable {
 }
 
 export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
-  // kind of a query: select, update, create, etc.
-  kind: string;
   // table alias
   as?: string;
   // single relations (belongsTo, hasOne) returns one when subQuery is true, returns many otherwise

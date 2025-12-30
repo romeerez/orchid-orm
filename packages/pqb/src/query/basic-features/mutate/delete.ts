@@ -1,5 +1,4 @@
 import {
-  SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query';
@@ -19,10 +18,10 @@ export type DeleteArgs<T extends PickQueryMetaResult> =
 
 export type DeleteResult<T extends PickQueryMetaResultReturnType> =
   T['meta']['hasSelect'] extends true
-    ? SetQueryKind<T, 'delete'>
+    ? T
     : T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsRowCountMany<T, 'delete'>
-    : SetQueryReturnsRowCount<T, 'delete'>;
+    ? SetQueryReturnsRowCountMany<T>
+    : SetQueryReturnsRowCount<T>;
 
 export const _queryDelete = <T extends PickQueryMetaResultReturnType>(
   query: T,

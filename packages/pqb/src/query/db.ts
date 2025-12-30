@@ -227,6 +227,7 @@ export class Db<
 {
   declare q: QueryData;
   declare __isQuery: true;
+  declare __kind: string;
   baseQuery: Query;
   columns: (keyof Shape)[];
   declare outputType: ColumnsShape.DefaultSelectOutput<Shape>;

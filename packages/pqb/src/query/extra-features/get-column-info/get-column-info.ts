@@ -1,4 +1,3 @@
-import { SetQueryKind } from '../../query';
 import { Column } from '../../../columns';
 import { PickQueryMetaShape } from '../../pick-query-types';
 import { _clone } from '../../basic-features/clone/clone';
@@ -17,7 +16,7 @@ export type SetQueryReturnsColumnInfo<
     : { [K in keyof T['shape']]: GetColumnInfo },
 > =
   // Omit is optimal
-  Omit<SetQueryKind<T, 'columnInfo'>, 'result' | 'returnType' | 'then'> & {
+  Omit<T, 'result' | 'returnType' | 'then'> & {
     result: { value: Column.Pick.QueryColumnOfType<Result> };
     returnType: 'value';
     then: QueryThenShallowSimplify<Result>;

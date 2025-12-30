@@ -2,7 +2,6 @@ import {
   isQuery,
   Query,
   QueryOrExpression,
-  SetQueryKind,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
 } from '../../query';
@@ -91,10 +90,10 @@ export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
 // `update` and `updateOrThrow` methods output type.
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
 type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
-  ? SetQueryKind<T, 'update'>
+  ? T
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsRowCountMany<T, 'update'>
-  : SetQueryReturnsRowCount<T, 'update'>;
+  ? SetQueryReturnsRowCountMany<T>
+  : SetQueryReturnsRowCount<T>;
 
 export type NumericColumns<T extends UpdateSelf> = {
   [K in keyof T['inputType']]: Exclude<

@@ -1,6 +1,6 @@
 import { _clone } from '../../basic-features/clone/clone';
 import { PickQueryMeta } from '../../pick-query-types';
-import { SetQueryReturnsVoidKind } from '../../query';
+import { SetQueryReturnsVoid } from '../../query';
 import { _queryExec } from '../../query.utils';
 
 export class QueryTruncate {
@@ -23,7 +23,7 @@ export class QueryTruncate {
   truncate<T extends PickQueryMeta>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
-  ): SetQueryReturnsVoidKind<T, 'truncate'> {
+  ): SetQueryReturnsVoid<T> {
     const query = _clone(this);
     const { q } = query;
     q.type = 'truncate';
