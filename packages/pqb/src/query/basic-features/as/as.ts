@@ -1,7 +1,4 @@
-import {
-  PickQueryMetaTable,
-  PickQueryMetaTableShape,
-} from '../../pick-query-types';
+import { PickQueryMetaShapeAs } from '../../pick-query-types';
 import { getFreeAlias, RecordString } from '../../../utils';
 import { QueryBase } from '../../query';
 
@@ -18,25 +15,16 @@ export interface QueryDataAliases extends PickQueryDataAliases {
   outerAliases?: RecordString;
 }
 
-export type AliasOrTable<T extends PickQueryMetaTable> =
-  T['meta']['as'] extends string
-    ? T['meta']['as']
-    : T['table'] extends string
-    ? T['table']
-    : never;
-
 export type SetQueryTableAlias<
-  T extends PickQueryMetaTableShape,
+  T extends PickQueryMetaShapeAs,
   As extends string,
 > = {
   [K in keyof T]: K extends 'meta'
     ? {
-        [K in keyof T['meta'] | 'as']: K extends 'as'
-          ? As
-          : K extends 'selectable'
+        [K in keyof T['meta']]: K extends 'selectable'
           ? Omit<
               T['meta']['selectable'],
-              `${AliasOrTable<T>}.${keyof T['shape'] & string}`
+              `${T['__as']}.${keyof T['shape'] & string}`
             > & {
               [K in keyof T['shape'] & string as `${As}.${K}`]: {
                 as: K;
@@ -45,10 +33,12 @@ export type SetQueryTableAlias<
             }
           : T['meta'][K];
       }
+    : K extends '__as'
+    ? As
     : T[K];
 };
 
-export type AsQueryArg = PickQueryMetaTableShape;
+export type AsQueryArg = PickQueryMetaShapeAs;
 
 /** getters **/
 

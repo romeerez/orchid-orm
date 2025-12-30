@@ -132,6 +132,7 @@ export interface QueryOrExpression<T> {
 
 export interface Query extends QueryBase, QueryMethods<unknown> {
   __isQuery: true;
+  __as: string;
   result: Column.QueryColumns;
   withData: WithDataItems;
   baseQuery: Query;

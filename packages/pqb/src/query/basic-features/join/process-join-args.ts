@@ -13,7 +13,7 @@ import {
   PickQueryRelations,
 } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
-import { JoinItemArgs, SimpleJoinItemNonSubQueryArgs } from './join.sql';
+import { JoinItemArgs } from './join.sql';
 import { JoinedShapes, QueryData, QueryDataJoinTo } from '../../query-data';
 
 /**
@@ -45,7 +45,7 @@ export const processJoinArgs = (
       const j = joinQuery(toQuery as never, joinTo) as Query;
       if (typeof args[0] === 'function') {
         const r = args[0](
-          makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo, shape),
+          makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo, shape) as never,
         ) as Query;
         return {
           j: j.merge(r),
@@ -56,7 +56,7 @@ export const processJoinArgs = (
 
       return { j, s: joinSubQuery };
     } else if (typeof args[0] !== 'function') {
-      return { w: first, a: args as SimpleJoinItemNonSubQueryArgs };
+      return { w: first, a: args as never };
     } else {
       const joinToQ = joinTo.q;
       const w = joinToQ.withShapes?.[first];
@@ -94,7 +94,7 @@ export const processJoinArgs = (
               : joinedShapes,
             joinTo,
             shape,
-          ),
+          ) as never,
         ) as Query,
       );
 
@@ -153,7 +153,7 @@ export const processJoinArgs = (
           : joinedShapes,
         joinTo,
         shape,
-      ),
+      ) as never,
     ) as Query;
 
     joinSubQuery ||= getIsJoinSubQuery(r);

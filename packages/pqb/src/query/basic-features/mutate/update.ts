@@ -21,7 +21,10 @@ import {
   joinSubQuery,
 } from '../join/join';
 import { _queryNone } from '../../extra-features/none/none';
-import { PickQueryMetaResultRelationsWithDataReturnTypeShape } from '../../pick-query-types';
+import {
+  PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+} from '../../pick-query-types';
 import { callWithThis, EmptyObject, RecordUnknown } from '../../../utils';
 import { RelationConfigBase } from '../../relations';
 import { QueryResult } from '../../../adapters/adapter';
@@ -590,7 +593,7 @@ export class Update {
    * ```
    */
   updateFrom<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(

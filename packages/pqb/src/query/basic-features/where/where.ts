@@ -20,7 +20,7 @@ import {
   PickQueryMeta,
   PickQueryMetaRelations,
   PickQueryMetaRelationsResultReturnType,
-  PickQueryMetaShapeRelationsWithData,
+  PickQueryMetaShapeRelationsWithDataAs,
   PickQueryQ,
   PickQueryRelations,
 } from '../../pick-query-types';
@@ -489,7 +489,7 @@ const existsArgs = (
 ) => {
   const joinArgs = processJoinArgs(
     self,
-    preprocessJoinArg(self, q),
+    preprocessJoinArg(self, q) as never,
     args as never,
     false,
     undefined,
@@ -507,7 +507,7 @@ const existsArgs = (
  * Mutative {@link Where.prototype.whereExists}
  */
 export const _queryWhereExists = <
-  T extends PickQueryMetaShapeRelationsWithData,
+  T extends PickQueryMetaShapeRelationsWithDataAs,
   Arg extends JoinFirstArg<T>,
 >(
   q: T,
@@ -1177,7 +1177,7 @@ export class Where {
    * ```
    */
   whereExists<
-    T extends PickQueryMetaShapeRelationsWithData,
+    T extends PickQueryMetaShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1202,7 +1202,7 @@ export class Where {
    * ```
    */
   orWhereExists<
-    T extends PickQueryMetaShapeRelationsWithData,
+    T extends PickQueryMetaShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);
@@ -1222,7 +1222,7 @@ export class Where {
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
   whereNotExists<
-    T extends PickQueryMetaShapeRelationsWithData,
+    T extends PickQueryMetaShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);
@@ -1239,7 +1239,7 @@ export class Where {
    * ```
    */
   orWhereNotExists<
-    T extends PickQueryMetaShapeRelationsWithData,
+    T extends PickQueryMetaShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);

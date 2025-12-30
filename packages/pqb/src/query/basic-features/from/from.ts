@@ -6,13 +6,14 @@ import {
   SubQueryForSql,
 } from '../../sub-query/sub-query-for-sql';
 import {
-  PickQueryMetaTableShapeReturnTypeWithData,
+  PickQueryMetaResultAs,
+  PickQueryMetaResultInputTypeAs,
+  PickQueryMetaShapeReturnTypeWithDataAs,
   PickQueryQ,
   PickQueryTableMetaResult,
-  PickQueryTableMetaResultInputType,
 } from '../../pick-query-types';
 import { MaybeArray, UnionToIntersection } from '../../../utils';
-import { AliasOrTable, getQueryAs, SetQueryTableAlias } from '../as/as';
+import { getQueryAs, SetQueryTableAlias } from '../as/as';
 import {
   ColumnsParsers,
   getQueryParsers,
@@ -25,7 +26,7 @@ import { SQLQueryArgs } from '../../db-sql-query';
 import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
 import { QueryThenByQuery } from '../../then/then';
 
-export type FromQuerySelf = PickQueryMetaTableShapeReturnTypeWithData;
+export type FromQuerySelf = PickQueryMetaShapeReturnTypeWithDataAs;
 
 export type FromArg<T extends FromQuerySelf> =
   | PickQueryTableMetaResult
@@ -39,9 +40,7 @@ export type FromResult<
     ? {
         [K in keyof T]: K extends 'meta'
           ? {
-              [K in keyof T['meta']]: K extends 'as'
-                ? string | undefined
-                : K extends 'selectable'
+              [K in keyof T['meta']]: K extends 'selectable'
                 ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
                 : T['meta'][K];
             }
@@ -52,18 +51,18 @@ export type FromResult<
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
-  : Arg extends PickQueryTableMetaResultInputType
+  : Arg extends PickQueryMetaResultInputTypeAs
   ? {
       [K in keyof T]: K extends 'meta'
         ? {
-            [K in keyof T['meta']]: K extends 'as'
-              ? AliasOrTable<Arg>
-              : K extends 'selectable'
-              ? SelectableFromShape<Arg['result'], AliasOrTable<Arg>>
+            [K in keyof T['meta']]: K extends 'selectable'
+              ? SelectableFromShape<Arg['result'], Arg['__as']>
               : K extends 'defaultSelect'
               ? keyof Arg['result']
               : T['meta'][K];
           }
+        : K extends '__as'
+        ? Arg['__as']
         : K extends 'result'
         ? Arg['result']
         : K extends 'shape'
@@ -90,10 +89,10 @@ export type FromResult<
                           };
                         }
                       : never
-                    : A extends PickQueryTableMetaResult
+                    : A extends PickQueryMetaResultAs
                     ? {
                         [K in keyof A['result'] &
-                          string as `${AliasOrTable<A>}.${K}`]: K extends string
+                          string as `${A['__as']}.${K}`]: K extends string
                           ? {
                               as: K;
                               column: A['result'][K];

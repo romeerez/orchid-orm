@@ -907,7 +907,7 @@ describe('select', () => {
         `
           SELECT ${profileJsonBuildObjectSql} "p"
           FROM "user"
-                 LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 

@@ -93,10 +93,11 @@ export type HasAndBelongsToManyQuery<
 > = {
   [K in keyof TableQuery]: K extends 'meta'
     ? Omit<TableQuery['meta'], 'selectable'> & {
-        as: Name;
         hasWhere: true;
         selectable: SelectableFromShape<TableQuery['shape'], Name>;
       }
+    : K extends '__as'
+    ? Name
     : K extends 'join'
     ? RelJoin
     : TableQuery[K];

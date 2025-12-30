@@ -4,7 +4,6 @@ import {
   Column,
   CreateCtx,
   getQueryAs,
-  JoinCallback,
   JoinQueryMethod,
   pushQueryOnForOuter,
   Query,
@@ -215,7 +214,7 @@ export function joinHasThrough(
         (sourceRelation.query as Query).as(as),
         throughRelation.query as never,
       );
-    }) as unknown as JoinCallback<Query, Query>,
+    }) as never,
   );
 }
 

@@ -1,4 +1,5 @@
 import {
+  PickQueryAs,
   PickQueryMetaReturnType,
   PickQueryShape,
   PickQueryTable,
@@ -14,7 +15,8 @@ export interface RelationJoinQuery {
 export interface RelationConfigQuery
   extends PickQueryTableMetaResult,
     PickQueryShape,
-    PickQueryTable {}
+    PickQueryTable,
+    PickQueryAs {}
 
 export interface RelationConfigBase extends IsQuery {
   returnsOne: boolean;

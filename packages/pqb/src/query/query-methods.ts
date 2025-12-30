@@ -30,7 +30,11 @@ import {
 import { AggregateMethods } from './basic-features/aggregate/aggregate';
 import { Select } from './basic-features/select/select';
 import { FromMethods } from './basic-features/from/from';
-import { JoinResultRequireMain, OnMethods, QueryJoin } from './basic-features/join/join';
+import {
+  JoinResultRequireMain,
+  OnMethods,
+  QueryJoin,
+} from './basic-features/join/join';
 import { CteQuery } from './basic-features/cte/cte.query';
 import { Union } from './basic-features/union/union';
 import { JsonMethods } from './basic-features/json/json';
@@ -72,7 +76,7 @@ import {
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
   PickQueryMetaResultReturnTypeWithDataWindowsThen,
-  PickQueryMetaShape,
+  PickQueryMetaShapeAs,
   PickQueryMetaShapeRelationsReturnType,
   PickQueryRelations,
   PickQueryResult,
@@ -80,12 +84,11 @@ import {
   PickQueryResultReturnTypeUniqueColumns,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
   PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
-  PickQueryTableMetaShape,
+  PickQueryTableMetaShapeAs,
 } from './pick-query-types';
 import {
   _getQueryAs,
   _setQueryAlias,
-  AliasOrTable,
   QueryAsMethods,
 } from './basic-features/as/as';
 import { QueryMetaBase } from './query-meta';
@@ -114,13 +117,13 @@ export type GroupArgs<T extends PickQueryResult> = (
   | Expression
 )[];
 
-interface QueryHelperQuery<T extends PickQueryMetaShape> {
+interface QueryHelperQuery<T extends PickQueryMetaShapeAs> {
   returnType: QueryReturnType;
   meta: QueryMetaBase & {
     // Omit is optimal
     selectable: Omit<
       T['meta']['selectable'],
-      `${AliasOrTable<T>}.${Extract<keyof T['shape'], string>}`
+      `${T['__as']}.${Extract<keyof T['shape'], string>}`
     >;
   };
   result: Column.QueryColumns;
@@ -142,7 +145,7 @@ interface IsQueryHelperForTable<Table extends string | undefined>
 }
 
 interface QueryHelper<
-  T extends PickQueryTableMetaShape,
+  T extends PickQueryTableMetaShapeAs,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Args extends any[],
   Result,
@@ -154,6 +157,7 @@ interface QueryHelper<
     ? MergeQuery<Q, Result>
     : Result;
 
+  __as: T['__as'];
   table: T['table'];
   args: Args;
   result: Result;
@@ -162,7 +166,7 @@ interface QueryHelper<
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
 export type QueryHelperResult<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends QueryHelper<PickQueryMetaShape, any[], unknown>,
+  T extends QueryHelper<PickQueryMetaShapeAs, any[], unknown>,
 > = T['result'];
 
 interface NarrowTypeSelf extends PickQueryMetaResultReturnType {
@@ -786,7 +790,7 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param fn - helper function
    */
-  makeHelper<T extends PickQueryMetaShape, Args extends unknown[], Result>(
+  makeHelper<T extends PickQueryMetaShapeAs, Args extends unknown[], Result>(
     this: T,
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {

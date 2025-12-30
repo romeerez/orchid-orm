@@ -105,11 +105,12 @@ export type HasOneQueryThrough<
 > = {
   [K in keyof TableQuery]: K extends 'meta'
     ? Omit<TableQuery['meta'], 'selectable'> & {
-        as: Name;
         defaults: HasOnePopulate<T, Name>;
         hasWhere: true;
         selectable: SelectableFromShape<TableQuery['shape'], Name>;
       }
+    : K extends '__as'
+    ? Name
     : K extends 'join'
     ? RelJoin
     : K extends CreateMethodsNames
@@ -126,11 +127,12 @@ export type HasOneQuery<
   : {
       [K in keyof TableQuery]: K extends 'meta'
         ? Omit<TableQuery['meta'], 'selectable'> & {
-            as: Name;
             defaults: HasOnePopulate<T, Name>;
             hasWhere: true;
             selectable: SelectableFromShape<TableQuery['shape'], Name>;
           }
+        : K extends '__as'
+        ? Name
         : K extends 'join'
         ? RelJoin
         : K extends CreateManyMethodsNames
