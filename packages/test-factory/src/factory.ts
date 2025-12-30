@@ -62,21 +62,21 @@ import {
 import { faker } from '@faker-js/faker';
 import randexp from 'randexp';
 
-type FakeDataFn = (sequence: number) => unknown;
+type ColumnFactory = (sequence: number) => unknown;
 
-interface FakeDataDefineFns {
-  [K: string]: (column: Column.Pick.Data) => FakeDataFn;
+interface FakeDataDefineColumnFactories {
+  [K: string]: (column: Column.Pick.Data) => ColumnFactory;
 }
 
-interface FakeDataFns {
-  [K: string]: FakeDataFn;
+interface ColumnFactories {
+  [K: string]: ColumnFactory;
 }
 
 export interface FactoryConfig {
   sequence?: number;
   sequenceDistance?: number;
   maxTextLength?: number;
-  fakeDataForTypes?: FakeDataDefineFns;
+  fakeDataForTypes?: FakeDataDefineColumnFactories;
 }
 
 type FactoryExtend<T extends PickQueryShape> = {
@@ -169,21 +169,21 @@ const pick = <T, Keys extends RecordUnknown>(
 
 const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
   factory: T,
+  columnFactories: ColumnFactories,
   data: RecordUnknown,
   omitValues: Record<PropertyKey, true>,
   pickValues: Record<PropertyKey, true>,
   arg?: Data,
 ) => {
-  let { fns } = factory;
   let allData = arg ? { ...data, ...arg } : data;
 
   if (omitValues) {
-    fns = omit(fns, omitValues);
+    columnFactories = omit(columnFactories, omitValues);
     allData = omit(allData, omitValues);
   }
 
   if (pickValues && Object.keys(pickValues).length) {
-    fns = pick(fns, pickValues);
+    columnFactories = pick(columnFactories, pickValues);
     allData = pick(allData, pickValues);
   }
 
@@ -192,8 +192,8 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
     const sequence = factory.sequence++;
 
     const result: RecordUnknown = {};
-    for (const key in fns) {
-      result[key] = fns[key](sequence);
+    for (const key in columnFactories) {
+      result[key] = columnFactories[key](sequence);
     }
 
     for (const key in data) {
@@ -209,26 +209,29 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
   };
 };
 
-const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
-  factory: T,
-  data: RecordUnknown,
-  arg?: Data,
-) => {
-  const { fns } = factory;
-
-  const pick: Record<string, true> = {};
-  for (const key in fns) {
-    pick[key] = true;
-  }
-
-  for (const key of getPrimaryKeys(factory.table as unknown as QueryBase)) {
+const getFactoryPrimaryKeys = (factory: TestFactory) => {
+  return getPrimaryKeys(factory.table as unknown as QueryBase).filter((key) => {
     const item = factory.table.shape[
       key
     ] as unknown as Column.Pick.DataAndDataType;
 
-    if ('identity' in item.data || item.dataType.includes('serial')) {
-      delete pick[key];
-    }
+    return 'identity' in item.data || item.dataType.includes('serial');
+  });
+};
+
+const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
+  factory: T,
+  columnFactoriesNoPkeys: ColumnFactories,
+  data: RecordUnknown,
+  arg?: Data,
+) => {
+  const pick: Record<string, true> = {};
+  for (const key in columnFactoriesNoPkeys) {
+    pick[key] = true;
+  }
+
+  for (const key of getFactoryPrimaryKeys(factory)) {
+    delete pick[key];
   }
 
   const shared: RecordUnknown = {};
@@ -239,7 +242,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     delete pick[key];
     const value = allData[key];
     if (typeof value === 'function') {
-      fns[key] = value as () => unknown;
+      columnFactoriesNoPkeys[key] = value as () => unknown;
     } else {
       shared[key] = value;
     }
@@ -251,7 +254,7 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
 
     const result = { ...shared };
     for (const key in pick) {
-      result[key] = fns[key](sequence);
+      result[key] = columnFactoriesNoPkeys[key](sequence);
     }
 
     if (arg) {
@@ -265,13 +268,13 @@ const processCreateData = <T extends TestFactory, Data extends CreateArg<T>>(
     } else {
       const promises: Promise<void>[] = [];
 
-      for (const key in pick) {
+      for (const key in columnFactoriesNoPkeys) {
         if (key in result) continue;
 
         promises.push(
           new Promise(async (resolve, reject) => {
             try {
-              result[key] = await fns[key](sequence);
+              result[key] = await columnFactoriesNoPkeys[key](sequence);
               resolve();
             } catch (err) {
               reject(err);
@@ -295,6 +298,7 @@ export class TestFactory<
   private readonly omitValues: Record<PropertyKey, true> = {};
   private readonly pickValues: Record<PropertyKey, true> = {};
   private readonly data: RecordUnknown = {};
+  private columnFactoriesNoPkeys?: ColumnFactories;
 
   [metaKey]!: {
     type: Type;
@@ -304,7 +308,7 @@ export class TestFactory<
 
   constructor(
     public table: Q,
-    public fns: FakeDataFns,
+    private columnFactories: ColumnFactories,
     options: TableFactoryConfig<PickQueryShape> = {},
   ) {
     if (options.sequence !== undefined) {
@@ -314,6 +318,18 @@ export class TestFactory<
       if (isNaN(workerId)) workerId = 1;
       this.sequence = (workerId - 1) * (options.sequenceDistance ?? 1000) + 1;
     }
+  }
+
+  private getColumnFactoriesNoPkeys() {
+    let value = this.columnFactoriesNoPkeys;
+    if (!value) {
+      value = { ...this.columnFactories };
+      for (const key of getFactoryPrimaryKeys(this)) {
+        delete value[key];
+      }
+      this.columnFactoriesNoPkeys = value;
+    }
+    return value;
   }
 
   set<
@@ -356,6 +372,7 @@ export class TestFactory<
     // TODO: consider memoizing the base case
     const build = makeBuild(
       this,
+      this.columnFactories,
       this.data,
       this.omitValues,
       this.pickValues,
@@ -371,6 +388,7 @@ export class TestFactory<
   ): BuildResult<T, Data>[] {
     const build = makeBuild(
       this,
+      this.columnFactories,
       this.data,
       this.omitValues,
       this.pickValues,
@@ -384,7 +402,13 @@ export class TestFactory<
     this: T,
     ...arr: Args
   ): { [I in keyof Args]: BuildResult<T, Args[I]> } {
-    const build = makeBuild(this, this.data, this.omitValues, this.pickValues);
+    const build = makeBuild(
+      this,
+      this.columnFactories,
+      this.data,
+      this.omitValues,
+      this.pickValues,
+    );
 
     return arr.map(build) as { [I in keyof Args]: BuildResult<T, Args[I]> };
   }
@@ -393,7 +417,12 @@ export class TestFactory<
     this: T,
     data?: Data,
   ): Promise<CreateResult<T>> {
-    const getData = processCreateData(this, this.data, data);
+    const getData = processCreateData(
+      this,
+      this.getColumnFactoriesNoPkeys(),
+      this.data,
+      data,
+    );
     return (await (this.table as unknown as Query).create(
       await getData(),
     )) as never;
@@ -404,7 +433,12 @@ export class TestFactory<
     qty: number,
     data?: Data,
   ): Promise<CreateResult<T>[]> {
-    const getData = processCreateData(this, this.data, data);
+    const getData = processCreateData(
+      this,
+      this.getColumnFactoriesNoPkeys(),
+      this.data,
+      data,
+    );
     const arr = await Promise.all([...Array(qty)].map(() => getData()));
     return (await (this.table as unknown as Query).createMany(
       arr as CreateData<T['table']>[],
@@ -415,7 +449,11 @@ export class TestFactory<
     this: T,
     ...arr: Args
   ): Promise<{ [K in keyof Args]: CreateResult<T> }> {
-    const getData = processCreateData(this, this.data);
+    const getData = processCreateData(
+      this,
+      this.getColumnFactoriesNoPkeys(),
+      this.data,
+    );
     const data = await Promise.all(arr.map(getData));
     return (await (this.table as unknown as Query).createMany(
       data as CreateData<T['table']>[],
@@ -423,11 +461,11 @@ export class TestFactory<
   }
 
   extend<T extends this>(this: T): new () => TestFactory<Q, Type> {
-    const { table, fns } = this;
+    const { table, columnFactories } = this;
 
     return class extends TestFactory<Q, Type> {
       constructor() {
-        super(table, fns);
+        super(table, columnFactories);
       }
     };
   }
@@ -879,13 +917,13 @@ export const tableFactory = <T extends CreateSelf>(
   config?: TableFactoryConfig<T>,
 ): TableFactory<T> => {
   const { shape } = table;
-  const fns: { [K: string]: (sequence: number) => unknown } = {
+  const columnFactories: { [K: string]: (sequence: number) => unknown } = {
     ...config?.extend,
   } as never;
 
   const uniqueColumns = new Set<string>();
   for (const key in shape) {
-    if (fns[key]) continue;
+    if (columnFactories[key]) continue;
 
     const {
       data: { indexes, primaryKey },
@@ -910,7 +948,7 @@ export const tableFactory = <T extends CreateSelf>(
     .tableData;
   if (primaryKey) {
     for (const key of primaryKey.columns) {
-      if (fns[key]) continue;
+      if (columnFactories[key]) continue;
 
       uniqueColumns.add(key);
     }
@@ -929,7 +967,7 @@ export const tableFactory = <T extends CreateSelf>(
   }
 
   for (const key in shape) {
-    if (fns[key]) continue;
+    if (columnFactories[key]) continue;
 
     const fn = makeGeneratorForColumn(
       config || emptyObject,
@@ -938,10 +976,10 @@ export const tableFactory = <T extends CreateSelf>(
       key,
       (shape as unknown as ColumnsShape)[key],
     );
-    if (fn) fns[key] = fn;
+    if (fn) columnFactories[key] = fn;
   }
 
-  return new TestFactory(table, fns, config) as TableFactory<T>;
+  return new TestFactory(table, columnFactories, config) as TableFactory<T>;
 };
 
 type ORMFactory<T> = {
