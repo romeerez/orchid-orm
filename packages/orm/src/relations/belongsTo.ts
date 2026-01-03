@@ -209,9 +209,10 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         q,
         (as) => {
           foreignKeys.forEach((foreignKey, i) => {
-            (
-              item[foreignKey] as RawSql
-            )._sql = `(SELECT "${as}"."${primaryKeys[i]}" FROM "${as}")`;
+            (item[foreignKey] as RawSql)._sql = selectCteColumnSql(
+              as,
+              primaryKeys[i],
+            );
           });
         },
         'create' in value
@@ -230,11 +231,8 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       _with(q, as, query.select(...primaryKeys).findBy(value.connect));
 
       foreignKeys.map((foreignKey, i) => {
-        const selectColumn = `(SELECT "${as}"."${primaryKeys[i]}" FROM "${as}")`;
         item[foreignKey] = new RawSql(
-          i === 0
-            ? `CASE WHEN (SELECT count(*) FROM "${as}") = 0 AND (SELECT 'not-found')::int = 0 THEN NULL ELSE ${selectColumn} END`
-            : selectColumn,
+          selectCteColumnMustExistSql(i, as, primaryKeys[i]),
         );
       });
 
@@ -367,15 +365,20 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           }
         }
         if (loadPrimaryKeys) {
-          const record = (await _queryFindBy(
-            query.select(...loadPrimaryKeys),
-            params.set as never,
-          )) as RecordUnknown;
-
           for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
-            update[(loadForeignKeys as string[])[i]] =
-              record[loadPrimaryKeys[i]];
+            update[(loadForeignKeys as string[])[i]] = new RawSql('');
           }
+
+          _with(
+            q as Query,
+            (as) => {
+              for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
+                (update[(loadForeignKeys as string[])[i]] as RawSql)._sql =
+                  selectCteColumnMustExistSql(i, as, loadPrimaryKeys[i]);
+              }
+            },
+            _queryFindBy(query.select(...loadPrimaryKeys), params.set as never),
+          );
         }
       } else if (params.create) {
         const q = query.clone();
@@ -491,4 +494,19 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       );
     }
   }) as BelongsToNestedUpdate;
+};
+
+const selectCteColumnSql = (cteAs: string, column: string) =>
+  `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;
+
+const selectCteColumnMustExistSql = (
+  i: number,
+  cteAs: string,
+  column: string,
+) => {
+  const selectColumn = selectCteColumnSql(cteAs, column);
+
+  return i === 0
+    ? `CASE WHEN (SELECT count(*) FROM "${cteAs}") = 0 AND (SELECT 'not-found')::int = 0 THEN NULL ELSE ${selectColumn} END`
+    : selectColumn;
 };

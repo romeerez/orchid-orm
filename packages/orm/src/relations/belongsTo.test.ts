@@ -1434,6 +1434,8 @@ describe('belongsTo', () => {
           .create({ ...ProfileData, UserId: firstUserId });
         const user = await db.user.select('Id').create(UserData);
 
+        resetQueriesCount();
+
         const profile = await db.profile
           .selectAll()
           .find(id)
@@ -1442,6 +1444,8 @@ describe('belongsTo', () => {
               set: user,
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(profile.UserId).toBe(user.Id);
       });
@@ -1474,6 +1478,8 @@ describe('belongsTo', () => {
           Name: 'user',
         });
 
+        resetQueriesCount();
+
         const profile = await db.profile
           .select('UserId')
           .find(id)
@@ -1482,6 +1488,8 @@ describe('belongsTo', () => {
               set: { Name: 'user' },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(profile.UserId).toBe(user.Id);
       });
@@ -1557,6 +1565,8 @@ describe('belongsTo', () => {
           Name: 'user',
         });
 
+        resetQueriesCount();
+
         const updatedUserIds = await db.profile
           .pluck('UserId')
           .where({ Id: { in: profileIds } })
@@ -1565,6 +1575,8 @@ describe('belongsTo', () => {
               set: { Name: 'user' },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updatedUserIds).toEqual([user.Id, user.Id]);
       });
