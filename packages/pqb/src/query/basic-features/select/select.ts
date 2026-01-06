@@ -1,4 +1,9 @@
-import { IsQuery, Query, QueryMetaHasSelect, QueryReturnType } from '../../query';
+import {
+  IsQuery,
+  Query,
+  QueryMetaHasSelect,
+  QueryReturnType,
+} from '../../query';
 import { pushQueryArrayImmutable } from '../../query.utils';
 import { Column } from '../../../columns/column';
 import { _queryNone } from '../../extra-features/none/none';
@@ -8,6 +13,7 @@ import {
   PickQueryQ,
   PickQueryRelationsWithData,
   PickQueryReturnType,
+  PickQuerySelectable,
   PickQueryWithData,
 } from '../../pick-query-types';
 import { Expression } from '../../expressions/expression';
@@ -18,7 +24,7 @@ import { QueryMetaBase, QueryMetaIsSubQuery } from '../../query-meta';
 import { SelectItem } from './select.sql';
 import { QueryThenByReturnType } from '../../then/then';
 
-export interface SelectSelf {
+export interface SelectSelf extends PickQuerySelectable {
   shape: Column.QueryColumns;
   relations: RelationsBase;
   result: Column.QueryColumns;
@@ -28,13 +34,11 @@ export interface SelectSelf {
 }
 
 // .select method argument.
-export type SelectArg<T extends SelectSelf> =
-  | '*'
-  | keyof T['meta']['selectable'];
+export type SelectArg<T extends SelectSelf> = '*' | keyof T['__selectable'];
 
 export type SelectArgs<T extends SelectSelf> = (
   | '*'
-  | keyof T['meta']['selectable']
+  | keyof T['__selectable']
 )[];
 
 interface SubQueryAddition<T extends PickQueryWithData>
@@ -58,7 +62,7 @@ export type SelectAsFnArg<T extends PickQueryRelationsWithData> =
 // value can be a column, raw, or a function returning query or raw.
 export interface SelectAsArg<T extends SelectSelf> {
   [K: string]:
-    | keyof T['meta']['selectable']
+    | keyof T['__selectable']
     | Expression
     | ((q: SelectAsFnArg<T>) => unknown);
 }
@@ -89,7 +93,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
     ? {
         [K in '*' extends Columns[number]
           ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
-          : Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+          : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
       } & (T['meta']['hasSelect'] extends (
         T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
       )
@@ -104,7 +108,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
         {
           [K in '*' extends Columns[number]
             ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
-            : Columns[number] as T['meta']['selectable'][K]['as']]: T['meta']['selectable'][K]['column'];
+            : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
         } & (T['meta']['hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
         )
@@ -120,7 +124,9 @@ type SelectResultObj<
 > = Obj extends SelectAsCheckReturnTypes
   ? {
       [K in keyof T]: K extends 'meta'
-        ? T['meta'] & SelectAsMeta<Obj>
+        ? T['meta'] & { hasSelect: true }
+        : K extends '__selectable'
+        ? T['__selectable'] & SelectAsSelectable<Obj>
         : K extends 'result'
         ? // Combine previously selected items, all columns if * was provided,
           // and the selected by string and object arguments.
@@ -172,7 +178,9 @@ type SelectResultColumnsAndObj<
   Obj,
 > = {
   [K in keyof T]: K extends 'meta'
-    ? T['meta'] & SelectAsMeta<Obj>
+    ? T['meta'] & { hasSelect: true }
+    : K extends '__selectable'
+    ? T['__selectable'] & SelectAsSelectable<Obj>
     : K extends 'result'
     ? // Combine previously selected items, all columns if * was provided,
       // and the selected by string and object arguments.
@@ -182,10 +190,10 @@ type SelectResultColumnsAndObj<
               ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
               : Columns[number])
           | keyof Obj as K extends Columns[number]
-          ? T['meta']['selectable'][K]['as']
+          ? T['__selectable'][K]['as']
           : K]: K extends keyof Obj
           ? SelectAsValueResult<T, Obj[K]>
-          : T['meta']['selectable'][K]['column'];
+          : T['__selectable'][K]['column'];
       } & (T['meta']['hasSelect'] extends (
         T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
       )
@@ -203,10 +211,10 @@ type SelectResultColumnsAndObj<
                 ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
                 : Columns[number])
             | keyof Obj as K extends Columns[number]
-            ? T['meta']['selectable'][K]['as']
+            ? T['__selectable'][K]['as']
             : K]: K extends keyof Obj
             ? SelectAsValueResult<T, Obj[K]>
-            : T['meta']['selectable'][K]['column'];
+            : T['__selectable'][K]['column'];
         } & (T['meta']['hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
         )
@@ -226,41 +234,36 @@ interface AllowedRelationOneQueryForSelectable extends QueryMetaIsSubQuery {
   returnType: 'value' | 'valueOrThrow' | 'one' | 'oneOrThrow';
 }
 
-// Add new 'selectable' types based on the select object argument.
-type SelectAsMeta<Obj> = {
-  // type is better than interface here
-
-  hasSelect: true;
-  selectable: UnionToIntersection<
-    {
-      [K in keyof Obj]: Obj[K] extends ((
-        q: never,
-      ) => infer R extends AllowedRelationOneQueryForSelectable)
-        ? {
-            [C in R['returnType'] extends 'value' | 'valueOrThrow'
-              ? K
-              : keyof R['result'] as R['returnType'] extends
-              | 'value'
-              | 'valueOrThrow'
-              ? K
-              : `${K & string}.${C & string}`]: {
-              as: C;
-              column: R['returnType'] extends 'value' | 'valueOrThrow'
-                ? R['result']['value']
-                : R['result'][C & keyof R['result']];
-            };
-          }
-        : never;
-    }[keyof Obj]
-  >;
-};
+// Add new '__selectable' types based on the select object argument.
+type SelectAsSelectable<Obj> = UnionToIntersection<
+  {
+    [K in keyof Obj]: Obj[K] extends ((
+      q: never,
+    ) => infer R extends AllowedRelationOneQueryForSelectable)
+      ? {
+          [C in R['returnType'] extends 'value' | 'valueOrThrow'
+            ? K
+            : keyof R['result'] as R['returnType'] extends
+            | 'value'
+            | 'valueOrThrow'
+            ? K
+            : `${K & string}.${C & string}`]: {
+            as: C;
+            column: R['returnType'] extends 'value' | 'valueOrThrow'
+              ? R['result']['value']
+              : R['result'][C & keyof R['result']];
+          };
+        }
+      : never;
+  }[keyof Obj]
+>;
 
 // map a single value of select object arg into a column
 type SelectAsValueResult<
   T extends SelectSelf,
   Arg,
-> = Arg extends keyof T['meta']['selectable']
-  ? T['meta']['selectable'][Arg]['column']
+> = Arg extends keyof T['__selectable']
+  ? T['__selectable'][Arg]['column']
   : Arg extends Expression
   ? Arg['result']['value']
   : Arg extends (q: never) => IsQuery

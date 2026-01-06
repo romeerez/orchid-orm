@@ -1,4 +1,7 @@
-import { PickQueryMetaResult } from '../../pick-query-types';
+import {
+  PickQueryMetaSelectableResult,
+  PickQuerySelectableResult,
+} from '../../pick-query-types';
 import { Expression } from '../../expressions/expression';
 import { pushQueryArrayImmutable } from '../../query.utils';
 import { _clone } from '../clone/clone';
@@ -8,7 +11,7 @@ import { OrderTsQueryConfig } from '../../extra-features/search/search.sql';
 import { SortDir } from './order.sql';
 import { pushQueryValueImmutable } from '../../query-data';
 
-export type OrderArgSelf = PickQueryMetaResult;
+export type OrderArgSelf = PickQueryMetaSelectableResult;
 
 export type OrderArg<T extends OrderArgSelf> =
   | OrderArgKey<T>
@@ -20,7 +23,7 @@ export type OrderArg<T extends OrderArgSelf> =
     }
   | Expression;
 
-export type OrderArgs<T extends OrderArgSelf> = OrderArg<T>[];
+export type OrderArgs<T extends PickQueryMetaSelectableResult> = OrderArg<T>[];
 
 type OrderArgTsQuery<T extends OrderArgSelf> =
   | string
@@ -28,13 +31,13 @@ type OrderArgTsQuery<T extends OrderArgSelf> =
   ? never
   : Exclude<T['meta']['tsQuery'], undefined>;
 
-type OrderArgKey<T extends OrderArgSelf> =
+type OrderArgKey<T extends PickQuerySelectableResult> =
   | {
       // filter out runtime computed selectables
-      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['queryType'] extends undefined
+      [K in keyof T['__selectable']]: T['__selectable'][K]['column']['queryType'] extends undefined
         ? never
         : K;
-    }[keyof T['meta']['selectable']]
+    }[keyof T['__selectable']]
   // separate mappings are better than a single combined
   | {
       [K in keyof T['result']]: T['result'][K]['dataType'] extends

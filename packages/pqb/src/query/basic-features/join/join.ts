@@ -2,22 +2,25 @@ import { IsQuery, Query, SelectableFromShape } from '../../query';
 import { Column } from '../../../columns/column';
 import { addColumnParserToQuery, ColumnsShape } from '../../../columns';
 import {
-  PickQueryMeta,
-  PickQueryMetaColumnTypes,
   PickQueryMetaResult,
   PickQueryMetaResultAs,
-  PickQueryMetaResultRelationsWithDataReturnType,
+  PickQuerySelectableResultRelationsWithDataReturnType,
   PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
-  PickQueryMetaResultReturnType,
-  PickQueryMetaShape,
-  PickQueryMetaShapeRelationsWithDataAs,
+  PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+  PickQuerySelectableShapeRelationsWithDataAs,
   PickQueryQ,
   PickQueryRelationsWithData,
   PickQueryTable,
   PickQueryMetaResultShapeAs,
   PickQueryResultAs,
   PickQueryShapeAs,
+  PickQuerySelectable,
+  PickQuerySelectableResultReturnType,
+  PickQuerySelectableShape,
+  PickQuerySelectableColumnTypes,
+  PickQuerySelectableResultAs,
+  PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
+  PickQuerySelectableShapeRelationsWithDataAsResultReturnType,
 } from '../../pick-query-types';
 import {
   EmptyTuple,
@@ -83,7 +86,7 @@ interface FnPickQueryResultAs {
  * See {@link join}
  */
 export type JoinArgs<
-  T extends PickQueryMetaShapeRelationsWithDataAs,
+  T extends PickQuerySelectableShapeRelationsWithDataAs,
   Arg extends JoinFirstArg<T>,
 > =
   | [on?: JoinCallback<T, Arg>]
@@ -112,25 +115,26 @@ type JoinSelectable<Q extends PickQueryResultAs> =
 // - `true` to join without conditions
 // - pair of columns, first is of the joined table, second is of main table
 // - string tuple of a column of a joined table, operator string such as '=' or '!=', and a column of the main table
-type JoinQueryArgs<T extends PickQueryMeta, Q extends PickQueryResultAs> =
+type JoinQueryArgs<
+  T extends PickQuerySelectable,
+  Q extends PickQueryResultAs,
+> =
   | [
       conditions:
         | {
-            [K in JoinSelectable<Q>]:
-              | keyof T['meta']['selectable']
-              | Expression;
+            [K in JoinSelectable<Q>]: keyof T['__selectable'] | Expression;
           }
         | Expression
         | true,
     ]
   | [
       leftColumn: JoinSelectable<Q> | Expression,
-      rightColumn: keyof T['meta']['selectable'] | Expression,
+      rightColumn: keyof T['__selectable'] | Expression,
     ]
   | [
       leftColumn: JoinSelectable<Q> | Expression,
       op: string,
-      rightColumn: keyof T['meta']['selectable'] | Expression,
+      rightColumn: keyof T['__selectable'] | Expression,
     ];
 
 // Available arguments when joining a `with` table. Can be:
@@ -138,70 +142,59 @@ type JoinQueryArgs<T extends PickQueryMeta, Q extends PickQueryResultAs> =
 // - raw SQL expression
 // - pair of columns, first is of the `with` table, second is of main table
 // - string tuple of a column of a `with` table, operator string such as '=' or '!=', and a column of the main table
-type JoinWithArgs<T extends PickQueryMeta, W extends WithDataItem> =
+type JoinWithArgs<T extends PickQuerySelectable, W extends WithDataItem> =
   | [
       conditions:
         | {
-            [K in WithSelectable<W>]:
-              | keyof T['meta']['selectable']
-              | Expression;
+            [K in WithSelectable<W>]: keyof T['__selectable'] | Expression;
           }
         | Expression,
     ]
   | [
       leftColumn: WithSelectable<W> | Expression,
-      rightColumn: keyof T['meta']['selectable'] | Expression,
+      rightColumn: keyof T['__selectable'] | Expression,
     ]
   | [
       leftColumn: WithSelectable<W> | Expression,
       op: string,
-      rightColumn: keyof T['meta']['selectable'] | Expression,
+      rightColumn: keyof T['__selectable'] | Expression,
     ];
 
-export type JoinResultRequireMain<T extends PickQueryMeta, JoinedSelectable> = {
+export type JoinResultRequireMain<
+  T extends PickQuerySelectable,
+  JoinedSelectable,
+> = {
   // is optimal
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta']]: K extends 'selectable'
-          ? T['meta']['selectable'] & JoinedSelectable
-          : T['meta'][K];
-      }
+  [K in keyof T]: K extends '__selectable'
+    ? T['__selectable'] & JoinedSelectable
     : T[K];
 };
 
 /**
  * Result of all `join` methods, not `joinLateral`.
- * Adds joined table columns from its 'result' to the 'selectable' of the query.
+ * Adds joined table columns from its 'result' to the '__selectable' of the query.
  */
 export type JoinResult<
-  T extends PickQueryMetaResultReturnType,
+  T extends PickQuerySelectableResultReturnType,
   JoinedSelectable,
   RequireMain,
 > = RequireMain extends true
   ? {
       // is optimal, same as JoinResultRequireMain above, inlined for fewer instantiations.
-      [K in keyof T]: K extends 'meta'
-        ? {
-            [K in keyof T['meta']]: K extends 'selectable'
-              ? T['meta']['selectable'] & JoinedSelectable
-              : T['meta'][K];
-          }
+      [K in keyof T]: K extends '__selectable'
+        ? T['__selectable'] & JoinedSelectable
         : T[K];
     }
   : {
-      [K in keyof T]: K extends 'meta'
+      [K in keyof T]: K extends '__selectable'
         ? {
-            [K in keyof T['meta']]: K extends 'selectable'
-              ? {
-                  [K in keyof T['meta']['selectable']]: {
-                    as: T['meta']['selectable'][K]['as'];
-                    column: Column.Modifiers.QueryColumnToNullable<
-                      T['meta']['selectable'][K]['column']
-                    >;
-                  };
-                } & JoinedSelectable // & is optimal
-              : T['meta'][K];
-          }
+            [K in keyof T['__selectable']]: {
+              as: T['__selectable'][K]['as'];
+              column: Column.Modifiers.QueryColumnToNullable<
+                T['__selectable'][K]['column']
+              >;
+            };
+          } & JoinedSelectable // & is optimal
         : K extends 'result'
         ? // nullable result: inlined for optimization
           {
@@ -227,7 +220,7 @@ export type JoinResult<
  * or with a query derived from the first join argument.
  */
 export type JoinResultFromArgs<
-  T extends PickQueryMetaResultRelationsWithDataReturnType,
+  T extends PickQuerySelectableResultRelationsWithDataReturnType,
   Arg,
   Args extends unknown[],
   RequireJoined,
@@ -285,14 +278,14 @@ interface FirstArgCallback {
 
 /**
  * Result of all `joinLateral` methods.
- * Adds joined table columns from its 'result' to the 'selectable' of the query.
+ * Adds joined table columns from its 'result' to the '__selectable' of the query.
  *
  * @param T - query type to join to
  * @param Arg - first arg of join, see {@link JoinFirstArg}
  * @param RequireJoined - when false, joined table shape will be mapped to make all columns optional
  */
 export type JoinLateralResult<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   As extends string,
   Result extends Column.QueryColumns,
   RequireJoined,
@@ -338,15 +331,11 @@ export type JoinResultSelectable<
           };
     };
 
-// Replace the 'selectable' of the query with the given selectable.
-type JoinAddSelectable<T extends PickQueryMeta, Selectable> = {
+// Replace the '__selectable' of the query with the given selectable.
+type JoinAddSelectable<T extends PickQuerySelectable, Selectable> = {
   // is optimal
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta']]: K extends 'selectable'
-          ? T['meta']['selectable'] & Selectable
-          : T['meta'][K];
-      }
+  [K in keyof T]: K extends '__selectable'
+    ? T['__selectable'] & Selectable
     : T[K];
 };
 
@@ -369,14 +358,12 @@ export type JoinArgToQuery<
       {
         [K in 'meta' | 'result' | '__as' | keyof T]: K extends '__as'
           ? T['withData'][Arg]['table']
-          : K extends 'meta'
-          ? QueryMetaBase & {
-              selectable: {
-                [K in keyof T['withData'][Arg]['shape'] &
-                  string as `${T['withData'][Arg]['table']}.${K}`]: {
-                  as: K;
-                  column: T['withData'][Arg]['shape'][K];
-                };
+          : K extends '__selectable'
+          ? {
+              [K in keyof T['withData'][Arg]['shape'] &
+                string as `${T['withData'][Arg]['table']}.${K}`]: {
+                as: K;
+                column: T['withData'][Arg]['shape'][K];
               };
             }
           : K extends 'result'
@@ -409,7 +396,7 @@ interface JoinArgToQueryCallback {
  * Callback must return a query builder.
  */
 export interface JoinCallback<
-  T extends PickQueryMetaShapeRelationsWithDataAs,
+  T extends PickQuerySelectableShapeRelationsWithDataAs,
   Arg extends JoinFirstArg<T>,
 > {
   (q: JoinQueryBuilder<T, JoinArgToQuery<T, Arg>>): IsQuery;
@@ -420,7 +407,7 @@ export interface JoinCallback<
  */
 export interface JoinQueryMethod {
   <
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -446,7 +433,7 @@ export const joinSubQuery = (q: ToSQLQuery, sub: ToSQLQuery): SubQueryForSql =>
   );
 
 export const _joinReturningArgs = <
-  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
   RequireJoined extends boolean,
 >(
   query: T,
@@ -632,7 +619,7 @@ const addAllShapesAndParsers = (
  * @param args - rest join arguments: columns to join with, or a callback
  */
 export const _join = <
-  T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
   R extends PickQueryMetaResult,
   RequireJoined extends boolean,
   RequireMain extends boolean,
@@ -671,13 +658,7 @@ export const _joinLateralProcessArg = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arg: JoinFirstArg<any>,
   cb: (
-    q: JoinQueryBuilder<
-      PickQueryMetaShape,
-      JoinArgToQuery<
-        PickQueryRelationsWithData,
-        JoinFirstArg<PickQueryRelationsWithData>
-      >
-    >,
+    q: JoinQueryBuilder<PickQuerySelectableShape, PickQuerySelectableResultAs>,
   ) => {
     table: string;
     meta: QueryMetaBase;
@@ -1276,7 +1257,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   join<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableShapeRelationsWithDataAsResultReturnType,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1318,7 +1299,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   leftJoin<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1357,7 +1338,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   rightJoin<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1396,7 +1377,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   fullJoin<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1478,7 +1459,7 @@ export class QueryJoin {
    * @param cb - {@link JoinLateralCallback}
    */
   joinLateral<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     As extends string,
     Result extends Column.QueryColumns,
@@ -1515,7 +1496,7 @@ export class QueryJoin {
    * @param cb - {@link JoinLateralCallback}
    */
   leftJoinLateral<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
+    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     As extends string,
     Result extends Column.QueryColumns,
@@ -1571,7 +1552,7 @@ export class QueryJoin {
    * @param data - array of data to join
    */
   joinData<
-    T extends PickQueryMetaColumnTypes,
+    T extends PickQuerySelectableColumnTypes,
     As extends string,
     RecordType extends Column.QueryColumnsInit,
     Item extends ColumnsShape.Input<RecordType>,
@@ -1581,16 +1562,12 @@ export class QueryJoin {
     fn: (types: T['columnTypes']) => RecordType,
     data: Item[],
   ): {
-    [K in keyof T]: K extends 'meta'
-      ? {
-          [K in keyof T['meta']]: K extends 'selectable'
-            ? T['meta']['selectable'] & {
-                [K in keyof RecordType & string as `${As}.${K}`]: {
-                  as: K;
-                  column: RecordType[K];
-                };
-              }
-            : T['meta'][K];
+    [K in keyof T]: K extends '__selectable'
+      ? T['__selectable'] & {
+          [K in keyof RecordType & string as `${As}.${K}`]: {
+            as: K;
+            column: RecordType[K];
+          };
         }
       : T[K];
   } {
@@ -1626,8 +1603,8 @@ type OnArgs<S extends QuerySelectable> =
 
 // Construct an object for `ON` type of where condition.
 const makeOnItem = (
-  joinTo: PickQueryMeta,
-  joinFrom: PickQueryMeta,
+  joinTo: PickQuerySelectable,
+  joinFrom: PickQuerySelectable,
   args: OnArgs<QuerySelectable>,
 ) => ({
   ON: {
@@ -1640,10 +1617,10 @@ const makeOnItem = (
 });
 
 // Add `ON` statement.
-export const pushQueryOnForOuter = <T extends PickQueryMeta>(
+export const pushQueryOnForOuter = <T extends PickQuerySelectable>(
   q: T,
-  joinFrom: PickQueryMeta,
-  joinTo: PickQueryMeta,
+  joinFrom: PickQuerySelectable,
+  joinTo: PickQuerySelectable,
   leftColumn: string,
   rightColumn: string,
 ): T => {
@@ -1659,10 +1636,10 @@ export const pushQueryOnForOuter = <T extends PickQueryMeta>(
 };
 
 // Add `ON` statement.
-export const pushQueryOn = <T extends PickQueryMeta>(
+export const pushQueryOn = <T extends PickQuerySelectable>(
   q: T,
-  joinFrom: PickQueryMeta,
-  joinTo: PickQueryMeta,
+  joinFrom: PickQuerySelectable,
+  joinTo: PickQuerySelectable,
   ...on: OnArgs<QuerySelectable>
 ): T => {
   return pushQueryValueImmutable(
@@ -1673,10 +1650,10 @@ export const pushQueryOn = <T extends PickQueryMeta>(
 };
 
 // Add `ON` statement separated from previous statements with `OR`.
-export const pushQueryOrOn = <T extends PickQueryMeta>(
+export const pushQueryOrOn = <T extends PickQuerySelectable>(
   q: T,
-  joinFrom: PickQueryMeta,
-  joinTo: PickQueryMeta,
+  joinFrom: PickQuerySelectable,
+  joinTo: PickQuerySelectable,
   ...on: OnArgs<QuerySelectable>
 ) => {
   return pushQueryValueImmutable(q as never, 'or', [
@@ -1686,10 +1663,10 @@ export const pushQueryOrOn = <T extends PickQueryMeta>(
 
 // Used by the ORM to join relations.
 // Adds a shape of relation to the `joinedShapes`, and adds an `on` statement.
-export const addQueryOn = <T extends PickQueryMeta>(
+export const addQueryOn = <T extends PickQuerySelectable>(
   query: T,
-  joinFrom: PickQueryMeta,
-  joinTo: PickQueryMeta,
+  joinFrom: PickQuerySelectable,
+  joinTo: PickQuerySelectable,
   ...args: OnArgs<QuerySelectable>
 ): T => {
   const cloned = _clone(query);
@@ -1718,13 +1695,13 @@ type OnJsonPathEqualsArgs<S extends QuerySelectable> = [
 /**
  * Mutative {@link OnMethods.prototype.on}
  */
-export const _queryJoinOn = <T extends PickQueryMeta>(
+export const _queryJoinOn = <T extends PickQuerySelectable>(
   q: T,
-  args: OnArgs<T['meta']['selectable']>,
+  args: OnArgs<T['__selectable']>,
 ): T => {
   return pushQueryOn(
     q,
-    (q as unknown as PickQueryQ).q.joinTo as unknown as PickQueryMeta,
+    (q as unknown as PickQueryQ).q.joinTo as unknown as PickQuerySelectable,
     q,
     ...args,
   );
@@ -1733,13 +1710,13 @@ export const _queryJoinOn = <T extends PickQueryMeta>(
 /**
  * Mutative {@link OnMethods.prototype.orOn}
  */
-export const _queryJoinOrOn = <T extends PickQueryMeta>(
+export const _queryJoinOrOn = <T extends PickQuerySelectable>(
   q: T,
-  args: OnArgs<T['meta']['selectable']>,
+  args: OnArgs<T['__selectable']>,
 ): T => {
   return pushQueryOrOn(
     q,
-    (q as unknown as PickQueryQ).q.joinTo as unknown as PickQueryMeta,
+    (q as unknown as PickQueryQ).q.joinTo as unknown as PickQuerySelectable,
     q,
     ...args,
   ) as unknown as T;
@@ -1748,9 +1725,9 @@ export const _queryJoinOrOn = <T extends PickQueryMeta>(
 /**
  * Mutative {@link OnMethods.prototype.onJsonPathEquals}
  */
-export const _queryJoinOnJsonPathEquals = <T extends PickQueryMeta>(
+export const _queryJoinOnJsonPathEquals = <T extends PickQuerySelectable>(
   q: T,
-  args: OnJsonPathEqualsArgs<T['meta']['selectable']>,
+  args: OnJsonPathEqualsArgs<T['__selectable']>,
 ): T => {
   return pushQueryValueImmutable(q as never, 'and', {
     ON: args,
@@ -1763,16 +1740,12 @@ export const _queryJoinOnJsonPathEquals = <T extends PickQueryMeta>(
  * Adds {@link OnMethods.prototype.on} method and similar to the query.
  */
 export type JoinQueryBuilder<
-  T extends PickQueryMetaShape = PickQueryMetaShape,
-  J extends PickQueryMetaResultAs = PickQueryMetaResultAs,
+  T extends PickQuerySelectableShape,
+  J extends PickQuerySelectableResultAs,
 > = {
-  [K in keyof J | keyof OnMethods]: K extends 'meta'
-    ? {
-        [K in keyof J['meta']]: K extends 'selectable'
-          ? SelectableFromShape<J['result'], J['__as']> &
-              Omit<T['meta']['selectable'], keyof T['shape']>
-          : J['meta'][K];
-      }
+  [K in keyof J | keyof OnMethods]: K extends '__selectable'
+    ? SelectableFromShape<J['result'], J['__as']> &
+        Omit<T['__selectable'], keyof T['shape']>
     : K extends keyof OnMethods
     ? OnMethods[K]
     : K extends keyof J
@@ -1797,9 +1770,9 @@ export class OnMethods {
    *
    * @param args - columns to join with
    */
-  on<T extends PickQueryMeta>(
+  on<T extends PickQuerySelectable>(
     this: T,
-    ...args: OnArgs<T['meta']['selectable']>
+    ...args: OnArgs<T['__selectable']>
   ): T {
     return _queryJoinOn(_clone(this) as never, args);
   }
@@ -1809,9 +1782,9 @@ export class OnMethods {
    *
    * @param args - columns to join with
    */
-  orOn<T extends PickQueryMeta>(
+  orOn<T extends PickQuerySelectable>(
     this: T,
-    ...args: OnArgs<T['meta']['selectable']>
+    ...args: OnArgs<T['__selectable']>
   ): T {
     return _queryJoinOrOn(_clone(this) as never, args);
   }
@@ -1828,9 +1801,9 @@ export class OnMethods {
    *
    * @param args - columns and JSON paths to join with.
    */
-  onJsonPathEquals<T extends PickQueryMeta>(
+  onJsonPathEquals<T extends PickQuerySelectable>(
     this: T,
-    ...args: OnJsonPathEqualsArgs<T['meta']['selectable']>
+    ...args: OnJsonPathEqualsArgs<T['__selectable']>
   ): T {
     return _queryJoinOnJsonPathEquals(_clone(this) as never, args);
   }

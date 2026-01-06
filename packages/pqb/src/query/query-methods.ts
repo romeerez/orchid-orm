@@ -59,7 +59,11 @@ import { QueryLog } from './basic-features/log/log';
 import { QueryHooks } from './extra-features/hooks/hooks';
 import { QueryUpsert } from './basic-features/mutate/upsert';
 import { QueryGet } from './basic-features/get/get.query';
-import { MergeQuery, MergeQueryMethods } from './extra-features/merge/merge';
+import {
+  MergeQuery,
+  MergeQueryArg,
+  MergeQueryMethods,
+} from './extra-features/merge/merge';
 import { QueryTransform } from './extra-features/data-transform/transform';
 import { QueryMap } from './extra-features/data-transform/map';
 import { QueryScope } from './extra-features/scope/scope.query';
@@ -72,19 +76,17 @@ import { Column } from '../columns';
 import { Expression, SelectableOrExpression } from './expressions/expression';
 import { applyMixins, EmptyObject } from '../utils';
 import {
-  PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaResultReturnType,
-  PickQueryMetaResultReturnTypeWithDataWindowsThen,
-  PickQueryMetaShapeAs,
-  PickQueryMetaShapeRelationsReturnType,
   PickQueryRelations,
   PickQueryResult,
   PickQueryResultReturnType,
   PickQueryResultReturnTypeUniqueColumns,
+  PickQuerySelectable,
+  PickQuerySelectableShapeAs,
+  PickQueryMetaSelectableShapeRelationsReturnType,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
-  PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
-  PickQueryTableMetaShapeAs,
+  PickQueryTableMetaShapeTableAs,
 } from './pick-query-types';
 import {
   _getQueryAs,
@@ -117,15 +119,14 @@ export type GroupArgs<T extends PickQueryResult> = (
   | Expression
 )[];
 
-interface QueryHelperQuery<T extends PickQueryMetaShapeAs> {
+interface QueryHelperQuery<T extends PickQuerySelectableShapeAs>
+  extends MergeQueryArg {
   returnType: QueryReturnType;
-  meta: QueryMetaBase & {
-    // Omit is optimal
-    selectable: Omit<
-      T['meta']['selectable'],
-      `${T['__as']}.${Extract<keyof T['shape'], string>}`
-    >;
-  };
+  meta: QueryMetaBase;
+  __selectable: Omit<
+    T['__selectable'],
+    `${T['__as']}.${Extract<keyof T['shape'], string>}`
+  >;
   result: Column.QueryColumns;
   windows: EmptyObject;
   withData: WithDataItems;
@@ -145,7 +146,7 @@ interface IsQueryHelperForTable<Table extends string | undefined>
 }
 
 interface QueryHelper<
-  T extends PickQueryTableMetaShapeAs,
+  T extends PickQueryTableMetaShapeTableAs,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Args extends any[],
   Result,
@@ -153,9 +154,7 @@ interface QueryHelper<
   <Q extends QueryHelperQuery<T>>(
     q: Q,
     ...args: Args
-  ): Result extends PickQueryMetaResultReturnTypeWithDataWindowsThen
-    ? MergeQuery<Q, Result>
-    : Result;
+  ): Result extends MergeQueryArg ? MergeQuery<Q, Result> : Result;
 
   __as: T['__as'];
   table: T['table'];
@@ -166,7 +165,7 @@ interface QueryHelper<
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
 export type QueryHelperResult<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends QueryHelper<PickQueryMetaShapeAs, any[], unknown>,
+  T extends QueryHelper<PickQueryTableMetaShapeTableAs, any[], MergeQueryArg>,
 > = T['result'];
 
 interface NarrowTypeSelf extends PickQueryMetaResultReturnType {
@@ -409,7 +408,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    * @param select - column name or a raw SQL
    */
-  pluck<T extends PickQueryMeta, S extends SelectableOrExpression<T>>(
+  pluck<T extends PickQuerySelectable, S extends SelectableOrExpression<T>>(
     this: T,
     select: S,
   ): SetQueryReturnsPluck<T, S> {
@@ -790,7 +789,11 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param fn - helper function
    */
-  makeHelper<T extends PickQueryMetaShapeAs, Args extends unknown[], Result>(
+  makeHelper<
+    T extends PickQuerySelectableShapeAs,
+    Args extends unknown[],
+    Result extends MergeQueryArg,
+  >(
     this: T,
     fn: (q: T, ...args: Args) => Result,
   ): QueryHelper<T, Args, Result> {
@@ -868,13 +871,13 @@ export class QueryMethods<ColumnTypes> {
    * @param fn - function to useHelper the query with. The result type will be merged with the main query as if the `merge` method was used.
    */
   useHelper<
-    T extends PickQueryTableMetaResultReturnTypeWithDataWindowsThen,
+    T extends MergeQueryArg,
     Fn extends IsQueryHelperForTable<T['table']>,
   >(
     this: T,
     fn: Fn,
     ...args: Fn['args']
-  ): Fn['result'] extends PickQueryMetaResultReturnTypeWithDataWindowsThen
+  ): Fn['result'] extends MergeQueryArg
     ? MergeQuery<T, Fn['result']>
     : Fn['result'] {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1011,7 +1014,7 @@ export class QueryMethods<ColumnTypes> {
   }
 
   chain<
-    T extends PickQueryMetaShapeRelationsReturnType,
+    T extends PickQueryMetaSelectableShapeRelationsReturnType,
     RelName extends keyof T['relations'],
   >(
     this: T,
@@ -1024,18 +1027,18 @@ export class QueryMethods<ColumnTypes> {
     ? {
         [K in keyof T['relations'][RelName]['maybeSingle']]: K extends 'meta'
           ? {
-              [K in keyof T['relations'][RelName]['maybeSingle']['meta']]: K extends 'selectable'
-                ? T['relations'][RelName]['maybeSingle']['meta']['selectable'] &
-                    Omit<T['meta']['selectable'], keyof T['shape']>
-                : K extends 'subQuery'
+              [K in keyof T['relations'][RelName]['maybeSingle']['meta']]: K extends 'subQuery'
                 ? true
                 : T['relations'][RelName]['maybeSingle']['meta'][K];
             }
+          : K extends '__selectable'
+          ? T['relations'][RelName]['maybeSingle']['__selectable'] &
+              Omit<T['__selectable'], keyof T['shape']>
           : T['relations'][RelName]['maybeSingle'][K];
       }
     : JoinResultRequireMain<
         T['relations'][RelName]['query'],
-        Omit<T['meta']['selectable'], keyof T['shape']>
+        Omit<T['__selectable'], keyof T['shape']>
       > {
     const rel = this.relations[relName as string];
 

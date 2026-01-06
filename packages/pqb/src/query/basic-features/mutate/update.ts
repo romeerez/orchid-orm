@@ -22,8 +22,15 @@ import {
 } from '../join/join';
 import { _queryNone } from '../../extra-features/none/none';
 import {
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+  PickQueryAs,
+  PickQueryInputType,
+  PickQueryMeta,
+  PickQueryRelations,
+  PickQueryResult,
+  PickQueryReturnType,
+  PickQuerySelectable,
+  PickQueryShape,
+  PickQueryWithData,
 } from '../../pick-query-types';
 import { callWithThis, EmptyObject, RecordUnknown } from '../../../utils';
 import { RelationConfigBase } from '../../relations';
@@ -37,9 +44,16 @@ import { pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 
 export interface UpdateSelf
-  extends PickQueryMetaResultRelationsWithDataReturnTypeShape {
-  inputType: RecordUnknown;
-}
+  extends PickQuerySelectable,
+    PickQueryMeta,
+    PickQueryResult,
+    PickQueryRelations,
+    PickQueryWithData,
+    PickQueryReturnType,
+    PickQueryShape,
+    PickQueryInputType,
+    PickQueryShape,
+    PickQueryAs {}
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -593,7 +607,7 @@ export class Update {
    * ```
    */
   updateFrom<
-    T extends PickQueryMetaResultRelationsWithDataReturnTypeShapeAs,
+    T extends UpdateSelf,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(

@@ -1,4 +1,4 @@
-import { SelectableFromShape } from '../../query';
+import { IsQuery, SelectableFromShape } from '../../query';
 import { sqlQueryArgsToExpression } from '../../expressions/raw-sql';
 import { anyShape, Column, ColumnsShape } from '../../../columns';
 import {
@@ -7,10 +7,9 @@ import {
 } from '../../sub-query/sub-query-for-sql';
 import {
   PickQueryMetaResultAs,
-  PickQueryMetaResultInputTypeAs,
-  PickQueryMetaShapeReturnTypeWithDataAs,
+  PickQueryMetaSelectableResultInputTypeAs,
+  PickQuerySelectableShapeReturnTypeWithDataAs,
   PickQueryQ,
-  PickQueryTableMetaResult,
 } from '../../pick-query-types';
 import { MaybeArray, UnionToIntersection } from '../../../utils';
 import { getQueryAs, SetQueryTableAlias } from '../as/as';
@@ -26,10 +25,10 @@ import { SQLQueryArgs } from '../../db-sql-query';
 import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
 import { QueryThenByQuery } from '../../then/then';
 
-export type FromQuerySelf = PickQueryMetaShapeReturnTypeWithDataAs;
+export type FromQuerySelf = PickQuerySelectableShapeReturnTypeWithDataAs;
 
 export type FromArg<T extends FromQuerySelf> =
-  | PickQueryTableMetaResult
+  | IsQuery
   | Exclude<keyof T['withData'], symbol | number>;
 
 export type FromResult<
@@ -38,12 +37,8 @@ export type FromResult<
 > = Arg extends string
   ? T['withData'] extends WithDataItems
     ? {
-        [K in keyof T]: K extends 'meta'
-          ? {
-              [K in keyof T['meta']]: K extends 'selectable'
-                ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
-                : T['meta'][K];
-            }
+        [K in keyof T]: K extends '__selectable'
+          ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
           : K extends 'result'
           ? T['withData'][Arg]['shape']
           : K extends 'then'
@@ -51,16 +46,16 @@ export type FromResult<
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
-  : Arg extends PickQueryMetaResultInputTypeAs
+  : Arg extends PickQueryMetaSelectableResultInputTypeAs
   ? {
       [K in keyof T]: K extends 'meta'
         ? {
-            [K in keyof T['meta']]: K extends 'selectable'
-              ? SelectableFromShape<Arg['result'], Arg['__as']>
-              : K extends 'defaultSelect'
+            [K in keyof T['meta']]: K extends 'defaultSelect'
               ? keyof Arg['result']
               : T['meta'][K];
           }
+        : K extends '__selectable'
+        ? SelectableFromShape<Arg['result'], Arg['__as']>
         : K extends '__as'
         ? Arg['__as']
         : K extends 'result'
@@ -75,34 +70,30 @@ export type FromResult<
     }
   : Arg extends (infer A)[]
   ? {
-      [K in keyof T]: K extends 'meta'
-        ? {
-            [K in keyof T['meta']]: K extends 'selectable'
-              ? UnionToIntersection<
-                  A extends string
-                    ? T['withData'] extends WithDataItems
-                      ? {
-                          [K in keyof T['withData'][A]['shape'] &
-                            string as `${A}.${K}`]: {
-                            as: K;
-                            column: T['withData'][A]['shape'][K];
-                          };
-                        }
-                      : never
-                    : A extends PickQueryMetaResultAs
+      [K in keyof T]: K extends '__selectable'
+        ? UnionToIntersection<
+            A extends string
+              ? T['withData'] extends WithDataItems
+                ? {
+                    [K in keyof T['withData'][A]['shape'] &
+                      string as `${A}.${K}`]: {
+                      as: K;
+                      column: T['withData'][A]['shape'][K];
+                    };
+                  }
+                : never
+              : A extends PickQueryMetaResultAs
+              ? {
+                  [K in keyof A['result'] &
+                    string as `${A['__as']}.${K}`]: K extends string
                     ? {
-                        [K in keyof A['result'] &
-                          string as `${A['__as']}.${K}`]: K extends string
-                          ? {
-                              as: K;
-                              column: A['result'][K];
-                            }
-                          : never;
+                        as: K;
+                        column: A['result'][K];
                       }
-                    : never
-                >
-              : T['meta'][K];
-          }
+                    : never;
+                }
+              : never
+          >
         : T[K];
     }
   : T;

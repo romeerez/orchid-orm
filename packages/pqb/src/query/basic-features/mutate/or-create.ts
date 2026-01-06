@@ -1,6 +1,9 @@
 import { _queryInsert, CreateData } from './create';
 import { UpsertResult, UpsertThis } from './upsert';
-import { PickQueryMetaResultReturnType, PickQueryQ } from '../../pick-query-types';
+import {
+  PickQueryMetaResultReturnType,
+  PickQueryQ,
+} from '../../pick-query-types';
 import { FnUnknownToUnknown, RecordUnknown } from '../../../utils';
 import { _clone } from '../clone/clone';
 

@@ -5,14 +5,14 @@ import { Column } from '../columns/column';
 import { TableData } from '../tableData';
 import { WithDataItems } from './basic-features/cte/cte.sql';
 import { ColumnsShape } from '../columns';
-import { QueryMetaBase } from './query-meta';
+import { QueryMetaBase, QuerySelectable } from './query-meta';
 import { QueryInternalBase } from './query-internal';
 import {
-  PickQueryMeta,
   PickQueryMetaResult,
   PickQueryMetaReturnType,
   PickQueryResult,
   PickQueryResultReturnType,
+  PickQuerySelectable,
   PickQueryShape,
 } from './pick-query-types';
 import { EmptyObject, RecordKeyTrue, RecordUnknown } from '../utils';
@@ -133,6 +133,7 @@ export interface QueryOrExpression<T> {
 export interface Query extends QueryBase, QueryMethods<unknown> {
   __isQuery: true;
   __as: string;
+  __selectable: QuerySelectable;
   result: Column.QueryColumns;
   withData: WithDataItems;
   baseQuery: Query;
@@ -155,14 +156,14 @@ export interface Query extends QueryBase, QueryMethods<unknown> {
   ) => QueryError;
 }
 
-export type SelectableOfType<T extends PickQueryMeta, Type> = {
-  [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['type'] extends Type | null
+export type SelectableOfType<T extends PickQuerySelectable, Type> = {
+  [K in keyof T['__selectable']]: T['__selectable'][K]['column']['type'] extends Type | null
     ? K
     : never;
-}[keyof T['meta']['selectable']];
+}[keyof T['__selectable']];
 
 export type SelectableOrExpressionOfType<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   C extends Column.Pick.Type,
 > =
   | SelectableOfType<T, C['type']>
@@ -243,7 +244,7 @@ export type QueryTake<T extends PickQueryResultReturnType> =
           : T[K];
       };
 
-export type SetQueryReturnsOne<T extends PickQueryMetaResult> = {
+export type SetQueryReturnsOne<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'oneOrThrow'
     : K extends 'then'
@@ -273,12 +274,12 @@ export type SetQueryReturnsRows<T extends PickQueryResult> = {
 };
 
 export type SetQueryReturnsPluck<
-  T extends PickQueryMeta,
-  S extends keyof T['meta']['selectable'] | Expression,
+  T extends PickQuerySelectable,
+  S extends keyof T['__selectable'] | Expression,
 > = SetQueryReturnsPluckColumn<
   T,
-  S extends keyof T['meta']['selectable']
-    ? T['meta']['selectable'][S]['column']
+  S extends keyof T['__selectable']
+    ? T['__selectable'][S]['column']
     : S extends Expression
     ? S['result']['value']
     : never
@@ -320,10 +321,10 @@ export type SetQueryReturnsPluckColumnResult<
 } & QueryMetaHasSelect;
 
 export type SetQueryReturnsValueOrThrow<
-  T extends PickQueryMeta,
-  Arg extends keyof T['meta']['selectable'],
-> = SetQueryReturnsColumnOrThrow<T, T['meta']['selectable'][Arg]['column']> &
-  T['meta']['selectable'][Arg]['column']['operators'];
+  T extends PickQuerySelectable,
+  Arg extends keyof T['__selectable'],
+> = SetQueryReturnsColumnOrThrow<T, T['__selectable'][Arg]['column']> &
+  T['__selectable'][Arg]['column']['operators'];
 
 export type SetValueQueryReturnsValueOrThrow<T extends PickQueryMetaResult> = {
   [K in keyof T]: K extends 'returnType'
@@ -334,18 +335,18 @@ export type SetValueQueryReturnsValueOrThrow<T extends PickQueryMetaResult> = {
 };
 
 export type SetQueryReturnsValueOptional<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   Arg extends GetStringArg<T>,
 > = SetQueryReturnsColumnOptional<
   T,
   {
-    [K in keyof T['meta']['selectable'][Arg]['column']]: K extends 'outputType'
-      ? T['meta']['selectable'][Arg]['column'][K] | undefined
-      : T['meta']['selectable'][Arg]['column'][K];
+    [K in keyof T['__selectable'][Arg]['column']]: K extends 'outputType'
+      ? T['__selectable'][Arg]['column'][K] | undefined
+      : T['__selectable'][Arg]['column'][K];
   }
 > &
-  Omit<T['meta']['selectable'][Arg]['column']['operators'], 'equals' | 'not'> &
-  Column.Modifiers.OperatorsNullable<T['meta']['selectable'][Arg]['column']>;
+  Omit<T['__selectable'][Arg]['column']['operators'], 'equals' | 'not'> &
+  Column.Modifiers.OperatorsNullable<T['__selectable'][Arg]['column']>;
 
 export type SetQueryReturnsColumnOrThrow<
   T,
@@ -373,7 +374,7 @@ export type SetQueryReturnsColumnOptional<
     : T[K];
 } & QueryMetaHasSelect;
 
-export type SetQueryReturnsColumn<T extends PickQueryMetaResult> = {
+export type SetQueryReturnsColumn<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'result'
     ? { value: T['result']['pluck'] }
     : K extends 'returnType'

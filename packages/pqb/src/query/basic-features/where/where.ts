@@ -17,12 +17,11 @@ import { _queryNone } from '../../extra-features/none/none';
 import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { prepareOpArg } from '../../../columns/operators';
 import {
-  PickQueryMeta,
-  PickQueryMetaRelations,
-  PickQueryMetaRelationsResultReturnType,
-  PickQueryMetaShapeRelationsWithDataAs,
+  PickQuerySelectableShapeRelationsWithDataAs,
   PickQueryQ,
   PickQueryRelations,
+  PickQuerySelectableRelations,
+  PickQuerySelectableRelationsResultReturnType,
 } from '../../pick-query-types';
 import {
   EmptyObject,
@@ -52,28 +51,24 @@ Argument of `where`:
   - raw SQL: q.where({ num: q.raw`sql` })
   - sub query returning a single column: q.where({ num: db.someTable.where(...).get('column') })
  */
-export type WhereArg<T extends PickQueryMetaRelations> =
+export type WhereArg<T extends PickQuerySelectableRelations> =
   | {
-      [K in
-        | keyof T['meta']['selectable']
-        | 'NOT'
-        | 'OR'
-        | 'IN']?: K extends 'NOT'
+      [K in keyof T['__selectable'] | 'NOT' | 'OR' | 'IN']?: K extends 'NOT'
         ? WhereArg<T> | WhereArgs<T>
         : K extends 'OR'
         ? (WhereArg<T> | WhereArgs<T>)[]
         : K extends 'IN'
         ? MaybeArray<{
-            columns: (keyof T['meta']['selectable'])[];
+            columns: (keyof T['__selectable'])[];
             values: unknown[][] | IsQuery | Expression;
           }>
         :
-            | T['meta']['selectable'][K]['column']['queryType']
+            | T['__selectable'][K]['column']['queryType']
             | null
             // inlined `ColumnOperators` helper
             | {
-                [O in keyof T['meta']['selectable'][K]['column']['operators']]?:
-                  | T['meta']['selectable'][K]['column']['operators'][O]['_opType'];
+                [O in keyof T['__selectable'][K]['column']['operators']]?:
+                  | T['__selectable'][K]['column']['operators'][O]['_opType'];
               }
             // inlined QueryOrExpression
             | {
@@ -81,7 +76,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
                   value: {
                     // simplified Column.Pick.QueryColumn
                     queryType:
-                      | T['meta']['selectable'][K]['column']['queryType']
+                      | T['__selectable'][K]['column']['queryType']
                       | null;
                   };
                 };
@@ -92,7 +87,7 @@ export type WhereArg<T extends PickQueryMetaRelations> =
                   value: {
                     // simplified Column.Pick.QueryColumn
                     queryType:
-                      | T['meta']['selectable'][K]['column']['queryType']
+                      | T['__selectable'][K]['column']['queryType']
                       | null;
                   };
                 };
@@ -121,6 +116,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | 'get'
           | 'columnTypes'
           | 'meta'
+          | '__selectable'
           | 'relations'
           | 'useHelper'
           | 'modify'
@@ -144,6 +140,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
                 | 'get'
                 | 'columnTypes'
                 | 'meta'
+                | '__selectable'
                 | 'relations'
                 | 'useHelper'
                 | 'modify'
@@ -159,29 +156,31 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
       };
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
-export type WhereArgs<T extends PickQueryMetaRelations> = WhereArg<T>[];
+export type WhereArgs<T extends PickQuerySelectableRelations> = WhereArg<T>[];
 
-export type WhereNotArgs<T extends PickQueryMetaRelations> = [WhereArg<T>];
+export type WhereNotArgs<T extends PickQuerySelectableRelations> = [
+  WhereArg<T>,
+];
 
 // Argument of `whereIn`: can be a column name or a tuple with column names to search in.
-export type WhereInColumn<T extends PickQueryMetaRelations> =
-  | keyof T['meta']['selectable']
-  | [keyof T['meta']['selectable'], ...(keyof T['meta']['selectable'])[]];
+export type WhereInColumn<T extends PickQuerySelectableRelations> =
+  | keyof T['__selectable']
+  | [keyof T['__selectable'], ...(keyof T['__selectable'])[]];
 
 // If `WhereInColumn` is a single column, it accepts array of values, or Query returning single column, or raw SQL expression.
 // If `WhereInColumn` is a tuple, it accepts a tuple of values described above.
 export type WhereInValues<
-  T extends PickQueryMetaRelations,
+  T extends PickQuerySelectableRelations,
   Column,
-> = Column extends keyof T['meta']['selectable']
+> = Column extends keyof T['__selectable']
   ?
-      | Iterable<T['meta']['selectable'][Column]['column']['queryType']>
+      | Iterable<T['__selectable'][Column]['column']['queryType']>
       | IsQuery
       | Expression
   :
       | ({
-          [I in keyof Column]: Column[I] extends keyof T['meta']['selectable']
-            ? T['meta']['selectable'][Column[I]]['column']['queryType']
+          [I in keyof Column]: Column[I] extends keyof T['__selectable']
+            ? T['__selectable'][Column[I]]['column']['queryType']
             : never;
         } & {
           length: Column extends { length: number } ? Column['length'] : never;
@@ -191,9 +190,9 @@ export type WhereInValues<
 
 // In addition to `WhereInColumn` + `WhereInValues` where user can provide a tuple with columns and a tuple with values, enable `whereIn` with object syntax.
 // Each key is a column name, value is array of column values, or a query returning single column, or a raw SQL expression.
-export type WhereInArg<T extends PickQueryMeta> = {
-  [K in keyof T['meta']['selectable']]?:
-    | Iterable<T['meta']['selectable'][K]['column']['queryType']>
+export type WhereInArg<T extends PickQuerySelectableRelations> = {
+  [K in keyof T['__selectable']]?:
+    | Iterable<T['__selectable'][K]['column']['queryType']>
     | IsQuery
     | Expression;
 };
@@ -213,7 +212,7 @@ interface QueryFnReturningSelect {
   };
 }
 
-const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
+const resolveCallbacksInArgs = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
 ) => {
@@ -267,7 +266,7 @@ const resolveCallbacksInArgs = <T extends PickQueryMetaRelations>(
 /**
  * Mutative {@link Where.prototype.where}
  */
-export const _queryWhere = <T extends PickQueryMetaRelations>(
+export const _queryWhere = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -276,7 +275,9 @@ export const _queryWhere = <T extends PickQueryMetaRelations>(
   return pushQueryArrayImmutable(q as never, 'and', args) as never;
 };
 
-export const _queryFindBy = <T extends PickQueryMetaRelationsResultReturnType>(
+export const _queryFindBy = <
+  T extends PickQuerySelectableRelationsResultReturnType,
+>(
   q: T,
   arg: WhereArg<T>,
 ): QueryTake<WhereResult<T>> => {
@@ -285,7 +286,7 @@ export const _queryFindBy = <T extends PickQueryMetaRelationsResultReturnType>(
 };
 
 export const _queryFindByOptional = <
-  T extends PickQueryMetaRelationsResultReturnType,
+  T extends PickQuerySelectableRelationsResultReturnType,
 >(
   q: T,
   arg: WhereArg<T>,
@@ -332,7 +333,7 @@ export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
 /**
  * Mutative {@link Where.prototype.whereNot}
  */
-export const _queryWhereNot = <T extends PickQueryMetaRelations>(
+export const _queryWhereNot = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereNotArgs<T>,
 ): WhereResult<T> => {
@@ -359,7 +360,7 @@ export const _queryWhereNotExists = (q: Query, arg: unknown, args: unknown) => {
   return _queryWhereNot(q, existsArgs(q, arg as never, args as never)) as never;
 };
 
-export const _queryWhereOneOf = <T extends PickQueryMetaRelations>(
+export const _queryWhereOneOf = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
 ): T => {
@@ -370,7 +371,7 @@ export const _queryWhereOneOf = <T extends PickQueryMetaRelations>(
   }) as never;
 };
 
-export const _queryWhereNotOneOf = <T extends PickQueryMetaRelations>(
+export const _queryWhereNotOneOf = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
 ): T => {
@@ -384,7 +385,7 @@ export const _queryWhereNotOneOf = <T extends PickQueryMetaRelations>(
 /**
  * Mutative {@link Where.prototype.orWhere}
  */
-export const _queryOr = <T extends PickQueryMetaRelations>(
+export const _queryOr = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -400,7 +401,7 @@ export const _queryOr = <T extends PickQueryMetaRelations>(
 /**
  * Mutative {@link Where.prototype.orWhereNot}
  */
-export const _queryOrNot = <T extends PickQueryMetaRelations>(
+export const _queryOrNot = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
 ): WhereResult<T> => {
@@ -507,7 +508,7 @@ const existsArgs = (
  * Mutative {@link Where.prototype.whereExists}
  */
 export const _queryWhereExists = <
-  T extends PickQueryMetaShapeRelationsWithDataAs,
+  T extends PickQuerySelectableShapeRelationsWithDataAs,
   Arg extends JoinFirstArg<T>,
 >(
   q: T,
@@ -515,7 +516,7 @@ export const _queryWhereExists = <
   args: JoinArgs<T, Arg>,
 ): WhereResult<T> => {
   return _queryWhere(
-    q,
+    q as never,
     existsArgs(q as unknown as Query, arg as never, args as never),
   ) as never;
 };
@@ -901,7 +902,7 @@ export class Where {
    *
    * @param args - {@link WhereArgs}
    */
-  where<T extends PickQueryMetaRelations>(
+  where<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
   ): WhereResult<T> {
@@ -936,7 +937,7 @@ export class Where {
    *
    * @param args - {@link WhereArgs}
    */
-  whereNot<T extends PickQueryMetaRelations>(
+  whereNot<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereNotArgs<T>
   ): WhereResult<T> {
@@ -983,7 +984,7 @@ export class Where {
    *
    * @param args - same arguments as in {@link where}, joined with `OR`
    */
-  whereOneOf<T extends PickQueryMetaRelations>(
+  whereOneOf<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
   ): T {
@@ -1004,7 +1005,7 @@ export class Where {
    *
    * @param args - same arguments as in {@link where}, joined with `OR`
    */
-  whereNotOneOf<T extends PickQueryMetaRelations>(
+  whereNotOneOf<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
   ): T {
@@ -1029,7 +1030,7 @@ export class Where {
    *
    * @param args - same arguments as in {@link where}, joined with `OR`
    */
-  orWhere<T extends PickQueryMetaRelations>(
+  orWhere<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
   ): WhereResult<T> {
@@ -1041,7 +1042,7 @@ export class Where {
    *
    * @param args - {@link WhereArgs} will be prefixed with `NOT` and joined with `OR`
    */
-  orWhereNot<T extends PickQueryMetaRelations>(
+  orWhereNot<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
   ): WhereResult<T> {
@@ -1094,7 +1095,10 @@ export class Where {
    * db.table.whereIn({ id: [] })
    * ```
    */
-  whereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(
+  whereIn<
+    T extends PickQuerySelectableRelations,
+    Column extends WhereInColumn<T>,
+  >(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
@@ -1111,7 +1115,10 @@ export class Where {
    * db.table.whereIn('a', [1, 2, 3]).orWhereIn('b', ['one', 'two']);
    * ```
    */
-  orWhereIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(
+  orWhereIn<
+    T extends PickQuerySelectableRelations,
+    Column extends WhereInColumn<T>,
+  >(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
@@ -1127,7 +1134,10 @@ export class Where {
    * db.table.whereNotIn('color', ['red', 'green', 'blue']);
    * ```
    */
-  whereNotIn<T extends PickQueryMetaRelations, Column extends WhereInColumn<T>>(
+  whereNotIn<
+    T extends PickQuerySelectableRelations,
+    Column extends WhereInColumn<T>,
+  >(
     this: T,
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
@@ -1144,7 +1154,7 @@ export class Where {
    * ```
    */
   orWhereNotIn<
-    T extends PickQueryMetaRelations,
+    T extends PickQuerySelectableRelations,
     Column extends WhereInColumn<T>,
   >(
     this: T,
@@ -1177,7 +1187,7 @@ export class Where {
    * ```
    */
   whereExists<
-    T extends PickQueryMetaShapeRelationsWithDataAs,
+    T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1202,7 +1212,7 @@ export class Where {
    * ```
    */
   orWhereExists<
-    T extends PickQueryMetaShapeRelationsWithDataAs,
+    T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);
@@ -1222,7 +1232,7 @@ export class Where {
    * @param args - no arguments needed when the first argument is a relation name, or conditions to join the table with.
    */
   whereNotExists<
-    T extends PickQueryMetaShapeRelationsWithDataAs,
+    T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);
@@ -1239,7 +1249,7 @@ export class Where {
    * ```
    */
   orWhereNotExists<
-    T extends PickQueryMetaShapeRelationsWithDataAs,
+    T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
   >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
     const q = _clone(this);

@@ -4,12 +4,15 @@ import {
   SetQueryReturnsColumnOrThrow,
 } from '../../query';
 import { AggregateMethods } from '../../basic-features/aggregate/aggregate';
-import { saveAliasedShape, setQueryObjectValueImmutable } from '../../query.utils';
+import {
+  saveAliasedShape,
+  setQueryObjectValueImmutable,
+} from '../../query.utils';
 import { columnToSql } from '../../sql/column-to-sql';
 import { Operators } from '../../../columns/operators';
 import { Column } from '../../../columns';
 import { OrchidOrmInternalError } from '../../errors';
-import { PickQueryMeta } from '../../pick-query-types';
+import { PickQueryMeta, PickQuerySelectable } from '../../pick-query-types';
 import { Expression, ExpressionData } from '../../expressions/expression';
 import { addValue, emptyObject, MaybeArray } from '../../../utils';
 import { _clone } from '../../basic-features/clone/clone';
@@ -22,6 +25,7 @@ import {
 } from './search.sql';
 import { ToSQLCtx } from '../../sql/to-sql';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
+import { PickQueryMetaSelectable } from 'pqb';
 
 // `headline` first argument is a name of the search.
 type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
@@ -32,7 +36,7 @@ type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
 // Options of the `headline` function:
 // - text: column name or a raw SQL with the full text to select headline from.
 // - options: string or an expression returning Postgres headline options (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
-interface HeadlineParams<T extends PickQueryMeta> {
+interface HeadlineParams<T extends PickQuerySelectable> {
   text?: SelectableOrExpressionOfType<T, Column.Pick.QueryColumnOfType<string>>;
   options?: string | Expression;
 }
@@ -110,7 +114,7 @@ declare module '../../basic-features/aggregate/aggregate' {
      * @param search - name of the search to use the query from
      * @param options - `text` for a text source, `options` for `ts_headline` options
      */
-    headline<T extends PickQueryMeta>(
+    headline<T extends PickQueryMetaSelectable>(
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,
@@ -119,7 +123,7 @@ declare module '../../basic-features/aggregate/aggregate' {
 }
 
 // type of `search` argument
-export type SearchArg<T extends PickQueryMeta, As extends string> = {
+export type SearchArg<T extends PickQuerySelectable, As extends string> = {
   // alias this search to use in `order` and/or in `headline`
   as?: As;
   // order results by search rank
@@ -131,7 +135,7 @@ export type SearchArg<T extends PickQueryMeta, As extends string> = {
     }
   | {
       // use a language stored in a column of the table
-      languageColumn?: keyof T['meta']['selectable'];
+      languageColumn?: keyof T['__selectable'];
     }
 ) &
   (
@@ -143,16 +147,16 @@ export type SearchArg<T extends PickQueryMeta, As extends string> = {
         // Provide one or multiple columns to search in.
         // Define an object like `{ title: 'A', body: 'B' }` to set column weights.
         in:
-          | MaybeArray<keyof T['meta']['selectable']>
-          | { [K in keyof T['meta']['selectable']]?: SearchWeight };
+          | MaybeArray<keyof T['__selectable']>
+          | { [K in keyof T['__selectable']]?: SearchWeight };
       }
     | {
         // search in a generated vector column
         vector: {
-          [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends 'tsvector'
+          [K in keyof T['__selectable']]: T['__selectable'][K]['column']['dataType'] extends 'tsvector'
             ? K
             : never;
-        }[keyof T['meta']['selectable']];
+        }[keyof T['__selectable']];
       }
   ) &
   (
@@ -422,7 +426,7 @@ export class SearchMethods {
    *
    * @param arg - search config
    */
-  search<T extends PickQueryMeta, As extends string>(
+  search<T extends PickQueryMetaSelectable, As extends string>(
     this: T,
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {

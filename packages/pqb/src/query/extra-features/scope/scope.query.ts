@@ -3,7 +3,7 @@ import { SelectableFromShape } from '../../query';
 import { Column } from '../../../columns/column';
 import {
   PickQueryMeta,
-  PickQueryMetaShapeRelationsWithData,
+  PickQuerySelectableShapeRelationsWithData,
 } from '../../pick-query-types';
 import { QueryMetaBase } from '../../query-meta';
 import { setObjectValueImmutable } from '../../../utils';
@@ -15,22 +15,16 @@ export type QueryScopes<Keys extends string> = {
   [K in Keys]: unknown;
 };
 
-interface ScopeArgumentQueryMeta<
-  Table extends string | undefined,
-  Shape extends Column.QueryColumns,
-> extends QueryMetaBase {
-  selectable: SelectableFromShape<Shape, Table>;
-}
-
 export interface ScopeArgumentQuery<
   Table extends string | undefined,
   Shape extends Column.QueryColumns,
 > extends Where,
-    PickQueryMetaShapeRelationsWithData {
+    PickQuerySelectableShapeRelationsWithData {
   __isQuery: true;
   table: Table;
   shape: Shape;
-  meta: ScopeArgumentQueryMeta<Table, Shape>;
+  meta: QueryMetaBase;
+  __selectable: SelectableFromShape<Shape, Table>;
 }
 
 /**

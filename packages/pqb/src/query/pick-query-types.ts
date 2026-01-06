@@ -1,7 +1,7 @@
-import { EmptyObject } from '../utils';
+import { EmptyObject, RecordUnknown } from '../utils';
 import { RelationsBase } from './relations';
 import { Column } from '../columns/column';
-import { QueryMetaBase } from './query-meta';
+import { QueryMetaBase, QuerySelectable } from './query-meta';
 import {
   IsQueries,
   IsQuery,
@@ -19,6 +19,128 @@ export interface PickQueryTable {
 export interface PickQueryMeta {
   meta: QueryMetaBase;
 }
+
+export interface PickQueryThen {
+  then: unknown;
+}
+
+export interface PickQuerySelectable {
+  __selectable: QuerySelectable;
+}
+
+export interface PickQueryMetaSelectable
+  extends PickQueryMeta,
+    PickQuerySelectable {}
+
+export interface PickQuerySelectableResult
+  extends PickQuerySelectable,
+    PickQueryResult {}
+
+export interface PickQueryMetaSelectableResult
+  extends PickQueryMeta,
+    PickQuerySelectable,
+    PickQueryResult {}
+
+export interface PickQuerySelectableRelations
+  extends PickQuerySelectable,
+    PickQueryRelations {}
+
+export interface PickQuerySelectableRelationsResultReturnType
+  extends PickQuerySelectableRelations,
+    PickQueryResult,
+    PickQueryReturnType {}
+
+export interface PickQuerySelectableResultWindows
+  extends PickQueryMetaSelectableResult,
+    PickQueryWindows {}
+
+export interface PickQueryMetaSelectableResultRelationsWindows
+  extends PickQueryMetaSelectableResult,
+    PickQueryRelations,
+    PickQueryWindows {}
+
+export interface PickQueryMetaSelectableResultRelationsWindowsColumnTypes
+  extends PickQueryMetaSelectableResultRelationsWindows,
+    PickQueryColumTypes {}
+
+export interface PickQuerySelectableShapeAs
+  extends PickQuerySelectable,
+    PickQueryShape,
+    PickQueryAs {}
+
+export interface PickQueryTableMetaShapeTableAs
+  extends PickQuerySelectableShapeAs,
+    PickQueryTable {}
+
+export interface PickQuerySelectableShapeReturnTypeWithDataAs
+  extends PickQuerySelectable,
+    PickQueryShape,
+    PickQueryMetaReturnType,
+    PickQueryWithData,
+    PickQueryAs {}
+
+export interface PickQuerySelectableShapeRelationsWithData
+  extends PickQuerySelectable,
+    PickQueryShape,
+    PickQueryRelations,
+    PickQueryWithData {}
+
+export interface PickQuerySelectableShapeRelationsWithDataAs
+  extends PickQuerySelectableShapeRelationsWithData,
+    PickQueryAs {}
+
+export interface PickQuerySelectableShapeRelationsWithDataAsResultReturnType
+  extends PickQuerySelectableShapeRelationsWithDataAs,
+    PickQueryResult,
+    PickQueryReturnType {}
+
+export interface PickQuerySelectableResultReturnType
+  extends PickQuerySelectable,
+    PickQueryResult,
+    PickQueryReturnType {}
+
+export interface PickQuerySelectableResultRelationsWithDataReturnType
+  extends PickQuerySelectable,
+    PickQueryResult,
+    PickQueryRelations,
+    PickQueryWithData,
+    PickQueryReturnType {}
+
+export interface PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs
+  extends PickQuerySelectableResultRelationsWithDataReturnType,
+    PickQueryShape,
+    PickQueryAs {}
+
+export interface PickQuerySelectableShape
+  extends PickQuerySelectable,
+    PickQueryShape {}
+
+export interface PickQuerySelectableColumnTypes
+  extends PickQuerySelectable,
+    PickQueryColumTypes {}
+
+export interface PickQueryMetaSelectableShapeRelationsReturnType
+  extends PickQueryMeta,
+    PickQuerySelectable,
+    PickQueryShape,
+    PickQueryRelations,
+    PickQueryReturnType {}
+
+export interface PickQueryMetaSelectableReturnType
+  extends PickQueryMeta,
+    PickQuerySelectable,
+    PickQueryReturnType {}
+
+export interface PickQueryMetaSelectableResultInputTypeAs
+  extends PickQueryMetaResult,
+    PickQuerySelectable,
+    PickQueryInputType,
+    PickQueryAs {}
+
+export interface PickQuerySelectableResultAs
+  extends PickQuerySelectable,
+    PickQueryResult,
+    PickQueryAs {}
 
 export interface PickQueryResult {
   result: Column.QueryColumns;
@@ -58,29 +180,13 @@ export interface PickQueryUniqueProperties {
   };
 }
 
-export interface PickQueryMetaResultWindows extends PickQueryMetaResult {
-  windows: EmptyObject;
-}
-
 export interface PickQueryTableMetaResult
   extends PickQueryTable,
     PickQueryMetaResult {}
 
 export interface PickQueryInputType {
-  inputType: unknown;
+  inputType: RecordUnknown;
 }
-
-export interface PickQueryTableMetaResultInputType
-  extends PickQueryTableMetaResult,
-    PickQueryInputType {}
-
-export interface PickQueryTableMetaShape
-  extends PickQueryTable,
-    PickQueryMetaShape {}
-
-export interface PickQueryTableMetaResultShape
-  extends PickQueryTableMetaResult,
-    PickQueryMetaShape {}
 
 export interface PickQueryMetaReturnType
   extends PickQueryMeta,
@@ -106,46 +212,9 @@ export interface PickQueryRelationQueries {
   relationQueries: IsQueries;
 }
 
-export interface PickQueryMetaRelations
-  extends PickQueryMeta,
-    PickQueryRelations {}
-
-export interface PickQueryMetaRelationsResult
-  extends PickQueryMetaRelations,
-    PickQueryResult {}
-
-export interface PickQueryMetaRelationsReturnType
-  extends PickQueryMetaRelationsResult,
-    PickQueryResultReturnType {}
-
-export interface PickQueryMetaShapeRelationsReturnType
-  extends PickQueryMetaRelationsReturnType,
-    PickQueryShape {}
-
-export interface PickQueryMetaRelationsResultReturnType
-  extends PickQueryMetaRelationsReturnType,
-    PickQueryResult {}
-
-export interface PickQueryMetaResultRelations
-  extends PickQueryResult,
-    PickQueryMeta,
-    PickQueryRelations {}
-
-export interface PickQueryMetaResultRelationsWindows
-  extends PickQueryMetaResultRelations,
-    PickQueryWindows {}
-
 export interface PickQueryColumTypes {
   columnTypes: unknown;
 }
-
-export interface PickQueryMetaColumnTypes
-  extends PickQueryMeta,
-    PickQueryColumTypes {}
-
-export interface PickQueryMetaResultRelationsWindowsColumnTypes
-  extends PickQueryMetaResultRelationsWindows,
-    PickQueryColumTypes {}
 
 export interface PickQueryWithDataColumnTypes
   extends PickQueryWithData,
@@ -168,59 +237,23 @@ export interface PickQueryMetaResultAs
   extends PickQueryMetaResult,
     PickQueryAs {}
 
-export interface PickQueryMetaShapeAs extends PickQueryMetaShape, PickQueryAs {}
-
-export interface PickQueryTableMetaShapeAs
-  extends PickQueryTableMetaShape,
-    PickQueryAs {}
-
 export interface PickQueryMetaResultShapeAs
   extends PickQueryMetaResult,
     PickQueryShape,
     PickQueryAs {}
 
-export interface PickQueryMetaShapeRelationsWithDataAs
-  extends PickQueryMetaShapeRelationsWithData,
-    PickQueryAs {}
-
-export interface PickQueryMetaResultRelationsWithDataReturnTypeShapeAs
+export interface PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs
   extends PickQueryMetaResultRelationsWithDataReturnTypeShape,
-    PickQueryAs {}
-
-export interface PickQueryMetaShapeReturnTypeWithDataAs
-  extends PickQueryMetaShape,
-    PickQueryMetaReturnType,
-    PickQueryWithData,
-    PickQueryAs {}
-
-export interface PickQueryMetaResultInputTypeAs
-  extends PickQueryMetaResult,
-    PickQueryInputType,
+    PickQuerySelectable,
     PickQueryAs {}
 
 export interface PickQueryResultAs extends PickQueryResult, PickQueryAs {}
 
 export interface PickQueryShapeAs extends PickQueryShape, PickQueryAs {}
 
-export interface PickQueryMetaTable extends PickQueryMeta, PickQueryTable {}
-
-export interface PickQueryMetaTableShape
-  extends PickQueryMetaTable,
-    PickQueryShape {}
-
-export interface PickQueryMetaWithData
-  extends PickQueryMeta,
-    PickQueryWithData {}
-
 export interface PickQueryRelationsWithData
   extends PickQueryWithData,
     PickQueryRelations {}
-
-export interface PickQueryMetaShapeRelationsWithData
-  extends PickQueryMeta,
-    PickQueryShape,
-    PickQueryRelations,
-    PickQueryWithData {}
 
 export interface PickQueryMetaResultRelationsWithDataReturnType
   extends PickQueryMeta,
@@ -228,11 +261,6 @@ export interface PickQueryMetaResultRelationsWithDataReturnType
     PickQueryRelations,
     PickQueryWithData,
     PickQueryReturnType {}
-
-export interface PickQueryMetaTableShapeReturnTypeWithData
-  extends PickQueryMetaTableShape,
-    PickQueryReturnType,
-    PickQueryMetaWithData {}
 
 export interface PickQueryMetaResultRelationsWithDataReturnTypeShape
   extends PickQueryMetaResultRelationsWithDataReturnType,
@@ -242,15 +270,6 @@ export interface PickQueryMetaResultReturnTypeWithDataWindows
   extends PickQueryMetaResultReturnType,
     PickQueryWithData,
     PickQueryWindows {}
-
-export interface PickQueryMetaResultReturnTypeWithDataWindowsThen
-  extends PickQueryMetaResultReturnTypeWithDataWindows {
-  then: unknown;
-}
-
-export interface PickQueryTableMetaResultReturnTypeWithDataWindowsThen
-  extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-    PickQueryTable {}
 
 export interface PickQuerySinglePrimaryKey {
   internal: {

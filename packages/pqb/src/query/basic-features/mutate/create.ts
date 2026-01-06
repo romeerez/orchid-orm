@@ -29,9 +29,15 @@ import {
 import { _querySelectAll } from '../select/select';
 import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import {
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  PickQueryInputType,
+  PickQueryMeta,
   PickQueryQ,
+  PickQueryRelations,
+  PickQueryResult,
+  PickQueryReturnType,
+  PickQueryShape,
   PickQueryUniqueProperties,
+  PickQueryWithData,
 } from '../../pick-query-types';
 import { EmptyObject, FnUnknownToUnknown, RecordUnknown } from '../../../utils';
 import { RelationConfigDataForCreate } from '../../relations';
@@ -48,10 +54,14 @@ import { QueryData } from '../../query-data';
 
 export interface CreateSelf
   extends IsQuery,
-    PickQueryMetaResultRelationsWithDataReturnTypeShape,
-    PickQueryUniqueProperties {
-  inputType: RecordUnknown;
-}
+    PickQueryMeta,
+    PickQueryResult,
+    PickQueryRelations,
+    PickQueryWithData,
+    PickQueryReturnType,
+    PickQueryShape,
+    PickQueryUniqueProperties,
+    PickQueryInputType {}
 
 // Type of argument for `create`, `createMany`, optional argument for `createOneFrom`,
 // `defaults` use a Partial of it.

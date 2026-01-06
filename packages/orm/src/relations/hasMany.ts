@@ -29,13 +29,13 @@ import {
   MaybeArray,
   objectHasValues,
   OrchidOrmInternalError,
-  PickQueryMetaRelations,
   RecordString,
   RecordUnknown,
   RelationConfigBase,
   RelationJoinQuery,
   toArray,
   prepareSubQueryForSql,
+  PickQuerySelectableRelations,
 } from 'pqb';
 import {
   addAutoForeignKey,
@@ -74,11 +74,12 @@ export type HasManyQuery<
   ? HasOneQueryThrough<T, Name, TableQuery>
   : {
       [K in keyof TableQuery]: K extends 'meta'
-        ? Omit<TableQuery['meta'], 'selectable'> & {
+        ? TableQuery['meta'] & {
             defaults: HasOnePopulate<T, Name>;
             hasWhere: true;
-            selectable: SelectableFromShape<TableQuery['shape'], Name>;
           }
+        : K extends '__selectable'
+        ? SelectableFromShape<TableQuery['shape'], Name>
         : K extends '__as'
         ? Name
         : K extends 'join'
@@ -356,7 +357,7 @@ export const makeHasManyMethod = (
 const getWhereForNestedUpdate = (
   t: Query,
   data: RecordUnknown[],
-  params: MaybeArray<WhereArg<PickQueryMetaRelations>> | undefined,
+  params: MaybeArray<WhereArg<PickQuerySelectableRelations>> | undefined,
   primaryKeys: string[],
   foreignKeys: string[],
 ): WhereResult<Query> => {

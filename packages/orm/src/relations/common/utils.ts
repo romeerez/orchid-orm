@@ -12,10 +12,10 @@ import {
   WhereArg,
   emptyObject,
   MaybeArray,
-  PickQueryMetaRelations,
   PickQueryRelations,
   RecordUnknown,
   RelationConfigBase,
+  PickQuerySelectableRelations,
 } from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
@@ -37,7 +37,7 @@ export type NestedInsertOneItemCreate = RecordUnknown;
 export type NestedInsertOneItemConnect = RecordUnknown;
 
 export interface NestedInsertOneItemConnectOrCreate {
-  where: WhereArg<PickQueryMetaRelations>;
+  where: WhereArg<PickQuerySelectableRelations>;
   create: RecordUnknown;
 }
 
@@ -49,7 +49,7 @@ export interface NestedInsertManyItems {
 
 export type NestedInsertManyCreate = RecordUnknown[];
 
-export type NestedInsertManyConnect = WhereArg<PickQueryMetaRelations>[];
+export type NestedInsertManyConnect = WhereArg<PickQuerySelectableRelations>[];
 
 export type NestedInsertManyConnectOrCreate =
   NestedInsertOneItemConnectOrCreate[];
@@ -57,9 +57,9 @@ export type NestedInsertManyConnectOrCreate =
 export type NestedInsertItem = NestedInsertOneItem | NestedInsertManyItems;
 
 export interface NestedUpdateOneItem {
-  add?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
+  add?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
   disconnect?: boolean;
-  set?: WhereArg<PickQueryMetaRelations>;
+  set?: WhereArg<PickQuerySelectableRelations>;
   delete?: boolean;
   update?: UpdateData<Query>;
   upsert?: {
@@ -70,12 +70,12 @@ export interface NestedUpdateOneItem {
 }
 
 export interface NestedUpdateManyItems {
-  add?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
-  disconnect?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
-  set?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
-  delete?: MaybeArray<WhereArg<PickQueryMetaRelations>>;
+  add?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
+  disconnect?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
+  set?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
+  delete?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
   update?: {
-    where: MaybeArray<WhereArg<PickQueryMetaRelations>>;
+    where: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
     data: UpdateData<Query>;
   };
   create: RecordUnknown[];

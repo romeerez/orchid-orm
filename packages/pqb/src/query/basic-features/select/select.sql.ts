@@ -527,7 +527,10 @@ const pushSubQuerySql = (
           cloned,
           cloned.baseQuery.clone(),
         ) as unknown as SubQueryForSql;
-        _queryGetOptional(query, new RawSql(`COALESCE(json_agg("c"), '[]')`));
+        _queryGetOptional(
+          query as never,
+          new RawSql(`COALESCE(json_agg("c"), '[]')`),
+        );
       }
       break;
     }

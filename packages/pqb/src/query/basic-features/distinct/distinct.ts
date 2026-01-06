@@ -1,6 +1,6 @@
 import { _clone } from '../clone/clone';
 import { SelectableOrExpressions } from '../../expressions/expression';
-import { PickQueryMeta } from '../../pick-query-types';
+import { PickQuerySelectable } from '../../pick-query-types';
 import { pushQueryArrayImmutable } from '../../query.utils';
 
 export class QueryDistinct {
@@ -22,7 +22,7 @@ export class QueryDistinct {
    *
    * @param columns - column names or a raw SQL
    */
-  distinct<T extends PickQueryMeta>(
+  distinct<T extends PickQuerySelectable>(
     this: T,
     ...columns: SelectableOrExpressions<T>
   ): T {

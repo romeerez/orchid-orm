@@ -102,7 +102,7 @@ describe('merge queries', () => {
 
       const q = joined.merge(User);
 
-      assertType<typeof q.meta.selectable, typeof joined.meta.selectable>();
+      assertType<typeof q.__selectable, typeof joined.__selectable>();
 
       expectSql(
         q.toSQL(),
@@ -118,7 +118,7 @@ describe('merge queries', () => {
 
       const q = User.merge(joined);
 
-      assertType<typeof q.meta.selectable, typeof joined.meta.selectable>();
+      assertType<typeof q.__selectable, typeof joined.__selectable>();
 
       expectSql(
         q.toSQL(),
@@ -136,8 +136,8 @@ describe('merge queries', () => {
       const q = left.merge(right);
 
       assertType<
-        typeof q.meta.selectable,
-        typeof left.meta.selectable & typeof right.meta.selectable
+        typeof q.__selectable,
+        typeof left.__selectable & typeof right.__selectable
       >();
 
       expectSql(

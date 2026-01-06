@@ -1,7 +1,7 @@
 import {
   PickQueryColumTypes,
-  PickQueryMeta,
-  PickQueryMetaResultRelationsWindowsColumnTypes,
+  PickQueryMetaSelectableResultRelationsWindowsColumnTypes,
+  PickQuerySelectable,
   PickQueryShape,
 } from '../pick-query-types';
 import { ColumnRefExpression } from './column-ref-expression';
@@ -105,13 +105,13 @@ export class QueryExpressions {
    * @param arg - any available column name, such as of a joined table
    */
   ref<
-    T extends PickQueryMeta,
-    K extends keyof T['meta']['selectable'] & string,
+    T extends PickQuerySelectable,
+    K extends keyof T['__selectable'] & string,
   >(
     this: T,
     arg: K,
-  ): RefExpression<T['meta']['selectable'][K]['column']> &
-    T['meta']['selectable'][K]['column']['operators'] {
+  ): RefExpression<T['__selectable'][K]['column']> &
+    T['__selectable'][K]['column']['operators'] {
     const q = _clone(this);
 
     const { shape } = q.q;
@@ -175,7 +175,7 @@ export class QueryExpressions {
    * @param options
    */
   fn<
-    T extends PickQueryMetaResultRelationsWindowsColumnTypes,
+    T extends PickQueryMetaSelectableResultRelationsWindowsColumnTypes,
     Type = unknown,
     C extends Column.Pick.QueryColumn = Column.Pick.QueryColumnOfType<Type>,
   >(
@@ -184,7 +184,13 @@ export class QueryExpressions {
     args: SelectableOrExpressions<T>,
     options?: AggregateOptions<T>,
   ): SetQueryReturnsFn<T, C> {
-    return makeFnExpression(this, emptyObject as C, fn, args, options) as never;
+    return makeFnExpression(
+      this,
+      emptyObject as C,
+      fn,
+      args as never,
+      options,
+    ) as never;
   }
 
   or(...args: [OrExpressionArg, ...OrExpressionArg[]]): OrExpression {

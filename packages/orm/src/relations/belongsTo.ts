@@ -90,10 +90,11 @@ export type BelongsToParams<
 export type BelongsToQuery<T extends Query, Name extends string> = {
   [P in keyof T]: P extends 'meta'
     ? // Omit is optimal
-      Omit<T['meta'], 'selectable'> & {
+      T['meta'] & {
         hasWhere: true;
-        selectable: SelectableFromShape<T['shape'], Name>;
       }
+    : P extends '__selectable'
+    ? SelectableFromShape<T['shape'], Name>
     : P extends '__as'
     ? Name
     : P extends 'join'

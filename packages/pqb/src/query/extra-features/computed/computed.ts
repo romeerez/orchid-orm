@@ -18,7 +18,6 @@ import { PickQueryQ, PickQueryShape } from '../../pick-query-types';
 import { QueryBatchResult } from '../../basic-features/select/select.utils';
 import { QueryExpressions } from '../../expressions/query-expressions';
 import { QuerySql } from '../../sql/sql';
-import { QueryMetaBase } from '../../query-meta';
 import { finalizeNestedHookSelect } from '../hooks/hooks';
 import { applyBatchTransforms } from '../data-transform/transform';
 import { QueryData } from '../../query-data';
@@ -111,10 +110,8 @@ export interface QueryComputedArg<
   windows: EmptyObject;
   relations: RelationsBase;
   result: EmptyObject;
-  meta: Omit<QueryMetaBase, 'selectable'> & {
-    selectable: {
-      [K in keyof Shape]: { as: string; column: Column.Pick.QueryColumn };
-    };
+  __selectable: {
+    [K in keyof Shape]: { as: string; column: Column.Pick.QueryColumn };
   };
 }
 

@@ -2,27 +2,25 @@ import { EmptyObject, RecordUnknown } from '../../utils';
 import { Column } from '../../columns/column';
 import { OperatorToSQL } from '../../columns/operators';
 import { HasBeforeAndBeforeSet } from '../sub-query/sub-query-for-sql';
-import { PickQueryMeta } from '../pick-query-types';
+import { PickQuerySelectable } from '../pick-query-types';
 import { QueryBeforeHookInternal } from '../query-data';
 import { ToSqlValues } from '../sql/to-sql';
 
 export type SelectableOrExpression<
-  T extends PickQueryMeta = PickQueryMeta,
+  T extends PickQuerySelectable = PickQuerySelectable,
   C extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
-> = '*' | keyof T['meta']['selectable'] | Expression<C>;
+> = '*' | keyof T['__selectable'] | Expression<C>;
 
 export type SelectableOrExpressions<
-  T extends { meta: { selectable: unknown } } = {
-    meta: { selectable: unknown };
-  },
+  T extends PickQuerySelectable = PickQuerySelectable,
   C extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
-> = ('*' | keyof T['meta']['selectable'] | Expression<C>)[];
+> = ('*' | keyof T['__selectable'] | Expression<C>)[];
 
 export type ExpressionOutput<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   Expr extends SelectableOrExpression<T>,
-> = Expr extends keyof T['meta']['selectable']
-  ? T['meta']['selectable'][Expr]['column']
+> = Expr extends keyof T['__selectable']
+  ? T['__selectable'][Expr]['column']
   : Expr extends Expression
   ? Expr['result']['value']
   : never;

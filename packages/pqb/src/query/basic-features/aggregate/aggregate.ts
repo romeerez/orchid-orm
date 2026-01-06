@@ -41,9 +41,9 @@ import {
   SelectableOrExpression,
 } from '../../expressions/expression';
 import {
-  PickQueryMeta,
-  PickQueryMetaResultRelationsWindows,
+  PickQueryMetaSelectableResultRelationsWindows,
   PickQueryQ,
+  PickQuerySelectable,
 } from '../../pick-query-types';
 import { emptyArray } from '../../../utils';
 import { _clone } from '../clone/clone';
@@ -113,23 +113,26 @@ type CountColumn = Column.Pick.QueryColumnOfTypeAndOps<
 type CountReturn<T> = SetQueryReturnsColumnOrThrow<T, CountColumn> &
   OperatorsCount;
 
-type SelectableDataType<T extends PickQueryMeta, DataType extends string> =
+type SelectableDataType<
+  T extends PickQuerySelectable,
+  DataType extends string,
+> =
   | {
-      [K in keyof T['meta']['selectable']]: T['meta']['selectable'][K]['column']['dataType'] extends DataType
+      [K in keyof T['__selectable']]: T['__selectable'][K]['column']['dataType'] extends DataType
         ? K
         : never;
-    }[keyof T['meta']['selectable']]
+    }[keyof T['__selectable']]
   | Expression<Column.Pick.QueryColumnOfDataType<DataType>>;
 
 type NumericReturn<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   Arg,
-> = Arg extends keyof T['meta']['selectable']
+> = Arg extends keyof T['__selectable']
   ? SetQueryReturnsColumnOrThrow<
       T,
       Column.Pick.QueryColumnOfTypeAndOps<
-        T['meta']['selectable'][Arg]['column']['dataType'],
-        T['meta']['selectable'][Arg]['column']['type'] | null,
+        T['__selectable'][Arg]['column']['dataType'],
+        T['__selectable'][Arg]['column']['type'] | null,
         OperatorsNumber
       >
     > &
@@ -171,7 +174,7 @@ type NullableBooleanReturn<T> = SetQueryReturnsColumnOrThrow<
   OperatorsBoolean;
 
 type NullableJSONAggReturn<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   Arg extends SelectableOrExpression<T>,
 > = SetQueryReturnsColumnOrThrow<
   T,
@@ -185,12 +188,12 @@ type NullableJSONAggReturn<
 > &
   OperatorsArray<never>;
 
-interface RecordSelectableOrExpression<T extends PickQueryMeta> {
+interface RecordSelectableOrExpression<T extends PickQuerySelectable> {
   [K: string]: SelectableOrExpression<T>;
 }
 
 type NullableJSONObjectReturn<
-  T extends PickQueryMeta,
+  T extends PickQuerySelectable,
   Obj extends RecordSelectableOrExpression<T>,
 > = SetQueryReturnsColumnOrThrow<
   T,
@@ -308,7 +311,7 @@ export class AggregateMethods {
    * @param arg - optionally, provide a column or a raw SQL for the `count` argument
    * @param options - aggregation options
    */
-  count<T extends PickQueryMetaResultRelationsWindows>(
+  count<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     arg: SelectableOrExpression<T> = '*',
     options?: AggregateOptions<T>,
@@ -344,7 +347,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   min<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableDataType<T, AggregateArgTypes['minMax']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
@@ -378,7 +381,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   max<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableDataType<T, AggregateArgTypes['minMax']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
@@ -411,7 +414,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   sum<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableDataType<T, AggregateArgTypes['sum']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
@@ -441,7 +444,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   avg<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableDataType<T, AggregateArgTypes['avg']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
@@ -474,7 +477,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   bitAnd<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableDataType<T, AggregateArgTypes['bit']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
@@ -504,7 +507,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   bitOr<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableDataType<T, AggregateArgTypes['bit']>,
   >(this: T, arg: Arg, options?: AggregateOptions<T>): NumericReturn<T, Arg> {
     return makeFnExpression(
@@ -536,7 +539,7 @@ export class AggregateMethods {
    * @param arg - boolean column or raw SQL
    * @param options - aggregation options
    */
-  boolAnd<T extends PickQueryMetaResultRelationsWindows>(
+  boolAnd<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     arg: SelectableDataType<T, AggregateArgTypes['bool']>,
     options?: AggregateOptions<T>,
@@ -570,7 +573,7 @@ export class AggregateMethods {
    * @param arg - boolean column or raw SQL
    * @param options - aggregation options
    */
-  boolOr<T extends PickQueryMetaResultRelationsWindows>(
+  boolOr<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     arg: SelectableDataType<T, AggregateArgTypes['bool']>,
     options?: AggregateOptions<T>,
@@ -587,7 +590,7 @@ export class AggregateMethods {
   /**
    * Equivalent to {@link boolAnd}
    */
-  every<T extends PickQueryMetaResultRelationsWindows>(
+  every<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     arg: SelectableDataType<T, AggregateArgTypes['bool']>,
     options?: AggregateOptions<T>,
@@ -626,7 +629,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   jsonAgg<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableOrExpression<T>,
   >(
     this: T,
@@ -646,7 +649,7 @@ export class AggregateMethods {
    * See {@link jsonAgg}
    */
   jsonbAgg<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Arg extends SelectableOrExpression<T>,
   >(
     this: T,
@@ -695,7 +698,7 @@ export class AggregateMethods {
    * @param options - aggregation options
    */
   jsonObjectAgg<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Obj extends RecordSelectableOrExpression<T>,
   >(
     this: T,
@@ -715,7 +718,7 @@ export class AggregateMethods {
    * See {@link jsonObjectAgg}
    */
   jsonbObjectAgg<
-    T extends PickQueryMetaResultRelationsWindows,
+    T extends PickQueryMetaSelectableResultRelationsWindows,
     Obj extends RecordSelectableOrExpression<T>,
   >(
     this: T,
@@ -753,7 +756,7 @@ export class AggregateMethods {
    * @param delimiter - string to join with
    * @param options - aggration options
    */
-  stringAgg<T extends PickQueryMetaResultRelationsWindows>(
+  stringAgg<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     arg: SelectableDataType<T, AggregateArgTypes['stringAgg']>,
     delimiter: string,
@@ -785,7 +788,7 @@ export class AggregateMethods {
    * @param arg - column or SQL with XML
    * @param options - aggregation options
    */
-  xmlAgg<T extends PickQueryMetaResultRelationsWindows>(
+  xmlAgg<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     arg: SelectableOrExpressionOfType<T, StringColumn>,
     options?: AggregateOptions<T>,
@@ -817,7 +820,7 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  rowNumber<T extends PickQueryMetaResultRelationsWindows>(
+  rowNumber<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T, 'int8'> {
@@ -844,7 +847,7 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  rank<T extends PickQueryMetaResultRelationsWindows>(
+  rank<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T, 'int8'> {
@@ -871,7 +874,7 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  denseRank<T extends PickQueryMetaResultRelationsWindows>(
+  denseRank<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T, 'int8'> {
@@ -898,7 +901,7 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  percentRank<T extends PickQueryMetaResultRelationsWindows>(
+  percentRank<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T, 'float8'> {
@@ -925,7 +928,7 @@ export class AggregateMethods {
    *
    * @param over - OVER clause config
    */
-  cumeDist<T extends PickQueryMetaResultRelationsWindows>(
+  cumeDist<T extends PickQueryMetaSelectableResultRelationsWindows>(
     this: T,
     over?: Over<T>,
   ): NullableNumberReturn<T, 'float8'> {

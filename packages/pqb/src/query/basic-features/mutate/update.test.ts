@@ -24,7 +24,7 @@ import {
 } from 'test-utils';
 import { addQueryOn } from '../join/join';
 import { Query } from '../../query';
-import { PickQueryMeta } from '../../pick-query-types';
+import { PickQuerySelectable } from '../../pick-query-types';
 import { RelationConfigBase } from '../../relations';
 
 const TableWithReadOnly = testDb('table', (t) => ({
@@ -672,7 +672,7 @@ describe('update', () => {
 
   describe('update with relation query', () => {
     const user = Object.assign(Object.create(User), {
-      joinQuery(toQuery: PickQueryMeta, baseQuery: PickQueryMeta) {
+      joinQuery(toQuery: PickQuerySelectable, baseQuery: PickQuerySelectable) {
         return addQueryOn(toQuery, baseQuery, toQuery, 'id', 'profile.userId');
       },
     });

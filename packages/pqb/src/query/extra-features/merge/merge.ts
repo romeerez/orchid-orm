@@ -1,28 +1,43 @@
 import {
+  PickQueryMeta,
   PickQueryMetaResult,
-  PickQueryMetaResultReturnTypeWithDataWindowsThen,
   PickQueryQ,
+  PickQueryResult,
+  PickQueryReturnType,
+  PickQuerySelectable,
+  PickQueryTable,
+  PickQueryThen,
+  PickQueryWindows,
+  PickQueryWithData,
 } from '../../pick-query-types';
 import { RecordUnknown } from '../../../utils';
 import { _clone } from '../../basic-features/clone/clone';
 import { UnionSet } from '../../basic-features/union/union.sql';
 import { QueryThenByQuery } from '../../then/then';
 
-export type MergeQuery<
-  T extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-  Q extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-> = {
+export interface MergeQueryArg
+  extends PickQueryTable,
+    PickQueryMeta,
+    PickQuerySelectable,
+    PickQueryResult,
+    PickQueryReturnType,
+    PickQueryWithData,
+    PickQueryWindows,
+    PickQueryThen {}
+
+export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
   [K in keyof T]: K extends 'meta'
     ? {
-        [K in keyof T['meta'] | keyof Q['meta']]: K extends 'selectable'
-          ? Q['meta']['selectable'] &
-              Omit<T['meta']['selectable'], keyof Q['meta']['selectable']>
-          : K extends 'hasWhere' | 'hasSelect'
+        [K in keyof T['meta'] | keyof Q['meta']]: K extends
+          | 'hasWhere'
+          | 'hasSelect'
           ? T['meta'][K] & Q['meta'][K] // true if any of them is true
           : K extends keyof Q['meta']
           ? Q['meta'][K]
           : T['meta'][K];
       }
+    : K extends '__selectable'
+    ? Q['__selectable'] & Omit<T['__selectable'], keyof Q['__selectable']>
     : K extends 'result'
     ? MergeQueryResult<T, Q>
     : K extends 'returnType'
@@ -72,10 +87,10 @@ const mergableObjects = new Set([
 const dontMergeArrays = new Set(['selectAllColumns']);
 
 export class MergeQueryMethods {
-  merge<
-    T extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-    Q extends PickQueryMetaResultReturnTypeWithDataWindowsThen,
-  >(this: T, q: Q): MergeQuery<T, Q> {
+  merge<T extends MergeQueryArg, Q extends MergeQueryArg>(
+    this: T,
+    q: Q,
+  ): MergeQuery<T, Q> {
     const query = _clone(this);
     const a = query.q as never as RecordUnknown;
     const b = (q as unknown as PickQueryQ).q as never as RecordUnknown;

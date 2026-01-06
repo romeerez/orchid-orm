@@ -6,9 +6,9 @@ import { windowToSql } from '../basic-features/window/window.sql';
 import { extendQuery } from '../query.utils';
 import { addColumnParserToQuery, Column } from '../../columns';
 import {
-  PickQueryMeta,
-  PickQueryMetaResultRelationsWindows,
-  PickQueryMetaResultWindows,
+  PickQueryMetaSelectableResultRelationsWindows,
+  PickQuerySelectable,
+  PickQuerySelectableResultWindows,
 } from '../pick-query-types';
 import {
   Expression,
@@ -26,7 +26,7 @@ import { QueryData } from '../query-data';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
-  T extends PickQueryMetaResultRelationsWindows,
+  T extends PickQueryMetaSelectableResultRelationsWindows,
 > {
   // Add DISTINCT inside of function call.
   distinct?: boolean;
@@ -45,7 +45,7 @@ export interface AggregateOptions<
 }
 
 // Window definition or name.
-export type Over<T extends PickQueryMetaResultWindows> =
+export type Over<T extends PickQuerySelectableResultWindows> =
   | keyof T['windows']
   | WindowArgDeclaration<T>;
 
@@ -53,13 +53,13 @@ export type Over<T extends PickQueryMetaResultWindows> =
 // It can be a column name, expression,
 // `pairs` is for { key: value } which is translated to ('key', value) (used by `jsonObjectAgg`),
 // `value` is for a query variable (used by `stringAgg` for a delimiter).
-export type FnExpressionArgs<Q extends PickQueryMeta> = (
+export type FnExpressionArgs<Q extends PickQuerySelectable> = (
   | SelectableOrExpression<Q>
   | FnExpressionArgsPairs<Q>
   | FnExpressionArgsValue
 )[];
 
-export interface FnExpressionArgsPairs<Q extends PickQueryMeta> {
+export interface FnExpressionArgsPairs<Q extends PickQuerySelectable> {
   pairs: { [K: string]: SelectableOrExpression<Q> };
 }
 
@@ -188,7 +188,7 @@ export class FnExpression<
 
 // Applies a function expression to the query.
 export function makeFnExpression<
-  T extends PickQueryMetaResultRelationsWindows,
+  T extends PickQueryMetaSelectableResultRelationsWindows,
   C extends Column.Pick.QueryColumn,
 >(
   self: T,

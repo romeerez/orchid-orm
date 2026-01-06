@@ -3,9 +3,8 @@ import { Operators, setQueryOperators } from '../../../columns/operators';
 import { getFullColumnTable } from '../../query.utils';
 import { Column } from '../../../columns';
 import {
-  PickQueryMeta,
-  PickQueryMetaTable,
   PickQueryQ,
+  PickQuerySelectable,
   PickQueryShape,
   PickQueryTable,
 } from '../../pick-query-types';
@@ -24,13 +23,13 @@ import {
 } from '../select/select.utils';
 import { getQueryAs } from '../as/as';
 
-export type QueryGetSelf = PickQueryMetaTable;
+export type QueryGetSelf = PickQuerySelectable;
 
 // `get` method argument, accepts a string for a column name or a raw SQL
 export type GetArg<T extends QueryGetSelf> = GetStringArg<T> | Expression;
 
-export type GetStringArg<T extends PickQueryMeta> =
-  keyof T['meta']['selectable'] & string;
+export type GetStringArg<T extends PickQuerySelectable> =
+  keyof T['__selectable'] & string;
 
 // `get` method result: returns a column type for raw expression or a value type for string argument
 export type GetResult<

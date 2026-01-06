@@ -20,8 +20,6 @@ export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   tsQuery?: string;
   // Used to determine what scopes are available on the table.
   scopes: Scopes;
-  // tracking columns of the main table, joined tables, `with` tables that are available for `select`.
-  selectable: QuerySelectable;
   // union of columns to select by default or with *
   defaultSelect: PropertyKey;
 }

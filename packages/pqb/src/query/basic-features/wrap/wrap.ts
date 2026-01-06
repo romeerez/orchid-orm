@@ -1,17 +1,16 @@
-import { Query } from '../../query';
+import { IsQuery, Query } from '../../query';
 import { FromQuerySelf, queryFrom } from '../from/from';
-import { PickQueryTableMetaResult } from '../../pick-query-types';
 import { _setQueryAs, SetQueryTableAlias } from '../as/as';
 import { _clone } from '../clone/clone';
 
 export type WrapQueryArg = FromQuerySelf;
 
 export function queryWrap<
-  T extends PickQueryTableMetaResult,
+  T extends IsQuery,
   Q extends WrapQueryArg,
   As extends string = 't',
 >(self: T, query: Q, as: As = 't' as As): SetQueryTableAlias<Q, As> {
-  return _setQueryAs(queryFrom(query, self), as) as never;
+  return _setQueryAs(queryFrom(query, self) as never, as) as never;
 }
 
 /**
@@ -27,11 +26,11 @@ export function cloneQueryBaseUnscoped(query: Query) {
 }
 
 export class QueryWrap {
-  wrap<
-    T extends PickQueryTableMetaResult,
-    Q extends WrapQueryArg,
-    As extends string = 't',
-  >(this: T, query: Q, as?: As): SetQueryTableAlias<Q, As> {
+  wrap<T extends IsQuery, Q extends WrapQueryArg, As extends string = 't'>(
+    this: T,
+    query: Q,
+    as?: As,
+  ): SetQueryTableAlias<Q, As> {
     return queryWrap(this, _clone(query), as) as never;
   }
 }

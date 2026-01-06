@@ -192,9 +192,7 @@ export type DbTableOptionScopes<
 > = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => IsQuery };
 
 interface TableMeta<
-  Table extends string | undefined,
   Shape extends Column.QueryColumnsInit,
-  ShapeWithComputed extends Column.QueryColumnsInit,
   Scopes extends RecordUnknown | undefined,
 > extends QueryMetaBase<{ [K in keyof Scopes]: true }> {
   kind: 'select';
@@ -203,7 +201,6 @@ interface TableMeta<
       ? never
       : K]: true;
   };
-  selectable: SelectableFromShape<ShapeWithComputed, Table>;
   defaultSelect: ColumnsShape.DefaultSelectKeys<Shape>;
 }
 
@@ -228,6 +225,7 @@ export class Db<
   declare q: QueryData;
   declare __isQuery: true;
   declare __as: Table & string;
+  declare __selectable: SelectableFromShape<ShapeWithComputed, Table>;
   baseQuery: Query;
   columns: (keyof Shape)[];
   declare outputType: ColumnsShape.DefaultSelectOutput<Shape>;
@@ -244,7 +242,7 @@ export class Db<
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
-  declare meta: TableMeta<Table, Shape, ShapeWithComputed, Scopes>;
+  declare meta: TableMeta<Shape, Scopes>;
   internal: QueryInternal<
     {
       [K in keyof PrimaryKeys]: (

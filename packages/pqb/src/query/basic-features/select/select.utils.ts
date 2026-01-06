@@ -27,9 +27,9 @@ import { RawSql } from '../../expressions/raw-sql';
 import { SelectArg, SelectAsArg, SelectSelf } from './select';
 import { _joinLateral } from '../join/join';
 import {
-  PickQueryMeta,
   PickQueryQ,
   PickQueryQAndInternal,
+  PickQuerySelectable,
 } from '../../pick-query-types';
 import {
   Expression,
@@ -92,7 +92,7 @@ export interface QueryBatchResult {
 }
 
 // add parser for a single key-value pair of selected object
-export const addParserForSelectItem = <T extends PickQueryMeta>(
+export const addParserForSelectItem = <T extends PickQuerySelectable>(
   query: T,
   as: string | getValueKey | undefined,
   key: string,

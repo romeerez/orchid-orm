@@ -1,6 +1,7 @@
 import {
   PickQueryAs,
-  PickQueryMetaReturnType,
+  PickQueryMetaSelectableReturnType,
+  PickQuerySelectable,
   PickQueryShape,
   PickQueryTable,
   PickQueryTableMetaResult,
@@ -14,6 +15,7 @@ export interface RelationJoinQuery {
 
 export interface RelationConfigQuery
   extends PickQueryTableMetaResult,
+    PickQuerySelectable,
     PickQueryShape,
     PickQueryTable,
     PickQueryAs {}
@@ -29,7 +31,7 @@ export interface RelationConfigBase extends IsQuery {
 
   modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
 
-  maybeSingle: PickQueryMetaReturnType;
+  maybeSingle: PickQueryMetaSelectableReturnType;
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.
