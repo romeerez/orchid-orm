@@ -4,8 +4,9 @@ import {
 } from '../../query';
 import { throwIfJoinLateral, throwIfNoWhere } from '../../query.utils';
 import {
+  PickQueryHasSelectResultReturnType,
+  PickQueryMetaHasSelectResultReturnType,
   PickQueryMetaResult,
-  PickQueryMetaResultReturnType,
   PickQueryQ,
 } from '../../pick-query-types';
 import { EmptyTuple } from '../../../utils';
@@ -16,14 +17,14 @@ export type DeleteMethodsNames = 'delete';
 export type DeleteArgs<T extends PickQueryMetaResult> =
   T['meta']['hasWhere'] extends true ? EmptyTuple : [never];
 
-export type DeleteResult<T extends PickQueryMetaResultReturnType> =
-  T['meta']['hasSelect'] extends true
+export type DeleteResult<T extends PickQueryHasSelectResultReturnType> =
+  T['__hasSelect'] extends true
     ? T
     : T['returnType'] extends undefined | 'all'
     ? SetQueryReturnsRowCountMany<T>
     : SetQueryReturnsRowCount<T>;
 
-export const _queryDelete = <T extends PickQueryMetaResultReturnType>(
+export const _queryDelete = <T extends PickQueryHasSelectResultReturnType>(
   query: T,
 ): DeleteResult<T> => {
   const q = (query as unknown as PickQueryQ).q;
@@ -104,7 +105,7 @@ export class Delete {
    * ```
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  delete<T extends PickQueryMetaResultReturnType>(
+  delete<T extends PickQueryMetaHasSelectResultReturnType>(
     this: T,
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {

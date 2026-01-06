@@ -1,6 +1,7 @@
 import {
   IsQuery,
   Query,
+  QueryHasSelect,
   QueryOrExpressionBooleanOrNullResult,
   QueryTake,
   QueryTakeOptional,
@@ -207,9 +208,7 @@ export interface QueryMetaHasWhere {
 }
 
 interface QueryFnReturningSelect {
-  (q: never): {
-    meta: { hasSelect: true };
-  };
+  (q: never): QueryHasSelect;
 }
 
 const resolveCallbacksInArgs = <T extends PickQuerySelectableRelations>(

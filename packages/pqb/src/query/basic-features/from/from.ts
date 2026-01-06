@@ -6,10 +6,16 @@ import {
   SubQueryForSql,
 } from '../../sub-query/sub-query-for-sql';
 import {
+  PickQueryAs,
+  PickQueryHasSelect,
+  PickQueryMeta,
   PickQueryMetaResultAs,
   PickQueryMetaSelectableResultInputTypeAs,
-  PickQuerySelectableShapeReturnTypeWithDataAs,
   PickQueryQ,
+  PickQueryReturnType,
+  PickQuerySelectable,
+  PickQueryShape,
+  PickQueryWithData,
 } from '../../pick-query-types';
 import { MaybeArray, UnionToIntersection } from '../../../utils';
 import { getQueryAs, SetQueryTableAlias } from '../as/as';
@@ -25,7 +31,14 @@ import { SQLQueryArgs } from '../../db-sql-query';
 import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
 import { QueryThenByQuery } from '../../then/then';
 
-export type FromQuerySelf = PickQuerySelectableShapeReturnTypeWithDataAs;
+export interface FromQuerySelf
+  extends PickQueryMeta,
+    PickQuerySelectable,
+    PickQueryShape,
+    PickQueryReturnType,
+    PickQueryWithData,
+    PickQueryAs,
+    PickQueryHasSelect {}
 
 export type FromArg<T extends FromQuerySelf> =
   | IsQuery
@@ -204,7 +217,7 @@ export class FromMethods {
    */
   from<T extends FromQuerySelf, Arg extends MaybeArray<FromArg<T>>>(
     this: T,
-    arg: T['meta']['hasSelect'] extends true
+    arg: T['__hasSelect'] extends true
       ? '`select` must be placed after `from`'
       : Arg,
   ): FromResult<T, Arg> {

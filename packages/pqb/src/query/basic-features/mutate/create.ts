@@ -29,6 +29,7 @@ import {
 import { _querySelectAll } from '../select/select';
 import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import {
+  PickQueryHasSelect,
   PickQueryInputType,
   PickQueryMeta,
   PickQueryQ,
@@ -54,6 +55,7 @@ import { QueryData } from '../../query-data';
 
 export interface CreateSelf
   extends IsQuery,
+    PickQueryHasSelect,
     PickQueryMeta,
     PickQueryResult,
     PickQueryRelations,
@@ -185,7 +187,7 @@ export type CreateResult<T extends CreateSelf> = T extends { isCount: true }
 // - returns a record with selected columns if the query has a select.
 // - if the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-type InsertResult<T extends CreateSelf> = T['meta']['hasSelect'] extends true
+type InsertResult<T extends CreateSelf> = T['__hasSelect'] extends true
   ? T['returnType'] extends undefined | 'all'
     ? SetQueryReturnsOneResult<T, NarrowCreateResult<T>>
     : T['returnType'] extends 'pluck'
@@ -209,14 +211,13 @@ type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
 // - query returns inserted row count by default.
 // - returns records with selected columns if the query has a select.
 // - if the query returns a single record, forces it to return multiple records.
-type InsertManyResult<T extends CreateSelf> =
-  T['meta']['hasSelect'] extends true
-    ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
-      : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
-      : SetQueryResult<T, NarrowCreateResult<T>>
-    : SetQueryReturnsRowCountMany<T>;
+type InsertManyResult<T extends CreateSelf> = T['__hasSelect'] extends true
+  ? T['returnType'] extends 'one' | 'oneOrThrow'
+    ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
+    : T['returnType'] extends 'value' | 'valueOrThrow'
+    ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
+    : SetQueryResult<T, NarrowCreateResult<T>>
+  : SetQueryReturnsRowCountMany<T>;
 
 /**
  * When creating a record with a *belongs to* nested record,

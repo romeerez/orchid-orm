@@ -25,6 +25,7 @@ import {
 import { Expression, isExpression } from '../query/expressions/expression';
 import { BooleanQueryColumn } from '../query/basic-features/aggregate/aggregate';
 import { getValueKey } from '../query/basic-features/get/get-value-key';
+import { QueryThen } from '../query';
 
 // workaround for circular dependencies between columns and sql
 let moveMutativeQueryToCte: MoveMutativeQueryToCte;
@@ -63,11 +64,20 @@ export interface Operator<
   Column extends Column.Pick.OutputTypeAndOperators = Column.Pick.OutputTypeAndOperators,
 > {
   <T extends PickQueryResult>(this: T, arg: Value):
-    | Omit<
-        SetQueryReturnsColumnOrThrow<T, Column>,
-        keyof T['result']['value']['operators']
-      > &
-        Column['operators'];
+    | {
+        [K in Exclude<
+          keyof T,
+          keyof T['result']['value']['operators']
+        >]: K extends '__hasSelect'
+          ? true
+          : K extends 'result'
+          ? { value: Column }
+          : K extends 'returnType'
+          ? 'valueOrThrow'
+          : K extends 'then'
+          ? QueryThen<Column['outputType']>
+          : T[K];
+      } & Column['operators'];
   // argument type of the function
   _opType: Value;
 }

@@ -1,15 +1,11 @@
-import {
-  IsQuery,
-  Query,
-  QueryMetaHasSelect,
-  QueryReturnType,
-} from '../../query';
+import { IsQuery, Query, QueryReturnType } from '../../query';
 import { pushQueryArrayImmutable } from '../../query.utils';
 import { Column } from '../../../columns/column';
 import { _queryNone } from '../../extra-features/none/none';
 import { RelationsBase } from '../../relations';
 import { EmptyObject, UnionToIntersection } from '../../../utils';
 import {
+  PickQueryHasSelect,
   PickQueryQ,
   PickQueryRelationsWithData,
   PickQueryReturnType,
@@ -24,7 +20,7 @@ import { QueryMetaBase, QueryMetaIsSubQuery } from '../../query-meta';
 import { SelectItem } from './select.sql';
 import { QueryThenByReturnType } from '../../then/then';
 
-export interface SelectSelf extends PickQuerySelectable {
+export interface SelectSelf extends PickQuerySelectable, PickQueryHasSelect {
   shape: Column.QueryColumns;
   relations: RelationsBase;
   result: Column.QueryColumns;
@@ -89,12 +85,14 @@ type SelectReturnType<T extends PickQueryReturnType> =
 
 // Result type of select without the ending object argument.
 type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
-  [K in keyof T]: K extends 'result'
+  [K in keyof T]: K extends '__hasSelect'
+    ? true
+    : K extends 'result'
     ? {
         [K in '*' extends Columns[number]
           ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
           : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
-      } & (T['meta']['hasSelect'] extends (
+      } & (T['__hasSelect'] extends (
         T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
       )
         ? Omit<T['result'], Columns[number]> // Omit is optimal
@@ -109,29 +107,29 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
           [K in '*' extends Columns[number]
             ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
             : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
-        } & (T['meta']['hasSelect'] extends (
+        } & (T['__hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
         )
           ? Omit<T['result'], Columns[number]>
           : unknown)
       >
     : T[K];
-} & QueryMetaHasSelect;
+};
 
 type SelectResultObj<
   T extends SelectSelf,
   Obj,
 > = Obj extends SelectAsCheckReturnTypes
   ? {
-      [K in keyof T]: K extends 'meta'
-        ? T['meta'] & { hasSelect: true }
+      [K in keyof T]: K extends '__hasSelect'
+        ? true
         : K extends '__selectable'
         ? T['__selectable'] & SelectAsSelectable<Obj>
         : K extends 'result'
         ? // Combine previously selected items, all columns if * was provided,
           // and the selected by string and object arguments.
           {
-            [K in T['meta']['hasSelect'] extends (
+            [K in T['__hasSelect'] extends (
               T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
             )
               ? keyof Obj | keyof T['result']
@@ -148,7 +146,7 @@ type SelectResultObj<
             SelectReturnType<T>,
             // result is copy-pasted to save on TS instantiations
             {
-              [K in T['meta']['hasSelect'] extends (
+              [K in T['__hasSelect'] extends (
                 T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
               )
                 ? keyof Obj | keyof T['result']
@@ -177,8 +175,8 @@ type SelectResultColumnsAndObj<
   Columns extends PropertyKey[],
   Obj,
 > = {
-  [K in keyof T]: K extends 'meta'
-    ? T['meta'] & { hasSelect: true }
+  [K in keyof T]: K extends '__hasSelect'
+    ? true
     : K extends '__selectable'
     ? T['__selectable'] & SelectAsSelectable<Obj>
     : K extends 'result'
@@ -194,7 +192,7 @@ type SelectResultColumnsAndObj<
           : K]: K extends keyof Obj
           ? SelectAsValueResult<T, Obj[K]>
           : T['__selectable'][K]['column'];
-      } & (T['meta']['hasSelect'] extends (
+      } & (T['__hasSelect'] extends (
         T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
       )
         ? Omit<T['result'], Columns[number]>
@@ -215,7 +213,7 @@ type SelectResultColumnsAndObj<
             : K]: K extends keyof Obj
             ? SelectAsValueResult<T, Obj[K]>
             : T['__selectable'][K]['column'];
-        } & (T['meta']['hasSelect'] extends (
+        } & (T['__hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
         )
           ? Omit<T['result'], Columns[number]>

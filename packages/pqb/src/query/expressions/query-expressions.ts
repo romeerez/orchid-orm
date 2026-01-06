@@ -1,5 +1,6 @@
 import {
   PickQueryColumTypes,
+  PickQueryHasSelect,
   PickQueryMetaSelectableResultRelationsWindowsColumnTypes,
   PickQuerySelectable,
   PickQueryShape,
@@ -14,12 +15,11 @@ import { SelectableOrExpressions } from './expression';
 import { AggregateOptions, makeFnExpression } from './fn-expression';
 import { emptyObject } from '../../utils';
 import { OrExpression, OrExpressionArg } from './or-expression';
-import { QueryMetaHasSelect } from '../query';
 
 import { QueryThen } from '../then/then';
 
 interface QueryReturnsFnAdd<T extends PickQueryColumTypes>
-  extends QueryMetaHasSelect {
+  extends PickQueryHasSelect {
   type<C extends Column.Pick.QueryColumn>(
     fn: (types: T['columnTypes']) => C,
   ): {

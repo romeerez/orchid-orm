@@ -23,6 +23,7 @@ import {
 import { _queryNone } from '../../extra-features/none/none';
 import {
   PickQueryAs,
+  PickQueryHasSelect,
   PickQueryInputType,
   PickQueryMeta,
   PickQueryRelations,
@@ -53,7 +54,8 @@ export interface UpdateSelf
     PickQueryShape,
     PickQueryInputType,
     PickQueryShape,
-    PickQueryAs {}
+    PickQueryAs,
+    PickQueryHasSelect {}
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -106,7 +108,7 @@ export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
 
 // `update` and `updateOrThrow` methods output type.
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
-type UpdateResult<T extends UpdateSelf> = T['meta']['hasSelect'] extends true
+type UpdateResult<T extends UpdateSelf> = T['__hasSelect'] extends true
   ? T
   : T['returnType'] extends undefined | 'all'
   ? SetQueryReturnsRowCountMany<T>

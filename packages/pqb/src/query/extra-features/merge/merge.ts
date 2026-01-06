@@ -1,6 +1,7 @@
 import {
+  PickQueryHasSelect,
+  PickQueryHasSelectResult,
   PickQueryMeta,
-  PickQueryMetaResult,
   PickQueryQ,
   PickQueryResult,
   PickQueryReturnType,
@@ -23,19 +24,20 @@ export interface MergeQueryArg
     PickQueryReturnType,
     PickQueryWithData,
     PickQueryWindows,
-    PickQueryThen {}
+    PickQueryThen,
+    PickQueryHasSelect {}
 
 export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
   [K in keyof T]: K extends 'meta'
     ? {
-        [K in keyof T['meta'] | keyof Q['meta']]: K extends
-          | 'hasWhere'
-          | 'hasSelect'
+        [K in keyof T['meta'] | keyof Q['meta']]: K extends 'hasWhere'
           ? T['meta'][K] & Q['meta'][K] // true if any of them is true
           : K extends keyof Q['meta']
           ? Q['meta'][K]
           : T['meta'][K];
       }
+    : K extends '__hasSelect'
+    ? T['__hasSelect'] & Q['__hasSelect']
     : K extends '__selectable'
     ? Q['__selectable'] & Omit<T['__selectable'], keyof Q['__selectable']>
     : K extends 'result'
@@ -51,9 +53,9 @@ export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
       ? QueryThenByQuery<T, MergeQueryResult<T, Q>>
       : Q['returnType'] extends 'all' | 'one' | 'oneOrThrow' | 'rows'
       ? QueryThenByQuery<Q, MergeQueryResult<T, Q>>
-      : Q['meta']['hasSelect'] extends true
+      : Q['__hasSelect'] extends true
       ? Q['then']
-      : T['meta']['hasSelect'] extends true
+      : T['__hasSelect'] extends true
       ? T['then']
       : Q['then']
     : K extends 'windows'
@@ -64,10 +66,10 @@ export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
 };
 
 type MergeQueryResult<
-  T extends PickQueryMetaResult,
-  Q extends PickQueryMetaResult,
-> = T['meta']['hasSelect'] extends true
-  ? Q['meta']['hasSelect'] extends true
+  T extends PickQueryHasSelectResult,
+  Q extends PickQueryHasSelectResult,
+> = T['__hasSelect'] extends true
+  ? Q['__hasSelect'] extends true
     ? Omit<T['result'], keyof Q['result']> & Q['result']
     : T['result']
   : Q['result'];

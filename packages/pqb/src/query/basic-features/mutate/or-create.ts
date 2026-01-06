@@ -1,7 +1,7 @@
 import { _queryInsert, CreateData } from './create';
 import { UpsertResult, UpsertThis } from './upsert';
 import {
-  PickQueryMetaResultReturnType,
+  PickQueryHasSelectResultReturnType,
   PickQueryQ,
 } from '../../pick-query-types';
 import { FnUnknownToUnknown, RecordUnknown } from '../../../utils';
@@ -13,7 +13,7 @@ export type OrCreateArg<Data> = Data | (() => Data);
 
 // this is used by `upsert` and `orCreate` methods.
 // `updateData` and `mergeData` args are passed only by `upsert`.
-export function _orCreate<T extends PickQueryMetaResultReturnType>(
+export function _orCreate<T extends PickQueryHasSelectResultReturnType>(
   query: T,
   data: unknown | FnUnknownToUnknown,
   updateData?: unknown,

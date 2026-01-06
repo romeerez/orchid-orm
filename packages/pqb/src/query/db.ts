@@ -226,6 +226,7 @@ export class Db<
   declare __isQuery: true;
   declare __as: Table & string;
   declare __selectable: SelectableFromShape<ShapeWithComputed, Table>;
+  declare __hasSelect: boolean;
   baseQuery: Query;
   columns: (keyof Shape)[];
   declare outputType: ColumnsShape.DefaultSelectOutput<Shape>;

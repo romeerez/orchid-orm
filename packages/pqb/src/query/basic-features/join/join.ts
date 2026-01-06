@@ -11,7 +11,6 @@ import {
   PickQueryQ,
   PickQueryRelationsWithData,
   PickQueryTable,
-  PickQueryMetaResultShapeAs,
   PickQueryResultAs,
   PickQueryShapeAs,
   PickQuerySelectable,
@@ -21,6 +20,7 @@ import {
   PickQuerySelectableResultAs,
   PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
   PickQuerySelectableShapeRelationsWithDataAsResultReturnType,
+  PickQueryHasSelectResultShapeAs,
 } from '../../pick-query-types';
 import {
   EmptyTuple,
@@ -233,9 +233,9 @@ export type JoinResultFromArgs<
         ReturnType<Args[0]>['__as'],
         RequireJoined
       >
-    : Arg extends PickQueryMetaResultShapeAs
+    : Arg extends PickQueryHasSelectResultShapeAs
     ? JoinResultSelectable<
-        Arg['meta']['hasSelect'] extends true
+        Arg['__hasSelect'] extends true
           ? // If joined query has select, computed values won't be available, use `result` as is
             Arg['result']
           : // If no select, allow using computed values by setting result to shape

@@ -5,6 +5,7 @@ import { RecordUnknown, setObjectValueImmutable } from '../../../utils';
 import { QueryMetaBase } from '../../query-meta';
 import {
   PickQueryBaseQuery,
+  PickQueryHasSelect,
   PickQueryInternal,
   PickQueryMetaResultReturnType,
   PickQueryQ,
@@ -63,7 +64,9 @@ const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
   };
 };
 
-export interface QueryWithSoftDelete extends PickQueryMetaResultReturnType {
+export interface QueryWithSoftDelete
+  extends PickQueryMetaResultReturnType,
+    PickQueryHasSelect {
   meta: QueryMetaBase<{ nonDeleted: true }>;
 }
 

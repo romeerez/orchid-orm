@@ -49,14 +49,13 @@ type CreateRawOrFromResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryReturnsColumn<T>
   : T;
 
-type InsertRawOrFromResult<T extends CreateSelf> =
-  T['meta']['hasSelect'] extends true
-    ? T['returnType'] extends undefined | 'all'
-      ? SetQueryReturnsOne<T>
-      : T['returnType'] extends 'pluck'
-      ? SetQueryReturnsColumn<T>
-      : T
-    : SetQueryReturnsRowCount<T>;
+type InsertRawOrFromResult<T extends CreateSelf> = T['__hasSelect'] extends true
+  ? T['returnType'] extends undefined | 'all'
+    ? SetQueryReturnsOne<T>
+    : T['returnType'] extends 'pluck'
+    ? SetQueryReturnsColumn<T>
+    : T
+  : SetQueryReturnsRowCount<T>;
 
 type CreateManyFromResult<T extends CreateSelf> = T extends {
   isCount: true;
@@ -68,14 +67,13 @@ type CreateManyFromResult<T extends CreateSelf> = T extends {
   ? SetValueQueryReturnsPluckColumn<T>
   : T;
 
-type InsertManyFromResult<T extends CreateSelf> =
-  T['meta']['hasSelect'] extends true
-    ? T['returnType'] extends 'one' | 'oneOrThrow'
-      ? SetQueryReturnsAll<T>
-      : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetValueQueryReturnsPluckColumn<T>
-      : T
-    : SetQueryReturnsRowCountMany<T>;
+type InsertManyFromResult<T extends CreateSelf> = T['__hasSelect'] extends true
+  ? T['returnType'] extends 'one' | 'oneOrThrow'
+    ? SetQueryReturnsAll<T>
+    : T['returnType'] extends 'value' | 'valueOrThrow'
+    ? SetValueQueryReturnsPluckColumn<T>
+    : T
+  : SetQueryReturnsRowCountMany<T>;
 
 /**
  * Is used by all create from queries methods.

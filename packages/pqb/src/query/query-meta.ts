@@ -9,8 +9,6 @@ export interface QuerySelectable {
 export interface QueryMetaBase<Scopes extends RecordKeyTrue = RecordKeyTrue> {
   // single relations (belongsTo, hasOne) returns one when subQuery is true, returns many otherwise
   subQuery: boolean;
-  // return type of `create`, `update`, `delete` depends on whether the query has select
-  hasSelect?: true;
   // `update` and `delete` require the query to have `where`.
   // Calling `.all()` is also setting `hasWhere` to true.
   hasWhere?: true;

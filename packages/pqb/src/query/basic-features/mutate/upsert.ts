@@ -7,7 +7,7 @@ import {
 import { _queryUpdate, UpdateData, UpdateSelf } from './update';
 import { CreateData, CreateSelf } from './create';
 import { _orCreate } from './or-create';
-import { PickQueryMetaResultReturnType } from '../../pick-query-types';
+import { PickQueryHasSelectResultReturnType } from '../../pick-query-types';
 import { isObjectEmpty } from '../../../utils';
 import { _clone } from '../clone/clone';
 import { QueryMetaBase } from '../../query-meta';
@@ -19,8 +19,8 @@ type UpsertCreate<DataKey extends PropertyKey, CD> = {
 };
 
 // unless upsert query has a select, it returns void
-export type UpsertResult<T extends PickQueryMetaResultReturnType> =
-  T['meta']['hasSelect'] extends true
+export type UpsertResult<T extends PickQueryHasSelectResultReturnType> =
+  T['__hasSelect'] extends true
     ? T['returnType'] extends 'value' | 'valueOrThrow'
       ? SetValueQueryReturnsValueOrThrow<T>
       : SetQueryReturnsOne<T>

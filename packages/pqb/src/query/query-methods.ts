@@ -76,7 +76,6 @@ import { Column } from '../columns';
 import { Expression, SelectableOrExpression } from './expressions/expression';
 import { applyMixins, EmptyObject } from '../utils';
 import {
-  PickQueryMetaResult,
   PickQueryMetaResultReturnType,
   PickQueryRelations,
   PickQueryResult,
@@ -87,6 +86,7 @@ import {
   PickQueryMetaSelectableShapeRelationsReturnType,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
   PickQueryTableMetaShapeTableAs,
+  PickQueryHasSelectResult,
 } from './pick-query-types';
 import {
   _getQueryAs,
@@ -658,9 +658,9 @@ export class QueryMethods<ColumnTypes> {
    *
    * @param columns - column names or a raw SQL
    */
-  group<T extends PickQueryMetaResult>(
+  group<T extends PickQueryHasSelectResult>(
     this: T,
-    ...columns: T['meta']['hasSelect'] extends true
+    ...columns: T['__hasSelect'] extends true
       ? GroupArgs<T>
       : { error: 'select is required for group' }[]
   ): T {
