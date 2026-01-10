@@ -1,25 +1,24 @@
 import { QueryMethods } from './query-methods';
-import { QueryData, QueryDataBase } from './query-data';
+import { QueryData } from './query-data';
 import { QueryBuilder } from './db';
 import { Column } from '../columns/column';
-import { TableData } from '../tableData';
 import { WithDataItems } from './basic-features/cte/cte.sql';
 import { ColumnsShape } from '../columns';
-import { QueryMetaBase, QuerySelectable } from './query-meta';
-import { QueryInternalBase } from './query-internal';
+import { QueryInternal } from './query-internal';
 import {
   PickQueryResult,
   PickQueryResultReturnType,
   PickQueryReturnType,
   PickQuerySelectable,
   PickQueryShape,
+  PickQueryTable,
 } from './pick-query-types';
 import { EmptyObject, RecordKeyTrue, RecordUnknown } from '../utils';
 import { RelationsBase } from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import { Expression } from './expressions/expression';
 import { GetStringArg } from './basic-features/get/get.utils';
-import { QueryMetaHasWhere } from './basic-features/where/where';
+import { QueryHasWhere } from './basic-features/where/where';
 import {
   QueryCatch,
   QueryThen,
@@ -49,34 +48,6 @@ export interface DbDomainArg<ColumnTypes> {
 export interface DbDomainArgRecord {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [K: string]: DbDomainArg<any>;
-}
-
-export interface QueryInternal<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  SinglePrimaryKey = any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  UniqueColumns = any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  UniqueColumnNames = any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  UniqueColumnTuples = any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  UniqueConstraints = any,
-> extends QueryInternalBase {
-  singlePrimaryKey: SinglePrimaryKey;
-  uniqueColumns: UniqueColumns;
-  uniqueColumnNames: UniqueColumnNames;
-  uniqueColumnTuples: UniqueColumnTuples;
-  uniqueConstraints: UniqueConstraints;
-  extensions?: DbExtension[];
-  domains?: DbDomainArgRecord;
-  generatorIgnore?: GeneratorIgnore;
-  tableData: TableData;
-  // For customizing `now()` sql
-  nowSQL?: string;
-  // for select, where, join callbacks: memoize a query extended with relations, so query.relName is a relation query
-  callbackArg?: Query;
-  selectAllCount: number;
 }
 
 export type SelectableFromShape<
@@ -111,39 +82,54 @@ export interface IsQuery {
   __isQuery: true;
 }
 
+// affects on typing of `chain`
+export interface IsSubQuery {
+  __subQuery: true;
+}
+
 export interface IsQueries {
   [K: string]: IsQuery;
-}
-
-export interface QueryBase extends IsQuery, PickQueryShape {
-  internal: QueryInternalBase;
-  q: QueryDataBase;
-  table?: string;
-}
-
-// It is a generic interface that covers any query:
-// both the table query objects
-// and the lightweight queries inside `where` and `on` callbacks
-export interface QueryBaseCommon<Scopes extends RecordKeyTrue = RecordKeyTrue>
-  extends QueryBase {
-  meta: QueryMetaBase<Scopes>;
 }
 
 export interface QueryOrExpression<T> {
   result: { value: Column.Pick.QueryColumnOfType<T> };
 }
 
-export interface Query extends QueryBase, QueryMethods<unknown> {
-  __isQuery: true;
+// query metadata that is stored only on TS side, not available in runtime
+export interface QuerySelectable {
+  [K: PropertyKey]: { as: string; column: Column.Pick.QueryColumn };
+}
+
+export interface Query
+  extends IsQuery,
+    PickQueryTable,
+    PickQueryShape,
+    PickQuerySelectable,
+    QueryMethods<unknown> {
   __as: string;
-  __selectable: QuerySelectable;
+
+  // Commented out for TS optimizations purposes:
+  // Single relations (belongsTo, hasOne) returns one when subQuery is true, returns many otherwise.
+  // It is of type `true | undefined` when is set.
+  // __subQuery: boolean;
+  // Union of available full text search aliases to use in `headline` and in `order`.
+  // __tsQuery?: string;
+
   // return type of `create`, `update`, `delete` depends on whether the query has select
   __hasSelect: boolean;
+  // `update` and `delete` require the query to have `where`.
+  // Calling `.all()` is also setting `__hasWhere` to true.
+  __hasWhere: boolean;
+  // Record<string, true> where keys are columns with defaults for `create` to make them optional.
+  __defaults: EmptyObject;
+  // Used to determine what scopes are available on the table.
+  __scopes: EmptyObject;
+  // union of columns to select by default or with *
+  __defaultSelect: PropertyKey;
   result: Column.QueryColumns;
   withData: WithDataItems;
   baseQuery: Query;
   internal: QueryInternal;
-  meta: QueryMetaBase<EmptyObject>;
   returnType: QueryReturnType;
   qb: QueryBuilder;
   columnTypes: unknown;
@@ -189,7 +175,7 @@ export type SetQueryReturnsAll<T extends PickQueryResult> = {
     : K extends 'then'
     ? QueryThenShallowSimplifyArr<ColumnsShape.Output<T['result']>>
     : T[K];
-} & QueryMetaHasWhere;
+} & QueryHasWhere;
 
 export type SetQueryReturnsAllResult<
   T extends PickQueryResult,
@@ -202,7 +188,7 @@ export type SetQueryReturnsAllResult<
     : K extends 'then'
     ? QueryThenShallowSimplifyArr<T['result']>
     : T[K];
-} & QueryMetaHasWhere;
+} & QueryHasWhere;
 
 export type QueryTakeOptional<T extends PickQueryResultReturnType> =
   T['returnType'] extends 'value' | 'pluck' | 'void'
@@ -223,6 +209,14 @@ export type QueryTakeOptional<T extends PickQueryResultReturnType> =
           : T[K];
       };
 
+export type QueryManyTakeOptional<T extends PickQueryResultReturnType> = {
+  [K in keyof T]: K extends 'returnType'
+    ? 'one'
+    : K extends 'then'
+    ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<T['result']>>
+    : T[K];
+};
+
 export type QueryTake<T extends PickQueryResultReturnType> =
   T['returnType'] extends 'valueOrThrow' | 'pluck' | 'void'
     ? T
@@ -241,6 +235,14 @@ export type QueryTake<T extends PickQueryResultReturnType> =
           ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
           : T[K];
       };
+
+export type QueryManyTake<T extends PickQueryResultReturnType> = {
+  [K in keyof T]: K extends 'returnType'
+    ? 'oneOrThrow'
+    : K extends 'then'
+    ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
+    : T[K];
+};
 
 export type SetQueryReturnsOne<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'

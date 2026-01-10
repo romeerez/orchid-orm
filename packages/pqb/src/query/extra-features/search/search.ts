@@ -12,7 +12,7 @@ import { columnToSql } from '../../sql/column-to-sql';
 import { Operators } from '../../../columns/operators';
 import { Column } from '../../../columns';
 import { OrchidOrmInternalError } from '../../errors';
-import { PickQueryMeta, PickQuerySelectable } from '../../pick-query-types';
+import { PickQuerySelectable, PickQueryTsQuery } from '../../pick-query-types';
 import { Expression, ExpressionData } from '../../expressions/expression';
 import { addValue, emptyObject, MaybeArray } from '../../../utils';
 import { _clone } from '../../basic-features/clone/clone';
@@ -25,11 +25,11 @@ import {
 } from './search.sql';
 import { ToSQLCtx } from '../../sql/to-sql';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
-import { PickQueryMetaSelectable } from 'pqb';
+import { OrderArgSelf } from '../../basic-features/order/order';
 
 // `headline` first argument is a name of the search.
-type HeadlineSearchArg<T extends PickQueryMeta> = Exclude<
-  T['meta']['tsQuery'],
+type HeadlineSearchArg<T extends PickQueryTsQuery> = Exclude<
+  T['__tsQuery'],
   undefined
 >;
 
@@ -114,7 +114,7 @@ declare module '../../basic-features/aggregate/aggregate' {
      * @param search - name of the search to use the query from
      * @param options - `text` for a text source, `options` for `ts_headline` options
      */
-    headline<T extends PickQueryMetaSelectable>(
+    headline<T extends OrderArgSelf>(
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,
@@ -180,7 +180,7 @@ export type SearchArg<T extends PickQuerySelectable, As extends string> = {
 
 // query type after `search`: this is collecting search aliases in `meta.tsQuery`
 export type WhereSearchResult<T, As extends string> = T & {
-  meta: { tsQuery: string extends As ? never : As };
+  __tsQuery: string extends As ? never : As;
 };
 
 class Headline extends Expression<Column.Pick.QueryColumnOfType<string>> {
@@ -221,21 +221,17 @@ class Headline extends Expression<Column.Pick.QueryColumnOfType<string>> {
 Object.assign(Headline, Operators.text);
 
 AggregateMethods.prototype.headline = function (
-  this: PickQueryMeta,
-  search,
-  params,
+  this: PickQuerySelectable,
+  search: string,
+  params?: HeadlineParams<Query>,
 ) {
   const q = this as unknown as Query;
   const source = q.q.sources?.[search];
   if (!source)
     throw new OrchidOrmInternalError(q, `Search \`${search}\` is not defined`);
 
-  return new Headline(
-    q.q as ExpressionData,
-    source,
-    params as HeadlineParams<Query> | undefined,
-  ) as never;
-};
+  return new Headline(q.q as ExpressionData, source, params);
+} as never;
 
 export class SearchMethods {
   /**
@@ -426,7 +422,7 @@ export class SearchMethods {
    *
    * @param arg - search config
    */
-  search<T extends PickQueryMetaSelectable, As extends string>(
+  search<T extends PickQuerySelectable, As extends string>(
     this: T,
     arg: SearchArg<T, As>,
   ): WhereSearchResult<T, As> {

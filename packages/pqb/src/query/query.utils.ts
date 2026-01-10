@@ -1,7 +1,6 @@
 import {
   IsQuery,
   Query,
-  QueryBase,
   QueryTake,
   QueryTakeOptional,
   SetQueryReturnsAll,
@@ -193,9 +192,7 @@ export const getFullColumnTable = (
   as: string | getValueKey | undefined,
 ): string => {
   const table = column.slice(0, index);
-  return as &&
-    table !== as &&
-    _checkIfAliased(q as QueryBase, table, as as string)
+  return as && table !== as && _checkIfAliased(q as Query, table, as as string)
     ? (as as string)
     : table;
 };

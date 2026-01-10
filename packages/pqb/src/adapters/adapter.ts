@@ -1,7 +1,7 @@
 import { emptyObject } from '../utils';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
-import { QueryBaseCommon, QueryLogObject } from '../query';
+import { Query, QueryLogObject } from '../query';
 
 /**
  * Generic result returning from query methods.
@@ -175,13 +175,13 @@ export interface TransactionState {
  */
 export type TransactionAfterCommitHook =
   | unknown[]
-  | QueryBaseCommon
+  | Query
   | AfterCommitHook[]
   | AfterCommitStandaloneHook;
 
 // Function to call after transaction commit.
 export interface AfterCommitHook {
-  (data: unknown[], q: QueryBaseCommon): unknown | Promise<unknown>;
+  (data: unknown[], q: Query): unknown | Promise<unknown>;
 }
 
 export interface AfterCommitStandaloneHook {

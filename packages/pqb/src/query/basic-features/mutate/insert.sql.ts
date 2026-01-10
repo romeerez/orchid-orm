@@ -41,6 +41,7 @@ import { Expression, isExpression } from '../../expressions/expression';
 import { HookSelect } from '../select/hook-select';
 import { getPrimaryKeys } from '../../query-columns/primary-keys';
 import { _clone } from '../clone/clone';
+import { Query } from '../../query';
 
 export type OnConflictTarget =
   | string
@@ -728,7 +729,7 @@ export const makeReturningSql = (
     }
 
     if (q.q.selectRelation) {
-      for (const column of getPrimaryKeys(q)) {
+      for (const column of getPrimaryKeys(q as Query)) {
         tempSelect.set(column, { select: column });
       }
     }

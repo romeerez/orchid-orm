@@ -69,7 +69,7 @@ describe('merge queries', () => {
     it('should use right where when left has no where', () => {
       const q = User.merge(User.where({ id: 1 }));
 
-      assertType<(typeof q)['meta']['hasWhere'], true>();
+      assertType<(typeof q)['__hasWhere'], true>();
 
       expectSql(
         q.toSQL(),
@@ -83,7 +83,7 @@ describe('merge queries', () => {
         User.where({ id: 2 }),
       );
 
-      assertType<(typeof q)['meta']['hasWhere'], true>();
+      assertType<(typeof q)['__hasWhere'], true>();
 
       expectSql(
         q.toSQL(),

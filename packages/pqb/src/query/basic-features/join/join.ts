@@ -1,12 +1,15 @@
-import { IsQuery, Query, SelectableFromShape } from '../../query';
+import {
+  IsQuery,
+  Query,
+  QuerySelectable,
+  SelectableFromShape,
+} from '../../query';
 import { Column } from '../../../columns/column';
 import { addColumnParserToQuery, ColumnsShape } from '../../../columns';
 import {
-  PickQueryMetaResult,
-  PickQueryMetaResultAs,
+  PickQueryResult,
   PickQuerySelectableResultRelationsWithDataReturnType,
-  PickQueryMetaResultRelationsWithDataReturnTypeShape,
-  PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+  PickQueryResultRelationsWithDataReturnTypeShape,
   PickQuerySelectableShapeRelationsWithDataAs,
   PickQueryQ,
   PickQueryRelationsWithData,
@@ -45,7 +48,6 @@ import { preprocessJoinArg, processJoinArgs } from './process-join-args';
 import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
 import { getShapeFromSelect } from '../select/select.utils';
 import { WithDataItem } from '../cte/cte.sql';
-import { QueryMetaBase, QuerySelectable } from '../../query-meta';
 import { isRelationQuery, RelationConfigBase } from '../../relations';
 import { ComputedColumns } from '../../extra-features/computed/computed';
 import { throwIfJoinLateral } from '../../query.utils';
@@ -356,7 +358,7 @@ export type JoinArgToQuery<
        * Constructs `selectable` based on `with` table shape.
        */
       {
-        [K in 'meta' | 'result' | '__as' | keyof T]: K extends '__as'
+        [K in 'result' | '__as' | keyof T]: K extends '__as'
           ? T['withData'][Arg]['table']
           : K extends '__selectable'
           ? {
@@ -373,7 +375,7 @@ export type JoinArgToQuery<
           : never;
       }
     : never
-  : Arg extends PickQueryMetaResultAs
+  : Arg extends PickQuerySelectableResultAs
   ? Arg
   : Arg extends keyof T['relations']
   ? T['relations'][Arg]['query']
@@ -489,7 +491,7 @@ export const _joinReturningArgs = <
     if (relation) {
       shape = getShapeFromSelect(relation.query as never);
       const r = prepareSubQueryForSql(query as never, relation.query as Query);
-      parsers = getQueryParsers(r);
+      parsers = getQueryParsers(r as unknown as Query);
       batchParsers = r.q.batchParsers;
       computeds = r.q.runtimeComputeds;
     } else {
@@ -620,7 +622,7 @@ const addAllShapesAndParsers = (
  */
 export const _join = <
   T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
-  R extends PickQueryMetaResult,
+  R extends PickQueryResult,
   RequireJoined extends boolean,
   RequireMain extends boolean,
 >(
@@ -661,7 +663,6 @@ export const _joinLateralProcessArg = (
     q: JoinQueryBuilder<PickQuerySelectableShape, PickQuerySelectableResultAs>,
   ) => {
     table: string;
-    meta: QueryMetaBase;
     result: Column.QueryColumns;
   },
 ): Query => {
@@ -715,7 +716,7 @@ export const _joinLateralProcessArg = (
  * @param innerJoinLateral - add `ON p.r IS NOT NULL` check to have INNER JOIN like experience when sub-selecting arrays.
  */
 export const _joinLateral = (
-  self: PickQueryMetaResultRelationsWithDataReturnTypeShape,
+  self: PickQueryResultRelationsWithDataReturnTypeShape,
   type: string,
   joinQuery: Query,
   as?: string,
@@ -1299,7 +1300,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   leftJoin<
-    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1338,7 +1339,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   rightJoin<
-    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1377,7 +1378,7 @@ export class QueryJoin {
    * @param args - {@link JoinArgs}
    */
   fullJoin<
-    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     Args extends JoinArgs<T, Arg>,
   >(
@@ -1459,7 +1460,7 @@ export class QueryJoin {
    * @param cb - {@link JoinLateralCallback}
    */
   joinLateral<
-    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     As extends string,
     Result extends Column.QueryColumns,
@@ -1496,7 +1497,7 @@ export class QueryJoin {
    * @param cb - {@link JoinLateralCallback}
    */
   leftJoinLateral<
-    T extends PickQueryMetaSelectableResultRelationsWithDataReturnTypeShapeAs,
+    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
     Arg extends JoinFirstArg<T>,
     As extends string,
     Result extends Column.QueryColumns,

@@ -68,9 +68,7 @@ export interface Operator<
         [K in Exclude<
           keyof T,
           keyof T['result']['value']['operators']
-        >]: K extends '__hasSelect'
-          ? true
-          : K extends 'result'
+        >]: K extends 'result'
           ? { value: Column }
           : K extends 'returnType'
           ? 'valueOrThrow'
@@ -227,13 +225,14 @@ const quoteLikeValue = (
 
 // common operators that exist for any types
 interface Base<Value> {
+  __hasSelect: true;
   equals: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   not: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   in: Operator<Value[] | IsQuery | Expression, BooleanQueryColumn>;
   notIn: Operator<Value[] | IsQuery | Expression, BooleanQueryColumn>;
 }
 
-const base: Base<unknown> = {
+const base = {
   equals: make((key, value, ctx, quotedAs) =>
     value === null
       ? `${key} IS NULL`
@@ -252,7 +251,7 @@ const base: Base<unknown> = {
     (key, value, ctx, quotedAs) =>
       `NOT ${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
-};
+} as Base<unknown>;
 
 interface OperatorsBooleanSelf extends OperatorsBoolean {
   result: { value: BooleanQueryColumn };
@@ -752,7 +751,12 @@ export interface OperatorsArray<T> extends Ord<T[]> {
   length: {
     _opType:
       | number
-      | { [K in keyof OperatorsNumber]?: OperatorsNumber[K]['_opType'] };
+      | {
+          [K in Exclude<
+            keyof OperatorsNumber,
+            '__hasSelect'
+          >]?: OperatorsNumber[K]['_opType'];
+        };
   };
 }
 

@@ -1,5 +1,4 @@
 import { _clone } from '../../basic-features/clone/clone';
-import { PickQueryMeta } from '../../pick-query-types';
 import { SetQueryReturnsVoid } from '../../query';
 import { _queryExec } from '../../query.utils';
 
@@ -20,7 +19,7 @@ export class QueryTruncate {
    *
    * @param options - truncate options, may have `cascade: true` and `restartIdentity: true`
    */
-  truncate<T extends PickQueryMeta>(
+  truncate<T>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoid<T> {

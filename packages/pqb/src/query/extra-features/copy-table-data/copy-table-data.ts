@@ -1,4 +1,4 @@
-import { PickQueryMetaShape, PickQueryShape } from '../../pick-query-types';
+import { PickQueryShape } from '../../pick-query-types';
 import { _clone } from '../../basic-features/clone/clone';
 import { CopyOptions } from './copy-table-data.sql';
 
@@ -53,7 +53,7 @@ type CopyArg<T extends PickQueryShape> = CopyOptions<keyof T['shape']>;
  *
  * @param arg - object with copy options
  */
-export function copyTableData<T extends PickQueryMetaShape>(
+export function copyTableData<T extends PickQueryShape>(
   query: T,
   arg: CopyArg<T>,
 ): T {

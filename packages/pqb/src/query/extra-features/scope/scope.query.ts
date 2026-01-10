@@ -1,11 +1,10 @@
-import { Where, WhereResult } from '../../basic-features/where/where';
+import { QueryHasWhere, Where } from '../../basic-features/where/where';
 import { SelectableFromShape } from '../../query';
 import { Column } from '../../../columns/column';
 import {
-  PickQueryMeta,
+  PickQueryScopes,
   PickQuerySelectableShapeRelationsWithData,
 } from '../../pick-query-types';
-import { QueryMetaBase } from '../../query-meta';
 import { setObjectValueImmutable } from '../../../utils';
 import { _clone } from '../../basic-features/clone/clone';
 import { QueryDataScopes } from '../../query-data';
@@ -23,7 +22,6 @@ export interface ScopeArgumentQuery<
   __isQuery: true;
   table: Table;
   shape: Shape;
-  meta: QueryMetaBase;
   __selectable: SelectableFromShape<Shape, Table>;
 }
 
@@ -73,10 +71,10 @@ export class QueryScope {
    *
    * @param scope - name of the scope to apply
    */
-  scope<T extends PickQueryMeta>(
+  scope<T extends PickQueryScopes>(
     this: T,
-    scope: keyof T['meta']['scopes'],
-  ): WhereResult<T> {
+    scope: keyof T['__scopes'],
+  ): T & QueryHasWhere {
     const q = _clone(this);
 
     if (!q.q.scopes?.[scope as string]) {
@@ -102,10 +100,7 @@ export class QueryScope {
    *
    * @param scope - name of the scope to remove from the query
    */
-  unscope<T extends PickQueryMeta>(
-    this: T,
-    scope: keyof T['meta']['scopes'],
-  ): T {
+  unscope<T extends PickQueryScopes>(this: T, scope: keyof T['__scopes']): T {
     const q = _clone(this);
 
     if (q.q.scopes) {

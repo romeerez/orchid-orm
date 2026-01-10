@@ -7,7 +7,6 @@ import {
 } from '../../commands/migrateOrRollback';
 import {
   AdapterBase,
-  QueryBase,
   defaultSchemaConfig,
   makeColumnTypes as defaultColumnTypes,
   Query,
@@ -19,7 +18,7 @@ import {
 } from '../../config';
 
 interface OrmParam {
-  $qb: QueryBase;
+  $qb: Query;
 }
 
 type UnknownPromiseFns = (() => Promise<unknown>)[];

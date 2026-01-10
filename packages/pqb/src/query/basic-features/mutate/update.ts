@@ -6,7 +6,7 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../../query';
 import { throwIfNoWhere } from '../../query.utils';
-import { _queryWhereIn, WhereResult } from '../where/where';
+import { _queryWhereIn, QueryHasWhere } from '../where/where';
 import {
   anyShape,
   Column,
@@ -24,8 +24,8 @@ import { _queryNone } from '../../extra-features/none/none';
 import {
   PickQueryAs,
   PickQueryHasSelect,
+  PickQueryHasWhere,
   PickQueryInputType,
-  PickQueryMeta,
   PickQueryRelations,
   PickQueryResult,
   PickQueryReturnType,
@@ -46,7 +46,6 @@ import { ToSQLQuery } from '../../sql/to-sql';
 
 export interface UpdateSelf
   extends PickQuerySelectable,
-    PickQueryMeta,
     PickQueryResult,
     PickQueryRelations,
     PickQueryWithData,
@@ -55,7 +54,8 @@ export interface UpdateSelf
     PickQueryInputType,
     PickQueryShape,
     PickQueryAs,
-    PickQueryHasSelect {}
+    PickQueryHasSelect,
+    PickQueryHasWhere {}
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -102,7 +102,7 @@ type UpdateRelationData<
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.
-export type UpdateArg<T extends UpdateSelf> = T['meta']['hasWhere'] extends true
+export type UpdateArg<T extends UpdateSelf> = T['__hasWhere'] extends true
   ? UpdateData<T>
   : 'Update statement must have where conditions. To update all prefix `update` with `all()`';
 
@@ -293,7 +293,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
           queryResult.rows.map((item) => primaryKeys.map((key) => item[key])),
         );
 
-        await _queryUpdate(t as WhereResult<Query>, ctx.collect.data as never);
+        await _queryUpdate(t, ctx.collect.data as never);
 
         for (const row of queryResult.rows) {
           Object.assign(row, ctx.collect.data);
@@ -616,7 +616,7 @@ export class Update {
     this: T,
     arg: Arg,
     ...args: Args
-  ): JoinResultFromArgs<WhereResult<T>, Arg, Args, true, true> {
+  ): JoinResultFromArgs<T, Arg, Args, true, true> & QueryHasWhere {
     const q = _clone(this);
 
     const joinArgs = _joinReturningArgs(

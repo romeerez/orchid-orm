@@ -1,4 +1,4 @@
-import { ORMTableInput, TableClass } from '../baseTable';
+import { ORMTableInput } from '../baseTable';
 import {
   _queryCreate,
   _queryDefaults,
@@ -19,8 +19,6 @@ import {
   Query,
   SelectableFromShape,
   setQueryObjectValueImmutable,
-  QueryTake,
-  QueryTakeOptional,
   UpdateCtx,
   UpdateCtxCollect,
   UpdateData,
@@ -42,6 +40,9 @@ import {
   _with,
   RawSql,
   _orCreate,
+  QueryHasWhere,
+  QueryManyTake,
+  QueryManyTakeOptional,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -51,12 +52,11 @@ import {
 } from './relations';
 import {
   addAutoForeignKey,
+  HasRelJoin,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
-  RelJoin,
   selectIfNotSelected,
 } from './common/utils';
-import { RelationRefsOptions } from './common/options';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface BelongsTo extends RelationThunkBase {
@@ -66,56 +66,43 @@ export interface BelongsTo extends RelationThunkBase {
 
 export interface BelongsToOptions<
   Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
-  Related extends TableClass = TableClass,
+  Related extends ORMTableInput = ORMTableInput,
 > {
   required?: boolean;
   columns: (keyof Columns)[];
-  references: (keyof InstanceType<Related>['columns']['shape'])[];
+  references: (keyof Related['columns']['shape'])[];
   foreignKey?: boolean | TableData.References.Options;
-  on?: ColumnsShape.InputPartial<InstanceType<Related>['columns']['shape']>;
+  on?: ColumnsShape.InputPartial<Related['columns']['shape']>;
 }
 
-export type BelongsToFKey<Relation extends RelationThunkBase> =
-  Relation['options'] extends RelationRefsOptions
-    ? Relation['options']['columns'][number]
-    : never;
-
-export type BelongsToParams<
-  T extends RelationConfigSelf,
-  Relation extends BelongsTo,
-> = {
-  [Name in BelongsToFKey<Relation>]: T['columns']['shape'][Name]['type'];
+export type BelongsToParams<T extends RelationConfigSelf, FK extends string> = {
+  [Name in FK]: T['columns']['shape'][Name]['type'];
 };
 
 export type BelongsToQuery<T extends Query, Name extends string> = {
-  [P in keyof T]: P extends 'meta'
-    ? // Omit is optimal
-      T['meta'] & {
-        hasWhere: true;
-      }
-    : P extends '__selectable'
+  [P in keyof T]: P extends '__selectable'
     ? SelectableFromShape<T['shape'], Name>
     : P extends '__as'
     ? Name
-    : P extends 'join'
-    ? RelJoin
     : P extends CreateMethodsNames | DeleteMethodsNames
     ? never
     : T[P];
-};
+} & QueryHasWhere &
+  HasRelJoin;
 
 export interface BelongsToInfo<
   T extends RelationConfigSelf,
   Name extends string,
-  Rel extends BelongsTo,
   FK extends string,
   Required,
   Q extends Query,
 > extends RelationConfigBase {
   returnsOne: true;
   query: Q;
-  params: BelongsToParams<T, Rel>;
-  maybeSingle: Required extends true ? QueryTake<Q> : QueryTakeOptional<Q>;
+  params: BelongsToParams<T, FK>;
+  maybeSingle: Required extends true
+    ? QueryManyTake<Q>
+    : QueryManyTakeOptional<Q>;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: FK;

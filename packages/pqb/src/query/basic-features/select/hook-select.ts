@@ -1,6 +1,6 @@
 import { Column } from '../../../columns/column';
 import { HookPurpose } from '../../extra-features/hooks/hooks.sql';
-import { IsQuery, QueryBase } from '../../query';
+import { IsQuery, Query } from '../../query';
 import { QueryAfterHook } from '../../query-data';
 
 export interface HasCteHooks {
@@ -53,9 +53,8 @@ export interface HasHookSelect {
 }
 
 export const _addToHookSelect = (query: IsQuery, selects: string[]) => {
-  const map: HookSelect = ((query as QueryBase).q.hookSelect = new Map(
-    (query as QueryBase).q.hookSelect,
-  ));
+  const { q } = query as Query;
+  const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
   for (const key of selects) {
     map.set(key, { select: key });
   }
@@ -66,9 +65,8 @@ export const _addToHookSelectWithTable = (
   selects: string[],
   table: string,
 ) => {
-  const map: HookSelect = ((query as QueryBase).q.hookSelect = new Map(
-    (query as QueryBase).q.hookSelect,
-  ));
+  const { q } = query as Query;
+  const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
   for (const column of selects) {
     map.set(column, { select: `${table}.${column}` });
   }

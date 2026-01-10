@@ -1,6 +1,7 @@
 import {
-  PickQueryMetaSelectableResult,
-  PickQuerySelectableResult,
+  PickQueryResult,
+  PickQuerySelectable,
+  PickQueryTsQuery,
 } from '../../pick-query-types';
 import { Expression } from '../../expressions/expression';
 import { pushQueryArrayImmutable } from '../../query.utils';
@@ -11,7 +12,10 @@ import { OrderTsQueryConfig } from '../../extra-features/search/search.sql';
 import { SortDir } from './order.sql';
 import { pushQueryValueImmutable } from '../../query-data';
 
-export type OrderArgSelf = PickQueryMetaSelectableResult;
+export interface OrderArgSelf
+  extends PickQuerySelectable,
+    PickQueryResult,
+    PickQueryTsQuery {}
 
 export type OrderArg<T extends OrderArgSelf> =
   | OrderArgKey<T>
@@ -23,15 +27,15 @@ export type OrderArg<T extends OrderArgSelf> =
     }
   | Expression;
 
-export type OrderArgs<T extends PickQueryMetaSelectableResult> = OrderArg<T>[];
+export type OrderArgs<T extends OrderArgSelf> = OrderArg<T>[];
 
 type OrderArgTsQuery<T extends OrderArgSelf> =
   | string
-  | undefined extends T['meta']['tsQuery']
+  | undefined extends T['__tsQuery']
   ? never
-  : Exclude<T['meta']['tsQuery'], undefined>;
+  : Exclude<T['__tsQuery'], undefined>;
 
-type OrderArgKey<T extends PickQuerySelectableResult> =
+type OrderArgKey<T extends OrderArgSelf> =
   | {
       // filter out runtime computed selectables
       [K in keyof T['__selectable']]: T['__selectable'][K]['column']['queryType'] extends undefined

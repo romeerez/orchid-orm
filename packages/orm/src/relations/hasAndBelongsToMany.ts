@@ -3,7 +3,7 @@ import {
   RelationData,
   RelationThunkBase,
 } from './relations';
-import { ORMTableInput, TableClass } from '../baseTable';
+import { ORMTableInput } from '../baseTable';
 import {
   _queryCreateManyFrom,
   _queryCreateMany,
@@ -45,15 +45,16 @@ import {
   toSnakeCase,
   defaultSchemaConfig,
   Column,
+  QueryHasWhere,
 } from 'pqb';
 import {
   addAutoForeignKey,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
+  HasRelJoin,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
-  RelJoin,
 } from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { joinQueryChainHOF } from './common/joinQueryChain';
@@ -65,7 +66,7 @@ export interface HasAndBelongsToMany extends RelationThunkBase {
 
 export interface HasAndBelongsToManyOptions<
   Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
-  Related extends TableClass = TableClass,
+  Related extends ORMTableInput = ORMTableInput,
 > {
   required?: boolean;
   columns: (keyof Columns)[];
@@ -74,45 +75,40 @@ export interface HasAndBelongsToManyOptions<
   through: {
     table: string;
     columns: string[];
-    references: (keyof InstanceType<Related>['columns']['shape'])[];
+    references: (keyof Related['columns']['shape'])[];
     foreignKey?: boolean | TableData.References.Options;
   };
-  on?: ColumnsShape.InputPartial<InstanceType<Related>['columns']['shape']>;
+  on?: ColumnsShape.InputPartial<Related['columns']['shape']>;
 }
 
 export type HasAndBelongsToManyParams<
   T extends RelationConfigSelf,
-  Relation extends HasAndBelongsToMany,
+  FK extends string,
 > = {
-  [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
+  [Name in FK]: T['columns']['shape'][Name]['type'];
 };
 
 export type HasAndBelongsToManyQuery<
   Name extends string,
   TableQuery extends Query,
 > = {
-  [K in keyof TableQuery]: K extends 'meta'
-    ? TableQuery['meta'] & {
-        hasWhere: true;
-      }
-    : K extends '__selectable'
+  [K in keyof TableQuery]: K extends '__selectable'
     ? SelectableFromShape<TableQuery['shape'], Name>
     : K extends '__as'
     ? Name
-    : K extends 'join'
-    ? RelJoin
     : TableQuery[K];
-};
+} & QueryHasWhere &
+  HasRelJoin;
 
 export interface HasAndBelongsToManyInfo<
   T extends RelationConfigSelf,
   Name extends string,
-  Rel extends HasAndBelongsToMany,
+  FK extends string,
   Q extends Query,
 > extends RelationConfigBase {
   returnsOne: false;
   query: Q;
-  params: HasAndBelongsToManyParams<T, Rel>;
+  params: HasAndBelongsToManyParams<T, FK>;
   maybeSingle: Q;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {

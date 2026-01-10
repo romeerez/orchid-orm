@@ -32,7 +32,6 @@ import {
   PointColumn,
   PolygonColumn,
   PostgisGeographyPointColumn,
-  Query,
   RealColumn,
   SerialColumn,
   SmallIntColumn,
@@ -57,7 +56,7 @@ import {
   RecordUnknown,
   StringData,
   getPrimaryKeys,
-  QueryBase,
+  Query,
 } from 'pqb';
 import { faker } from '@faker-js/faker';
 import randexp from 'randexp';
@@ -210,7 +209,7 @@ const makeBuild = <T extends TestFactory, Data extends BuildArg<T>>(
 };
 
 const getFactoryPrimaryKeys = (factory: TestFactory) => {
-  return getPrimaryKeys(factory.table as unknown as QueryBase).filter((key) => {
+  return getPrimaryKeys(factory.table as unknown as Query).filter((key) => {
     const item = factory.table.shape[
       key
     ] as unknown as Column.Pick.DataAndDataType;

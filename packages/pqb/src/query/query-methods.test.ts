@@ -663,7 +663,7 @@ describe('queryMethods', () => {
       const q = User.select('id').useHelper(modifier);
 
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
-      assertType<typeof q.meta.hasWhere, true>();
+      assertType<typeof q.__hasWhere, true>();
 
       expectSql(
         q.toSQL(),
@@ -726,7 +726,7 @@ describe('queryMethods', () => {
       );
 
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
-      assertType<typeof q.meta.hasWhere, true>();
+      assertType<typeof q.__hasWhere, true>();
 
       expectSql(
         q.toSQL(),

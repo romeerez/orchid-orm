@@ -2,13 +2,14 @@ import { IsQuery, Query } from '../../query';
 import { RawSql } from '../../expressions/raw-sql';
 import { Column } from '../../../columns/column';
 import { RecordUnknown, setObjectValueImmutable } from '../../../utils';
-import { QueryMetaBase } from '../../query-meta';
 import {
   PickQueryBaseQuery,
   PickQueryHasSelect,
+  PickQueryHasWhere,
   PickQueryInternal,
-  PickQueryMetaResultReturnType,
   PickQueryQ,
+  PickQueryResult,
+  PickQueryReturnType,
 } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
 import { _queryUpdate } from './update';
@@ -65,9 +66,15 @@ const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
 };
 
 export interface QueryWithSoftDelete
-  extends PickQueryMetaResultReturnType,
-    PickQueryHasSelect {
-  meta: QueryMetaBase<{ nonDeleted: true }>;
+  extends PickQueryResult,
+    PickQueryReturnType,
+    PickQueryHasSelect,
+    PickQueryHasWhere {
+  __scopes: NonDeletedScope;
+}
+
+export interface NonDeletedScope {
+  nonDeleted: true;
 }
 
 /**

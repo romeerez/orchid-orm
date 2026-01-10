@@ -39,8 +39,12 @@ interface FromQuery extends Query {
 }
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: ORMTableInputToQueryBuilder<InstanceType<T[K]>>;
-} & {
+  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
+    ? ORMTableInputToQueryBuilder<R>
+    : never;
+} & OrchidORMMethods;
+
+interface OrchidORMMethods {
   /**
    * @see import('pqb').Transaction.prototype.transaction
    */
@@ -127,7 +131,7 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
   ): FromResult<FromQuery, Arg>;
 
   $close(): Promise<void>;
-};
+}
 
 export type OrchidOrmParam<Options> = true | null extends true
   ? 'Set strict: true to tsconfig'
@@ -203,7 +207,9 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     }
 
     const tableClass = tables[key];
-    const table = tableClass.instance();
+    const table = (
+      tableClass as unknown as { instance(): ORMTableInput }
+    ).instance();
     tableInstances[key] = table;
 
     const options: DbTableOptions<unknown, string, Column.Shape.QueryInit> = {

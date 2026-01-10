@@ -110,21 +110,15 @@ export interface HandleResult {
 
 export type WithItems = CteItem[];
 
-// TODO: merge into a single interface
-export interface QueryDataBase
-  extends QueryDataAliases,
-    PickQueryDataParsers,
-    HasHookSelect {
-  shape: Column.QueryColumnsInit;
-  select?: unknown;
-}
-
 export interface JoinValueDedupItem {
   q: Query;
   a: string;
 }
 
-export interface QueryData extends QueryDataBase {
+export interface QueryData
+  extends QueryDataAliases,
+    PickQueryDataParsers,
+    HasHookSelect {
   type:
     | undefined
     // the same as undefined, used only in SQL composer to override default value

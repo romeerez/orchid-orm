@@ -1,9 +1,9 @@
-import { PickQuerySelectableShapeAs } from '../../pick-query-types';
+import { PickQueryQ, PickQuerySelectableShapeAs } from '../../pick-query-types';
 import { getFreeAlias, RecordString } from '../../../utils';
-import { QueryBase } from '../../query';
+import { Query } from '../../query';
 
 import { _clone } from '../clone/clone';
-import { QueryDataBase } from '../../query-data';
+import { QueryData } from '../../query-data';
 
 interface PickQueryDataAliases {
   aliases?: RecordString;
@@ -39,13 +39,13 @@ export const getQueryAs = (q: { table?: string; q: { as?: string } }) => {
   return q.q.as || (q.table as string);
 };
 
-export const _getQueryAs = (q: QueryBase): string | undefined => q.q.as;
+export const _getQueryAs = (q: Query): string | undefined => q.q.as;
 
 export const _getQueryFreeAlias = (q: QueryDataAliases, as: string): string =>
   q.aliases ? getFreeAlias(q.aliases, as) : as;
 
 export const _checkIfAliased = (
-  q: QueryBase,
+  q: Query,
   as: string,
   name: string,
 ): boolean => {
@@ -60,7 +60,7 @@ export const _getQueryAliasOrName = (
 };
 
 export const _getQueryOuterAliases = (
-  q: QueryDataBase,
+  q: QueryDataAliases,
 ): RecordString | undefined => {
   return q.outerAliases;
 };
@@ -71,7 +71,7 @@ export const _setQueryAs = <T extends AsQueryArg, As extends string>(
   self: T,
   as: As,
 ): SetQueryTableAlias<T, As> => {
-  const { q } = self as unknown as QueryBase;
+  const { q } = self as unknown as PickQueryQ;
   q.as = as;
   q.aliases = {
     ...q.aliases!,
@@ -81,15 +81,11 @@ export const _setQueryAs = <T extends AsQueryArg, As extends string>(
   return self as never;
 };
 
-export const _setQueryAlias = (
-  q: QueryBase,
-  name: string,
-  as: string,
-): void => {
+export const _setQueryAlias = (q: Query, name: string, as: string): void => {
   q.q.aliases = { ...q.q.aliases, [as]: name };
 };
 
-export const _setSubQueryAliases = (q: QueryBase): void => {
+export const _setSubQueryAliases = (q: Query): void => {
   q.q.outerAliases = q.q.aliases;
 };
 
@@ -98,8 +94,8 @@ export const _setSubQueryAliases = (q: QueryBase): void => {
  * stores the result to the relation query data.
  */
 export const _applyRelationAliases = (
-  query: QueryBase,
-  relQueryData: QueryDataBase,
+  query: Query,
+  relQueryData: QueryData,
 ): void => {
   const aliases = query.q.as
     ? { ...query.q.aliases }
@@ -114,8 +110,8 @@ export const _applyRelationAliases = (
 };
 
 export const _copyQueryAliasToQuery = (
-  fromQuery: QueryBase,
-  toQuery: QueryBase,
+  fromQuery: Query,
+  toQuery: Query,
   key: string,
 ): string => {
   const name = _getQueryAliasOrName(fromQuery.q, key);

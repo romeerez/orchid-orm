@@ -1,8 +1,7 @@
 import { _clone } from '../clone/clone';
-import { IsQuery } from '../../query';
-import { QueryMetaIsSubQuery } from '../../query-meta';
+import { IsQuery, IsSubQuery } from '../../query';
 
-interface SubQueryReturningSingle extends QueryMetaIsSubQuery {
+interface SubQueryReturningSingle extends IsSubQuery {
   returnType: 'one' | 'oneOrThrow';
 }
 

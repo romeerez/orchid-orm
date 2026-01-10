@@ -5,7 +5,6 @@ import { CteItem, CteOptions } from './cte.sql';
 import { Column } from '../../../columns';
 import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import {
-  PickQueryMetaWithDataColumnTypes,
   PickQueryResult,
   PickQueryWithDataColumnTypes,
 } from '../../pick-query-types';
@@ -44,7 +43,7 @@ export interface CteQueryBuilder<T extends PickQueryWithDataColumnTypes>
 
 // Adds a `withData` entry to a query
 export type CteResult<
-  T extends PickQueryMetaWithDataColumnTypes,
+  T extends PickQueryWithDataColumnTypes,
   Name extends string,
   Q extends PickQueryResult,
 > = {
@@ -233,13 +232,13 @@ export class CteQuery {
    *   ]);
    * ```
    */
-  with<T extends PickQueryMetaWithDataColumnTypes, Name extends string, Q>(
+  with<T extends PickQueryWithDataColumnTypes, Name extends string, Q>(
     this: T,
     name: Name,
     query: Q | ((q: CteQueryBuilder<T>) => Q),
   ): CteResult<T, Name, Q extends PickQueryResult ? Q : never>;
   with<
-    T extends PickQueryMetaWithDataColumnTypes,
+    T extends PickQueryWithDataColumnTypes,
     Name extends string,
     Q extends PickQueryResult,
   >(
@@ -352,7 +351,7 @@ export class CteQuery {
    * ```
    */
   withRecursive<
-    T extends PickQueryMetaWithDataColumnTypes,
+    T extends PickQueryWithDataColumnTypes,
     Name extends string,
     Q extends PickQueryResult,
     Result = CteResult<T, Name, Q>,
@@ -365,7 +364,7 @@ export class CteQuery {
     }) => PickQueryResult,
   ): Result;
   withRecursive<
-    T extends PickQueryMetaWithDataColumnTypes,
+    T extends PickQueryWithDataColumnTypes,
     Name extends string,
     Q extends PickQueryResult,
     Result = CteResult<T, Name, Q>,

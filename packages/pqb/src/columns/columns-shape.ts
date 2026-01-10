@@ -46,11 +46,13 @@ export namespace ColumnsShape {
 
   // table output type returned by default, with no select
   export type DefaultSelectOutput<Shape extends Column.QueryColumnsInit> = {
-    [K in keyof Shape as Shape[K]['data']['explicitSelect'] extends
-      | true
-      | undefined
-      ? never
-      : K]: Shape[K]['outputType'];
+    [K in {
+      [K in keyof Shape]: Shape[K]['data']['explicitSelect'] extends
+        | true
+        | undefined
+        ? never
+        : K;
+    }[keyof Shape]]: Shape[K]['outputType'];
   };
 
   export interface MapToObjectColumn<Shape extends Column.QueryColumns> {

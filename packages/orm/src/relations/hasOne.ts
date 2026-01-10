@@ -13,8 +13,6 @@ import {
   PickQueryQ,
   Query,
   SelectableFromShape,
-  QueryTake,
-  QueryTakeOptional,
   UpdateCtx,
   UpdateData,
   VirtualColumn,
@@ -29,8 +27,11 @@ import {
   RelationConfigBase,
   RelationJoinQuery,
   Column,
+  QueryHasWhere,
+  QueryManyTake,
+  QueryManyTakeOptional,
 } from 'pqb';
-import { ORMTableInput, TableClass } from '../baseTable';
+import { ORMTableInput } from '../baseTable';
 import {
   RelationData,
   RelationThunkBase,
@@ -44,13 +45,13 @@ import {
   getThroughRelation,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
+  HasRelJoin,
   joinHasRelation,
   joinHasThrough,
   NestedInsertOneItem,
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
-  RelJoin,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { joinQueryChainHOF } from './common/joinQueryChain';
@@ -70,32 +71,29 @@ interface RelationHasOneThroughOptions<
 
 export type HasOneOptions<
   Columns extends Column.Shape.QueryInit = Column.Shape.QueryInit,
-  Related extends TableClass = TableClass,
+  Related extends ORMTableInput = ORMTableInput,
   Through extends string = string,
   Source extends string = string,
 > =
-  | RelationRefsOptions<
-      keyof Columns,
-      InstanceType<Related>['columns']['shape']
-    >
+  | RelationRefsOptions<keyof Columns, Related['columns']['shape']>
   | RelationHasOneThroughOptions<Through, Source>;
 
 export type HasOneParams<
   T extends RelationConfigSelf,
-  Relation extends RelationThunkBase,
-> = Relation['options'] extends RelationRefsOptions
+  Options,
+> = Options extends RelationRefsOptions
   ? {
-      [Name in Relation['options']['columns'][number]]: T['columns']['shape'][Name]['type'];
+      [Name in Options['columns'][number]]: T['columns']['shape'][Name]['type'];
     }
-  : Relation['options'] extends RelationThroughOptions
-  ? RelationConfigParams<T, T['relations'][Relation['options']['through']]>
+  : Options extends RelationThroughOptions
+  ? RelationConfigParams<T, T['relations'][Options['through']]>
   : never;
 
 export type HasOnePopulate<
   T extends RelationConfigSelf,
   Name extends string,
 > = T['relations'][Name]['options'] extends RelationRefsOptions
-  ? Record<T['relations'][Name]['options']['references'][number], true>
+  ? T['relations'][Name]['options']['references'][number]
   : never;
 
 export type HasOneQueryThrough<
@@ -103,21 +101,17 @@ export type HasOneQueryThrough<
   Name extends string,
   TableQuery extends Query,
 > = {
-  [K in keyof TableQuery]: K extends 'meta'
-    ? TableQuery['meta'] & {
-        defaults: HasOnePopulate<T, Name>;
-        hasWhere: true;
-      }
+  [K in keyof TableQuery]: K extends '__defaults'
+    ? HasOnePopulate<T, Name>
     : K extends '__selectable'
     ? SelectableFromShape<TableQuery['shape'], Name>
     : K extends '__as'
     ? Name
-    : K extends 'join'
-    ? RelJoin
     : K extends CreateMethodsNames
     ? never
     : TableQuery[K];
-};
+} & QueryHasWhere &
+  HasRelJoin;
 
 export type HasOneQuery<
   T extends RelationConfigSelf,
@@ -126,21 +120,17 @@ export type HasOneQuery<
 > = T['relations'][Name]['options'] extends RelationThroughOptions
   ? HasOneQueryThrough<T, Name, TableQuery>
   : {
-      [K in keyof TableQuery]: K extends 'meta'
-        ? TableQuery['meta'] & {
-            defaults: HasOnePopulate<T, Name>;
-            hasWhere: true;
-          }
+      [K in keyof TableQuery]: K extends '__defaults'
+        ? HasOnePopulate<T, Name>
         : K extends '__selectable'
         ? SelectableFromShape<TableQuery['shape'], Name>
         : K extends '__as'
         ? Name
-        : K extends 'join'
-        ? RelJoin
         : K extends CreateManyMethodsNames
         ? never
         : TableQuery[K];
-    };
+    } & QueryHasWhere &
+      HasRelJoin;
 
 export interface HasOneInfo<
   T extends RelationConfigSelf,
@@ -153,10 +143,10 @@ export interface HasOneInfo<
 > extends RelationConfigBase {
   returnsOne: true;
   query: Q;
-  params: HasOneParams<T, Rel>;
+  params: HasOneParams<T, Rel['options']>;
   maybeSingle: T['relations'][Name]['options']['required'] extends true
-    ? QueryTake<Q>
-    : QueryTakeOptional<Q>;
+    ? QueryManyTake<Q>
+    : QueryManyTakeOptional<Q>;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: T['relations'][Name]['options'] extends RelationThroughOptions
     ? EmptyObject

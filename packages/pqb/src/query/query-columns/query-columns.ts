@@ -1,5 +1,5 @@
 import { Column } from '../../columns';
-import { QueryBase } from '../query';
+import { Query } from '../query';
 
 export interface QueryInternalColumnNameToKey {
   // cache `columnNameToKey` method that's available on table instances
@@ -11,7 +11,7 @@ export interface QueryInternalColumnNameToKey {
  * use this method to exchange a db column name to its runtime key.
  */
 export const queryColumnNameToKey = (
-  q: QueryBase,
+  q: Query,
   name: string,
 ): string | undefined => {
   let map = q.internal.columnNameToKeyMap;

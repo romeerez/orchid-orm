@@ -6,7 +6,7 @@ import { windowToSql } from '../basic-features/window/window.sql';
 import { extendQuery } from '../query.utils';
 import { addColumnParserToQuery, Column } from '../../columns';
 import {
-  PickQueryMetaSelectableResultRelationsWindows,
+  PickQuerySelectableResultRelationsWindows,
   PickQuerySelectable,
   PickQuerySelectableResultWindows,
 } from '../pick-query-types';
@@ -26,7 +26,7 @@ import { QueryData } from '../query-data';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
-  T extends PickQueryMetaSelectableResultRelationsWindows,
+  T extends PickQuerySelectableResultRelationsWindows,
 > {
   // Add DISTINCT inside of function call.
   distinct?: boolean;
@@ -188,7 +188,7 @@ export class FnExpression<
 
 // Applies a function expression to the query.
 export function makeFnExpression<
-  T extends PickQueryMetaSelectableResultRelationsWindows,
+  T extends PickQuerySelectableResultRelationsWindows,
   C extends Column.Pick.QueryColumn,
 >(
   self: T,

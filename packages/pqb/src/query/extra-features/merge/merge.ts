@@ -1,7 +1,7 @@
 import {
   PickQueryHasSelect,
   PickQueryHasSelectResult,
-  PickQueryMeta,
+  PickQueryHasWhere,
   PickQueryQ,
   PickQueryResult,
   PickQueryReturnType,
@@ -18,28 +18,20 @@ import { QueryThenByQuery } from '../../then/then';
 
 export interface MergeQueryArg
   extends PickQueryTable,
-    PickQueryMeta,
     PickQuerySelectable,
     PickQueryResult,
     PickQueryReturnType,
     PickQueryWithData,
     PickQueryWindows,
     PickQueryThen,
-    PickQueryHasSelect {}
+    PickQueryHasSelect,
+    PickQueryHasWhere {}
 
 export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta'] | keyof Q['meta']]: K extends 'hasWhere'
-          ? T['meta'][K] & Q['meta'][K] // true if any of them is true
-          : K extends keyof Q['meta']
-          ? Q['meta'][K]
-          : T['meta'][K];
-      }
-    : K extends '__hasSelect'
-    ? T['__hasSelect'] & Q['__hasSelect']
-    : K extends '__selectable'
-    ? Q['__selectable'] & Omit<T['__selectable'], keyof Q['__selectable']>
+  [K in keyof T]: K extends '__hasWhere' | '__hasSelect'
+    ? T[K] & Q[K] // true if any of them is true
+    : K extends '__selectable' | 'windows' | 'withData'
+    ? Q[K] & Omit<T[K], keyof Q[K]>
     : K extends 'result'
     ? MergeQueryResult<T, Q>
     : K extends 'returnType'
@@ -58,10 +50,6 @@ export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
       : T['__hasSelect'] extends true
       ? T['then']
       : Q['then']
-    : K extends 'windows'
-    ? Q['windows'] & Omit<T['windows'], keyof Q['windows']>
-    : K extends 'withData'
-    ? Q['withData'] & Omit<T['withData'], keyof Q['withData']>
     : T[K];
 };
 

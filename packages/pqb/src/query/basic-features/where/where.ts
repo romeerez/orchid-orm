@@ -116,7 +116,6 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | 'table' // is needed for `useHelper`
           | 'get'
           | 'columnTypes'
-          | 'meta'
           | '__selectable'
           | 'relations'
           | 'useHelper'
@@ -140,7 +139,6 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
                 | 'table' // is needed for `useHelper`
                 | 'get'
                 | 'columnTypes'
-                | 'meta'
                 | '__selectable'
                 | 'relations'
                 | 'useHelper'
@@ -198,13 +196,9 @@ export type WhereInArg<T extends PickQuerySelectableRelations> = {
     | Expression;
 };
 
-// After applying `where`, attach `hasWhere: true` to query meta to allow updating and deleting.
-export type WhereResult<T> = T & QueryMetaHasWhere;
-
-export interface QueryMetaHasWhere {
-  meta: {
-    hasWhere: true;
-  };
+// After applying `where`, attach `__hasWhere: true` to query to allow updating and deleting.
+export interface QueryHasWhere {
+  __hasWhere: true;
 }
 
 interface QueryFnReturningSelect {
@@ -268,7 +262,7 @@ const resolveCallbacksInArgs = <T extends PickQuerySelectableRelations>(
 export const _queryWhere = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
-): WhereResult<T> => {
+): T & QueryHasWhere => {
   resolveCallbacksInArgs(q, args);
 
   return pushQueryArrayImmutable(q as never, 'and', args) as never;
@@ -279,7 +273,7 @@ export const _queryFindBy = <
 >(
   q: T,
   arg: WhereArg<T>,
-): QueryTake<WhereResult<T>> => {
+): QueryTake<T & QueryHasWhere> => {
   validateFindBy(q, arg, 'findBy');
   return _queryTake(_queryWhere(q, [arg]));
 };
@@ -289,7 +283,7 @@ export const _queryFindByOptional = <
 >(
   q: T,
   arg: WhereArg<T>,
-): QueryTakeOptional<WhereResult<T>> => {
+): QueryTakeOptional<T & QueryHasWhere> => {
   validateFindBy(q, arg, 'findByOptional');
   return _queryTakeOptional(_queryWhere(q, [arg]));
 };
@@ -335,7 +329,7 @@ export const _queryWhereSql = <T>(q: T, args: SQLQueryArgs): T => {
 export const _queryWhereNot = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereNotArgs<T>,
-): WhereResult<T> => {
+): T & QueryHasWhere => {
   resolveCallbacksInArgs(q, args);
 
   return pushQueryValueImmutable(q as never, 'and', {
@@ -387,7 +381,7 @@ export const _queryWhereNotOneOf = <T extends PickQuerySelectableRelations>(
 export const _queryOr = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
-): WhereResult<T> => {
+): T & QueryHasWhere => {
   resolveCallbacksInArgs(q, args);
 
   return pushQueryArrayImmutable(
@@ -403,7 +397,7 @@ export const _queryOr = <T extends PickQuerySelectableRelations>(
 export const _queryOrNot = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
-): WhereResult<T> => {
+): T & QueryHasWhere => {
   resolveCallbacksInArgs(q, args);
 
   return pushQueryArrayImmutable(
@@ -424,13 +418,13 @@ export const _queryWhereIn = <T>(
   arg: unknown,
   values: unknown[] | Iterable<unknown> | IsQuery | Expression | undefined,
   not?: boolean,
-): WhereResult<T> => {
+): T & QueryHasWhere => {
   let item;
   if (values) {
     if (isIterable(values)) values = [...values];
 
     if ('length' in values && !values.length) {
-      return _queryNone(q) as WhereResult<T>;
+      return _queryNone(q) as T & QueryHasWhere;
     }
 
     if (values instanceof (q as Query).constructor) {
@@ -456,7 +450,7 @@ export const _queryWhereIn = <T>(
         ('length' in values && !values.length) ||
         ('size' in values && !values.size)
       ) {
-        return _queryNone(q) as WhereResult<T>;
+        return _queryNone(q) as T & QueryHasWhere;
       }
 
       if (values instanceof (q as Query).constructor) {
@@ -513,7 +507,7 @@ export const _queryWhereExists = <
   q: T,
   arg: Arg,
   args: JoinArgs<T, Arg>,
-): WhereResult<T> => {
+): T & QueryHasWhere => {
   return _queryWhere(
     q as never,
     existsArgs(q as unknown as Query, arg as never, args as never),
@@ -904,7 +898,7 @@ export class Where {
   where<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryWhere(_clone(this), args as never) as never;
   }
 
@@ -939,7 +933,7 @@ export class Where {
   whereNot<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereNotArgs<T>
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryWhereNot(_clone(this), args as never) as never;
   }
 
@@ -1032,7 +1026,7 @@ export class Where {
   orWhere<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryOr(_clone(this), args as never) as never;
   }
 
@@ -1044,7 +1038,7 @@ export class Where {
   orWhereNot<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryOrNot(_clone(this), args as never) as never;
   }
 
@@ -1102,7 +1096,7 @@ export class Where {
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryWhereIn(_clone(this), true, args[0], args[1]) as never;
   }
 
@@ -1122,7 +1116,7 @@ export class Where {
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [WhereInArg<T>]
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryWhereIn(_clone(this), false, args[0], args[1]) as never;
   }
 
@@ -1141,7 +1135,7 @@ export class Where {
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryWhereIn(_clone(this), true, args[0], args[1], true) as never;
   }
 
@@ -1160,7 +1154,7 @@ export class Where {
     ...args:
       | [column: Column, values: WhereInValues<T, Column>]
       | [arg: WhereInArg<T>]
-  ): WhereResult<T> {
+  ): T & QueryHasWhere {
     return _queryWhereIn(_clone(this), false, args[0], args[1], true) as never;
   }
 
@@ -1197,7 +1191,7 @@ export class Where {
     ? { error: 'Cannot select in whereExists' }
     : Args[0] extends QueryFnReturningSelect
     ? { error: 'Cannot select in whereExists' }
-    : WhereResult<T> {
+    : T & QueryHasWhere {
     return _queryWhereExists(_clone(this) as unknown as T, arg, args) as never;
   }
 
@@ -1213,7 +1207,7 @@ export class Where {
   orWhereExists<
     T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
-  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): T & QueryHasWhere {
     const q = _clone(this);
     return _queryOr(q, existsArgs(q, arg as never, args as never)) as never;
   }
@@ -1233,7 +1227,7 @@ export class Where {
   whereNotExists<
     T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
-  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): T & QueryHasWhere {
     const q = _clone(this);
     return _queryWhereNotExists(q, arg, args);
   }
@@ -1250,7 +1244,7 @@ export class Where {
   orWhereNotExists<
     T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
-  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): WhereResult<T> {
+  >(this: T, arg: Arg, ...args: JoinArgs<T, Arg>): T & QueryHasWhere {
     const q = _clone(this);
     return _queryOrNot(q, existsArgs(q, arg as never, args as never)) as never;
   }

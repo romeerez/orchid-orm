@@ -78,7 +78,6 @@ import { HasMany, HasManyInfo, HasManyQuery } from './relations/hasMany';
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {
   new (): T;
-  instance(): T;
 }
 
 // object with table classes, used on orchidORM() for setting tables
@@ -121,7 +120,8 @@ export interface TableToDb<
       | TableDataItemsUniqueConstraints<T['columns']['data']>,
       T['types'],
       T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
-      MapTableScopesOption<T>
+      MapTableScopesOption<T>,
+      ColumnsShape.DefaultSelectKeys<T['columns']['shape']>
     > {
   relations: Relations;
 }
@@ -138,7 +138,6 @@ export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
                 ? BelongsToInfo<
                     T,
                     K,
-                    T['relations'][K],
                     T['relations'][K]['options']['columns'][number] & string,
                     T['relations'][K]['options']['required'],
                     BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
@@ -161,7 +160,7 @@ export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
                 ? HasAndBelongsToManyInfo<
                     T,
                     K,
-                    T['relations'][K],
+                    T['relations'][K]['options']['columns'][number] & string,
                     HasAndBelongsToManyQuery<
                       K,
                       RelationTableToQuery<T['relations'][K]>
@@ -400,61 +399,61 @@ export interface BaseTableInstance<ColumnTypes> {
 
   belongsTo<
     Columns extends Column.Shape.QueryInit,
-    Related extends TableClass,
+    Related extends ORMTableInput,
     Options extends BelongsToOptions<Columns, Related>,
   >(
     this: { columns: { shape: Columns } },
-    fn: () => Related,
+    fn: () => { new (): Related },
     options: Options,
   ): {
     type: 'belongsTo';
-    fn: () => Related;
+    related: Related;
     options: Options;
   };
 
   hasOne<
     Columns extends Column.Shape.QueryInit,
-    Related extends TableClass,
+    Related extends ORMTableInput,
     Through extends string,
     Source extends string,
     Options extends HasOneOptions<Columns, Related, Through, Source>,
   >(
     this: { columns: { shape: Columns } },
-    fn: () => Related,
+    fn: () => { new (): Related },
     options: Options,
   ): {
     type: 'hasOne';
-    fn: () => Related;
+    related: Related;
     options: Options;
   };
 
   hasMany<
     Columns extends Column.Shape.QueryInit,
-    Related extends TableClass,
+    Related extends ORMTableInput,
     Through extends string,
     Source extends string,
     Options extends HasOneOptions<Columns, Related, Through, Source>,
   >(
     this: { columns: { shape: Columns } },
-    fn: () => Related,
+    fn: () => { new (): Related },
     options: Options,
   ): {
     type: 'hasMany';
-    fn: () => Related;
+    related: Related;
     options: Options;
   };
 
   hasAndBelongsToMany<
     Columns extends Column.Shape.QueryInit,
-    Related extends TableClass,
+    Related extends ORMTableInput,
     Options extends HasAndBelongsToManyOptions<Columns, Related>,
   >(
     this: { columns: { shape: Columns } },
-    fn: () => Related,
+    fn: () => { new (): Related },
     options: Options,
   ): {
     type: 'hasAndBelongsToMany';
-    fn: () => Related;
+    related: Related;
     options: Options;
   };
 

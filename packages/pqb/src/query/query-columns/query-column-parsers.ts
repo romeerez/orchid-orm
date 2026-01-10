@@ -1,6 +1,6 @@
 import { FnUnknownToUnknown, MaybePromise } from '../../utils';
 import { HookSelect } from '../basic-features/select/hook-select';
-import { QueryBase } from '../query';
+import { Query } from '../query';
 import { getValueKey } from '../basic-features/get/get-value-key';
 
 export interface PickQueryDataParsers {
@@ -73,7 +73,7 @@ export const overrideParserInQuery = (
   } else query.parsers = { [key]: parser } as ColumnsParsers;
 };
 
-export const getQueryParsers = (q: QueryBase, hookSelect?: HookSelect) => {
+export const getQueryParsers = (q: Query, hookSelect?: HookSelect) => {
   if (hookSelect) {
     const parsers = { ...q.q.parsers };
     const { defaultParsers } = q.q;

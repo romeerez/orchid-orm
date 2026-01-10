@@ -2,9 +2,9 @@ import {
   getClonedQueryData,
   MergeQuery,
   Query,
-  WhereResult,
   QueryReturnType,
   RecordUnknown,
+  QueryHasWhere,
 } from 'pqb';
 
 type QueryMethods<T extends Query> = Record<
@@ -22,8 +22,8 @@ type QueryOne<T extends Query> = {
 export interface MethodsBase<T extends Query> {
   queryMethods?: QueryMethods<T>;
   queryOneMethods?: QueryMethods<QueryOne<T>>;
-  queryWithWhereMethods?: QueryMethods<WhereResult<T>>;
-  queryOneWithWhereMethods?: QueryMethods<QueryOne<WhereResult<T>>>;
+  queryWithWhereMethods?: QueryMethods<T & QueryHasWhere>;
+  queryOneWithWhereMethods?: QueryMethods<QueryOne<T & QueryHasWhere>>;
   methods?: RecordUnknown;
 }
 
@@ -49,11 +49,14 @@ export type MapMethods<T extends Query, Methods extends MethodsBase<T>> = {
     ? Methods['methods'][K]
     : K extends keyof Methods['queryOneWithWhereMethods']
     ? MapQueryMethods<
-        QueryOne<WhereResult<Query>>,
+        QueryOne<Query & QueryHasWhere>,
         Methods['queryOneWithWhereMethods'][K]
       >
     : K extends keyof Methods['queryWithWhereMethods']
-    ? MapQueryMethods<WhereResult<Query>, Methods['queryWithWhereMethods'][K]>
+    ? MapQueryMethods<
+        Query & QueryHasWhere,
+        Methods['queryWithWhereMethods'][K]
+      >
     : K extends keyof Methods['queryOneMethods']
     ? MapQueryMethods<QueryOne<Query>, Methods['queryOneMethods'][K]>
     : K extends keyof Methods['queryMethods']

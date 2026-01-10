@@ -1,5 +1,6 @@
 import {
   IsQuery,
+  IsSubQuery,
   Query,
   QueryReturnType,
   QueryTake,
@@ -49,7 +50,7 @@ import {
   _queryFindByOptional,
   _queryWhere,
   _queryWhereSql,
-  QueryMetaHasWhere,
+  QueryHasWhere,
   Where,
 } from './basic-features/where/where';
 import { SearchMethods } from './extra-features/search/search';
@@ -76,14 +77,13 @@ import { Column } from '../columns';
 import { Expression, SelectableOrExpression } from './expressions/expression';
 import { applyMixins, EmptyObject } from '../utils';
 import {
-  PickQueryMetaResultReturnType,
+  PickQueryResultReturnType,
   PickQueryRelations,
   PickQueryResult,
-  PickQueryResultReturnType,
   PickQueryResultReturnTypeUniqueColumns,
   PickQuerySelectable,
   PickQuerySelectableShapeAs,
-  PickQueryMetaSelectableShapeRelationsReturnType,
+  PickQuerySelectableShapeRelationsReturnTypeIsSubQuery,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
   PickQueryTableMetaShapeTableAs,
   PickQueryHasSelectResult,
@@ -93,7 +93,6 @@ import {
   _setQueryAlias,
   QueryAsMethods,
 } from './basic-features/as/as';
-import { QueryMetaBase } from './query-meta';
 import { QuerySql, Sql } from './sql/sql';
 import { OrchidOrmInternalError } from './errors';
 import { SQLQueryArgs } from './db-sql-query';
@@ -122,7 +121,6 @@ export type GroupArgs<T extends PickQueryResult> = (
 interface QueryHelperQuery<T extends PickQuerySelectableShapeAs>
   extends MergeQueryArg {
   returnType: QueryReturnType;
-  meta: QueryMetaBase;
   __selectable: Omit<
     T['__selectable'],
     `${T['__as']}.${Extract<keyof T['shape'], string>}`
@@ -168,7 +166,7 @@ export type QueryHelperResult<
   T extends QueryHelper<PickQueryTableMetaShapeTableAs, any[], MergeQueryArg>,
 > = T['result'];
 
-interface NarrowTypeSelf extends PickQueryMetaResultReturnType {
+interface NarrowTypeSelf extends PickQueryResultReturnType {
   returnType:
     | undefined
     | 'all'
@@ -187,7 +185,7 @@ type NarrowInvalidKeys<T extends PickQueryResult, Narrow> = {
     : K;
 }[keyof Narrow];
 
-interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
+interface NarrowValueTypeResult<T extends PickQueryResultReturnType, Narrow>
   extends Column.QueryColumns {
   value: {
     [K in keyof T['result']['value']]: K extends 'outputType'
@@ -196,7 +194,7 @@ interface NarrowValueTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
   };
 }
 
-interface NarrowPluckTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
+interface NarrowPluckTypeResult<T extends PickQueryResultReturnType, Narrow>
   extends Column.QueryColumns {
   pluck: {
     [K in keyof T['result']['pluck']]: K extends 'outputType'
@@ -208,7 +206,7 @@ interface NarrowPluckTypeResult<T extends PickQueryMetaResultReturnType, Narrow>
 }
 
 type QueryIfResult<
-  T extends PickQueryMetaResultReturnType,
+  T extends PickQueryResultReturnType,
   R extends PickQueryResult,
 > = {
   [K in keyof T]: K extends 'result'
@@ -227,7 +225,7 @@ type QueryIfResult<
 };
 
 export type QueryIfResultThen<
-  T extends PickQueryMetaResultReturnType,
+  T extends PickQueryResultReturnType,
   R extends PickQueryResult,
 > = T['returnType'] extends undefined | 'all'
   ? QueryThenShallowSimplifyArr<
@@ -477,7 +475,7 @@ export class QueryMethods<ColumnTypes> {
   find<T extends PickQueryShapeResultReturnTypeSinglePrimaryKey>(
     this: T,
     value: T['internal']['singlePrimaryKey'] | Expression,
-  ): QueryTake<T> & QueryMetaHasWhere {
+  ): QueryTake<T> & QueryHasWhere {
     const q = _clone(this);
 
     if (value === null || value === undefined) {
@@ -511,7 +509,7 @@ export class QueryMethods<ColumnTypes> {
   findBySql<T extends PickQueryResultReturnType>(
     this: T,
     ...args: SQLQueryArgs
-  ): QueryTake<T> & QueryMetaHasWhere {
+  ): QueryTake<T> & QueryHasWhere {
     const q = _clone(this);
     return _queryTake(_queryWhereSql(q, args)) as never;
   }
@@ -529,7 +527,7 @@ export class QueryMethods<ColumnTypes> {
   findOptional<T extends PickQueryShapeResultReturnTypeSinglePrimaryKey>(
     this: T,
     value: T['internal']['singlePrimaryKey'] | Expression,
-  ): QueryTakeOptional<T> & QueryMetaHasWhere {
+  ): QueryTakeOptional<T> & QueryHasWhere {
     return _queryTakeOptional((this as unknown as Query).find(value)) as never;
   }
 
@@ -549,7 +547,7 @@ export class QueryMethods<ColumnTypes> {
   findBySqlOptional<T extends PickQueryResultReturnType>(
     this: T,
     ...args: SQLQueryArgs
-  ): QueryTakeOptional<T> & QueryMetaHasWhere {
+  ): QueryTakeOptional<T> & QueryHasWhere {
     return _queryTakeOptional(
       (this as unknown as Query).findBySql(...args),
     ) as never;
@@ -571,7 +569,7 @@ export class QueryMethods<ColumnTypes> {
   findBy<T extends PickQueryResultReturnTypeUniqueColumns>(
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
-  ): QueryTake<T> & QueryMetaHasWhere {
+  ): QueryTake<T> & QueryHasWhere {
     return _queryFindBy(_clone(this), uniqueColumnValues as never) as never;
   }
 
@@ -591,7 +589,7 @@ export class QueryMethods<ColumnTypes> {
   findByOptional<T extends PickQueryResultReturnTypeUniqueColumns>(
     this: T,
     uniqueColumnValues: T['internal']['uniqueColumns'],
-  ): QueryTakeOptional<T> & QueryMetaHasWhere {
+  ): QueryTakeOptional<T> & QueryHasWhere {
     return _queryFindByOptional(
       _clone(this),
       uniqueColumnValues as never,
@@ -994,7 +992,7 @@ export class QueryMethods<ColumnTypes> {
     return () => this as never;
   }
 
-  if<T extends PickQueryMetaResultReturnType, R extends PickQueryResult>(
+  if<T extends PickQueryResultReturnType, R extends PickQueryResult>(
     this: T,
     condition: boolean | null | undefined,
     fn: (q: T) => R & { returnType: T['returnType'] },
@@ -1014,28 +1012,23 @@ export class QueryMethods<ColumnTypes> {
   }
 
   chain<
-    T extends PickQueryMetaSelectableShapeRelationsReturnType,
+    T extends PickQuerySelectableShapeRelationsReturnTypeIsSubQuery,
     RelName extends keyof T['relations'],
   >(
     this: T,
     relName: RelName,
   ): [
-    T['meta']['subQuery'],
+    T['__subQuery'],
     T['returnType'],
     T['relations'][RelName]['returnsOne'],
-  ] extends [true, 'one' | 'oneOrThrow', true]
+  ] extends [true | undefined, 'one' | 'oneOrThrow', true]
     ? {
-        [K in keyof T['relations'][RelName]['maybeSingle']]: K extends 'meta'
-          ? {
-              [K in keyof T['relations'][RelName]['maybeSingle']['meta']]: K extends 'subQuery'
-                ? true
-                : T['relations'][RelName]['maybeSingle']['meta'][K];
-            }
-          : K extends '__selectable'
+        [K in
+          | keyof T['relations'][RelName]['maybeSingle']]: K extends '__selectable'
           ? T['relations'][RelName]['maybeSingle']['__selectable'] &
               Omit<T['__selectable'], keyof T['shape']>
           : T['relations'][RelName]['maybeSingle'][K];
-      }
+      } & IsSubQuery
     : JoinResultRequireMain<
         T['relations'][RelName]['query'],
         Omit<T['__selectable'], keyof T['shape']>

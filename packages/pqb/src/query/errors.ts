@@ -1,6 +1,6 @@
 import { RecordUnknown } from '../utils';
 import { PickQueryShape } from './pick-query-types';
-import { IsQuery, QueryBase } from './query';
+import { IsQuery, Query } from './query';
 import { queryColumnNameToKey } from './query-columns/query-columns';
 
 export abstract class OrchidOrmError extends Error {}
@@ -15,11 +15,11 @@ export abstract class OrchidOrmError extends Error {}
  */
 export class NotFoundError extends OrchidOrmError {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
-  readonly #query: QueryBase;
+  readonly #query: Query;
 
   constructor(query: IsQuery, message = 'Record is not found') {
     super(message);
-    this.#query = query as QueryBase;
+    this.#query = query as Query;
   }
 
   get query() {
@@ -29,11 +29,11 @@ export class NotFoundError extends OrchidOrmError {
 
 export class OrchidOrmInternalError extends Error {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
-  readonly #query: QueryBase;
+  readonly #query: Query;
 
   constructor(query: IsQuery, message?: string, public data?: RecordUnknown) {
     super(message);
-    this.#query = query as QueryBase;
+    this.#query = query as Query;
   }
 
   get query() {

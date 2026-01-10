@@ -1,5 +1,5 @@
 import { Column } from '../../../columns';
-import { PickQueryMetaShape } from '../../pick-query-types';
+import { PickQueryShape } from '../../pick-query-types';
 import { _clone } from '../../basic-features/clone/clone';
 import { QueryThenShallowSimplify } from '../../then/then';
 
@@ -9,7 +9,7 @@ import { QueryThenShallowSimplify } from '../../then/then';
  * the value is a {@link GetColumnInfo} object or a Record with keys for column names and ColumnInfo objects as values.
  **/
 export type SetQueryReturnsColumnInfo<
-  T extends PickQueryMetaShape,
+  T extends PickQueryShape,
   Column extends keyof T['shape'] | undefined,
   Result = Column extends keyof T['shape']
     ? GetColumnInfo
@@ -74,7 +74,7 @@ const rowToColumnInfo = (row: unknown): GetColumnInfo => {
  * @param column - optional: select info for only a single column if provided, or for all table columns if not
  */
 export function getColumnInfo<
-  T extends PickQueryMetaShape,
+  T extends PickQueryShape,
   Column extends keyof T['shape'] | undefined = undefined,
 >(query: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
   const q = _clone(query);

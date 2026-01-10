@@ -37,7 +37,7 @@ import {
   SelectableOrExpression,
 } from '../../expressions/expression';
 import { getFullColumnTable, pushQueryArrayImmutable } from '../../query.utils';
-import { IsQuery, Query, QueryBase } from '../../query';
+import { IsQuery, Query } from '../../query';
 import { NotFoundError } from '../../errors';
 import { finalizeNestedHookSelect } from '../../extra-features/hooks/hooks';
 import { applyBatchTransforms } from '../../extra-features/data-transform/transform';
@@ -470,7 +470,7 @@ export const processSelectArg = <T extends SelectSelf>(
           if (as) {
             value.q.joinedForSelect = _copyQueryAliasToQuery(
               value,
-              q as unknown as QueryBase,
+              q as unknown as Query,
               as,
             );
           }

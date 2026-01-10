@@ -1,11 +1,11 @@
-import { IsQuery, QueryBase } from '../../query';
+import { IsQuery } from '../../query';
 
 export type DelayedRelationSelect = {
-  query: QueryBase;
+  query: IsQuery;
   value?: { [K: string]: IsQuery };
 };
 
-export const newDelayedRelationSelect = (query: QueryBase) => ({
+export const newDelayedRelationSelect = (query: IsQuery) => ({
   query,
 });
 

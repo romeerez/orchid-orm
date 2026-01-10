@@ -1,4 +1,4 @@
-import { Query, QueryInternal } from '../query';
+import { Query } from '../query';
 import { QueryData } from '../query-data';
 import { QueryBuilder } from '../db';
 import { addWithToSql, ctesToSql, TopCTE } from '../basic-features/cte/cte.sql';
@@ -14,6 +14,7 @@ import {
   JoinItem,
   makeRowToJson,
   MoreThanOneRowError,
+  QueryInternal,
   Sql,
 } from '../index';
 import { moveMutativeQueryToCteBase } from '../basic-features/cte/move-mutative-query-to-cte-base.sql';
@@ -81,7 +82,6 @@ export interface ToSQLQuery {
   withData: Query['withData'];
   clone: Query['clone'];
   baseQuery: Query['baseQuery'];
-  meta: Query['meta'];
   returnType: Query['returnType'];
   result: Query['result'];
   shape: Query['shape'];

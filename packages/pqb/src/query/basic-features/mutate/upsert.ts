@@ -10,7 +10,6 @@ import { _orCreate } from './or-create';
 import { PickQueryHasSelectResultReturnType } from '../../pick-query-types';
 import { isObjectEmpty } from '../../../utils';
 import { _clone } from '../clone/clone';
-import { QueryMetaBase } from '../../query-meta';
 
 type UpsertCreate<DataKey extends PropertyKey, CD> = {
   [K in keyof CD as K extends DataKey ? never : K]: CD[K];
@@ -29,12 +28,8 @@ export type UpsertResult<T extends PickQueryHasSelectResultReturnType> =
 // Require type of query object to query only one record
 // because upserting multiple isn't possible
 export interface UpsertThis extends UpdateSelf, CreateSelf {
-  meta: MetaPropHasWhere;
+  __hasWhere: true;
   returnType: 'one' | 'oneOrThrow' | 'value' | 'valueOrThrow' | 'void';
-}
-
-interface MetaPropHasWhere extends QueryMetaBase {
-  hasWhere: true;
 }
 
 export interface QueryUpsert {

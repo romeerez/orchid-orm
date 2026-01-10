@@ -51,6 +51,5 @@ export * from './pick-query-types';
 export * from './query';
 export * from './query.utils';
 export * from './query-internal';
-export * from './query-meta';
 export * from './relations';
 export * from './query-data';

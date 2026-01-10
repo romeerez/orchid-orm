@@ -4,7 +4,6 @@ import {
   GeneratorIgnore,
   IsQuery,
   Query,
-  QueryInternal,
   SelectableFromShape,
 } from './query';
 import { QueryMethods } from './query-methods';
@@ -27,6 +26,7 @@ import {
 } from '../columns/default-schema-config';
 import {
   enableSoftDelete,
+  NonDeletedScope,
   SoftDeleteOption,
 } from './basic-features/mutate/soft-delete';
 import {
@@ -47,7 +47,6 @@ import {
 import { DbSqlQuery, performQuery, SQLQueryArgs } from './db-sql-query';
 import { snakeCaseKey } from '../columns/types';
 import { setDb } from '../columns/operators';
-import { QueryMetaBase } from './query-meta';
 import {
   applyMixins,
   emptyObject,
@@ -78,6 +77,7 @@ import {
   _queryHookBeforeUpdate,
 } from './extra-features/hooks/hooks';
 import { QueryData, QueryDataScopes } from './query-data';
+import { QueryInternal } from './query-internal';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -191,19 +191,6 @@ export type DbTableOptionScopes<
   Keys extends string = string,
 > = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => IsQuery };
 
-interface TableMeta<
-  Shape extends Column.QueryColumnsInit,
-  Scopes extends RecordUnknown | undefined,
-> extends QueryMetaBase<{ [K in keyof Scopes]: true }> {
-  kind: 'select';
-  defaults: {
-    [K in keyof Shape as unknown extends Shape[K]['data']['default']
-      ? never
-      : K]: true;
-  };
-  defaultSelect: ColumnsShape.DefaultSelectKeys<Shape>;
-}
-
 export interface QueryBuilder extends Query {
   returnType: undefined;
 }
@@ -218,6 +205,7 @@ export class Db<
     ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
     ShapeWithComputed extends Column.QueryColumnsInit = Shape,
     Scopes extends RecordUnknown | undefined = EmptyObject,
+    DefaultSelect extends keyof Shape = keyof Shape,
   >
   extends QueryMethods<ColumnTypes>
   implements Query
@@ -226,12 +214,23 @@ export class Db<
   declare __isQuery: true;
   declare __as: Table & string;
   declare __selectable: SelectableFromShape<ShapeWithComputed, Table>;
+  // declare __subQuery: boolean;
   declare __hasSelect: boolean;
+  declare __hasWhere: boolean;
+  declare __defaults: {
+    [K in {
+      [K in keyof Shape]: unknown extends Shape[K]['data']['default']
+        ? never
+        : K;
+    }[keyof Shape]]: true;
+  };
+  declare __scopes: { [K in keyof Scopes]: true };
+  declare __defaultSelect: DefaultSelect;
   baseQuery: Query;
   columns: (keyof Shape)[];
   declare outputType: ColumnsShape.DefaultSelectOutput<Shape>;
   declare inputType: ColumnsShape.Input<Shape>;
-  declare result: Pick<Shape, ColumnsShape.DefaultSelectKeys<Shape>>; // Pick is optimal
+  declare result: { [K in DefaultSelect]: Shape[K] };
   declare returnType: undefined;
   declare then: QueryThenShallowSimplifyArr<ColumnsShape.DefaultOutput<Shape>>;
   declare windows: EmptyObject;
@@ -243,7 +242,6 @@ export class Db<
     length: number,
     name: QueryErrorName,
   ) => QueryError<this>;
-  declare meta: TableMeta<Shape, Scopes>;
   internal: QueryInternal<
     {
       [K in keyof PrimaryKeys]: (
@@ -401,11 +399,9 @@ export class Db<
       else logger.warn(message);
     }
 
-    const columns = Object.keys(
-      shape,
-    ) as unknown as (keyof ColumnsShape.Output<Shape>)[];
+    const columns = Object.keys(shape) as unknown as (keyof Shape)[];
 
-    this.columns = columns as (keyof ColumnsShape.Output<Shape>)[];
+    this.columns = columns as (keyof Shape)[];
 
     if (options.computed) applyComputedColumns(this, options.computed);
 
@@ -627,7 +623,8 @@ export interface DbTableConstructor<ColumnTypes> {
     UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
     ColumnTypes,
     Shape & ComputedColumnsFromOptions<Options['computed']>,
-    MapTableScopesOption<Options>
+    MapTableScopesOption<Options>,
+    ColumnsShape.DefaultSelectKeys<Shape>
   > & {
     ko: Shape;
   };
@@ -635,7 +632,7 @@ export interface DbTableConstructor<ColumnTypes> {
 
 export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
   ? T extends { softDelete: true | PropertyKey }
-    ? T['scopes'] & { nonDeleted: unknown }
+    ? T['scopes'] & NonDeletedScope
     : T['scopes']
   : T extends { softDelete: true | PropertyKey }
   ? { nonDeleted: unknown }

@@ -1,33 +1,36 @@
-import { IsQuery, Query, QueryReturnType } from '../../query';
+import { IsQuery, IsSubQuery, Query, QueryReturnType } from '../../query';
 import { pushQueryArrayImmutable } from '../../query.utils';
 import { Column } from '../../../columns/column';
 import { _queryNone } from '../../extra-features/none/none';
-import { RelationsBase } from '../../relations';
 import { EmptyObject, UnionToIntersection } from '../../../utils';
 import {
+  PickQueryDefaultSelect,
   PickQueryHasSelect,
   PickQueryQ,
+  PickQueryRelations,
   PickQueryRelationsWithData,
+  PickQueryResult,
   PickQueryReturnType,
   PickQuerySelectable,
+  PickQueryShape,
   PickQueryWithData,
 } from '../../pick-query-types';
 import { Expression } from '../../expressions/expression';
 import { ColumnsShape } from '../../../columns/columns-shape';
 import { _clone } from '../clone/clone';
 import { processSelectArg } from './select.utils';
-import { QueryMetaBase, QueryMetaIsSubQuery } from '../../query-meta';
 import { SelectItem } from './select.sql';
 import { QueryThenByReturnType } from '../../then/then';
 
-export interface SelectSelf extends PickQuerySelectable, PickQueryHasSelect {
-  shape: Column.QueryColumns;
-  relations: RelationsBase;
-  result: Column.QueryColumns;
-  meta: QueryMetaBase;
-  returnType: QueryReturnType;
-  withData: EmptyObject;
-}
+export interface SelectSelf
+  extends PickQuerySelectable,
+    PickQueryHasSelect,
+    PickQueryDefaultSelect,
+    PickQueryShape,
+    PickQueryRelations,
+    PickQueryResult,
+    PickQueryReturnType,
+    PickQueryWithData {}
 
 // .select method argument.
 export type SelectArg<T extends SelectSelf> = '*' | keyof T['__selectable'];
@@ -37,8 +40,7 @@ export type SelectArgs<T extends SelectSelf> = (
   | keyof T['__selectable']
 )[];
 
-interface SubQueryAddition<T extends PickQueryWithData>
-  extends QueryMetaIsSubQuery {
+interface SubQueryAddition<T extends PickQueryWithData> extends IsSubQuery {
   withData: T['withData']; // to refer to the outside `.with` from a relation query
 }
 
@@ -90,7 +92,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
     : K extends 'result'
     ? {
         [K in '*' extends Columns[number]
-          ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
+          ? Exclude<Columns[number], '*'> | T['__defaultSelect']
           : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
       } & (T['__hasSelect'] extends (
         T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
@@ -105,7 +107,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
         // the result is copy-pasted to save on TS instantiations
         {
           [K in '*' extends Columns[number]
-            ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
+            ? Exclude<Columns[number], '*'> | T['__defaultSelect']
             : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
         } & (T['__hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
@@ -185,7 +187,7 @@ type SelectResultColumnsAndObj<
       {
         [K in
           | ('*' extends Columns[number]
-              ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
+              ? Exclude<Columns[number], '*'> | T['__defaultSelect']
               : Columns[number])
           | keyof Obj as K extends Columns[number]
           ? T['__selectable'][K]['as']
@@ -206,7 +208,7 @@ type SelectResultColumnsAndObj<
         {
           [K in
             | ('*' extends Columns[number]
-                ? Exclude<Columns[number], '*'> | T['meta']['defaultSelect']
+                ? Exclude<Columns[number], '*'> | T['__defaultSelect']
                 : Columns[number])
             | keyof Obj as K extends Columns[number]
             ? T['__selectable'][K]['as']
@@ -227,7 +229,7 @@ type SelectResultColumnsAndObj<
 
 // To allow where-ing on a relation that returns a single record.
 // Where-ing is allowed because relation is joined and the row is not JSON-ed unlike selecting multiple rows.
-interface AllowedRelationOneQueryForSelectable extends QueryMetaIsSubQuery {
+interface AllowedRelationOneQueryForSelectable extends IsSubQuery {
   result: Column.QueryColumns;
   returnType: 'value' | 'valueOrThrow' | 'one' | 'oneOrThrow';
 }

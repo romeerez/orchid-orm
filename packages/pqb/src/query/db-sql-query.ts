@@ -1,6 +1,5 @@
 import { QueryBuilder } from './db';
 import { QueryData } from './query-data';
-import { QueryInternal } from './query';
 import {
   isRawSQL,
   RawSqlBase,
@@ -11,6 +10,7 @@ import { TemplateLiteralArgs } from './expressions/expression';
 import { AdapterBase, QueryResult, QueryResultRow } from '../adapters/adapter';
 import { RecordUnknown } from '../utils';
 import { TopToSqlCtx, ToSQLCtx } from './sql/to-sql';
+import { QueryInternal } from './query-internal';
 
 // Argument for `query` and `queryArrays`, it can be a SQL template literal, or a raw SQL object.
 export type SQLQueryArgs = TemplateLiteralArgs | [RawSqlBase];

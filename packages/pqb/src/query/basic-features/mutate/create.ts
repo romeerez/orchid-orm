@@ -5,7 +5,6 @@ import {
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
   QueryOrExpression,
-  QueryBase,
   IsQuery,
   isQuery,
   SetQueryReturnsAllResult,
@@ -29,9 +28,9 @@ import {
 import { _querySelectAll } from '../select/select';
 import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import {
+  PickQueryDefaults,
   PickQueryHasSelect,
   PickQueryInputType,
-  PickQueryMeta,
   PickQueryQ,
   PickQueryRelations,
   PickQueryResult,
@@ -56,7 +55,7 @@ import { QueryData } from '../../query-data';
 export interface CreateSelf
   extends IsQuery,
     PickQueryHasSelect,
-    PickQueryMeta,
+    PickQueryDefaults,
     PickQueryResult,
     PickQueryRelations,
     PickQueryWithData,
@@ -79,7 +78,7 @@ export interface CreateSelf
 export type CreateData<T extends CreateSelf> =
   EmptyObject extends T['relations']
     ? // if no relations, don't load TS with extra calculations
-      CreateDataWithDefaults<T, keyof T['meta']['defaults']>
+      CreateDataWithDefaults<T, keyof T['__defaults']>
     : CreateRelationsData<T>;
 
 type CreateDataWithDefaults<
@@ -116,7 +115,7 @@ export type CreateRelationsData<T extends CreateSelf> =
   // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
   CreateDataWithDefaultsForRelations<
     T,
-    keyof T['meta']['defaults'],
+    keyof T['__defaults'],
     T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
   > &
     CreateBelongsToData<T> &
@@ -147,15 +146,17 @@ export type CreateRelationsDataOmittingFKeys<
     Union extends RelationConfigDataForCreate
       ? (
           u: // omit relation columns if they are in defaults, is tested in factory.test.ts
-          Union['columns'] extends keyof T['meta']['defaults']
+          Union['columns'] extends keyof T['__defaults']
             ? {
                 [P in Exclude<
                   Union['columns'] & keyof T['inputType'],
-                  keyof T['meta']['defaults']
+                  keyof T['__defaults']
                 >]: CreateColumn<T, P>;
               } & {
-                [P in keyof T['meta']['defaults'] &
-                  Union['columns']]?: CreateColumn<T, P>;
+                [P in keyof T['__defaults'] & Union['columns']]?: CreateColumn<
+                  T,
+                  P
+                >;
               } & Partial<Union['nested']>
             :
                 | {
@@ -257,13 +258,12 @@ type OnConflictArg<T extends PickQueryUniqueProperties> =
   | Expression
   | { constraint: T['internal']['uniqueConstraints'] };
 
-export type AddQueryDefaults<T extends CreateSelf, Defaults> = {
-  [K in keyof T]: K extends 'meta'
-    ? {
-        [K in keyof T['meta']]: K extends 'defaults'
-          ? T['meta']['defaults'] & Defaults
-          : T['meta'][K];
-      }
+export type AddQueryDefaults<
+  T extends CreateSelf,
+  DefaultKeys extends PropertyKey,
+> = {
+  [K in keyof T]: K extends '__defaults'
+    ? { [K in keyof T['__defaults'] | DefaultKeys]: true }
     : T[K];
 };
 
@@ -508,7 +508,7 @@ export const insert = (
 
     if (values.length > 1) {
       const insertValuesAs = _getQueryFreeAlias(q, 'v');
-      _setQueryAlias(self as unknown as QueryBase, 'v', insertValuesAs);
+      _setQueryAlias(self as Query, 'v', insertValuesAs);
 
       q.insertValuesAs = insertValuesAs;
     }
@@ -584,7 +584,7 @@ export const _queryDefaults = <
 >(
   q: T,
   data: Data,
-): AddQueryDefaults<T, { [K in keyof Data]: true }> => {
+): AddQueryDefaults<T, keyof Data> => {
   (q as unknown as Query).q.defaults = data;
   return q as never;
 };
@@ -754,7 +754,7 @@ export class QueryCreate {
   defaults<T extends CreateSelf, Data extends Partial<CreateData<T>>>(
     this: T,
     data: Data,
-  ): AddQueryDefaults<T, { [K in keyof Data]: true }> {
+  ): AddQueryDefaults<T, keyof Data> {
     return _queryDefaults(_clone(this) as never, data as never);
   }
 

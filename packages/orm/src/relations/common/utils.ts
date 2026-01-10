@@ -27,6 +27,10 @@ export interface RelJoin extends JoinQueryMethod {
   <T extends Query>(this: T): T;
 }
 
+export interface HasRelJoin {
+  join: RelJoin;
+}
+
 export interface NestedInsertOneItem {
   create?: NestedInsertOneItemCreate;
   connect?: NestedInsertOneItemConnect;

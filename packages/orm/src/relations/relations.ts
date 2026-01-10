@@ -77,7 +77,7 @@ export type RelationToOneDataForCreateSameQuery<Q extends Query> =
 
 export interface RelationThunkBase {
   type: string;
-  fn(): TableClass;
+  related: ORMTableInput;
   options: unknown;
 }
 
@@ -96,8 +96,11 @@ export interface RelationData {
   modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
 }
 
-export type RelationTableToQuery<Relation extends RelationThunkBase> =
-  ORMTableInputToQueryBuilder<InstanceType<ReturnType<Relation['fn']>>>;
+export type RelationTableToQuery<Relation> = Relation extends {
+  related: infer R extends ORMTableInput;
+}
+  ? ORMTableInputToQueryBuilder<R>
+  : never;
 
 export interface RelationConfigSelf {
   columns: { shape: Column.Shape.QueryInit };
@@ -108,11 +111,14 @@ export type RelationConfigParams<
   T extends RelationConfigSelf,
   Relation extends RelationThunk,
 > = Relation extends BelongsTo
-  ? BelongsToParams<T, Relation>
+  ? BelongsToParams<T, Relation['options']['columns'][number] & string>
   : Relation extends HasOne | HasMany
-  ? HasOneParams<T, Relation>
+  ? HasOneParams<T, Relation['options']>
   : Relation extends HasAndBelongsToMany
-  ? HasAndBelongsToManyParams<T, Relation>
+  ? HasAndBelongsToManyParams<
+      T,
+      Relation['options']['columns'][number] & string
+    >
   : never;
 
 interface ApplyRelationData {
@@ -143,7 +149,9 @@ export const applyRelations = (
     const dbTable = result[name];
     for (const relationName in table.relations) {
       const relation = table.relations[relationName];
-      const otherTableClass = relation.fn();
+      const otherTableClass = (
+        relation as unknown as { fn(): TableClass }
+      ).fn();
       const otherTable = tableEntries.find(
         (pair) => pair[1] instanceof otherTableClass,
       );

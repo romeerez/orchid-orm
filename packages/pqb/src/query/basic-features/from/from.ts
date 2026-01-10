@@ -1,4 +1,4 @@
-import { IsQuery, SelectableFromShape } from '../../query';
+import { IsQuery, Query, SelectableFromShape } from '../../query';
 import { sqlQueryArgsToExpression } from '../../expressions/raw-sql';
 import { anyShape, Column, ColumnsShape } from '../../../columns';
 import {
@@ -8,9 +8,8 @@ import {
 import {
   PickQueryAs,
   PickQueryHasSelect,
-  PickQueryMeta,
-  PickQueryMetaResultAs,
-  PickQueryMetaSelectableResultInputTypeAs,
+  PickQueryResultAs,
+  PickQuerySelectableResultInputTypeAs,
   PickQueryQ,
   PickQueryReturnType,
   PickQuerySelectable,
@@ -32,8 +31,7 @@ import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
 import { QueryThenByQuery } from '../../then/then';
 
 export interface FromQuerySelf
-  extends PickQueryMeta,
-    PickQuerySelectable,
+  extends PickQuerySelectable,
     PickQueryShape,
     PickQueryReturnType,
     PickQueryWithData,
@@ -59,14 +57,10 @@ export type FromResult<
           : T[K];
       }
     : SetQueryTableAlias<T, Arg>
-  : Arg extends PickQueryMetaSelectableResultInputTypeAs
+  : Arg extends PickQuerySelectableResultInputTypeAs
   ? {
-      [K in keyof T]: K extends 'meta'
-        ? {
-            [K in keyof T['meta']]: K extends 'defaultSelect'
-              ? keyof Arg['result']
-              : T['meta'][K];
-          }
+      [K in keyof T]: K extends '__defaultSelect'
+        ? keyof Arg['result']
         : K extends '__selectable'
         ? SelectableFromShape<Arg['result'], Arg['__as']>
         : K extends '__as'
@@ -95,7 +89,7 @@ export type FromResult<
                     };
                   }
                 : never
-              : A extends PickQueryMetaResultAs
+              : A extends PickQueryResultAs
               ? {
                   [K in keyof A['result'] &
                     string as `${A['__as']}.${K}`]: K extends string
@@ -162,7 +156,7 @@ export function queryFrom<
     const q = prepareSubQueryForSql(self as never, arg as never);
     data.as ||= q.q.as || q.table || 't';
     data.shape = getShapeFromSelect(q, true) as ColumnsShape;
-    data.defaultParsers = getQueryParsers(q);
+    data.defaultParsers = getQueryParsers(q as unknown as Query);
     data.batchParsers = q.q.batchParsers;
   }
 

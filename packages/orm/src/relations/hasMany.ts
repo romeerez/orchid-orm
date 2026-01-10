@@ -7,7 +7,6 @@ import {
   CreateData,
   Query,
   WhereArg,
-  WhereResult,
   isQueryReturnsAll,
   VirtualColumn,
   CreateCtx,
@@ -36,6 +35,7 @@ import {
   toArray,
   prepareSubQueryForSql,
   PickQuerySelectableRelations,
+  QueryHasWhere,
 } from 'pqb';
 import {
   addAutoForeignKey,
@@ -43,13 +43,13 @@ import {
   getThroughRelation,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
+  HasRelJoin,
   joinHasRelation,
   joinHasThrough,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
   NestedUpdateManyItems,
-  RelJoin,
 } from './common/utils';
 import { RelationThroughOptions } from './common/options';
 import {
@@ -73,19 +73,15 @@ export type HasManyQuery<
 > = T['relations'][Name]['options'] extends RelationThroughOptions
   ? HasOneQueryThrough<T, Name, TableQuery>
   : {
-      [K in keyof TableQuery]: K extends 'meta'
-        ? TableQuery['meta'] & {
-            defaults: HasOnePopulate<T, Name>;
-            hasWhere: true;
-          }
+      [K in keyof TableQuery]: K extends '__defaults'
+        ? HasOnePopulate<T, Name>
         : K extends '__selectable'
         ? SelectableFromShape<TableQuery['shape'], Name>
         : K extends '__as'
         ? Name
-        : K extends 'join'
-        ? RelJoin
         : TableQuery[K];
-    };
+    } & QueryHasWhere &
+      HasRelJoin;
 
 export interface HasManyInfo<
   T extends RelationConfigSelf,
@@ -95,7 +91,7 @@ export interface HasManyInfo<
 > extends RelationConfigBase {
   returnsOne: false;
   query: Q;
-  params: HasOneParams<T, Rel>;
+  params: HasOneParams<T, Rel['options']>;
   maybeSingle: Q;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
@@ -360,7 +356,7 @@ const getWhereForNestedUpdate = (
   params: MaybeArray<WhereArg<PickQuerySelectableRelations>> | undefined,
   primaryKeys: string[],
   foreignKeys: string[],
-): WhereResult<Query> => {
+): Query => {
   return t.where({
     IN: {
       columns: foreignKeys,

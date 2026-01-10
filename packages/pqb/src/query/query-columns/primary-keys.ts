@@ -1,11 +1,11 @@
 import { OrchidOrmInternalError } from '../errors';
-import { QueryBase } from '../query';
+import { Query } from '../query';
 
-export const getPrimaryKeys = (q: QueryBase) => {
+export const getPrimaryKeys = (q: Query) => {
   return (q.internal.primaryKeys ??= collectPrimaryKeys(q));
 };
 
-export const requirePrimaryKeys = (q: QueryBase, message: string) => {
+export const requirePrimaryKeys = (q: Query, message: string) => {
   const primaryKeys = getPrimaryKeys(q);
   if (!primaryKeys.length) {
     throw new OrchidOrmInternalError(q, message);
@@ -13,7 +13,7 @@ export const requirePrimaryKeys = (q: QueryBase, message: string) => {
   return primaryKeys;
 };
 
-const collectPrimaryKeys = (q: QueryBase): string[] => {
+const collectPrimaryKeys = (q: Query): string[] => {
   const primaryKeys = [];
   const { shape } = q.q;
   for (const key in shape) {

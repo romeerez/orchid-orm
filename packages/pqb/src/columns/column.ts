@@ -1,4 +1,4 @@
-import { Query, QueryBaseCommon } from '../query/query';
+import { Query } from '../query/query';
 import { emptyObject, RecordString, RecordUnknown } from '../utils';
 import {
   RawSQLValues,
@@ -394,7 +394,7 @@ export namespace Column {
 
     // hook for modifying base query object of the table
     // used for automatic updating of `updatedAt`
-    modifyQuery?(q: QueryBaseCommon, column: Column.Pick.Data): void;
+    modifyQuery?(q: Query, column: Column.Pick.Data): void;
 
     // raw database check expression
     checks?: Column.Data.Check[];
@@ -1645,11 +1645,7 @@ export abstract class Column<
   }
 
   modifyQuery<T extends Column.Pick.Data>(this: T, cb: (q: Query) => void): T {
-    return setColumnData(
-      this,
-      'modifyQuery',
-      cb as (q: QueryBaseCommon) => void,
-    );
+    return setColumnData(this, 'modifyQuery', cb);
   }
 
   /**
