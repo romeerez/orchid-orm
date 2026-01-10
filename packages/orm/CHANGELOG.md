@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.59.4
+
+### Patch Changes
+
+- df5a123: Internal changes
+- Updated dependencies [df5a123]
+  - pqb@0.58.4
+  - rake-db@2.27.28
+
 ## 1.59.3
 
 ### Patch Changes

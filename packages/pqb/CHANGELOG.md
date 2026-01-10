@@ -1,5 +1,11 @@
 # pqb
 
+## 0.58.4
+
+### Patch Changes
+
+- df5a123: Internal changes
+
 ## 0.58.3
 
 ### Patch Changes
