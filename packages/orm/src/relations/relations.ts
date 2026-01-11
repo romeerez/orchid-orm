@@ -1,11 +1,6 @@
 import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
-import {
-  ORMTableInputToQueryBuilder,
-  ORMTableInput,
-  TableClass,
-  TableInfo,
-} from '../baseTable';
+import { ORMTableInput, TableClass, TableInfo, TableToDb } from '../baseTable';
 import { OrchidORM } from '../orm';
 import {
   _queryTake,
@@ -99,7 +94,7 @@ export interface RelationData {
 export type RelationTableToQuery<Relation> = Relation extends {
   related: infer R extends ORMTableInput;
 }
-  ? ORMTableInputToQueryBuilder<R>
+  ? TableToDb<R>
   : never;
 
 export interface RelationConfigSelf {

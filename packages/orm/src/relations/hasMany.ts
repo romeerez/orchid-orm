@@ -12,7 +12,6 @@ import {
   CreateCtx,
   UpdateCtx,
   UpdateData,
-  AddQueryDefaults,
   _queryDefaults,
   _queryUpdateOrThrow,
   _queryUpdate,
@@ -51,13 +50,8 @@ import {
   NestedInsertManyItems,
   NestedUpdateManyItems,
 } from './common/utils';
-import { RelationThroughOptions } from './common/options';
-import {
-  HasOneOptions,
-  HasOneParams,
-  HasOnePopulate,
-  HasOneQueryThrough,
-} from './hasOne';
+import { RelationRefsOptions, RelationThroughOptions } from './common/options';
+import { HasOneOptions, HasOneParams, HasOneQueryThrough } from './hasOne';
 import { ORMTableInput } from '../baseTable';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
@@ -70,18 +64,22 @@ export type HasManyQuery<
   T extends RelationConfigSelf,
   Name extends string,
   TableQuery extends Query,
-> = T['relations'][Name]['options'] extends RelationThroughOptions
-  ? HasOneQueryThrough<T, Name, TableQuery>
-  : {
+> = T['relations'][Name]['options'] extends RelationRefsOptions
+  ? {
       [K in keyof TableQuery]: K extends '__defaults'
-        ? HasOnePopulate<T, Name>
+        ? {
+            [K in
+              | keyof TableQuery['__defaults']
+              | T['relations'][Name]['options']['references'][number]]: true;
+          }
         : K extends '__selectable'
         ? SelectableFromShape<TableQuery['shape'], Name>
         : K extends '__as'
         ? Name
         : TableQuery[K];
     } & QueryHasWhere &
-      HasRelJoin;
+      HasRelJoin
+  : HasOneQueryThrough<Name, TableQuery>;
 
 export interface HasManyInfo<
   T extends RelationConfigSelf,
@@ -99,21 +97,13 @@ export interface HasManyInfo<
       ? EmptyObject
       : {
           // create related records
-          create?: CreateData<
-            T['relations'][Name]['options'] extends RelationThroughOptions
-              ? Q
-              : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
-          >[];
+          create?: CreateData<Q>[];
           // find existing records by `where` conditions and update their foreign keys with the new id
           connect?: WhereArg<Q>[];
           // try finding records by `where` conditions, and create them if not found
           connectOrCreate?: {
             where: WhereArg<Q>;
-            create: CreateData<
-              T['relations'][Name]['options'] extends RelationThroughOptions
-                ? Q
-                : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
-            >;
+            create: CreateData<Q>;
           }[];
         };
   };
@@ -143,11 +133,7 @@ export interface HasManyInfo<
     };
     set?: MaybeArray<WhereArg<Q>>;
     add?: MaybeArray<WhereArg<Q>>;
-    create?: CreateData<
-      T['relations'][Name]['options'] extends RelationThroughOptions
-        ? Q
-        : AddQueryDefaults<Q, HasOnePopulate<T, Name>>
-    >[];
+    create?: CreateData<Q>[];
   };
 }
 

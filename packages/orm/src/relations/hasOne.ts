@@ -5,7 +5,6 @@ import {
   _queryUpdate,
   _queryUpdateOrThrow,
   _queryWhere,
-  AddQueryDefaults,
   CreateCtx,
   CreateData,
   CreateMethodsNames,
@@ -89,21 +88,11 @@ export type HasOneParams<
   ? RelationConfigParams<T, T['relations'][Options['through']]>
   : never;
 
-export type HasOnePopulate<
-  T extends RelationConfigSelf,
-  Name extends string,
-> = T['relations'][Name]['options'] extends RelationRefsOptions
-  ? T['relations'][Name]['options']['references'][number]
-  : never;
-
 export type HasOneQueryThrough<
-  T extends RelationConfigSelf,
   Name extends string,
   TableQuery extends Query,
 > = {
-  [K in keyof TableQuery]: K extends '__defaults'
-    ? HasOnePopulate<T, Name>
-    : K extends '__selectable'
+  [K in keyof TableQuery]: K extends '__selectable'
     ? SelectableFromShape<TableQuery['shape'], Name>
     : K extends '__as'
     ? Name
@@ -117,11 +106,14 @@ export type HasOneQuery<
   T extends RelationConfigSelf,
   Name extends string,
   TableQuery extends Query,
-> = T['relations'][Name]['options'] extends RelationThroughOptions
-  ? HasOneQueryThrough<T, Name, TableQuery>
-  : {
+> = T['relations'][Name]['options'] extends RelationRefsOptions
+  ? {
       [K in keyof TableQuery]: K extends '__defaults'
-        ? HasOnePopulate<T, Name>
+        ? {
+            [K in
+              | keyof TableQuery['__defaults']
+              | T['relations'][Name]['options']['references'][number]]: true;
+          }
         : K extends '__selectable'
         ? SelectableFromShape<TableQuery['shape'], Name>
         : K extends '__as'
@@ -130,16 +122,14 @@ export type HasOneQuery<
         ? never
         : TableQuery[K];
     } & QueryHasWhere &
-      HasRelJoin;
+      HasRelJoin
+  : HasOneQueryThrough<Name, TableQuery>;
 
 export interface HasOneInfo<
   T extends RelationConfigSelf,
   Name extends string,
   Rel extends HasOne,
   Q extends Query,
-  CD = T['relations'][Name]['options'] extends RelationThroughOptions
-    ? CreateData<Q>
-    : CreateData<AddQueryDefaults<Q, HasOnePopulate<T, Name>>>,
 > extends RelationConfigBase {
   returnsOne: true;
   query: Q;
@@ -152,7 +142,7 @@ export interface HasOneInfo<
     ? EmptyObject
     : {
         [P in Name]?: RelationToOneDataForCreate<{
-          nestedCreateQuery: CD;
+          nestedCreateQuery: CreateData<Q>;
           table: Q;
         }>;
       };
@@ -177,11 +167,11 @@ export interface HasOneInfo<
     | {
         upsert: {
           update: UpdateData<Q>;
-          create: CD | (() => CD);
+          create: CreateData<Q> | (() => CreateData<Q>);
         };
       }
     | {
-        create: CD;
+        create: CreateData<Q>;
       };
 }
 

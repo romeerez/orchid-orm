@@ -42,7 +42,6 @@ import {
   MaybeArray,
   QueryOrExpression,
   RecordUnknown,
-  RelationsBase,
   ShallowSimplify,
   snakeCaseKey,
   StaticSQLArgs,
@@ -97,10 +96,8 @@ export interface Table extends Query, TableInfo {}
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
 // add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export interface TableToDb<
-  T extends ORMTableInput,
-  Relations extends RelationsBase,
-> extends TableInfo,
+export interface TableToDb<T extends ORMTableInput>
+  extends TableInfo,
     Db<
       T['table'],
       T['columns']['shape'],
@@ -123,54 +120,45 @@ export interface TableToDb<
       MapTableScopesOption<T>,
       ColumnsShape.DefaultSelectKeys<T['columns']['shape']>
     > {
-  relations: Relations;
+  relations: T extends RelationConfigSelf
+    ? {
+        [K in keyof T['relations'] &
+          string]: T['relations'][K] extends BelongsTo
+          ? BelongsToInfo<
+              T,
+              K,
+              T['relations'][K]['options']['columns'][number] & string,
+              T['relations'][K]['options']['required'],
+              BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
+            >
+          : T['relations'][K] extends HasOne
+          ? HasOneInfo<
+              T,
+              K,
+              T['relations'][K],
+              HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+            >
+          : T['relations'][K] extends HasMany
+          ? HasManyInfo<
+              T,
+              K,
+              T['relations'][K],
+              HasManyQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+            >
+          : T['relations'][K] extends HasAndBelongsToMany
+          ? HasAndBelongsToManyInfo<
+              T,
+              K,
+              T['relations'][K]['options']['columns'][number] & string,
+              HasAndBelongsToManyQuery<
+                K,
+                RelationTableToQuery<T['relations'][K]>
+              >
+            >
+          : never;
+      }
+    : EmptyObject;
 }
-
-// convert a table class type into queryable interface
-export type ORMTableInputToQueryBuilder<T extends ORMTableInput> =
-  T extends RelationConfigSelf
-    ? TableToDb<
-        T,
-        T extends RelationConfigSelf
-          ? {
-              [K in keyof T['relations'] &
-                string]: T['relations'][K] extends BelongsTo
-                ? BelongsToInfo<
-                    T,
-                    K,
-                    T['relations'][K]['options']['columns'][number] & string,
-                    T['relations'][K]['options']['required'],
-                    BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
-                  >
-                : T['relations'][K] extends HasOne
-                ? HasOneInfo<
-                    T,
-                    K,
-                    T['relations'][K],
-                    HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
-                  >
-                : T['relations'][K] extends HasMany
-                ? HasManyInfo<
-                    T,
-                    K,
-                    T['relations'][K],
-                    HasManyQuery<T, K, RelationTableToQuery<T['relations'][K]>>
-                  >
-                : T['relations'][K] extends HasAndBelongsToMany
-                ? HasAndBelongsToManyInfo<
-                    T,
-                    K,
-                    T['relations'][K]['options']['columns'][number] & string,
-                    HasAndBelongsToManyQuery<
-                      K,
-                      RelationTableToQuery<T['relations'][K]>
-                    >
-                  >
-                : never;
-            }
-          : EmptyObject
-      >
-    : TableToDb<T, EmptyObject>;
 
 // type of table instance created by a table class
 // is used only in `orchidORM` constructor to accept proper classes

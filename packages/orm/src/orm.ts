@@ -20,10 +20,10 @@ import {
   Column,
 } from 'pqb';
 import {
-  ORMTableInputToQueryBuilder,
   ORMTableInput,
   TableClasses,
   BaseTableClass,
+  TableToDb,
 } from './baseTable';
 import { applyRelations } from './relations/relations';
 import {
@@ -40,7 +40,7 @@ interface FromQuery extends Query {
 
 export type OrchidORM<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? ORMTableInputToQueryBuilder<R>
+    ? TableToDb<R>
     : never;
 } & OrchidORMMethods;
 
