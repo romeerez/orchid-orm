@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.59.5
+
+### Patch Changes
+
+- 6a4e786: Fix: serial id was still required in a nested create in hasOne/hasMany
+- Updated dependencies [8d5f051]
+  - pqb@0.58.5
+  - rake-db@2.27.29
+
 ## 1.59.4
 
 ### Patch Changes

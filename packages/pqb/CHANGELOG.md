@@ -1,5 +1,11 @@
 # pqb
 
+## 0.58.5
+
+### Patch Changes
+
+- 8d5f051: Omit relation columns from a default select when not having named columns
+
 ## 0.58.4
 
 ### Patch Changes
