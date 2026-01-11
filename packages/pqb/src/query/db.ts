@@ -419,7 +419,7 @@ export class Db<
       }
       this.q.selectAllColumns = list;
     } else {
-      this.q.selectAllShape = shape;
+      this.q.selectAllShape = { ...shape };
     }
 
     if (modifyQuery) {

@@ -2,6 +2,7 @@ import { User, userData } from '../test-utils/pqb.test-utils';
 import { createDbWithAdapter } from './db';
 import {
   assertType,
+  BaseTable,
   columnTypes,
   createTestDb,
   expectSql,
@@ -21,6 +22,7 @@ import {
 import { TransactionState } from '../adapters/adapter';
 import { RecordUnknown } from '../utils';
 import { QueryLogger } from 'pqb';
+import { orchidORMWithAdapter } from 'orchid-orm';
 
 describe('db connection', () => {
   // not supported by postgres.js
@@ -103,6 +105,30 @@ describe('db', () => {
       `,
       ['bar'],
     );
+  });
+
+  it('should omit relation columns from `selectAllShape` when not having named columns', () => {
+    class SomeTable extends BaseTable {
+      table = 'some';
+      columns = this.setColumns((t) => ({ id: t.identity().primaryKey() }));
+      relations = {
+        rel: this.belongsTo(() => SomeTable, {
+          columns: ['id'],
+          references: ['id'],
+        }),
+      };
+    }
+
+    const db = orchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+      },
+      {
+        some: SomeTable,
+      },
+    );
+
+    expect(Object.keys(db.some.q.selectAllShape)).not.toContain('rel');
   });
 
   describe('overriding column types', () => {
