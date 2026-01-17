@@ -39,6 +39,12 @@ export const getQueryAs = (q: { table?: string; q: { as?: string } }) => {
   return q.q.as || (q.table as string);
 };
 
+export const requireQueryAs = (q: { table?: string; q: { as?: string } }) => {
+  const as = getQueryAs(q);
+  if (!as) throw new Error(`Table name or alias is missing`);
+  return as;
+};
+
 export const _getQueryAs = (q: Query): string | undefined => q.q.as;
 
 export const _getQueryFreeAlias = (q: QueryDataAliases, as: string): string =>

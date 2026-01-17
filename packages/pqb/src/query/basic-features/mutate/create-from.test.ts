@@ -533,15 +533,15 @@ describe('createFrom functions', () => {
       expectSql(
         q.toSQL(),
         `
-          WITH "q" AS (
+          WITH "user" AS (
+            INSERT INTO "user"("name", "password")
+            VALUES ($1, $2)
+            RETURNING "user"."id", "user"."name"
+          ), "q" AS (
             SELECT "chat"."id_of_chat" "chatId"
             FROM "chat"
             WHERE "chat"."id_of_chat" = $3
             LIMIT 1
-          ), "user" AS (
-            INSERT INTO "user"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "user"."id", "user"."name"
           )
           INSERT INTO "message"("chat_id", "author_id", "text")
           SELECT "q"."chatId", v."author_id"::int4, v."text"::text

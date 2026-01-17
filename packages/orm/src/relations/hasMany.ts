@@ -10,7 +10,6 @@ import {
   isQueryReturnsAll,
   VirtualColumn,
   CreateCtx,
-  UpdateCtx,
   UpdateData,
   _queryDefaults,
   _queryUpdateOrThrow,
@@ -181,7 +180,7 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     );
   }
 
-  update(q: Query, _: UpdateCtx, set: RecordUnknown) {
+  update(q: Query, set: RecordUnknown) {
     const params = set[this.key] as NestedUpdateManyItems;
     if ((params.set || params.create) && isQueryReturnsAll(q)) {
       const key = params.set ? 'set' : 'create';

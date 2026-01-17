@@ -1,5 +1,5 @@
 import { Query } from '../query';
-import { QueryData } from '../query-data';
+import { QueryData, QueryType } from '../query-data';
 import { QueryBuilder } from '../db';
 import { addWithToSql, ctesToSql, TopCTE } from '../basic-features/cte/cte.sql';
 import { SubQueryForSql } from '../sub-query/sub-query-for-sql';
@@ -13,6 +13,7 @@ import {
   _clone,
   JoinItem,
   makeRowToJson,
+  makeSql,
   MoreThanOneRowError,
   QueryInternal,
   Sql,
@@ -90,7 +91,7 @@ export interface ToSQLQuery {
 export interface ToSql {
   (
     table: ToSQLQuery,
-    type: QueryData['type'],
+    type: QueryType,
     topCtx?: TopToSqlCtx,
     isSubSql?: boolean,
     cteName?: string,
@@ -125,6 +126,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
   let result: Sql;
 
   let selectKeywordPos: number | undefined;
+  let prependedSelectParenthesis: boolean | undefined;
 
   let fromQuery: SubQueryForSql | undefined;
 
@@ -134,10 +136,10 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
     if (type === 'truncate') {
       pushTruncateSql(ctx, tableName, query);
-      result = { text: sql.join(' '), values };
+      result = makeSql(ctx, table, type, isSubSql);
     } else if (type === 'columnInfo') {
       pushColumnInfoSql(ctx, table, query);
-      result = { text: sql.join(' '), values };
+      result = makeSql(ctx, table, type, isSubSql);
     } else {
       const quotedAs = `"${query.as || tableName}"`;
 
@@ -149,7 +151,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
         result = pushDeleteSql(ctx, table, query, quotedAs, isSubSql);
       } else if (type === 'copy') {
         pushCopySql(ctx, table, query, quotedAs);
-        result = { text: sql.join(' '), values };
+        result = makeSql(ctx, table, type, isSubSql);
       } else {
         throw new Error(`Unsupported query type ${type}`);
       }
@@ -313,13 +315,10 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
     if (selectKeywordPos !== undefined && !isSubSql && ctx.topCtx.cteHooks) {
       sql[selectKeywordPos] = '(' + sql[selectKeywordPos];
+      prependedSelectParenthesis = true;
     }
 
-    result = {
-      text: sql.join(' '),
-      values,
-      runAfterQuery,
-    };
+    result = makeSql(ctx, table, type, isSubSql, runAfterQuery);
   }
 
   if (!ctx.cteName) {
@@ -329,27 +328,29 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     }
   }
 
-  if (!isSubSql && ctx.topCtx.cteHooks && 'text' in result) {
-    result.cteHooks = ctx.topCtx.cteHooks;
+  if (!isSubSql) {
+    if (ctx.topCtx.cteHooks && 'text' in result) {
+      result.cteHooks = ctx.topCtx.cteHooks;
 
-    if (ctx.topCtx.cteHooks.hasSelect) {
-      if (selectKeywordPos !== undefined) {
-        result.text += ')';
+      if (ctx.topCtx.cteHooks.hasSelect) {
+        if (prependedSelectParenthesis) {
+          result.text += ')';
+        }
+
+        result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
+          ctx.selectedCount || 0,
+        )}json_build_object(${Object.entries(ctx.topCtx.cteHooks.tableHooks)
+          .map(
+            ([cteName, data]) =>
+              `'${cteName}', (SELECT json_agg(${makeRowToJson(
+                cteName,
+                data.shape,
+                false,
+                true,
+              )}) FROM "${cteName}")`,
+          )
+          .join(', ')})`;
       }
-
-      result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
-        ctx.selectedCount || 0,
-      )}json_build_object(${Object.entries(ctx.topCtx.cteHooks.tableHooks)
-        .map(
-          ([cteName, data]) =>
-            `'${cteName}', (SELECT json_agg(${makeRowToJson(
-              cteName,
-              data.shape,
-              false,
-              true,
-            )}) FROM "${cteName}")`,
-        )
-        .join(', ')})`;
     }
   }
 

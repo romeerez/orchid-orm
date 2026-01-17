@@ -82,17 +82,18 @@ export const ctesToSql = (
     if (ctx !== ctx.topCtx && item.q?.q.type) {
       addTopCte('prepend', ctx, item.q, item.n);
     } else {
-      (result ||= []).push(cteToSql(ctx, item));
+      const { as, sql } = cteToSqlGiveAs(ctx, item);
+      addTopCteSql('prepend', ctx, as, sql);
     }
   }
   return result;
 };
 
-export const cteToSql = (
+export const cteToSqlGiveAs = (
   ctx: ToSQLCtx,
   item: CteItem,
   type?: QueryData['type'],
-): string => {
+): { as: string; sql: string } => {
   let inner: string;
 
   let as;
@@ -124,16 +125,25 @@ export const cteToSql = (
   }
 
   const o = item.o ?? (emptyObject as CteOptions);
-  return `${o.recursive ? 'RECURSIVE ' : ''}"${as}"${
-    o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
-  } AS ${
-    o.materialized
-      ? 'MATERIALIZED '
-      : o.notMaterialized
-      ? 'NOT MATERIALIZED '
-      : ''
-  }(${inner})`;
+  return {
+    as,
+    sql: `${o.recursive ? 'RECURSIVE ' : ''}"${as}"${
+      o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
+    } AS ${
+      o.materialized
+        ? 'MATERIALIZED '
+        : o.notMaterialized
+        ? 'NOT MATERIALIZED '
+        : ''
+    }(${inner})`,
+  };
 };
+
+export const cteToSql = (
+  ctx: ToSQLCtx,
+  item: CteItem,
+  type?: QueryData['type'],
+): string => cteToSqlGiveAs(ctx, item, type).sql;
 
 export const prependTopCte = (
   ctx: ToSQLCtx,
@@ -141,6 +151,17 @@ export const prependTopCte = (
   as?: string,
   type?: QueryData['type'],
 ) => addTopCte('prepend', ctx, q, as, type);
+
+export const addTopCteSql = (
+  key: 'prepend' | 'append',
+  ctx: ToSQLCtx,
+  as: string,
+  sql: string,
+) => {
+  const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
+  topCTE.names[as] = true;
+  topCTE[key].push(sql);
+};
 
 export const addTopCte = (
   key: 'prepend' | 'append',

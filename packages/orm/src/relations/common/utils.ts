@@ -188,7 +188,7 @@ export const hasRelationHandleUpdate = (
   });
 };
 
-export const selectIfNotSelected = (q: Query, columns: string[]) => {
+export const _selectIfNotSelected = (q: Query, columns: string[]) => {
   const select = q.q.select || [];
   if (!select.includes('*')) {
     for (const column of columns) {

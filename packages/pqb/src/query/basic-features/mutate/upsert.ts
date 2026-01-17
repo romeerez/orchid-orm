@@ -32,6 +32,39 @@ export interface UpsertThis extends UpdateSelf, CreateSelf {
   returnType: 'one' | 'oneOrThrow' | 'value' | 'valueOrThrow' | 'void';
 }
 
+export type UpsertData<T extends UpsertThis, Update extends UpdateData<T>> =
+  | {
+      update: Update;
+      create: CreateData<T> | ((update: Update) => CreateData<T>);
+    }
+  | {
+      data: Update;
+      create:
+        | UpsertCreate<keyof Update, CreateData<T>>
+        | ((update: Update) => UpsertCreate<keyof Update, CreateData<T>>);
+    };
+
+export const _queryUpsert = (
+  q: Query,
+  data: UpsertData<UpsertThis, UpdateData<Query>>,
+): Query => {
+  q.q.upsertUpdate = true;
+
+  let updateData;
+  let mergeData;
+  if ('data' in data) {
+    updateData = mergeData = data.data;
+  } else {
+    updateData = data.update;
+  }
+
+  if (!isObjectEmpty(updateData)) {
+    _queryUpdate(q, updateData as never);
+  }
+
+  return _orCreate(q as Query, data.create, updateData, mergeData) as Query;
+};
+
 export interface QueryUpsert {
   /**
    * `upsert` tries to update a single record, and then it creates the record if it doesn't yet exist.
@@ -142,37 +175,12 @@ export interface QueryUpsert {
    */
   upsert<T extends UpsertThis, Update extends UpdateData<T>>(
     this: T,
-    data:
-      | {
-          update: Update;
-          create: CreateData<T> | ((update: Update) => CreateData<T>);
-        }
-      | {
-          data: Update;
-          create:
-            | UpsertCreate<keyof Update, CreateData<T>>
-            | ((update: Update) => UpsertCreate<keyof Update, CreateData<T>>);
-        },
+    data: UpsertData<T, Update>,
   ): UpsertResult<T>;
 }
 
 export const QueryUpsert: QueryUpsert = {
   upsert(data) {
-    const q = _clone(this);
-    q.q.upsertUpdate = true;
-
-    let updateData;
-    let mergeData;
-    if ('data' in data) {
-      updateData = mergeData = data.data;
-    } else {
-      updateData = data.update;
-    }
-
-    if (!isObjectEmpty(updateData)) {
-      _queryUpdate(q, updateData as never);
-    }
-
-    return _orCreate(q as Query, data.create, updateData, mergeData) as never;
+    return _queryUpsert(_clone(this), data as never) as never;
   },
 };

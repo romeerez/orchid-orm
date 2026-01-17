@@ -12,7 +12,6 @@ import {
   PickQueryQ,
   Query,
   SelectableFromShape,
-  UpdateCtx,
   UpdateData,
   VirtualColumn,
   WhereArg,
@@ -219,7 +218,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     );
   }
 
-  update(q: Query, _: UpdateCtx, set: RecordUnknown) {
+  update(q: Query, set: RecordUnknown) {
     const params = set[this.key] as NestedUpdateOneItem;
     if (
       (params.set || params.create || params.upsert) &&
