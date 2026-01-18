@@ -548,7 +548,12 @@ describe('update', () => {
           WHERE "user"."id" = $4
           RETURNING "user"."id"
         )
-        SELECT * FROM "b"
+        (SELECT *, NULL FROM "b")
+        UNION ALL
+        SELECT NULL, json_build_object(
+          'a', (SELECT json_agg(row_to_json("a".*)) FROM "a"),
+          'b', (SELECT json_agg(row_to_json("b".*)) FROM "b")
+        )
       `,
       ['name', 'password', 1, 2],
     );
@@ -616,11 +621,16 @@ describe('update', () => {
                  "updated_at" = now()
           WHERE "user"."id" = $2
           RETURNING "user"."name"
+        ), q2 AS (
+          UPDATE "user"
+             SET "name" = (SELECT "q"."name" FROM "q"),
+                 "updated_at" = now()
+          WHERE "user"."id" = $3
+          RETURNING NULL
         )
-        UPDATE "user"
-           SET "name" = (SELECT "q"."name" FROM "q"),
-               "updated_at" = now()
-        WHERE "user"."id" = $3
+        SELECT *, NULL FROM q2
+        UNION ALL
+        SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
       `,
       ['new name', 2, 1],
     );
@@ -660,11 +670,16 @@ describe('update', () => {
           DELETE FROM "user"
           WHERE "user"."id" = $1
           RETURNING "user"."name"
+        ), q2 AS (
+          UPDATE "user"
+             SET "name" = (SELECT "q"."name" FROM "q"),
+                 "updated_at" = now()
+          WHERE "user"."id" = $2
+          RETURNING NULL
         )
-        UPDATE "user"
-           SET "name" = (SELECT "q"."name" FROM "q"),
-               "updated_at" = now()
-        WHERE "user"."id" = $2
+        SELECT *, NULL FROM q2
+        UNION ALL
+        SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
       `,
       [2, 1],
     );

@@ -413,7 +413,7 @@ describe('hooks', () => {
       await testDb
         .with(
           'cte',
-          User.get('id').where({
+          User.get('id').whereNot({
             id: () =>
               User.get('id').insert({
                 ...userData,
@@ -1298,6 +1298,7 @@ describe('hooks', () => {
       await _appendQuery(
         UserNoHooks.as('main').create(userData),
         User.create(userData),
+        noop,
       );
 
       assert.createHooksBeingCalled({ data: [depData], cte: true });
@@ -1310,6 +1311,7 @@ describe('hooks', () => {
       await _appendQuery(
         UserNoHooks.as('main').create(userData),
         User.find(id).update({ name: 'new name', age: 123 }),
+        noop,
       );
 
       assert.updateHooksBeingCalled({
@@ -1325,6 +1327,7 @@ describe('hooks', () => {
       await _appendQuery(
         UserNoHooks.as('main').create(userData),
         User.find(id).delete(),
+        noop,
       );
 
       assert.deleteHooksCteBeingCalled({
@@ -1341,6 +1344,7 @@ describe('hooks', () => {
           update: { name: 'new name' },
           create: userData,
         }),
+        noop,
       );
 
       assert.upsertCreateHookBeingCalled({

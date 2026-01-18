@@ -33,6 +33,7 @@ export abstract class VirtualColumn<
     ctx: CreateCtx,
     item: RecordUnknown,
     rowIndex: number,
+    one?: boolean,
   ): void;
 
   update?(q: UpdateSelf, set: RecordUnknown): void;

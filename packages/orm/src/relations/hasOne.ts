@@ -1,7 +1,6 @@
 import {
   _queryDefaults,
   _queryDelete,
-  _queryRows,
   _queryUpdate,
   _queryUpdateOrThrow,
   _queryWhere,
@@ -28,6 +27,14 @@ import {
   QueryHasWhere,
   QueryManyTake,
   QueryManyTakeOptional,
+  _queryCreate,
+  RawSql,
+  _appendQuery,
+  _clone,
+  _queryUpsert,
+  _queryWhereIn,
+  _queryInsert,
+  noop,
 } from 'pqb';
 import { ORMTableInput } from '../baseTable';
 import {
@@ -38,11 +45,11 @@ import {
   RelationConfigSelf,
 } from './relations';
 import {
+  _selectIfNotSelected,
   addAutoForeignKey,
   getSourceRelation,
   getThroughRelation,
   hasRelationHandleCreate,
-  hasRelationHandleUpdate,
   HasRelJoin,
   joinHasRelation,
   joinHasThrough,
@@ -50,6 +57,8 @@ import {
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
+  selectCteColumnSql,
+  selectCteColumnsSql,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { joinQueryChainHOF } from './common/joinQueryChain';
@@ -194,7 +203,7 @@ export type HasOneNestedUpdate = (
 
 class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasOneNestedInsert;
-  private readonly nestedUpdate: HasOneNestedUpdate;
+  private readonly setNulls: RecordUnknown;
 
   constructor(
     schema: ColumnSchemaConfig,
@@ -203,38 +212,157 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   ) {
     super(schema);
     this.nestedInsert = nestedInsert(state);
-    this.nestedUpdate = nestedUpdate(state);
+
+    this.setNulls = {};
+    for (const foreignKey of state.foreignKeys) {
+      this.setNulls[foreignKey] = null;
+    }
   }
 
-  create(q: Query, ctx: CreateCtx, item: RecordUnknown, rowIndex: number) {
-    hasRelationHandleCreate(
-      q,
-      ctx,
-      item,
-      rowIndex,
-      this.key,
-      this.state.primaryKeys,
-      this.nestedInsert,
-    );
+  create(
+    self: Query,
+    ctx: CreateCtx,
+    item: RecordUnknown,
+    rowIndex: number,
+    one?: boolean,
+  ) {
+    if (one) {
+      const value = item[this.key] as NestedInsertOneItem;
+      if (!value.create && !value.connect && !value.connectOrCreate) {
+        return;
+      }
+
+      const { query: rel, primaryKeys, foreignKeys } = this.state;
+
+      _selectIfNotSelected(self, primaryKeys);
+
+      const data = value.create ? { ...value.create } : {};
+
+      foreignKeys.forEach((key) => {
+        data[key] = new RawSql('');
+      });
+
+      const query = value.create
+        ? _queryCreate(_clone(rel), data as never)
+        : value.connect
+        ? _queryUpdateOrThrow(
+            rel.where(value.connect as WhereArg<Query>) as never,
+            data as never,
+          )
+        : value.connectOrCreate
+        ? _queryUpsert(rel.where(value.connectOrCreate.where) as never, {
+            update: data,
+            create: {
+              ...value.connectOrCreate.create,
+              ...data,
+            },
+          })
+        : (undefined as never);
+
+      _appendQuery(self, query, (as) => {
+        foreignKeys.forEach((key, i) => {
+          (data[key] as RawSql)._sql = selectCteColumnSql(as, primaryKeys[i]);
+        });
+      });
+    } else {
+      hasRelationHandleCreate(
+        self,
+        ctx,
+        item,
+        rowIndex,
+        this.key,
+        this.state.primaryKeys,
+        this.nestedInsert,
+      );
+    }
   }
 
-  update(q: Query, set: RecordUnknown) {
+  update(self: Query, set: RecordUnknown) {
     const params = set[this.key] as NestedUpdateOneItem;
     if (
       (params.set || params.create || params.upsert) &&
-      isQueryReturnsAll(q)
+      isQueryReturnsAll(self)
     ) {
       const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
       throw new Error(`\`${key}\` option is not allowed in a batch update`);
     }
 
-    hasRelationHandleUpdate(
-      q,
-      set,
-      this.key,
-      this.state.primaryKeys,
-      this.nestedUpdate,
-    );
+    const { primaryKeys, foreignKeys, query: relQuery } = this.state;
+    if (
+      params.create ||
+      params.update ||
+      params.upsert ||
+      params.disconnect ||
+      params.set ||
+      params.delete
+    ) {
+      _selectIfNotSelected(self, primaryKeys);
+
+      const selectIdsSql = new RawSql('');
+
+      const existingRelQuery = _queryWhereIn(
+        _clone(relQuery),
+        true,
+        foreignKeys,
+        selectIdsSql,
+      );
+
+      let setIds = undefined as unknown as RecordUnknown;
+      if (params.create || params.set || params.upsert) {
+        setIds = {};
+        foreignKeys.forEach((foreignKey) => {
+          setIds[foreignKey] = new RawSql('');
+        });
+      }
+
+      const nullifyOrDeleteQuery = params.update
+        ? _queryUpdate(existingRelQuery, params.update)
+        : params.upsert
+        ? _queryUpsert(existingRelQuery, {
+            update: params.upsert.update,
+            create: {
+              ...(typeof params.upsert.create === 'function'
+                ? params.upsert.create()
+                : params.upsert.create),
+              ...setIds,
+            },
+          })
+        : params.delete
+        ? _queryDelete(existingRelQuery)
+        : _queryUpdate(existingRelQuery, this.setNulls);
+
+      nullifyOrDeleteQuery.q.returnType = 'void';
+
+      _appendQuery(self, nullifyOrDeleteQuery, (as) => {
+        selectIdsSql._sql = selectCteColumnsSql(as, primaryKeys);
+
+        if (params.create || params.set || params.upsert) {
+          foreignKeys.forEach((foreignKey, i) => {
+            (setIds[foreignKey] as RawSql)._sql = selectCteColumnSql(
+              as,
+              primaryKeys[i],
+            );
+          });
+        }
+      });
+
+      if (params.create) {
+        const createQuery = _queryInsert(_clone(relQuery), {
+          ...params.create,
+          ...setIds,
+        });
+
+        _appendQuery(self, createQuery, noop);
+      } else if (params.set) {
+        const setQuery = _queryUpdate(
+          _queryWhere(_clone(relQuery), [params.set as never]),
+          setIds,
+        );
+        setQuery.q.returnType = 'void';
+
+        _appendQuery(self, setQuery, noop);
+      }
+    }
   }
 }
 
@@ -391,9 +519,9 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         const [selfData, item] = items[i] as [RecordUnknown, RecordUnknown];
 
         const data: RecordUnknown = {};
-        for (let i = 0; i < len; i++) {
-          data[foreignKeys[i]] = selfData[primaryKeys[i]];
-        }
+        primaryKeys.forEach((primaryKey, i) => {
+          data[foreignKeys[i]] = selfData[primaryKey];
+        });
 
         items[i] =
           'connect' in item
@@ -447,95 +575,4 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
       await t.insertMany(items as RecordUnknown[]);
     }
   }) as HasOneNestedInsert;
-};
-
-const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
-  const len = primaryKeys.length;
-
-  const setNulls: RecordUnknown = {};
-  for (const foreignKey of foreignKeys) {
-    setNulls[foreignKey] = null;
-  }
-
-  return (async (_, data, params) => {
-    const t = query.clone();
-    const ids = data.map((item) =>
-      primaryKeys.map((primaryKey) => item[primaryKey]),
-    );
-
-    const currentRelationsQuery = t.whereIn(
-      foreignKeys as [string, ...string[]],
-      ids as [unknown, ...unknown[]][],
-    );
-
-    if (params.create || params.disconnect || params.set) {
-      let queryToDisconnect = currentRelationsQuery;
-      // do not nullify the record that is going to be set, because the column may non-nullable.
-      if (params.set) {
-        queryToDisconnect = queryToDisconnect.whereNot(params.set) as never;
-      }
-
-      await _queryUpdate(queryToDisconnect, setNulls as never);
-
-      const record = data[0];
-
-      if (params.create) {
-        const obj: RecordUnknown = { ...params.create };
-        for (let i = 0; i < len; i++) {
-          obj[foreignKeys[i]] = record[primaryKeys[i]];
-        }
-
-        await t.insert(obj);
-      }
-
-      if (params.set) {
-        const obj: RecordUnknown = {};
-        for (let i = 0; i < len; i++) {
-          obj[foreignKeys[i]] = record[primaryKeys[i]];
-        }
-
-        await _queryUpdate(
-          _queryWhere(t as Query, [params.set as never]) as never,
-          obj as never,
-        );
-      }
-    } else if (params.update) {
-      await _queryUpdate(currentRelationsQuery, params.update as never);
-    } else if (params.delete) {
-      const q = _queryDelete(currentRelationsQuery);
-      q.q.returnType = 'value'; // do not throw
-      await q;
-    } else if (params.upsert) {
-      const { update, create } = params.upsert;
-      currentRelationsQuery.q.select = foreignKeys;
-      const updatedIds = (await _queryUpdate(
-        _queryRows(currentRelationsQuery),
-        update as never,
-      )) as unknown as unknown[][];
-
-      if (updatedIds.length < ids.length) {
-        const data = typeof create === 'function' ? create() : create;
-
-        await t.createMany(
-          ids.reduce((rows: RecordUnknown[], ids) => {
-            if (
-              !updatedIds.some((updated) =>
-                updated.every((value, i) => value === ids[i]),
-              )
-            ) {
-              const obj: RecordUnknown = { ...data };
-
-              for (let i = 0; i < len; i++) {
-                obj[foreignKeys[i]] = ids[i];
-              }
-
-              rows.push(obj);
-            }
-
-            return rows;
-          }, []),
-        );
-      }
-    }
-  }) as HasOneNestedUpdate;
 };

@@ -31,7 +31,6 @@ import {
   ColumnsShape,
   Column,
   getFreeAlias,
-  _with,
   RawSql,
   _orCreate,
   QueryHasWhere,
@@ -39,11 +38,12 @@ import {
   QueryManyTakeOptional,
   _appendQuery,
   _queryWhereIn,
-  requireQueryAs,
   _queryUpsert,
   UpsertData,
   UpsertThis,
   _querySelect,
+  _prependWith,
+  noop,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -57,6 +57,8 @@ import {
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
   _selectIfNotSelected,
+  selectCteColumnSql,
+  selectCteColumnsSql,
 } from './common/utils';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
@@ -190,7 +192,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
       const selectPKeys = query.select(...primaryKeys);
 
-      _with(
+      _prependWith(
         q,
         asFn,
         'create' in value
@@ -206,7 +208,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       return;
     } else if ('connect' in value) {
       const as = getFreeAlias(q.q.withShapes, 'q');
-      _with(q, as, query.select(...primaryKeys).findBy(value.connect));
+      _prependWith(q, as, query.select(...primaryKeys).findBy(value.connect));
 
       foreignKeys.map((foreignKey, i) => {
         item[foreignKey] = new RawSql(
@@ -326,20 +328,23 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
       const asFn = setForeignKeysFromCte(update, primaryKeys, foreignKeys);
 
-      _with(self, asFn, createQuery);
+      _prependWith(self, asFn, createQuery);
     } else if (params.update) {
       _selectIfNotSelected(self, foreignKeys);
 
-      const as = requireQueryAs(self);
-
-      const selectIdsSql = new RawSql(selectCteColumnsSql(as, foreignKeys));
+      const selectIdsSql = new RawSql('');
 
       const updateQuery = _queryUpdate(
         _queryWhereIn(query.clone(), true, primaryKeys, selectIdsSql),
         params.update as UpdateData<Query>,
       );
 
-      _appendQuery(self, updateQuery);
+      // don't throw "not found" if it is not found for update
+      updateQuery.q.returnType = 'value';
+
+      _appendQuery(self, updateQuery, (as) => {
+        selectIdsSql._sql = selectCteColumnsSql(as, foreignKeys);
+      });
     } else if (params.upsert) {
       if (isQueryReturnsAll(self)) {
         throw new Error('`upsert` option is not allowed in a batch update');
@@ -362,7 +367,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
       const asFn = setForeignKeysFromCte(update, primaryKeys, foreignKeys);
 
-      _with(self, asFn, upsertQuery);
+      _prependWith(self, asFn, upsertQuery);
     } else if (params.delete) {
       _selectIfNotSelected(self, foreignKeys);
 
@@ -379,7 +384,11 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
       _queryWhereIn(self, true, foreignKeys, selectIdsSql);
 
-      _appendQuery(self, _queryDelete(relQuery));
+      const deleteQuery = _queryDelete(relQuery);
+      // don't throw "not found" if it is not found for delete
+      deleteQuery.q.returnType = 'value';
+
+      _appendQuery(self, deleteQuery, noop);
     } else if (params.disconnect) {
       disconnect(update, foreignKeys);
     } else if (params.set) {
@@ -403,7 +412,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
           true,
         );
 
-        _with(
+        _prependWith(
           self,
           asFn,
           _queryFindBy(query.select(...loadPrimaryKeys), params.set as never),
@@ -429,7 +438,7 @@ const relWithSelectIds = (
 
   const selectIdsSql = new RawSql('');
 
-  _with(
+  _prependWith(
     self,
     (as) => {
       selectIdsSql._sql = selectCteColumnsSql(as, foreignKeys);
@@ -481,14 +490,6 @@ const setForeignKeysFromCte = (
     );
   };
 };
-
-const selectCteColumnsSql = (cteAs: string, columns: string[]) =>
-  `(SELECT ${columns
-    .map((c) => `"${cteAs}"."${c}"`)
-    .join(', ')} FROM "${cteAs}")`;
-
-const selectCteColumnSql = (cteAs: string, column: string) =>
-  `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;
 
 const selectCteColumnMustExistSql = (
   i: number,

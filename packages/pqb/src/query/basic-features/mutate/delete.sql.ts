@@ -91,5 +91,5 @@ export const pushDeleteSql = (
     ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
   }
 
-  return makeSql(ctx, query, 'delete', isSubSql);
+  return makeSql(ctx, 'delete', isSubSql);
 };

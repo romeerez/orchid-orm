@@ -335,3 +335,11 @@ const getColumnKeyFromDbName = (query: Query, name: string) => {
   }
   return name;
 };
+
+export const selectCteColumnsSql = (cteAs: string, columns: string[]) =>
+  `(SELECT ${columns
+    .map((c) => `"${cteAs}"."${c}"`)
+    .join(', ')} FROM "${cteAs}")`;
+
+export const selectCteColumnSql = (cteAs: string, column: string) =>
+  `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;

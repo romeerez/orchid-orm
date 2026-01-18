@@ -38,6 +38,7 @@ export const prepareSubQueryForSql: PrepareSubQueryForSql = (
   mainQuery,
   subQuery,
 ) => {
+  // used in DynamicRawSql because it doesn't know what callbacks does it need before executing
   if (subQuery.dynamicBefore) {
     pushQueryValueImmutable(mainQuery as never, 'dynamicBefore', subQuery.q);
     return subQuery as never;

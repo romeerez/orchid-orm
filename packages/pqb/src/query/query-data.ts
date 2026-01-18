@@ -127,6 +127,10 @@ export type QueryType =
   | 'columnInfo'
   | 'copy';
 
+export interface AsFn {
+  (as: string): void;
+}
+
 export interface QueryData
   extends QueryDataAliases,
     PickQueryDataParsers,
@@ -273,6 +277,7 @@ export interface QueryData
   hookUpdateSet?: RecordUnknown[];
 
   appendQueries?: SubQueryForSql[];
+  asFns?: AsFn[];
 
   /** select and upsert **/
 

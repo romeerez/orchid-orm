@@ -45,7 +45,6 @@ import {
   getShouldWrapMainQueryInCte,
   wrapMainQueryInCte,
 } from '../../sql/wrap-main-query-in-cte';
-import { requireQueryAs } from '../as/as';
 
 export type OnConflictTarget =
   | string
@@ -438,7 +437,7 @@ const applySqlState = (
   ctx.sql[0] = insertSql;
 
   if (wrapInCte) {
-    wrapMainQueryInCte(ctx, sqlState.query, `"${requireQueryAs(sqlState.q)}"`);
+    wrapMainQueryInCte(ctx, sqlState.query);
   }
 };
 
@@ -701,7 +700,7 @@ export const makeReturningSql = (
     addTableHook(ctx, q, q.q, select);
 
     ctx.selectedCount = 1;
-    return returnSqlOrNull(ctx, isSubSql);
+    return returnSqlOrNull(ctx, q, isSubSql);
   }
 
   const otherCTEHookSelect =
@@ -754,13 +753,17 @@ export const makeReturningSql = (
 
   if (!sql) ctx.selectedCount = 1;
 
-  return returnSqlOrNull(ctx, isSubSql, sql);
+  return returnSqlOrNull(ctx, q, isSubSql, sql);
 };
 
 const returnSqlOrNull = (
   ctx: ToSQLCtx,
+  q: ToSQLQuery,
   isSubSql?: boolean,
   sql?: string,
 ): string | undefined => {
-  return sql || (isSubSql || ctx.topCtx.cteHooks ? 'NULL' : undefined);
+  return (
+    sql ||
+    (isSubSql || ctx.topCtx.cteHooks || q.q.appendQueries ? 'NULL' : undefined)
+  );
 };

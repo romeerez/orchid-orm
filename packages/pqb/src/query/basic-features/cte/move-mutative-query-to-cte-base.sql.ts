@@ -1,7 +1,7 @@
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { ToSql, ToSQLCtx } from '../../sql/to-sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
-import { prependTopCte } from './cte.sql';
+import { addTopCte } from './cte.sql';
 import { _clone } from '../clone/clone';
 import { getShapeFromSelect } from '../select/select.utils';
 import { getQueryAs } from '../as/as';
@@ -39,7 +39,7 @@ export const moveQueryToCte = (
     }
   }
 
-  const as = prependTopCte(ctx, query, undefined, type);
+  const as = addTopCte('before', ctx, query, undefined, type);
 
   const makeSelectList = (isSubSql?: boolean) => {
     const list: string[] = [];

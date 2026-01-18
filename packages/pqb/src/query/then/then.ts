@@ -503,6 +503,11 @@ const then = async (
       for (const cteName in localSql.cteHooks.tableHooks) {
         const hook = localSql.cteHooks.tableHooks[cteName];
 
+        const data = cteData?.[cteName];
+        if (!data && hook.throwOnNotFound) {
+          throw new NotFoundError(q, `Record for cte ${cteName} is not found`);
+        }
+
         const purpose = hook.tableHook.hookPurpose as HookPurpose | undefined;
         if (!purpose) continue;
 
@@ -512,7 +517,6 @@ const then = async (
           dataPerSubQuery.set(hook.table, tableData);
         }
 
-        const data = cteData?.[cteName];
         if (data) {
           const existing = tableData.data[purpose];
           tableData.data[purpose] = existing ? [...existing, ...data] : data;

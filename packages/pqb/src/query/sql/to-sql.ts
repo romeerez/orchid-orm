@@ -1,7 +1,12 @@
 import { Query } from '../query';
 import { QueryData, QueryType } from '../query-data';
 import { QueryBuilder } from '../db';
-import { addWithToSql, ctesToSql, TopCTE } from '../basic-features/cte/cte.sql';
+import {
+  addWithToSql,
+  ctesToSql,
+  setFreeTopCteAs,
+  TopCTE,
+} from '../basic-features/cte/cte.sql';
 import { SubQueryForSql } from '../sub-query/sub-query-for-sql';
 import { pushTruncateSql } from '../extra-features/truncate/truncate.sql';
 import { pushColumnInfoSql } from '../extra-features/get-column-info/get-column-info.sql';
@@ -69,8 +74,8 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSqlValues {
   q: QueryData;
   sql: string[];
   selectedCount: number;
-  cteSqls?: string[];
   cteName?: string;
+  wrapAs?: string;
 }
 
 export interface ToSQLQuery {
@@ -121,7 +126,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     ctx.topCtx = ctx as TopToSqlCtx;
   }
 
-  const cteSqls = ctesToSql(ctx, query.with);
+  ctesToSql(ctx, query.with);
 
   let result: Sql;
 
@@ -130,16 +135,28 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
   let fromQuery: SubQueryForSql | undefined;
 
+  if (query.asFns) {
+    let as;
+    if (isSubSql) {
+      as = cteName || setFreeTopCteAs(ctx);
+    } else {
+      as = ctx.wrapAs = setFreeTopCteAs(ctx);
+    }
+    for (const fn of query.asFns) {
+      fn(as);
+    }
+  }
+
   if (type && type !== 'upsert') {
     const tableName = table.table ?? query.as;
     if (!tableName) throw new Error(`Table is missing for ${type}`);
 
     if (type === 'truncate') {
       pushTruncateSql(ctx, tableName, query);
-      result = makeSql(ctx, table, type, isSubSql);
+      result = makeSql(ctx, type, isSubSql);
     } else if (type === 'columnInfo') {
       pushColumnInfoSql(ctx, table, query);
-      result = makeSql(ctx, table, type, isSubSql);
+      result = makeSql(ctx, type, isSubSql);
     } else {
       const quotedAs = `"${query.as || tableName}"`;
 
@@ -151,7 +168,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
         result = pushDeleteSql(ctx, table, query, quotedAs, isSubSql);
       } else if (type === 'copy') {
         pushCopySql(ctx, table, query, quotedAs);
-        result = makeSql(ctx, table, type, isSubSql);
+        result = makeSql(ctx, type, isSubSql);
       } else {
         throw new Error(`Unsupported query type ${type}`);
       }
@@ -166,6 +183,14 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
         skipSelect = true;
 
         const upsertOrCreate = _clone(table as Query);
+
+        // it expected for update to not find records, do not throw if not found
+        if (upsertOrCreate.q.returnType === 'oneOrThrow') {
+          upsertOrCreate.q.returnType = 'one';
+        } else if (upsertOrCreate.q.returnType === 'valueOrThrow') {
+          upsertOrCreate.q.returnType = 'value';
+        }
+
         const { as, makeSql: makeFirstSql } = moveMutativeQueryToCteBase(
           toSql,
           ctx,
@@ -318,7 +343,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
       prependedSelectParenthesis = true;
     }
 
-    result = makeSql(ctx, table, type, isSubSql, runAfterQuery);
+    result = makeSql(ctx, type, isSubSql, runAfterQuery);
   }
 
   if (!ctx.cteName) {
@@ -354,7 +379,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     }
   }
 
-  if ('text' in result) addWithToSql(ctx, result, cteSqls, isSubSql);
+  if ('text' in result) addWithToSql(ctx, result, isSubSql);
 
   return result;
 };

@@ -83,6 +83,14 @@ export type CteSqlResult<
 const _addCte = (query: Query, item: CteItem) =>
   pushOrNewArrayToObjectImmutable(query.q, 'with', item);
 
+export const _prependWith = (
+  q: Query,
+  name: string | ((as: string) => void),
+  queryArg:
+    | PickQueryResult
+    | ((q: CteQueryBuilder<PickQueryWithDataColumnTypes>) => PickQueryResult),
+) => _with(q, name, queryArg, undefined, true);
+
 export const _with = (
   q: Query,
   name: string | ((as: string) => void),
@@ -90,6 +98,7 @@ export const _with = (
     | PickQueryResult
     | ((q: CteQueryBuilder<PickQueryWithDataColumnTypes>) => PickQueryResult),
   options?: CteArgsOptions,
+  prepend?: boolean,
 ) => {
   let query: Query;
   if (typeof queryArg === 'function') {
@@ -111,6 +120,7 @@ export const _with = (
     n: name,
     o: options as CteOptions,
     q: prepareSubQueryForSql(q, query),
+    p: prepend,
   });
 
   const shape = getShapeFromSelect(query, true);

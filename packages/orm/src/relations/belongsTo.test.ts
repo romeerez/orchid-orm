@@ -2,6 +2,7 @@ import { Db, Query, NotFoundError, omit } from 'pqb';
 import {
   messageSelectAll,
   profileSelectAll,
+  useQueryCounter,
   useRelationCallback,
   userRowToJSON,
   userSelectAll,
@@ -19,8 +20,6 @@ import {
   ChatData,
   ProfileData,
   UserData,
-  TestAdapter,
-  TestTransactionAdapter,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 
@@ -28,31 +27,10 @@ const ormParams = { db: db.$qb };
 
 const activeUserData = { ...UserData, Active: true };
 
-let querySpies: jest.SpyInstance[] | undefined;
-const useQueryCounter = () => {
-  querySpies = [
-    jest.spyOn(TestAdapter.prototype, 'query'),
-    jest.spyOn(TestAdapter.prototype, 'arrays'),
-    jest.spyOn(TestTransactionAdapter.prototype, 'query'),
-    jest.spyOn(TestTransactionAdapter.prototype, 'arrays'),
-  ];
-
-  beforeEach(resetQueriesCount);
-};
-
-const resetQueriesCount = () => querySpies?.forEach((spy) => spy.mockClear());
-
-const getQueriesCount = () => {
-  if (!querySpies) {
-    throw new Error('Must use useQueryCounter');
-  }
-
-  return querySpies.reduce((acc, spy) => acc + spy.mock.calls.length, 0);
-};
-
 describe('belongsTo', () => {
   useTestORM();
-  useQueryCounter();
+
+  const { resetQueriesCount, getQueriesCount } = useQueryCounter();
 
   it('should define foreign keys under autoForeignKeys option', () => {
     const BaseTable = createBaseTable({

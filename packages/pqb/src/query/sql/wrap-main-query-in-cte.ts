@@ -9,15 +9,24 @@ export const getShouldWrapMainQueryInCte = (
   isSubSql?: boolean,
 ): boolean | undefined => {
   return (
-    !isSubSql && ((type && ctx.topCtx.cteHooks) || q.appendQueries) && true
+    ((!isSubSql && type && ctx.topCtx.cteHooks) || q.appendQueries) && true
   );
 };
 
-export const wrapMainQueryInCte = (ctx: ToSQLCtx, q: QueryData, as: string) => {
-  addTopCteSql('append', ctx, as, as + ' AS (' + ctx.sql.join(' ') + ')');
+export const wrapMainQueryInCte = (
+  ctx: ToSQLCtx,
+  q: QueryData,
+  isSubSql?: boolean,
+) => {
+  let as: string | undefined;
+  if (!isSubSql && !ctx.cteName) {
+    as = addTopCteSql(ctx, ctx.wrapAs, ctx.sql.join(' '));
+  }
 
-  q.appendQueries?.forEach((query) => addTopCte('append', ctx, query));
+  q.appendQueries?.forEach((query) => addTopCte('after', ctx, query));
 
-  const addNull = ctx.topCtx.cteHooks?.hasSelect;
-  ctx.sql = [`SELECT *${addNull ? ', NULL' : ''} FROM ${as}`];
+  if (!isSubSql && !ctx.cteName) {
+    const addNull = ctx.topCtx.cteHooks?.hasSelect;
+    ctx.sql = [`SELECT *${addNull ? ', NULL' : ''} FROM ${as}`];
+  }
 };

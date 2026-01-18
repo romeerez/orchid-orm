@@ -5,6 +5,7 @@ import {
   userSelectAll,
   useTestORM,
   userRowToJSON,
+  useQueryCounter,
 } from '../test-utils/orm.test-utils';
 import { Db, Query, NotFoundError, omit } from 'pqb';
 import { orchidORMWithAdapter } from '../orm';
@@ -27,6 +28,8 @@ const ormParams = {
 };
 
 useTestORM();
+
+const { resetQueriesCount, getQueriesCount } = useQueryCounter();
 
 const activeProfileData = { ...ProfileData, Active: true };
 
@@ -777,6 +780,9 @@ describe('hasOne', () => {
         });
 
         const user = await q;
+
+        expect(getQueriesCount()).toEqual(1);
+
         const profile = await db.profile.findBy({ UserId: user.Id });
 
         assert.user({ user, Name: 'user' });
@@ -796,6 +802,9 @@ describe('hasOne', () => {
         });
 
         const user = await q;
+
+        expect(getQueriesCount()).toEqual(1);
+
         const profile = await db.profile.findBy({ UserId: user.Id });
 
         assert.user({ user, Name: 'user' });
@@ -827,6 +836,10 @@ describe('hasOne', () => {
         ]);
 
         const users = await q;
+
+        // create users + create profiles
+        expect(getQueriesCount()).toEqual(2);
+
         const profiles = await db.profile
           .where({
             UserId: { in: users.map((user) => user.Id) },
@@ -865,6 +878,10 @@ describe('hasOne', () => {
         ]);
 
         const users = await q;
+
+        // create users + create profiles
+        expect(getQueriesCount()).toEqual(2);
+
         const profiles = await db.profile
           .where({
             UserId: { in: users.map((user) => user.Id) },
@@ -892,10 +909,12 @@ describe('hasOne', () => {
             },
           });
 
+          expect(getQueriesCount()).toEqual(1);
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(
-            [{ Id: expect.any(Number) }],
+          expect(afterCreate).toHaveBeenCalledWith(
+            [expect.objectContaining({ Id: expect.any(Number) })],
             expect.any(Db),
           );
         });
@@ -918,6 +937,9 @@ describe('hasOne', () => {
             },
           ]);
 
+          // create users + create profiles
+          expect(getQueriesCount()).toEqual(2);
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
@@ -939,6 +961,7 @@ describe('hasOne', () => {
             },
           },
         });
+        resetQueriesCount();
 
         const q = db.user.create({
           ...UserData,
@@ -949,6 +972,9 @@ describe('hasOne', () => {
         });
 
         const user = await q;
+
+        expect(getQueriesCount()).toBe(1);
+
         const profile = await db.user.queryRelated('profile', user);
 
         assert.user({ user, Name: 'user' });
@@ -965,6 +991,7 @@ describe('hasOne', () => {
             },
           },
         });
+        resetQueriesCount();
 
         const q = db.user.create({
           ...UserData,
@@ -975,6 +1002,8 @@ describe('hasOne', () => {
         });
 
         const res = await q.catch((err) => err);
+
+        expect(getQueriesCount()).toBe(1);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -993,6 +1022,7 @@ describe('hasOne', () => {
             ProfileKey: user.UserKey,
           },
         ]);
+        resetQueriesCount();
 
         const q = db.user.createMany([
           {
@@ -1012,6 +1042,10 @@ describe('hasOne', () => {
         ]);
 
         const users = await q;
+
+        // TODO: N+1 updates
+        expect(getQueriesCount()).toBe(3);
+
         const profiles = await db.profile
           .where({
             UserId: { in: users.map((user) => user.Id) },
@@ -1035,6 +1069,7 @@ describe('hasOne', () => {
             },
           },
         });
+        resetQueriesCount();
 
         const q = db.user.createMany([
           {
@@ -1047,6 +1082,9 @@ describe('hasOne', () => {
 
         const res = await q.catch((err) => err);
 
+        // user create + profile update
+        expect(getQueriesCount()).toBe(2);
+
         expect(res).toEqual(expect.any(NotFoundError));
       });
 
@@ -1058,6 +1096,7 @@ describe('hasOne', () => {
 
         it('should invoke callbacks', async () => {
           const profileId = await db.profile.get('Id').create(ProfileData);
+          resetQueriesCount();
 
           await db.user.insert({
             ...UserData,
@@ -1065,6 +1104,8 @@ describe('hasOne', () => {
               connect: { Id: profileId },
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -1081,6 +1122,8 @@ describe('hasOne', () => {
             .pluck('Id')
             .createMany([ProfileData, ProfileData]);
 
+          resetQueriesCount();
+
           await db.user.createMany([
             {
               ...UserData,
@@ -1095,6 +1138,9 @@ describe('hasOne', () => {
               },
             },
           ]);
+
+          // TODO: N+1 updates
+          expect(getQueriesCount()).toBe(3);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(2);
           expect(afterUpdate).toHaveBeenCalledTimes(2);
@@ -1118,6 +1164,8 @@ describe('hasOne', () => {
           },
         });
 
+        resetQueriesCount();
+
         const user1 = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1129,6 +1177,10 @@ describe('hasOne', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
+        resetQueriesCount();
+
         const user2 = await db.user.create({
           ...UserData,
           Name: 'user 2',
@@ -1139,6 +1191,8 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         const profile1 = await db.user.queryRelated('profile', user1);
         const profile2 = await db.user.queryRelated('profile', user2);
@@ -1176,6 +1230,8 @@ describe('hasOne', () => {
             },
           ]);
 
+        resetQueriesCount();
+
         const user1 = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1187,6 +1243,10 @@ describe('hasOne', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
+        resetQueriesCount();
+
         const user2 = await db.user.create({
           ...UserData,
           Name: 'user 2',
@@ -1197,6 +1257,8 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         const profile1 = await db.user.queryRelated('activeProfile', user1);
         const profile2 = await db.user.queryRelated('activeProfile', user2);
@@ -1221,6 +1283,8 @@ describe('hasOne', () => {
           },
         });
 
+        resetQueriesCount();
+
         const [user1, user2] = await db.user.createMany([
           {
             ...UserData,
@@ -1243,6 +1307,9 @@ describe('hasOne', () => {
             },
           },
         ]);
+
+        // TODO: N+1
+        expect(getQueriesCount()).toBe(4);
 
         const profile1 = await db.user.queryRelated('profile', user1);
         const profile2 = await db.user.queryRelated('profile', user2);
@@ -1280,6 +1347,8 @@ describe('hasOne', () => {
             },
           ]);
 
+        resetQueriesCount();
+
         const [user1, user2] = await db.user.createMany([
           {
             ...UserData,
@@ -1302,6 +1371,9 @@ describe('hasOne', () => {
             },
           },
         ]);
+
+        // TODO: N+1 updates
+        expect(getQueriesCount()).toBe(4);
 
         const profile1 = await db.user.queryRelated('activeProfile', user1);
         const profile2 = await db.user.queryRelated('activeProfile', user2);
@@ -1328,6 +1400,8 @@ describe('hasOne', () => {
       it('should invoke callbacks when connecting', async () => {
         const Id = await db.profile.get('Id').create(ProfileData);
 
+        resetQueriesCount();
+
         await db.user.create({
           ...UserData,
           profile: {
@@ -1338,12 +1412,18 @@ describe('hasOne', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
       });
 
       it('should invoke callbacks when creating', async () => {
+        resetMocks();
+
+        resetQueriesCount();
+
         await db.user.create({
           ...UserData,
           profile: {
@@ -1353,6 +1433,8 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         const Id = await db.profile.take().get('Id');
 
@@ -1365,6 +1447,8 @@ describe('hasOne', () => {
         resetMocks();
 
         const Id = await db.profile.get('Id').create(ProfileData);
+
+        resetQueriesCount();
 
         await db.user.createMany([
           {
@@ -1386,6 +1470,9 @@ describe('hasOne', () => {
             },
           },
         ]);
+
+        // TODO: N+1
+        expect(getQueriesCount()).toBe(4);
 
         const ids = await db.profile.pluck('Id');
 
@@ -1410,14 +1497,18 @@ describe('hasOne', () => {
 
         const { Id: profileId } = await db.user.queryRelated('profile', user);
 
+        resetQueriesCount();
+
         const Id = await db.user
           .get('Id')
-          .where(user)
+          .find(user.Id)
           .update({
             profile: {
               disconnect: true,
             },
           });
+
+        expect(getQueriesCount()).toBe(1);
 
         expect(Id).toBe(user.Id);
 
@@ -1433,6 +1524,8 @@ describe('hasOne', () => {
 
         const { Id: profileId } = await db.user.queryRelated('profile', user);
 
+        resetQueriesCount();
+
         const Id = await db.user
           .get('Id')
           .where(user)
@@ -1441,6 +1534,8 @@ describe('hasOne', () => {
               disconnect: true,
             },
           });
+
+        expect(getQueriesCount()).toBe(1);
 
         expect(Id).toBe(user.Id);
 
@@ -1458,12 +1553,16 @@ describe('hasOne', () => {
           UserId: { in: userIds },
         });
 
+        resetQueriesCount();
+
         const count = await db.user.where({ Id: { in: userIds } }).update({
           profile: {
             disconnect: true,
           },
         });
         expect(count).toBe(2);
+
+        expect(getQueriesCount()).toBe(1);
 
         const updatedUserIds = await db.profile
           .pluck('UserId')
@@ -1480,11 +1579,16 @@ describe('hasOne', () => {
           UserId: { in: userIds },
         });
 
+        resetQueriesCount();
+
         const count = await db.user.where({ Id: { in: userIds } }).update({
           activeProfile: {
             disconnect: true,
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const updatedUserIds = await db.profile
@@ -1507,11 +1611,16 @@ describe('hasOne', () => {
               user: { create: UserData },
             });
 
+          resetQueriesCount();
+
           const count = await db.user.find(UserId as number).update({
             profile: {
               disconnect: true,
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -1533,11 +1642,16 @@ describe('hasOne', () => {
             },
           ]);
 
+          resetQueriesCount();
+
           const count = await db.user.where({ Id: { in: userIds } }).update({
             profile: {
               disconnect: true,
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(2);
 
           const ids = await db.profile.pluck('Id');
@@ -1560,11 +1674,16 @@ describe('hasOne', () => {
           .select('Id')
           .createMany([{ ...ProfileData, UserId: Id }, { ...ProfileData }]);
 
+        resetQueriesCount();
+
         const count = await db.user.find(Id).update({
           profile: {
             set: { Id: profile2Id },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile1 = await db.profile.find(profile1Id);
@@ -1584,11 +1703,16 @@ describe('hasOne', () => {
             { ...ProfileData, Active: true },
           ]);
 
+        resetQueriesCount();
+
         const count = await db.user.find(Id).update({
           activeProfile: {
             set: { Id: profile2Id },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile1 = await db.profile.find(profile1Id);
@@ -1629,7 +1753,7 @@ describe('hasOne', () => {
           });
           expect(count).toBe(1);
 
-          expect(beforeUpdate).toHaveBeenCalledTimes(2);
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toBeCalledWith(
             [{ Id: profileId }],
@@ -1651,10 +1775,12 @@ describe('hasOne', () => {
           });
           expect(count).toBe(1);
 
-          expect(beforeUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toBeCalledWith([{ Id: prevId }], expect.any(Db));
-          expect(afterUpdate).toBeCalledWith([{ Id: newId }], expect.any(Db));
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: prevId }, { Id: newId }],
+            expect.any(Db),
+          );
         });
       });
     });
@@ -1670,11 +1796,16 @@ describe('hasOne', () => {
           .select('Id')
           .take();
 
+        resetQueriesCount();
+
         const count = await db.user.find(Id).update({
           profile: {
             delete: true,
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.profile.findByOptional({ Id: profileId });
@@ -1686,11 +1817,16 @@ describe('hasOne', () => {
           .get('Id')
           .create({ ...UserData, profile: { create: ProfileData } });
 
+        resetQueriesCount();
+
         const count = await db.user.find(Id).update({
           activeProfile: {
             delete: true,
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profiles = await db.profile;
@@ -1704,11 +1840,16 @@ describe('hasOne', () => {
           { ...UserData, profile: { create: ProfileData } },
         ]);
 
+        resetQueriesCount();
+
         const updated = await db.user.where({ Id: { in: userIds } }).update({
           profile: {
             delete: true,
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(updated).toBe(2);
 
         const count = await db.profile.count();
@@ -1721,11 +1862,16 @@ describe('hasOne', () => {
           { ...UserData, profile: { create: ProfileData } },
         ]);
 
+        resetQueriesCount();
+
         const count = await db.user.where({ Id: { in: userIds } }).update({
           activeProfile: {
             delete: true,
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(2);
 
         const profiles = await db.profile;
@@ -1744,11 +1890,16 @@ describe('hasOne', () => {
             .select('Id', 'UserId')
             .create({ Bio: 'bio', user: { create: UserData } });
 
+          resetQueriesCount();
+
           const count = await db.user.find(UserId as number).update({
             profile: {
               delete: true,
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(1);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
@@ -1764,6 +1915,8 @@ describe('hasOne', () => {
             { Bio: 'bio', user: { create: UserData } },
           ]);
 
+          resetQueriesCount();
+
           const count = await db.user
             .where({ Id: { in: data.map((p) => p.UserId as number) } })
             .update({
@@ -1771,6 +1924,9 @@ describe('hasOne', () => {
                 delete: true,
               },
             });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(2);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
@@ -1789,6 +1945,8 @@ describe('hasOne', () => {
           .get('Id')
           .create({ ...UserData, profile: { create: ProfileData } });
 
+        resetQueriesCount();
+
         const count = await db.user.find(Id).update({
           profile: {
             update: {
@@ -1796,6 +1954,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.user
@@ -1810,6 +1971,8 @@ describe('hasOne', () => {
           .get('Id')
           .create({ ...UserData, profile: { create: ProfileData } });
 
+        resetQueriesCount();
+
         const count = await db.user.find(Id).update({
           activeProfile: {
             update: {
@@ -1817,6 +1980,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.user
@@ -1832,6 +1998,8 @@ describe('hasOne', () => {
           { ...UserData, profile: { create: ProfileData } },
         ]);
 
+        resetQueriesCount();
+
         const count = await db.user.where({ Id: { in: userIds } }).update({
           profile: {
             update: {
@@ -1839,6 +2007,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(2);
 
         const bios = await db.profile.pluck('Bio');
@@ -1851,6 +2022,8 @@ describe('hasOne', () => {
           { ...UserData, profile: { create: activeProfileData } },
         ]);
 
+        resetQueriesCount();
+
         const count = await db.user.where({ Id: { in: userIds } }).update({
           activeProfile: {
             update: {
@@ -1858,6 +2031,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(2);
 
         const bios = await db.profile.pluck('Bio');
@@ -1875,6 +2051,8 @@ describe('hasOne', () => {
             .select('Id', 'UserId')
             .create({ Bio: 'bio', user: { create: UserData } });
 
+          resetQueriesCount();
+
           const count = await db.user.find(UserId as number).update({
             profile: {
               update: {
@@ -1882,6 +2060,9 @@ describe('hasOne', () => {
               },
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -1897,6 +2078,8 @@ describe('hasOne', () => {
             { Bio: 'bio', user: { create: UserData } },
           ]);
 
+          resetQueriesCount();
+
           const count = await db.user
             .where({ Id: { in: data.map((p) => p.UserId as number) } })
             .update({
@@ -1906,6 +2089,9 @@ describe('hasOne', () => {
                 },
               },
             });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(2);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -1925,6 +2111,8 @@ describe('hasOne', () => {
           profile: { create: ProfileData },
         });
 
+        resetQueriesCount();
+
         const count = await db.user.find(user.Id).update({
           profile: {
             upsert: {
@@ -1935,6 +2123,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.user.queryRelated('profile', user);
@@ -1943,6 +2134,8 @@ describe('hasOne', () => {
 
       it('should create related record if it does not exists', async () => {
         const user = await db.user.create(UserData);
+
+        resetQueriesCount();
 
         const count = await db.user.find(user.Id).update({
           profile: {
@@ -1957,6 +2150,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.user.queryRelated('profile', user);
@@ -1965,6 +2161,8 @@ describe('hasOne', () => {
 
       it('should create related record if it does not exists with a data from a callback', async () => {
         const user = await db.user.create(UserData);
+
+        resetQueriesCount();
 
         const count = await db.user.find(user.Id).update({
           profile: {
@@ -1979,6 +2177,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.user.queryRelated('profile', user);
@@ -1990,6 +2191,8 @@ describe('hasOne', () => {
           ...UserData,
           profile: { create: ProfileData },
         });
+
+        resetQueriesCount();
 
         const count = await db.user.find(user.Id).update({
           activeProfile: {
@@ -2004,6 +2207,9 @@ describe('hasOne', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
+
         expect(count).toBe(1);
 
         const profile = await db.user.queryRelated('activeProfile', user);
@@ -2043,6 +2249,8 @@ describe('hasOne', () => {
             .select('Id', 'UserId')
             .create({ Bio: 'bio', user: { create: UserData } });
 
+          resetQueriesCount();
+
           const count = await db.user.find(UserId as number).update({
             profile: {
               upsert: {
@@ -2053,20 +2261,22 @@ describe('hasOne', () => {
               },
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
-            [{ Id, UserId, ProfileKey: 'key' }],
-            expect.any(Db),
-          );
+          expect(afterUpdate).toBeCalledWith([{ Id }], expect.any(Db));
         });
 
         it('should invoke callbacks when creating', async () => {
           resetMocks();
 
           const userId = await db.user.get('Id').create(UserData);
+
+          resetQueriesCount();
 
           const count = await db.user.find(userId).update({
             profile: {
@@ -2078,9 +2288,12 @@ describe('hasOne', () => {
               },
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(1);
 
-          const profile = await db.profile.take();
+          const profile = await db.profile.select('Id').take();
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -2099,6 +2312,8 @@ describe('hasOne', () => {
           .queryRelated('profile', { Id: userId, UserKey: 'key' })
           .get('Id');
 
+        resetQueriesCount();
+
         const updated = await db.user
           .selectAll()
           .find(userId)
@@ -2107,6 +2322,8 @@ describe('hasOne', () => {
               create: { ...ProfileData, Bio: 'created' },
             },
           });
+
+        expect(getQueriesCount()).toBe(1);
 
         const previousProfile = await db.profile.find(previousProfileId);
         expect(previousProfile.UserId).toBe(null);
@@ -2124,6 +2341,8 @@ describe('hasOne', () => {
           .queryRelated('profile', { Id: userId, UserKey: 'key' })
           .get('Id');
 
+        resetQueriesCount();
+
         const updated = await db.user
           .selectAll()
           .find(userId)
@@ -2132,6 +2351,8 @@ describe('hasOne', () => {
               create: { ...ProfileData, Bio: 'created' },
             },
           });
+
+        expect(getQueriesCount()).toBe(1);
 
         const previousProfile = await db.profile.find(previousProfileId);
         expect(previousProfile.UserId).toBe(userId);
@@ -2170,11 +2391,16 @@ describe('hasOne', () => {
 
           resetMocks();
 
+          resetQueriesCount();
+
           const count = await db.user.find(UserId as number).update({
             profile: {
               create: ProfileData,
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
+
           expect(count).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -2185,7 +2411,10 @@ describe('hasOne', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith([{ Id: newId }], expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(
+            [{ Id: newId }],
+            expect.any(Db),
+          );
         });
       });
     });

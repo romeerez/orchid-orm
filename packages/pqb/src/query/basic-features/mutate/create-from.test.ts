@@ -4,6 +4,8 @@ import {
   Message,
   messageColumnsSql,
   MessageRecord,
+  Profile,
+  profileData,
   Snake,
   SnakeRecord,
   snakeSelectAll,
@@ -17,6 +19,7 @@ import {
   testDb,
   useTestDatabase,
 } from 'test-utils';
+import { NotFoundError } from 'pqb';
 
 const TableWithReadOnly = testDb('table', (t) => ({
   id: t.identity().primaryKey(),
@@ -95,6 +98,29 @@ describe('createFrom functions', () => {
         `,
         [1, 1],
       );
+    });
+
+    it('should throw not found when it should', async () => {
+      const user = User.find(0).select({ userId: 'id' });
+
+      const q = Profile.createOneFrom(user, {
+        ...profileData,
+        bio: 'one',
+      });
+
+      await expect(q).rejects.toThrow(NotFoundError);
+    });
+
+    it('should not throw not found when found', async () => {
+      const id = await User.get('id').create(userData);
+      const user = User.find(id).select({ userId: 'id' });
+
+      const q = Profile.createOneFrom(user, {
+        ...profileData,
+        bio: 'one',
+      });
+
+      await q;
     });
 
     it('should a create record from select with named columns', () => {
@@ -315,7 +341,7 @@ describe('createFrom functions', () => {
     it('should a create record from select with provided data', async () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
-      const query = Message.createManyFrom(chat, [
+      const query = Message.select('text').createManyFrom(chat, [
         {
           authorId: 1,
           text: () => sql`'text 1'`,
@@ -326,7 +352,7 @@ describe('createFrom functions', () => {
         },
       ]);
 
-      assertType<Awaited<typeof query>, MessageRecord[]>();
+      assertType<Awaited<typeof query>, { text: string }[]>();
 
       expectSql(
         query.toSQL(),
@@ -336,20 +362,58 @@ describe('createFrom functions', () => {
             FROM "chat"
             WHERE "chat"."id_of_chat" = $1
             LIMIT 1
+          ), q2 AS (
+            INSERT INTO "message"("chat_id", "author_id", "text")
+            SELECT "q"."chatId", v."author_id"::int4, v."text"::text
+            FROM "q", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
+            RETURNING "message"."text"
           )
-          INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "q"."chatId", v."author_id"::int4, v."text"::text
-          FROM "q", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
-          RETURNING ${messageColumnsSql}
+          SELECT *, NULL FROM q2
+          UNION ALL SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
         [1, 1, 2],
       );
     });
 
+    it('should throw not found when it should', async () => {
+      const user = User.find(0).select({ userId: 'id' });
+
+      const q = Profile.createManyFrom(user, [
+        {
+          ...profileData,
+          bio: 'one',
+        },
+        {
+          ...profileData,
+          bio: 'two',
+        },
+      ]);
+
+      await expect(q).rejects.toThrow(NotFoundError);
+    });
+
+    it('should not throw not found when found', async () => {
+      const id = await User.get('id').create(userData);
+      const user = User.find(id).select({ userId: 'id' });
+
+      const q = Profile.createManyFrom(user, [
+        {
+          ...profileData,
+          bio: 'one',
+        },
+        {
+          ...profileData,
+          bio: 'two',
+        },
+      ]);
+
+      await q;
+    });
+
     it('should a create record from select with named columns', () => {
       const user = User.find(1).select({ snakeName: 'name' });
 
-      const query = Snake.createManyFrom(user, [
+      const query = Snake.select('snakeName').createManyFrom(user, [
         {
           tailLength: 5,
         },
@@ -358,7 +422,7 @@ describe('createFrom functions', () => {
         },
       ]);
 
-      assertType<Awaited<typeof query>, SnakeRecord[]>();
+      assertType<Awaited<typeof query>, { snakeName: string }[]>();
 
       expectSql(
         query.toSQL(),
@@ -368,18 +432,22 @@ describe('createFrom functions', () => {
             FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
+          ), q2 AS (
+            INSERT INTO "snake"("snake_name", "tail_length")
+            SELECT "q"."snakeName", v."tail_length"::int4
+            FROM "q", (VALUES ($2), ($3)) v("tail_length")
+            RETURNING "snake"."snake_name" "snakeName"
           )
-          INSERT INTO "snake"("snake_name", "tail_length")
-          SELECT "q"."snakeName", v."tail_length"::int4
-          FROM "q", (VALUES ($2), ($3)) v("tail_length")
-          RETURNING ${snakeSelectAll}
+          SELECT *, NULL FROM q2
+          UNION ALL
+          SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
         [1, 5, 6],
       );
     });
 
     it('should add runtime defaults', () => {
-      const q = RuntimeDefaultTable.createManyFrom(
+      const q = RuntimeDefaultTable.select('name').createManyFrom(
         User.find(123).select('password'),
         [
           {
@@ -399,11 +467,15 @@ describe('createFrom functions', () => {
             FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
+          ), q2 AS (
+            INSERT INTO "user"("password", "id", "name")
+            SELECT "q"."password", v."id"::int4, v."name"::text
+            FROM "q", (VALUES ($2, $3), ($4, $5)) v("id", "name")
+            RETURNING "user"."name"
           )
-          INSERT INTO "user"("password", "id", "name")
-          SELECT "q"."password", v."id"::int4, v."name"::text
-          FROM "q", (VALUES ($2, $3), ($4, $5)) v("id", "name")
-          RETURNING *
+          SELECT *, NULL FROM q2
+          UNION ALL
+          SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
         [123, 456, 'runtime text', 789, 'runtime text'],
       );
@@ -448,11 +520,15 @@ describe('createFrom functions', () => {
             FROM "user"
             WHERE "user"."id" = $1
             LIMIT 1
+          ), q2 AS (
+            INSERT INTO "user"("name", "password")
+            SELECT "q"."name", v."password"::text
+            FROM "q", (VALUES ($2), ($3)) v("password")
+            RETURNING "user"."name"
           )
-          INSERT INTO "user"("name", "password")
-          SELECT "q"."name", v."password"::text
-          FROM "q", (VALUES ($2), ($3)) v("password")
-          RETURNING "user"."name"
+          SELECT *, NULL FROM q2
+          UNION ALL
+          SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
         [user.id, 'one', 'two'],
       );
@@ -470,7 +546,7 @@ describe('createFrom functions', () => {
     it('should a create record from select with additional value returned from an insert sub query', () => {
       const chat = Chat.find(1).select({ chatId: 'idOfChat' });
 
-      const query = Message.createManyFrom(chat, [
+      const query = Message.select('text').createManyFrom(chat, [
         {
           authorId: () => User.create(userData).get('id'),
           text: () => sql`'text 1'`,
@@ -481,7 +557,7 @@ describe('createFrom functions', () => {
         },
       ]);
 
-      assertType<Awaited<typeof query>, MessageRecord[]>();
+      assertType<Awaited<typeof query>, { text: string }[]>();
 
       expectSql(
         query.toSQL(),
@@ -499,14 +575,18 @@ describe('createFrom functions', () => {
             INSERT INTO "user"("name", "password")
             VALUES ($4, $5)
             RETURNING "user"."id"
+          ), q4 AS (
+            INSERT INTO "message"("chat_id", "author_id", "text")
+            SELECT
+              "q"."chatId",
+              v."author_id"::int4,
+              v."text"::text
+            FROM "q", (VALUES ((SELECT "q2"."id" FROM "q2"), 'text 1'), ((SELECT "q3"."id" FROM "q3"), 'text 2')) v("author_id", "text")
+            RETURNING "message"."text"
           )
-          INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT
-            "q"."chatId",
-            v."author_id"::int4,
-            v."text"::text
-          FROM "q", (VALUES ((SELECT "q2"."id" FROM "q2"), 'text 1'), ((SELECT "q3"."id" FROM "q3"), 'text 2')) v("author_id", "text")
-          RETURNING ${messageColumnsSql}
+          SELECT *, NULL FROM q4
+          UNION ALL
+          SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
         [1, 'name', 'password', 'name', 'password'],
       );
@@ -542,14 +622,18 @@ describe('createFrom functions', () => {
             FROM "chat"
             WHERE "chat"."id_of_chat" = $3
             LIMIT 1
+          ), q2 AS (
+            INSERT INTO "message"("chat_id", "author_id", "text")
+            SELECT "q"."chatId", v."author_id"::int4, v."text"::text
+            FROM "q", (VALUES
+              ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)),
+              ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1))
+            ) v("author_id", "text")
+            RETURNING "message"."chat_id" "chatId", "message"."author_id" "authorId", "message"."text"
           )
-          INSERT INTO "message"("chat_id", "author_id", "text")
-          SELECT "q"."chatId", v."author_id"::int4, v."text"::text
-          FROM "q", (VALUES
-            ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)),
-            ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1))
-          ) v("author_id", "text")
-          RETURNING "message"."chat_id" "chatId", "message"."author_id" "authorId", "message"."text"
+          SELECT *, NULL FROM q2
+          UNION ALL
+          SELECT NULL, NULL, NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
         [userData.name, userData.password, idOfChat],
       );

@@ -20,6 +20,7 @@ export interface CteTableHook {
   table: string;
   shape: Column.Shape.Data;
   tableHook: TableHook;
+  throwOnNotFound?: boolean;
 }
 
 export interface TableHook {

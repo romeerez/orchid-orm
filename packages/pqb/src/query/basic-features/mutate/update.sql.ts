@@ -155,7 +155,7 @@ export const pushUpdateSql = (
     ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
   }
 
-  return makeSql(ctx, query, 'update', isSubSql);
+  return makeSql(ctx, 'update', isSubSql);
 };
 
 const pushUpdateReturning = (

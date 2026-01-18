@@ -237,7 +237,9 @@ describe('delete', () => {
           WHERE "user"."name" IN (SELECT "a"."name" FROM "a")
           RETURNING "user"."id"
         )
-        SELECT * FROM "b"
+        (SELECT *, NULL FROM "b")
+        UNION ALL
+        SELECT NULL, json_build_object('a', (SELECT json_agg(row_to_json("a".*)) FROM "a"))
       `,
       [1],
     );

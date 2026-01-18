@@ -1,6 +1,10 @@
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { Column } from '../../../columns/column';
-import { CteTableHook, HookSelect, TableHook } from '../../basic-features/select/hook-select';
+import {
+  CteTableHook,
+  HookSelect,
+  TableHook,
+} from '../../basic-features/select/hook-select';
 import { QueryData } from '../../query-data';
 
 export type HookPurpose = 'Create' | 'Update' | 'Delete';
@@ -20,6 +24,10 @@ export const addTableHook = (
   const afterUpdateCommit = data.afterUpdateCommit;
   const afterSaveCommit = data.afterSaveCommit;
   const afterDeleteCommit = data.afterDeleteCommit;
+  const throwOnNotFound =
+    // Assuming that Create always returns a record, though needs to be cautions with onConflictDoNothing
+    hookPurpose !== 'Create' &&
+    (data.returnType === 'oneOrThrow' || data.returnType === 'valueOrThrow');
 
   const hasAfterHook =
     afterCreate ||
@@ -31,7 +39,7 @@ export const addTableHook = (
     afterSaveCommit ||
     afterDeleteCommit;
 
-  if (!select && !hasAfterHook) {
+  if (!select && !hasAfterHook && !throwOnNotFound) {
     return;
   }
 
@@ -49,7 +57,7 @@ export const addTableHook = (
   };
 
   if (ctx.cteName) {
-    if (tableHook && hasAfterHook) {
+    if (tableHook && (hasAfterHook || throwOnNotFound)) {
       const shape: Column.Shape.Data = {};
       if (tableHook.select) {
         for (const key of tableHook.select.keys()) {
@@ -61,10 +69,12 @@ export const addTableHook = (
         table: q.table!,
         shape,
         tableHook: tableHook,
+        throwOnNotFound,
       };
 
+      const hasSelect = throwOnNotFound || !!tableHook.select;
       if (
-        tableHook.select &&
+        hasSelect &&
         ctx.topCtx.selectList &&
         ctx.topCtx === ctx.topCtx.topCtx &&
         !ctx.topCtx.cteHookTopNullSelectAppended
@@ -74,11 +84,11 @@ export const addTableHook = (
       }
 
       if (ctx.topCtx.cteHooks) {
-        if (tableHook.select) ctx.topCtx.cteHooks.hasSelect = true;
+        if (hasSelect) ctx.topCtx.cteHooks.hasSelect = true;
         ctx.topCtx.cteHooks.tableHooks[ctx.cteName] ??= item;
       } else {
         ctx.topCtx.cteHooks = {
-          hasSelect: !!tableHook.select,
+          hasSelect,
           tableHooks: { [ctx.cteName]: item },
         };
       }
