@@ -1241,6 +1241,14 @@ const row = result.rows[0];
 row[0]; // our value
 ```
 
+## $ref
+
+Use `$ref` when you need a column or other quoted identifier reference outside of a table query:
+
+```ts
+await db.$query`SET SEARCH_PATH TO ${db.$ref(schema)}`
+```
+
 ## $from
 
 Use `$from` to build a queries around sub queries similar to the following:

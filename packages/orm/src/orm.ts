@@ -130,6 +130,11 @@ interface OrchidORMMethods {
     arg: Arg,
   ): FromResult<FromQuery, Arg>;
 
+  /**
+   * See {@link QueryExpressions.ref}
+   */
+  $ref: OmitThisParameter<Db['ref']>;
+
   $close(): Promise<void>;
 }
 
@@ -187,6 +192,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     $afterCommit: afterCommit,
     $adapter: adapter,
     $qb: qb,
+    $ref: qb.ref.bind(qb),
     get $query() {
       return qb.query;
     },

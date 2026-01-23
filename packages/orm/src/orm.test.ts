@@ -10,7 +10,7 @@ import {
   UserData,
 } from 'test-utils';
 import { Selectable } from './baseTable';
-import { Db, raw } from 'pqb';
+import { Db, Expression, raw } from 'pqb';
 
 describe('orm', () => {
   useTestORM();
@@ -144,6 +144,14 @@ describe('orm', () => {
       await db.$queryArrays`SELECT 1`;
 
       expect(spy).toBeCalledWith`SELECT 1`;
+    });
+
+    it('should expose $ref from the query builder', () => {
+      const column = (db.$ref('table.column') as Expression).toSQL({
+        values: [],
+      });
+
+      expect(column).toBe(`"table"."column"`);
     });
   });
 
