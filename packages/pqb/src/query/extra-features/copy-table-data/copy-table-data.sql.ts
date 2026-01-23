@@ -2,6 +2,7 @@ import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { QueryData } from '../../query-data';
 import { escapeString } from '../../../quote';
 import { pushWhereStatementSql } from '../../basic-features/where/where.sql';
+import { quoteSchemaAndTable } from '../../sql/sql';
 
 export type CopyOptions<Column = string> = {
   columns?: Column[];
@@ -42,8 +43,13 @@ export const pushCopySql = (
 
   const target = 'from' in copy ? copy.from : copy.to;
 
+  const quotedTable = quoteSchemaAndTable(
+    query.schema,
+    table.table as string,
+  );
+
   sql.push(
-    `COPY "${table.table as string}"${columns} ${
+    `COPY ${quotedTable}${columns} ${
       'from' in copy ? 'FROM' : 'TO'
     } ${
       typeof target === 'string'

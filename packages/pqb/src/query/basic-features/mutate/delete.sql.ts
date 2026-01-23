@@ -7,7 +7,7 @@ import { Query } from '../../query';
 import { isRelationQuery } from '../../relations';
 import { OrchidOrmInternalError } from '../../errors';
 import { newDelayedRelationSelect } from '../select/delayed-relational-select';
-import { Sql } from '../../sql/sql';
+import { quoteSchemaAndTable, Sql } from '../../sql/sql';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
@@ -16,7 +16,10 @@ export const pushDeleteSql = (
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
-  const from = `"${table.table || query.from}"`;
+  const from = quoteSchemaAndTable(
+    query.schema,
+    (table.table || query.from) as string,
+  );
   ctx.sql.push(`DELETE FROM ${from}`);
 
   if (from !== quotedAs) {
