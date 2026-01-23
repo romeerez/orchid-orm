@@ -31,6 +31,11 @@
       "import": "./dist/postgres-js.mjs",
       "types": "./dist/postgres-js.d.ts"
     },
+    "./migrations": {
+      "require": "./dist/migrations/index.js",
+      "import": "./dist/migrations/index.mjs",
+      "types": "./dist/migrations/index.d.ts"
+    },
     "./migrations/node-postgres": {
       "require": "./dist/migrations/node-postgres.js",
       "import": "./dist/migrations/node-postgres.mjs",
