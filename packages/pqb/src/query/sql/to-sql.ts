@@ -21,10 +21,10 @@ import {
   makeSql,
   MoreThanOneRowError,
   QueryInternal,
+  RawSql,
   Sql,
 } from '../index';
 import { moveMutativeQueryToCteBase } from '../basic-features/cte/move-mutative-query-to-cte-base.sql';
-import { _queryWhereNotExists } from '../basic-features/where/where';
 import { pushDistinctSql } from '../basic-features/distinct/distinct.sql';
 import { setSqlCtxSelectList } from '../basic-features/select/select.sql';
 import { pushFromAndAs } from '../basic-features/from/fromAndAs.sql';
@@ -198,16 +198,12 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
           upsertUpdate ? 'update' : null,
         );
 
-        upsertOrCreate.q.and =
-          upsertOrCreate.q.or =
-          upsertOrCreate.q.scopes =
-            undefined;
+        upsertOrCreate.q.or = upsertOrCreate.q.scopes = undefined;
 
-        _queryWhereNotExists(
-          upsertOrCreate,
-          upsertOrCreate.baseQuery.from(as),
-          [],
-        );
+        upsertOrCreate.q.and = [
+          // use raw SQL rather than _queryWhereNotExists to avoid soft delete being appended
+          new RawSql(`NOT EXISTS (SELECT 1 FROM "${as}")`),
+        ];
 
         const { makeSql: makeSecondSql } = moveMutativeQueryToCteBase(
           toSql,

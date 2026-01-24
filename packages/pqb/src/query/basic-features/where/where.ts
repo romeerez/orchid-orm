@@ -911,7 +911,7 @@ export class Where {
    *
    * @param args - SQL expression
    */
-  whereSql<T>(this: T, ...args: SQLQueryArgs): T {
+  whereSql<T>(this: T, ...args: SQLQueryArgs): T & QueryHasWhere {
     return _queryWhereSql(_clone(this), args as never) as never;
   }
 

@@ -18,6 +18,22 @@ const TableWithReadOnly = testDb('user', (t) => ({
   password: t.integer().readOnly(),
 }));
 
+const TableWithSoftDelete = testDb(
+  'user',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    name: t.string(),
+    password: t.string(),
+    deletedAt: t.timestamp().nullable(),
+  }),
+  undefined,
+  {
+    softDelete: true,
+  },
+);
+
+const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+
 describe('upsert', () => {
   useTestDatabase();
 
@@ -163,17 +179,41 @@ describe('upsert', () => {
 
   // FOR UPDATE only makes sense for SELECT queries, it should be omitted for both the update and insert parts
   it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
-    const spy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+    arraysSpy.mockClear();
 
     await User.find(123).upsert({ update: {}, create: userData }).forUpdate();
 
-    expect(spy.mock.calls).toEqual([
+    expect(arraysSpy.mock.calls).toEqual([
       ['UPDATE "user" SET "updated_at" = now() WHERE "user"."id" = $1', [123]],
       [
         'WITH "q" AS (' +
           'UPDATE "user" SET "updated_at" = now() WHERE "user"."id" = $1 RETURNING NULL' +
           '), "q2" AS (' +
-          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE NOT EXISTS (SELECT 1 FROM "q") RETURNING NULL' +
+          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
+        [123, ...Object.values(userData)],
+      ],
+    ]);
+  });
+
+  it('should omit soft delete check from the insert part, since it was applied in the selecting sub query', async () => {
+    arraysSpy.mockClear();
+
+    await TableWithSoftDelete.find(123).upsert({
+      update: {},
+      create: userData,
+    });
+
+    expect(arraysSpy.mock.calls).toEqual([
+      [
+        'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
+        [123],
+      ],
+      [
+        'WITH "q" AS (' +
+          'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)' +
+          '), "q2" AS (' +
+          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],
