@@ -2,7 +2,7 @@ import { IsQuery } from '../query';
 import { pushQueryArrayImmutable } from '../query.utils';
 import {
   pushQueryValueImmutable,
-  QueryBeforeHookInternal,
+  QueryBeforeHook,
   QueryData,
 } from '../query-data';
 import { ToSQLQuery } from '../sql/to-sql';
@@ -15,7 +15,7 @@ export interface SubQueryForSql extends IsQuery, ToSQLQuery {
 }
 
 export interface HasBeforeAndBeforeSet {
-  before?: QueryBeforeHookInternal[];
+  before?: QueryBeforeHook[];
   beforeSet?: QueryData['beforeSet'];
 }
 

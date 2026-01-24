@@ -12,8 +12,8 @@ import { QueryBatchResult } from '../../basic-features/select/select.utils';
 import {
   pushQueryValueImmutable,
   QueryAfterHook,
+  QueryBeforeActionHook,
   QueryBeforeHook,
-  QueryBeforeHookInternal,
 } from '../../query-data';
 
 // A function type for after-hook. Constructs type of data argument based on selected columns.
@@ -36,7 +36,7 @@ export type HookSelectArg<T extends PickQueryShape> = (keyof T['shape'] &
 export type HookAction = 'Create' | 'Update' | 'Save' | 'Delete';
 
 // Save `before` hook into the query.
-const before = <T>(q: T, key: HookAction, cb: QueryBeforeHookInternal): T =>
+const before = <T>(q: T, key: HookAction, cb: QueryBeforeHook): T =>
   pushQueryValueImmutable(q as IsQuery, `before${key}`, cb) as never;
 
 // Save `after` hook into the query: this saves the function and the hook selection into the query data.
@@ -65,7 +65,7 @@ const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
 
 export const _queryHookBeforeQuery = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHookInternal,
+  cb: QueryBeforeHook,
 ): T => {
   return pushQueryValueImmutable(q as never, 'before', cb);
 };
@@ -149,7 +149,7 @@ export const finalizeNestedHookSelect = (
 
 export const _queryHookBeforeCreate = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHook,
+  cb: QueryBeforeActionHook,
 ): T => {
   return before(q, 'Create', (q) =>
     cb(new QueryHookUtils(q, q.q.columns, 'hookCreateSet')),
@@ -180,7 +180,7 @@ export const _queryHookAfterCreateCommit = <
 
 export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHook,
+  cb: QueryBeforeActionHook,
 ): T => {
   return before(q, 'Update', (q) => {
     const columns: string[] = [];
@@ -218,7 +218,7 @@ export const _queryHookAfterUpdateCommit = <
 
 export const _queryHookBeforeSave = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHook,
+  cb: QueryBeforeActionHook,
 ): T => {
   return _queryHookBeforeUpdate(_queryHookBeforeCreate(q, cb), cb);
 };
@@ -247,7 +247,7 @@ export const _queryAfterSaveCommit = <
 
 export const _queryHookBeforeDelete = <T extends PickQueryShape>(
   q: T,
-  cb: QueryBeforeHookInternal,
+  cb: QueryBeforeHook,
 ): T => {
   return before(q, 'Delete', cb);
 };
@@ -280,7 +280,7 @@ export abstract class QueryHooks {
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeQuery<T>(this: T, cb: QueryBeforeHookInternal): T {
+  beforeQuery<T>(this: T, cb: QueryBeforeHook): T {
     return _queryHookBeforeQuery(_clone(this), cb) as T;
   }
 
@@ -300,7 +300,7 @@ export abstract class QueryHooks {
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeCreate<T>(this: T, cb: QueryBeforeHook): T {
+  beforeCreate<T>(this: T, cb: QueryBeforeActionHook): T {
     return _queryHookBeforeCreate(_clone(this), cb) as T;
   }
 
@@ -345,7 +345,7 @@ export abstract class QueryHooks {
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeUpdate<T>(this: T, cb: QueryBeforeHook): T {
+  beforeUpdate<T>(this: T, cb: QueryBeforeActionHook): T {
     return _queryHookBeforeUpdate(_clone(this), cb) as T;
   }
 
@@ -392,7 +392,7 @@ export abstract class QueryHooks {
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeSave<T>(this: T, cb: QueryBeforeHook): T {
+  beforeSave<T>(this: T, cb: QueryBeforeActionHook): T {
     return _queryHookBeforeSave(_clone(this), cb) as T;
   }
 
@@ -435,7 +435,7 @@ export abstract class QueryHooks {
    *
    * @param cb - function to call, first argument is a query object
    */
-  beforeDelete<T>(this: T, cb: QueryBeforeHookInternal): T {
+  beforeDelete<T>(this: T, cb: QueryBeforeHook): T {
     return _queryHookBeforeDelete(_clone(this), cb) as T;
   }
 

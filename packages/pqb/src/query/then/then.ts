@@ -34,11 +34,7 @@ import { NotFoundError, QueryError } from '../errors';
 import { SingleSql, SingleSqlItem, Sql } from '../sql/sql';
 import { requirePrimaryKeys } from '../query-columns/primary-keys';
 import { applyTransforms } from '../extra-features/data-transform/transform';
-import {
-  HandleResult,
-  QueryAfterHook,
-  QueryBeforeHookInternal,
-} from '../query-data';
+import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../query-data';
 import { SelectAsValue, SelectItem } from '../basic-features/select/select.sql';
 import { PickQueryReturnType } from '../pick-query-types';
 
@@ -186,7 +182,7 @@ function maybeWrappedThen(
 
   const shouldCatch = q.catch;
 
-  let beforeActionHooks: QueryBeforeHookInternal[] | undefined;
+  let beforeActionHooks: QueryBeforeHook[] | undefined;
   let afterHooks: QueryAfterHook[] | undefined;
   let afterSaveHooks: QueryAfterHook[] | undefined;
   let afterCommitHooks: QueryAfterHook[] | undefined;
@@ -287,7 +283,7 @@ const then = async (
   q: Query,
   adapter: AdapterBase,
   trx?: TransactionState,
-  beforeHooks?: QueryBeforeHookInternal[],
+  beforeHooks?: QueryBeforeHook[],
   afterHooks?: QueryAfterHook[],
   afterSaveHooks?: QueryAfterHook[],
   afterCommitHooks?: QueryAfterHook[],

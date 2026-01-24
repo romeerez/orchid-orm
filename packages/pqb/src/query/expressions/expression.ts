@@ -3,7 +3,7 @@ import { Column } from '../../columns/column';
 import { OperatorToSQL } from '../../columns/operators';
 import { HasBeforeAndBeforeSet } from '../sub-query/sub-query-for-sql';
 import { PickQuerySelectable } from '../pick-query-types';
-import { QueryBeforeHookInternal } from '../query-data';
+import { QueryBeforeHook } from '../query-data';
 import { ToSqlValues } from '../sql/to-sql';
 
 export type SelectableOrExpression<
@@ -32,7 +32,7 @@ export type ExpressionChain = (OperatorToSQL | unknown)[];
 export interface ExpressionData extends HasBeforeAndBeforeSet {
   chain?: ExpressionChain;
   expr?: Expression;
-  before?: QueryBeforeHookInternal[];
+  before?: QueryBeforeHook[];
   dynamicBefore?: boolean;
 }
 

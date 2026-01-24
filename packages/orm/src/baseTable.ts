@@ -14,8 +14,8 @@ import {
   parseTableData,
   Query,
   QueryAfterHook,
+  QueryBeforeActionHook,
   QueryBeforeHook,
-  QueryBeforeHookInternal,
   QueryData,
   QueryHooks,
   RawSql,
@@ -232,8 +232,8 @@ export type Updatable<T extends ORMTableInput> = ShallowSimplify<
 >;
 
 // type of before hook function for the table
-type BeforeHookMethod = (cb: QueryBeforeHookInternal) => void;
-type BeforeActionHookMethod = (cb: QueryBeforeHook) => void;
+type BeforeHookMethod = (cb: QueryBeforeHook) => void;
+type BeforeActionHookMethod = (cb: QueryBeforeActionHook) => void;
 
 // type of after hook function for the table
 type AfterHookMethod = (cb: QueryAfterHook) => void;

@@ -73,9 +73,9 @@ export interface JoinedParsers {
   [K: string]: ColumnsParsers | undefined;
 }
 
-export type QueryBeforeHookInternal = (query: Query) => void | Promise<void>;
+export type QueryBeforeHook = (query: Query) => void | Promise<void>;
 
-export type QueryBeforeHook = (
+export type QueryBeforeActionHook = (
   utils: QueryHookUtils<PickQueryInputType>,
 ) => void | Promise<void>;
 
@@ -196,17 +196,17 @@ export interface QueryData
   // selected computed columns
   selectedComputeds?: ComputedColumns;
   // a set for deduplication of hooks added dynamically from the sub queries
-  beforeSet?: Set<QueryBeforeHookInternal>;
+  beforeSet?: Set<QueryBeforeHook>;
   // regular before are executed before SQL is generated,
   // but in some cases (dynamic aka lazy SQL) this is impossible,
   // such queries need a second round of `before` hooks to execute after SQL generation.
   dynamicBefore?: HasBeforeAndBeforeSet[];
   // run functions before any query
-  before?: QueryBeforeHookInternal[];
+  before?: QueryBeforeHook[];
   // run functions after any query
   after?: QueryAfterHook[];
   // run functions before create
-  beforeCreate?: QueryBeforeHookInternal[];
+  beforeCreate?: QueryBeforeHook[];
   // run functions after create in transaction
   afterCreate?: QueryAfterHook[];
   // run functions after create commit
@@ -214,7 +214,7 @@ export interface QueryData
   // additional select for afterCreate hooks
   afterCreateSelect?: Set<string>;
   // run functions before update
-  beforeUpdate?: QueryBeforeHookInternal[];
+  beforeUpdate?: QueryBeforeHook[];
   // run functions after update in transaction
   afterUpdate?: QueryAfterHook[];
   // run functions after update commit
@@ -228,7 +228,7 @@ export interface QueryData
   // additional select for afterSave hooks
   afterSaveSelect?: Set<string>;
   // run functions before delete
-  beforeDelete?: QueryBeforeHookInternal[];
+  beforeDelete?: QueryBeforeHook[];
   // run functions after delete in transaction
   afterDelete?: QueryAfterHook[];
   // run functions after delete commit
