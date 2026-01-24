@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.60.1
+
+### Patch Changes
+
+- 9d0b66b: Export root migrations module (#613)
+
 ## 1.60.0
 
 ### Minor Changes
