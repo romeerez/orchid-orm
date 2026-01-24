@@ -14,6 +14,7 @@ import {
   parseTableData,
   Query,
   QueryAfterHook,
+  QueryBeforeHook,
   QueryBeforeHookInternal,
   QueryData,
   QueryHooks,
@@ -232,6 +233,7 @@ export type Updatable<T extends ORMTableInput> = ShallowSimplify<
 
 // type of before hook function for the table
 type BeforeHookMethod = (cb: QueryBeforeHookInternal) => void;
+type BeforeActionHookMethod = (cb: QueryBeforeHook) => void;
 
 // type of after hook function for the table
 type AfterHookMethod = (cb: QueryAfterHook) => void;
@@ -447,13 +449,13 @@ export interface BaseTableInstance<ColumnTypes> {
 
   beforeQuery: BeforeHookMethod;
   afterQuery: AfterHookMethod;
-  beforeCreate: BeforeHookMethod;
+  beforeCreate: BeforeActionHookMethod;
   afterCreate: AfterSelectableHookMethod;
   afterCreateCommit: AfterSelectableHookMethod;
-  beforeUpdate: BeforeHookMethod;
+  beforeUpdate: BeforeActionHookMethod;
   afterUpdate: AfterSelectableHookMethod;
   afterUpdateCommit: AfterSelectableHookMethod;
-  beforeSave: BeforeHookMethod;
+  beforeSave: BeforeActionHookMethod;
   afterSave: AfterSelectableHookMethod;
   afterSaveCommit: AfterSelectableHookMethod;
   beforeDelete: BeforeHookMethod;
