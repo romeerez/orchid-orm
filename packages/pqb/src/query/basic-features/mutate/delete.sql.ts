@@ -16,10 +16,7 @@ export const pushDeleteSql = (
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
-  const from = quoteSchemaAndTable(
-    query.schema,
-    (query.table || q.from) as string,
-  );
+  const from = quoteSchemaAndTable(q.schema, (query.table || q.from) as string);
   ctx.sql.push(`DELETE FROM ${from}`);
 
   if (from !== quotedAs) {
