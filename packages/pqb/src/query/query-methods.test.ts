@@ -551,6 +551,42 @@ describe('queryMethods', () => {
         `,
       );
     });
+
+    it('prefixes insert with schema', () => {
+      const q = User.withSchema('geo').insert(userData);
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "geo"."user"("name", "password")
+          VALUES ($1, $2)
+        `,
+        [userData.name, userData.password],
+      );
+    });
+
+    it('prefixes insertMany with schema', () => {
+      const q = User.withSchema('geo').insertMany([userData, userData]);
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "geo"."user"("name", "password")
+          VALUES ($1, $2), ($3, $4)
+        `,
+        [userData.name, userData.password, userData.name, userData.password],
+      );
+    });
+
+    it('prefixes delete with schema', () => {
+      const q = User.withSchema('geo').where({ id: 1 }).delete();
+
+      expectSql(
+        q.toSQL(),
+        `DELETE FROM "geo"."user" "user" WHERE "user"."id" = $1`,
+        [1],
+      );
+    });
   });
 
   describe('group', () => {

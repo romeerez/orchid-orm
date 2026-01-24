@@ -21,6 +21,7 @@ import {
   makeSql,
   MoreThanOneRowError,
   QueryInternal,
+  quoteSchemaAndTable,
   RawSql,
   Sql,
 } from '../index';
@@ -161,7 +162,13 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
       const quotedAs = `"${query.as || tableName}"`;
 
       if (type === 'insert') {
-        result = makeInsertSql(ctx, table, query, `"${tableName}"`, isSubSql);
+        result = makeInsertSql(
+          ctx,
+          table,
+          query,
+          quoteSchemaAndTable(query.schema, tableName),
+          isSubSql,
+        );
       } else if (type === 'update') {
         result = pushUpdateSql(ctx, table, query, quotedAs, isSubSql);
       } else if (type === 'delete') {
