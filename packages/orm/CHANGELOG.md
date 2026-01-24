@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.60.2
+
+### Patch Changes
+
+- 1dd32d9: Fix before hooks typing (#615)
+
 ## 1.60.1
 
 ### Patch Changes
