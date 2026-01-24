@@ -1,5 +1,11 @@
 # pqb
 
+## 0.59.0
+
+### Minor Changes
+
+- de0a9a2: Optimizations, and fix upsert with soft delete (#612)
+
 ## 0.58.5
 
 ### Patch Changes

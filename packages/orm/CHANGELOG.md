@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.60.0
+
+### Minor Changes
+
+- de0a9a2: Optimizations, and fix upsert with soft delete (#612)
+
+### Patch Changes
+
+- Updated dependencies [de0a9a2]
+  - pqb@0.59.0
+  - rake-db@2.27.30
+
 ## 1.59.5
 
 ### Patch Changes
