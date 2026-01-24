@@ -1,5 +1,11 @@
 # pqb
 
+## 0.59.1
+
+### Patch Changes
+
+- 5eb7f20: Fix schema handling for INSERT, DELETE and COPY (#614)
+
 ## 0.59.0
 
 ### Minor Changes
