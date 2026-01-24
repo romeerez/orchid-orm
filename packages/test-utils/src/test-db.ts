@@ -499,7 +499,7 @@ class CategoryTable extends BaseTable {
 export const db = orchidORMWithAdapter(
   {
     adapter: testAdapter,
-    log: true,
+    log: !process.env.CI,
   },
   {
     user: UserTable,
