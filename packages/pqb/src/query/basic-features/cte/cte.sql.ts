@@ -26,6 +26,8 @@ export interface CteItem {
   q?: SubQueryForSql;
   // sql
   s?: Expression;
+  // prepend: false by default
+  p?: boolean;
 }
 
 export interface CteOptions {
@@ -37,62 +39,48 @@ export interface CteOptions {
 
 export interface TopCTE {
   names: RecordUnknown;
-  prepend: string[];
-  append: string[];
-}
-
-interface TopCteSize {
-  prepend: number;
-  append: number;
+  stack: string[][];
+  append: string[][];
 }
 
 const newTopCte = (ctx: ToSQLCtx): TopCTE => ({
-  names: { ...ctx.q.joinedShapes },
-  prepend: [],
+  names: { ...ctx.q.withShapes, ...ctx.q.joinedShapes },
+  stack: [],
   append: [],
 });
 
 export const getTopCteSize = ({
   topCtx: { topCTE },
-}: ToSQLCtx): TopCteSize | undefined =>
-  topCTE && {
-    prepend: topCTE.prepend.length,
-    append: topCTE.append.length,
-  };
+}: ToSQLCtx): number | undefined => topCTE?.append.length;
 
-export const setTopCteSize = ({ topCtx }: ToSQLCtx, size?: TopCteSize) => {
+export const setTopCteSize = ({ topCtx }: ToSQLCtx, size?: number) => {
   if (topCtx.topCTE) {
     if (size) {
-      topCtx.topCTE.prepend.length = size.prepend;
-      topCtx.topCTE.append.length = size.append;
+      topCtx.topCTE.append.length = size;
     } else {
       topCtx.topCTE = undefined;
     }
   }
 };
 
-export const ctesToSql = (
-  ctx: ToSQLCtx,
-  ctes?: WithItems,
-): string[] | undefined => {
+export const ctesToSql = (ctx: ToSQLCtx, ctes?: WithItems): void => {
   if (!ctes) return;
 
-  let result: string[] | undefined;
   for (const item of ctes) {
+    const place = item.p ? 'before' : 'after';
     if (ctx !== ctx.topCtx && item.q?.q.type) {
-      addTopCte('prepend', ctx, item.q, item.n);
+      addTopCte(place, ctx, item.q, item.n);
     } else {
-      (result ||= []).push(cteToSql(ctx, item));
+      addTopCteInternal(place, ctx, item);
     }
   }
-  return result;
 };
 
-export const cteToSql = (
+export const cteToSqlGiveAs = (
   ctx: ToSQLCtx,
   item: CteItem,
   type?: QueryData['type'],
-): string => {
+): { as: string; sql: string } => {
   let inner: string;
 
   let as;
@@ -124,26 +112,53 @@ export const cteToSql = (
   }
 
   const o = item.o ?? (emptyObject as CteOptions);
-  return `${o.recursive ? 'RECURSIVE ' : ''}"${as}"${
-    o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
-  } AS ${
-    o.materialized
-      ? 'MATERIALIZED '
-      : o.notMaterialized
-      ? 'NOT MATERIALIZED '
-      : ''
-  }(${inner})`;
+  return {
+    as,
+    sql: `${o.recursive ? 'RECURSIVE ' : ''}"${as}"${
+      o.columns ? `(${o.columns.map((x) => `"${x}"`).join(', ')})` : ''
+    } AS ${
+      o.materialized
+        ? 'MATERIALIZED '
+        : o.notMaterialized
+        ? 'NOT MATERIALIZED '
+        : ''
+    }(${inner})`,
+  };
 };
 
-export const prependTopCte = (
+export const cteToSql = (
   ctx: ToSQLCtx,
-  q: SubQueryForSql,
-  as?: string,
+  item: CteItem,
   type?: QueryData['type'],
-) => addTopCte('prepend', ctx, q, as, type);
+): string => cteToSqlGiveAs(ctx, item, type).sql;
+
+export const setFreeTopCteAs = (ctx: ToSQLCtx) => {
+  const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
+  const as = setFreeAlias(topCTE.names, 'q', true);
+  topCTE.names[as] = true;
+  return as;
+};
+
+export const addTopCteSql = (
+  ctx: ToSQLCtx,
+  as: string | undefined,
+  sql: string,
+): string => {
+  const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
+
+  as ??= setFreeAlias(topCTE.names, 'q', true);
+  topCTE.names[as] = true;
+
+  const target =
+    topCTE.stack[topCTE.stack.length - 1] ||
+    (topCTE.append[topCTE.append.length] = []);
+
+  target.push(as + ' AS (' + sql + ')');
+  return as;
+};
 
 export const addTopCte = (
-  key: 'prepend' | 'append',
+  place: 'before' | 'after',
   ctx: ToSQLCtx,
   q: SubQueryForSql,
   as?: string | ((as: string) => void),
@@ -161,23 +176,45 @@ export const addTopCte = (
     as = name;
   }
 
-  topCTE[key].push(cteToSql(ctx, { n: as, q }, type));
+  addTopCteInternal(place, ctx, { n: as, q }, type);
 
   return as;
+};
+
+const addTopCteInternal = (
+  place: 'before' | 'after',
+  ctx: ToSQLCtx,
+  item: CteItem,
+  type?: QueryData['type'],
+) => {
+  const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
+
+  const target =
+    (place === 'before' && topCTE.stack[topCTE.stack.length - 1]) ||
+    (topCTE.append[topCTE.append.length] = []);
+
+  const prepend: string[] = [];
+  topCTE.stack.push(prepend);
+
+  const sql = cteToSql(ctx, item, type); // more ctes can be appended here
+
+  target.push(...prepend, sql);
+
+  topCTE.stack.pop();
 };
 
 export const addWithToSql = (
   ctx: ToSQLCtx,
   sql: SingleSql,
-  cteSqls?: string[],
   isSubSql?: boolean,
 ): void => {
-  if (cteSqls?.length || (!isSubSql && ctx.topCtx.topCTE) || ctx.cteSqls) {
+  if (!isSubSql && ctx.topCtx.topCTE) {
     const sqls: string[] = [];
-    if (!isSubSql && ctx.topCtx.topCTE) sqls.push(...ctx.topCtx.topCTE.prepend);
-    if (cteSqls) sqls.push(...cteSqls);
-    if (!isSubSql && ctx.topCtx.topCTE) sqls.push(...ctx.topCtx.topCTE.append);
-    if (ctx.cteSqls) sqls.push(...ctx.cteSqls);
+    if (!isSubSql && ctx.topCtx.topCTE) {
+      for (const append of ctx.topCtx.topCTE.append) {
+        sqls.push(...append);
+      }
+    }
 
     sql.text = 'WITH ' + sqls.join(', ') + ' ' + sql.text;
   }

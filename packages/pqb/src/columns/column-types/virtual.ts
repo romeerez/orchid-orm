@@ -6,10 +6,7 @@ import {
   CreateCtx,
   CreateSelf,
 } from '../../query/basic-features/mutate/create';
-import {
-  UpdateCtx,
-  UpdateSelf,
-} from '../../query/basic-features/mutate/update';
+import { UpdateSelf } from '../../query/basic-features/mutate/update';
 
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,
@@ -36,7 +33,8 @@ export abstract class VirtualColumn<
     ctx: CreateCtx,
     item: RecordUnknown,
     rowIndex: number,
+    one?: boolean,
   ): void;
 
-  update?(q: UpdateSelf, ctx: UpdateCtx, set: RecordUnknown): void;
+  update?(q: UpdateSelf, set: RecordUnknown): void;
 }

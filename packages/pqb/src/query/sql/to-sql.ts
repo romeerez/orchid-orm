@@ -1,7 +1,12 @@
 import { Query } from '../query';
-import { QueryData } from '../query-data';
+import { QueryData, QueryType } from '../query-data';
 import { QueryBuilder } from '../db';
-import { addWithToSql, ctesToSql, TopCTE } from '../basic-features/cte/cte.sql';
+import {
+  addWithToSql,
+  ctesToSql,
+  setFreeTopCteAs,
+  TopCTE,
+} from '../basic-features/cte/cte.sql';
 import { SubQueryForSql } from '../sub-query/sub-query-for-sql';
 import { pushTruncateSql } from '../extra-features/truncate/truncate.sql';
 import { pushColumnInfoSql } from '../extra-features/get-column-info/get-column-info.sql';
@@ -13,13 +18,14 @@ import {
   _clone,
   JoinItem,
   makeRowToJson,
+  makeSql,
   MoreThanOneRowError,
   QueryInternal,
   quoteSchemaAndTable,
+  RawSql,
   Sql,
 } from '../index';
 import { moveMutativeQueryToCteBase } from '../basic-features/cte/move-mutative-query-to-cte-base.sql';
-import { _queryWhereNotExists } from '../basic-features/where/where';
 import { pushDistinctSql } from '../basic-features/distinct/distinct.sql';
 import { setSqlCtxSelectList } from '../basic-features/select/select.sql';
 import { pushFromAndAs } from '../basic-features/from/fromAndAs.sql';
@@ -69,8 +75,8 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSqlValues {
   q: QueryData;
   sql: string[];
   selectedCount: number;
-  cteSqls?: string[];
   cteName?: string;
+  wrapAs?: string;
 }
 
 export interface ToSQLQuery {
@@ -91,7 +97,7 @@ export interface ToSQLQuery {
 export interface ToSql {
   (
     table: ToSQLQuery,
-    type: QueryData['type'],
+    type: QueryType,
     topCtx?: TopToSqlCtx,
     isSubSql?: boolean,
     cteName?: string,
@@ -121,13 +127,26 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     ctx.topCtx = ctx as TopToSqlCtx;
   }
 
-  const cteSqls = ctesToSql(ctx, query.with);
+  ctesToSql(ctx, query.with);
 
   let result: Sql;
 
   let selectKeywordPos: number | undefined;
+  let prependedSelectParenthesis: boolean | undefined;
 
   let fromQuery: SubQueryForSql | undefined;
+
+  if (query.asFns) {
+    let as;
+    if (isSubSql) {
+      as = cteName || setFreeTopCteAs(ctx);
+    } else {
+      as = ctx.wrapAs = setFreeTopCteAs(ctx);
+    }
+    for (const fn of query.asFns) {
+      fn(as);
+    }
+  }
 
   if (type && type !== 'upsert') {
     const tableName = table.table ?? query.as;
@@ -135,10 +154,10 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
     if (type === 'truncate') {
       pushTruncateSql(ctx, tableName, query);
-      result = { text: sql.join(' '), values };
+      result = makeSql(ctx, type, isSubSql);
     } else if (type === 'columnInfo') {
       pushColumnInfoSql(ctx, table, query);
-      result = { text: sql.join(' '), values };
+      result = makeSql(ctx, type, isSubSql);
     } else {
       const quotedAs = `"${query.as || tableName}"`;
 
@@ -156,7 +175,7 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
         result = pushDeleteSql(ctx, table, query, quotedAs, isSubSql);
       } else if (type === 'copy') {
         pushCopySql(ctx, table, query, quotedAs);
-        result = { text: sql.join(' '), values };
+        result = makeSql(ctx, type, isSubSql);
       } else {
         throw new Error(`Unsupported query type ${type}`);
       }
@@ -171,6 +190,14 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
         skipSelect = true;
 
         const upsertOrCreate = _clone(table as Query);
+
+        // it expected for update to not find records, do not throw if not found
+        if (upsertOrCreate.q.returnType === 'oneOrThrow') {
+          upsertOrCreate.q.returnType = 'one';
+        } else if (upsertOrCreate.q.returnType === 'valueOrThrow') {
+          upsertOrCreate.q.returnType = 'value';
+        }
+
         const { as, makeSql: makeFirstSql } = moveMutativeQueryToCteBase(
           toSql,
           ctx,
@@ -178,16 +205,12 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
           upsertUpdate ? 'update' : null,
         );
 
-        upsertOrCreate.q.and =
-          upsertOrCreate.q.or =
-          upsertOrCreate.q.scopes =
-            undefined;
+        upsertOrCreate.q.or = upsertOrCreate.q.scopes = undefined;
 
-        _queryWhereNotExists(
-          upsertOrCreate,
-          upsertOrCreate.baseQuery.from(as),
-          [],
-        );
+        upsertOrCreate.q.and = [
+          // use raw SQL rather than _queryWhereNotExists to avoid soft delete being appended
+          new RawSql(`NOT EXISTS (SELECT 1 FROM "${as}")`),
+        ];
 
         const { makeSql: makeSecondSql } = moveMutativeQueryToCteBase(
           toSql,
@@ -320,13 +343,10 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
     if (selectKeywordPos !== undefined && !isSubSql && ctx.topCtx.cteHooks) {
       sql[selectKeywordPos] = '(' + sql[selectKeywordPos];
+      prependedSelectParenthesis = true;
     }
 
-    result = {
-      text: sql.join(' '),
-      values,
-      runAfterQuery,
-    };
+    result = makeSql(ctx, type, isSubSql, runAfterQuery);
   }
 
   if (!ctx.cteName) {
@@ -336,31 +356,33 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     }
   }
 
-  if (!isSubSql && ctx.topCtx.cteHooks && 'text' in result) {
-    result.cteHooks = ctx.topCtx.cteHooks;
+  if (!isSubSql) {
+    if (ctx.topCtx.cteHooks && 'text' in result) {
+      result.cteHooks = ctx.topCtx.cteHooks;
 
-    if (ctx.topCtx.cteHooks.hasSelect) {
-      if (selectKeywordPos !== undefined) {
-        result.text += ')';
+      if (ctx.topCtx.cteHooks.hasSelect) {
+        if (prependedSelectParenthesis) {
+          result.text += ')';
+        }
+
+        result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
+          ctx.selectedCount || 0,
+        )}json_build_object(${Object.entries(ctx.topCtx.cteHooks.tableHooks)
+          .map(
+            ([cteName, data]) =>
+              `'${cteName}', (SELECT json_agg(${makeRowToJson(
+                cteName,
+                data.shape,
+                false,
+                true,
+              )}) FROM "${cteName}")`,
+          )
+          .join(', ')})`;
       }
-
-      result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
-        ctx.selectedCount || 0,
-      )}json_build_object(${Object.entries(ctx.topCtx.cteHooks.tableHooks)
-        .map(
-          ([cteName, data]) =>
-            `'${cteName}', (SELECT json_agg(${makeRowToJson(
-              cteName,
-              data.shape,
-              false,
-              true,
-            )}) FROM "${cteName}")`,
-        )
-        .join(', ')})`;
     }
   }
 
-  if ('text' in result) addWithToSql(ctx, result, cteSqls, isSubSql);
+  if ('text' in result) addWithToSql(ctx, result, isSubSql);
 
   return result;
 };

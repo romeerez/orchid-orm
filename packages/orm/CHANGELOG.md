@@ -1,5 +1,29 @@
 # orchid-orm
 
+## 1.60.2
+
+### Patch Changes
+
+- 1dd32d9: Fix before hooks typing (#615)
+
+## 1.60.1
+
+### Patch Changes
+
+- 9d0b66b: Export root migrations module (#613)
+
+## 1.60.0
+
+### Minor Changes
+
+- de0a9a2: Optimizations, and fix upsert with soft delete (#612)
+
+### Patch Changes
+
+- Updated dependencies [de0a9a2]
+  - pqb@0.59.0
+  - rake-db@2.27.30
+
 ## 1.59.5
 
 ### Patch Changes

@@ -14,7 +14,7 @@ import { processJoinItem } from '../join/join.sql';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
-import { quoteSchemaAndTable, Sql } from '../../sql/sql';
+import { makeSql, quoteSchemaAndTable, Sql } from '../../sql/sql';
 import {
   addValue,
   emptyObject,
@@ -29,20 +29,20 @@ import { isExpression } from '../../expressions/expression';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  query: QueryData,
+  query: ToSQLQuery,
+  q: QueryData,
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
   const quotedTable = quoteSchemaAndTable(
-    query.schema,
-    table.table || (query.from as string),
+    q.schema,
+    query.table || (q.from as string),
   );
 
   let hookSet: RecordUnknown;
-  if (query.hookUpdateSet) {
+  if (q.hookUpdateSet) {
     hookSet = {};
-    for (const item of query.hookUpdateSet) {
+    for (const item of q.hookUpdateSet) {
       Object.assign(hookSet, item);
     }
   } else {
@@ -50,25 +50,25 @@ export const pushUpdateSql = (
   }
 
   const set: string[] = [];
-  processData(ctx, table, set, query.updateData, hookSet, quotedAs);
+  processData(ctx, query, set, q.updateData, hookSet, quotedAs);
 
-  if (query.hookUpdateSet) {
-    applySet(ctx, table, set, hookSet, emptyObject, quotedAs);
+  if (q.hookUpdateSet) {
+    applySet(ctx, query, set, hookSet, emptyObject, quotedAs);
   }
 
   const delayedRelationSelect: DelayedRelationSelect | undefined =
-    query.selectRelation ? newDelayedRelationSelect(table) : undefined;
+    q.selectRelation ? newDelayedRelationSelect(query) : undefined;
 
   // if no values to set, make a `SELECT` query
   if (!set.length) {
-    if (!query.select) {
-      query.select = countSelect;
+    if (!q.select) {
+      q.select = countSelect;
     }
 
     pushUpdateReturning(
       ctx,
-      table,
       query,
+      q,
       quotedAs,
       'SELECT',
       delayedRelationSelect,
@@ -76,8 +76,8 @@ export const pushUpdateSql = (
     );
 
     ctx.sql.push(`FROM ${quotedTable}`);
-    pushWhereStatementSql(ctx, table, query, quotedAs);
-    pushLimitSQL(ctx.sql, ctx.values, query);
+    pushWhereStatementSql(ctx, query, q, quotedAs);
+    pushLimitSQL(ctx.sql, ctx.values, q);
   } else {
     ctx.sql.push(`UPDATE ${quotedTable}`);
 
@@ -88,13 +88,13 @@ export const pushUpdateSql = (
     ctx.sql.push('SET');
     ctx.sql.push(set.join(', '));
 
-    const { updateFrom } = query;
+    const { updateFrom } = q;
     let fromWhereSql: string | undefined;
     if (updateFrom) {
       const { target, on } = processJoinItem(
         ctx,
-        table,
         query,
+        q,
         updateFrom,
         quotedAs,
       );
@@ -103,14 +103,14 @@ export const pushUpdateSql = (
 
       fromWhereSql = on;
 
-      if (query.join) {
-        const joinSet = query.join.length > 1 ? new Set<string>() : null;
+      if (q.join) {
+        const joinSet = q.join.length > 1 ? new Set<string>() : null;
 
-        for (const item of query.join) {
+        for (const item of q.join) {
           const { target, on } = processJoinItem(
             ctx,
-            table,
             query,
+            q,
             item.args,
             quotedAs,
           );
@@ -130,7 +130,7 @@ export const pushUpdateSql = (
       }
     }
 
-    const mainWhereSql = whereToSql(ctx, table, query, quotedAs);
+    const mainWhereSql = whereToSql(ctx, query, q, quotedAs);
     const whereSql = mainWhereSql
       ? fromWhereSql
         ? mainWhereSql + ' AND ' + fromWhereSql
@@ -142,8 +142,8 @@ export const pushUpdateSql = (
 
     pushUpdateReturning(
       ctx,
-      table,
       query,
+      q,
       quotedAs,
       'RETURNING',
       delayedRelationSelect,
@@ -155,16 +155,13 @@ export const pushUpdateSql = (
     ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
   }
 
-  return {
-    text: ctx.sql.join(' '),
-    values: ctx.values,
-  };
+  return makeSql(ctx, 'update', isSubSql);
 };
 
 const pushUpdateReturning = (
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  query: QueryData,
+  query: ToSQLQuery,
+  q: QueryData,
   quotedAs: string,
   keyword: string,
   delayedRelationSelect: DelayedRelationSelect | undefined,
@@ -172,8 +169,8 @@ const pushUpdateReturning = (
 ) => {
   const returning = makeReturningSql(
     ctx,
-    table,
     query,
+    q,
     quotedAs,
     delayedRelationSelect,
     'Update',
@@ -186,7 +183,7 @@ const pushUpdateReturning = (
 
 const processData = (
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
+  query: ToSQLQuery,
   set: string[],
   data: UpdateQueryDataItem[],
   hookSet: RecordUnknown,
@@ -199,23 +196,23 @@ const processData = (
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
     } else {
-      applySet(ctx, table, set, item, hookSet, quotedAs);
+      applySet(ctx, query, set, item, hookSet, quotedAs);
     }
   }
 
-  if (append) processData(ctx, table, set, append, hookSet, quotedAs);
+  if (append) processData(ctx, query, set, append, hookSet, quotedAs);
 };
 
 const applySet = (
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
+  query: ToSQLQuery,
   set: string[],
   item: UpdateQueryDataObject,
   hookSet: RecordUnknown,
   quotedAs?: string,
 ) => {
   const QueryClass = ctx.qb.constructor as unknown as Db;
-  const shape = table.q.shape;
+  const shape = query.q.shape;
 
   for (const key in item) {
     const value = item[key];
@@ -224,7 +221,7 @@ const applySet = (
     set.push(
       `"${shape[key].data.name || key}" = ${processValue(
         ctx,
-        table,
+        query,
         QueryClass,
         key,
         value,
@@ -236,7 +233,7 @@ const applySet = (
 
 const processValue = (
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
+  query: ToSQLQuery,
   QueryClass: Db,
   key: string,
   value: UpdateQueryDataObject[string],
@@ -246,17 +243,17 @@ const processValue = (
     if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
-      const query = value as Query;
-      if (query.q.subQuery === 1) {
-        return selectToSql(ctx, table, query.q, quotedAs);
+      const subQuery = value as Query;
+      if (subQuery.q.subQuery === 1) {
+        return selectToSql(ctx, query, subQuery.q, quotedAs);
       }
 
       return `(${moveMutativeQueryToCte(
         ctx,
-        query as unknown as SubQueryForSql,
+        subQuery as unknown as SubQueryForSql,
       )})`;
     } else if ('op' in value && 'arg' in value) {
-      return `"${table.q.shape[key].data.name || key}" ${
+      return `"${query.q.shape[key].data.name || key}" ${
         (value as { op: string }).op
       } ${addValue(ctx.values, (value as { arg: unknown }).arg)}`;
     }

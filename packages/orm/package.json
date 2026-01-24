@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.59.5",
+  "version": "1.60.2",
   "description": "Postgres ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
   "repository": {
@@ -30,6 +30,11 @@
       "require": "./dist/postgres-js.js",
       "import": "./dist/postgres-js.mjs",
       "types": "./dist/postgres-js.d.ts"
+    },
+    "./migrations": {
+      "require": "./dist/migrations/index.js",
+      "import": "./dist/migrations/index.mjs",
+      "types": "./dist/migrations/index.d.ts"
     },
     "./migrations/node-postgres": {
       "require": "./dist/migrations/node-postgres.js",

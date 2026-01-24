@@ -26,7 +26,6 @@ import {
   SelectableFromShape,
   TableData,
   UpdateData,
-  UpdateCtx,
   VirtualColumn,
   WhereArg,
   ColumnSchemaConfig,
@@ -198,7 +197,7 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
     );
   }
 
-  update(q: Query, _: UpdateCtx, set: RecordUnknown) {
+  update(q: Query, set: RecordUnknown) {
     hasRelationHandleUpdate(
       q,
       set,

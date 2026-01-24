@@ -23,7 +23,7 @@ import {
   SelectableOrExpression,
 } from './expressions/expression';
 import { AdapterBase, QueryResult } from '../adapters/adapter';
-import { HasHookSelect, HookSelect } from './basic-features/select/hook-select';
+import { HasHookSelect } from './basic-features/select/hook-select';
 import {
   MaybeArray,
   pushOrNewArrayToObjectImmutable,
@@ -115,28 +115,29 @@ export interface JoinValueDedupItem {
   a: string;
 }
 
+export type QueryType =
+  | undefined
+  // the same as undefined, used only in SQL composer to override default value
+  | null
+  | 'upsert'
+  | 'insert'
+  | 'update'
+  | 'delete'
+  | 'truncate'
+  | 'columnInfo'
+  | 'copy';
+
+export interface AsFn {
+  (as: string): void;
+}
+
 export interface QueryData
   extends QueryDataAliases,
     PickQueryDataParsers,
     HasHookSelect {
-  type:
-    | undefined
-    // the same as undefined, used only in SQL composer to override default value
-    | null
-    | 'upsert'
-    | 'insert'
-    | 'update'
-    | 'delete'
-    | 'truncate'
-    | 'columnInfo'
-    | 'copy';
+  type: QueryType;
   adapter: AdapterBase;
   shape: ColumnsShape;
-  patchResult?(
-    q: Query,
-    hookSelect: HookSelect | undefined,
-    queryResult: QueryResult,
-  ): Promise<void>;
   handleResult: HandleResult;
   // When executed in a transaction,
   // the query will be wrapped with a `SAVEPOINT x; *query*; ROLLBACK TO SAVEPOINT x (if fails)`.
@@ -274,6 +275,9 @@ export interface QueryData
   // `set` data for insert or update that was set from a `before*` hook
   hookCreateSet?: RecordUnknown[];
   hookUpdateSet?: RecordUnknown[];
+
+  appendQueries?: SubQueryForSql[];
+  asFns?: AsFn[];
 
   /** select and upsert **/
 

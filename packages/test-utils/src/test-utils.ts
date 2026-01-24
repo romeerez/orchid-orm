@@ -90,7 +90,7 @@ export const testDb = createDbWithAdapter({
   snakeCase: true,
   adapter: testAdapter,
   columnTypes: testColumnTypes,
-  log: false,
+  log: true,
 });
 
 export const { sql } = testDb;

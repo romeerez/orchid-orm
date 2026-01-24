@@ -8,6 +8,9 @@ import { PickQueryColumTypes } from '../pick-query-types';
 import { DynamicSQLArg, StaticSQLArgs } from '../expressions/expression';
 import { DynamicRawSQL, raw, RawSql } from '../expressions/raw-sql';
 import { Column } from '../../columns';
+import { ToSQLCtx } from './to-sql';
+import { QueryType } from '../query-data';
+import { wrapMainQueryInCte } from './wrap-main-query-in-cte';
 
 export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
   delayedRelationSelect?: DelayedRelationSelect;
@@ -37,6 +40,33 @@ export interface BatchSql extends SqlCommonOptions {
 // Output type of the `toSQL` method of query objects.
 // This will be passed to database adapter to perform query.
 export type Sql = SingleSql | BatchSql;
+
+export const makeSql = (
+  ctx: ToSQLCtx,
+  type: QueryType,
+  isSubSql: boolean | undefined,
+  runAfterQuery?: RunAfterQuery,
+): SingleSql => {
+  if (
+    (!isSubSql &&
+      // require type to exclude SELECT because it does not require wrapping in CTE for UNION
+      type &&
+      // exclude insert because insert handles this logic on its own, since it has to deal with batches
+      type !== 'insert' &&
+      // exclude upsert because it upsert is SELECT from a union, select doesn't require wrapping
+      type !== 'upsert' &&
+      ctx.topCtx.cteHooks) ||
+    ctx.q.appendQueries
+  ) {
+    wrapMainQueryInCte(ctx, ctx.q, isSubSql);
+  }
+
+  return {
+    text: ctx.sql.join(' '),
+    values: ctx.values,
+    runAfterQuery,
+  };
+};
 
 export const quoteSchemaAndTable = (
   schema: string | undefined,

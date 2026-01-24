@@ -31,7 +31,6 @@ import { SingleSqlItem, Sql } from '../../sql/sql';
 import {
   addValue,
   emptyArray,
-  getFreeAlias,
   pushOrNewArray,
   RecordUnknown,
   toArray,
@@ -42,6 +41,10 @@ import { HookSelect } from '../select/hook-select';
 import { getPrimaryKeys } from '../../query-columns/primary-keys';
 import { _clone } from '../clone/clone';
 import { Query } from '../../query';
+import {
+  getShouldWrapMainQueryInCte,
+  wrapMainQueryInCte,
+} from '../../sql/wrap-main-query-in-cte';
 
 export type OnConflictTarget =
   | string
@@ -402,10 +405,12 @@ const applySqlState = (
     ? sqlState.insertSql + sqlState.selectFromSql
     : sqlState.insertSql;
 
-  const wrapForCteHookAs =
-    !sqlState.isSubSql &&
-    ctx.topCtx.cteHooks &&
-    getFreeAlias(sqlState.query.withShapes, 'i');
+  const wrapInCte = getShouldWrapMainQueryInCte(
+    ctx,
+    sqlState.query,
+    'insert',
+    sqlState.isSubSql,
+  );
 
   if ('valuesSql' in sqlState) {
     ctx.sql[1] =
@@ -425,20 +430,14 @@ const applySqlState = (
     sqlState.isSubSql || !!ctx.topCtx.cteHooks,
   );
 
-  const addNull = !sqlState.isSubSql && sqlState.ctx.topCtx.cteHooks?.hasSelect;
-
   if (returning) {
     ctx.sql[sqlState.returningPos] = 'RETURNING ' + returning;
   }
 
   ctx.sql[0] = insertSql;
 
-  if (wrapForCteHookAs) {
-    (sqlState.ctx.cteSqls ??= []).push(
-      wrapForCteHookAs + ' AS (' + ctx.sql.join(' ') + ')',
-    );
-
-    ctx.sql = [`SELECT *${addNull ? ', NULL' : ''} FROM ${wrapForCteHookAs}`];
+  if (wrapInCte) {
+    wrapMainQueryInCte(ctx, sqlState.query);
   }
 };
 
@@ -701,7 +700,7 @@ export const makeReturningSql = (
     addTableHook(ctx, q, q.q, select);
 
     ctx.selectedCount = 1;
-    return isSubSql ? 'NULL' : undefined;
+    return returnSqlOrNull(ctx, q, isSubSql);
   }
 
   const otherCTEHookSelect =
@@ -754,5 +753,17 @@ export const makeReturningSql = (
 
   if (!sql) ctx.selectedCount = 1;
 
-  return sql || (isSubSql ? 'NULL' : undefined);
+  return returnSqlOrNull(ctx, q, isSubSql, sql);
+};
+
+const returnSqlOrNull = (
+  ctx: ToSQLCtx,
+  q: ToSQLQuery,
+  isSubSql?: boolean,
+  sql?: string,
+): string | undefined => {
+  return (
+    sql ||
+    (isSubSql || ctx.topCtx.cteHooks || q.q.appendQueries ? 'NULL' : undefined)
+  );
 };

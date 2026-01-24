@@ -6,7 +6,7 @@ import {
   SetQueryReturnsRowCountMany,
 } from '../../query';
 import { throwIfNoWhere } from '../../query.utils';
-import { _queryWhereIn, QueryHasWhere } from '../where/where';
+import { QueryHasWhere } from '../where/where';
 import {
   anyShape,
   Column,
@@ -33,14 +33,12 @@ import {
   PickQueryShape,
   PickQueryWithData,
 } from '../../pick-query-types';
-import { callWithThis, EmptyObject, RecordUnknown } from '../../../utils';
+import { EmptyObject, RecordUnknown } from '../../../utils';
 import { RelationConfigBase } from '../../relations';
-import { QueryResult } from '../../../adapters/adapter';
 import { isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
 import { resolveSubQueryCallback } from '../../sub-query/sub-query';
-import { requirePrimaryKeys } from '../../query-columns/primary-keys';
 import { pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 
@@ -133,13 +131,6 @@ export type ChangeCountArg<T extends UpdateSelf> =
         : number | string | bigint;
     };
 
-// Context object for `update` logic used internally.
-// It's being used by relations logic in the ORM.
-export interface UpdateCtx {
-  queries?: ((queryResult: QueryResult) => Promise<void>)[];
-  collect?: UpdateCtxCollect;
-}
-
 export interface UpdateCtxCollect {
   data: RecordUnknown;
 }
@@ -216,8 +207,6 @@ export const _queryUpdate = <T extends UpdateSelf>(
 
   const { shape } = q;
 
-  const ctx: UpdateCtx = {};
-
   let selectQuery: Query | undefined;
 
   for (const key in arg) {
@@ -225,7 +214,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
     if (!item && shape !== anyShape) {
       delete set[key];
     } else if (item.data.virtual) {
-      (item as VirtualColumn<ColumnSchemaConfig>).update?.(query, ctx, set);
+      (item as VirtualColumn<ColumnSchemaConfig>).update?.(query, set);
       delete set[key];
     } else {
       if (item) throwOnReadOnly(query, item, key);
@@ -267,39 +256,6 @@ export const _queryUpdate = <T extends UpdateSelf>(
         if (encode) set[key] = encode(value);
       }
     }
-  }
-
-  const { queries } = ctx;
-  if (queries) {
-    const primaryKeys = requirePrimaryKeys(
-      query,
-      'Cannot perform complex update on a table without primary keys',
-    );
-    const hookSelect = (q.hookSelect = new Map(q.hookSelect));
-    for (const column of primaryKeys) {
-      hookSelect.set(column, { select: column });
-    }
-
-    q.patchResult = async (_, _h, queryResult) => {
-      await Promise.all(queries.map(callWithThis, queryResult));
-
-      if (ctx.collect) {
-        const t = query.baseQuery.clone();
-
-        _queryWhereIn(
-          t,
-          true,
-          primaryKeys,
-          queryResult.rows.map((item) => primaryKeys.map((key) => item[key])),
-        );
-
-        await _queryUpdate(t, ctx.collect.data as never);
-
-        for (const row of queryResult.rows) {
-          Object.assign(row, ctx.collect.data);
-        }
-      }
-    };
   }
 
   if (returnCount) {

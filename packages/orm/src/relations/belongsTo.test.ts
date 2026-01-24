@@ -2,6 +2,7 @@ import { Db, Query, NotFoundError, omit } from 'pqb';
 import {
   messageSelectAll,
   profileSelectAll,
+  useQueryCounter,
   useRelationCallback,
   userRowToJSON,
   userSelectAll,
@@ -19,8 +20,6 @@ import {
   ChatData,
   ProfileData,
   UserData,
-  TestAdapter,
-  TestTransactionAdapter,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 
@@ -28,31 +27,10 @@ const ormParams = { db: db.$qb };
 
 const activeUserData = { ...UserData, Active: true };
 
-let querySpies: jest.SpyInstance[] | undefined;
-const useQueryCounter = () => {
-  querySpies = [
-    jest.spyOn(TestAdapter.prototype, 'query'),
-    jest.spyOn(TestAdapter.prototype, 'arrays'),
-    jest.spyOn(TestTransactionAdapter.prototype, 'query'),
-    jest.spyOn(TestTransactionAdapter.prototype, 'arrays'),
-  ];
-
-  beforeEach(resetQueriesCount);
-};
-
-const resetQueriesCount = () => querySpies?.forEach((spy) => spy.mockClear());
-
-const getQueriesCount = () => {
-  if (!querySpies) {
-    throw new Error('Must use useQueryCounter');
-  }
-
-  return querySpies.reduce((acc, spy) => acc + spy.mock.calls.length, 0);
-};
-
 describe('belongsTo', () => {
   useTestORM();
-  useQueryCounter();
+
+  const { resetQueriesCount, getQueriesCount } = useQueryCounter();
 
   it('should define foreign keys under autoForeignKeys option', () => {
     const BaseTable = createBaseTable({
@@ -839,6 +817,8 @@ describe('belongsTo', () => {
           activeSender: testData.createMessageSender(),
         });
 
+        expect(getQueriesCount()).toEqual(1);
+
         await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
         await assert.activeChat({ ChatId, Title: 'chat' });
         await assert.activeSender({ AuthorId, Name: 'user' });
@@ -856,6 +836,8 @@ describe('belongsTo', () => {
         );
 
         const [first, second] = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         await assert.message({
           messageId: first.Id,
@@ -888,6 +870,8 @@ describe('belongsTo', () => {
         );
 
         const [first, second] = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         await assert.message({
           messageId: first.Id,
@@ -1035,6 +1019,8 @@ describe('belongsTo', () => {
         it('should invoke callbacks', async () => {
           await db.message.create(data);
 
+          expect(getQueriesCount()).toEqual(1);
+
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
@@ -1047,6 +1033,8 @@ describe('belongsTo', () => {
           resetMocks();
 
           await db.message.createMany([data, data]);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1091,6 +1079,7 @@ describe('belongsTo', () => {
       it('should not connect when `on` condition does not match', async () => {
         await db.chat.create({ ...ChatData, Title: 'chat' });
         await db.user.create({ ...UserData, Name: 'user' });
+        resetQueriesCount();
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           createdAt: MessageData.createdAt,
@@ -1108,6 +1097,8 @@ describe('belongsTo', () => {
 
         const res = await q.catch((err) => err);
 
+        expect(getQueriesCount()).toEqual(1);
+
         expect(res).toEqual(expect.any(NotFoundError));
       });
 
@@ -1120,6 +1111,7 @@ describe('belongsTo', () => {
           { ...UserData, Name: 'user 1' },
           { ...UserData, Name: 'user 2' },
         ]);
+        resetQueriesCount();
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').createMany([
           {
@@ -1148,6 +1140,8 @@ describe('belongsTo', () => {
 
         const [first, second] = await q;
 
+        expect(getQueriesCount()).toEqual(1);
+
         await assert.message({
           messageId: first.Id,
           ChatId: first.ChatId,
@@ -1170,6 +1164,7 @@ describe('belongsTo', () => {
       it('should not connect in batch create if `on` condition does not match', async () => {
         await db.chat.create(ChatData);
         await db.user.create(UserData);
+        resetQueriesCount();
 
         const q = db.message.createMany([
           {
@@ -1185,6 +1180,8 @@ describe('belongsTo', () => {
 
         const res = await q.catch((err) => err);
 
+        expect(getQueriesCount()).toEqual(1);
+
         expect(res).toEqual(expect.any(NotFoundError));
       });
     });
@@ -1195,6 +1192,7 @@ describe('belongsTo', () => {
           ...ChatData,
           Title: 'chat',
         });
+        resetQueriesCount();
 
         const q = db.message.select('Id', 'ChatId', 'AuthorId').create({
           updatedAt: MessageData.updatedAt,
@@ -1205,6 +1203,8 @@ describe('belongsTo', () => {
         });
 
         const { Id: messageId, ChatId, AuthorId } = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(ChatId).toBe(chat.IdOfChat);
 
@@ -1223,6 +1223,7 @@ describe('belongsTo', () => {
           ...UserData,
           Name: 'name',
         });
+        resetQueriesCount();
 
         const q = await db.message.select('Id', 'ChatId', 'AuthorId').create({
           updatedAt: MessageData.updatedAt,
@@ -1233,6 +1234,8 @@ describe('belongsTo', () => {
         });
 
         const { Id: messageId, ChatId, AuthorId } = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(ChatId).toBe(activeChat.IdOfChat);
         expect(AuthorId).not.toBe(user.Id);
@@ -1251,6 +1254,7 @@ describe('belongsTo', () => {
           ...UserData,
           Name: 'user 2',
         });
+        resetQueriesCount();
 
         const q = await db.message
           .select('Id', 'ChatId', 'AuthorId')
@@ -1272,6 +1276,8 @@ describe('belongsTo', () => {
           ]);
 
         const [first, second] = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(first.ChatId).toBe(chat.IdOfChat);
         expect(second.AuthorId).toBe(user.Id);
@@ -1305,6 +1311,7 @@ describe('belongsTo', () => {
           ...UserData,
           Name: 'user',
         });
+        resetQueriesCount();
 
         const q = await db.message
           .select('Id', 'ChatId', 'AuthorId')
@@ -1319,6 +1326,8 @@ describe('belongsTo', () => {
           ]);
 
         const [{ Id: messageId, ChatId, AuthorId }] = await q;
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(ChatId).toBe(activeChat.IdOfChat);
         expect(AuthorId).not.toBe(user.Id);
@@ -1347,6 +1356,7 @@ describe('belongsTo', () => {
         it('should invoke callbacks', async () => {
           await db.message.create(data);
 
+          expect(getQueriesCount()).toEqual(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
@@ -1360,6 +1370,7 @@ describe('belongsTo', () => {
 
           await db.message.createMany([data, data]);
 
+          expect(getQueriesCount()).toEqual(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(
@@ -1380,6 +1391,7 @@ describe('belongsTo', () => {
         const id = await db.profile
           .get('Id')
           .create({ Bio: 'bio', user: { create: UserData } });
+        resetQueriesCount();
 
         const profile = await db.profile
           .select('UserId')
@@ -1389,6 +1401,8 @@ describe('belongsTo', () => {
             user: { disconnect: true },
           });
 
+        expect(getQueriesCount()).toEqual(1);
+
         expect(profile.UserId).toBe(null);
       });
 
@@ -1396,6 +1410,7 @@ describe('belongsTo', () => {
         const id = await db.profile
           .get('Id')
           .create({ Bio: 'bio', user: { create: UserData } });
+        resetQueriesCount();
 
         const profile = await db.profile
           .select('UserId')
@@ -1405,6 +1420,8 @@ describe('belongsTo', () => {
             activeUser: { disconnect: true },
           });
 
+        expect(getQueriesCount()).toEqual(1);
+
         expect(profile.UserId).toBe(null);
       });
 
@@ -1413,6 +1430,7 @@ describe('belongsTo', () => {
           { Bio: 'bio', user: { create: UserData } },
           { Bio: 'bio', user: { create: UserData } },
         ]);
+        resetQueriesCount();
 
         const userIds = await db.profile
           .pluck('UserId')
@@ -1421,6 +1439,8 @@ describe('belongsTo', () => {
             Bio: 'string',
             activeUser: { disconnect: true },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(userIds).toEqual([null, null]);
       });
@@ -1456,6 +1476,7 @@ describe('belongsTo', () => {
           .get('Id')
           .create({ ...ProfileData, UserId: firstUserId });
         const user = await db.user.select('Id').create(UserData);
+        resetQueriesCount();
 
         const q = db.profile.find(id).update({
           activeUser: {
@@ -1464,6 +1485,8 @@ describe('belongsTo', () => {
         });
 
         const res = await q.catch((err) => err);
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1504,6 +1527,8 @@ describe('belongsTo', () => {
           Name: 'user',
         });
 
+        resetQueriesCount();
+
         const q = db.profile.find(id).update({
           activeUser: {
             set: { Name: 'user' },
@@ -1511,6 +1536,8 @@ describe('belongsTo', () => {
         });
 
         const res = await q.catch((err) => err);
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1522,6 +1549,7 @@ describe('belongsTo', () => {
           { ...ProfileData, UserId },
         ]);
         const user = await db.user.select('Id').create(UserData);
+        resetQueriesCount();
 
         const updatedUserIds = await db.profile
           .pluck('UserId')
@@ -1531,6 +1559,8 @@ describe('belongsTo', () => {
               set: user,
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updatedUserIds).toEqual([user.Id, user.Id]);
       });
@@ -1542,6 +1572,7 @@ describe('belongsTo', () => {
           { ...ProfileData, UserId },
         ]);
         const user = await db.user.select('Id').create(UserData);
+        resetQueriesCount();
 
         const q = db.profile.where({ Id: { in: profileIds } }).update({
           activeUser: {
@@ -1550,6 +1581,8 @@ describe('belongsTo', () => {
         });
 
         const res = await q.catch((err) => err);
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1591,6 +1624,7 @@ describe('belongsTo', () => {
           ...UserData,
           Name: 'user',
         });
+        resetQueriesCount();
 
         const q = db.profile.where({ Id: { in: profileIds } }).update({
           activeUser: {
@@ -1599,6 +1633,9 @@ describe('belongsTo', () => {
         });
 
         const res = await q.catch((err) => err);
+
+        expect(getQueriesCount()).toEqual(1);
+
         expect(res).toEqual(expect.any(NotFoundError));
       });
     });
@@ -1609,6 +1646,8 @@ describe('belongsTo', () => {
           .select('Id', 'UserId')
           .create({ Bio: 'bio', user: { create: UserData } });
 
+        resetQueriesCount();
+
         const profile = await db.profile
           .select('UserId')
           .find(Id)
@@ -1617,6 +1656,8 @@ describe('belongsTo', () => {
               delete: true,
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(profile.UserId).toBe(null);
 
@@ -1629,6 +1670,8 @@ describe('belongsTo', () => {
           .select('Id', 'UserId')
           .create({ Bio: 'bio', user: { create: UserData } });
 
+        resetQueriesCount();
+
         const profile = await db.profile
           .select('UserId')
           .find(Id)
@@ -1637,6 +1680,8 @@ describe('belongsTo', () => {
               delete: true,
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(profile.UserId).toBe(null);
 
@@ -1651,6 +1696,8 @@ describe('belongsTo', () => {
           { ...ProfileData, UserId: user.Id },
         ]);
 
+        resetQueriesCount();
+
         const updatedUserIds = await db.profile
           .pluck('UserId')
           .where({ Id: { in: profileIds } })
@@ -1659,6 +1706,8 @@ describe('belongsTo', () => {
               delete: true,
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updatedUserIds).toEqual([null, null]);
 
@@ -1673,6 +1722,8 @@ describe('belongsTo', () => {
           { ...ProfileData, UserId: user.Id },
         ]);
 
+        resetQueriesCount();
+
         const updatedUserIds = await db.profile
           .pluck('UserId')
           .where({ Id: { in: profileIds } })
@@ -1681,6 +1732,8 @@ describe('belongsTo', () => {
               delete: true,
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updatedUserIds).toEqual([null, null]);
 
@@ -1709,8 +1762,11 @@ describe('belongsTo', () => {
 
         it('should invoke callbacks', async () => {
           const Id = await db.profile.get('Id').create(profileWithUserData);
+          resetQueriesCount();
 
           await db.profile.find(Id).update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -1722,14 +1778,16 @@ describe('belongsTo', () => {
 
         it('should invoke callbacks in a batch delete', async () => {
           resetMocks();
-
           const profiles = await db.profile
             .select('Id', 'UserId')
             .createMany([profileWithUserData, profileWithUserData]);
+          resetQueriesCount();
 
           await db.profile
             .where({ Id: { in: profiles.map((p) => p.Id) } })
             .update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
@@ -1746,6 +1804,7 @@ describe('belongsTo', () => {
         const { Id, UserId } = await db.profile
           .select('Id', 'UserId')
           .create({ Bio: 'bio', user: { create: UserData } });
+        resetQueriesCount();
 
         const updated = await db.profile.find(Id).update({
           user: {
@@ -1754,6 +1813,8 @@ describe('belongsTo', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updated).toBe(1);
 
@@ -1765,6 +1826,7 @@ describe('belongsTo', () => {
         const { Id, UserId } = await db.profile
           .select('Id', 'UserId')
           .create({ Bio: 'bio', user: { create: UserData } });
+        resetQueriesCount();
 
         const count = await db.profile.find(Id).update({
           activeUser: {
@@ -1773,6 +1835,8 @@ describe('belongsTo', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(count).toBe(1);
 
@@ -1785,6 +1849,7 @@ describe('belongsTo', () => {
           { Bio: 'bio', user: { create: UserData } },
           { Bio: 'bio', user: { create: UserData } },
         ]);
+        resetQueriesCount();
 
         const count = await db.profile
           .where({ Id: { in: profiles.map((profile) => profile.Id) } })
@@ -1795,6 +1860,8 @@ describe('belongsTo', () => {
               },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(count).toBe(2);
 
@@ -1809,6 +1876,7 @@ describe('belongsTo', () => {
           { Bio: 'bio', user: { create: { ...UserData, Active: true } } },
           { Bio: 'bio', user: { create: UserData } },
         ]);
+        resetQueriesCount();
 
         const count = await db.profile
           .where({ Id: { in: profiles.map((profile) => profile.Id) } })
@@ -1819,6 +1887,8 @@ describe('belongsTo', () => {
               },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(count).toBe(2);
 
@@ -1857,8 +1927,11 @@ describe('belongsTo', () => {
           const { Id, UserId } = await db.profile
             .select('Id', 'UserId')
             .create(profileWithUserData);
+          resetQueriesCount();
 
           const count = await db.profile.find(Id).update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -1872,10 +1945,13 @@ describe('belongsTo', () => {
           const profiles = await db.profile
             .select('Id', 'UserId')
             .createMany([profileWithUserData, profileWithUserData]);
+          resetQueriesCount();
 
           const count = await db.profile
             .where({ Id: { in: profiles.map((p) => p.Id) } })
             .update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(count).toBe(2);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -1896,6 +1972,7 @@ describe('belongsTo', () => {
             create: UserData,
           },
         });
+        resetQueriesCount();
 
         const count = await db.profile.find(profile.Id).update({
           user: {
@@ -1908,6 +1985,8 @@ describe('belongsTo', () => {
           },
         });
 
+        expect(getQueriesCount()).toEqual(1);
+
         expect(count).toBe(1);
 
         const user = await db.profile.queryRelated('user', profile);
@@ -1916,6 +1995,7 @@ describe('belongsTo', () => {
 
       it('should create related record if it does not exist', async () => {
         const profile = await db.profile.create(ProfileData);
+        resetQueriesCount();
 
         const count = await db.profile.find(profile.Id).update({
           user: {
@@ -1930,6 +2010,9 @@ describe('belongsTo', () => {
             },
           },
         });
+
+        expect(getQueriesCount()).toEqual(1);
+
         expect(count).toBe(1);
 
         const profiles = await db.profile.select('*', { user: (q) => q.user });
@@ -1943,6 +2026,7 @@ describe('belongsTo', () => {
 
       it('should create related record if it does not exist with a data from a callback', async () => {
         const profile = await db.profile.create(ProfileData);
+        resetQueriesCount();
 
         const updated = await db.profile
           .selectAll()
@@ -1961,6 +2045,8 @@ describe('belongsTo', () => {
             },
           });
 
+        expect(getQueriesCount()).toEqual(1);
+
         const user = await db.profile.queryRelated('user', updated);
         expect(user?.Name).toBe('created');
       });
@@ -1972,6 +2058,7 @@ describe('belongsTo', () => {
             create: UserData,
           },
         });
+        resetQueriesCount();
 
         const updated = await db.profile
           .selectAll()
@@ -1989,6 +2076,8 @@ describe('belongsTo', () => {
               },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         const user = await db.profile.queryRelated('user', updated);
         expect(user?.Name).toBe('created');
@@ -2034,24 +2123,29 @@ describe('belongsTo', () => {
         };
 
         it('should invoke update callbacks when updating', async () => {
-          const { Id, UserId } = await db.profile
-            .select('Id', 'UserId')
+          const { Id, UserId, ProfileKey } = await db.profile
+            .select('Id', 'UserId', 'ProfileKey')
             .create({
               Bio: 'bio',
               user: {
                 create: UserData,
               },
             });
-
           resetMocks();
+          resetQueriesCount();
 
           const count = await db.profile.find(Id).update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(count).toBe(1);
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ Id: UserId }], expect.any(Db));
-          expect(beforeCreate).not.toBeCalled();
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: UserId, UserKey: ProfileKey }],
+            expect.any(Db),
+          );
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).not.toBeCalled();
         });
 
@@ -2059,11 +2153,14 @@ describe('belongsTo', () => {
           resetMocks();
 
           const Id = await db.profile.get('Id').create(ProfileData);
+          resetQueriesCount();
 
           const count = await db.profile.find(Id).update(data);
 
+          expect(getQueriesCount()).toEqual(1);
+
           expect(count).toBe(1);
-          expect(beforeUpdate).toHaveBeenCalledTimes(0);
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).not.toBeCalled();
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -2080,6 +2177,7 @@ describe('belongsTo', () => {
         const profileId = await db.profile
           .get('Id')
           .create({ Bio: 'bio', user: { create: UserData } });
+        resetQueriesCount();
 
         const updated = await db.profile
           .selectAll()
@@ -2090,6 +2188,8 @@ describe('belongsTo', () => {
             },
           });
 
+        expect(getQueriesCount()).toEqual(1);
+
         const user = await db.profile.queryRelated('user', updated);
         expect(user?.Name).toBe('created');
       });
@@ -2098,6 +2198,7 @@ describe('belongsTo', () => {
         const profileId = await db.profile
           .get('Id')
           .create({ Bio: 'bio', user: { create: UserData } });
+        resetQueriesCount();
 
         const updated = await db.profile
           .selectAll()
@@ -2107,6 +2208,8 @@ describe('belongsTo', () => {
               create: { ...UserData, Name: 'created' },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         const user = await db.profile.queryRelated('user', updated);
         expect(user).toMatchObject({ Name: 'created', Active: true });
@@ -2118,6 +2221,7 @@ describe('belongsTo', () => {
           { ...ProfileData, UserId },
           { ...ProfileData, UserId },
         ]);
+        resetQueriesCount();
 
         const updatedUserIds = await db.profile
           .pluck('UserId')
@@ -2127,6 +2231,8 @@ describe('belongsTo', () => {
               create: { ...UserData, Name: 'created' },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updatedUserIds[0]).toBe(updatedUserIds[1]);
 
@@ -2140,6 +2246,7 @@ describe('belongsTo', () => {
           { ...ProfileData, UserId },
           { ...ProfileData, UserId },
         ]);
+        resetQueriesCount();
 
         const updatedUserIds = await db.profile
           .pluck('UserId')
@@ -2149,6 +2256,8 @@ describe('belongsTo', () => {
               create: { ...UserData, Name: 'created' },
             },
           });
+
+        expect(getQueriesCount()).toEqual(1);
 
         expect(updatedUserIds[0]).toBe(updatedUserIds[1]);
 
@@ -2173,8 +2282,11 @@ describe('belongsTo', () => {
           const Id = await db.profile
             .get('Id')
             .create({ ...ProfileData, UserId });
+          resetQueriesCount();
 
           const count = await db.profile.find(Id).update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(count).toBe(1);
           expect(beforeCreate).toHaveBeenCalledTimes(1);
@@ -2191,12 +2303,14 @@ describe('belongsTo', () => {
             { ...ProfileData, UserId },
             { ...ProfileData, UserId },
           ]);
-
           resetMocks();
+          resetQueriesCount();
 
           const count = await db.profile
             .where({ Id: { in: ids } })
             .update(data);
+
+          expect(getQueriesCount()).toEqual(1);
 
           expect(count).toBe(2);
           expect(beforeCreate).toHaveBeenCalledTimes(1);

@@ -5,6 +5,7 @@ export default [
   ...config,
   ...rollupExportFile('src/adapters/node-postgres', 'dist/node-postgres'),
   ...rollupExportFile('src/adapters/postgres-js', 'dist/postgres-js'),
+  ...rollupExportFile('src/migrations/index', 'dist/migrations/index'),
   ...rollupExportFile(
     'src/migrations/adapters/node-postgres',
     'dist/migrations/node-postgres',

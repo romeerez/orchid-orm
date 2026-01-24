@@ -188,7 +188,7 @@ export const hasRelationHandleUpdate = (
   });
 };
 
-export const selectIfNotSelected = (q: Query, columns: string[]) => {
+export const _selectIfNotSelected = (q: Query, columns: string[]) => {
   const select = q.q.select || [];
   if (!select.includes('*')) {
     for (const column of columns) {
@@ -335,3 +335,11 @@ const getColumnKeyFromDbName = (query: Query, name: string) => {
   }
   return name;
 };
+
+export const selectCteColumnsSql = (cteAs: string, columns: string[]) =>
+  `(SELECT ${columns
+    .map((c) => `"${cteAs}"."${c}"`)
+    .join(', ')} FROM "${cteAs}")`;
+
+export const selectCteColumnSql = (cteAs: string, column: string) =>
+  `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;

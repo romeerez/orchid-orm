@@ -371,12 +371,6 @@ const then = async (
         }
       }
 
-      // Has to be after log, so the same logger instance can be used in the sub-suquential queries.
-      // Useful for `upsert` and `orCreate`.
-      if (query.patchResult) {
-        await query.patchResult(q, tableHook?.select, queryResult);
-      }
-
       if (localSql.cteHooks?.hasSelect) {
         const lastRowI = queryResult.rows.length - 1;
         const lastFieldI = queryResult.fields.length - 1;
@@ -454,11 +448,6 @@ const then = async (
       // runAfterQuery is not called because it's only for upsert,
       // while this batch branch is for batch insert
 
-      if (query.patchResult) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        await query.patchResult(q, tableHook?.select, queryResult!);
-      }
-
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result = query.handleResult(q, tempReturnType, queryResult!, localSql);
     }
@@ -514,6 +503,11 @@ const then = async (
       for (const cteName in localSql.cteHooks.tableHooks) {
         const hook = localSql.cteHooks.tableHooks[cteName];
 
+        const data = cteData?.[cteName];
+        if (!data && hook.throwOnNotFound) {
+          throw new NotFoundError(q, `Record for cte ${cteName} is not found`);
+        }
+
         const purpose = hook.tableHook.hookPurpose as HookPurpose | undefined;
         if (!purpose) continue;
 
@@ -523,7 +517,6 @@ const then = async (
           dataPerSubQuery.set(hook.table, tableData);
         }
 
-        const data = cteData?.[cteName];
         if (data) {
           const existing = tableData.data[purpose];
           tableData.data[purpose] = existing ? [...existing, ...data] : data;

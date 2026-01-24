@@ -4,9 +4,6 @@ import {
   _queryDefaults,
   _queryDelete,
   _queryFindBy,
-  _queryHookAfterUpdate,
-  _queryHookBeforeUpdate,
-  _queryRows,
   _queryUpdate,
   _queryWhere,
   CreateCtx,
@@ -19,8 +16,6 @@ import {
   Query,
   SelectableFromShape,
   setQueryObjectValueImmutable,
-  UpdateCtx,
-  UpdateCtxCollect,
   UpdateData,
   VirtualColumn,
   WhereArg,
@@ -30,19 +25,25 @@ import {
   emptyArray,
   EmptyObject,
   getPrimaryKeys,
-  QueryResult,
   RecordUnknown,
   RelationConfigBase,
   RelationJoinQuery,
   ColumnsShape,
   Column,
   getFreeAlias,
-  _with,
   RawSql,
   _orCreate,
   QueryHasWhere,
   QueryManyTake,
   QueryManyTakeOptional,
+  _appendQuery,
+  _queryWhereIn,
+  _queryUpsert,
+  UpsertData,
+  UpsertThis,
+  _querySelect,
+  _prependWith,
+  noop,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -55,7 +56,9 @@ import {
   HasRelJoin,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
-  selectIfNotSelected,
+  _selectIfNotSelected,
+  selectCteColumnSql,
+  selectCteColumnsSql,
 } from './common/utils';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
@@ -157,10 +160,6 @@ type BelongsToNestedUpdate = (
   q: Query,
   update: RecordUnknown,
   params: NestedUpdateOneItem,
-  state: {
-    queries?: ((queryResult: QueryResult) => Promise<void>)[];
-    collect?: UpdateCtxCollect;
-  },
 ) => void;
 
 class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
@@ -189,20 +188,13 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
     const value = item[key] as NestedInsertOneItemCreate;
     if ('create' in value || 'connectOrCreate' in value) {
-      foreignKeys.forEach((foreignKey) => (item[foreignKey] = new RawSql('')));
+      const asFn = setForeignKeysFromCte(item, primaryKeys, foreignKeys);
 
       const selectPKeys = query.select(...primaryKeys);
 
-      _with(
+      _prependWith(
         q,
-        (as) => {
-          foreignKeys.forEach((foreignKey, i) => {
-            (item[foreignKey] as RawSql)._sql = selectCteColumnSql(
-              as,
-              primaryKeys[i],
-            );
-          });
-        },
+        asFn,
         'create' in value
           ? _queryCreate(selectPKeys, value.create as never)
           : _orCreate(
@@ -216,7 +208,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       return;
     } else if ('connect' in value) {
       const as = getFreeAlias(q.q.withShapes, 'q');
-      _with(q, as, query.select(...primaryKeys).findBy(value.connect));
+      _prependWith(q, as, query.select(...primaryKeys).findBy(value.connect));
 
       foreignKeys.map((foreignKey, i) => {
         item[foreignKey] = new RawSql(
@@ -228,11 +220,11 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     }
   }
 
-  update(q: Query, ctx: UpdateCtx, set: RecordUnknown) {
+  update(q: Query, set: RecordUnknown) {
     q.q.wrapInTransaction = true;
 
     const data = set[this.key] as NestedUpdateOneItem;
-    this.nestedUpdate(q, set, data, ctx);
+    this.nestedUpdate(q, set, data);
   }
 }
 
@@ -327,165 +319,177 @@ export const makeBelongsToMethod = (
 };
 
 const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
-  return ((q, update, params, state) => {
-    if (params.upsert && isQueryReturnsAll(q)) {
-      throw new Error('`upsert` option is not allowed in a batch update');
-    }
+  return ((self, update, params) => {
+    if (params.create) {
+      const createQuery = _querySelect(
+        _queryCreate(query.clone(), params.create),
+        primaryKeys,
+      );
 
-    let idsForDelete: [unknown, ...unknown[]][] | undefined;
+      const asFn = setForeignKeysFromCte(update, primaryKeys, foreignKeys);
 
-    _queryHookBeforeUpdate(q, async ({ query: q }) => {
-      if (params.disconnect) {
-        for (const key of foreignKeys) {
-          update[key] = null;
-        }
-      } else if (params.set) {
-        let loadPrimaryKeys: string[] | undefined;
-        let loadForeignKeys: string[] | undefined;
-        for (let i = 0; i < len; i++) {
-          const primaryKey = primaryKeys[i];
-          if (primaryKey in params.set) {
-            update[foreignKeys[i]] =
-              params.set[primaryKey as keyof typeof params.set];
-          } else {
-            (loadPrimaryKeys ??= []).push(primaryKey);
-            (loadForeignKeys ??= []).push(foreignKeys[i]);
-          }
-        }
-        if (loadPrimaryKeys) {
-          for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
-            update[(loadForeignKeys as string[])[i]] = new RawSql('');
-          }
+      _prependWith(self, asFn, createQuery);
+    } else if (params.update) {
+      _selectIfNotSelected(self, foreignKeys);
 
-          _with(
-            q as Query,
-            (as) => {
-              for (let i = 0, len = loadPrimaryKeys.length; i < len; i++) {
-                (update[(loadForeignKeys as string[])[i]] as RawSql)._sql =
-                  selectCteColumnMustExistSql(i, as, loadPrimaryKeys[i]);
-              }
-            },
-            _queryFindBy(query.select(...loadPrimaryKeys), params.set as never),
-          );
-        }
-      } else if (params.create) {
-        const q = query.clone();
-        q.q.select = primaryKeys;
-        const record = (await _queryCreate(
-          q,
-          params.create,
-        )) as unknown as RecordUnknown;
-        for (let i = 0; i < len; i++) {
-          update[foreignKeys[i]] = record[primaryKeys[i]];
-        }
-      } else if (params.delete) {
-        const selectQuery = (q as Query).clone();
-        selectQuery.q.type = undefined;
-        selectQuery.q.distinct = emptyArray;
-        selectIfNotSelected(selectQuery, foreignKeys);
-        idsForDelete = (await _queryRows(selectQuery)) as [
-          unknown,
-          ...unknown[],
-        ][];
-        for (const foreignKey of foreignKeys) {
-          update[foreignKey] = null;
+      const selectIdsSql = new RawSql('');
+
+      const updateQuery = _queryUpdate(
+        _queryWhereIn(query.clone(), true, primaryKeys, selectIdsSql),
+        params.update as UpdateData<Query>,
+      );
+
+      // don't throw "not found" if it is not found for update
+      updateQuery.q.returnType = 'value';
+
+      _appendQuery(self, updateQuery, (as) => {
+        selectIdsSql._sql = selectCteColumnsSql(as, foreignKeys);
+      });
+    } else if (params.upsert) {
+      if (isQueryReturnsAll(self)) {
+        throw new Error('`upsert` option is not allowed in a batch update');
+      }
+
+      const { relQuery } = relWithSelectIds(
+        self,
+        query,
+        primaryKeys,
+        foreignKeys,
+      );
+
+      const upsertQuery = _querySelect(
+        _queryUpsert(
+          relQuery,
+          params.upsert as UpsertData<UpsertThis, UpdateData<Query>>,
+        ),
+        primaryKeys,
+      );
+
+      const asFn = setForeignKeysFromCte(update, primaryKeys, foreignKeys);
+
+      _prependWith(self, asFn, upsertQuery);
+    } else if (params.delete) {
+      _selectIfNotSelected(self, foreignKeys);
+
+      disconnect(update, foreignKeys);
+
+      const { selectIdsSql, relQuery } = relWithSelectIds(
+        self,
+        query,
+        primaryKeys,
+        foreignKeys,
+      );
+
+      self.q.and = self.q.or = undefined;
+
+      _queryWhereIn(self, true, foreignKeys, selectIdsSql);
+
+      const deleteQuery = _queryDelete(relQuery);
+      // don't throw "not found" if it is not found for delete
+      deleteQuery.q.returnType = 'value';
+
+      _appendQuery(self, deleteQuery, noop);
+    } else if (params.disconnect) {
+      disconnect(update, foreignKeys);
+    } else if (params.set) {
+      let loadPrimaryKeys: string[] | undefined;
+      let loadForeignKeys: string[] | undefined;
+      for (let i = 0; i < len; i++) {
+        const primaryKey = primaryKeys[i];
+        if (primaryKey in params.set) {
+          update[foreignKeys[i]] =
+            params.set[primaryKey as keyof typeof params.set];
+        } else {
+          (loadPrimaryKeys ??= []).push(primaryKey);
+          (loadForeignKeys ??= []).push(foreignKeys[i]);
         }
       }
-    });
+      if (loadPrimaryKeys) {
+        const asFn = setForeignKeysFromCte(
+          update,
+          loadPrimaryKeys,
+          loadForeignKeys as string[],
+          true,
+        );
 
-    const { upsert } = params;
-    if (upsert || params.update || params.delete) {
-      selectIfNotSelected(q, foreignKeys);
-    }
-
-    if (upsert) {
-      (state.queries ??= []).push(async (queryResult) => {
-        const row = queryResult.rows[0];
-        let obj: RecordUnknown | undefined = {};
-        for (let i = 0; i < len; i++) {
-          const id = row[foreignKeys[i]];
-          if (id === null) {
-            obj = undefined;
-            break;
-          }
-
-          obj[primaryKeys[i]] = id;
-        }
-
-        const count = obj
-          ? await _queryUpdate(
-              query.findBy(obj as never),
-              upsert.update as UpdateData<Query>,
-            )
-          : 0;
-
-        if (!count) {
-          const data =
-            typeof upsert.create === 'function'
-              ? upsert.create()
-              : upsert.create;
-
-          const result = (await _queryCreate(
-            query.select(...primaryKeys),
-            data,
-          )) as unknown as RecordUnknown;
-
-          const collectData: RecordUnknown = {};
-          state.collect = {
-            data: collectData,
-          };
-
-          for (let i = 0; i < len; i++) {
-            collectData[foreignKeys[i]] = result[primaryKeys[i]];
-          }
-        }
-      });
-    } else if (params.delete || params.update) {
-      _queryHookAfterUpdate(
-        q,
-        params.update ? foreignKeys : emptyArray,
-        async (data) => {
-          let ids: [unknown, ...unknown[]][] | undefined;
-
-          if (params.delete) {
-            ids = idsForDelete;
-          } else {
-            ids = [];
-            for (const item of data) {
-              let row: unknown[] | undefined;
-              for (const foreignKey of foreignKeys) {
-                const id = (item as RecordUnknown)[foreignKey];
-                if (id === null) {
-                  row = undefined;
-                  break;
-                } else {
-                  (row ??= []).push(id);
-                }
-              }
-              if (row) ids.push(row as [unknown, ...unknown[]]);
-            }
-          }
-
-          if (!ids?.length) return;
-
-          const t = query.whereIn(
-            primaryKeys as [string, ...string[]],
-            ids as [unknown, ...unknown[]][],
-          );
-
-          if (params.delete) {
-            await _queryDelete(t);
-          } else {
-            await _queryUpdate(t, params.update as UpdateData<Query>);
-          }
-        },
-      );
+        _prependWith(
+          self,
+          asFn,
+          _queryFindBy(query.select(...loadPrimaryKeys), params.set as never),
+        );
+      }
     }
   }) as BelongsToNestedUpdate;
 };
 
-const selectCteColumnSql = (cteAs: string, column: string) =>
-  `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;
+const disconnect = (update: RecordUnknown, foreignKeys: string[]) => {
+  for (const foreignKey of foreignKeys) {
+    update[foreignKey] = null;
+  }
+};
+
+const relWithSelectIds = (
+  self: Query,
+  rel: Query,
+  primaryKeys: string[],
+  foreignKeys: string[],
+) => {
+  const selectIdsQuery = makeSelectIdsQuery(self, foreignKeys);
+
+  const selectIdsSql = new RawSql('');
+
+  _prependWith(
+    self,
+    (as) => {
+      selectIdsSql._sql = selectCteColumnsSql(as, foreignKeys);
+    },
+    selectIdsQuery,
+  );
+
+  return {
+    selectIdsSql,
+    relQuery: _queryWhereIn(rel.clone(), true, primaryKeys, selectIdsSql),
+  };
+};
+
+const makeSelectIdsQuery = (self: Query, foreignKeys: string[]) => {
+  const selectIdsQuery = self.baseQuery.clone();
+  selectIdsQuery.q.distinct = emptyArray;
+  selectIdsQuery.q.select = foreignKeys;
+  selectIdsQuery.q.and = self.q.and;
+  selectIdsQuery.q.or = self.q.or;
+  return selectIdsQuery;
+};
+
+const setForeignKeysFromCte = (
+  record: RecordUnknown,
+  primaryKeys: string[],
+  foreignKeys: string[],
+  mustExist?: boolean,
+) => {
+  for (const key of foreignKeys) {
+    record[key] = new RawSql('');
+  }
+
+  return (as: string) => {
+    foreignKeys.forEach(
+      mustExist
+        ? (foreignKey, i) => {
+            (record[foreignKey] as RawSql)._sql = selectCteColumnMustExistSql(
+              i,
+              as,
+              primaryKeys[i],
+            );
+          }
+        : (foreignKey, i) => {
+            (record[foreignKey] as RawSql)._sql = selectCteColumnSql(
+              as,
+              primaryKeys[i],
+            );
+          },
+    );
+  };
+};
 
 const selectCteColumnMustExistSql = (
   i: number,

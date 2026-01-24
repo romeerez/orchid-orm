@@ -13,6 +13,7 @@ import { Delete } from '../../basic-features/mutate/delete';
 import { QueryOrCreate } from '../../basic-features/mutate/or-create';
 import { QueryCreateFrom } from '../../basic-features/mutate/create-from';
 import { noop } from '../../../utils';
+import { _appendQuery } from '../append-query/append-query';
 
 const hookSet = {
   beforeCreate: {
@@ -280,6 +281,14 @@ const assert = {
       afterSaveCommit: 1,
     });
   },
+  deleteHooksCteBeingCalled({ data }: { data: unknown[] }) {
+    assert.hooksBeingCalledV2({
+      data,
+      beforeDelete: 1,
+      afterDelete: 1,
+      afterDeleteCommit: 1,
+    });
+  },
 };
 
 describe('hooks', () => {
@@ -404,7 +413,7 @@ describe('hooks', () => {
       await testDb
         .with(
           'cte',
-          User.get('id').where({
+          User.get('id').whereNot({
             id: () =>
               User.get('id').insert({
                 ...userData,
@@ -1277,12 +1286,70 @@ describe('hooks', () => {
 
         await testDb.with('cte', User.find(id).delete()).from('cte');
 
-        assert.hooksBeingCalledV2({
+        assert.deleteHooksCteBeingCalled({
           data: [depData],
-          beforeDelete: 1,
-          afterDelete: 1,
-          afterDeleteCommit: 1,
         });
+      });
+    });
+  });
+
+  describe('_appendQuery', () => {
+    it('should call hooks for the appended create', async () => {
+      await _appendQuery(
+        UserNoHooks.as('main').create(userData),
+        User.create(userData),
+        noop,
+      );
+
+      assert.createHooksBeingCalled({ data: [depData], cte: true });
+    });
+
+    it('should call hooks for the appended update', async () => {
+      const id = await User.get('id').create(userData);
+      jest.clearAllMocks();
+
+      await _appendQuery(
+        UserNoHooks.as('main').create(userData),
+        User.find(id).update({ name: 'new name', age: 123 }),
+        noop,
+      );
+
+      assert.updateHooksBeingCalled({
+        data: [{ name: 'new name', age: 123 }],
+        cte: true,
+      });
+    });
+
+    it('should call hooks for the appended delete', async () => {
+      const id = await User.get('id').create(userData);
+      jest.clearAllMocks();
+
+      await _appendQuery(
+        UserNoHooks.as('main').create(userData),
+        User.find(id).delete(),
+        noop,
+      );
+
+      assert.deleteHooksCteBeingCalled({
+        data: [depData],
+      });
+    });
+
+    it('should call hooks for the appended upsert', async () => {
+      jest.clearAllMocks();
+
+      await _appendQuery(
+        UserNoHooks.as('main').create(userData),
+        User.find(0).upsert({
+          update: { name: 'new name' },
+          create: userData,
+        }),
+        noop,
+      );
+
+      assert.upsertCreateHookBeingCalled({
+        data: [depData],
+        cte: true,
       });
     });
   });

@@ -540,6 +540,9 @@ This is a lightweight function that skips most of the normal migration command s
 all it does is it runs a given migrations.
 
 ```ts
+// when using orchid-orm
+import { migrateFiles } from 'orchid-orm/migrations';
+// when using standalone rake-db
 import { migrateFiles } from 'rake-db';
 
 await migrateFiles(db, [
@@ -559,9 +562,11 @@ You can prepare a function beforehand, and then to run migrations dynamically fr
 
 ```ts
 // for porsager/postgres driver:
-import { makeConnectAndMigrate } from 'rake-db/postgres-js';
+import { makeConnectAndMigrate } from 'orchid-orm/migrations/postgres-js';
 // for node-postgres driver:
-import { makeConnectAndMigrate } from 'rake-db/node-postgres';
+import { makeConnectAndMigrate } from 'orchid-orm/migrations/node-postgres';
+// when using standalone rake-db
+import { makeConnectAndMigrate } from 'rake-db/postgres-js'; // or 'rake-db/node-postgres'
 
 const connectAndMigrate = makeConnectAndMigrate({
   // minimal config for file-reading approach:

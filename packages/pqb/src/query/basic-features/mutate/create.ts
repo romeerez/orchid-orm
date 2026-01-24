@@ -305,6 +305,7 @@ export const createSelect = (q: Query) => {
  * @param rowIndex - index of record's data in `createMany` args array.
  * @param ctx - context of create query to be shared with a {@link VirtualColumn}.
  * @param encoders - to collect `encode`s of columns.
+ * @param one - whether it's for creating one record.
  */
 const processCreateItem = (
   q: CreateSelf,
@@ -312,6 +313,7 @@ const processCreateItem = (
   rowIndex: number,
   ctx: CreateCtx,
   encoders: RecordEncoder,
+  one?: boolean,
 ) => {
   const { shape } = (q as Query).q;
   for (const key in item) {
@@ -324,6 +326,7 @@ const processCreateItem = (
         ctx,
         item,
         rowIndex,
+        one,
       );
       continue;
     }
@@ -396,7 +399,7 @@ export const handleOneData = (
 
   data = defaults ? { ...defaults, ...data } : { ...data };
 
-  processCreateItem(q, data, 0, ctx, encoders);
+  processCreateItem(q, data, 0, ctx, encoders, true);
 
   const columns = Array.from(ctx.columns.keys());
   const values = [

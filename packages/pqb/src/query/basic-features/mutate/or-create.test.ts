@@ -6,9 +6,11 @@ import {
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
+  db,
   sql,
   testDb,
   TestTransactionAdapter,
+  UserData,
   useTestDatabase,
 } from 'test-utils';
 
@@ -17,6 +19,22 @@ const TableWithReadOnly = testDb('user', (t) => ({
   name: t.string(),
   password: t.integer().readOnly(),
 }));
+
+const TableWithSoftDelete = testDb(
+  'user',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    name: t.string(),
+    password: t.string(),
+    deletedAt: t.timestamp().nullable(),
+  }),
+  undefined,
+  {
+    softDelete: true,
+  },
+);
+
+const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
 
 describe('orCreate', () => {
   useTestDatabase();
@@ -32,7 +50,7 @@ describe('orCreate', () => {
   });
 
   it('should return void by default', () => {
-    const query = User.find(1).orCreate(userData);
+    const query = db.user.find(1).orCreate(UserData);
 
     assertType<Awaited<typeof query>, void>();
   });
@@ -96,17 +114,38 @@ describe('orCreate', () => {
 
   // FOR UPDATE only makes sense for SELECT queries
   it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
-    const spy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+    arraysSpy.mockClear();
 
     await User.find(123).orCreate(userData).forUpdate();
 
-    expect(spy.mock.calls).toEqual([
+    expect(arraysSpy.mock.calls).toEqual([
       ['SELECT FROM "user" WHERE "user"."id" = $1 FOR UPDATE', [123]],
       [
         'WITH "q" AS (' +
           'SELECT FROM "user" WHERE "user"."id" = $1 FOR UPDATE' +
           '), "q2" AS (' +
-          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE NOT EXISTS (SELECT 1 FROM "q") RETURNING NULL' +
+          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
+        [123, ...Object.values(userData)],
+      ],
+    ]);
+  });
+
+  it('should omit soft delete check from the insert part, since it was applied in the selecting sub query', async () => {
+    arraysSpy.mockClear();
+
+    await TableWithSoftDelete.find(123).orCreate(userData);
+
+    expect(arraysSpy.mock.calls).toEqual([
+      [
+        'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
+        [123],
+      ],
+      [
+        'WITH "q" AS (' +
+          'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)' +
+          '), "q2" AS (' +
+          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],

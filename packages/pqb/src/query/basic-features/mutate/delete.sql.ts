@@ -7,18 +7,18 @@ import { Query } from '../../query';
 import { isRelationQuery } from '../../relations';
 import { OrchidOrmInternalError } from '../../errors';
 import { newDelayedRelationSelect } from '../select/delayed-relational-select';
-import { quoteSchemaAndTable, Sql } from '../../sql/sql';
+import { makeSql, quoteSchemaAndTable, Sql } from '../../sql/sql';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  query: QueryData,
+  query: ToSQLQuery,
+  q: QueryData,
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
   const from = quoteSchemaAndTable(
     query.schema,
-    (table.table || query.from) as string,
+    (table.table || q.from) as string,
   );
   ctx.sql.push(`DELETE FROM ${from}`);
 
@@ -27,13 +27,13 @@ export const pushDeleteSql = (
   }
 
   let conditions: string | undefined;
-  if (query.join?.length) {
+  if (q.join?.length) {
     const targets: string[] = [];
     const ons: string[] = [];
 
-    const joinSet = query.join.length > 1 ? new Set<string>() : null;
+    const joinSet = q.join.length > 1 ? new Set<string>() : null;
 
-    for (const item of query.join) {
+    for (const item of q.join) {
       const lateral = 'l' in item.args && item.args.l;
       if (lateral) {
         if (isRelationQuery(lateral)) {
@@ -41,12 +41,12 @@ export const pushDeleteSql = (
         }
 
         throw new OrchidOrmInternalError(
-          table as Query,
+          query as Query,
           'Join lateral is not supported in delete',
         );
       }
 
-      const join = processJoinItem(ctx, table, query, item.args, quotedAs);
+      const join = processJoinItem(ctx, query, q, item.args, quotedAs);
 
       const key = `${join.target}${join.on}`;
       if (joinSet) {
@@ -64,24 +64,24 @@ export const pushDeleteSql = (
     conditions = ons.join(' AND ');
   }
 
-  pushWhereStatementSql(ctx, table, query, quotedAs);
+  pushWhereStatementSql(ctx, query, q, quotedAs);
 
   if (conditions) {
-    if (query.and?.length || query.or?.length || query.scopes) {
+    if (q.and?.length || q.or?.length || q.scopes) {
       ctx.sql.push('AND', conditions);
     } else {
       ctx.sql.push('WHERE', conditions);
     }
   }
 
-  const delayedRelationSelect = query.selectRelation
-    ? newDelayedRelationSelect(table)
+  const delayedRelationSelect = q.selectRelation
+    ? newDelayedRelationSelect(query)
     : undefined;
 
   const returning = makeReturningSql(
     ctx,
-    table,
     query,
+    q,
     quotedAs,
     delayedRelationSelect,
     'Delete',
@@ -94,8 +94,5 @@ export const pushDeleteSql = (
     ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
   }
 
-  return {
-    text: ctx.sql.join(' '),
-    values: ctx.values,
-  };
+  return makeSql(ctx, 'delete', isSubSql);
 };
