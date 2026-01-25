@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.60.4
+
+### Patch Changes
+
+- 1b4f67f: Fix typing for conditionally selected column or relation in a repo (#621)
+- Updated dependencies [1b4f67f]
+  - pqb@0.59.2
+  - rake-db@2.27.32
+
 ## 1.60.3
 
 ### Patch Changes

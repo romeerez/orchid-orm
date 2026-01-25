@@ -1,5 +1,11 @@
 # pqb
 
+## 0.59.2
+
+### Patch Changes
+
+- 1b4f67f: Fix typing for conditionally selected column or relation in a repo (#621)
+
 ## 0.59.1
 
 ### Patch Changes
