@@ -129,6 +129,24 @@ describe('createRepo', () => {
     it('should support join callback arg', () => {
       db.other.join('some', (q) => repo(q).one());
     });
+
+    // for https://github.com/romeerez/orchid-orm/issues/621
+    it('should have optional type for conditionally selected column', () => {
+      const repo = createRepo(db.some, {
+        queryMethods: {
+          conditionalRel(q) {
+            return q.select('id').if(true, (q) => q.select('name'));
+          },
+        },
+      });
+
+      const q = repo.conditionalRel();
+
+      assertType<
+        Awaited<typeof q>,
+        { id: number; name: string | undefined }[]
+      >();
+    });
   });
 
   describe('queryOneMethods', () => {

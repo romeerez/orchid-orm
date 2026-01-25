@@ -69,6 +69,10 @@ export namespace Column {
       [K in keyof C]: K extends 'outputType' | 'queryType' ? C[K] | null : C[K];
     };
 
+    export type QueryColumnToOptional<C> = {
+      [K in keyof C]: K extends 'outputType' ? C[K] | undefined : C[K];
+    };
+
     interface DataNullable {
       isNullable: true;
       optional: true;

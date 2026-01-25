@@ -217,7 +217,7 @@ type QueryIfResult<
           ? K extends keyof R['result']
             ? R['result'][K] | T['result'][K]
             : T['result'][K]
-          : R['result'][K];
+          : Column.Modifiers.QueryColumnToOptional<R['result'][K]>;
       }
     : K extends 'then'
     ? QueryIfResultThen<T, R>

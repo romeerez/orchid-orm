@@ -10,6 +10,7 @@ import {
 } from '../test-utils/pqb.test-utils';
 import {
   assertType,
+  db,
   expectSql,
   now,
   sql,
@@ -932,6 +933,22 @@ describe('queryMethods', () => {
       const q2 = q.if(true, (q) => q.get('active'));
 
       assertType<Awaited<typeof q2>, number | string | boolean | null>();
+    });
+
+    it('should have a proper type for conditionally selected relation', async () => {
+      const q = db.post
+        .select('Id')
+        .if(true, (q) =>
+          q.select({
+            user: (q) => q.user.select('Name'),
+          }),
+        )
+        .take();
+
+      assertType<
+        Awaited<typeof q>,
+        { Id: number; user: { Name: string } | undefined }
+      >();
     });
   });
 });
