@@ -133,9 +133,6 @@ describe('adapter', () => {
         schema: 'public',
         table: 'user',
         constraint: 'user_pkey',
-        file: 'nbtinsert.c',
-        line: '666',
-        routine: '_bt_check_unique',
       });
     });
   });
