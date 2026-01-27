@@ -46,6 +46,14 @@ describe('baseTable', () => {
     expect(s.columnTypes).toBe(BaseTable.columnTypes);
   });
 
+  it('should have `sql.ref` to quote SQL identifiers', () => {
+    const { sql } = BaseTable;
+
+    const ref = sql.ref('my_schema.my_table');
+
+    expect(ref.makeSQL()).toBe('"my_schema"."my_table"');
+  });
+
   it('should allow to customize a name', () => {
     const base = createBaseTable({
       exportAs: 'custom',

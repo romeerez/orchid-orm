@@ -10,6 +10,7 @@ import {
   TemplateLiteralArgs,
   templateLiteralSQLToCode,
 } from './expression';
+import { SqlRefExpression } from './sql-ref-expression';
 import { Column } from '../../columns/column';
 import { ColumnSchemaConfig } from '../../columns/column-schema';
 import { DefaultColumnTypes } from '../../columns/column-types';
@@ -253,10 +254,32 @@ export interface SqlFn {
   ): Args extends [RecordUnknown]
     ? (...sql: TemplateLiteralArgs) => RawSql<Column.Pick.QueryColumn, T>
     : RawSql<Column.Pick.QueryColumn, T>;
+
+  /**
+   * `sql.ref` quotes a SQL identifier such as a table name, column name, or schema name.
+   * Use it when you need to dynamically reference an identifier in raw SQL.
+   *
+   * ```ts
+   * import { sql } from './baseTable';
+   *
+   * const schema = 'my_schema';
+   *
+   * // Produces: SET LOCAL search_path TO "my_schema"
+   * await db.$query`SET LOCAL search_path TO ${sql.ref(schema)}`
+   * ```
+   *
+   * It handles dots to support qualified names:
+   *
+   * ```ts
+   * // "my_schema"."my_table"
+   * sql.ref('my_schema.my_table');
+   * ```
+   */
+  ref(name: string): SqlRefExpression;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const sqlFn: SqlFn = (...args: any[]): any => {
+export const sqlFn: SqlFn = ((...args: any[]): any => {
   const arg = args[0];
   if (Array.isArray(arg)) {
     return new RawSql(args as TemplateLiteralArgs);
@@ -272,4 +295,6 @@ export const sqlFn: SqlFn = (...args: any[]): any => {
 
   return (...args: TemplateLiteralArgs) =>
     new RawSql(args, arg as RecordUnknown);
-};
+}) as SqlFn;
+
+sqlFn.ref = (name) => new SqlRefExpression(name);

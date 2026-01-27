@@ -159,6 +159,29 @@ sql({
 sql`($one + $two) / $one`.type((t) => t.numeric()).values({ one: 1, two: 2 });
 ```
 
+## sql.ref
+
+[//]: # 'has JSDoc'
+
+`sql.ref` quotes a SQL identifier such as a table name, column name, or schema name.
+Use it when you need to dynamically reference an identifier in raw SQL.
+
+```ts
+import { sql } from './baseTable';
+
+const schema = 'my_schema';
+
+// Produces: SET LOCAL search_path TO "my_schema"
+await db.$query`SET LOCAL search_path TO ${sql.ref(schema)}`
+```
+
+It handles dots to support qualified names:
+
+```ts
+// "my_schema"."my_table"
+sql.ref('my_schema.my_table');
+```
+
 ## column
 
 [//]: # 'has JSDoc'

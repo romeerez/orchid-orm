@@ -276,4 +276,46 @@ describe('sql', () => {
       'value',
     ]);
   });
+
+  describe('sql.ref', () => {
+    it('should quote a simple identifier', () => {
+      const ref = sql.ref('my_table');
+      expect(ref.makeSQL()).toBe('"my_table"');
+    });
+
+    it('should quote a qualified identifier with dots', () => {
+      const ref = sql.ref('my_schema.my_table');
+      expect(ref.makeSQL()).toBe('"my_schema"."my_table"');
+    });
+
+    it('should escape double quotes in identifier', () => {
+      const ref = sql.ref('table"name');
+      expect(ref.makeSQL()).toBe('"table""name"');
+    });
+
+    it('should be usable inside sql template literal', () => {
+      const schema = 'my_schema';
+      const q = sql`SET LOCAL SEARCH_PATH TO ${sql.ref(schema)}`;
+
+      expect(q.toSQL({ values: [] })).toBe(
+        `SET LOCAL SEARCH_PATH TO "my_schema"`,
+      );
+    });
+
+    it('should be usable with db.sql in a raw query', () => {
+      const tableName = 'users';
+      const q = testDb.sql`SELECT * FROM ${sql.ref(tableName)}`;
+
+      expect(q.toSQL({ values: [] })).toBe(`SELECT * FROM "users"`);
+    });
+
+    it('should be usable in query builder select', () => {
+      const column = 'name';
+      const q = User.select({
+        value: () => sql<string>`${sql.ref(column)}`,
+      });
+
+      expectSql(q.toSQL(), `SELECT "name" "value" FROM "user"`);
+    });
+  });
 });
