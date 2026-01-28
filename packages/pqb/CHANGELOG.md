@@ -1,5 +1,11 @@
 # pqb
 
+## 0.59.3
+
+### Patch Changes
+
+- 4b8f569: Add `sql.ref` for quoting SQL identifiers
+
 ## 0.59.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.60.5
+
+### Patch Changes
+
+- 4b8f569: Add `sql.ref` for quoting SQL identifiers
+- Updated dependencies [4b8f569]
+  - pqb@0.59.3
+  - rake-db@2.27.33
+
 ## 1.60.4
 
 ### Patch Changes
