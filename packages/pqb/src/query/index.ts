@@ -33,6 +33,7 @@ export * from './expressions/ref-expression';
 export * from './expressions/or-expression';
 export * from './expressions/query-expressions';
 export * from './expressions/raw-sql';
+export * from './expressions/sql-ref-expression';
 export * from './extra-features/append-query/append-query';
 export * from './extra-features/computed/computed';
 export * from './extra-features/data-transform/transform';

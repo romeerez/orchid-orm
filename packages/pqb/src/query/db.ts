@@ -19,6 +19,7 @@ import {
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { DynamicRawSQL, raw, RawSql } from './expressions/raw-sql';
+import { SqlRefExpression } from './expressions/sql-ref-expression';
 import { ScopeArgumentQuery } from './extra-features/scope/scope.query';
 import {
   defaultSchemaConfig,
@@ -630,6 +631,17 @@ export interface DbTableConstructor<ColumnTypes> {
   };
 }
 
+export interface DbSqlMethod<ColumnTypes> {
+  <T>(...args: StaticSQLArgs): RawSql<
+    Column.Pick.QueryColumnOfType<T>,
+    ColumnTypes
+  >;
+  <T>(
+    ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
+  ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  ref(name: string): SqlRefExpression;
+}
+
 export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
   ? T extends { softDelete: true | PropertyKey }
     ? T['scopes'] & NonDeletedScope
@@ -643,12 +655,7 @@ export interface DbResult<ColumnTypes>
     DbTableConstructor<ColumnTypes> {
   adapter: AdapterBase;
   close: AdapterBase['close'];
-  sql<T = unknown>(
-    ...args: StaticSQLArgs
-  ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
-  sql<T = unknown>(
-    ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
-  ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  sql: DbSqlMethod<ColumnTypes>;
 }
 {
 }
@@ -801,15 +808,23 @@ export const createDbWithAdapter = <
 
   Object.setPrototypeOf(db, Db.prototype);
 
-  // bind column types to the `sql` method
-  db.sql = (...args: unknown[]) => {
-    const sql = (raw as any)(...args);
-    sql.columnTypes = ct;
-    return sql;
-  };
+  db.sql = _createDbSqlMethod(ct) as typeof db.sql;
 
   return db as never;
 };
+
+export function _createDbSqlMethod<ColumnTypes>(
+  columnTypes: ColumnTypes,
+): DbSqlMethod<ColumnTypes> {
+  // bind column types
+  const sqlFn = ((...args: unknown[]) => {
+    const sql = (raw as any)(...args);
+    sql.columnTypes = columnTypes;
+    return sql;
+  }) as DbSqlMethod<ColumnTypes>;
+  sqlFn.ref = (name) => new SqlRefExpression(name);
+  return sqlFn;
+}
 
 export const _initQueryBuilder = (
   adapter: AdapterBase,

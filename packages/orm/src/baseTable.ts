@@ -7,7 +7,6 @@ import {
   DefaultColumnTypes,
   defaultSchemaConfig,
   DefaultSchemaConfig,
-  DynamicRawSQL,
   getColumnTypes,
   makeColumnTypes,
   MapTableScopesOption,
@@ -18,7 +17,6 @@ import {
   QueryBeforeHook,
   QueryData,
   QueryHooks,
-  RawSql,
   ShapeColumnPrimaryKeys,
   ShapeUniqueColumns,
   TableData,
@@ -28,12 +26,10 @@ import {
   TableDataItemsUniqueColumnTuples,
   TableDataItemsUniqueConstraints,
   UniqueConstraints,
-  raw,
   ComputedOptionsConfig,
   applyMixins,
   ColumnSchemaConfig,
   QueryScopes,
-  DynamicSQLArg,
   emptyArray,
   EmptyObject,
   emptyObject,
@@ -45,10 +41,11 @@ import {
   RecordUnknown,
   ShallowSimplify,
   snakeCaseKey,
-  StaticSQLArgs,
   toSnakeCase,
   ColumnsShape,
   Column,
+  DbSqlMethod,
+  _createDbSqlMethod,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -472,12 +469,7 @@ export interface BaseTableClass<
   columnTypes: ColumnTypes;
   getFilePath(): string;
 
-  sql<T>(
-    ...args: StaticSQLArgs
-  ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
-  sql<T>(
-    ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
-  ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  sql: DbSqlMethod<ColumnTypes>;
 
   new (): BaseTableInstance<ColumnTypes>;
   instance(): BaseTableInstance<ColumnTypes>;
@@ -570,12 +562,7 @@ export function createBaseTable<
     static exportAs = exportAs;
     static columnTypes = columnTypes;
 
-    static sql(...args: unknown[]) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sql = (raw as any)(...args);
-      sql.columnTypes = columnTypes;
-      return sql;
-    }
+    static sql = _createDbSqlMethod(columnTypes);
 
     private static _inputSchema: unknown;
     static inputSchema() {
