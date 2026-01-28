@@ -1,4 +1,7 @@
-import { expectQueryNotMutated, User } from '../../../test-utils/pqb.test-utils';
+import {
+  expectQueryNotMutated,
+  User,
+} from '../../../test-utils/pqb.test-utils';
 import { expectSql } from 'test-utils';
 
 describe('truncate', () => {

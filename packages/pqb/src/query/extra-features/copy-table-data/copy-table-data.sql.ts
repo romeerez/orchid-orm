@@ -43,15 +43,10 @@ export const pushCopySql = (
 
   const target = 'from' in copy ? copy.from : copy.to;
 
-  const quotedTable = quoteSchemaAndTable(
-    query.schema,
-    table.table as string,
-  );
+  const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
 
   sql.push(
-    `COPY ${quotedTable}${columns} ${
-      'from' in copy ? 'FROM' : 'TO'
-    } ${
+    `COPY ${quotedTable}${columns} ${'from' in copy ? 'FROM' : 'TO'} ${
       typeof target === 'string'
         ? escapeString(target)
         : `PROGRAM ${escapeString(target.program)}`

@@ -1,4 +1,8 @@
-import { Message, User, userColumnsSql } from '../../../test-utils/pqb.test-utils';
+import {
+  Message,
+  User,
+  userColumnsSql,
+} from '../../../test-utils/pqb.test-utils';
 import { expectSql, line } from 'test-utils';
 
 describe('clear', () => {
