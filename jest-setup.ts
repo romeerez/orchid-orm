@@ -105,7 +105,9 @@ jest.mock('./packages/pqb/src/query/sub-query/sub-query-for-sql', () => {
 });
 
 jest.mock('./packages/pqb/src/query/basic-features/wrap/wrap', () => {
-  const actual = jest.requireActual('./packages/pqb/src/query/basic-features/wrap/wrap');
+  const actual = jest.requireActual(
+    './packages/pqb/src/query/basic-features/wrap/wrap',
+  );
 
   return process.env.RUNNING_BENCHMARKS
     ? actual
@@ -204,7 +206,9 @@ jest.mock(
 );
 
 jest.mock('./packages/pqb/src/query/basic-features/cte/cte.query', () => {
-  const actual = jest.requireActual('./packages/pqb/src/query/basic-features/cte/cte.query');
+  const actual = jest.requireActual(
+    './packages/pqb/src/query/basic-features/cte/cte.query',
+  );
   return process.env.RUNNING_BENCHMARKS
     ? actual
     : {

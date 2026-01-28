@@ -296,7 +296,7 @@ const viewsSql = `SELECT
       WHERE rew.ev_class = c.oid AND obj.oid <> c.oid
     ) t
   ) "deps",
-  right(substring(r.ev_action from ':hasRecursive \w'), 1)::bool AS "isRecursive",
+  right(substring(r.ev_action from ':hasRecursive \\w'), 1)::bool AS "isRecursive",
   array_to_json(c.reloptions) AS "with",
   (SELECT coalesce(json_agg(t), '[]') FROM (${columnsSql({
     schema: 'nc',

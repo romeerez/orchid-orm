@@ -1,4 +1,8 @@
-import { Query, QueryReturnTypeAll, QueryReturnTypeOptional } from '../../query';
+import {
+  Query,
+  QueryReturnTypeAll,
+  QueryReturnTypeOptional,
+} from '../../query';
 import { Column } from '../../../columns/column';
 import { PickQueryReturnType } from '../../pick-query-types';
 import { RecordUnknown } from '../../../utils';
