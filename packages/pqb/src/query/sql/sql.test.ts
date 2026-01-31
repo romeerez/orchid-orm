@@ -21,21 +21,35 @@ describe('sql', () => {
     expect(sql.result.value).toBe(type);
   });
 
-  it('should handle a simple string', () => {
-    const sql = User.sql<boolean>({ raw: 'simple sql' });
+  it('should handle a simple string and not interpolate', () => {
+    const sql = User.sql<boolean>('$$column = $value');
 
     expect(sql).toMatchObject({
-      _sql: 'simple sql',
+      _sql: '$$column = $value',
       columnTypes: User.columnTypes,
     });
 
     expectSql(
       User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (simple sql)`,
+      `SELECT ${userColumnsSql} FROM "user" WHERE ($$column = $value)`,
     );
   });
 
-  it('should handle values, and a simple string', () => {
+  it('should handle a raw object without values and not interpolate', () => {
+    const sql = User.sql<boolean>({ raw: '$$column = $value' });
+
+    expect(sql).toMatchObject({
+      _sql: '$$column = $value',
+      columnTypes: User.columnTypes,
+    });
+
+    expectSql(
+      User.where(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "user" WHERE ($$column = $value)`,
+    );
+  });
+
+  it('should handle raw sql with values', () => {
     const sql = User.sql<boolean>({
       raw: '$$_CoLuMn = $VaLuE123',
     }).values({

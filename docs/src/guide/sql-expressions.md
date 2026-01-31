@@ -4,13 +4,18 @@
 
 [//]: # 'has JSDoc'
 
-When there is a need to use a piece of raw SQL, use the `sql` exported from the `BaseTable` file, it is also attached to query objects for convenience.
+When there is a need to use a piece of raw SQL, use `sql` as a standalone import or from your `BaseTable` (bound to its column types):
+
+```ts
+import { sql } from 'orchid-orm';
+// or
+import { BaseTable } from './baseTable';
+const { sql } = BaseTable;
+```
 
 When selecting a custom SQL, specify a resulting type with `<generic>` syntax:
 
 ```ts
-import { sql } from './baseTable';
-
 const result: { num: number }[] = await db.table.select({
   num: sql<number>`random() * 100`,
 });
@@ -21,6 +26,7 @@ In a situation when you want the result to be parsed, such as when returning a t
 This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
 
 ```ts
+// Use the bound version
 import { sql } from './baseTable';
 
 const result: { timestamp: Date }[] = await db.table.select({
@@ -68,43 +74,41 @@ db.table.join(db.otherTable, 'id', 'other.otherId').where`
 `;
 ```
 
-SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
+`sql('...')` accepts only a string and has **no interpolation**: the string is used as-is. Static SQL is fine; concatenating user input is not.
 
 ```ts
-import { sql } from './baseTable';
+// static string — no interpolation, okay
+await db.table.where(sql('column = random() * 100'));
 
-// no interpolation is okay
-await db.table.where(sql({ raw: 'column = random() * 100' }));
-
-// get value from user-provided params
+// concatenating user input is NOT safe, SQL injection is possible:
 const { value } = req.params;
-
-// this is NOT safe, SQL injection is possible:
-await db.table.where(sql({ raw: `column = random() * ${value}` }));
+await db.table.where(sql('column = random() * ' + value));
 ```
 
-To inject values into `sql({ raw: '...' })` SQL strings, denote it with `$` in the string and provide `values` object.
+To interpolate values, use the object form with placeholders:
 
-Use `$$` to provide column or/and table name (`column` or `ref` are preferable). Column names will be quoted so don't quote them manually.
+- Use `$name` for values (will be safely bound as parameters)
+- Use `$$name` for column or table names (will be quoted automatically)
 
 ```ts
-import { sql } from './baseTable';
-
 // get value from user-provided params
 const { value } = req.params;
 
-// this is SAFE, SQL injection are prevented:
+// this is SAFE, SQL injection is prevented:
 await db.table.where(
   sql<boolean>({
-    raw: '$$column = random() * $value',
+    raw: '$$column = random() * $multiplier',
     values: {
-      column: 'someTable.someColumn', // or simply 'column'
-      one: value,
-      two: 123,
+      column: 'price', // column name, will be quoted as "price"
+      multiplier: value, // user value, safely bound as parameter
     },
   }),
 );
 ```
+
+::: tip
+Prefer [column](#column) or [ref](#ref) over `$$name` when possible for better type safety.
+:::
 
 ::: warning
 Values can be cast to strings.
@@ -143,13 +147,13 @@ sql`key = ${value}`.type((t) => t.boolean());
 // with column name via `column` method:
 sql`${db.table.column('column')} = ${value}`;
 
-// raw SQL string, not allowed to interpolate values:
-sql({ raw: 'random()' });
+// plain string (no interpolation):
+sql('random()');
 
-// with resulting type and `raw` string:
-sql<number>({ raw: 'random()' });
+// plain string with resulting type:
+sql<number>('random()');
 
-// with column name and a value in a `raw` string:
+// object form with named placeholders:
 sql({
   raw: `$$column = $value`,
   values: { column: 'columnName', value: 123 },
@@ -172,7 +176,7 @@ import { sql } from './baseTable';
 const schema = 'my_schema';
 
 // Produces: SET LOCAL search_path TO "my_schema"
-await db.$query`SET LOCAL search_path TO ${sql.ref(schema)}`
+await db.$query`SET LOCAL search_path TO ${sql.ref(schema)}`;
 ```
 
 It handles dots to support qualified names:
@@ -209,8 +213,6 @@ await db.table.select({
 and other dynamically defined columns.
 
 ```ts
-import { sql } from './baseTable';
-
 await db.table.join('otherTable').select({
   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
   // returns a boolean

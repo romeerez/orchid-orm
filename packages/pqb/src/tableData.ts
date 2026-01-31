@@ -1,5 +1,5 @@
 import { Column } from './columns/column';
-import { RawSqlBase, sqlFn, SqlFn } from './query/expressions/raw-sql';
+import { RawSqlBase, SqlFn, sql } from './query/expressions/raw-sql';
 import OptionsArg = TableData.Index.OptionsArg;
 import { Expression } from './query/expressions/expression';
 import { EmptyTuple, MaybeArray, RecordUnknown } from './utils';
@@ -377,6 +377,9 @@ export interface TableDataMethods<Key extends PropertyKey> {
 
   check(check: RawSqlBase, name?: string): NonUniqDataItem;
 
+  /**
+   * @deprecated Use `sql` from BaseTable or standalone import instead.
+   */
   sql: SqlFn;
 }
 
@@ -512,7 +515,7 @@ export const tableDataMethods: TableDataMethods<string> = {
   check(check, name) {
     return { constraint: { check, name } } as never;
   },
-  sql: sqlFn,
+  sql,
 };
 
 export const parseTableData = (

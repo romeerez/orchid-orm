@@ -1,5 +1,52 @@
 # Breaking changes
 
+## orchid-orm 1.61
+
+Unified `raw` and `sql` into a single `sql` function.
+
+Previously, there were multiple ways to create raw SQL expressions:
+
+- `raw()` function from `pqb`
+- `query.sql` method on query objects
+- `t.sql` in column type definitions
+- `BaseTable.sql` from your base table
+
+Now there is a single `sql` function that can be imported standalone or accessed from `BaseTable`:
+
+```ts
+// Standalone import
+import { sql } from 'orchid-orm';
+// or from pqb
+import { sql } from 'pqb';
+
+// Or from your BaseTable (bound to its column types)
+import { BaseTable } from './baseTable';
+const { sql } = BaseTable;
+```
+
+The new `sql` supports all previously available syntaxes:
+
+```ts
+// Template literal with safe interpolation
+sql`column = ${value}`;
+
+// Plain string (no interpolation)
+sql('random()');
+
+// Object form with named placeholders
+sql({
+  raw: '$$column = $value',
+  values: { column: 'name', value: 123 }
+});
+
+// Dynamic SQL (evaluated at query time)
+sql(() => sql`value = ${computedValue}`);
+```
+
+Note: `sql('...')` is now the preferred shorthand for `sql({ raw: '...' })` when no values are needed.
+
+All other raw-SQL helpers still work for now (`raw()`, `query.sql`, `t.sql`), but are deprecated.
+
 ## orchid-orm 1.60
 
 Since orchid-orm 1.55 all queries inside a transaction were issues with a `SAVEPOINT`,

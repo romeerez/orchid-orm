@@ -1072,7 +1072,6 @@ applyMixins(QueryMethods, [
   QueryHooks,
   QueryGet,
   MergeQueryMethods,
-  QuerySql,
   QueryTransform,
   QueryMap,
   QueryScope,

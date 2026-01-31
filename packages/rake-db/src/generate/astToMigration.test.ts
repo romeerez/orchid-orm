@@ -1027,7 +1027,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable('schema.table', (t) => ({
-    id: t.identity().primaryKey().check(t.sql({ raw: 'column > 10' })).check(t.sql({ raw: 'column < 20' })),
+    id: t.identity().primaryKey().check(t.sql('column > 10')).check(t.sql('column < 20')),
   }));
 });
 `,
@@ -1056,7 +1056,7 @@ change(async (db) => {
     (t) => ({
       id: t.identity().primaryKey(),
     }),
-    (t) => t.check(t.sql({ raw: 'sql' })),
+    (t) => t.check(t.sql('sql')),
   );
 });
 `,
@@ -1068,7 +1068,7 @@ change(async (db) => {
 
       expectResult(
         result,
-        template(`  await db.addCheck('table', t.sql({ raw: 'sql' }));`),
+        template(`  await db.addCheck('table', t.sql('sql'));`),
       );
     });
   });
@@ -1230,7 +1230,7 @@ change(async (db) => {
     checkOption: 'LOCAL',
     securityBarrier: true,
     securityInvoker: true,
-  }, db.sql({ raw: '$a' }).values({"a":1}));
+  }, db.sql('$a').values({"a":1}));
 });
 `,
       );
