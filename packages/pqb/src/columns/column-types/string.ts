@@ -22,8 +22,11 @@ import {
   RecordString,
   toSnakeCase,
 } from '../../utils';
-import { StaticSQLArgs } from '../../query/expressions/expression';
-import { SearchWeightRecord } from '../../query';
+import {
+  isStaticSQLArgs,
+  StaticSQLArgs,
+} from '../../query/expressions/expression';
+import type { SearchWeightRecord } from '../../query';
 
 export type TextColumnData = StringData;
 
@@ -539,10 +542,9 @@ export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column<
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
   ): Column.Modifiers.Generated<T> {
-    const arg = args[0];
     // early return on StaticSQLArgs case
-    if (typeof arg === 'object' && 'raw' in arg) {
-      return super.generated(...(args as StaticSQLArgs)) as never;
+    if (isStaticSQLArgs(args)) {
+      return super.generated(...args) as never;
     }
 
     const toSQL: Column.Data.Generated['toSQL'] = (ctx) => {

@@ -195,7 +195,7 @@ export class OneTable extends BaseTable {
         name: 'uniqueIdx',
         nullsNotDistinct: true,
       }),
-      t.check(t.sql({ raw: '((one)::text <> two)' }), 'tableCheck'),
+      t.check(t.sql('((one)::text <> two)'), 'tableCheck'),
     ],
   );
 }

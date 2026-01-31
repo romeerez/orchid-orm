@@ -24,7 +24,7 @@ import { BooleanColumn } from './column-types/boolean';
 import { JSONTextColumn } from './column-types/json';
 import { timestampHelpers, TimestampHelpers } from './timestamps';
 import { CustomTypeColumn, DomainColumn } from './column-types/custom-type';
-import { RawSql, sqlFn, SqlFn } from '../query/expressions/raw-sql';
+import { RawSql, sql, SqlFn } from '../query/expressions/raw-sql';
 import { TableData } from '../tableData';
 import { PostgisGeographyPointColumn } from './column-types/postgis';
 import { ColumnSchemaConfig } from './column-schema';
@@ -57,6 +57,9 @@ export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
 
   name<T>(this: T, name: string): T;
 
+  /**
+   * @deprecated Use `sql` from BaseTable or standalone import instead.
+   */
   sql: SqlFn;
 
   smallint: SchemaConfig['smallint'];
@@ -125,7 +128,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       return this;
     },
 
-    sql: sqlFn,
+    sql,
 
     smallint: schema.smallint,
     integer: schema.integer,

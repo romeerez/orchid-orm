@@ -5,7 +5,6 @@ import {
   ExpressionTypeMethod,
   isTemplateLiteralArgs,
   RawSQLValues,
-  SQLArgs,
   StaticSQLArgs,
   TemplateLiteralArgs,
   templateLiteralSQLToCode,
@@ -15,7 +14,7 @@ import { Column } from '../../columns/column';
 import { ColumnSchemaConfig } from '../../columns/column-schema';
 import { DefaultColumnTypes } from '../../columns/column-types';
 import { ToSQLCtx, ToSqlValues } from '../sql/to-sql';
-import { emptyObject, RecordUnknown } from '../../utils';
+import { emptyObject } from '../../utils';
 import { PrepareSubQueryForSql } from '../sub-query/sub-query-for-sql';
 import { SQLQueryArgs } from '../db-sql-query';
 
@@ -61,7 +60,7 @@ export interface RawSqlBase extends Expression {
 }
 
 // RawSql extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
-export interface RawSql<T extends Column.Pick.QueryColumn, ColumnTypes>
+export interface RawSql<T extends Column.Pick.QueryColumn>
   extends Expression<T>,
     RawSqlBase,
     ExpressionTypeMethod {}
@@ -174,7 +173,7 @@ export const rawSqlToCode = (rawSql: RawSqlBase, t: string): string => {
 
   code +=
     typeof sql === 'string'
-      ? `({ raw: '${sql.replace(/'/g, "\\'")}' })`
+      ? `('${sql.replace(/'/g, "\\'")}')`
       : templateLiteralSQLToCode(sql);
 
   if (values) {
@@ -206,7 +205,7 @@ export class DynamicRawSQL<
 
   // Calls the given function to get SQL from it.
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    const expr = this.fn(raw as never);
+    const expr = this.fn(sql as never);
     this.q.beforeSet = this.q.before = undefined;
     const prepared = prepareSubQueryForSql(
       this,
@@ -218,20 +217,6 @@ export class DynamicRawSQL<
 
 DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
-export function raw<T = never>(
-  ...args: StaticSQLArgs
-): RawSql<Column.Pick.QueryColumnOfType<T>>;
-export function raw<T = never>(
-  ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
-): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>>;
-export function raw(...args: SQLArgs) {
-  return isTemplateLiteralArgs(args)
-    ? new RawSql(args)
-    : typeof args[0] === 'function'
-    ? new DynamicRawSQL(args[0])
-    : new RawSql(args[0].raw, args[0].values);
-}
-
 // Raw SQL count(*) to apply directly to `QueryData.select`.
 export const countSelect = [new RawSql('count(*)')];
 
@@ -241,20 +226,7 @@ export function sqlQueryArgsToExpression(args: SQLQueryArgs): RawSqlBase {
     : (args[0] as never);
 }
 
-export interface SqlFn {
-  <
-    T,
-    Args extends
-      | [sql: TemplateStringsArray, ...values: unknown[]]
-      | [sql: string]
-      | [values: RecordUnknown, sql?: string],
-  >(
-    this: T,
-    ...args: Args
-  ): Args extends [RecordUnknown]
-    ? (...sql: TemplateLiteralArgs) => RawSql<Column.Pick.QueryColumn, T>
-    : RawSql<Column.Pick.QueryColumn, T>;
-
+export interface BaseSqlFn {
   /**
    * `sql.ref` quotes a SQL identifier such as a table name, column name, or schema name.
    * Use it when you need to dynamically reference an identifier in raw SQL.
@@ -278,23 +250,47 @@ export interface SqlFn {
   ref(name: string): SqlRefExpression;
 }
 
+export interface SqlFn extends BaseSqlFn {
+  <T>(this: T, ...args: StaticSQLArgs): RawSql<Column.Pick.QueryColumn, T>;
+  <T>(
+    this: T,
+    fn: DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>,
+  ): DynamicRawSQL<Column.Pick.QueryColumn, T>;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const sqlFn: SqlFn = ((...args: any[]): any => {
+export const sql = ((...args) => {
   const arg = args[0];
-  if (Array.isArray(arg)) {
-    return new RawSql(args as TemplateLiteralArgs);
+
+  // Template literal: sql`...`
+  if (isTemplateLiteralArgs(args)) {
+    return new RawSql(args);
   }
 
-  if (typeof args[0] === 'string') {
-    return new RawSql(args[0]);
+  // Plain string: sql('raw string')
+  if (typeof arg === 'string') {
+    return new RawSql(arg);
   }
 
-  if (args[1] !== undefined) {
-    return new RawSql(args[1], arg);
+  // Dynamic function: sql(() => sql`...`)
+  if (typeof arg === 'function') {
+    return new DynamicRawSQL(arg);
   }
 
-  return (...args: TemplateLiteralArgs) =>
-    new RawSql(args, arg as RecordUnknown);
+  // Object form: sql({ raw: '...', values?: {...} })
+  if (typeof arg === 'object' && arg !== null && 'raw' in arg) {
+    return new RawSql(
+      arg.raw as string,
+      arg.values as RawSQLValues | undefined,
+    );
+  }
+
+  throw new Error('Invalid arguments for sql function');
 }) as SqlFn;
 
-sqlFn.ref = (name) => new SqlRefExpression(name);
+sql.ref = (name) => new SqlRefExpression(name);
+
+/**
+ * @deprecated Use `sql` instead. Import from 'orchid-orm' or destructure from BaseTable.
+ */
+export const raw: SqlFn = sql;

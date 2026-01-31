@@ -6,7 +6,7 @@ import {
   TemplateLiteralArgs,
   templateLiteralSQLToCode,
 } from '../query/expressions/expression';
-import { raw, RawSqlBase } from '../query/expressions/raw-sql';
+import { sql, RawSqlBase } from '../query/expressions/raw-sql';
 import { TableData } from '../tableData';
 import { ColumnTypeSchemaArg } from './column-schema';
 import { Code, ColumnToCodeCtx } from './code';
@@ -1671,10 +1671,10 @@ export abstract class Column<
     this: T,
     ...args: StaticSQLArgs
   ): Column.Modifiers.Generated<T> {
-    const sql = raw(...args);
+    const expr = sql(...args);
     const column = setColumnData(this, 'generated', {
       toSQL(ctx, quoted) {
-        return sql.toSQL(ctx, quoted);
+        return expr.toSQL(ctx, quoted);
       },
 
       toCode() {
@@ -1682,6 +1682,8 @@ export abstract class Column<
 
         if (Array.isArray(args[0])) {
           sql += templateLiteralSQLToCode(args as TemplateLiteralArgs);
+        } else if (typeof args[0] === 'string') {
+          sql += `('${args[0].replace(/'/g, "\\'")}')`;
         } else {
           const { raw, values } = args[0] as {
             raw: string;

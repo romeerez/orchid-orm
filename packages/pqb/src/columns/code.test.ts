@@ -31,7 +31,7 @@ describe('code', () => {
           't',
           new RawSql('sql = $key', { key: 'value' }),
         ),
-      ).toBe(`t.sql({ raw: 'sql = $key' }).values({"key":"value"})`);
+      ).toBe(`t.sql('sql = $key').values({"key":"value"})`);
     });
 
     it('should stringify function', () => {

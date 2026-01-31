@@ -88,11 +88,6 @@ export const isTemplateLiteralArgs = (
 ): args is TemplateLiteralArgs =>
   Array.isArray(args[0]) && 'raw' in args[0] && Array.isArray(args[0].raw);
 
-// Argument type for `sql` function.
-// It can take a template literal, an object `{ raw: string, values?: Record<string, unknown> }`,
-// or a function to build SQL lazily.
-export type SQLArgs = StaticSQLArgs | [DynamicSQLArg<Column.Pick.QueryColumn>];
-
 // Function for sql method to build SQL lazily (dynamically).
 // May be used for computed column to build a different SQL in different executions.
 export interface DynamicSQLArg<T extends Column.Pick.QueryColumn> {
@@ -102,7 +97,16 @@ export interface DynamicSQLArg<T extends Column.Pick.QueryColumn> {
 // SQL arguments for a non-lazy SQL expression.
 export type StaticSQLArgs =
   | TemplateLiteralArgs
+  | [string]
   | [{ raw: string; values?: RawSQLValues }];
+
+export const isStaticSQLArgs = (args: unknown[]): args is StaticSQLArgs =>
+  isTemplateLiteralArgs(args) ||
+  (args.length === 1 && typeof args[0] === 'string') ||
+  (args.length === 1 &&
+    typeof args[0] === 'object' &&
+    args[0] !== null &&
+    'raw' in args[0]);
 
 // Record of values to pass and store in a RawSql instance.
 export type RawSQLValues = RecordUnknown;

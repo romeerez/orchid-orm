@@ -112,37 +112,51 @@ describe('baseTable', () => {
   });
 
   describe('overriding column types', () => {
-    it('should have .sql with overridden types', () => {
-      class Type extends Column {
-        dataType = 'type';
-        operators = Operators.any;
-        constructor() {
-          super(defaultSchemaConfig, defaultSchemaConfig.unknown);
-        }
-        toCode() {
-          return '';
-        }
+    class Type extends Column<DefaultSchemaConfig, number> {
+      dataType = 'type';
+      operators = Operators.any;
+      constructor() {
+        super(defaultSchemaConfig, defaultSchemaConfig.number);
       }
-      const type = new Type();
-      const BaseTable = createBaseTable({ columnTypes: { type: () => type } });
-      class UserTable extends BaseTable {
-        readonly table = 'user';
+      toCode() {
+        return '';
+      }
+    }
+    const type = new Type();
+    const BaseTable = createBaseTable({
+      columnTypes: (t) => ({
+        ...t,
+        type: () => type,
+      }),
+    });
+    const { sql } = BaseTable;
+
+    it('should have .sql with overridden types', () => {
+      const s = sql``;
+      expect(s.columnTypes).toBe(BaseTable.columnTypes);
+
+      const value = s.type((t) => t.type());
+      expect(value.result.value).toBe(type);
+    });
+
+    it('should use query sql with custom type in select', () => {
+      class Table extends BaseTable {
+        readonly table = 'table';
         columns = this.setColumns((t) => ({
-          id: t.type().primaryKey(),
-          createdAt: t.type(),
+          id: t.identity().primaryKey(),
         }));
       }
 
-      const { user } = orchidORMWithAdapter(
+      const { table } = orchidORMWithAdapter(
         { adapter: testAdapter },
-        {
-          user: UserTable,
-        },
+        { table: Table },
       );
 
-      const value = user.sql``.type((t) => t.type());
+      const q = table.select({
+        column: (q) => q.sql`expr`.type((t) => t.type()),
+      });
 
-      expect(value.result.value).toBe(type);
+      assertType<Awaited<typeof q>, { column: number }[]>();
     });
 
     it('should return date as string by default', async () => {

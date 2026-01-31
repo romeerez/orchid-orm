@@ -62,11 +62,11 @@ db.table.search({
   query: 'query',
 });
 
-import { raw } from 'orchid-orm';
+import { sql } from 'orchid-orm';
 
 db.table.search({
   // raw SQL: join text columns with space
-  text: raw`concat_ws(' ', title, body)`,
+  text: sql`concat_ws(' ', title, body)`,
   query: 'query',
 });
 
@@ -119,12 +119,12 @@ The `query` (`websearch_to_tsquery`) can work with any user input, while other q
 Each query kind accepts a string or a raw SQL.
 
 ```ts
-import { raw } from 'orchid-orm';
+import { sql } from 'orchid-orm';
 
 db.table.search({
   vector: 'titleAndBodyVector',
   // can accept raw SQL:
-  phraseQuery: raw`'The Fat Rats'`,
+  phraseQuery: sql`'The Fat Rats'`,
 });
 ```
 
@@ -233,7 +233,7 @@ db.table
 `text` can be a raw SQL, here we are joining multiple columns:
 
 ```ts
-import { raw } from 'orchid-orm';
+import { sql } from 'orchid-orm';
 
 db.table
   .search({
@@ -243,7 +243,7 @@ db.table
   })
   .select({
     highlightedText: (q) =>
-      q.headline('search', { text: raw`concat_ws(' ', title, body)` }),
+      q.headline('search', { text: sql`concat_ws(' ', title, body)` }),
   });
 ```
 

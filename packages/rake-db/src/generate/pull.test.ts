@@ -247,7 +247,7 @@ change(async (db) => {
       ...t.timestamps(),
     }),
     (t) => [
-      t.check(t.sql({ raw: 'table check' }), 'table_column_check'),
+      t.check(t.sql('table check'), 'table_column_check'),
       t.foreignKey(
         ['id', 'text'],
         'schema.table1',
