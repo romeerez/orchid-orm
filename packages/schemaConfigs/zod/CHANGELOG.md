@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.49
+
+### Patch Changes
+
+- e583b8a: Support static and dynamic `schema` property in ORM config and individual tables (#614)
+- Updated dependencies [e583b8a]
+  - pqb@0.60.0
+
 ## 1.0.48
 
 ### Patch Changes

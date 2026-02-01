@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.28.0
+
+### Minor Changes
+
+- e583b8a: Support static and dynamic `schema` property in ORM config and individual tables (#614)
+
+### Patch Changes
+
+- Updated dependencies [e583b8a]
+  - pqb@0.60.0
+
 ## 2.27.33
 
 ### Patch Changes

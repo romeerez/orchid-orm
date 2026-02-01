@@ -1,5 +1,11 @@
 # pqb
 
+## 0.60.0
+
+### Minor Changes
+
+- e583b8a: Support static and dynamic `schema` property in ORM config and individual tables (#614)
+
 ## 0.59.3
 
 ### Patch Changes
