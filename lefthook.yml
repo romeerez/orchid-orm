@@ -1,6 +1,12 @@
 pre-commit:
+  parallel: true
   commands:
     eslint:
       glob: "*.{js,mjs,ts,json}"
-      run: npx eslint --fix {staged_files}
+      run: npx eslint --fix {staged_files} --max-warnings 0
+      stage_fixed: true
+    docs-prettier:
+      root: docs/src/
+      glob: "*.{md}"
+      run: npx prettier --write {staged_files}
       stage_fixed: true
