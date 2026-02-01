@@ -44,6 +44,8 @@ import {
   _querySelect,
   _prependWith,
   noop,
+  _queryInsertMany,
+  _hookSelectColumns,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -56,9 +58,9 @@ import {
   HasRelJoin,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
-  _selectIfNotSelected,
   selectCteColumnSql,
   selectCteColumnsSql,
+  selectCteColumnFromManySql,
 } from './common/utils';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
@@ -174,11 +176,52 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     this.nestedUpdate = nestedUpdate(this.state);
   }
 
-  create(q: Query, ctx: CreateCtx, item: RecordUnknown) {
+  create(q: Query, ctx: CreateCtx, items: RecordUnknown[]) {
     const {
       key,
       state: { query, primaryKeys, foreignKeys },
     } = this;
+
+    interface NestedCreateItem {
+      items: RecordUnknown[];
+      values: RecordUnknown[];
+    }
+
+    interface NestedCreateItems {
+      create?: NestedCreateItem;
+      connect?: NestedCreateItem;
+      connectOrCreate?: NestedCreateItem;
+    }
+
+    let nestedCreateItems: NestedCreateItems | undefined;
+
+    items.forEach((item) => {
+      const value = item[key] as NestedInsertOneItemCreate;
+      const kind = value.create
+        ? 'create'
+        : value.connect
+        ? 'connect'
+        : 'connectOrCreate';
+
+      if (kind) {
+        const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {
+          items: [],
+          values: [],
+        });
+        nestedCreateItem.items.push(item);
+        nestedCreateItem.values.push(value[kind] as RecordUnknown);
+
+        if (kind !== 'connect') {
+          for (const key of foreignKeys) {
+            item[key] = new RawSql('');
+          }
+        }
+      }
+    });
+
+    if (!nestedCreateItems) {
+      return;
+    }
 
     for (const key of foreignKeys) {
       if (!ctx.columns.has(key)) {
@@ -186,37 +229,62 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       }
     }
 
-    const value = item[key] as NestedInsertOneItemCreate;
-    if ('create' in value || 'connectOrCreate' in value) {
-      const asFn = setForeignKeysFromCte(item, primaryKeys, foreignKeys);
-
+    const { create, connect, connectOrCreate } = nestedCreateItems;
+    if (create) {
       const selectPKeys = query.select(...primaryKeys);
 
       _prependWith(
         q,
-        asFn,
-        'create' in value
-          ? _queryCreate(selectPKeys, value.create as never)
-          : _orCreate(
-              _queryWhere(selectPKeys, [
-                (value.connectOrCreate as { where: never }).where,
-              ]),
-              (value.connectOrCreate as { create: never }).create,
-            ),
+        (as) => {
+          const count = create.items.length;
+          foreignKeys.forEach((foreignKey, i) => {
+            const primaryKey = primaryKeys[i];
+            create.items.forEach((item, i) => {
+              (item[foreignKey] as RawSql)._sql = selectCteColumnFromManySql(
+                as,
+                primaryKey,
+                i,
+                count,
+              );
+            });
+          });
+        },
+        _queryInsertMany(selectPKeys, create.values),
       );
+    }
 
-      return;
-    } else if ('connect' in value) {
-      const as = getFreeAlias(q.q.withShapes, 'q');
-      _prependWith(q, as, query.select(...primaryKeys).findBy(value.connect));
+    if (connect) {
+      connect.values.forEach((value, itemI) => {
+        const as = getFreeAlias(q.q.withShapes, 'q');
+        _prependWith(q, as, query.select(...primaryKeys).findBy(value));
 
-      foreignKeys.map((foreignKey, i) => {
-        item[foreignKey] = new RawSql(
-          selectCteColumnMustExistSql(i, as, primaryKeys[i]),
+        foreignKeys.map((foreignKey, i) => {
+          connect.items[itemI][foreignKey] = new RawSql(
+            selectCteColumnMustExistSql(i, as, primaryKeys[i]),
+          );
+        });
+      });
+    }
+
+    if (connectOrCreate) {
+      connectOrCreate.values.forEach((value, itemI) => {
+        const asFn = setForeignKeysFromCte(
+          connectOrCreate.items[itemI],
+          primaryKeys,
+          foreignKeys,
+        );
+
+        const selectPKeys = query.select(...primaryKeys);
+
+        _prependWith(
+          q,
+          asFn,
+          _orCreate(
+            _queryWhere(selectPKeys, [(value as { where: never }).where]),
+            (value as { create: never }).create,
+          ),
         );
       });
-
-      return;
     }
   }
 
@@ -330,7 +398,13 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
       _prependWith(self, asFn, createQuery);
     } else if (params.update) {
-      _selectIfNotSelected(self, foreignKeys);
+      let appendedAs: string | undefined;
+      _hookSelectColumns(self, foreignKeys, (aliasedForeignKeys) => {
+        selectIdsSql._sql = selectCteColumnsSql(
+          appendedAs as string,
+          aliasedForeignKeys,
+        );
+      });
 
       const selectIdsSql = new RawSql('');
 
@@ -342,9 +416,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       // don't throw "not found" if it is not found for update
       updateQuery.q.returnType = 'value';
 
-      _appendQuery(self, updateQuery, (as) => {
-        selectIdsSql._sql = selectCteColumnsSql(as, foreignKeys);
-      });
+      _appendQuery(self, updateQuery, (as) => (appendedAs = as));
     } else if (params.upsert) {
       if (isQueryReturnsAll(self)) {
         throw new Error('`upsert` option is not allowed in a batch update');
@@ -369,7 +441,9 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
       _prependWith(self, asFn, upsertQuery);
     } else if (params.delete) {
-      _selectIfNotSelected(self, foreignKeys);
+      _hookSelectColumns(self, foreignKeys, (a) => {
+        console.log(a);
+      });
 
       disconnect(update, foreignKeys);
 

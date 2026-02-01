@@ -307,6 +307,10 @@ describe('relation-select', () => {
         it('should work when inserting a batch', async () => {
           setMaxBindingParams(5);
 
+          // Nested creates in a single query aren't supported together with the batch mode,
+          // it's too complex to support them together.
+          db.$qb.internal.nestedCreateBatchMax = 0;
+
           const q = db.user
             .insertMany([
               {

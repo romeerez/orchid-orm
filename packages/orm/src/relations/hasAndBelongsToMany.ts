@@ -187,12 +187,17 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
     this.nestedUpdate = nestedUpdate(state);
   }
 
-  create(q: Query, ctx: CreateCtx, item: RecordUnknown, rowIndex: number) {
+  create(
+    q: Query,
+    ctx: CreateCtx,
+    items: RecordUnknown[],
+    rowIndexes: number[],
+  ) {
     hasRelationHandleCreate(
       q,
       ctx,
-      item,
-      rowIndex,
+      items,
+      rowIndexes,
       this.key,
       this.state.primaryKeys,
       this.nestedInsert,

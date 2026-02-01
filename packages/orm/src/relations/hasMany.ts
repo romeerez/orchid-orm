@@ -34,6 +34,12 @@ import {
   prepareSubQueryForSql,
   PickQuerySelectableRelations,
   QueryHasWhere,
+  RawSql,
+  _hookSelectColumns,
+  _queryInsertMany,
+  _clone,
+  _appendQuery,
+  _queryUpsert,
 } from 'pqb';
 import {
   addAutoForeignKey,
@@ -47,7 +53,9 @@ import {
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
+  NestedInsertOneItemConnectOrCreate,
   NestedUpdateManyItems,
+  selectCteColumnFromManySql,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { HasOneOptions, HasOneParams, HasOneQueryThrough } from './hasOne';
@@ -168,16 +176,180 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     this.nestedUpdate = nestedUpdate(state);
   }
 
-  create(q: Query, ctx: CreateCtx, item: RecordUnknown, rowIndex: number) {
-    hasRelationHandleCreate(
-      q,
-      ctx,
-      item,
-      rowIndex,
-      this.key,
-      this.state.primaryKeys,
-      this.nestedInsert,
-    );
+  create(
+    self: Query,
+    ctx: CreateCtx,
+    items: RecordUnknown[],
+    rowIndexes: number[],
+    count: number,
+  ) {
+    if (count <= self.qb.internal.nestedCreateBatchMax) {
+      interface NestedCreateItem {
+        indexes: number[];
+        items: RecordUnknown[];
+        values: unknown[][];
+      }
+
+      interface NestedCreateItems {
+        create?: {
+          indexes: number[];
+          items: RecordUnknown[][];
+        };
+        connect?: NestedCreateItem;
+        connectOrCreate?: NestedCreateItem;
+      }
+
+      const { query: rel, primaryKeys, foreignKeys } = this.state;
+
+      let nestedCreateItems: NestedCreateItems | undefined;
+
+      items.forEach((item, i) => {
+        const value = item[this.key] as NestedInsertManyItems;
+
+        if (value.create?.length) {
+          const nestedCreateItem = ((nestedCreateItems ??= {}).create ??= {
+            indexes: [],
+            items: [],
+          });
+          nestedCreateItem.indexes.push(rowIndexes[i]);
+
+          const data = value.create.map((obj) => {
+            const data = { ...obj };
+            for (const key of foreignKeys) {
+              data[key] = new RawSql('');
+            }
+            return data;
+          });
+
+          nestedCreateItem.items.push(data);
+        } else {
+          const kind = value.connect?.length
+            ? 'connect'
+            : value.connectOrCreate?.length
+            ? 'connectOrCreate'
+            : undefined;
+
+          if (kind) {
+            const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {
+              indexes: [],
+              items: [],
+              values: [],
+            });
+            nestedCreateItem.indexes.push(rowIndexes[i]);
+            nestedCreateItem.values.push(value[kind] as unknown[]);
+
+            const data: RecordUnknown = {};
+            for (const key of foreignKeys) {
+              data[key] = new RawSql('');
+            }
+            nestedCreateItem.items.push(data);
+          }
+        }
+      });
+
+      if (!nestedCreateItems) {
+        return;
+      }
+
+      let createAs: string | undefined;
+      let connectAs: string | undefined;
+      let connectOrCreateAs: string | undefined;
+      _hookSelectColumns(self, primaryKeys, (aliasedPrimaryKeys) => {
+        foreignKeys.forEach((key, keyI) => {
+          const primaryKey = aliasedPrimaryKeys[keyI];
+
+          if (create && createAs) {
+            for (let i = 0; i < create.items.length; i++) {
+              const sql = selectCteColumnFromManySql(
+                createAs,
+                primaryKey,
+                create.indexes[i],
+                count,
+              );
+
+              for (const item of create.items[i]) {
+                (item[key] as RawSql)._sql = sql;
+              }
+            }
+          }
+
+          if (connect && connectAs) {
+            for (let i = 0; i < connect.items.length; i++) {
+              (connect.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  connectAs,
+                  primaryKey,
+                  connect.indexes[i],
+                  count,
+                );
+            }
+          }
+
+          if (connectOrCreate && connectOrCreateAs) {
+            for (let i = 0; i < connectOrCreate.items.length; i++) {
+              (connectOrCreate.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  connectOrCreateAs,
+                  primaryKey,
+                  connectOrCreate.indexes[i],
+                  count,
+                );
+            }
+          }
+        });
+      });
+
+      const { create, connect, connectOrCreate } = nestedCreateItems;
+
+      if (create) {
+        const query = _queryInsertMany(
+          _clone(rel),
+          create.items.flat() as never,
+        );
+
+        _appendQuery(self, query, (as) => (createAs = as));
+      }
+
+      if (connect) {
+        connect.values.forEach((value, i) => {
+          const query = _queryUpdateOrThrow(
+            rel.whereOneOf(...(value as never[])) as never,
+            connect.items[i] as never,
+          ) as Query;
+
+          query.q.ensureCount = value.length;
+
+          _appendQuery(self, query, (as) => (connectAs = as));
+        });
+      }
+
+      if (connectOrCreate) {
+        connectOrCreate.values.forEach((array, i) => {
+          const foreignKeyValues = connectOrCreate.items[i];
+          for (const value of array as NestedInsertOneItemConnectOrCreate[]) {
+            const query = _queryUpsert(rel.where(value.where) as never, {
+              update: foreignKeyValues,
+              create: {
+                ...value.create,
+                ...foreignKeyValues,
+              },
+            });
+
+            _appendQuery(self, query, (as) => (connectOrCreateAs = as));
+          }
+        });
+      }
+    } else {
+      hasRelationHandleCreate(
+        self,
+        ctx,
+        items,
+        rowIndexes,
+        this.key,
+        this.state.primaryKeys,
+        this.nestedInsert,
+      );
+    }
   }
 
   update(q: Query, set: RecordUnknown) {

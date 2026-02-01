@@ -255,16 +255,20 @@ export class PostgresJsAdapter implements AdapterBase {
     return (
       options
         ? this.sql.begin(options, (sql) =>
-            cb(new PostgresJsTransactionAdapter(this, sql)).then((res) => {
-              ok = true;
-              return (result = res);
-            }),
+            cb(new PostgresJsTransactionAdapter(this, sql as never)).then(
+              (res) => {
+                ok = true;
+                return (result = res);
+              },
+            ),
           )
         : this.sql.begin((sql) =>
-            cb(new PostgresJsTransactionAdapter(this, sql)).then((res) => {
-              ok = true;
-              return (result = res);
-            }),
+            cb(new PostgresJsTransactionAdapter(this, sql as never)).then(
+              (res) => {
+                ok = true;
+                return (result = res);
+              },
+            ),
           )
     ).catch((err) => {
       if (ok) return result;

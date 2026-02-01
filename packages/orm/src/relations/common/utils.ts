@@ -106,51 +106,53 @@ export const getSourceRelation = (
 export const hasRelationHandleCreate = (
   q: Query,
   ctx: CreateCtx,
-  item: RecordUnknown,
-  rowIndex: number,
+  items: RecordUnknown[],
+  rowIndexes: number[],
   key: string,
   primaryKeys: string[],
   nestedInsert: HasOneNestedInsert | HasManyNestedInsert,
 ) => {
-  const value = item[key] as NestedInsertItem;
-  if (
-    (!value.create ||
-      (Array.isArray(value.create) && value.create.length === 0)) &&
-    (!value.connect ||
-      (Array.isArray(value.connect) && value.connect.length === 0)) &&
-    (!value.connectOrCreate ||
-      (Array.isArray(value.connectOrCreate) &&
-        value.connectOrCreate.length === 0))
-  )
-    return;
-
-  const store = ctx as unknown as {
-    hasRelation?: Record<string, [number, NestedInsertItem][]>;
-  };
-
-  if (!store.hasRelation) store.hasRelation = {};
-
-  const values = [rowIndex, value] as [number, NestedInsertItem];
-
-  if (store.hasRelation[key]) {
-    store.hasRelation[key].push(values);
-    return;
-  }
-
   q.q.wrapInTransaction = true;
 
-  const relationData = [values];
-  store.hasRelation[key] = relationData;
+  items.forEach((item, i) => {
+    const value = item[key] as NestedInsertItem;
+    if (
+      (!value.create ||
+        (Array.isArray(value.create) && value.create.length === 0)) &&
+      (!value.connect ||
+        (Array.isArray(value.connect) && value.connect.length === 0)) &&
+      (!value.connectOrCreate ||
+        (Array.isArray(value.connectOrCreate) &&
+          value.connectOrCreate.length === 0))
+    )
+      return;
 
-  _queryHookAfterCreate(q, primaryKeys, (rows, q) =>
-    (nestedInsert as HasOneNestedInsert)(
-      q,
-      relationData.map(([rowIndex, data]) => [
-        rows[rowIndex],
-        data as NestedInsertOneItem,
-      ]),
-    ),
-  );
+    const store = ctx as unknown as {
+      hasRelation?: Record<string, [number, NestedInsertItem][]>;
+    };
+
+    if (!store.hasRelation) store.hasRelation = {};
+
+    const values = [rowIndexes[i], value] as [number, NestedInsertItem];
+
+    if (store.hasRelation[key]) {
+      store.hasRelation[key].push(values);
+      return;
+    }
+
+    const relationData = [values];
+    store.hasRelation[key] = relationData;
+
+    _queryHookAfterCreate(q, primaryKeys, (rows, q) =>
+      (nestedInsert as HasOneNestedInsert)(
+        q,
+        relationData.map(([rowIndex, data]) => [
+          rows[rowIndex],
+          data as NestedInsertOneItem,
+        ]),
+      ),
+    );
+  });
 };
 
 export const hasRelationHandleUpdate = (
@@ -343,3 +345,17 @@ export const selectCteColumnsSql = (cteAs: string, columns: string[]) =>
 
 export const selectCteColumnSql = (cteAs: string, column: string) =>
   `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;
+
+export const selectCteColumnFromManySql = (
+  cteAs: string,
+  column: string,
+  rowIndex: number,
+  count: number,
+) => {
+  let sql = `(SELECT "${cteAs}"."${column}" FROM "${cteAs}"`;
+  if (count > 1) {
+    sql += ` LIMIT 1`;
+    if (rowIndex) sql += ` OFFSET ${rowIndex}`;
+  }
+  return sql + ')';
+};

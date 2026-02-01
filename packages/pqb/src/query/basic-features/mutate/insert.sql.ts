@@ -717,19 +717,25 @@ export const makeReturningSql = (
 
     if (hookSelect) {
       for (const column of hookSelect) {
-        tempSelect.set(column, { select: column });
+        if (!tempSelect.has(column)) {
+          tempSelect.set(column, { select: column });
+        }
       }
     }
 
     if (otherCTEHookSelect) {
       for (const column of otherCTEHookSelect) {
-        tempSelect.set(column, { select: column });
+        if (!tempSelect.has(column)) {
+          tempSelect.set(column, { select: column });
+        }
       }
     }
 
     if (q.q.selectRelation) {
       for (const column of getPrimaryKeys(q as Query)) {
-        tempSelect.set(column, { select: column });
+        if (!tempSelect.has(column)) {
+          tempSelect.set(column, { select: column });
+        }
       }
     }
   }

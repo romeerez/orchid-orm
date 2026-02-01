@@ -298,6 +298,7 @@ export const selectToSqlList = (
           if (!isSubSql) {
             hookSelect.delete(column);
           }
+          item.onAs?.forEach((fn) => fn(columnName));
           continue;
         }
 
@@ -306,15 +307,19 @@ export const selectToSqlList = (
         item.as = name;
         item.temp = name;
         sql += ` "${name}"`;
+        item.onAs?.forEach((fn) => fn(name));
       } else if (selectedAs?.[columnName]) {
-        item.as = selectedAs[columnName];
+        const as = selectedAs[columnName];
+        item.as = as;
         item.temp = columnName;
+        item.onAs?.forEach((fn) => fn(as));
         continue;
       } else {
         if (col?.data.name || typeof select === 'object') {
           sql += ` "${columnName}"`;
         }
         item.temp = columnName;
+        item.onAs?.forEach((fn) => fn(column));
       }
 
       if (jsonList) jsonList[name] = col;

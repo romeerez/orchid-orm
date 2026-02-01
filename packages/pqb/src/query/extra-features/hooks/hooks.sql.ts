@@ -1,6 +1,7 @@
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { Column } from '../../../columns/column';
 import {
+  CteHooks,
   CteTableHook,
   HookSelect,
   TableHook,
@@ -16,6 +17,11 @@ export const addTableHook = (
   select?: HookSelect,
   hookPurpose?: HookPurpose,
 ): void => {
+  if (data.ensureCount !== undefined && ctx.cteName) {
+    const cteHooks = setCteHooks(ctx, true);
+    (cteHooks.ensureCount ??= {})[ctx.cteName] = data.ensureCount;
+  }
+
   const afterCreate = data.afterCreate;
   const afterUpdate = data.afterUpdate;
   const afterSave = data.afterSave;
@@ -73,27 +79,32 @@ export const addTableHook = (
       };
 
       const hasSelect = throwOnNotFound || !!tableHook.select;
-      if (
-        hasSelect &&
-        ctx.topCtx.selectList &&
-        ctx.topCtx === ctx.topCtx.topCtx &&
-        !ctx.topCtx.cteHookTopNullSelectAppended
-      ) {
-        ctx.topCtx.selectList.push('NULL');
-        ctx.topCtx.cteHookTopNullSelectAppended = true;
-      }
-
-      if (ctx.topCtx.cteHooks) {
-        if (hasSelect) ctx.topCtx.cteHooks.hasSelect = true;
-        ctx.topCtx.cteHooks.tableHooks[ctx.cteName] ??= item;
-      } else {
-        ctx.topCtx.cteHooks = {
-          hasSelect,
-          tableHooks: { [ctx.cteName]: item },
-        };
-      }
+      const cteHooks = setCteHooks(ctx, hasSelect);
+      cteHooks.tableHooks[ctx.cteName] ??= item;
     }
   } else {
     ctx.topCtx.tableHook = tableHook;
+  }
+};
+
+const setCteHooks = (ctx: ToSQLCtx, hasSelect: boolean): CteHooks => {
+  if (
+    hasSelect &&
+    ctx.topCtx.selectList &&
+    ctx.topCtx === ctx.topCtx.topCtx &&
+    !ctx.topCtx.cteHookTopNullSelectAppended
+  ) {
+    ctx.topCtx.selectList.push('NULL');
+    ctx.topCtx.cteHookTopNullSelectAppended = true;
+  }
+
+  if (ctx.topCtx.cteHooks) {
+    if (hasSelect) ctx.topCtx.cteHooks.hasSelect = true;
+    return ctx.topCtx.cteHooks;
+  } else {
+    return (ctx.topCtx.cteHooks = {
+      hasSelect,
+      tableHooks: {},
+    });
   }
 };

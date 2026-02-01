@@ -1,4 +1,4 @@
-import { Db, Query, omit } from 'pqb';
+import { Db, Query, omit, NotFoundError } from 'pqb';
 import {
   useRelationCallback,
   chatSelectAll,
@@ -7,6 +7,7 @@ import {
   messageRowToJSON,
   messageJSONBuildObject,
   userRowToJSON,
+  useQueryCounter,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
 import {
@@ -32,6 +33,18 @@ const ormParams = {
 };
 
 const activeMessageData = { ...MessageData, Active: true };
+
+const { resetQueriesCount, getQueriesCount } = useQueryCounter();
+
+const useMultiQueryNestedCreate = () => {
+  beforeAll(() => {
+    db.$qb.internal.nestedCreateBatchMax = 1;
+  });
+
+  afterAll(() => {
+    db.$qb.internal.nestedCreateBatchMax = 100;
+  });
+};
 
 describe('hasMany', () => {
   useTestORM();
@@ -997,6 +1010,8 @@ describe('hasMany', () => {
       it('should support create', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1016,6 +1031,8 @@ describe('hasMany', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
         assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
@@ -1030,6 +1047,8 @@ describe('hasMany', () => {
 
       it('should support create using `on`', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+
+        resetQueriesCount();
 
         const user = await db.user.create({
           ...UserData,
@@ -1050,6 +1069,8 @@ describe('hasMany', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
         assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
@@ -1062,8 +1083,10 @@ describe('hasMany', () => {
         });
       });
 
-      it('should support create in batch create', async () => {
+      const testCreateMany = async (queriesCount: number) => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+
+        resetQueriesCount();
 
         const user = await db.user.createMany([
           {
@@ -1103,6 +1126,8 @@ describe('hasMany', () => {
             },
           },
         ]);
+
+        expect(getQueriesCount()).toBe(queriesCount);
 
         assert.user(user[0], 'user 1');
         assert.user(user[1], 'user 2');
@@ -1123,10 +1148,24 @@ describe('hasMany', () => {
           text1: 'message 3',
           text2: 'message 4',
         });
+      };
+
+      it('should support create in batch create', async () => {
+        await testCreateMany(1);
+      });
+
+      describe('too many records', () => {
+        useMultiQueryNestedCreate();
+
+        it('should use a multi-query strategy when inserting too many records', async () => {
+          await testCreateMany(2);
+        });
       });
 
       it('should support create in batch create using `on`', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+
+        resetQueriesCount();
 
         const user = await db.user.createMany([
           {
@@ -1166,6 +1205,8 @@ describe('hasMany', () => {
             },
           },
         ]);
+
+        expect(getQueriesCount()).toBe(1);
 
         assert.user(user[0], 'user 1');
         assert.user(user[1], 'user 2');
@@ -1189,6 +1230,8 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty create list', async () => {
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1196,6 +1239,8 @@ describe('hasMany', () => {
             create: [],
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         assert.user(user, 'user 1');
       });
@@ -1209,6 +1254,8 @@ describe('hasMany', () => {
         it('should invoke callbacks', async () => {
           const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
+          resetQueriesCount();
+
           await db.user.create({
             ...UserData,
             messages: {
@@ -1219,7 +1266,9 @@ describe('hasMany', () => {
             },
           });
 
-          const ids = await db.message;
+          expect(getQueriesCount()).toBe(1);
+
+          const ids = await db.message.select('Id');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1230,6 +1279,8 @@ describe('hasMany', () => {
           resetMocks();
 
           const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+
+          resetQueriesCount();
 
           await db.user.createMany([
             {
@@ -1252,7 +1303,9 @@ describe('hasMany', () => {
             },
           ]);
 
-          const ids = await db.message;
+          expect(getQueriesCount()).toBe(1);
+
+          const ids = await db.message.select('Id');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1265,6 +1318,7 @@ describe('hasMany', () => {
       it('should support connect', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const sender = await db.user.create({ ...UserData, Name: 'tmp' });
+
         await db.message.createMany([
           {
             ChatId,
@@ -1280,6 +1334,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1294,6 +1350,8 @@ describe('hasMany', () => {
             ],
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         assert.user(user, 'user 1');
 
@@ -1325,6 +1383,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1340,6 +1400,8 @@ describe('hasMany', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
         assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
@@ -1352,7 +1414,41 @@ describe('hasMany', () => {
         });
       });
 
-      it('should support connect in batch create', async () => {
+      it('should fail if record for connect is not found', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const sender = await db.user.create({ ...UserData, Name: 'tmp' });
+        await db.message.createMany([
+          {
+            ChatId,
+            AuthorId: sender.Id,
+            Text: 'message 1',
+            Active: true,
+          },
+        ]);
+
+        resetQueriesCount();
+
+        await expect(
+          db.user.create({
+            ...UserData,
+            Name: 'user 1',
+            activeMessages: {
+              connect: [
+                {
+                  Text: 'message 1',
+                },
+                {
+                  Text: 'message 2',
+                },
+              ],
+            },
+          }),
+        ).rejects.toThrow(NotFoundError);
+
+        expect(getQueriesCount()).toBe(1);
+      });
+
+      const testConnectInCreateMany = async (queriesCount: number) => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const sender = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.message.createMany([
@@ -1377,6 +1473,8 @@ describe('hasMany', () => {
             Text: 'message 4',
           },
         ]);
+
+        resetQueriesCount();
 
         const user = await db.user.createMany([
           {
@@ -1409,6 +1507,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        expect(getQueriesCount()).toBe(queriesCount);
+
         assert.user(user[0], 'user 1');
         assert.user(user[1], 'user 2');
 
@@ -1427,6 +1527,18 @@ describe('hasMany', () => {
           ChatId,
           text1: 'message 3',
           text2: 'message 4',
+        });
+      };
+
+      it('should support connect in batch create', async () => {
+        await testConnectInCreateMany(1);
+      });
+
+      describe('too many records', () => {
+        useMultiQueryNestedCreate();
+
+        it('should use a multi-query strategy when inserting too many records', async () => {
+          await testConnectInCreateMany(3);
         });
       });
 
@@ -1460,6 +1572,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        resetQueriesCount();
+
         const user = await db.user.createMany([
           {
             ...UserData,
@@ -1491,6 +1605,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        expect(getQueriesCount()).toBe(1);
+
         assert.user(user[0], 'user 1');
         assert.user(user[1], 'user 2');
 
@@ -1513,6 +1629,8 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty connect list', async () => {
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1520,6 +1638,8 @@ describe('hasMany', () => {
             connect: [],
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         assert.user(user, 'user 1');
       });
@@ -1537,12 +1657,16 @@ describe('hasMany', () => {
             { ...MessageData, ChatId },
           ]);
 
+          resetQueriesCount();
+
           await db.user.create({
             ...UserData,
             messages: {
               connect: [{ Id: ids[0] }, { Id: ids[1] }],
             },
           });
+
+          expect(getQueriesCount()).toBe(1);
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -1563,6 +1687,7 @@ describe('hasMany', () => {
           ]);
 
           resetMocks();
+          resetQueriesCount();
 
           await db.user.createMany([
             {
@@ -1579,14 +1704,12 @@ describe('hasMany', () => {
             },
           ]);
 
-          expect(beforeUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toHaveBeenCalledTimes(2);
+          expect(getQueriesCount()).toBe(1);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toBeCalledWith(
-            [{ Id: ids[0] }, { Id: ids[1] }],
-            expect.any(Db),
-          );
-          expect(afterUpdate).toBeCalledWith(
-            [{ Id: ids[2] }, { Id: ids[3] }],
+            [{ Id: ids[0] }, { Id: ids[1] }, { Id: ids[2] }, { Id: ids[3] }],
             expect.any(Db),
           );
         });
@@ -1601,6 +1724,8 @@ describe('hasMany', () => {
           sender: { create: { ...UserData, Name: 'tmp' } },
           Text: 'message 1',
         });
+
+        resetQueriesCount();
 
         const user = await db.user.create({
           ...UserData,
@@ -1619,6 +1744,8 @@ describe('hasMany', () => {
           },
         });
 
+        expect(getQueriesCount()).toBe(1);
+
         assert.user(user, 'user 1');
 
         const messages = await db.message.order('Text');
@@ -1633,7 +1760,7 @@ describe('hasMany', () => {
         });
       });
 
-      it('should support connect or create in batch create', async () => {
+      const testConnectOrCreateInCreateMany = async (queriesCount: number) => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);
         const [{ Id: message1Id }, { Id: message4Id }] = await db.message
           .select('Id')
@@ -1649,6 +1776,8 @@ describe('hasMany', () => {
               Text: 'message 4',
             },
           ]);
+
+        resetQueriesCount();
 
         const users = await db.user.createMany([
           {
@@ -1685,6 +1814,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        expect(getQueriesCount()).toBe(queriesCount);
+
         assert.user(users[0], 'user 1');
         assert.user(users[1], 'user 2');
 
@@ -1707,6 +1838,18 @@ describe('hasMany', () => {
           text1: 'message 3',
           text2: 'message 4',
         });
+      };
+
+      it('should support connect or create in batch create', async () => {
+        await testConnectOrCreateInCreateMany(1);
+      });
+
+      describe('too many records', () => {
+        useMultiQueryNestedCreate();
+
+        it('should use a multi-query strategy when inserting too many records', async () => {
+          await testConnectOrCreateInCreateMany(6);
+        });
       });
 
       it('should connect or create using `on`', async () => {
@@ -1725,6 +1868,8 @@ describe('hasMany', () => {
           },
         ]);
 
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1741,6 +1886,8 @@ describe('hasMany', () => {
             ],
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         assert.user(user, 'user 1');
 
@@ -1759,6 +1906,8 @@ describe('hasMany', () => {
       });
 
       it('should ignore empty connectOrCreate list', async () => {
+        resetQueriesCount();
+
         const user = await db.user.create({
           ...UserData,
           Name: 'user 1',
@@ -1766,6 +1915,8 @@ describe('hasMany', () => {
             connectOrCreate: [],
           },
         });
+
+        expect(getQueriesCount()).toBe(1);
 
         assert.user(user, 'user 1');
       });
@@ -1786,6 +1937,8 @@ describe('hasMany', () => {
             { ...MessageData, ChatId },
           ]);
 
+          resetQueriesCount();
+
           await db.user.create({
             ...UserData,
             messages: {
@@ -1802,18 +1955,15 @@ describe('hasMany', () => {
             },
           });
 
-          expect(beforeUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toHaveBeenCalledTimes(2);
+          expect(getQueriesCount()).toBe(1);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toBeCalledWith(
             [
               {
                 Id: ids[0],
               },
-            ],
-            expect.any(Db),
-          );
-          expect(afterUpdate).toBeCalledWith(
-            [
               {
                 Id: ids[1],
               },
@@ -1826,6 +1976,7 @@ describe('hasMany', () => {
           const ChatId = await db.chat.get('IdOfChat').create(ChatData);
 
           resetMocks();
+          resetQueriesCount();
 
           await db.user.create({
             ...UserData,
@@ -1843,7 +1994,9 @@ describe('hasMany', () => {
             },
           });
 
-          const messages = await db.message;
+          expect(getQueriesCount()).toBe(1);
+
+          const messages = await db.message.select('Id');
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1858,6 +2011,7 @@ describe('hasMany', () => {
           ]);
 
           resetMocks();
+          resetQueriesCount();
 
           await db.user.createMany([
             {
@@ -1892,12 +2046,18 @@ describe('hasMany', () => {
             },
           ]);
 
-          expect(beforeUpdate).toHaveBeenCalledTimes(4);
-          expect(afterUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toBeCalledWith([{ Id: ids[0] }], expect.any(Db));
-          expect(afterUpdate).toBeCalledWith([{ Id: ids[1] }], expect.any(Db));
+          expect(getQueriesCount()).toBe(1);
 
-          const created = await db.message.whereNot({ Id: { in: ids } });
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toBeCalledWith(
+            [{ Id: ids[0] }, { Id: ids[1] }],
+            expect.any(Db),
+          );
+
+          const created = await db.message
+            .whereNot({ Id: { in: ids } })
+            .select('Id');
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toBeCalledWith(created, expect.any(Db));

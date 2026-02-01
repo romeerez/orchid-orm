@@ -1,4 +1,9 @@
-import { IsQuery, QueryOrExpression, QueryReturnType } from '../../query';
+import {
+  IsQuery,
+  Query,
+  QueryOrExpression,
+  QueryReturnType,
+} from '../../query';
 import { AfterCommitErrorHandler } from '../../basic-features/transaction/transaction';
 import { Column } from '../../../columns';
 import {
@@ -7,7 +12,7 @@ import {
   PickQueryShape,
 } from '../../pick-query-types';
 import { _clone } from '../../basic-features/clone/clone';
-import { RecordString, RecordUnknown } from '../../../utils';
+import { emptyArray, RecordString, RecordUnknown } from '../../../utils';
 import { QueryBatchResult } from '../../basic-features/select/select.utils';
 import {
   pushQueryValueImmutable,
@@ -75,6 +80,33 @@ export const _queryHookAfterQuery = <T extends PickQueryShape>(
   cb: QueryAfterHook,
 ): T => {
   return pushQueryValueImmutable(q as never, 'after', cb);
+};
+
+export const _hookSelectColumns = (
+  query: Query,
+  columns: string[],
+  asFn: (as: string[]) => void,
+) => {
+  const hookSelect = (query.q.hookSelect = new Map(
+    query.q.hookSelect && [...query.q.hookSelect],
+  ));
+
+  const aliases: string[] = [];
+  const addAlias = (as: string) => {
+    aliases.push(as);
+    if (aliases.length === columns.length) {
+      asFn(aliases);
+    }
+  };
+
+  for (const column of columns) {
+    const item = hookSelect.get(column);
+    hookSelect.set(column, {
+      ...item,
+      select: column,
+      onAs: [...(item?.onAs || emptyArray), addAlias],
+    });
+  }
 };
 
 export class QueryHookUtils<T extends PickQueryInputType> {

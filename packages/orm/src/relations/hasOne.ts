@@ -27,7 +27,6 @@ import {
   QueryHasWhere,
   QueryManyTake,
   QueryManyTakeOptional,
-  _queryCreate,
   RawSql,
   _appendQuery,
   _clone,
@@ -35,6 +34,8 @@ import {
   _queryWhereIn,
   _queryInsert,
   noop,
+  _queryInsertMany,
+  _hookSelectColumns,
 } from 'pqb';
 import { ORMTableInput } from '../baseTable';
 import {
@@ -45,7 +46,6 @@ import {
   RelationConfigSelf,
 } from './relations';
 import {
-  _selectIfNotSelected,
   addAutoForeignKey,
   getSourceRelation,
   getThroughRelation,
@@ -57,6 +57,7 @@ import {
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
+  selectCteColumnFromManySql,
   selectCteColumnSql,
   selectCteColumnsSql,
 } from './common/utils';
@@ -222,54 +223,143 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   create(
     self: Query,
     ctx: CreateCtx,
-    item: RecordUnknown,
-    rowIndex: number,
-    one?: boolean,
+    items: RecordUnknown[],
+    rowIndexes: number[],
+    count: number,
   ) {
-    if (one) {
-      const value = item[this.key] as NestedInsertOneItem;
-      if (!value.create && !value.connect && !value.connectOrCreate) {
-        return;
+    if (count <= self.qb.internal.nestedCreateBatchMax) {
+      interface NestedCreateItem {
+        indexes: number[];
+        items: RecordUnknown[];
+        values: RecordUnknown[];
+      }
+
+      interface NestedCreateItems {
+        create?: NestedCreateItem;
+        connect?: NestedCreateItem;
+        connectOrCreate?: NestedCreateItem;
       }
 
       const { query: rel, primaryKeys, foreignKeys } = this.state;
 
-      _selectIfNotSelected(self, primaryKeys);
+      let nestedCreateItems: NestedCreateItems | undefined;
 
-      const data = value.create ? { ...value.create } : {};
+      items.forEach((item, i) => {
+        const value = item[this.key] as NestedInsertOneItem;
+        const kind = value.create
+          ? 'create'
+          : value.connect
+          ? 'connect'
+          : 'connectOrCreate';
 
-      foreignKeys.forEach((key) => {
-        data[key] = new RawSql('');
+        if (kind) {
+          const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {
+            indexes: [],
+            items: [],
+            values: [],
+          });
+          nestedCreateItem.indexes.push(rowIndexes[i]);
+          nestedCreateItem.values.push(value[kind] as RecordUnknown);
+
+          const data = value.create ? { ...value.create } : {};
+
+          for (const key of foreignKeys) {
+            data[key] = new RawSql('');
+          }
+
+          nestedCreateItem.items.push(data);
+        }
       });
 
-      const query = value.create
-        ? _queryCreate(_clone(rel), data as never)
-        : value.connect
-        ? _queryUpdateOrThrow(
-            rel.where(value.connect as WhereArg<Query>) as never,
-            data as never,
-          )
-        : value.connectOrCreate
-        ? _queryUpsert(rel.where(value.connectOrCreate.where) as never, {
-            update: data,
-            create: {
-              ...value.connectOrCreate.create,
-              ...data,
-            },
-          })
-        : (undefined as never);
+      if (!nestedCreateItems) {
+        return;
+      }
 
-      _appendQuery(self, query, (as) => {
-        foreignKeys.forEach((key, i) => {
-          (data[key] as RawSql)._sql = selectCteColumnSql(as, primaryKeys[i]);
+      let createAs: string | undefined;
+      let connectAs: string | undefined;
+      let connectOrCreateAs: string | undefined;
+      _hookSelectColumns(self, primaryKeys, (aliasedPrimaryKeys) => {
+        foreignKeys.forEach((key, keyI) => {
+          const primaryKey = aliasedPrimaryKeys[keyI];
+
+          if (create && createAs) {
+            for (let i = 0; i < create.items.length; i++) {
+              (create.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  createAs,
+                  primaryKey,
+                  create.indexes[i],
+                  count,
+                );
+            }
+          }
+
+          if (connect && connectAs) {
+            for (let i = 0; i < connect.items.length; i++) {
+              (connect.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  connectAs,
+                  primaryKey,
+                  connect.indexes[i],
+                  count,
+                );
+            }
+          }
+
+          if (connectOrCreate && connectOrCreateAs) {
+            for (let i = 0; i < connectOrCreate.items.length; i++) {
+              (connectOrCreate.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  connectOrCreateAs,
+                  primaryKey,
+                  connectOrCreate.indexes[i],
+                  count,
+                );
+            }
+          }
         });
       });
+
+      const { create, connect, connectOrCreate } = nestedCreateItems;
+
+      if (create) {
+        const query = _queryInsertMany(_clone(rel), create.items as never);
+
+        _appendQuery(self, query, (as) => (createAs = as));
+      }
+
+      if (connect) {
+        connect.values.forEach((value, i) => {
+          const query = _queryUpdateOrThrow(
+            rel.where(value as never) as never,
+            connect.items[i] as never,
+          ) as Query;
+
+          query.q.ensureCount = 1;
+
+          _appendQuery(self, query, (as) => (connectAs = as));
+        });
+      }
+
+      if (connectOrCreate) {
+        connectOrCreate.values.forEach((value, i) => {
+          const query = _queryUpsert(rel.where(value.where as never) as never, {
+            update: connectOrCreate.items[i],
+            create: {
+              ...(value.create as RecordUnknown),
+              ...connectOrCreate.items[i],
+            },
+          });
+
+          _appendQuery(self, query, (as) => (connectOrCreateAs = as));
+        });
+      }
     } else {
       hasRelationHandleCreate(
         self,
         ctx,
-        item,
-        rowIndex,
+        items,
+        rowIndexes,
         this.key,
         this.state.primaryKeys,
         this.nestedInsert,
@@ -296,7 +386,22 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       params.set ||
       params.delete
     ) {
-      _selectIfNotSelected(self, primaryKeys);
+      let appendedAs: string | undefined;
+      _hookSelectColumns(self, primaryKeys, (aliasedPrimaryKeys) => {
+        selectIdsSql._sql = selectCteColumnsSql(
+          appendedAs as string,
+          aliasedPrimaryKeys,
+        );
+
+        if (params.create || params.set || params.upsert) {
+          foreignKeys.forEach((foreignKey, i) => {
+            (setIds[foreignKey] as RawSql)._sql = selectCteColumnSql(
+              appendedAs as string,
+              aliasedPrimaryKeys[i],
+            );
+          });
+        }
+      });
 
       const selectIdsSql = new RawSql('');
 
@@ -333,18 +438,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
       nullifyOrDeleteQuery.q.returnType = 'void';
 
-      _appendQuery(self, nullifyOrDeleteQuery, (as) => {
-        selectIdsSql._sql = selectCteColumnsSql(as, primaryKeys);
-
-        if (params.create || params.set || params.upsert) {
-          foreignKeys.forEach((foreignKey, i) => {
-            (setIds[foreignKey] as RawSql)._sql = selectCteColumnSql(
-              as,
-              primaryKeys[i],
-            );
-          });
-        }
-      });
+      _appendQuery(self, nullifyOrDeleteQuery, (as) => (appendedAs = as));
 
       if (params.create) {
         const createQuery = _queryInsert(_clone(relQuery), {

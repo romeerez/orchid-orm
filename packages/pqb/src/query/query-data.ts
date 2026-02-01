@@ -145,6 +145,7 @@ export interface QueryData
   returningMany?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
+  ensureCount?: number;
   with?: WithItems;
   withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;

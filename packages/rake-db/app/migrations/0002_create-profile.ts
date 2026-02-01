@@ -9,4 +9,12 @@ change(async (db) => {
     active: t.boolean().nullable(),
     ...t.timestamps(),
   }));
+
+  await db.createTable('schema.profilePic', (t) => ({
+    id: t.id(),
+    profilePicKey: t.text(),
+    profileId: t.integer().foreignKey('schema.profile', 'id').unique(),
+    url: t.text(),
+    ...t.timestamps(),
+  }));
 });

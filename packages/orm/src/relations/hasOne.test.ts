@@ -33,6 +33,16 @@ const { resetQueriesCount, getQueriesCount } = useQueryCounter();
 
 const activeProfileData = { ...ProfileData, Active: true };
 
+const useMultiQueryNestedCreate = () => {
+  beforeAll(() => {
+    db.$qb.internal.nestedCreateBatchMax = 1;
+  });
+
+  afterAll(() => {
+    db.$qb.internal.nestedCreateBatchMax = 100;
+  });
+};
+
 describe('hasOne', () => {
   it('should define foreign keys under autoForeignKeys option', () => {
     const BaseTable = createBaseTable({
@@ -811,7 +821,7 @@ describe('hasOne', () => {
         assert.activeProfile({ profile, Bio: 'profile' });
       });
 
-      it('should support create many', async () => {
+      const testCreateMany = async (queriesCount: number) => {
         const q = db.user.createMany([
           {
             ...UserData,
@@ -837,8 +847,7 @@ describe('hasOne', () => {
 
         const users = await q;
 
-        // create users + create profiles
-        expect(getQueriesCount()).toEqual(2);
+        expect(getQueriesCount()).toEqual(queriesCount);
 
         const profiles = await db.profile
           .where({
@@ -851,6 +860,87 @@ describe('hasOne', () => {
 
         assert.user({ user: users[1], Name: 'user 2' });
         assert.profile({ profile: profiles[1], Bio: 'profile 2' });
+      };
+
+      it('should support create many', async () => {
+        await testCreateMany(1);
+      });
+
+      describe('too many records', () => {
+        useMultiQueryNestedCreate();
+
+        it('should use a multi-query strategy when inserting too many records', async () => {
+          await testCreateMany(2);
+        });
+      });
+
+      it('should support deeply nested batch creates', async () => {
+        const q = db.user.insertMany([
+          {
+            ...UserData,
+            Name: 'user 1',
+            profile: {
+              create: {
+                ...ProfileData,
+                Bio: 'profile 1',
+                pic: {
+                  create: {
+                    Url: 'url 1',
+                  },
+                },
+              },
+            },
+          },
+          {
+            ...UserData,
+            Name: 'user 2',
+            profile: {
+              create: {
+                ...ProfileData,
+                Bio: 'profile 2',
+                pic: {
+                  create: {
+                    Url: 'url 2',
+                  },
+                },
+              },
+            },
+          },
+        ]);
+
+        const count = await q;
+
+        expect(getQueriesCount()).toEqual(1);
+
+        expect(count).toBe(2);
+
+        const data = await db.user.select('Name', {
+          profile: (q) =>
+            q.profile.select('Bio', {
+              pic: (q) => q.pic.select('Url'),
+            }),
+        });
+
+        expect(data).toEqual([
+          {
+            Name: 'user 1',
+            profile: {
+              Bio: 'profile 1',
+              pic: {
+                Url: 'url 1',
+              },
+            },
+          },
+          {
+            Name: 'user 2',
+            profile: {
+              Bio: 'profile 2',
+              pic: {
+                Url: 'url 2',
+              },
+            },
+          },
+        ]);
       });
 
       it('should create many using `on`', async () => {
@@ -879,8 +969,7 @@ describe('hasOne', () => {
 
         const users = await q;
 
-        // create users + create profiles
-        expect(getQueriesCount()).toEqual(2);
+        expect(getQueriesCount()).toEqual(1);
 
         const profiles = await db.profile
           .where({
@@ -937,8 +1026,7 @@ describe('hasOne', () => {
             },
           ]);
 
-          // create users + create profiles
-          expect(getQueriesCount()).toEqual(2);
+          expect(getQueriesCount()).toEqual(1);
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -961,6 +1049,7 @@ describe('hasOne', () => {
             },
           },
         });
+
         resetQueriesCount();
 
         const q = db.user.create({
@@ -981,6 +1070,24 @@ describe('hasOne', () => {
         assert.profile({ profile, Bio: 'profile' });
       });
 
+      it('should fail if record for connect is not found', async () => {
+        resetQueriesCount();
+
+        const q = db.user.create({
+          ...UserData,
+          Name: 'user',
+          profile: {
+            connect: { Bio: 'profile' },
+          },
+        });
+
+        const res = await q.catch((err) => err);
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(res).toEqual(expect.any(NotFoundError));
+      });
+
       it('should fail to connect when `on` condition does not match', async () => {
         await db.profile.create({
           Bio: 'profile',
@@ -991,6 +1098,7 @@ describe('hasOne', () => {
             },
           },
         });
+
         resetQueriesCount();
 
         const q = db.user.create({
@@ -1008,7 +1116,7 @@ describe('hasOne', () => {
         expect(res).toEqual(expect.any(NotFoundError));
       });
 
-      it('should support connect in batch create', async () => {
+      const testConnectInCreateMany = async (queriesCount: number) => {
         const user = await db.user.create({ ...UserData, Name: 'tmp' });
         await db.profile.createMany([
           {
@@ -1022,6 +1130,7 @@ describe('hasOne', () => {
             ProfileKey: user.UserKey,
           },
         ]);
+
         resetQueriesCount();
 
         const q = db.user.createMany([
@@ -1043,8 +1152,7 @@ describe('hasOne', () => {
 
         const users = await q;
 
-        // TODO: N+1 updates
-        expect(getQueriesCount()).toBe(3);
+        expect(getQueriesCount()).toBe(queriesCount);
 
         const profiles = await db.profile
           .where({
@@ -1057,6 +1165,18 @@ describe('hasOne', () => {
 
         assert.user({ user: users[1], Name: 'user 2' });
         assert.profile({ profile: profiles[1], Bio: 'profile 2' });
+      };
+
+      it('should support connect in batch create', async () => {
+        await testConnectInCreateMany(1);
+      });
+
+      describe('too many records', () => {
+        useMultiQueryNestedCreate();
+
+        it('should use a multi-query strategy when inserting too many records', async () => {
+          await testConnectInCreateMany(3);
+        });
       });
 
       it('should fail to connect when `on` condition does not match', async () => {
@@ -1082,8 +1202,7 @@ describe('hasOne', () => {
 
         const res = await q.catch((err) => err);
 
-        // user create + profile update
-        expect(getQueriesCount()).toBe(2);
+        expect(getQueriesCount()).toBe(1);
 
         expect(res).toEqual(expect.any(NotFoundError));
       });
@@ -1139,14 +1258,12 @@ describe('hasOne', () => {
             },
           ]);
 
-          // TODO: N+1 updates
-          expect(getQueriesCount()).toBe(3);
+          expect(getQueriesCount()).toBe(1);
 
-          expect(beforeUpdate).toHaveBeenCalledTimes(2);
-          expect(afterUpdate).toHaveBeenCalledTimes(2);
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate.mock.calls).toEqual([
-            [[{ Id: ids[0] }], expect.any(Db)],
-            [[{ Id: ids[1] }], expect.any(Db)],
+            [[{ Id: ids[0] }, { Id: ids[1] }], expect.any(Db)],
           ]);
         });
       });
@@ -1272,7 +1389,7 @@ describe('hasOne', () => {
         assert.activeProfile({ profile: profile2, Bio: 'profile 2' });
       });
 
-      it('should support connect or create many', async () => {
+      const testConnectOrCreateInCreateMany = async (queriesCount: number) => {
         const profileId = await db.profile.get('Id').create({
           Bio: 'profile 1',
           user: {
@@ -1308,8 +1425,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        // TODO: N+1
-        expect(getQueriesCount()).toBe(4);
+        expect(getQueriesCount()).toBe(queriesCount);
 
         const profile1 = await db.user.queryRelated('profile', user1);
         const profile2 = await db.user.queryRelated('profile', user2);
@@ -1320,6 +1436,18 @@ describe('hasOne', () => {
 
         assert.user({ user: user2, Name: 'user 2' });
         assert.profile({ profile: profile2, Bio: 'profile 2' });
+      };
+
+      it('should support connect or create many', async () => {
+        await testConnectOrCreateInCreateMany(1);
+      });
+
+      describe('too many records', () => {
+        useMultiQueryNestedCreate();
+
+        it('should use a multi-query strategy when inserting too many records', async () => {
+          await testConnectOrCreateInCreateMany(4);
+        });
       });
 
       it('should connect or create in batch create using `on`', async () => {
@@ -1372,8 +1500,7 @@ describe('hasOne', () => {
           },
         ]);
 
-        // TODO: N+1 updates
-        expect(getQueriesCount()).toBe(4);
+        expect(getQueriesCount()).toBe(1);
 
         const profile1 = await db.user.queryRelated('activeProfile', user1);
         const profile2 = await db.user.queryRelated('activeProfile', user2);
@@ -1471,12 +1598,11 @@ describe('hasOne', () => {
           },
         ]);
 
-        // TODO: N+1
-        expect(getQueriesCount()).toBe(4);
+        expect(getQueriesCount()).toBe(1);
 
-        const ids = await db.profile.pluck('Id');
+        const ids = (await db.profile.pluck('Id')).sort((a, b) => a - b);
 
-        expect(beforeUpdate).toHaveBeenCalledTimes(2);
+        expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toBeCalledWith([{ Id: ids[0] }], expect.any(Db));
 

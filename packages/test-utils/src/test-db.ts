@@ -199,6 +199,33 @@ export class ProfileTable extends BaseTable {
       through: 'activeUser',
       source: 'activeOnePost',
     }),
+
+    pic: this.hasOne(() => ProfilePicTable, {
+      columns: ['Id', 'ProfileKey'],
+      references: ['ProfileId', 'ProfilePicKey'],
+    }),
+  };
+}
+
+class ProfilePicTable extends BaseTable {
+  readonly table = 'profilePic';
+  columns = this.setColumns((t) => ({
+    Id: t.name('id').identity().primaryKey(),
+    ProfilePicKey: t.name('profile_pic_key').text(),
+    ProfileId: t
+      .name('profile_id')
+      .integer()
+      .unique()
+      .foreignKey(() => ProfileTable, 'Id'),
+    Url: t.name('url').text(),
+    ...t.timestamps(),
+  }));
+
+  relations = {
+    profile: this.belongsTo(() => ProfileTable, {
+      columns: ['ProfileId', 'ProfilePicKey'],
+      references: ['Id', 'ProfileKey'],
+    }),
   };
 }
 
@@ -505,6 +532,7 @@ export const db = orchidORMWithAdapter(
   {
     user: UserTable,
     profile: ProfileTable,
+    profilePic: ProfilePicTable,
     chat: ChatTable,
     message: MessageTable,
     post: PostTable,

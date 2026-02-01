@@ -362,19 +362,28 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
           result.text += ')';
         }
 
+        const keyValues = Object.entries(ctx.topCtx.cteHooks.tableHooks).map(
+          ([cteName, data]) =>
+            `'${cteName}', (SELECT json_agg(${makeRowToJson(
+              cteName,
+              data.shape,
+              false,
+              true,
+            )}) FROM "${cteName}")`,
+        );
+
+        if (ctx.topCtx.cteHooks.ensureCount) {
+          keyValues.push(
+            ...Object.entries(ctx.topCtx.cteHooks.ensureCount).map(
+              ([cteName, count]) =>
+                `'#${cteName}', CASE WHEN (SELECT count(*) FROM "${cteName}") < ${count} THEN (SELECT 'not-found')::int END`,
+            ),
+          );
+        }
+
         result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
           ctx.selectedCount || 0,
-        )}json_build_object(${Object.entries(ctx.topCtx.cteHooks.tableHooks)
-          .map(
-            ([cteName, data]) =>
-              `'${cteName}', (SELECT json_agg(${makeRowToJson(
-                cteName,
-                data.shape,
-                false,
-                true,
-              )}) FROM "${cteName}")`,
-          )
-          .join(', ')})`;
+        )}json_build_object(${keyValues.join(', ')})`;
       }
     }
   }

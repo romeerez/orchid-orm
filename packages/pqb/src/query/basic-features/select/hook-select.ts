@@ -10,6 +10,9 @@ export interface HasCteHooks {
 export interface CteHooks {
   hasSelect: boolean;
   tableHooks: CteTableHooks;
+  ensureCount?: {
+    [cteName: string]: number;
+  };
 }
 
 export interface CteTableHooks {
@@ -42,6 +45,7 @@ export interface HookSelectValue {
   select: string | { sql: string };
   as?: string;
   temp?: string;
+  onAs?: ((as: string) => void)[];
 }
 
 export interface HasTableHook {

@@ -31,9 +31,9 @@ export abstract class VirtualColumn<
   create?(
     q: CreateSelf,
     ctx: CreateCtx,
-    item: RecordUnknown,
-    rowIndex: number,
-    one?: boolean,
+    items: unknown[],
+    rowIndex: number[],
+    count: number,
   ): void;
 
   update?(q: UpdateSelf, set: RecordUnknown): void;

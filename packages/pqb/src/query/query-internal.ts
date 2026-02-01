@@ -51,4 +51,8 @@ export interface QueryInternal<
   // for select, where, join callbacks: memoize a query extended with relations, so query.relName is a relation query
   callbackArg?: Query;
   selectAllCount: number;
+  /**
+   * @see DbSharedOptions
+   */
+  nestedCreateBatchMax: number;
 }

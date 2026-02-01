@@ -294,6 +294,23 @@ export const createSelect = (q: Query) => {
   }
 };
 
+interface CreateHandler {
+  column: {
+    create(
+      query: CreateSelf,
+      ctx: CreateCtx,
+      items: RecordUnknown[],
+      rowIndexes: number[],
+      count: number,
+    ): void;
+  };
+  rowIndexes: number[];
+}
+
+interface CreateHandlers {
+  [columnName: string]: CreateHandler;
+}
+
 /**
  * Processes arguments of data to create.
  * If the passed key is for a {@link VirtualColumn}, calls `create` of the virtual column.
@@ -305,7 +322,7 @@ export const createSelect = (q: Query) => {
  * @param rowIndex - index of record's data in `createMany` args array.
  * @param ctx - context of create query to be shared with a {@link VirtualColumn}.
  * @param encoders - to collect `encode`s of columns.
- * @param one - whether it's for creating one record.
+ * @param createHandlers - collects column `create` functions per column having it, and collects row indexes having a value for this column
  */
 const processCreateItem = (
   q: CreateSelf,
@@ -313,7 +330,7 @@ const processCreateItem = (
   rowIndex: number,
   ctx: CreateCtx,
   encoders: RecordEncoder,
-  one?: boolean,
+  createHandlers: CreateHandlers,
 ) => {
   const { shape } = (q as Query).q;
   for (const key in item) {
@@ -321,13 +338,17 @@ const processCreateItem = (
     if (!column) continue;
 
     if (column.data.virtual) {
-      (column as VirtualColumn<ColumnSchemaConfig>).create?.(
-        q,
-        ctx,
-        item,
-        rowIndex,
-        one,
-      );
+      const virtual = column as VirtualColumn<ColumnSchemaConfig>;
+      if (virtual.create) {
+        if (createHandlers[key]) {
+          createHandlers[key].rowIndexes.push(rowIndex);
+        } else {
+          createHandlers[key] = {
+            column: virtual,
+            rowIndexes: [rowIndex],
+          } as CreateHandler;
+        }
+      }
       continue;
     }
 
@@ -357,6 +378,20 @@ const processCreateItem = (
       ctx.columns.set(key, ctx.columns.size);
       encoders[key] = column?.data.encode as FnUnknownToUnknown;
     }
+  }
+};
+
+const runCreateHandlers = (
+  q: CreateSelf,
+  ctx: CreateCtx,
+  data: RecordUnknown[],
+  createHandlers: CreateHandlers,
+) => {
+  const count = data.length;
+  for (const key in createHandlers) {
+    const { column, rowIndexes } = createHandlers[key];
+    const items = rowIndexes.map((i) => data[i]);
+    column.create(q, ctx, items, rowIndexes, count);
   }
 };
 
@@ -399,7 +434,11 @@ export const handleOneData = (
 
   data = defaults ? { ...defaults, ...data } : { ...data };
 
-  processCreateItem(q, data, 0, ctx, encoders, true);
+  const createHandlers: CreateHandlers = {};
+
+  processCreateItem(q, data, 0, ctx, encoders, createHandlers);
+
+  runCreateHandlers(q, ctx, [data], createHandlers);
 
   const columns = Array.from(ctx.columns.keys());
   const values = [
@@ -435,20 +474,26 @@ export const handleManyData = (
     defaults ? (item) => ({ ...defaults, ...item }) : (item) => ({ ...item }),
   );
 
-  data.forEach((item, i) => {
-    processCreateItem(q, item, i, ctx, encoders);
-  });
+  const createHandlers: CreateHandlers = {};
+
+  const len = data.length;
+  for (let i = 0; i < len; i++) {
+    processCreateItem(q, data[i], i, ctx, encoders, createHandlers);
+  }
+
+  runCreateHandlers(q, ctx, data, createHandlers);
 
   const values = Array(data.length);
   const columns = Array.from(ctx.columns.keys());
 
-  data.forEach((item, i) => {
+  for (let i = 0; i < len; i++) {
+    const item = data[i];
     (values as unknown[][])[i] = columns.map((key) =>
       encoders[key] && item[key] !== undefined && !isExpression(item[key])
         ? encoders[key](item[key])
         : item[key],
     );
-  });
+  }
 
   return { columns, values };
 };

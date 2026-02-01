@@ -122,6 +122,14 @@ export interface DbSharedOptions extends QueryLogOptions {
   };
   generatorIgnore?: GeneratorIgnore;
   schema?: QuerySchema;
+  /**
+   * For `hasMany` and `hasOne`:
+   * controls nested create|connect|connectOrCreate strategy in `createMany`.
+   * When creating many records <= this value, it will use a single query with CTEs.
+   * Otherwise, it will perform nested operations in separate queries in a transaction.
+   * A single query is more efficient on lower amount of records and on lower latency to a database.
+   */
+  nestedCreateBatchMax?: number;
 }
 
 export interface DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes>
@@ -848,6 +856,8 @@ export const _initQueryBuilder = (
     transactionStorage,
     commonOptions,
   );
+
+  qb.internal.nestedCreateBatchMax = options.nestedCreateBatchMax ?? 100;
 
   if (options.extensions) {
     const arr: DbExtension[] = [];
