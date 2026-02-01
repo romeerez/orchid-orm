@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.61.1
+
+### Patch Changes
+
+- 502b5ab: Optmize hasOne and hasMany nested create/connect/connectOrCreate
+
 ## 1.61.0
 
 ### Minor Changes
