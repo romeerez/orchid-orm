@@ -45,6 +45,7 @@ import {
   defaultSchemaConfig,
   Column,
   QueryHasWhere,
+  QuerySchema,
 } from 'pqb';
 import {
   addAutoForeignKey,
@@ -72,6 +73,7 @@ export interface HasAndBelongsToManyOptions<
   references: string[];
   foreignKey?: boolean | TableData.References.Options;
   through: {
+    schema?: QuerySchema;
     table: string;
     columns: string[];
     references: (keyof Related['columns']['shape'])[];
@@ -223,6 +225,7 @@ export const makeHasAndBelongsToManyMethod = (
   relation: HasAndBelongsToMany,
   relationName: string,
   query: Query,
+  schema?: QuerySchema,
 ): RelationData => {
   const { options } = relation;
   const { snakeCase } = table.internal;
@@ -288,6 +291,7 @@ export const makeHasAndBelongsToManyMethod = (
   baseQuery.shape = shape;
   baseQuery.q = {
     ...baseQuery.q,
+    schema: options.through.schema || schema,
     shape: baseQuery.shape,
   };
   const subQuery = Object.create(baseQuery) as Query;

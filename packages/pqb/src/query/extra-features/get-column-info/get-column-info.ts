@@ -1,7 +1,9 @@
 import { Column } from '../../../columns';
 import { PickQueryShape } from '../../pick-query-types';
-import { _clone } from '../../basic-features/clone/clone';
 import { QueryThenShallowSimplify } from '../../then/then';
+import { makeColumnInfoSql } from './get-column-info.sql';
+import { ToSQLQuery } from '../../sql/to-sql';
+import { _clone, Query } from 'pqb';
 
 /**
  * Result type for `columnInfo` method.
@@ -77,13 +79,10 @@ export function getColumnInfo<
   T extends PickQueryShape,
   Column extends keyof T['shape'] | undefined = undefined,
 >(query: T, column?: Column): SetQueryReturnsColumnInfo<T, Column> {
-  const q = _clone(query);
-  q.q.type = 'columnInfo';
-  q.q.returnType = 'all';
+  const q = Object.create(_clone(query)) as Query;
 
-  if (column) {
-    q.q.column = column as string;
-  }
+  q.toSQL = () =>
+    makeColumnInfoSql(query as unknown as ToSQLQuery, column as string);
 
   q.q.handleResult = (_, _t, result) => {
     if (column) {
@@ -98,5 +97,5 @@ export function getColumnInfo<
     }
   };
 
-  return q as unknown as SetQueryReturnsColumnInfo<T, Column>;
+  return q as never;
 }

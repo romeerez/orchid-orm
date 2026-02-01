@@ -42,10 +42,10 @@ describe('relation-select', () => {
         q.toSQL(),
         `
         SELECT "one"."one" "one", "one"."two" "two"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT "profile"."active" "one", "profile"."bio" "two"
-          FROM "profile"
+          FROM "schema"."profile"
           WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
         ) "one" ON true
         WHERE "one"."one" > $1
@@ -73,13 +73,13 @@ describe('relation-select', () => {
         q.toSQL(),
         `
           SELECT row_to_json("user".*) "user"
-          FROM "profile"
+          FROM "schema"."profile"
           LEFT JOIN LATERAL (
             SELECT "profile2"."profile" "profile", "profile2"."bio" "bio"
-            FROM "user"
+            FROM "schema"."user"
             LEFT JOIN LATERAL (
               SELECT "profile2"."active" "profile", "profile2"."bio" "bio"
-              FROM "profile" "profile2"
+              FROM "schema"."profile" "profile2"
               WHERE "profile2"."user_id" = "user"."id"
                 AND "profile2"."profile_key" = "user"."user_key"
             ) "profile2" ON true

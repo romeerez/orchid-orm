@@ -155,7 +155,11 @@ describe('transaction', () => {
 
       expect(log.mock.calls).toEqual([
         [expect.stringContaining(`BEGIN`)],
-        [expect.stringContaining(`SELECT ${userColumnsSql} FROM "user"`)],
+        [
+          expect.stringContaining(
+            `SELECT ${userColumnsSql} FROM "schema"."user"`,
+          ),
+        ],
         [expect.stringContaining(`SELECT 1 AS a`)],
         [expect.stringContaining(`COMMIT`)],
       ]);

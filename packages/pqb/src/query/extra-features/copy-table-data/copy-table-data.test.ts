@@ -31,7 +31,7 @@ describe('copy', () => {
         [method as 'from']: 'path-to-file',
       });
 
-      expectSql(q.toSQL(), `COPY "user" ${sql} 'path-to-file'`);
+      expectSql(q.toSQL(), `COPY "schema"."user" ${sql} 'path-to-file'`);
     });
 
     it(`should copy ${method} with options`, () => {
@@ -43,7 +43,7 @@ describe('copy', () => {
       expectSql(
         q.toSQL(),
         `
-        COPY "user"("name", "password")
+        COPY "schema"."user"("name", "password")
         ${sql} PROGRAM 'program'
         WITH (
           FORMAT csv,
@@ -70,16 +70,8 @@ describe('copy', () => {
 
       expectSql(
         q.toSQL(),
-        `COPY "snake"("snake_name", "tail_length") ${sql} 'path-to-file'`,
+        `COPY "schema"."snake"("snake_name", "tail_length") ${sql} 'path-to-file'`,
       );
-    });
-
-    it(`should copy ${method} with schema`, () => {
-      const q = copyTableData(User.withSchema('geo'), {
-        [method as 'from']: 'path-to-file',
-      });
-
-      expectSql(q.toSQL(), `COPY "geo"."user" ${sql} 'path-to-file'`);
     });
   });
 });

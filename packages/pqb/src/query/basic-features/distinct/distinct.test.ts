@@ -15,7 +15,7 @@ describe('distinct', () => {
 
     expectSql(
       q.distinct().toSQL(),
-      `SELECT DISTINCT ${userColumnsSql} FROM "user"`,
+      `SELECT DISTINCT ${userColumnsSql} FROM "schema"."user"`,
     );
 
     expectQueryNotMutated(q);
@@ -28,7 +28,7 @@ describe('distinct', () => {
       q.distinct('id', 'user.name').toSQL(),
       `
           SELECT DISTINCT ON ("user"."id", "user"."name") ${userColumnsSql}
-          FROM "user"
+          FROM "schema"."user"
         `,
     );
 
@@ -42,7 +42,7 @@ describe('distinct', () => {
       q.toSQL(),
       `
           SELECT DISTINCT ON ("snake"."snake_name", "snake"."tail_length") ${snakeSelectAll}
-          FROM "snake"
+          FROM "schema"."snake"
         `,
     );
   });
@@ -57,8 +57,8 @@ describe('distinct', () => {
         .toSQL(),
       `
           SELECT DISTINCT ON ("user"."id", "profile"."user_id") ${userTableColumnsSql}
-          FROM "user"
-          JOIN "profile" ON "profile"."user_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
         `,
     );
 
@@ -75,8 +75,8 @@ describe('distinct', () => {
       q.toSQL(),
       `
           SELECT DISTINCT ON ("user"."id", "snake"."tail_length") ${userTableColumnsSql}
-          FROM "user"
-          JOIN "snake" ON "snake"."tail_length" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id"
         `,
     );
   });
@@ -91,8 +91,8 @@ describe('distinct', () => {
         .toSQL(),
       `
           SELECT DISTINCT ON ("user"."id", "p"."user_id") ${userTableColumnsSql}
-          FROM "user"
-          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
     );
 
@@ -109,8 +109,8 @@ describe('distinct', () => {
       q.toSQL(),
       `
           SELECT DISTINCT ON ("user"."id", "s"."tail_length") ${userTableColumnsSql}
-          FROM "user"
-          JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."snake" "s" ON "s"."tail_length" = "user"."id"
         `,
     );
   });
@@ -120,7 +120,7 @@ describe('distinct', () => {
     expectSql(
       q.distinct(testDb.sql`"user".id`).toSQL(),
       `
-          SELECT DISTINCT ON ("user".id) ${userColumnsSql} FROM "user"
+          SELECT DISTINCT ON ("user".id) ${userColumnsSql} FROM "schema"."user"
         `,
     );
     expectQueryNotMutated(q);

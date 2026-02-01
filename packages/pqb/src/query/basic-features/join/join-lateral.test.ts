@@ -26,10 +26,10 @@ describe('joinLateral', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userTableColumnsSql} FROM "user"
+        SELECT ${userTableColumnsSql} FROM "schema"."user"
         JOIN LATERAL (
           SELECT ${messageColumnsSql}
-          FROM "message"
+          FROM "schema"."message"
           WHERE "message"."author_id" = "user"."id"
         ) "message" ON true
       `,
@@ -55,10 +55,10 @@ describe('joinLateral', () => {
       q.toSQL(),
       `
         SELECT "user"."id", "m"."createdAt"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "m"."text", "m"."created_at" "createdAt"
-          FROM "message" "m"
+          FROM "schema"."message" "m"
           WHERE "m"."text" = $1
             AND "user"."name" = $2
             AND "m"."author_id" = "user"."id"
@@ -91,10 +91,10 @@ describe('joinLateral', () => {
       q.toSQL(),
       `
         SELECT "user"."id", row_to_json("m".*) "m"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT ${messageColumnsSql}
-          FROM "message" "m"
+          FROM "schema"."message" "m"
           WHERE "m"."author_id" = "user"."id"
           ORDER BY "m"."created_at" DESC
         ) "m" ON true
@@ -130,10 +130,10 @@ describe('joinLateral', () => {
       q.toSQL(),
       `
         SELECT "user"."id", "m"."text"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT ${messageColumnsSql}
-          FROM "message" "m"
+          FROM "schema"."message" "m"
         ) "m" ON true
       `,
     );
@@ -154,10 +154,10 @@ describe('joinLateral', () => {
       q.toSQL(),
       `
         SELECT "user"."id", row_to_json("m".*) "m"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT ${messageColumnsSql}
-          FROM "message" "m"
+          FROM "schema"."message" "m"
         ) "m" ON true
       `,
     );

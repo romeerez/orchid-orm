@@ -17,11 +17,11 @@ describe('append-query', () => {
       q.toSQL(),
       `
         WITH q AS (
-          SELECT "main"."name" "Name" FROM "user" "main"
+          SELECT "main"."name" "Name" FROM "schema"."user" "main"
           WHERE "main"."name" = $1
         ), "q2" AS (
           SELECT "user"."age" "Age"
-          FROM "user"
+          FROM "schema"."user"
           WHERE "user"."name" = "main"."Name"
         )
         SELECT * FROM q
@@ -63,11 +63,11 @@ describe('append-query', () => {
       q.toSQL(),
       `
         WITH q AS (
-          SELECT "user"."id" "one" FROM "user"
+          SELECT "user"."id" "one" FROM "schema"."user"
         ), "q2" AS (
-          SELECT "user"."id" "two" FROM "user"
+          SELECT "user"."id" "two" FROM "schema"."user"
         ), "q3" AS (
-          SELECT "user"."id" "three" FROM "user"
+          SELECT "user"."id" "three" FROM "schema"."user"
         )
         SELECT * FROM q
       `,
@@ -98,11 +98,11 @@ describe('append-query', () => {
       q.toSQL(),
       `
         WITH "user" AS (
-          INSERT INTO "user"("name", "user_key", "password")
+          INSERT INTO "schema"."user"("name", "user_key", "password")
           VALUES ($1, $2, $3)
           RETURNING NULL
         ), "q" AS (
-          SELECT "user"."id" FROM "user" LIMIT 1
+          SELECT "user"."id" FROM "schema"."user" LIMIT 1
         )
         SELECT FROM "user"
       `,

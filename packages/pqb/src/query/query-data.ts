@@ -49,8 +49,8 @@ import {
   OnConflictSet,
   OnConflictTarget,
 } from './basic-features/mutate/insert.sql';
-import { CopyOptions } from './extra-features/copy-table-data/copy-table-data.sql';
 import { QueryLogger, QueryLogObject } from './basic-features/log/log';
+import { QuerySchema } from './basic-features/schema/schema';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: Column.Shape.QueryInit;
@@ -122,10 +122,7 @@ export type QueryType =
   | 'upsert'
   | 'insert'
   | 'update'
-  | 'delete'
-  | 'truncate'
-  | 'columnInfo'
-  | 'copy';
+  | 'delete';
 
 export interface AsFn {
   (as: string): void;
@@ -160,7 +157,7 @@ export interface QueryData
   // to select values with `get` or aggregate them when they were joined inside `select`.
   // joined table name is implicit in such a case.
   valuesJoinedAs?: RecordString;
-  schema?: string;
+  schema?: QuerySchema;
   select?: SelectItem[];
   selectRelation?: boolean;
   selectCache?: { sql: string; aliases: string[] };
@@ -320,19 +317,6 @@ export interface QueryData
   /** update **/
 
   updateData: UpdateQueryDataItem[];
-
-  /** truncate **/
-
-  restartIdentity?: boolean;
-  cascade?: boolean;
-
-  /** column info **/
-
-  column?: string;
-
-  /** copy **/
-
-  copy: CopyOptions;
 }
 
 export type InsertQueryDataObjectValues = unknown[][];

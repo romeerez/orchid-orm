@@ -15,6 +15,7 @@ import {
   RelationJoinQuery,
   RelationsBase,
   Column,
+  QuerySchema,
 } from 'pqb';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {
@@ -129,6 +130,7 @@ export const applyRelations = (
   qb: Query,
   tables: Record<string, ORMTableInput>,
   result: OrchidORM,
+  schema?: QuerySchema,
 ) => {
   const tableEntries = Object.entries(tables);
 
@@ -193,7 +195,7 @@ export const applyRelations = (
         }
       }
 
-      applyRelation(table, qb, data, delayedRelations);
+      applyRelation(table, qb, data, delayedRelations, schema);
     }
   }
 
@@ -260,6 +262,7 @@ const applyRelation = (
   qb: Query,
   { relationName, relation, dbTable, otherDbTable }: ApplyRelationData,
   delayedRelations: DelayedRelations,
+  schema?: QuerySchema,
 ) => {
   const baseQuery = Object.create(otherDbTable);
   baseQuery.baseQuery = baseQuery;
@@ -289,6 +292,7 @@ const applyRelation = (
       relation,
       relationName,
       query,
+      schema,
     );
   } else {
     throw new Error(`Unknown relation type ${type}`);
@@ -337,6 +341,6 @@ const applyRelation = (
   if (!tableRelations) return;
 
   tableRelations[relationName]?.forEach((data) => {
-    applyRelation(table, qb, data, delayedRelations);
+    applyRelation(table, qb, data, delayedRelations, schema);
   });
 };

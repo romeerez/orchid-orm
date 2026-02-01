@@ -150,11 +150,16 @@ describe('transform', () => {
     });
 
     it('should transform relation that does not have parsers', async () => {
-      const User = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-      }));
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.text(),
+          password: t.text(),
+        }),
+        undefined,
+        { schema: () => 'schema' },
+      );
 
       const q = User.select('id', {
         users: () =>

@@ -26,7 +26,7 @@ describe('merge queries', () => {
 
       assertType<Awaited<typeof q>, { id: number }[]>();
 
-      expectSql(q.toSQL(), `SELECT "user"."id" FROM "user"`);
+      expectSql(q.toSQL(), `SELECT "user"."id" FROM "schema"."user"`);
     });
 
     it('should merge selects when both have it', () => {
@@ -34,7 +34,10 @@ describe('merge queries', () => {
 
       assertType<Awaited<typeof q>, { id: number; name: string }[]>();
 
-      expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+      expectSql(
+        q.toSQL(),
+        `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+      );
     });
   });
 
@@ -52,7 +55,10 @@ describe('merge queries', () => {
       assertType<typeof q.returnType, 'oneOrThrow'>();
       assertType<Awaited<typeof q>, UserRecord>();
 
-      expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user" LIMIT 1`);
+      expectSql(
+        q.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`,
+      );
     });
 
     it('should prefer right return type', () => {
@@ -61,7 +67,7 @@ describe('merge queries', () => {
       assertType<typeof q.returnType, 'all'>();
       assertType<Awaited<typeof q>, UserRecord[]>();
 
-      expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
+      expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "schema"."user"`);
     });
   });
 
@@ -73,7 +79,7 @@ describe('merge queries', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."id" = $1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."id" = $1`,
         [1],
       );
     });
@@ -88,7 +94,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WHERE "user"."id" = $1 AND "user"."name" = $2 AND "user"."id" = $3
         `,
         [1, 'name', 2],
@@ -107,8 +113,8 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."author_id" = "user"."id"
+          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -123,8 +129,8 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."author_id" = "user"."id"
+          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -143,9 +149,9 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."author_id" = "user"."id"
-          JOIN "profile" ON "profile"."user_id" = "user"."id"
+          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
         `,
       );
     });
@@ -164,7 +170,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WINDOW "w" AS (PARTITION BY "user"."id")
         `,
       );
@@ -184,7 +190,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WINDOW "w" AS (PARTITION BY "user"."id")
         `,
       );
@@ -208,7 +214,7 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WINDOW "a" AS (PARTITION BY "user"."id"),
                  "b" AS (PARTITION BY "user"."name")
         `,
@@ -236,9 +242,9 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "withAlias" AS (
-            SELECT "user"."id" FROM "user"
+            SELECT "user"."id" FROM "schema"."user"
           )
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
         `,
       );
     });
@@ -262,9 +268,9 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "withAlias" AS (
-            SELECT "user"."id" FROM "user"
+            SELECT "user"."id" FROM "schema"."user"
           )
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
         `,
       );
     });
@@ -293,11 +299,11 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "a" AS (
-            SELECT "user"."id" FROM "user"
+            SELECT "user"."id" FROM "schema"."user"
           ), "b" AS (
-            SELECT "user"."name" FROM "user"
+            SELECT "user"."name" FROM "schema"."user"
           )
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
         `,
       );
     });
@@ -423,14 +429,6 @@ describe('merge queries', () => {
       q1.afterDeleteSelect = new Set(['one']);
       q2.afterDeleteSelect = new Set(['two']);
 
-      q1.restartIdentity = false;
-      q2.restartIdentity = true;
-      q1.cascade = false;
-      q2.cascade = true;
-
-      q1.column = 'id';
-      q2.column = 'name';
-
       const { q } = query1.merge(query2);
       expect(q.shape).toEqual({
         number: q1.shape.number,
@@ -499,11 +497,6 @@ describe('merge queries', () => {
       expect(q.beforeDelete).toEqual([...q1.beforeDelete, ...q2.beforeDelete]);
       expect(q.afterDelete).toEqual([...q1.afterDelete, ...q2.afterDelete]);
       expect(q.afterDeleteSelect).toEqual(new Set(['one', 'two']));
-
-      expect(q.restartIdentity).toBe(q2.restartIdentity);
-      expect(q.cascade).toBe(q2.cascade);
-
-      expect(q.column).toBe(q2.column);
     });
   });
 });

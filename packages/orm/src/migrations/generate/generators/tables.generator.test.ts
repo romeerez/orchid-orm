@@ -54,12 +54,12 @@ describe('tables', () => {
     await arrange({
       tables: [
         class One extends BaseTable {
-          schema = 'schema';
+          schema = () => 'schema';
           table = 'table';
           noPrimaryKey = true;
         },
         class Two extends BaseTable {
-          schema = 'schema';
+          schema = () => 'schema';
           table = 'table';
           noPrimaryKey = true;
         },
@@ -81,7 +81,7 @@ describe('tables', () => {
         },
         tables: [
           class One extends BaseTable {
-            schema = 'schema';
+            schema = () => 'schema';
             table = 'one';
             comment = 'table comment';
             noPrimaryKey = true;

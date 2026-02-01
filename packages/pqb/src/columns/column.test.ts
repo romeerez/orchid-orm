@@ -1,10 +1,5 @@
 import { Column } from './column';
-import {
-  profileData,
-  User,
-  userData,
-  UserRecord,
-} from '../test-utils/pqb.test-utils';
+import { profileData, userData } from '../test-utils/pqb.test-utils';
 import { createDbWithAdapter } from '../query/db';
 import { columnCode, ColumnToCodeCtx } from './code';
 import { Code } from './code';
@@ -18,6 +13,9 @@ import {
   testSchemaConfig,
   useTestDatabase,
   testZodColumnTypes as t,
+  db,
+  UserData,
+  User,
 } from 'test-utils';
 import { raw } from '../query/expressions/raw-sql';
 import { Operators } from './operators';
@@ -73,21 +71,28 @@ describe('column type', () => {
       let createColumns: string[] | undefined;
       let updateColumns: string[] | undefined;
 
-      const User = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.string().setOnCreate(({ columns }) => {
-          createColumns = columns;
-          return 'set on create';
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.string().setOnCreate(({ columns }) => {
+            createColumns = columns;
+            return 'set on create';
+          }),
+          password: t.string().setOnUpdate(({ columns }) => {
+            updateColumns = columns;
+            return 'set on update';
+          }),
+          picture: t
+            .string()
+            .nullable()
+            .setOnSave(() => 'set on save'),
         }),
-        password: t.string().setOnUpdate(({ columns }) => {
-          updateColumns = columns;
-          return 'set on update';
-        }),
-        picture: t
-          .string()
-          .nullable()
-          .setOnSave(() => 'set on save'),
-      }));
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const user = await User.create({
         name: 'name',
@@ -107,24 +112,31 @@ describe('column type', () => {
       let createColumns: string[] | undefined;
       let updateColumns: string[] | undefined;
 
-      const User = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.string().setOnCreate(({ columns }) => {
-          createColumns = columns;
-          return 'set on create';
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.string().setOnCreate(({ columns }) => {
+            createColumns = columns;
+            return 'set on create';
+          }),
+          password: t.string().setOnUpdate(({ columns }) => {
+            updateColumns = columns;
+            return 'set on update';
+          }),
+          picture: t
+            .string()
+            .nullable()
+            .setOnSave(() => 'set on save'),
         }),
-        password: t.string().setOnUpdate(({ columns }) => {
-          updateColumns = columns;
-          return 'set on update';
-        }),
-        picture: t
-          .string()
-          .nullable()
-          .setOnSave(() => 'set on save'),
-      }));
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const id = await testDb.query
-        .get<number>`INSERT INTO "user"("name", "password") VALUES ('name', 'password') RETURNING "id"`;
+        .get<number>`INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password') RETURNING "id"`;
 
       const updated = await User.find(id)
         .update({
@@ -145,15 +157,22 @@ describe('column type', () => {
     });
 
     it('should not override values when returning undefined', async () => {
-      const User = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.string().setOnCreate(() => undefined),
-        password: t.string().setOnUpdate(() => undefined),
-        picture: t
-          .string()
-          .nullable()
-          .setOnSave(() => undefined),
-      }));
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.string().setOnCreate(() => undefined),
+          password: t.string().setOnUpdate(() => undefined),
+          picture: t
+            .string()
+            .nullable()
+            .setOnSave(() => undefined),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const user = await User.create({
         name: 'name',
@@ -167,7 +186,7 @@ describe('column type', () => {
       });
 
       const id = await testDb.query
-        .get<number>`INSERT INTO "user"("name", "password") VALUES ('n', 'p') RETURNING "id"`;
+        .get<number>`INSERT INTO "schema"."user"("name", "password") VALUES ('n', 'p') RETURNING "id"`;
 
       const updated = await User.find(id)
         .update({
@@ -235,11 +254,18 @@ describe('column type', () => {
     });
 
     test('table with select(false) column should omit from select it by default', () => {
-      const User = testDb('user', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text().select(false),
-      }));
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.serial().primaryKey(),
+          name: t.text(),
+          password: t.text().select(false),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const q = User.all();
 
@@ -248,17 +274,24 @@ describe('column type', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "id", "name" FROM "user"
+          SELECT "id", "name" FROM "schema"."user"
         `,
       );
     });
 
     test('table with hidden column still allows to select it', () => {
-      const User = testDb('user', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text().select(false),
-      }));
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.serial().primaryKey(),
+          name: t.text(),
+          password: t.text().select(false),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const q = User.select('id', 'name', 'password');
 
@@ -274,7 +307,7 @@ describe('column type', () => {
             "user"."id",
             "user"."name",
             "user"."password"
-          FROM "user"
+          FROM "schema"."user"
         `,
       );
     });
@@ -313,19 +346,26 @@ describe('column type', () => {
     });
 
     it('should not override the type to search records with', () => {
-      const table = testDb('table', (t) => ({
-        id: t.serial(),
-        column: t.text().parse(parseInt).primaryKey(),
-      }));
+      const table = testDb(
+        'table',
+        (t) => ({
+          id: t.serial(),
+          column: t.text().parse(parseInt).primaryKey(),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const q = table.findBy({ column: 'text' });
       assertType<Awaited<typeof q>, { id: number; column: number }>();
     });
 
     describe('parsing columns', () => {
-      let user = {} as UserRecord;
+      let user = {} as User;
       beforeEach(async () => {
-        user = await User.create(userData);
+        user = await db.user.create(UserData);
       });
 
       it('should return column data as returned from db if not set', async () => {
@@ -334,10 +374,17 @@ describe('column type', () => {
           adapter: testAdapter,
         });
 
-        const UserWithPlainTimestamp = db('user', (t) => ({
-          id: t.serial().primaryKey(),
-          createdAt: t.timestampNoTZ(),
-        }));
+        const UserWithPlainTimestamp = db(
+          'user',
+          (t) => ({
+            id: t.serial().primaryKey(),
+            createdAt: t.timestampNoTZ(),
+          }),
+          undefined,
+          {
+            schema: () => 'schema',
+          },
+        );
 
         expect(typeof (await UserWithPlainTimestamp.take()).createdAt).toBe(
           'string',
@@ -345,25 +392,36 @@ describe('column type', () => {
       });
 
       it('should parse all columns', async () => {
-        expect((await User.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await User.take()).createdAt instanceof Date).toBe(true);
-        const idx = Object.keys(User.q.shape).indexOf('createdAt');
-        expect((await User.rows())[0][idx] instanceof Date).toBe(true);
+        expect((await db.user.all())[0].createdAt instanceof Date).toBe(true);
+        expect((await db.user.take()).createdAt instanceof Date).toBe(true);
+        const idx = Object.keys(db.user.q.shape).indexOf('createdAt');
+        expect((await db.user.rows())[0][idx] instanceof Date).toBe(true);
       });
 
       it('should parse joined record columns', async () => {
-        const ProfileWithoutTimestamps = testDb('profile', (t) => ({
-          id: t.identity().primaryKey(),
-          userId: t.integer().foreignKey('user', 'id'),
-          bio: t.text().nullable(),
-        }));
+        const ProfileWithoutTimestamps = testDb(
+          'profile',
+          (t) => ({
+            id: t.identity().primaryKey(),
+            userId: t.integer().foreignKey('user', 'id'),
+            bio: t.text().nullable(),
+          }),
+          undefined,
+          {
+            schema: () => 'schema',
+          },
+        );
 
         await ProfileWithoutTimestamps.create({
           ...profileData,
-          userId: user.id,
+          userId: user.Id,
         });
 
-        const result = await ProfileWithoutTimestamps.join(User, 'id', 'userId')
+        const result = await ProfileWithoutTimestamps.join(
+          db.user,
+          'Id',
+          'userId',
+        )
           .select('*', { user: 'user.*' })
           .take();
 
@@ -427,7 +485,7 @@ describe('column type', () => {
   });
 
   describe('as', () => {
-    const db = createDbWithAdapter({
+    const dbNoZod = createDbWithAdapter({
       snakeCase: true,
       adapter: testAdapter,
       columnTypes: (t) => ({
@@ -460,21 +518,35 @@ describe('column type', () => {
       }),
     });
 
-    const UserWithCustomTimestamps = db('user', (t) => ({
-      id: t.serial().primaryKey(),
-      name: t.text(),
-      password: t.text(),
-      createdAt: t.numberTimestamp(),
-      updatedAt: t.dateTimestamp(),
-    }));
+    const UserWithCustomTimestamps = dbNoZod(
+      'user',
+      (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        createdAt: t.numberTimestamp(),
+        updatedAt: t.dateTimestamp(),
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
-    const UserWithCustomTimestampsZod = dbZod('user', (t) => ({
-      id: t.serial().primaryKey(),
-      name: t.text(),
-      password: t.text(),
-      createdAt: t.numberTimestamp(),
-      updatedAt: t.dateTimestamp(),
-    }));
+    const UserWithCustomTimestampsZod = dbZod(
+      'user',
+      (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        createdAt: t.numberTimestamp(),
+        updatedAt: t.dateTimestamp(),
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
     const userColumnsSql =
       UserWithCustomTimestamps.q.selectAllColumns!.join(', ');
@@ -523,7 +595,7 @@ describe('column type', () => {
       });
 
       it('should parse correctly', async () => {
-        const id = await User.get('id').create(userData);
+        const id = await db.user.get('Id').create(UserData);
 
         const user = await table.find(id);
 
@@ -544,7 +616,7 @@ describe('column type', () => {
         expectSql(
           query.toSQL(),
           `
-          INSERT INTO "user"("name", "password", "created_at", "updated_at")
+          INSERT INTO "schema"."user"("name", "password", "created_at", "updated_at")
           VALUES ($1, $2, $3, $4)
           RETURNING ${userColumnsSql}
         `,
@@ -553,7 +625,7 @@ describe('column type', () => {
       });
 
       it('should encode columns for update', async () => {
-        const id = await User.get('id').create(userData);
+        const id = await db.user.get('Id').create(UserData);
         const createdAt = Date.now();
         const updatedAt = new Date();
 
@@ -565,7 +637,7 @@ describe('column type', () => {
         expectSql(
           query.toSQL(),
           `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "created_at" = $1, "updated_at" = $2
           WHERE "user"."id" = $3
         `,
@@ -681,14 +753,21 @@ describe('column type', () => {
 
   describe('default', () => {
     it('should accept `inputType` that may be overridden by `encode`', () => {
-      testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        balance: t
-          .decimal()
-          .encode((value: string | number) => '100' + String(value))
-          // the column `type` is `string`, but default should accept `inputType` = `string | number`
-          .default(500),
-      }));
+      testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          balance: t
+            .decimal()
+            .encode((value: string | number) => '100' + String(value))
+            // the column `type` is `string`, but default should accept `inputType` = `string | number`
+            .default(500),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
     });
 
     it('should have toCode', () => {
@@ -717,17 +796,24 @@ describe('column type', () => {
     });
 
     it('should encode lazy default value with the encoding function from the column', async () => {
-      const User = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-        data: t.json().default(() => ['foo']),
-      }));
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.text(),
+          password: t.text(),
+          data: t.json().default(() => ['foo']),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const q = User.insert(userData);
       expectSql(
         q.toSQL(),
-        `INSERT INTO "user"("name", "password", "data") VALUES ($1, $2, $3)`,
+        `INSERT INTO "schema"."user"("name", "password", "data") VALUES ($1, $2, $3)`,
         [userData.name, userData.password, '["foo"]'],
       );
     });
@@ -735,10 +821,17 @@ describe('column type', () => {
 
   describe('hasDefault', () => {
     it('should allow omitting the column from create', () => {
-      const User = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text().hasDefault(),
-      }));
+      const User = testDb(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          name: t.text().hasDefault(),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       User.create({});
     });
@@ -962,10 +1055,17 @@ describe('column type', () => {
       );
     });
 
-    const table = testDb('table', (t) => ({
-      id: t.identity().primaryKey(),
-      col: t.integer().generated`123`,
-    }));
+    const table = testDb(
+      'table',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        col: t.integer().generated`123`,
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
     it('should not be allowed in create', () => {
       expect(() =>

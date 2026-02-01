@@ -1,11 +1,9 @@
 import { Db, Query, NotFoundError, omit } from 'pqb';
 import {
   messageSelectAll,
-  profileSelectAll,
   useQueryCounter,
   useRelationCallback,
   userRowToJSON,
-  userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
@@ -20,6 +18,8 @@ import {
   ChatData,
   ProfileData,
   UserData,
+  UserSelectAll,
+  ProfileSelectAll,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 
@@ -112,7 +112,7 @@ describe('belongsTo', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userSelectAll} FROM "user"
+            SELECT ${UserSelectAll} FROM "schema"."user"
             WHERE "user"."id" = $1
               AND "user"."user_key" = $2
           `,
@@ -135,7 +135,7 @@ describe('belongsTo', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userSelectAll} FROM "user" "activeUser"
+            SELECT ${UserSelectAll} FROM "schema"."user" "activeUser"
             WHERE "activeUser"."active" = $1
               AND "activeUser"."id" = $2
               AND "activeUser"."user_key" = $3
@@ -157,7 +157,7 @@ describe('belongsTo', () => {
           ) as Query
         ).toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" "u"
+          SELECT ${UserSelectAll} FROM "schema"."user" "u"
           WHERE "u"."id" = "p"."user_id"
             AND "u"."user_key" = "p"."profile_key"
         `,
@@ -172,9 +172,9 @@ describe('belongsTo', () => {
             .whereExists((q) => q.user.where({ Name: 'name' }))
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "user"
+              SELECT 1 FROM "schema"."user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
@@ -189,9 +189,9 @@ describe('belongsTo', () => {
             .whereExists('user', (q) => q.where({ 'user.Name': 'name' }))
             .toSQL(),
           `
-          SELECT ${profileSelectAll} FROM "profile" "p"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
           WHERE EXISTS (
-            SELECT 1 FROM "user"
+            SELECT 1 FROM "schema"."user"
             WHERE "user"."id" = "p"."user_id"
               AND "user"."user_key" = "p"."profile_key"
               AND "user"."name" = $1
@@ -208,9 +208,9 @@ describe('belongsTo', () => {
             .whereExists((q) => q.activeUser.where({ Name: 'name' }))
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "activeUser"
+              SELECT 1 FROM "schema"."user" "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."name" = $2
                 AND "activeUser"."id" = "p"."user_id"
@@ -228,9 +228,9 @@ describe('belongsTo', () => {
             )
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "activeUser"
+              SELECT 1 FROM "schema"."user" "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."id" = "p"."user_id"
                 AND "activeUser"."user_key" = "p"."profile_key"
@@ -252,12 +252,12 @@ describe('belongsTo', () => {
             )
             .toSQL(),
           `
-              SELECT ${messageSelectAll} FROM "message" "m"
+              SELECT ${messageSelectAll} FROM "schema"."message" "m"
               WHERE (EXISTS (
-                SELECT 1 FROM "user"  "activeSender"
+                SELECT 1 FROM "schema"."user" "activeSender"
                 WHERE "activeSender"."active" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "profile"
+                    SELECT 1 FROM "schema"."profile"
                     WHERE "profile"."user_id" = "activeSender"."id"
                       AND "profile"."profile_key" = "activeSender"."user_key"
                       AND "profile"."bio" = $2
@@ -280,14 +280,14 @@ describe('belongsTo', () => {
             )
             .toSQL(),
           `
-              SELECT ${messageSelectAll} FROM "message" "m"
+              SELECT ${messageSelectAll} FROM "schema"."message" "m"
               WHERE (EXISTS (
-                SELECT 1 FROM "user"  "activeSender"
+                SELECT 1 FROM "schema"."user" "activeSender"
                 WHERE "activeSender"."active" = $1
                   AND "activeSender"."id" = "m"."author_id"
                   AND "activeSender"."user_key" = "m"."message_key"
                   AND EXISTS (
-                    SELECT 1 FROM "profile"  "activeProfile"
+                    SELECT 1 FROM "schema"."profile" "activeProfile"
                     WHERE "activeProfile"."active" = $2
                       AND "activeProfile"."user_id" = "activeSender"."id"
                       AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -314,8 +314,8 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "user"."name" "Name"
-            FROM "profile" "p"
-            JOIN "user"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."user"
               ON "user"."id" = "p"."user_id"
              AND "user"."user_key" = "p"."profile_key"
              AND "user"."name" = $1
@@ -336,8 +336,8 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "activeUser"."name" "Name"
-            FROM "profile" "p"
-            JOIN "user"  "activeUser"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."user" "activeUser"
               ON "activeUser"."active" = $1
              AND "activeUser"."id" = "p"."user_id"
              AND "activeUser"."user_key" = "p"."profile_key"
@@ -362,8 +362,8 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "u"."name" "Name"
-            FROM "profile" "p"
-            JOIN "user"  "u"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."user" "u"
               ON "u"."name" = $1
              AND "u"."age" = $2
              AND "u"."id" = "p"."user_id"
@@ -388,8 +388,8 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "u"."name" "Name"
-            FROM "profile" "p"
-            JOIN "user"  "u"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."user" "u"
               ON "u"."name" = $1
              AND "u"."active" = $2
              AND "u"."age" = $3
@@ -412,10 +412,10 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT "profile"."bio" "Bio", ${userRowToJSON('u')} "u"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN LATERAL (
-              SELECT ${userSelectAll}
-              FROM "user" "u"
+              SELECT ${UserSelectAll}
+              FROM "schema"."user" "u"
               WHERE "u"."name" = $1
                 AND "u"."id" = "profile"."user_id"
                 AND "u"."user_key" = "profile"."profile_key"
@@ -438,10 +438,10 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT "profile"."bio" "Bio", ${userRowToJSON('u')} "u"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN LATERAL (
-              SELECT ${userSelectAll}
-              FROM "user" "u"
+              SELECT ${UserSelectAll}
+              FROM "schema"."user" "u"
               WHERE "u"."active" = $1
                 AND "u"."name" = $2
                 AND "u"."id" = "profile"."user_id"
@@ -474,10 +474,10 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               row_to_json("user".*) "user"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT "user"."id" "Id", "user"."name" "Name"
-              FROM "user"
+              FROM "schema"."user"
               WHERE "user"."name" = $1
                 AND "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
@@ -508,10 +508,10 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               row_to_json("user".*) "user"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT "activeUser"."id" "Id", "activeUser"."name" "Name"
-              FROM "user" "activeUser"
+              FROM "schema"."user" "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."name" = $2
                 AND "activeUser"."id" = "p"."user_id"
@@ -534,10 +534,10 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               row_to_json("u".*) "u"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             JOIN LATERAL (
               SELECT "user"."id" "Id"
-              FROM "user"
+              FROM "schema"."user"
               WHERE "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
             ) "u" ON true
@@ -558,10 +558,10 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("hasUser"."hasUser", false) "hasUser"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT true "hasUser"
-              FROM "user"
+              FROM "schema"."user"
               WHERE "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
             ) "hasUser" ON true
@@ -582,10 +582,10 @@ describe('belongsTo', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("hasUser"."hasUser", false) "hasUser"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT true "hasUser"
-              FROM "user" "activeUser"
+              FROM "schema"."user" "activeUser"
               WHERE "activeUser"."active" = $1
                 AND "activeUser"."id" = "p"."user_id"
                 AND "activeUser"."user_key" = "p"."profile_key"
@@ -612,16 +612,16 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT row_to_json("user".*) "user"
-            FROM "profile"
+            FROM "schema"."profile"
             LEFT JOIN LATERAL (
               SELECT row_to_json("profile2".*) "profile"
-              FROM "user"
+              FROM "schema"."user"
               LEFT JOIN LATERAL (
                 SELECT ${userRowToJSON('user2')} "user"
-                FROM "profile" "profile2"
+                FROM "schema"."profile" "profile2"
                 LEFT JOIN LATERAL (
-                  SELECT ${userSelectAll}
-                  FROM "user" "user2"
+                  SELECT ${UserSelectAll}
+                  FROM "schema"."user" "user2"
                   WHERE "user2"."id" = "profile2"."user_id"
                     AND "user2"."user_key" = "profile2"."profile_key"
                 ) "user2" ON true
@@ -654,16 +654,16 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             SELECT row_to_json("activeUser".*) "activeUser"
-            FROM "profile"
+            FROM "schema"."profile"
             LEFT JOIN LATERAL (
               SELECT row_to_json("profile2".*) "profile"
-              FROM "user" "activeUser"
+              FROM "schema"."user" "activeUser"
               LEFT JOIN LATERAL (
                 SELECT ${userRowToJSON('activeUser2')} "activeUser"
-                FROM "profile" "profile2"
+                FROM "schema"."profile" "profile2"
                 LEFT JOIN LATERAL (
-                  SELECT ${userSelectAll}
-                  FROM "user" "activeUser2"
+                  SELECT ${UserSelectAll}
+                  FROM "schema"."user" "activeUser2"
                   WHERE "activeUser2"."active" = $1
                     AND "activeUser2"."id" = "profile2"."user_id"
                     AND "activeUser2"."user_key" = "profile2"."profile_key"
@@ -912,19 +912,19 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             WITH "user" AS (
-              INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+              INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
               VALUES ($1, $2, $3, $4, $5)
-              RETURNING ${userSelectAll}
+              RETURNING ${UserSelectAll}
             ),
             "profile" AS (
-              INSERT INTO "profile"("bio", "profile_key", "updated_at", "created_at", "user_id")
+              INSERT INTO "schema"."profile"("bio", "profile_key", "updated_at", "created_at", "user_id")
               VALUES (
                 $6, $7, $8, $9,
                 (
                   SELECT "user"."Id" FROM "user" LIMIT 1
                 )
               )
-              RETURNING ${profileSelectAll}
+              RETURNING ${ProfileSelectAll}
             )
             SELECT * FROM "profile"
           `,
@@ -936,6 +936,7 @@ describe('belongsTo', () => {
         // for this issue: https://github.com/romeerez/orchid-orm/issues/34
         it('should create record with explicitly setting id and foreign key', async () => {
           class UserTable extends BaseTable {
+            schema = () => 'schema';
             readonly table = 'user';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
@@ -946,6 +947,7 @@ describe('belongsTo', () => {
           }
 
           class ProfileTable extends BaseTable {
+            schema = () => 'schema';
             readonly table = 'profile';
             columns = this.setColumns((t) => ({
               Id: t.name('id').identity().primaryKey(),
@@ -986,9 +988,9 @@ describe('belongsTo', () => {
           expectSql(
             q.toSQL(),
             `
-              INSERT INTO "profile"("id", "user_id", "profile_key", "bio")
+              INSERT INTO "schema"."profile"("id", "user_id", "profile_key", "bio")
               VALUES ($1, $2, $3, $4)
-              RETURNING ${profileSelectAll}
+              RETURNING ${ProfileSelectAll}
             `,
             [1, UserId, 'key', 'bio'],
           );
@@ -2326,6 +2328,7 @@ describe('belongsTo', () => {
 
   describe('not required belongsTo', () => {
     class UserTable extends BaseTable {
+      schema = 'schema';
       readonly table = 'user';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -2335,6 +2338,7 @@ describe('belongsTo', () => {
     }
 
     class ProfileTable extends BaseTable {
+      schema = 'schema';
       readonly table = 'profile';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -2398,9 +2402,9 @@ describe('belongsTo', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${profileSelectAll} FROM "profile" WHERE (
+        SELECT ${ProfileSelectAll} FROM "schema"."profile" WHERE (
           SELECT count(*) = $1
-          FROM "user"
+          FROM "schema"."user"
           WHERE "user"."name" IN ($2, $3)
             AND "user"."id" = "profile"."user_id"
             AND "user"."user_key" = "profile"."profile_key"

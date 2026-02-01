@@ -44,13 +44,7 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
 export const getDb = () => {
   if (db) return db;
 
-  db = createMigrationInterface(
-    {
-      getSchema: () => undefined,
-    } as unknown as AdapterBase,
-    true,
-    testConfig,
-  );
+  db = createMigrationInterface({} as unknown as AdapterBase, true, testConfig);
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
   return db as unknown as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;

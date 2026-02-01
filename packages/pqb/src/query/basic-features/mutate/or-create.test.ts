@@ -14,11 +14,18 @@ import {
   useTestDatabase,
 } from 'test-utils';
 
-const TableWithReadOnly = testDb('user', (t) => ({
-  id: t.identity().primaryKey(),
-  name: t.string(),
-  password: t.integer().readOnly(),
-}));
+const TableWithReadOnly = testDb(
+  'user',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    name: t.string(),
+    password: t.integer().readOnly(),
+  }),
+  undefined,
+  {
+    schema: () => 'schema',
+  },
+);
 
 const TableWithSoftDelete = testDb(
   'user',
@@ -30,6 +37,7 @@ const TableWithSoftDelete = testDb(
   }),
   undefined,
   {
+    schema: () => 'schema',
     softDelete: true,
   },
 );
@@ -119,12 +127,12 @@ describe('orCreate', () => {
     await User.find(123).orCreate(userData).forUpdate();
 
     expect(arraysSpy.mock.calls).toEqual([
-      ['SELECT FROM "user" WHERE "user"."id" = $1 FOR UPDATE', [123]],
+      ['SELECT FROM "schema"."user" WHERE "user"."id" = $1 FOR UPDATE', [123]],
       [
         'WITH "q" AS (' +
-          'SELECT FROM "user" WHERE "user"."id" = $1 FOR UPDATE' +
+          'SELECT FROM "schema"."user" WHERE "user"."id" = $1 FOR UPDATE' +
           '), "q2" AS (' +
-          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],
@@ -138,14 +146,14 @@ describe('orCreate', () => {
 
     expect(arraysSpy.mock.calls).toEqual([
       [
-        'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
+        'SELECT FROM "schema"."user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
         [123],
       ],
       [
         'WITH "q" AS (' +
-          'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)' +
+          'SELECT FROM "schema"."user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)' +
           '), "q2" AS (' +
-          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],

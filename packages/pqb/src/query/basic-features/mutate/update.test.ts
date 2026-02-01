@@ -27,11 +27,16 @@ import { Query } from '../../query';
 import { PickQuerySelectable } from '../../pick-query-types';
 import { RelationConfigBase } from '../../relations';
 
-const TableWithReadOnly = testDb('table', (t) => ({
-  id: t.identity().primaryKey(),
-  key: t.string(),
-  value: t.integer().readOnly(),
-}));
+const TableWithReadOnly = testDb(
+  'table',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    key: t.string(),
+    value: t.integer().readOnly(),
+  }),
+  undefined,
+  { schema: () => 'schema' },
+);
 
 describe('update', () => {
   useTestDatabase();
@@ -88,7 +93,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = 'name', "updated_at" = now()
         WHERE "user"."id" = $1 OR "user"."id" = $2
       `,
@@ -108,7 +113,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -134,7 +139,7 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "snake"
+        UPDATE "schema"."snake"
         SET "snake_name" = $1,
             "tail_length" = $2,
             "updated_at" = now()
@@ -159,7 +164,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -186,7 +191,7 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "snake"
+        UPDATE "schema"."snake"
         SET "snake_name" = $1,
             "tail_length" = $2,
             "updated_at" = now()
@@ -213,7 +218,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -252,7 +257,7 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "snake"
+        UPDATE "schema"."snake"
         SET "snake_name" = $1,
             "tail_length" = $2,
             "updated_at" = now()
@@ -279,7 +284,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -314,7 +319,7 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "snake"
+        UPDATE "schema"."snake"
         SET "snake_name" = $1,
             "tail_length" = $2,
             "updated_at" = now()
@@ -341,7 +346,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -386,7 +391,7 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "snake"
+        UPDATE "schema"."snake"
         SET "snake_name" = $1,
             "tail_length" = $2,
             "updated_at" = now()
@@ -416,7 +421,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -460,7 +465,7 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "snake"
+        UPDATE "schema"."snake"
         SET "snake_name" = $1,
             "tail_length" = $2,
             "updated_at" = now()
@@ -487,7 +492,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "data" = $2,
             "updated_at" = now()
@@ -507,7 +512,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = 'raw sql', "updated_at" = now()
         WHERE "user"."id" = $1
       `,
@@ -534,12 +539,12 @@ describe('update', () => {
       q.toSQL(),
       `
         WITH "a" AS (
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "name" = $1, "password" = $2, "updated_at" = now()
           WHERE "user"."id" = $3
           RETURNING "user"."name"
         ), "b" AS (
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET
             "name" = (
               SELECT "a"."name" FROM "a" LIMIT 1
@@ -567,7 +572,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1,
             "password" = $2,
             "updated_at" = now()
@@ -599,9 +604,9 @@ describe('update', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET
-          "name" = (SELECT "user"."name" FROM "user" LIMIT 1),
+          "name" = (SELECT "user"."name" FROM "schema"."user" LIMIT 1),
           "updated_at" = now()
       `,
     );
@@ -616,13 +621,13 @@ describe('update', () => {
       q.toSQL(),
       `
         WITH "q" AS (
-          UPDATE "user"
+          UPDATE "schema"."user"
              SET "name" = $1,
                  "updated_at" = now()
           WHERE "user"."id" = $2
           RETURNING "user"."name"
         ), q2 AS (
-          UPDATE "user"
+          UPDATE "schema"."user"
              SET "name" = (SELECT "q"."name" FROM "q"),
                  "updated_at" = now()
           WHERE "user"."id" = $3
@@ -645,11 +650,11 @@ describe('update', () => {
       q.toSQL(),
       `
         WITH "q" AS (
-          INSERT INTO "user"("name", "password")
+          INSERT INTO "schema"."user"("name", "password")
           VALUES ($1, $2)
           RETURNING "user"."name"
         )
-        UPDATE "user"
+        UPDATE "schema"."user"
            SET "name" = (SELECT "q"."name" FROM "q"),
                "updated_at" = now()
         WHERE "user"."id" = $3
@@ -667,11 +672,11 @@ describe('update', () => {
       q.toSQL(),
       `
         WITH "q" AS (
-          DELETE FROM "user"
+          DELETE FROM "schema"."user"
           WHERE "user"."id" = $1
           RETURNING "user"."name"
         ), q2 AS (
-          UPDATE "user"
+          UPDATE "schema"."user"
              SET "name" = (SELECT "q"."name" FROM "q"),
                  "updated_at" = now()
           WHERE "user"."id" = $2
@@ -714,11 +719,11 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-        UPDATE "profile"
+        UPDATE "schema"."profile"
         SET
           "user_id" = (
             SELECT "user"."id"
-            FROM "user"
+            FROM "schema"."user"
             WHERE "user"."id" = "profile"."user_id"
             LIMIT 1
           ),
@@ -778,7 +783,7 @@ describe('update', () => {
     expectSql(
       query.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
         SET "name" = $1, "updated_at" = now()
         WHERE "user"."id" = $2
       `,
@@ -809,7 +814,10 @@ describe('update', () => {
           nullable: t.bigint().nullable(),
         }),
         undefined,
-        { noPrimaryKey: 'ignore' },
+        {
+          schema: () => 'schema',
+          noPrimaryKey: 'ignore',
+        },
       );
 
       table[action]('num');
@@ -836,7 +844,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "age" = "age" ${sign} $1,
               "updated_at" = now()
         `,
@@ -850,7 +858,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "product"
+          UPDATE "schema"."product"
           SET "price_amount" = "price_amount" ${sign} $1
         `,
         [1],
@@ -863,7 +871,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "age" = "age" ${sign} $1,
               "updated_at" = now()
         `,
@@ -877,7 +885,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "product"
+          UPDATE "schema"."product"
           SET "price_amount" = "price_amount" ${sign} $1
         `,
         ['1'],
@@ -890,7 +898,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "age" = "age" ${sign} $1,
               "updated_at" = now()
           RETURNING "user"."id"
@@ -907,7 +915,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "age" = "age" ${sign} $1,
               "updated_at" = now()
           RETURNING "user"."id"
@@ -924,7 +932,7 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "snake"
+          UPDATE "schema"."snake"
           SET "tail_length" = "tail_length" ${sign} $1,
               "updated_at" = now()
           RETURNING "snake"."snake_id" "snakeId"
@@ -966,7 +974,7 @@ describe('update', () => {
       expectSql(
         query.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "name" = $1,
               "id" = "id" + $2,
               "password" = $3,
@@ -982,11 +990,18 @@ describe('update', () => {
   });
 
   describe('updating with empty set', () => {
-    const User = testDb('user', (t) => ({
-      id: t.identity().primaryKey(),
-      name: t.text(),
-      password: t.text(),
-    }));
+    const User = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
     beforeAll(async () => {
       await User.insert(userData);
@@ -995,7 +1010,7 @@ describe('update', () => {
     it('should select count for return type `rowCount`', async () => {
       const q = User.all().update({});
 
-      expectSql(q.toSQL(), `SELECT count(*) FROM "user"`);
+      expectSql(q.toSQL(), `SELECT count(*) FROM "schema"."user"`);
 
       expect(await q).toBe(1);
     });
@@ -1003,7 +1018,7 @@ describe('update', () => {
     it('should select records for return type of many records', async () => {
       const q = User.all().select('name').update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user"`);
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user"`);
 
       const res = await q;
 
@@ -1015,7 +1030,10 @@ describe('update', () => {
     it('should select one record for return type selecting one record', async () => {
       const q = User.select('name').where().take().update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user"  LIMIT 1`);
+      expectSql(
+        q.toSQL(),
+        `SELECT "user"."name" FROM "schema"."user"  LIMIT 1`,
+      );
 
       const res = await q;
 
@@ -1027,7 +1045,7 @@ describe('update', () => {
     it('should get a single value', async () => {
       const q = User.where().take().get('name').update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user" LIMIT 1`);
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user" LIMIT 1`);
 
       const res = await q;
 
@@ -1039,7 +1057,7 @@ describe('update', () => {
     it('should pluck values', async () => {
       const q = User.all().pluck('name').update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "user"`);
+      expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user"`);
 
       const res = await q;
 
@@ -1071,9 +1089,9 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "message"
+          UPDATE "schema"."message"
           SET "text" = "sender"."name", "updated_at" = now()
-          FROM "user" "sender"
+          FROM "schema"."user" "sender"
           WHERE ("sender"."id" = $1)
             AND ("message"."deleted_at" IS NULL)
             AND "sender"."id" = "message"."author_id"
@@ -1121,13 +1139,13 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "message"
+          UPDATE "schema"."message"
           SET
             "text" = "user"."name",
             "active" = "chat"."active",
             "updated_at" = now()
-          FROM "user"
-          JOIN "chat" ON true
+          FROM "schema"."user"
+          JOIN "schema"."chat" ON true
           WHERE ("user"."id" = $2 AND "chat"."id_of_chat" = $3)
             AND ("message"."deleted_at" IS NULL)
             AND "user"."id" = "message"."author_id"
@@ -1157,11 +1175,11 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "message"
+          UPDATE "schema"."message"
           SET "text" = "user"."n", "updated_at" = now()
           FROM (
             SELECT "user"."id" "i", "user"."name" "n"
-            FROM "user"
+            FROM "schema"."user"
           ) "user"
           WHERE ("message"."deleted_at" IS NULL)
             AND "user"."i" = "message"."author_id"
@@ -1184,9 +1202,9 @@ describe('update', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "message"
+          UPDATE "schema"."message"
           SET "text" = "sender"."name", "updated_at" = now()
-          FROM "user" "sender"
+          FROM "schema"."user" "sender"
           WHERE ("sender"."id" = $1)
             AND ("message"."deleted_at" IS NULL)
             AND "sender"."id" = "message"."author_id"
@@ -1224,9 +1242,9 @@ describe('update', () => {
         `
           WITH "w" AS (
             SELECT "user"."id" "i", "user"."name" "n"
-            FROM "user"
+            FROM "schema"."user"
           )
-          UPDATE "message"
+          UPDATE "schema"."message"
           SET "text" = "w"."n", "updated_at" = now()
           FROM "w"
           WHERE ("message"."author_id" = "w"."i")
@@ -1251,9 +1269,9 @@ describe('update', () => {
         `
           WITH "w" AS (
             SELECT "user"."id" "i", "user"."name" "n"
-            FROM "user"
+            FROM "schema"."user"
           )
-          UPDATE "message"
+          UPDATE "schema"."message"
           SET "text" = "w"."n", "updated_at" = now()
           FROM "w"
           WHERE ("w"."n" = $1)

@@ -102,7 +102,7 @@ interface AdapterConfigConnectRetryStrategy {
 // Interface of a database adapter to use for different databases.
 export interface AdapterBase {
   connectRetryConfig?: AdapterConfigConnectRetry;
-  schema?: string;
+  searchPath?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
   assignError(to: QueryError, from: Error): void;
@@ -114,12 +114,12 @@ export interface AdapterBase {
     database?: string;
     user?: string;
     password?: string;
-    schema?: string;
+    searchPath?: string;
   }): AdapterBase;
 
   getDatabase(): string;
   getUser(): string;
-  getSchema(): string | undefined;
+  getSearchPath(): string | undefined;
   getHost(): string;
 
   connect?(): Promise<unknown>;

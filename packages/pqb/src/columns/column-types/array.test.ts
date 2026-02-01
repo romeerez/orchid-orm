@@ -108,7 +108,7 @@ describe('array column', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT * FROM "table" WHERE $1 = ANY("table"."arr")`,
+        `SELECT * FROM "schema"."table" WHERE $1 = ANY("table"."arr")`,
         [1],
       );
     });
@@ -116,25 +116,31 @@ describe('array column', () => {
     it('should have `hasEvery` operator', () => {
       const q = table.where({ arr: { hasEvery: [1, 2] } });
 
-      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" @> $1`, [
-        [1, 2],
-      ]);
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "schema"."table" WHERE "table"."arr" @> $1`,
+        [[1, 2]],
+      );
     });
 
     it('should have `hasSome` operator', () => {
       const q = table.where({ arr: { hasSome: [1, 2] } });
 
-      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" && $1`, [
-        [1, 2],
-      ]);
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "schema"."table" WHERE "table"."arr" && $1`,
+        [[1, 2]],
+      );
     });
 
     it('should have `containedIn` operator', async () => {
       const q = table.where({ arr: { containedIn: [1, 2] } });
 
-      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" <@ $1`, [
-        [1, 2],
-      ]);
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "schema"."table" WHERE "table"."arr" <@ $1`,
+        [[1, 2]],
+      );
     });
 
     it('should have `length` operator', () => {
@@ -144,7 +150,7 @@ describe('array column', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT * FROM "table" WHERE COALESCE(array_length("table"."arr", 1), 0) = $1`,
+        `SELECT * FROM "schema"."table" WHERE COALESCE(array_length("table"."arr", 1), 0) = $1`,
         [3],
       );
     });
@@ -156,7 +162,7 @@ describe('array column', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT * FROM "table" WHERE COALESCE(array_length("table"."arr", 1), 0) > $1`,
+        `SELECT * FROM "schema"."table" WHERE COALESCE(array_length("table"."arr", 1), 0) > $1`,
         [3],
       );
     });
@@ -166,9 +172,11 @@ describe('array column', () => {
         arr: [1, 2],
       });
 
-      expectSql(q.toSQL(), `SELECT * FROM "table" WHERE "table"."arr" = $1`, [
-        [1, 2],
-      ]);
+      expectSql(
+        q.toSQL(),
+        `SELECT * FROM "schema"."table" WHERE "table"."arr" = $1`,
+        [[1, 2]],
+      );
     });
   });
 });

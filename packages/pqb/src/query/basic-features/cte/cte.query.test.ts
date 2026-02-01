@@ -1,14 +1,18 @@
 import {
-  Profile,
-  profileColumnsSql,
-  ProfileRecord,
-  Snake,
   User,
   userColumnsSql,
   userData,
   UserRecord,
 } from '../../../test-utils/pqb.test-utils';
-import { expectSql, assertType, sql, useTestDatabase } from 'test-utils';
+import {
+  expectSql,
+  assertType,
+  sql,
+  useTestDatabase,
+  db,
+  Profile,
+  ProfileSelectAll,
+} from 'test-utils';
 import { CteOptions } from './cte.sql';
 
 const makeOptions = (
@@ -23,19 +27,19 @@ const makeOptions = (
       options: { columns: ['id', 'name'] },
       sql: `WITH "w"${
         sqlColumns ? sqlColumns : `("id", "name")`
-      } AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      } AS (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
     },
     {
       options: { recursive: true },
-      sql: `WITH RECURSIVE "w"${sqlColumns} AS (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH RECURSIVE "w"${sqlColumns} AS (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
     },
     {
       options: { materialized: true },
-      sql: `WITH "w"${sqlColumns} AS MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH "w"${sqlColumns} AS MATERIALIZED (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
     },
     {
       options: { notMaterialized: true },
-      sql: `WITH "w"${sqlColumns} AS NOT MATERIALIZED (SELECT ${select} FROM "user") SELECT * FROM "w"`,
+      sql: `WITH "w"${sqlColumns} AS NOT MATERIALIZED (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
     },
   ];
 };
@@ -55,7 +59,7 @@ describe('cte', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT "user"."id" "i", "user"."updated_at" "u" FROM "user") SELECT * FROM "w"
+        WITH "w" AS (SELECT "user"."id" "i", "user"."updated_at" "u" FROM "schema"."user") SELECT * FROM "w"
       `,
     );
 
@@ -95,57 +99,35 @@ describe('cte', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT ${userColumnsSql} FROM "user")
-        SELECT "w"."id" FROM "user"
+        WITH "w" AS (SELECT ${userColumnsSql} FROM "schema"."user")
+        SELECT "w"."id" FROM "schema"."user"
         JOIN "w" ON "w"."id" = "user"."id"
       `,
     );
   });
 
   it('should work with join lateral', () => {
-    const q = User.with('w', Profile)
-      .joinLateral('w', (q) => q.on('userId', 'user.id').where({ bio: 'bio' }))
-      .select('name', 'w.*');
+    const q = db.user
+      .with('w', db.profile)
+      .joinLateral('w', (q) => q.on('UserId', 'user.Id').where({ Bio: 'bio' }))
+      .select('Name', 'w.*');
 
-    assertType<Awaited<typeof q>, { name: string; w: ProfileRecord }[]>();
+    assertType<Awaited<typeof q>, { Name: string; w: Profile }[]>();
 
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT ${profileColumnsSql} FROM "profile")
-        SELECT "user"."name", row_to_json("w".*) "w"
-        FROM "user"
+        WITH "w" AS (SELECT ${ProfileSelectAll} FROM "schema"."profile")
+        SELECT "user"."name" "Name", row_to_json("w".*) "w"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT *
           FROM "w"
-          WHERE "w"."userId" = "user"."id"
-            AND "w"."bio" = $1
+          WHERE "w"."UserId" = "user"."id"
+            AND "w"."Bio" = $1
         ) "w" ON true
       `,
       ['bio'],
-    );
-  });
-
-  it('should support selecting named columns', () => {
-    const q = User.with('w', Snake.select('snakeName', 'tailLength'))
-      .from('w')
-      .select('snakeName', 'w.tailLength');
-
-    assertType<
-      Awaited<typeof q>,
-      { snakeName: string; tailLength: number }[]
-    >();
-
-    expectSql(
-      q.toSQL(),
-      `
-        WITH "w" AS (
-          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
-          FROM "snake"
-        )
-        SELECT "w"."snakeName", "w"."tailLength"
-        FROM "w"
-      `,
     );
   });
 
@@ -162,7 +144,7 @@ describe('cte', () => {
             .map((c) => `"${c}"`)
             .join(
               ', ',
-            )}) AS (SELECT ${userColumnsSql} FROM "user") SELECT * FROM "w"
+            )}) AS (SELECT ${userColumnsSql} FROM "schema"."user") SELECT * FROM "w"
         `,
       );
     });
@@ -190,7 +172,7 @@ describe('cte', () => {
       q.toSQL(),
       `
         WITH "a" AS (
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WHERE "user"."id" = $1
         ), "b" AS (
           SELECT * FROM "a"
@@ -243,31 +225,30 @@ describe('withRecursive', () => {
   });
 
   it('should work with queries', () => {
-    const q = Profile.withRecursive(
-      'rec',
-      Profile.select('id', 'userId').find(1),
-      (q) =>
+    const q = db.profile
+      .withRecursive('rec', db.profile.select('Id', 'UserId').find(1), (q) =>
         q
-          .from(Profile)
-          .select('id', 'userId')
-          .join('rec', 'rec.id', 'profile.userId'),
-    ).from('rec');
+          .from(db.profile)
+          .select('Id', 'UserId')
+          .join('rec', 'rec.Id', 'profile.UserId'),
+      )
+      .from('rec');
 
     expectSql(
       q.toSQL(),
       `
         WITH RECURSIVE "rec" AS (
           (
-            SELECT "profile"."id", "profile"."user_id" "userId"
-            FROM "profile"
+            SELECT "profile"."id" "Id", "profile"."user_id" "UserId"
+            FROM "schema"."profile"
             WHERE "profile"."id" = $1
             LIMIT 1
           )  
           UNION ALL
           (
-            SELECT "profile"."id", "profile"."userId"
-            FROM (SELECT ${profileColumnsSql} FROM "profile") "profile"
-            JOIN "rec" ON "rec"."id" = "profile"."userId"
+            SELECT "profile"."Id", "profile"."UserId"
+            FROM (SELECT ${ProfileSelectAll} FROM "schema"."profile") "profile"
+            JOIN "rec" ON "rec"."Id" = "profile"."UserId"
           )
         )
         SELECT * FROM "rec"
@@ -313,7 +294,7 @@ describe('withSql', () => {
           id: t.integer(),
           name: t.text(),
         }),
-        () => sql`SELECT * FROM "user"`,
+        () => sql`SELECT * FROM "schema"."user"`,
       ).from('w');
 
       expectSql(q.toSQL(), s);
@@ -334,7 +315,7 @@ describe('withSql', () => {
       `
         WITH "test"("id") AS (select 1 as id)
         SELECT "test"."id"
-        FROM "user"
+        FROM "schema"."user"
         JOIN "test" ON true
       `,
     );

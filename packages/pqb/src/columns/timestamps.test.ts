@@ -33,7 +33,7 @@ describe('timestamps methods', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "schema"."user"
             SET "${updatedAtName}" = (custom_now())
           `,
         );
@@ -45,7 +45,7 @@ describe('timestamps methods', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "schema"."user"
             SET "${updatedAtName}" = $1
           `,
           [now],

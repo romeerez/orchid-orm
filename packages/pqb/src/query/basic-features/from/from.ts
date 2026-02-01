@@ -126,6 +126,14 @@ export function queryFrom<
     const parsers: ColumnsParsers = {};
     data.defaultParsers = parsers;
     if (w) addWithParsers(w, parsers);
+
+    const i = arg.indexOf('.');
+    if (i !== -1) {
+      data.schema = arg.slice(0, i);
+      arg = arg.slice(i + 1) as Arg;
+    } else if (w) {
+      data.schema = undefined;
+    }
   } else if (Array.isArray(arg)) {
     const { shape } = data;
 
@@ -144,10 +152,11 @@ export function queryFrom<
         joinedParsers[item] = parsers;
         addWithParsers(w, parsers);
       } else if (!isExpression(item)) {
-        Object.assign(shape, getShapeFromSelect(item, true));
+        const sub = prepareSubQueryForSql(self as unknown as Query, item);
+        Object.assign(shape, getShapeFromSelect(sub, true));
 
-        const key = getQueryAs(item);
-        joinedParsers[key] = getQueryParsers(item);
+        const key = getQueryAs(sub);
+        joinedParsers[key] = getQueryParsers(sub as unknown as Query);
       }
     }
 

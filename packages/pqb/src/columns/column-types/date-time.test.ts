@@ -246,13 +246,20 @@ describe('date time columns', () => {
     });
 
     it('should parse and encode timestamp as a number', async () => {
-      const UserWithNumberTimestamp = testDb('user', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-        createdAt: t.timestamp().asNumber(),
-        updatedAt: t.timestamp().asNumber(),
-      }));
+      const UserWithNumberTimestamp = testDb(
+        'user',
+        (t) => ({
+          id: t.serial().primaryKey(),
+          name: t.text(),
+          password: t.text(),
+          createdAt: t.timestamp().asNumber(),
+          updatedAt: t.timestamp().asNumber(),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const userColumnsSql =
         UserWithNumberTimestamp.q.selectAllColumns!.join(', ');
@@ -268,7 +275,7 @@ describe('date time columns', () => {
       expectSql(
         createQuery.toSQL(),
         `
-          INSERT INTO "user"("name", "password", "created_at", "updated_at")
+          INSERT INTO "schema"."user"("name", "password", "created_at", "updated_at")
           VALUES ($1, $2, $3, $4)
           RETURNING ${userColumnsSql}
         `,
@@ -294,7 +301,7 @@ describe('date time columns', () => {
       expectSql(
         updateQuery.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "created_at" = $1, "updated_at" = $2
           WHERE "user"."id" = $3
         `,
@@ -322,13 +329,20 @@ describe('date time columns', () => {
         .parse(z.number(), (text) => parseInt(text))
         .as(t.integer());
 
-      const UserWithNumberTimestamp = testDb('user', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-        createdAt: t.timestampNoTZ().asDate(),
-        updatedAt: t.timestampNoTZ().asDate(),
-      }));
+      const UserWithNumberTimestamp = testDb(
+        'user',
+        (t) => ({
+          id: t.serial().primaryKey(),
+          name: t.text(),
+          password: t.text(),
+          createdAt: t.timestampNoTZ().asDate(),
+          updatedAt: t.timestampNoTZ().asDate(),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const userColumnsSql =
         UserWithNumberTimestamp.q.selectAllColumns!.join(', ');
@@ -344,7 +358,7 @@ describe('date time columns', () => {
       expectSql(
         createQuery.toSQL(),
         `
-          INSERT INTO "user"("name", "password", "created_at", "updated_at")
+          INSERT INTO "schema"."user"("name", "password", "created_at", "updated_at")
           VALUES ($1, $2, $3, $4)
           RETURNING ${userColumnsSql}
         `,
@@ -370,7 +384,7 @@ describe('date time columns', () => {
       expectSql(
         updateQuery.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "created_at" = $1, "updated_at" = $2
           WHERE "user"."id" = $3
         `,

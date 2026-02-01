@@ -14,6 +14,7 @@ export const BaseTable = createBaseTable({
 
 export type User = Selectable<UserTable>;
 class UserTable extends BaseTable {
+  schema = () => 'schema';
   readonly table = 'user';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
@@ -44,6 +45,7 @@ class UserTable extends BaseTable {
 
 export type Profile = Selectable<ProfileTable>;
 export class ProfileTable extends BaseTable {
+  schema = () => 'schema';
   readonly table = 'profile';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),

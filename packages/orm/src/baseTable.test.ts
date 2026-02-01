@@ -150,6 +150,7 @@ describe('baseTable', () => {
 
       const BaseTable = createBaseTable();
       class UserTable extends BaseTable {
+        schema = 'schema';
         readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.identity().primaryKey(),
@@ -184,6 +185,7 @@ describe('baseTable', () => {
       });
 
       class UserTable extends BaseTable {
+        schema = 'schema';
         readonly table = 'user';
         columns = this.setColumns((t) => ({
           id: t.identity().primaryKey(),
@@ -705,13 +707,13 @@ describe('baseTable', () => {
         `
           WITH "cte" AS (
             SELECT "user"."id" "Id", "user"."name" "Name"
-            FROM "user"
+            FROM "schema"."user"
           )
           SELECT row_to_json("rel".*) "rel"
-          FROM "user"
+          FROM "schema"."user"
           LEFT JOIN LATERAL (
             SELECT "profile"."id" "Id", "cte"."Name"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN "cte" ON "cte"."Id" = "profile"."id"
             WHERE "profile"."user_id" = "user"."id"
               AND "profile"."profile_key" = "user"."user_key"

@@ -80,8 +80,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "user"
-          JOIN "message" ON "message"."author_id" = "user"."id"
+          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
         `,
       );
 
@@ -117,8 +117,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAllWithTable} FROM "snake"
-          JOIN "message" ON "message"."author_id" = "snake"."tail_length"
+          SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"
+          JOIN "schema"."message" ON "message"."author_id" = "snake"."tail_length"
         `,
       );
 
@@ -140,8 +140,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql}, "message"."text" FROM "user"
-          JOIN "message" ON "message"."author_id" = "user"."id"
+          SELECT ${userTableColumnsSql}, "message"."text" FROM "schema"."user"
+          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
         `,
       );
 
@@ -157,7 +157,7 @@ describe('select', () => {
 
       const q = User.select();
 
-      expectSql(q.toSQL(), `SELECT FROM "user"`);
+      expectSql(q.toSQL(), `SELECT FROM "schema"."user"`);
 
       const users = await q;
       assertType<typeof users, EmptyObject[]>();
@@ -174,7 +174,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "user"."name" FROM "user"
+          SELECT "user"."id", "user"."name" FROM "schema"."user"
         `,
       );
 
@@ -198,7 +198,7 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
-          FROM "snake"
+          FROM "schema"."snake"
         `,
       );
     });
@@ -212,7 +212,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "user"."name" FROM "user"
+          SELECT "user"."id", "user"."name" FROM "schema"."user"
         `,
       );
 
@@ -236,7 +236,7 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
-          FROM "snake"
+          FROM "schema"."snake"
         `,
       );
     });
@@ -252,8 +252,8 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "profile"."user_id" "userId" FROM "user"
-          JOIN "profile" ON "profile"."user_id" = "user"."id"
+          SELECT "user"."id", "profile"."user_id" "userId" FROM "schema"."user"
+          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
         `,
       );
 
@@ -276,8 +276,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "profile"."user_id" "userId" FROM "user"
-          LEFT JOIN "profile" ON "profile"."user_id" = "user"."id"
+          SELECT "user"."id", "profile"."user_id" "userId" FROM "schema"."user"
+          LEFT JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
         `,
       );
     });
@@ -294,8 +294,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."id", "snake"."snake_name" "snakeName"
-          FROM "user"
-          JOIN "snake" ON "snake"."tail_length" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id"
         `,
       );
     });
@@ -311,8 +311,8 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "p"."user_id" "userId" FROM "user"
-          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "user"."id", "p"."user_id" "userId" FROM "schema"."user"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -336,8 +336,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."id", "s"."snake_name" "snakeName"
-          FROM "user"
-          JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."snake" "s" ON "s"."tail_length" = "user"."id"
         `,
       );
     });
@@ -426,7 +426,7 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT "user"."id" "aliasedId", "user"."name" "aliasedName"
-          FROM "user"
+          FROM "schema"."user"
         `,
       );
       expectQueryNotMutated(q);
@@ -441,7 +441,7 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "snake"."snake_name" "name", "snake"."tail_length" "length"
-          FROM "snake"
+          FROM "schema"."snake"
         `,
       );
     });
@@ -468,7 +468,7 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT "user"."id" "aliasedId", "user"."name" "aliasedName"
-          FROM "user"
+          FROM "schema"."user"
         `,
       );
       expectQueryNotMutated(q);
@@ -486,7 +486,7 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "snake"."snake_name" "name", "snake"."tail_length" "length"
-          FROM "snake"
+          FROM "schema"."snake"
         `,
       );
     });
@@ -512,8 +512,8 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT "user"."id" "aliasedId", "profile"."user_id" "aliasedUserId"
-          FROM "user"
-          JOIN "profile" ON "profile"."user_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -531,8 +531,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."id" "userId", "snake"."tail_length" "length"
-          FROM "user"
-          JOIN "snake" ON "snake"."tail_length" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id"
         `,
       );
     });
@@ -558,8 +558,8 @@ describe('select', () => {
         query.toSQL(),
         `
           SELECT "user"."id" "aliasedId", "p"."user_id" "aliasedUserId"
-          FROM "user"
-          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -577,8 +577,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."id" "userId", "s"."tail_length" "length"
-          FROM "user"
-          JOIN "snake" "s" ON "s"."tail_length" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."snake" "s" ON "s"."tail_length" = "user"."id"
         `,
       );
     });
@@ -592,7 +592,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT 1 "one" FROM "user"
+          SELECT 1 "one" FROM "schema"."user"
         `,
       );
       expectQueryNotMutated(q);
@@ -640,7 +640,7 @@ describe('select', () => {
         expectSql(
           query.toSQL(),
           `
-            SELECT 1 "one" FROM "user"
+            SELECT 1 "one" FROM "schema"."user"
           `,
         );
       });
@@ -661,11 +661,12 @@ describe('select', () => {
             SELECT
               (
                 SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-                FROM (SELECT "user"."id" FROM "user") "t"
+                FROM (SELECT "user"."id" FROM "schema"."user") "t"
               ) "subquery"
-            FROM "user"
+            FROM "schema"."user"
           `,
         );
+
         expectQueryNotMutated(q);
       });
 
@@ -682,10 +683,10 @@ describe('select', () => {
                 SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
                 FROM (
                   SELECT ${snakeSelectAll}
-                  FROM "snake"
+                  FROM "schema"."snake"
                 ) "t"
               ) "subquery"
-            FROM "snake"
+            FROM "schema"."snake"
           `,
         );
       });
@@ -832,8 +833,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-          JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -871,8 +872,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-                 JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -906,8 +907,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-          LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          LEFT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -939,8 +940,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-                 LEFT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          LEFT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -973,8 +974,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-                 RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -1008,8 +1009,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-                 RIGHT JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -1046,8 +1047,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
-          FROM "user"
-                 FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -1084,8 +1085,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "user"
-          FULL JOIN "profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user"
+          FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
         `,
       );
 
@@ -1136,7 +1137,7 @@ describe('select', () => {
         Object.keys(User.q.selectAllShape),
       );
 
-      expectSql(query.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
+      expectSql(query.toSQL(), `SELECT ${userColumnsSql} FROM "schema"."user"`);
     });
 
     it('should select all named columns', () => {
@@ -1147,7 +1148,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake"
         `,
       );
     });
@@ -1298,8 +1299,8 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)
-            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "product" LIMIT 1) "t"
-          ) "product" FROM "user" LIMIT 1`,
+            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "schema"."product" LIMIT 1) "t"
+          ) "product" FROM "schema"."user" LIMIT 1`,
         );
       });
 
@@ -1312,8 +1313,8 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
-            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "product") "t"
-          ) "products" FROM "user" LIMIT 1`,
+            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "schema"."product") "t"
+          ) "products" FROM "schema"."user" LIMIT 1`,
         );
       });
 
@@ -1326,8 +1327,8 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
-            FROM (SELECT "product"."id", "product"."camel_case" "camelCase", "product"."price_amount" "priceAmount" FROM "product") "t"
-          ) "products" FROM "user" LIMIT 1`,
+            FROM (SELECT "product"."id", "product"."camel_case" "camelCase", "product"."price_amount" "priceAmount" FROM "schema"."product") "t"
+          ) "products" FROM "schema"."user" LIMIT 1`,
         );
       });
     });

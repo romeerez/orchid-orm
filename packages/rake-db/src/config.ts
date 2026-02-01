@@ -13,7 +13,7 @@ import {
 } from 'pqb';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
-import { MigrationItem } from './migration/migrationsSet';
+import { MigrationItem } from './migration/migrations-set';
 import { getCliParam } from './common';
 
 export interface CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> {
@@ -53,6 +53,7 @@ export interface PickRenameMigrations {
 }
 
 export interface PickMigrationsTable {
+  schema?: string;
   migrationsTable: string;
 }
 
@@ -91,6 +92,9 @@ interface RakeDbBaseConfig<
     PickMigrationCallbacks,
     PickForceDefaultExports,
     PickAfterChangeCommit {
+  // schema is used when creating the migrations-tracking table,
+  // and in pull command to omit current schema from the generated migrations.
+  schema?: string;
   schemaConfig: SchemaConfig;
   snakeCase: boolean;
   language?: string;

@@ -14,7 +14,7 @@ import { processJoinItem } from '../join/join.sql';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
-import { makeSql, quoteSchemaAndTable, Sql } from '../../sql/sql';
+import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
 import {
   addValue,
   emptyObject,
@@ -34,10 +34,8 @@ export const pushUpdateSql = (
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
-  const quotedTable = quoteSchemaAndTable(
-    q.schema,
-    query.table || (q.from as string),
-  );
+  const quotedTable = `"${query.table || (q.from as string)}"`;
+  const from = quoteTableWithSchema(query);
 
   let hookSet: RecordUnknown;
   if (q.hookUpdateSet) {
@@ -75,11 +73,11 @@ export const pushUpdateSql = (
       isSubSql,
     );
 
-    ctx.sql.push(`FROM ${quotedTable}`);
+    ctx.sql.push(`FROM ${from}`);
     pushWhereStatementSql(ctx, query, q, quotedAs);
     pushLimitSQL(ctx.sql, ctx.values, q);
   } else {
-    ctx.sql.push(`UPDATE ${quotedTable}`);
+    ctx.sql.push(`UPDATE ${from}`);
 
     if (quotedTable !== quotedAs) {
       ctx.sql.push(quotedAs);

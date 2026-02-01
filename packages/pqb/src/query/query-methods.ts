@@ -67,7 +67,7 @@ import {
 } from './extra-features/merge/merge';
 import { QueryTransform } from './extra-features/data-transform/transform';
 import { QueryMap } from './extra-features/data-transform/map';
-import { QueryScope } from './extra-features/scope/scope.query';
+import { QueryScope } from './extra-features/scope/scope';
 import { SoftDeleteMethods } from './basic-features/mutate/soft-delete';
 import { _queryNone } from './extra-features/none/none';
 import { _chain } from './extra-features/chain/chain';
@@ -105,6 +105,7 @@ import { QueryLimitOffset } from './basic-features/limit-offset/limit-offset';
 import { QueryOrder } from './basic-features/order/order';
 import { QueryTruncate } from './extra-features/truncate/truncate';
 import { QueryWindow } from './basic-features/window/window';
+import { QueryWithSchema } from './basic-features/schema/schema';
 
 export type GroupArgs<T extends PickQueryResult> = (
   | {
@@ -315,6 +316,7 @@ export interface QueryMethods<ColumnTypes>
     QueryCatchers,
     QueryLog,
     QueryOrder,
+    QueryWithSchema,
     QueryHooks,
     QueryUpsert,
     QueryOrCreate,
@@ -594,30 +596,6 @@ export class QueryMethods<ColumnTypes> {
       _clone(this),
       uniqueColumnValues as never,
     ) as never;
-  }
-
-  /**
-   * Specifies the schema to be used as a prefix of a table name.
-   *
-   * Though this method can be used to set the schema right when building the query,
-   * it's better to specify schema when calling `db(table, () => columns, { schema: string })`
-   *
-   * ```ts
-   * db.table.withSchema('customSchema').select('id');
-   * ```
-   *
-   * Resulting SQL:
-   *
-   * ```sql
-   * SELECT "user"."id" FROM "customSchema"."user"
-   * ```
-   *
-   * @param schema - a name of the database schema to use
-   */
-  withSchema<T>(this: T, schema: string): T {
-    const q = _clone(this);
-    q.q.schema = schema;
-    return q as T;
   }
 
   /**
@@ -1039,9 +1017,6 @@ export class QueryMethods<ColumnTypes> {
   }
 }
 
-Object.assign(QueryMethods.prototype, QueryUpsert);
-Object.assign(QueryMethods.prototype, QueryOrCreate);
-
 applyMixins(QueryMethods, [
   QueryClone,
   QueryAsMethods,
@@ -1069,6 +1044,9 @@ applyMixins(QueryMethods, [
   Then,
   QueryLog,
   QueryOrder,
+  QueryWithSchema,
+  QueryUpsert,
+  QueryOrCreate,
   QueryHooks,
   QueryGet,
   MergeQueryMethods,

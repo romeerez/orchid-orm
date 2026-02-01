@@ -83,7 +83,7 @@ change(async (db) => {
             .check(t.sql`(VALUE = 'ab'::text)`),
         );
       },
-      tables: [table(undefined, undefined, { schema: 'schema' })],
+      tables: [table(undefined, undefined, { schema: () => 'schema' })],
     });
 
     await act();

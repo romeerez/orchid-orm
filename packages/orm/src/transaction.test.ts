@@ -3,11 +3,12 @@ import {
   db,
   line,
   ProfileData,
+  ProfileSelectAll,
   TestAdapter,
   TestTransactionAdapter,
   UserData,
+  UserSelectAll,
 } from 'test-utils';
-import { profileSelectAll, userSelectAll } from './test-utils/orm.test-utils';
 
 describe('transaction', () => {
   beforeEach(jest.clearAllMocks);
@@ -32,14 +33,14 @@ describe('transaction', () => {
       expect(transactionSpy).toBeCalledTimes(1);
       expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
         line(`
-          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+          INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
-          RETURNING ${userSelectAll}
+          RETURNING ${UserSelectAll}
         `),
         line(`
-          INSERT INTO "profile"("bio", "profile_key", "updated_at", "created_at")
+          INSERT INTO "schema"."profile"("bio", "profile_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4)
-          RETURNING ${profileSelectAll}
+          RETURNING ${ProfileSelectAll}
         `),
       ]);
     },

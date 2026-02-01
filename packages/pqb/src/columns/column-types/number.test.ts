@@ -153,7 +153,7 @@ describe('number columns', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "table"("one") VALUES (DEFAULT) RETURNING *
+          INSERT INTO "schema"."table"("one") VALUES (DEFAULT) RETURNING *
         `,
       );
     });

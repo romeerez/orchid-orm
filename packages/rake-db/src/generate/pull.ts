@@ -1,9 +1,9 @@
-import { structureToAst, makeStructureToAstCtx } from './structureToAst';
-import { astToMigration } from './astToMigration';
-import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
-import { saveMigratedVersion } from '../migration/manageMigratedVersions';
 import { AdapterBase, ColumnSchemaConfig } from 'pqb';
+import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
+import { saveMigratedVersion } from '../migration/manage-migrated-versions';
 import { RakeDbConfig } from '../config';
+import { astToMigration } from './ast-to-migration';
+import { structureToAst, makeStructureToAstCtx } from './structure-to-ast';
 
 export const pullDbStructure = async <
   SchemaConfig extends ColumnSchemaConfig,
@@ -12,7 +12,7 @@ export const pullDbStructure = async <
   adapter: AdapterBase,
   config: RakeDbConfig<SchemaConfig, CT>,
 ): Promise<void> => {
-  const currentSchema = adapter.schema || 'public';
+  const currentSchema = adapter.searchPath || 'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);
 

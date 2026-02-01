@@ -38,16 +38,16 @@ describe('db connection', () => {
     });
   }
 
-  it('should support setting a default schema via url parameters', async () => {
+  it('should support setting a searchPath via url parameters', async () => {
     const url = new URL(testDbOptions.databaseURL as string);
-    url.searchParams.set('schema', 'geo');
+    url.searchParams.set('searchPath', 'schema');
 
     const db = createTestDb({
       ...testDbOptions,
       databaseURL: url.toString(),
     });
 
-    await db('city');
+    await db('user');
 
     await db.close();
   });
@@ -56,10 +56,10 @@ describe('db connection', () => {
     const db = createTestDb({
       ...testDbOptions,
       databaseURL: testDbOptions.databaseURL,
-      schema: 'geo',
+      schema: 'schema',
     });
 
-    await db('city');
+    await db('user');
 
     await db.close();
   });
@@ -100,7 +100,7 @@ describe('db', () => {
     expectSql(
       query.toSQL(),
       `
-        SELECT "table"."id", "table"."name" FROM "table"
+        SELECT "table"."id", "table"."name" FROM "schema"."table"
         WHERE "table"."foo" = $1
       `,
       ['bar'],
@@ -139,10 +139,17 @@ describe('db', () => {
         adapter: testAdapter,
         snakeCase: true,
       });
-      const table = db('user', (t) => ({
-        id: t.identity().primaryKey(),
-        createdAt: t.timestampNoTZ(),
-      }));
+      const table = db(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          createdAt: t.timestampNoTZ(),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const result = await table.take().get('createdAt');
       expect(typeof result).toBe('string');
@@ -164,10 +171,17 @@ describe('db', () => {
         }),
       });
 
-      const table = db('user', (t) => ({
-        id: t.identity().primaryKey(),
-        createdAt: t.timestamp(),
-      }));
+      const table = db(
+        'user',
+        (t) => ({
+          id: t.identity().primaryKey(),
+          createdAt: t.timestamp(),
+        }),
+        undefined,
+        {
+          schema: () => 'schema',
+        },
+      );
 
       const result = await table.take().get('createdAt');
       expect(result instanceof Date).toBe(true);
@@ -398,56 +412,58 @@ describe('db', () => {
 
       const records = await testDb.query.records<{
         name: string;
-      }>`SELECT * FROM "user"`;
+      }>`SELECT * FROM "schema"."user"`;
       assertType<typeof records, { name: string }[]>();
       expect(records).toMatchObject([userData]);
 
       const take = await testDb.query.take<{
         name: string;
-      }>`SELECT * FROM "user"`;
+      }>`SELECT * FROM "schema"."user"`;
       assertType<typeof take, { name: string }>();
       expect(take).toMatchObject(userData);
 
       await expect(
-        () => testDb.query.take`SELECT * FROM "user" WHERE id = 0`,
+        () => testDb.query.take`SELECT * FROM "schema"."user" WHERE id = 0`,
       ).rejects.toThrow('Record is not found');
 
       const takeOptional = await testDb.query.takeOptional<{
         name: string;
-      }>`SELECT * FROM "user"`;
+      }>`SELECT * FROM "schema"."user"`;
       assertType<typeof takeOptional, { name: string } | undefined>();
       expect(takeOptional).toMatchObject(userData);
 
       const takeOptionalNotFound = await testDb.query.takeOptional<{
         name: string;
-      }>`SELECT * FROM "user" WHERE id = 0`;
+      }>`SELECT * FROM "schema"."user" WHERE id = 0`;
       expect(takeOptionalNotFound).toBe(undefined);
 
       const rows = await testDb.query.rows<
         [number, string]
-      >`SELECT id, name FROM "user"`;
+      >`SELECT id, name FROM "schema"."user"`;
       assertType<typeof rows, [number, string][]>();
       expect(rows).toEqual([[user.id, user.name]]);
 
-      const pluck = await testDb.query.pluck<number>`SELECT id FROM "user"`;
+      const pluck = await testDb.query
+        .pluck<number>`SELECT id FROM "schema"."user"`;
       assertType<typeof pluck, number[]>();
       expect(pluck).toEqual([user.id]);
 
-      const get = await testDb.query.get<number>`SELECT id FROM "user"`;
+      const get = await testDb.query
+        .get<number>`SELECT id FROM "schema"."user"`;
       assertType<typeof get, number>();
       expect(get).toEqual(user.id);
 
       await expect(
-        () => testDb.query.get`SELECT * FROM "user" WHERE id = 0`,
+        () => testDb.query.get`SELECT * FROM "schema"."user" WHERE id = 0`,
       ).rejects.toThrow('Record is not found');
 
       const getOptional = await testDb.query
-        .getOptional<number>`SELECT id FROM "user"`;
+        .getOptional<number>`SELECT id FROM "schema"."user"`;
       assertType<typeof getOptional, number | undefined>();
       expect(getOptional).toEqual(user.id);
 
       const getOptionalNotFound = await testDb.query
-        .getOptional<number>`SELECT id FROM "user" WHERE id = 0`;
+        .getOptional<number>`SELECT id FROM "schema"."user" WHERE id = 0`;
       assertType<typeof getOptionalNotFound, number | undefined>();
       expect(getOptionalNotFound).toBe(undefined);
     });
@@ -458,65 +474,97 @@ describe('db', () => {
     const { qb } = testDb;
 
     it('should support create', async () => {
-      const created = await qb.from('user').create(userData);
+      const created = await qb
+        .withSchema('schema')
+        .from('user')
+        .create(userData);
       assertType<typeof created, RecordUnknown>();
       expect(created).toMatchObject(userData);
 
-      const inserted = await qb.from('user').insert(userData);
+      const inserted = await qb
+        .withSchema('schema')
+        .from('user')
+        .insert(userData);
       assertType<typeof inserted, number>();
       expect(inserted).toBe(1);
 
-      const createdMany = await qb.from('user').createMany([userData]);
+      const createdMany = await qb
+        .withSchema('schema')
+        .from('user')
+        .createMany([userData]);
       assertType<typeof createdMany, RecordUnknown[]>();
       expect(createdMany).toMatchObject([userData]);
 
       const insertedMany = await qb
+        .withSchema('schema')
         .from('user')
         .insertMany([userData, userData]);
       assertType<typeof insertedMany, number>();
       expect(insertedMany).toBe(2);
 
       const createdFrom = await qb
+        .withSchema('schema')
         .from('user')
-        .createOneFrom(qb.from('user').select('name').take(), {
-          password: userData.password,
-        });
+        .createOneFrom(
+          qb.withSchema('schema').from('user').select('name').take(),
+          {
+            password: userData.password,
+          },
+        );
       assertType<typeof createdFrom, RecordUnknown>();
       expect(createdFrom).toMatchObject(userData);
 
       const insertedFrom = await qb
+        .withSchema('schema')
         .from('user')
-        .insertOneFrom(qb.from('user').select('name').take(), {
-          password: userData.password,
-        });
+        .insertOneFrom(
+          qb.withSchema('schema').from('user').select('name').take(),
+          {
+            password: userData.password,
+          },
+        );
       assertType<typeof insertedFrom, number>();
       expect(insertedFrom).toBe(1);
 
       const createdManyFrom = await qb
+        .withSchema('schema')
         .from('user')
-        .createForEachFrom(qb.from('user').select('name', 'password').limit(1));
+        .createForEachFrom(
+          qb
+            .withSchema('schema')
+            .from('user')
+            .select('name', 'password')
+            .limit(1),
+        );
       assertType<typeof createdManyFrom, RecordUnknown[]>();
       expect(createdManyFrom).toMatchObject([userData]);
 
       const insertedManyFrom = await qb
+        .withSchema('schema')
         .from('user')
-        .insertForEachFrom(qb.from('user').select('name', 'password').limit(1));
+        .insertForEachFrom(
+          qb
+            .withSchema('schema')
+            .from('user')
+            .select('name', 'password')
+            .limit(1),
+        );
       assertType<typeof insertedManyFrom, number>();
       expect(insertedManyFrom).toBe(1);
     });
 
     it('should support update', async () => {
-      const user = await qb.from('user').create({ ...userData, age: 1 });
+      const user = await qb.from('schema.user').create({ ...userData, age: 1 });
 
       const updatedCount = await qb
-        .from('user')
+        .from('schema.user')
         .findBy({ id: user.id })
         .update(userData);
       assertType<typeof updatedCount, number>();
       expect(updatedCount).toBe(1);
 
       const updated = await qb
-        .from('user')
+        .from('schema.user')
         .selectAll()
         .findBy({ id: user.id })
         .update(userData);
@@ -524,14 +572,14 @@ describe('db', () => {
       expect(updated).toMatchObject(userData);
 
       const updatedSql = await qb
-        .from('user')
+        .from('schema.user')
         .findBy({ id: user.id })
         .update({ name: sql`${'name'}` });
       assertType<typeof updatedSql, number>();
       expect(updatedSql).toBe(1);
 
       const incremented = await qb
-        .from('user')
+        .from('schema.user')
         .findBy({ id: user.id })
         .select('age')
         .increment('age');
@@ -539,7 +587,7 @@ describe('db', () => {
       expect(incremented.age).toBe(2);
 
       const decremented = await qb
-        .from('user')
+        .from('schema.user')
         .findBy({ id: user.id })
         .select('age')
         .decrement('age');
@@ -548,10 +596,10 @@ describe('db', () => {
     });
 
     it('should support delete', async () => {
-      const user = await qb.from('user').create(userData);
+      const user = await qb.from('schema.user').create(userData);
 
       const deleted = await qb
-        .from('user')
+        .from('schema.user')
         .selectAll()
         .findBy({ id: user.id })
         .delete();

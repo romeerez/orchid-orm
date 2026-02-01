@@ -30,8 +30,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (simple sql)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (simple sql)`,
     );
   });
 
@@ -53,8 +53,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE ("name" = $1)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("name" = $1)`,
       ['value'],
     );
   });
@@ -94,8 +94,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (simple sql)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (simple sql)`,
     );
   });
 
@@ -117,8 +117,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE ("name" = $1)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("name" = $1)`,
       ['value'],
     );
   });
@@ -132,8 +132,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (one $1 two $2 three $3 four)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
@@ -150,8 +150,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (one $1 two $2 three $3 four)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
@@ -171,8 +171,8 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (value = $2 AND $1)`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (value = $2 AND $1)`,
       [true, 'value'],
     );
   });
@@ -191,13 +191,13 @@ describe('sql', () => {
     });
 
     expectSql(
-      User.where(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE ("user"."name")`,
+      User.whereSql(sql).toSQL(),
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("user"."name")`,
     );
   });
 
   it('should not replace values inside string literals', () => {
-    const query = User.where(
+    const query = User.whereSql(
       User.sql<boolean>({
         raw: `foo = $foo AND bar = '$bar''$bar' AND baz = $baz`,
       }).values({
@@ -208,13 +208,13 @@ describe('sql', () => {
 
     expectSql(
       query.toSQL(),
-      `SELECT ${userColumnsSql} FROM "user" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
       [1, true],
     );
   });
 
   it('should throw when variable in the query is not provided', () => {
-    const q = User.where(
+    const q = User.whereSql(
       User.sql<boolean>({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
     );
 
@@ -222,7 +222,7 @@ describe('sql', () => {
   });
 
   it('should throw when variable in the object is not used by the query', () => {
-    const q = User.where(
+    const q = User.whereSql(
       User.sql<boolean>({ raw: `a = $a` }).values({ a: 1, b: 'b' }),
     );
 
@@ -241,7 +241,7 @@ describe('sql', () => {
       q.toSQL(),
       `
           SELECT "user"."name" || ' ' || "user"."password" "value"
-          FROM "user"
+          FROM "schema"."user"
         `,
     );
   });
@@ -272,7 +272,7 @@ describe('sql', () => {
 
     const q = User.get(testDb.sql`${new CustomExpression()}`);
 
-    expectSql(q.toSQL(), `SELECT hello, "user"! FROM "user" LIMIT 1`, [
+    expectSql(q.toSQL(), `SELECT hello, "user"! FROM "schema"."user" LIMIT 1`, [
       'value',
     ]);
   });
@@ -315,7 +315,7 @@ describe('sql', () => {
         value: () => sql<string>`${sql.ref(column)}`,
       });
 
-      expectSql(q.toSQL(), `SELECT "name" "value" FROM "user"`);
+      expectSql(q.toSQL(), `SELECT "name" "value" FROM "schema"."user"`);
     });
   });
 });

@@ -1,8 +1,6 @@
 import {
   useRelationCallback,
   messageSelectAll,
-  profileSelectAll,
-  userSelectAll,
   useTestORM,
   userRowToJSON,
   useQueryCounter,
@@ -20,6 +18,8 @@ import {
   ChatData,
   ProfileData,
   UserData,
+  UserSelectAll,
+  ProfileSelectAll,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 
@@ -112,7 +112,7 @@ describe('hasOne', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile"
             WHERE "profile"."user_id" = $1
               AND "profile"."profile_key" = $2
           `,
@@ -134,7 +134,7 @@ describe('hasOne', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfile"
             WHERE "activeProfile"."active" = $1
               AND "activeProfile"."user_id" = $2
               AND "activeProfile"."profile_key" = $3
@@ -159,7 +159,7 @@ describe('hasOne', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "profile"("user_id", "profile_key", "bio", "updated_at", "created_at")
+            INSERT INTO "schema"."profile"("user_id", "profile_key", "bio", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5)
           `,
           [1, 'key', 'bio', now, now],
@@ -179,7 +179,7 @@ describe('hasOne', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "profile"("active", "user_id", "profile_key", "bio", "updated_at", "created_at")
+            INSERT INTO "schema"."profile"("active", "user_id", "profile_key", "bio", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5, $6)
           `,
           [true, 1, 'key', 'bio', now, now],
@@ -196,7 +196,7 @@ describe('hasOne', () => {
           ) as Query
         ).toSQL(),
         `
-          SELECT ${profileSelectAll} FROM "profile" "p"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
           WHERE "p"."user_id" = "u"."id"
             AND "p"."profile_key" = "u"."user_key"
         `,
@@ -208,9 +208,9 @@ describe('hasOne', () => {
         expectSql(
           db.user.as('u').whereExists('profile').toSQL(),
           `
-          SELECT ${userSelectAll} FROM "user" "u"
+          SELECT ${UserSelectAll} FROM "schema"."user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "profile"
+            SELECT 1 FROM "schema"."profile"
             WHERE "profile"."user_id" = "u"."id"
             AND "profile"."profile_key" = "u"."user_key"
           )
@@ -223,9 +223,9 @@ describe('hasOne', () => {
             .whereExists((q) => q.profile.where({ Bio: 'bio' }))
             .toSQL(),
           `
-              SELECT ${userSelectAll} FROM "user" "u"
+              SELECT ${UserSelectAll} FROM "schema"."user" "u"
               WHERE EXISTS (
-                SELECT 1 FROM "profile"
+                SELECT 1 FROM "schema"."profile"
                 WHERE "profile"."bio" = $1
                   AND "profile"."user_id" = "u"."id"
                   AND "profile"."profile_key" = "u"."user_key"
@@ -240,9 +240,9 @@ describe('hasOne', () => {
             .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
             .toSQL(),
           `
-            SELECT ${userSelectAll} FROM "user" "u"
+            SELECT ${UserSelectAll} FROM "schema"."user" "u"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"
+              SELECT 1 FROM "schema"."profile"
               WHERE "profile"."user_id" = "u"."id"
                 AND "profile"."profile_key" = "u"."user_key"
                 AND "profile"."bio" = $1
@@ -256,9 +256,9 @@ describe('hasOne', () => {
         expectSql(
           db.user.as('u').whereExists('activeProfile').toSQL(),
           `
-            SELECT ${userSelectAll} FROM "user" "u"
+            SELECT ${UserSelectAll} FROM "schema"."user" "u"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfile"
+              SELECT 1 FROM "schema"."profile" "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "u"."id"
                 AND "activeProfile"."profile_key" = "u"."user_key"
@@ -273,9 +273,9 @@ describe('hasOne', () => {
             .whereExists((q) => q.activeProfile.where({ Bio: 'bio' }))
             .toSQL(),
           `
-              SELECT ${userSelectAll} FROM "user" "u"
+              SELECT ${UserSelectAll} FROM "schema"."user" "u"
               WHERE EXISTS (
-                SELECT 1 FROM "profile"  "activeProfile"
+                SELECT 1 FROM "schema"."profile" "activeProfile"
                 WHERE "activeProfile"."active" = $1
                   AND "activeProfile"."bio" = $2
                   AND "activeProfile"."user_id" = "u"."id"
@@ -293,9 +293,9 @@ describe('hasOne', () => {
             )
             .toSQL(),
           `
-            SELECT ${userSelectAll} FROM "user" "u"
+            SELECT ${UserSelectAll} FROM "schema"."user" "u"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfile"
+              SELECT 1 FROM "schema"."profile" "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "u"."id"
                 AND "activeProfile"."profile_key" = "u"."user_key"
@@ -320,8 +320,8 @@ describe('hasOne', () => {
           q.toSQL(),
           `
           SELECT "u"."name" "Name", "profile"."bio" "Bio"
-          FROM "user" "u"
-          JOIN "profile"
+          FROM "schema"."user" "u"
+          JOIN "schema"."profile"
             ON "profile"."user_id" = "u"."id"
                  AND "profile"."profile_key" = "u"."user_key"
            AND "profile"."bio" = $1
@@ -342,8 +342,8 @@ describe('hasOne', () => {
           q.toSQL(),
           `
             SELECT "u"."name" "Name", "activeProfile"."bio" "Bio"
-            FROM "user" "u"
-            JOIN "profile"  "activeProfile"
+            FROM "schema"."user" "u"
+            JOIN "schema"."profile" "activeProfile"
               ON "activeProfile"."active" = $1
              AND "activeProfile"."user_id" = "u"."id"
              AND "activeProfile"."profile_key" = "u"."user_key"
@@ -368,8 +368,8 @@ describe('hasOne', () => {
           q.toSQL(),
           `
           SELECT "u"."name" "Name", "p"."bio" "Bio"
-          FROM "user" "u"
-          JOIN "profile"  "p"
+          FROM "schema"."user" "u"
+          JOIN "schema"."profile" "p"
             ON "p"."bio" = $1
             AND "p"."user_id" = $2
             AND "p"."user_id" = "u"."id"
@@ -394,8 +394,8 @@ describe('hasOne', () => {
           q.toSQL(),
           `
             SELECT "u"."name" "Name", "p"."bio" "Bio"
-            FROM "user" "u"
-            JOIN "profile"  "p"
+            FROM "schema"."user" "u"
+            JOIN "schema"."profile" "p"
               ON "p"."bio" = $1
              AND "p"."active" = $2
              AND "p"."user_id" = $3
@@ -418,10 +418,10 @@ describe('hasOne', () => {
           q.toSQL(),
           `
             SELECT "user"."name" "Name", row_to_json("p".*) "p"
-            FROM "user"
+            FROM "schema"."user"
             JOIN LATERAL (
-              SELECT ${profileSelectAll}
-              FROM "profile" "p"
+              SELECT ${ProfileSelectAll}
+              FROM "schema"."profile" "p"
               WHERE "p"."bio" = $1
                 AND "p"."user_id" = "user"."id"
                 AND "p"."profile_key" = "user"."user_key"
@@ -444,10 +444,10 @@ describe('hasOne', () => {
           q.toSQL(),
           `
             SELECT "user"."name" "Name", row_to_json("p".*) "p"
-            FROM "user"
+            FROM "schema"."user"
             JOIN LATERAL (
-              SELECT ${profileSelectAll}
-              FROM "profile" "p"
+              SELECT ${ProfileSelectAll}
+              FROM "schema"."profile" "p"
               WHERE "p"."active" = $1
                 AND "p"."bio" = $2
                 AND "p"."user_id" = "user"."id"
@@ -477,10 +477,10 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               row_to_json("profile".*) "profile"
-            FROM "user" "u"
+            FROM "schema"."user" "u"
             LEFT JOIN LATERAL (
-              SELECT ${profileSelectAll}
-              FROM "profile"
+              SELECT ${ProfileSelectAll}
+              FROM "schema"."profile"
               WHERE "profile"."bio" = $1
                 AND "profile"."user_id" = "u"."id"
                 AND "profile"."profile_key" = "u"."user_key"
@@ -507,10 +507,10 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               row_to_json("profile".*) "profile"
-            FROM "user" "u"
+            FROM "schema"."user" "u"
                    LEFT JOIN LATERAL (
-              SELECT ${profileSelectAll}
-              FROM "profile" "activeProfile"
+              SELECT ${ProfileSelectAll}
+              FROM "schema"."profile" "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."bio" = $2
                 AND "activeProfile"."user_id" = "u"."id"
@@ -533,10 +533,10 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               row_to_json("profile".*) "profile"
-            FROM "user" "u"
+            FROM "schema"."user" "u"
             JOIN LATERAL (
               SELECT "profile"."id" "Id"
-              FROM "profile"
+              FROM "schema"."profile"
               WHERE "profile"."user_id" = "u"."id"
                 AND "profile"."profile_key" = "u"."user_key"
             ) "profile" ON true
@@ -557,10 +557,10 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               COALESCE("hasProfile"."hasProfile", false) "hasProfile"
-            FROM "user" "u"
+            FROM "schema"."user" "u"
             LEFT JOIN LATERAL (
               SELECT true "hasProfile"
-              FROM "profile"
+              FROM "schema"."profile"
               WHERE "profile"."user_id" = "u"."id"
                 AND "profile"."profile_key" = "u"."user_key"
             ) "hasProfile" ON true
@@ -581,10 +581,10 @@ describe('hasOne', () => {
             SELECT
               "u"."id" "Id",
               COALESCE("hasProfile"."hasProfile", false) "hasProfile"
-            FROM "user" "u"
+            FROM "schema"."user" "u"
             LEFT JOIN LATERAL (
               SELECT true "hasProfile"
-              FROM "profile" "activeProfile"
+              FROM "schema"."profile" "activeProfile"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "u"."id"
                 AND "activeProfile"."profile_key" = "u"."user_key"
@@ -611,16 +611,16 @@ describe('hasOne', () => {
           q.toSQL(),
           `
             SELECT row_to_json("profile".*) "profile"
-            FROM "user"
+            FROM "schema"."user"
             LEFT JOIN LATERAL (
               SELECT ${userRowToJSON('user2')} "user"
-              FROM "profile"
+              FROM "schema"."profile"
               LEFT JOIN LATERAL (
                 SELECT row_to_json("profile2".*) "profile"
-                FROM "user" "user2"
+                FROM "schema"."user" "user2"
                 LEFT JOIN LATERAL (
-                  SELECT ${profileSelectAll}
-                  FROM "profile" "profile2"
+                  SELECT ${ProfileSelectAll}
+                  FROM "schema"."profile" "profile2"
                   WHERE "profile2"."user_id" = "user2"."id"
                     AND "profile2"."profile_key" = "user2"."user_key"
                 ) "profile2" ON true
@@ -653,16 +653,16 @@ describe('hasOne', () => {
           q.toSQL(),
           `
             SELECT row_to_json("activeProfile".*) "activeProfile"
-            FROM "user" "activeUser"
+            FROM "schema"."user" "activeUser"
             LEFT JOIN LATERAL (
               SELECT ${userRowToJSON('activeUser2')} "activeUser"
-              FROM "profile" "activeProfile"
+              FROM "schema"."profile" "activeProfile"
               LEFT JOIN LATERAL (
                 SELECT row_to_json("activeProfile2".*) "activeProfile"
-                FROM "user" "activeUser2"
+                FROM "schema"."user" "activeUser2"
                 LEFT JOIN LATERAL (
-                  SELECT ${profileSelectAll}
-                  FROM "profile" "activeProfile2"
+                  SELECT ${ProfileSelectAll}
+                  FROM "schema"."profile" "activeProfile2"
                   WHERE "activeProfile2"."active" = $1
                     AND "activeProfile2"."user_id" = "activeUser2"."id"
                     AND "activeProfile2"."profile_key" = "activeUser2"."user_key"
@@ -689,11 +689,11 @@ describe('hasOne', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "profile"
+            UPDATE "schema"."profile"
             SET
               "bio" = (
                 SELECT "user"."name"
-                FROM "user"
+                FROM "schema"."user"
                 WHERE "user"."id" = "profile"."user_id"
                   AND "user"."user_key" = "profile"."profile_key"
               ),
@@ -710,11 +710,11 @@ describe('hasOne', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "profile"
+            UPDATE "schema"."profile"
             SET
               "bio" = (
                 SELECT "activeUser"."name"
-                FROM "user" "activeUser"
+                FROM "schema"."user" "activeUser"
                 WHERE "activeUser"."active" = $1
                   AND "activeUser"."id" = "profile"."user_id"
                   AND "activeUser"."user_key" = "profile"."profile_key"
@@ -2422,6 +2422,7 @@ describe('hasOne', () => {
 
   describe('not required hasOne', () => {
     class UserTable extends BaseTable {
+      schema = () => 'schema';
       readonly table = 'user';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -2438,6 +2439,7 @@ describe('hasOne', () => {
     }
 
     class ProfileTable extends BaseTable {
+      schema = () => 'schema';
       readonly table = 'profile';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -2487,9 +2489,9 @@ describe('hasOne', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user" WHERE (
+        SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
           SELECT count(*) = $1
-          FROM "profile"
+          FROM "schema"."profile"
           WHERE "profile"."bio" IN ($2, $3)
             AND "profile"."user_id" = "user"."id"
             AND "profile"."profile_key" = "user"."user_key"
@@ -2676,9 +2678,9 @@ describe('hasOne through', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${profileSelectAll} FROM "profile"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile"
           WHERE EXISTS (
-            SELECT 1 FROM "user"  "sender"
+            SELECT 1 FROM "schema"."user" "sender"
             WHERE "profile"."user_id" = "sender"."id"
               AND "profile"."profile_key" = "sender"."user_key"
               AND "sender"."id" = $1
@@ -2698,9 +2700,9 @@ describe('hasOne through', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfile"
           WHERE EXISTS (
-            SELECT 1 FROM "user"  "activeSender"
+            SELECT 1 FROM "schema"."user" "activeSender"
             WHERE "activeProfile"."active" = $1
               AND "activeProfile"."user_id" = "activeSender"."id"
               AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2723,9 +2725,9 @@ describe('hasOne through', () => {
         ) as Query
       ).toSQL(),
       `
-        SELECT ${profileSelectAll} FROM "profile" "p"
+        SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
         WHERE EXISTS (
-          SELECT 1 FROM "user"  "sender"
+          SELECT 1 FROM "schema"."user" "sender"
           WHERE "p"."user_id" = "sender"."id"
             AND "p"."profile_key" = "sender"."user_key"
             AND "sender"."id" = "m"."author_id"
@@ -2740,11 +2742,11 @@ describe('hasOne through', () => {
       expectSql(
         db.message.whereExists('profile').toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message"
+          SELECT ${messageSelectAll} FROM "schema"."message"
           WHERE (EXISTS (
-            SELECT 1 FROM "profile"
+            SELECT 1 FROM "schema"."profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "sender"
+              SELECT 1 FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
@@ -2761,12 +2763,12 @@ describe('hasOne through', () => {
           .whereExists((q) => q.profile.where({ Bio: 'bio' }))
           .toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message" "m"
+          SELECT ${messageSelectAll} FROM "schema"."message" "m"
           WHERE (EXISTS (
-            SELECT 1 FROM "profile"
+            SELECT 1 FROM "schema"."profile"
             WHERE "profile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user"  "sender"
+                SELECT 1 FROM "schema"."user" "sender"
                 WHERE "profile"."user_id" = "sender"."id"
                   AND "profile"."profile_key" = "sender"."user_key"
                   AND "sender"."id" = "m"."author_id"
@@ -2784,11 +2786,11 @@ describe('hasOne through', () => {
           .whereExists('profile', (q) => q.where({ 'profile.Bio': 'bio' }))
           .toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message" "m"
+          SELECT ${messageSelectAll} FROM "schema"."message" "m"
           WHERE (EXISTS (
-            SELECT 1 FROM "profile"
+            SELECT 1 FROM "schema"."profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "sender"
+              SELECT 1 FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -2806,11 +2808,11 @@ describe('hasOne through', () => {
       expectSql(
         db.message.whereExists('activeProfile').toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message"
+          SELECT ${messageSelectAll} FROM "schema"."message"
           WHERE (EXISTS (
-            SELECT 1 FROM "profile"  "activeProfile"
+            SELECT 1 FROM "schema"."profile" "activeProfile"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "activeSender"
+              SELECT 1 FROM "schema"."user" "activeSender"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2830,12 +2832,12 @@ describe('hasOne through', () => {
           .whereExists((q) => q.activeProfile.where({ Bio: 'bio' }))
           .toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message" "m"
+          SELECT ${messageSelectAll} FROM "schema"."message" "m"
           WHERE (EXISTS (
-            SELECT 1 FROM "profile"  "activeProfile"
+            SELECT 1 FROM "schema"."profile" "activeProfile"
             WHERE "activeProfile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user"  "activeSender"
+                SELECT 1 FROM "schema"."user" "activeSender"
                 WHERE "activeProfile"."active" = $2
                   AND "activeProfile"."user_id" = "activeSender"."id"
                   AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2857,11 +2859,11 @@ describe('hasOne through', () => {
           )
           .toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message" "m"
+          SELECT ${messageSelectAll} FROM "schema"."message" "m"
           WHERE (EXISTS (
-            SELECT 1 FROM "profile"  "activeProfile"
+            SELECT 1 FROM "schema"."profile" "activeProfile"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "activeSender"
+              SELECT 1 FROM "schema"."user" "activeSender"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2891,10 +2893,10 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT "m"."text" "Text", "profile"."bio" "Bio"
-          FROM "message" "m"
-          JOIN "profile"
+          FROM "schema"."message" "m"
+          JOIN "schema"."profile"
             ON EXISTS (
-              SELECT 1 FROM "user"  "sender"
+              SELECT 1 FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -2919,10 +2921,10 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT "m"."text" "Text", "activeProfile"."bio" "Bio"
-          FROM "message" "m"
-          JOIN "profile"  "activeProfile"
+          FROM "schema"."message" "m"
+          JOIN "schema"."profile" "activeProfile"
             ON EXISTS (
-              SELECT 1 FROM "user"  "activeSender"
+              SELECT 1 FROM "schema"."user" "activeSender"
               WHERE "activeProfile"."active" = $1
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -2952,12 +2954,12 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT "m"."text" "Text", "p"."bio" "Bio"
-          FROM "message" "m"
-          JOIN "profile"  "p"
+          FROM "schema"."message" "m"
+          JOIN "schema"."profile" "p"
             ON "p"."bio" = $1
            AND "p"."user_id" = $2
            AND EXISTS (
-              SELECT 1 FROM "user"  "sender"
+              SELECT 1 FROM "schema"."user" "sender"
               WHERE "p"."user_id" = "sender"."id"
                 AND "p"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -2984,12 +2986,12 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT "m"."text" "Text", "p"."bio" "Bio"
-          FROM "message" "m"
-          JOIN "profile"  "p"
+          FROM "schema"."message" "m"
+          JOIN "schema"."profile" "p"
             ON "p"."bio" = $1
            AND "p"."user_id" = $2
            AND EXISTS (
-              SELECT 1 FROM "user"  "activeSender"
+              SELECT 1 FROM "schema"."user" "activeSender"
               WHERE "p"."active" = $3
                 AND "p"."user_id" = "activeSender"."id"
                 AND "p"."profile_key" = "activeSender"."user_key"
@@ -3015,14 +3017,14 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT "message"."text" "Text", row_to_json("p".*) "p"
-          FROM "message"
+          FROM "schema"."message"
           JOIN LATERAL (
-            SELECT ${profileSelectAll}
-            FROM "profile" "p"
+            SELECT ${ProfileSelectAll}
+            FROM "schema"."profile" "p"
             WHERE "p"."bio" = $1
               AND EXISTS (
               SELECT 1
-              FROM "user"  "sender"
+              FROM "schema"."user" "sender"
               WHERE "p"."user_id" = "sender"."id"
                 AND "p"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
@@ -3048,14 +3050,14 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT "message"."text" "Text", row_to_json("p".*) "p"
-          FROM "message"
+          FROM "schema"."message"
           JOIN LATERAL (
-            SELECT ${profileSelectAll}
-            FROM "profile" "p"
+            SELECT ${ProfileSelectAll}
+            FROM "schema"."profile" "p"
             WHERE "p"."bio" = $1
               AND EXISTS (
               SELECT 1
-              FROM "user"  "activeSender"
+              FROM "schema"."user" "activeSender"
               WHERE "p"."active" = $2
                 AND "p"."user_id" = "activeSender"."id"
                 AND "p"."profile_key" = "activeSender"."user_key"
@@ -3086,12 +3088,12 @@ describe('hasOne through', () => {
           SELECT
             "m"."id" "Id",
             row_to_json("profile".*) "profile"
-          FROM "message" "m"
+          FROM "schema"."message" "m"
           LEFT JOIN LATERAL (
-            SELECT ${profileSelectAll} FROM "profile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile"
             WHERE "profile"."bio" = $1
               AND EXISTS (
-                SELECT 1 FROM "user" "sender"
+                SELECT 1 FROM "schema"."user" "sender"
                 WHERE "profile"."user_id" = "sender"."id"
                   AND "profile"."profile_key" = "sender"."user_key"
                   AND "sender"."id" = "m"."author_id"
@@ -3117,12 +3119,12 @@ describe('hasOne through', () => {
           SELECT
             "m"."id" "Id",
             row_to_json("profile".*) "profile"
-          FROM "message" "m"
+          FROM "schema"."message" "m"
           LEFT JOIN LATERAL (
-            SELECT ${profileSelectAll} FROM "profile" "activeProfile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfile"
             WHERE "activeProfile"."bio" = $1
               AND EXISTS (
-              SELECT 1 FROM "user"  "activeSender"
+              SELECT 1 FROM "schema"."user" "activeSender"
               WHERE "activeProfile"."active" = $2
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3148,11 +3150,11 @@ describe('hasOne through', () => {
           SELECT
             "m"."id" "Id",
             row_to_json("profile".*) "profile"
-          FROM "message" "m"
+          FROM "schema"."message" "m"
           JOIN LATERAL (
-            SELECT ${profileSelectAll} FROM "profile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user" "sender"
+              SELECT 1 FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -3177,12 +3179,12 @@ describe('hasOne through', () => {
           SELECT
             "m"."id" "Id",
             COALESCE("hasProfile"."hasProfile", false) "hasProfile"
-          FROM "message" "m"
+          FROM "schema"."message" "m"
           LEFT JOIN LATERAL (
             SELECT true "hasProfile"
-            FROM "profile"
+            FROM "schema"."profile"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "sender"
+              SELECT 1 FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "m"."author_id"
@@ -3211,21 +3213,21 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT row_to_json("profile".*) "profile"
-          FROM "message"
+          FROM "schema"."message"
           LEFT JOIN LATERAL (
             SELECT COALESCE("messages"."messages", '[]') "messages"
-            FROM "profile"
+            FROM "schema"."profile"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "messages"
               FROM (
                 SELECT row_to_json("profile2".*) "profile"
-                FROM "message" "messages"
+                FROM "schema"."message" "messages"
                 LEFT JOIN LATERAL (
-                  SELECT ${profileSelectAll}
-                  FROM "profile" "profile2"
+                  SELECT ${ProfileSelectAll}
+                  FROM "schema"."profile" "profile2"
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user"  "sender"
+                    FROM "schema"."user" "sender"
                     WHERE "profile2"."user_id" = "sender"."id"
                       AND "profile2"."profile_key" = "sender"."user_key"
                       AND "sender"."id" = "messages"."author_id"
@@ -3235,7 +3237,7 @@ describe('hasOne through', () => {
                 WHERE ("profile2"."Bio" = $1
                   AND EXISTS (
                     SELECT 1
-                    FROM "user"
+                    FROM "schema"."user"
                     WHERE ("messages"."author_id" = "user"."id"
                       AND "messages"."message_key" = "user"."user_key")
                       AND ("messages"."deleted_at" IS NULL)
@@ -3247,7 +3249,7 @@ describe('hasOne through', () => {
             ) "messages" ON true
             WHERE EXISTS (
               SELECT 1
-              FROM "user"  "sender"
+              FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"
@@ -3277,21 +3279,21 @@ describe('hasOne through', () => {
         q.toSQL(),
         `
           SELECT row_to_json("profile".*) "profile"
-          FROM "message"
+          FROM "schema"."message"
           LEFT JOIN LATERAL (
             SELECT COALESCE("messages"."messages", '[]') "messages"
-            FROM "profile" "activeProfile"
+            FROM "schema"."profile" "activeProfile"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "messages"
               FROM (
                 SELECT row_to_json("profile".*) "profile"
-                FROM "message" "messages"
+                FROM "schema"."message" "messages"
                 LEFT JOIN LATERAL (
-                  SELECT ${profileSelectAll}
-                  FROM "profile" "activeProfile2"
+                  SELECT ${ProfileSelectAll}
+                  FROM "schema"."profile" "activeProfile2"
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user"  "activeSender"
+                    FROM "schema"."user" "activeSender"
                     WHERE "activeProfile2"."active" = $1
                       AND "activeProfile2"."user_id" = "activeSender"."id"
                       AND "activeProfile2"."profile_key" = "activeSender"."user_key"
@@ -3303,7 +3305,7 @@ describe('hasOne through', () => {
                 WHERE ("profile"."Bio" = $3
                   AND EXISTS (
                     SELECT 1
-                    FROM "user"
+                    FROM "schema"."user"
                     WHERE ("messages"."author_id" = "user"."id"
                       AND "messages"."message_key" = "user"."user_key")
                       AND ("messages"."deleted_at" IS NULL)
@@ -3314,7 +3316,7 @@ describe('hasOne through', () => {
             ) "messages" ON true
             WHERE EXISTS (
               SELECT 1
-              FROM "user" "activeSender"
+              FROM "schema"."user" "activeSender"
               WHERE "activeProfile"."active" = $4
                 AND "activeProfile"."user_id" = "activeSender"."id"
                 AND "activeProfile"."profile_key" = "activeSender"."user_key"
@@ -3332,6 +3334,7 @@ describe('hasOne through', () => {
 
   describe('not required hasOne through', () => {
     class UserTable extends BaseTable {
+      schema = 'schema';
       readonly table = 'user';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -3348,6 +3351,7 @@ describe('hasOne through', () => {
     }
 
     class ProfileTable extends BaseTable {
+      schema = 'schema';
       readonly table = 'profile';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -3356,6 +3360,7 @@ describe('hasOne through', () => {
     }
 
     class MessageTable extends BaseTable {
+      schema = 'schema';
       readonly table = 'message';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
@@ -3430,13 +3435,13 @@ describe('hasOne through', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${messageSelectAll} FROM "message" WHERE ((
+        SELECT ${messageSelectAll} FROM "schema"."message" WHERE ((
           SELECT count(*) = $1
-          FROM "profile"
+          FROM "schema"."profile"
           WHERE "profile"."bio" IN ($2, $3)
             AND EXISTS (
               SELECT 1
-              FROM "user"  "sender"
+              FROM "schema"."user" "sender"
               WHERE "profile"."user_id" = "sender"."id"
                 AND "profile"."profile_key" = "sender"."user_key"
                 AND "sender"."id" = "message"."author_id"

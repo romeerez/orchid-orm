@@ -232,10 +232,9 @@ db.table
 
 [//]: # 'has JSDoc'
 
-Specifies the schema to be used as a prefix of a table name.
+Specifies the schema to be used as a prefix of a table name - only for a single query.
 
-Though this method can be used to set the schema right when building the query,
-it's better to specify schema when calling `db(table, () => columns, { schema: string })`
+Normally, specify the schema in `orchidORM` config, or in the table class, see [table schema](/guide/orm-and-query-builder.html#table-schemas).
 
 ```ts
 db.table.withSchema('customSchema').select('id');

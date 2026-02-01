@@ -1,27 +1,33 @@
-import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
-import { QueryData } from '../../query-data';
+import { ToSQLQuery } from '../../sql/to-sql';
 import { addValue } from '../../../utils';
+import { SingleSql } from '../../sql/sql';
 
-export const pushColumnInfoSql = (
-  ctx: ToSQLCtx,
-  table: ToSQLQuery,
-  query: QueryData,
-) => {
-  ctx.sql.push(
-    `SELECT * FROM information_schema.columns WHERE table_name = ${addValue(
-      ctx.values,
-      table.table,
-    )} AND table_catalog = current_database() AND table_schema = ${
-      query.schema || 'current_schema()'
-    }`,
-  );
+import { getQuerySchema } from '../../basic-features/schema/schema';
 
-  if (query.column) {
-    ctx.sql.push(
-      `AND column_name = ${addValue(
-        ctx.values,
-        table.q.shape[query.column]?.data.name || query.column,
-      )}`,
-    );
+export const makeColumnInfoSql = (
+  query: ToSQLQuery,
+  column?: string,
+): SingleSql => {
+  const values: unknown[] = [];
+
+  const schema = getQuerySchema(query);
+
+  let text = `SELECT * FROM information_schema.columns WHERE table_name = ${addValue(
+    values,
+    query.table,
+  )} AND table_catalog = current_database() AND table_schema = ${
+    schema ? addValue(values, schema) : 'current_schema()'
+  }`;
+
+  if (column) {
+    text += ` AND column_name = ${addValue(
+      values,
+      query.q.shape[column]?.data.name || column,
+    )}`;
   }
+
+  return {
+    text,
+    values,
+  };
 };

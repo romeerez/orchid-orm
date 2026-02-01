@@ -1,25 +1,24 @@
-import { ToSQLCtx } from '../../sql/to-sql';
+import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { QueryData, QueryDataFromItem } from '../../query-data';
-import { IsQuery, Query } from '../../query';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { isExpression } from '../../expressions/expression';
 import { getQueryAs } from '../as/as';
 import { searchSourcesToSql } from '../../extra-features/search/search.sql';
-import { quoteSchemaAndTable } from '../../sql/sql';
+import { quoteFromWithSchema, quoteTableWithSchema } from '../../sql/sql';
 import { checkIfASimpleQuery } from '../../sql/check-if-a-simple-query';
 
 let fromQuery: SubQueryForSql | undefined;
 
 export const pushFromAndAs = (
   ctx: ToSQLCtx,
-  table: IsQuery,
+  query: ToSQLQuery,
   data: QueryData,
   quotedAs?: string,
 ): SubQueryForSql | undefined => {
   let sql = 'FROM ';
 
-  const from = getFrom(ctx, table, data, quotedAs);
+  const from = getFrom(ctx, query, data, quotedAs);
   sql += from;
 
   if (data.sources) {
@@ -38,7 +37,7 @@ export const pushFromAndAs = (
 
 const getFrom = (
   ctx: ToSQLCtx,
-  table: IsQuery,
+  query: ToSQLQuery,
   data: QueryData,
   quotedAs?: string,
 ) => {
@@ -48,16 +47,16 @@ const getFrom = (
     const { from } = data;
     if (Array.isArray(from)) {
       return from
-        .map((item) => fromToSql(ctx, data, item, quotedAs))
+        .map((item) => fromToSql(ctx, query, data, item, quotedAs))
         .join(', ');
     }
 
-    return fromToSql(ctx, data, from, quotedAs);
+    return fromToSql(ctx, query, data, from, quotedAs);
   }
 
-  let sql = quoteSchemaAndTable(data.schema, (table as Query).table as string);
+  let sql = quoteTableWithSchema(query);
 
-  if (data.as && quotedAs && quotedAs !== sql) {
+  if (data.as && query.table !== data.as) {
     sql += ` ${quotedAs}`;
   }
 
@@ -68,6 +67,7 @@ const getFrom = (
 
 const fromToSql = (
   ctx: ToSQLCtx,
+  query: ToSQLQuery,
   data: QueryData,
   from: QueryDataFromItem,
   quotedAs?: string,
@@ -89,13 +89,13 @@ const fromToSql = (
           quotedAs || `"${getQueryAs(from)}"`
         }`;
       } else {
-        sql = quoteSchemaAndTable(from.q.schema, from.table);
+        sql = quoteTableWithSchema(from);
       }
 
       fromQuery = from;
     }
   } else {
-    sql = quoteSchemaAndTable(data.schema, from);
+    sql = quoteFromWithSchema(query.q.schema, from);
   }
 
   return (only === undefined ? data.only : only) ? `ONLY ${sql}` : sql;

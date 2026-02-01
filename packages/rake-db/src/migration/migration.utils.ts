@@ -3,10 +3,10 @@ import {
   Column,
   DomainColumn,
   escapeForMigration,
-  TableData,
   isRawSQL,
   RawSqlBase,
   SingleSql,
+  TableData,
   toArray,
   toCamelCase,
   toSnakeCase,
@@ -20,8 +20,8 @@ import {
   quoteTable,
   quoteWithSchema,
 } from '../common';
-import { AnyRakeDbConfig } from '../config';
-import { TableQuery } from './createTable';
+import { AnyRakeDbConfig, PickMigrationsTable } from '../config';
+import { TableQuery } from './create-table';
 
 export const versionToString = (
   config: Pick<AnyRakeDbConfig, 'migrationId'>,
@@ -652,4 +652,23 @@ export const cmpRawSql = (a: RawSqlBase, b: RawSqlBase) => {
   const bValues = JSON.stringify(values);
 
   return aSql === bSql && aValues === bValues;
+};
+
+export const getMigrationsSchemaAndTable = (
+  config: PickMigrationsTable,
+): { schema?: string; table: string } => {
+  const [tableSchema, table] = getSchemaAndTableFromName(
+    config.migrationsTable,
+  );
+
+  const schema =
+    tableSchema ||
+    (config.schema && config.schema !== 'public' ? config.schema : undefined);
+
+  return { schema, table };
+};
+
+export const migrationsSchemaTableSql = (config: PickMigrationsTable) => {
+  const { schema, table } = getMigrationsSchemaAndTable(config);
+  return `${schema ? `"${schema}".` : ''}"${table}"`;
 };

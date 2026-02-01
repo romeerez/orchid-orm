@@ -27,6 +27,7 @@ const User = testDb(
   }),
   undefined,
   {
+    schema: () => 'schema',
     computed: (q) => ({
       nameAndKey: q.sql(
         () => sql<string>`${q.column('name')} || ' ' || ${q.column('userKey')}`,
@@ -89,7 +90,7 @@ describe('computed', () => {
               "user"."name", ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
               (1::decimal) "decimal",
               ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
-            FROM "user"
+            FROM "schema"."user"
             LIMIT 1
           `,
         );
@@ -125,7 +126,7 @@ describe('computed', () => {
               ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
               (1::decimal) "decimal",
               ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
-            FROM "user"
+            FROM "schema"."user"
             LIMIT 1
           `,
         );
@@ -160,7 +161,7 @@ describe('computed', () => {
               ("user"."name" || ' ' || "user"."user_key") "as",
               (1::decimal) "dec",
               ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
-            FROM "user"
+            FROM "schema"."user"
             LIMIT 1
           `,
         );
@@ -195,7 +196,7 @@ describe('computed', () => {
               ("user"."name" || ' ' || "user"."user_key") "as",
               (1::decimal) "dec",
               ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
-            FROM "user"
+            FROM "schema"."user"
             LIMIT 1
           `,
         );
@@ -227,8 +228,8 @@ describe('computed', () => {
               ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
               (1::decimal) "decimal",
               ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
-            FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."user_id"
+            FROM "schema"."profile"
+            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -259,8 +260,8 @@ describe('computed', () => {
               ("user"."name" || ' ' || "user"."user_key") "as",
               (1::decimal) "dec",
               ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
-            FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."user_id"
+            FROM "schema"."profile"
+            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -284,7 +285,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             WHERE
               ("user"."name" || ' ' || "user"."user_key") = $1 AND
               (1::decimal) = $2 AND
@@ -303,7 +304,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             WHERE (1::decimal) > $1
               AND ("user"."name" || ' ' || "user"."user_key" || 'dep') ILIKE '%' || $2
           `,
@@ -320,7 +321,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             WHERE (1::decimal) > $1
               AND ("user"."name" || ' ' || "user"."user_key" || 'dep') ILIKE '%' || $2
           `,
@@ -336,7 +337,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             ORDER BY
               ("user"."name" || ' ' || "user"."user_key") ASC,
               (1::decimal) ASC,
@@ -355,7 +356,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             ORDER BY
               ("user"."name" || ' ' || "user"."user_key") DESC,
               (1::decimal) DESC,
@@ -407,7 +408,7 @@ describe('computed', () => {
 
           expectSql(
             q.toSQL(),
-            `SELECT "user"."id", "user"."name" FROM "user" LIMIT 1`,
+            `SELECT "user"."id", "user"."name" FROM "schema"."user" LIMIT 1`,
           );
 
           const res = await q;
@@ -423,7 +424,10 @@ describe('computed', () => {
         async (column) => {
           const q = User.pluck(column);
 
-          expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+          expectSql(
+            q.toSQL(),
+            `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+          );
 
           const res = await q;
 
@@ -438,7 +442,10 @@ describe('computed', () => {
         async (column) => {
           const q = User.select(column).rows();
 
-          expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+          expectSql(
+            q.toSQL(),
+            `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+          );
 
           const res = await q;
 
@@ -458,7 +465,7 @@ describe('computed', () => {
 
           expectSql(
             q.toSQL(),
-            `SELECT "user"."name" "n", "user"."id" FROM "user"`,
+            `SELECT "user"."name" "n", "user"."id" FROM "schema"."user"`,
           );
 
           const result = await q;
@@ -471,7 +478,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "user" LIMIT 1`,
+          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
         );
 
         const res = await q;
@@ -493,7 +500,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "user" LIMIT 1`,
+          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
         );
 
         const res = await q;
@@ -519,7 +526,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "user" LIMIT 1`,
+          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
         );
 
         const res = await q;
@@ -543,7 +550,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "user" LIMIT 1`,
+          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
         );
 
         const res = await q;
@@ -567,7 +574,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "user" LIMIT 1`,
+          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
         );
 
         const res = await q;
@@ -591,7 +598,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT true "id", "user"."id" "id2", "user"."name" FROM "user" LIMIT 1`,
+          `SELECT true "id", "user"."id" "id2", "user"."name" FROM "schema"."user" LIMIT 1`,
         );
 
         const res = await q;
@@ -613,8 +620,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT "profile"."id", "user"."name", "user"."password", "user"."id" "id2"
-            FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."user_id"
+            FROM "schema"."profile"
+            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -648,8 +655,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT ${profileTableColumnsSql}, "user"."name", "user"."password", "user"."id" "id2"
-            FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."user_id"
+            FROM "schema"."profile"
+            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -682,8 +689,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT "user"."name", "user"."id"
-            FROM "profile"
-            JOIN "user" ON "user"."id" = "profile"."user_id"
+            FROM "schema"."profile"
+            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
             LIMIT 1
           `,
         );
@@ -707,8 +714,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT "user"."updated_at" "updatedAt", "user"."id", "user"."name"
-            FROM "profile"
-            JOIN "user" ON ("profile"."user_id" = "user"."id")
+            FROM "schema"."profile"
+            JOIN "schema"."user" ON ("profile"."user_id" = "user"."id")
           `,
         );
 
@@ -732,10 +739,10 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT "user"."updatedAt", "user"."id", "user"."name"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN (
               SELECT "user"."id", "user"."updated_at" "updatedAt", "user"."name"
-              FROM "user"
+              FROM "schema"."user"
             ) "user" ON "user"."id" = "profile"."user_id"
           `,
         );
@@ -765,10 +772,10 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT "user"."id", "user"."name"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN LATERAL (
               SELECT "user"."id", "user"."name"
-              FROM "user"
+              FROM "schema"."user"
               WHERE "user"."id" = "profile"."user_id"
             ) "user" ON true
           `,
@@ -791,7 +798,7 @@ describe('computed', () => {
           `
             WITH "u" AS (
               SELECT "user"."id", "user"."name"
-              FROM "user"
+              FROM "schema"."user"
             )
             SELECT "u"."id", "u"."name" FROM "u"
           `,
@@ -816,10 +823,10 @@ describe('computed', () => {
           `
             WITH "u" AS (
               SELECT "user"."id", "user"."name"
-              FROM "user"
+              FROM "schema"."user"
             )
             SELECT "u"."id", "u"."name"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN "u" ON "u"."id" = "profile"."user_id"
           `,
         );
@@ -1114,7 +1121,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "user"("name", "password")
+            INSERT INTO "schema"."user"("name", "password")
             VALUES ($1, $2)
             RETURNING "user"."id", "user"."name"
           `,
@@ -1143,7 +1150,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "schema"."user"
             SET "name" = $1
             WHERE "user"."id" = $2
             RETURNING "user"."id", "user"."name"
@@ -1173,7 +1180,7 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "user"
+            UPDATE "schema"."user"
             SET "name" = $1
             WHERE "user"."id" = $2
             RETURNING "user"."id", "user"."name"

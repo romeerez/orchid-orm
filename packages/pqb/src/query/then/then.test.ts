@@ -255,9 +255,16 @@ describe('batch queries', () => {
   afterEach(jest.clearAllMocks);
 
   it('should wrap batch queries in transaction', async () => {
-    const Table = testDb('tmp.then', (t) => ({
-      num: t.integer().primaryKey(),
-    }));
+    const Table = testDb(
+      'tmp.then',
+      (t) => ({
+        num: t.integer().primaryKey(),
+      }),
+      undefined,
+      {
+        schema: undefined,
+      },
+    );
 
     const q = Table.insertMany(
       Array.from({ length: 3 }, (_, i) => ({
@@ -284,9 +291,16 @@ describe('batch queries', () => {
   });
 
   it('should not wrap into transaction when it is already wrapped', async () => {
-    const Table = testDb('tmp.then', (t) => ({
-      num: t.integer().primaryKey(),
-    }));
+    const Table = testDb(
+      'tmp.then',
+      (t) => ({
+        num: t.integer().primaryKey(),
+      }),
+      undefined,
+      {
+        schema: undefined,
+      },
+    );
 
     const q = Table.insertMany(
       Array.from({ length: 3 }, (_, i) => ({

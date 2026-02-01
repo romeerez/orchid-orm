@@ -8,12 +8,9 @@ import {
   TopCTE,
 } from '../basic-features/cte/cte.sql';
 import { SubQueryForSql } from '../sub-query/sub-query-for-sql';
-import { pushTruncateSql } from '../extra-features/truncate/truncate.sql';
-import { pushColumnInfoSql } from '../extra-features/get-column-info/get-column-info.sql';
 import { makeInsertSql } from '../basic-features/mutate/insert.sql';
 import { pushUpdateSql } from '../basic-features/mutate/update.sql';
 import { pushDeleteSql } from '../basic-features/mutate/delete.sql';
-import { pushCopySql } from '../extra-features/copy-table-data/copy-table-data.sql';
 import {
   _clone,
   JoinItem,
@@ -21,7 +18,6 @@ import {
   makeSql,
   MoreThanOneRowError,
   QueryInternal,
-  quoteSchemaAndTable,
   RawSql,
   Sql,
 } from '../index';
@@ -104,6 +100,21 @@ export interface ToSql {
   ): Sql;
 }
 
+export const newToSqlCtx = (query: ToSQLQuery): ToSQLCtx => {
+  const ctx = {
+    topCtx: undefined as unknown as TopToSqlCtx,
+    qb: query.qb,
+    q: query.q,
+    sql: [],
+    values: [],
+    selectedCount: 0,
+  };
+
+  ctx.topCtx = ctx;
+
+  return ctx;
+};
+
 export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
   const query = table.q;
   const sql: string[] = [];
@@ -152,30 +163,16 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
     const tableName = table.table ?? query.as;
     if (!tableName) throw new Error(`Table is missing for ${type}`);
 
-    if (type === 'truncate') {
-      pushTruncateSql(ctx, tableName, query);
-      result = makeSql(ctx, type, isSubSql);
-    } else if (type === 'columnInfo') {
-      pushColumnInfoSql(ctx, table, query);
-      result = makeSql(ctx, type, isSubSql);
+    if (type === 'insert') {
+      result = makeInsertSql(ctx, table, query, `"${tableName}"`, isSubSql);
     } else {
+      // insert does not support aliasing the target table, while update and delete support it
       const quotedAs = `"${query.as || tableName}"`;
 
-      if (type === 'insert') {
-        result = makeInsertSql(
-          ctx,
-          table,
-          query,
-          quoteSchemaAndTable(query.schema, tableName),
-          isSubSql,
-        );
-      } else if (type === 'update') {
+      if (type === 'update') {
         result = pushUpdateSql(ctx, table, query, quotedAs, isSubSql);
       } else if (type === 'delete') {
         result = pushDeleteSql(ctx, table, query, quotedAs, isSubSql);
-      } else if (type === 'copy') {
-        pushCopySql(ctx, table, query, quotedAs);
-        result = makeSql(ctx, type, isSubSql);
       } else {
         throw new Error(`Unsupported query type ${type}`);
       }

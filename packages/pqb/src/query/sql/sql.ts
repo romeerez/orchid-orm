@@ -8,9 +8,11 @@ import { PickQueryColumTypes } from '../pick-query-types';
 import { DynamicSQLArg, StaticSQLArgs } from '../expressions/expression';
 import { DynamicRawSQL, raw, RawSql } from '../expressions/raw-sql';
 import { Column } from '../../columns';
-import { ToSQLCtx } from './to-sql';
+import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryType } from '../query-data';
 import { wrapMainQueryInCte } from './wrap-main-query-in-cte';
+import { OrchidOrmInternalError } from '../errors';
+import { QuerySchema } from '../basic-features/schema/schema';
 
 export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
   delayedRelationSelect?: DelayedRelationSelect;
@@ -73,6 +75,32 @@ export const quoteSchemaAndTable = (
   table: string,
 ): string => {
   return schema ? `"${schema}"."${table}"` : `"${table}"`;
+};
+
+export const requireTableOrStringFrom = (query: ToSQLQuery): string => {
+  const table =
+    query.table ||
+    (typeof query.q.from === 'string' ? query.q.from : undefined);
+
+  if (!table) {
+    throw new OrchidOrmInternalError(
+      query,
+      "The query object does not have a table and doesn't define a `from` string",
+    );
+  }
+
+  return table;
+};
+
+export const quoteTableWithSchema = (query: ToSQLQuery): string =>
+  quoteFromWithSchema(query.q.schema, requireTableOrStringFrom(query));
+
+export const quoteFromWithSchema = (
+  schema: QuerySchema | undefined,
+  table: string,
+): string => {
+  const s = typeof schema === 'function' ? schema() : schema;
+  return s ? `"${s}"."${table}"` : `"${table}"`;
 };
 
 export const makeRowToJson = (

@@ -473,7 +473,7 @@ export const db = custom({ databaseURL: 'url' }, {
           },
         });
 
-        await pull([adapters[0].reconfigure({ schema: 'custom' })], testConfig);
+        await pull(adapters, { ...testConfig, schema: 'custom' });
 
         assert.dbFile([
           [

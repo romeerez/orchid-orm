@@ -1,14 +1,19 @@
-import { ToSQLCtx } from '../../sql/to-sql';
-import { QueryData } from '../../query-data';
-import { quoteSchemaAndTable } from '../../sql/sql';
+import { ToSQLQuery } from '../../sql/to-sql';
+import { quoteTableWithSchema, SingleSql } from '../../sql/sql';
 
-export const pushTruncateSql = (
-  ctx: ToSQLCtx,
-  table: string,
-  query: QueryData,
-) => {
-  ctx.sql.push('TRUNCATE', quoteSchemaAndTable(query.schema, table));
+export interface TruncateOptions {
+  restartIdentity?: boolean;
+  cascade?: boolean;
+}
 
-  if (query.restartIdentity) ctx.sql.push('RESTART IDENTITY');
-  if (query.cascade) ctx.sql.push('CASCADE');
+export const makeTruncateSql = (
+  query: ToSQLQuery,
+  options?: TruncateOptions,
+): SingleSql => {
+  let text = `TRUNCATE ${quoteTableWithSchema(query)}`;
+
+  if (options?.restartIdentity) text += ' RESTART IDENTITY';
+  if (options?.cascade) text += ' CASCADE';
+
+  return { text, values: [] };
 };

@@ -2,7 +2,6 @@ import { Db, Query, omit, RecordUnknown } from 'pqb';
 import {
   chatSelectAll,
   useRelationCallback,
-  userSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import {
@@ -15,6 +14,7 @@ import {
   TestTransactionAdapter,
   ChatData,
   UserData,
+  UserSelectAll,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 import { orchidORMWithAdapter } from '../orm';
@@ -145,9 +145,9 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${chatSelectAll} FROM "chat" "chats"
+          SELECT ${chatSelectAll} FROM "schema"."chat" "chats"
           WHERE EXISTS (
-            SELECT 1 FROM "chatUser"
+            SELECT 1 FROM "schema"."chatUser"
             WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
               AND "chatUser"."chat_key" = "chats"."chat_key"
               AND "chatUser"."user_id" = $1
@@ -176,10 +176,10 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${chatSelectAll} FROM "chat" "activeChats"
+          SELECT ${chatSelectAll} FROM "schema"."chat" "activeChats"
           WHERE "activeChats"."active" = $1
             AND EXISTS (
-              SELECT 1 FROM "chatUser"
+              SELECT 1 FROM "schema"."chatUser"
               WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                 AND "chatUser"."chat_key" = "activeChats"."chat_key"
                 AND "chatUser"."user_id" = $2
@@ -204,9 +204,9 @@ describe('hasAndBelongsToMany', () => {
         ) as Query
       ).toSQL(),
       `
-        SELECT ${chatSelectAll} FROM "chat" "c"
+        SELECT ${chatSelectAll} FROM "schema"."chat" "c"
         WHERE EXISTS (
-          SELECT 1 FROM "chatUser"
+          SELECT 1 FROM "schema"."chatUser"
           WHERE "chatUser"."chat_id" = "c"."id_of_chat"
             AND "chatUser"."chat_key" = "c"."chat_key"
             AND "chatUser"."user_id" = "u"."id"
@@ -221,11 +221,11 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         db.user.whereExists('chats').toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "chats"
+            SELECT 1 FROM "schema"."chat"  "chats"
             WHERE EXISTS (
-              SELECT 1 FROM "chatUser"
+              SELECT 1 FROM "schema"."chatUser"
               WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                 AND "chatUser"."chat_key" = "chats"."chat_key"
                 AND "chatUser"."user_id" = "user"."id"
@@ -241,12 +241,12 @@ describe('hasAndBelongsToMany', () => {
           .whereExists((q) => q.chats.where({ Title: 'title' }))
           .toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" "u"
+          SELECT ${UserSelectAll} FROM "schema"."user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "chats"
+            SELECT 1 FROM "schema"."chat"  "chats"
             WHERE "chats"."title" = $1
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -263,12 +263,12 @@ describe('hasAndBelongsToMany', () => {
           .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
           .toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" "u"
+          SELECT ${UserSelectAll} FROM "schema"."user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "chats"
+            SELECT 1 FROM "schema"."chat"  "chats"
             WHERE
               EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -285,12 +285,12 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         db.user.whereExists('activeChats').toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "activeChats"
+            SELECT 1 FROM "schema"."chat"  "activeChats"
             WHERE "activeChats"."active" = $1
               AND EXISTS (
-              SELECT 1 FROM "chatUser"
+              SELECT 1 FROM "schema"."chatUser"
               WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                 AND "chatUser"."chat_key" = "activeChats"."chat_key"
                 AND "chatUser"."user_id" = "user"."id"
@@ -307,13 +307,13 @@ describe('hasAndBelongsToMany', () => {
           .whereExists((q) => q.activeChats.where({ Title: 'title' }))
           .toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" "u"
+          SELECT ${UserSelectAll} FROM "schema"."user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "activeChats"
+            SELECT 1 FROM "schema"."chat"  "activeChats"
             WHERE "activeChats"."active" = $1
               AND "activeChats"."title" = $2
               AND EXISTS (
-              SELECT 1 FROM "chatUser"
+              SELECT 1 FROM "schema"."chatUser"
               WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                 AND "chatUser"."chat_key" = "activeChats"."chat_key"
                 AND "chatUser"."user_id" = "u"."id"
@@ -332,12 +332,12 @@ describe('hasAndBelongsToMany', () => {
           )
           .toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" "u"
+          SELECT ${UserSelectAll} FROM "schema"."user" "u"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "activeChats"
+            SELECT 1 FROM "schema"."chat"  "activeChats"
             WHERE "activeChats"."active" = $1
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                   AND "chatUser"."chat_key" = "activeChats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -364,10 +364,10 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
         SELECT "u"."name" "Name", "chats"."title" "Title"
-        FROM "user" "u"
-        JOIN "chat"  "chats"
+        FROM "schema"."user" "u"
+        JOIN "schema"."chat"  "chats"
           ON EXISTS (
-            SELECT 1 FROM "chatUser"
+            SELECT 1 FROM "schema"."chatUser"
             WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
               AND "chatUser"."chat_key" = "chats"."chat_key"
               AND "chatUser"."user_id" = "u"."id"
@@ -391,11 +391,11 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "activeChats"."title" "Title"
-          FROM "user" "u"
-          JOIN "chat"  "activeChats"
+          FROM "schema"."user" "u"
+          JOIN "schema"."chat"  "activeChats"
             ON "activeChats"."active" = $1
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                   AND "chatUser"."chat_key" = "activeChats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -424,12 +424,12 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
         SELECT "u"."name" "Name", "c"."title" "Title"
-        FROM "user" "u"
-        JOIN "chat"  "c"
+        FROM "schema"."user" "u"
+        JOIN "schema"."chat" "c"
           ON "c"."title" = $1
           AND "c"."updated_at" = $2
           AND EXISTS (
-            SELECT 1 FROM "chatUser"
+            SELECT 1 FROM "schema"."chatUser"
             WHERE "chatUser"."chat_id" = "c"."id_of_chat"
               AND "chatUser"."chat_key" = "c"."chat_key"
               AND "chatUser"."user_id" = "u"."id"
@@ -457,13 +457,13 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "c"."title" "Title"
-          FROM "user" "u"
-          JOIN "chat"  "c"
+          FROM "schema"."user" "u"
+          JOIN "schema"."chat" "c"
             ON "c"."title" = $1
            AND "c"."active" = $2
            AND "c"."updated_at" = $3
            AND EXISTS (
-             SELECT 1 FROM "chatUser"
+             SELECT 1 FROM "schema"."chatUser"
              WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                AND "chatUser"."chat_key" = "c"."chat_key"
                AND "chatUser"."user_id" = "u"."id"
@@ -486,14 +486,14 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT "user"."name" "Name", row_to_json("c".*) "chat"
-          FROM "user"
+          FROM "schema"."user"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             WHERE "c"."title" = $1
               AND EXISTS (
                 SELECT 1
-                FROM "chatUser"
+                FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                   AND "chatUser"."chat_key" = "c"."chat_key"
                   AND "chatUser"."user_id" = "user"."id"
@@ -518,15 +518,15 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT "user"."name" "Name", row_to_json("c".*) "chat"
-          FROM "user"
+          FROM "schema"."user"
           JOIN LATERAL (
             SELECT ${chatSelectAll}
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             WHERE "c"."active" = $1
               AND "c"."title" = $2
               AND EXISTS (
                 SELECT 1
-                FROM "chatUser"
+                FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                   AND "chatUser"."chat_key" = "c"."chat_key"
                   AND "chatUser"."user_id" = "user"."id"
@@ -558,17 +558,17 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("chats"."chats", '[]') "chats"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT
                 "chats"."id_of_chat" "IdOfChat",
                 "chats"."title" "Title"
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               WHERE "chats"."title" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                     AND "chatUser"."chat_key" = "chats"."chat_key"
                     AND "chatUser"."user_id" = "u"."id"
@@ -598,18 +598,18 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("chats"."chats", '[]') "chats"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT
                 "activeChats"."id_of_chat" "IdOfChat",
                 "activeChats"."title" "Title"
-              FROM "chat" "activeChats"
+              FROM "schema"."chat" "activeChats"
               WHERE "activeChats"."active" = $1
                 AND "activeChats"."title" = $2
                 AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                   AND "chatUser"."chat_key" = "activeChats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -633,14 +633,14 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             "chats"."chats" "chats"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT "chats"."id_of_chat" "IdOfChat"
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -665,12 +665,12 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             "chatsCount"."chatsCount" "chatsCount"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT count(*) "chatsCount"
-            FROM "chat" "chats"
+            FROM "schema"."chat" "chats"
             WHERE EXISTS (
-              SELECT 1 FROM "chatUser"
+              SELECT 1 FROM "schema"."chatUser"
               WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                 AND "chatUser"."chat_key" = "chats"."chat_key"
                 AND "chatUser"."user_id" = "u"."id"
@@ -694,13 +694,13 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             "chatsCount"."chatsCount" "chatsCount"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT count(*) "chatsCount"
-            FROM "chat" "activeChats"
+            FROM "schema"."chat" "activeChats"
             WHERE "activeChats"."active" = $1
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                   AND "chatUser"."chat_key" = "activeChats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -725,14 +725,14 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("titles"."titles", '[]') "titles"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") "titles"
             FROM (
               SELECT "chats"."title" "Title"
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -757,15 +757,15 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("titles"."titles", '[]') "titles"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Title") "titles"
             FROM (
                    SELECT "activeChats"."title" "Title"
-                   FROM "chat" "activeChats"
+                   FROM "schema"."chat" "activeChats"
                    WHERE "activeChats"."active" = $1
                      AND EXISTS (
-                       SELECT 1 FROM "chatUser"
+                       SELECT 1 FROM "schema"."chatUser"
                        WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                          AND "chatUser"."chat_key" = "activeChats"."chat_key"
                          AND "chatUser"."user_id" = "u"."id"
@@ -791,12 +791,12 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("hasChats"."hasChats", false) "hasChats"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT true "hasChats"
-            FROM "chat" "chats"
+            FROM "schema"."chat" "chats"
             WHERE EXISTS (
-              SELECT 1 FROM "chatUser"
+              SELECT 1 FROM "schema"."chatUser"
               WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                 AND "chatUser"."chat_key" = "chats"."chat_key"
                 AND "chatUser"."user_id" = "u"."id"
@@ -821,13 +821,13 @@ describe('hasAndBelongsToMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("hasChats"."hasChats", false) "hasChats"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT true "hasChats"
-            FROM "chat" "activeChats"
+            FROM "schema"."chat" "activeChats"
             WHERE "activeChats"."active" = $1
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                   AND "chatUser"."chat_key" = "activeChats"."chat_key"
                   AND "chatUser"."user_id" = "u"."id"
@@ -855,25 +855,25 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT COALESCE("chats"."chats", '[]') "chats"
-          FROM "user"
+          FROM "schema"."user"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "chats"
             FROM (
               SELECT COALESCE("users"."users", '[]') "users"
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               LEFT JOIN LATERAL (
                 SELECT json_agg(row_to_json(t.*)) "users"
                 FROM (
                   SELECT COALESCE("chats2"."chats", '[]') "chats"
-                  FROM "user" "users"
+                  FROM "schema"."user" "users"
                   LEFT JOIN LATERAL (
                     SELECT json_agg(row_to_json(t.*)) "chats"
                     FROM (
                       SELECT ${chatSelectAll}
-                      FROM "chat" "chats2"
+                      FROM "schema"."chat" "chats2"
                       WHERE EXISTS (
                         SELECT 1
-                        FROM "chatUser"
+                        FROM "schema"."chatUser"
                         WHERE "chatUser"."chat_id" = "chats2"."id_of_chat"
                           AND "chatUser"."chat_key" = "chats2"."chat_key"
                           AND "chatUser"."user_id" = "users"."id"
@@ -883,7 +883,7 @@ describe('hasAndBelongsToMany', () => {
                   ) "chats2" ON true
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "chatUser"
+                    FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "chats"."id_of_chat"
@@ -893,7 +893,7 @@ describe('hasAndBelongsToMany', () => {
               ) "users" ON true
               WHERE EXISTS (
                 SELECT 1
-                FROM "chatUser"
+                FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "user"."id"
@@ -920,26 +920,26 @@ describe('hasAndBelongsToMany', () => {
         q.toSQL(),
         `
           SELECT COALESCE("activeChats"."activeChats", '[]') "activeChats"
-          FROM "user" "activeUsers"
+          FROM "schema"."user" "activeUsers"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "activeChats"
             FROM (
               SELECT COALESCE("activeUsers2"."activeUsers", '[]') "activeUsers"
-              FROM "chat" "activeChats"
+              FROM "schema"."chat" "activeChats"
               LEFT JOIN LATERAL (
                 SELECT json_agg(row_to_json(t.*)) "activeUsers"
                 FROM (
                   SELECT COALESCE("activeChats2"."activeChats", '[]') "activeChats"
-                  FROM "user" "activeUsers2"
+                  FROM "schema"."user" "activeUsers2"
                   LEFT JOIN LATERAL (
                     SELECT json_agg(row_to_json(t.*)) "activeChats"
                     FROM (
                       SELECT ${chatSelectAll}
-                      FROM "chat" "activeChats2"
+                      FROM "schema"."chat" "activeChats2"
                       WHERE "activeChats2"."active" = $1
                         AND EXISTS (
                           SELECT 1
-                          FROM "chatUser"
+                          FROM "schema"."chatUser"
                           WHERE "chatUser"."chat_id" = "activeChats2"."id_of_chat"
                             AND "chatUser"."chat_key" = "activeChats2"."chat_key"
                             AND "chatUser"."user_id" = "activeUsers2"."id"
@@ -950,7 +950,7 @@ describe('hasAndBelongsToMany', () => {
                   WHERE "activeUsers2"."active" = $2
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers2"."id"
                         AND "chatUser"."user_key" = "activeUsers2"."user_key"
                         AND "chatUser"."chat_id" = "activeChats"."id_of_chat"
@@ -961,7 +961,7 @@ describe('hasAndBelongsToMany', () => {
               WHERE "activeChats"."active" = $3
                 AND EXISTS (
                   SELECT 1
-                  FROM "chatUser"
+                  FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                     AND "chatUser"."chat_key" = "activeChats"."chat_key"
                     AND "chatUser"."user_id" = "activeUsers"."id"
@@ -1078,7 +1078,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql,
           `
-          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+          INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
           RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
@@ -1088,7 +1088,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatsSql,
           `
-          INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
+          INSERT INTO "schema"."chat"("title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
           RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
         `,
@@ -1098,7 +1098,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql,
           `
-          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
+          INSERT INTO "schema"."chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
         `,
           [
@@ -1150,7 +1150,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatsSql,
           `
-            INSERT INTO "chat"("active", "title", "chat_key", "updated_at", "created_at")
+            INSERT INTO "schema"."chat"("active", "title", "chat_key", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
             RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
           `,
@@ -1222,7 +1222,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql,
           `
-          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+          INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
           RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
@@ -1243,7 +1243,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatsSql,
           `
-          INSERT INTO "chat"("title", "chat_key", "updated_at", "created_at")
+          INSERT INTO "schema"."chat"("title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
           RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
         `,
@@ -1270,7 +1270,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql,
           `
-          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
+          INSERT INTO "schema"."chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
         `,
           [
@@ -1340,7 +1340,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           { text: createChatsSqlCall[0], values: createChatsSqlCall[1] },
           `
-          INSERT INTO "chat"("active", "title", "chat_key", "updated_at", "created_at")
+          INSERT INTO "schema"."chat"("active", "title", "chat_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10), ($11, $12, $13, $14, $15), ($16, $17, $18, $19, $20)
           RETURNING "chat"."id_of_chat" "IdOfChat", "chat"."chat_key" "ChatKey"
         `,
@@ -1464,7 +1464,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql,
           `
-          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+          INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
           RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
@@ -1477,7 +1477,7 @@ describe('hasAndBelongsToMany', () => {
             { text: call[0], values: call[1] },
             `
             SELECT "chats"."id_of_chat" "IdOfChat", "chats"."chat_key" "ChatKey"
-            FROM "chat" "chats"
+            FROM "schema"."chat" "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
           `,
@@ -1488,7 +1488,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql,
           `
-          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
+          INSERT INTO "schema"."chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
         `,
           [
@@ -1622,7 +1622,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createUserSql,
           `
-          INSERT INTO "user"("name", "user_key", "password", "updated_at", "created_at")
+          INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5), ($6, $7, $8, $9, $10)
           RETURNING "user"."id" "Id", "user"."user_key" "UserKey"
         `,
@@ -1646,7 +1646,7 @@ describe('hasAndBelongsToMany', () => {
             { text: call[0], values: call[1] },
             `
             SELECT "chats"."id_of_chat" "IdOfChat", "chats"."chat_key" "ChatKey"
-            FROM "chat" "chats"
+            FROM "schema"."chat" "chats"
             WHERE "chats"."title" = $1
             LIMIT 1
           `,
@@ -1657,7 +1657,7 @@ describe('hasAndBelongsToMany', () => {
         expectSql(
           createChatUserSql,
           `
-          INSERT INTO "chatUser"("user_id", "user_key", "chat_id", "chat_key")
+          INSERT INTO "schema"."chatUser"("user_id", "user_key", "chat_id", "chat_key")
           VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)
         `,
           [
@@ -2914,13 +2914,13 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" WHERE (
+          SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
             SELECT count(*) = $1
-            FROM "chat" "chats"
+            FROM "schema"."chat" "chats"
             WHERE "chats"."title" IN ($2, $3)
               AND EXISTS (
                 SELECT 1
-                FROM "chatUser"
+                FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "user"."id"
@@ -2940,14 +2940,14 @@ describe('hasAndBelongsToMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userSelectAll} FROM "user" WHERE (
+          SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
             SELECT count(*) = $1
-            FROM "chat" "activeChats"
+            FROM "schema"."chat" "activeChats"
             WHERE "activeChats"."active" = $2
               AND "activeChats"."title" IN ($3, $4)
               AND EXISTS (
                 SELECT 1
-                FROM "chatUser"
+                FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                   AND "chatUser"."chat_key" = "activeChats"."chat_key"
                   AND "chatUser"."user_id" = "user"."id"

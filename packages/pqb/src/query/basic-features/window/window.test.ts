@@ -27,7 +27,7 @@ describe('window', () => {
         })
         .toSQL(),
       `
-          SELECT avg("user"."id") OVER "w" "avg" FROM "user"
+          SELECT avg("user"."id") OVER "w" "avg" FROM "schema"."user"
           WINDOW "w" AS (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
         `,
     );
@@ -47,7 +47,7 @@ describe('window', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT avg("snake"."tail_length") OVER "w" "avg" FROM "snake"
+          SELECT avg("snake"."tail_length") OVER "w" "avg" FROM "schema"."snake"
           WINDOW "w" AS (PARTITION BY "snake"."snake_name" ORDER BY "snake"."tail_length" DESC)
         `,
     );
@@ -68,7 +68,7 @@ describe('window', () => {
         })
         .toSQL(),
       `
-        SELECT avg("user"."id") OVER "w" "avg" FROM "user"
+        SELECT avg("user"."id") OVER "w" "avg" FROM "schema"."user"
         WINDOW "w" AS (PARTITION BY id ORDER BY name DESC)
       `,
     );

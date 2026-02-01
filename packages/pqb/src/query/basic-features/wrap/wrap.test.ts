@@ -11,7 +11,7 @@ describe('wrap', () => {
 
     expectSql(
       q.select('id').wrap(User.select('id')).toSQL(),
-      'SELECT "t"."id" FROM (SELECT "user"."id" FROM "user") "t"',
+      'SELECT "t"."id" FROM (SELECT "user"."id" FROM "schema"."user") "t"',
     );
 
     expectQueryNotMutated(q);
@@ -22,7 +22,7 @@ describe('wrap', () => {
 
     expectSql(
       q.select('id').wrap(User.select('id'), 'wrapped').toSQL(),
-      'SELECT "wrapped"."id" FROM (SELECT "user"."id" FROM "user") "wrapped"',
+      'SELECT "wrapped"."id" FROM (SELECT "user"."id" FROM "schema"."user") "wrapped"',
     );
 
     expectQueryNotMutated(q);
@@ -37,7 +37,7 @@ describe('wrap', () => {
           SELECT "t"."snakeName"
           FROM (
             SELECT "snake"."snake_name" "snakeName"
-            FROM "snake"
+            FROM "schema"."snake"
           ) "t"
         `,
     );

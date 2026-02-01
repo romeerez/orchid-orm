@@ -15,7 +15,7 @@
     "orchid-orm-valibot": "workspace:*",
     "orchid-orm-schema-to-zod": "workspace:*",
     "orchid-orm-test-factory": "workspace:*",
-    "zod": "^4.0.0",
+    "zod": "^4.3.6",
     "valibot": "^0.29.0"
   }
 }

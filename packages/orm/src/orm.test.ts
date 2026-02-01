@@ -17,6 +17,7 @@ describe('orm', () => {
 
   type User = Selectable<UserTable>;
   class UserTable extends BaseTable {
+    schema = () => 'schema';
     readonly table = 'user';
     filePath = 'orm.test.ts';
     columns = this.setColumns((t) => ({
@@ -27,6 +28,7 @@ describe('orm', () => {
   }
 
   class ProfileTable extends BaseTable {
+    schema = () => 'schema';
     readonly table = 'profile';
     filePath = 'orm.test.ts';
     columns = this.setColumns((t) => ({
@@ -105,7 +107,7 @@ describe('orm', () => {
       query.toSQL(),
       `
         SELECT "user"."id", "user"."name"
-        FROM "user"
+        FROM "schema"."user"
         WHERE "user"."id" > $1
       `,
       [0],
@@ -181,10 +183,10 @@ describe('orm', () => {
           "user"."created_at" "createdAt",
           "user"."name" "alias",
           "messagesCount"."messagesCount" "messagesCount"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT count(*) "messagesCount"
-          FROM "message" "messages"
+          FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "messagesCount" ON true

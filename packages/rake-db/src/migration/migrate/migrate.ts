@@ -4,7 +4,7 @@ import {
   migrateAndClose,
   MigrateFnConfig,
   runMigration,
-} from '../../commands/migrateOrRollback';
+} from '../../commands/migrate-or-rollback';
 import {
   AdapterBase,
   defaultSchemaConfig,

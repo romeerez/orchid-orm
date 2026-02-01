@@ -9,6 +9,6 @@
   "author": "Roman Kushyn",
   "license": "ISC",
   "devDependencies": {
-    "zod": "^4.0.0"
+    "zod": "^4.3.6"
   }
 }

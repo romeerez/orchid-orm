@@ -2,6 +2,7 @@ import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
 import { expectSql, testDb, TestTransactionAdapter } from 'test-utils';
 import { RecordUnknown } from '../utils';
+import { quoteTableWithSchema } from 'pqb';
 
 export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;
@@ -74,14 +75,18 @@ export const UniqueTable = testDb(
 );
 
 export type MessageRecord = typeof Message.outputType;
-export const Message = testDb('message', (t) => ({
-  id: t.identity().primaryKey(),
-  chatId: t.integer().foreignKey('chat', 'id'),
-  authorId: t.integer().foreignKey('user', 'id'),
-  text: t.text(),
-  meta: t.json().nullable(),
-  ...t.timestamps(),
-}));
+export const Message = testDb(
+  'message',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    chatId: t.integer().foreignKey('chat', 'id'),
+    authorId: t.integer().foreignKey('user', 'id'),
+    text: t.text(),
+    meta: t.json().nullable(),
+    ...t.timestamps(),
+  }),
+  undefined,
+);
 
 export const messageColumnsSql = Message.q.selectAllColumns!.join(', ');
 
@@ -101,7 +106,9 @@ export const Snake = testDb(
     ...t.timestamps(),
   }),
   undefined,
-  { snakeCase: true },
+  {
+    snakeCase: true,
+  },
 );
 
 const snakeAllColumns = [
@@ -139,7 +146,7 @@ export const Product = testDb('product', (t) => ({
 
 export const expectQueryNotMutated = (q: Query) => {
   const select = q.table === 'user' ? userColumnsSql : '*';
-  expectSql(q.toSQL(), `SELECT ${select} FROM "${q.table}"`);
+  expectSql(q.toSQL(), `SELECT ${select} FROM ${quoteTableWithSchema(q)}`);
 };
 
 export const insert = async <T extends RecordUnknown & { id: number }>(

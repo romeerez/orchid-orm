@@ -94,7 +94,6 @@ export type WhereArg<T extends PickQuerySelectableRelations> =
                 };
               });
     }
-  | QueryOrExpressionBooleanOrNullResult
   | ((
       q: WhereQueryBuilder<T>,
     ) => QueryOrExpressionBooleanOrNullResult | WhereQueryBuilder<T>);
@@ -236,21 +235,31 @@ const resolveCallbacksInArgs = <T extends PickQuerySelectableRelations>(
           }
           copy[key] = resolved;
         } else {
-          for (const op in value) {
-            const param = value[op];
-            if (param && typeof param === 'object') {
-              if (Array.isArray(param)) {
-                param.forEach((item, i) => {
-                  const val = prepareOpArg(q, item);
-                  if (val) param[i] = val;
-                });
-              } else {
-                const val = prepareOpArg(q, param);
-                if (val) value[op] = val;
-              }
-            }
-          }
+          prepareWhereObj(q, value, true);
         }
+      }
+    }
+  }
+};
+
+const prepareWhereObj = (
+  q: PickQuerySelectableRelations,
+  value: RecordUnknown,
+  checkNested?: boolean,
+) => {
+  for (const op in value) {
+    const param = value[op];
+    if (param && typeof param === 'object') {
+      if (Array.isArray(param)) {
+        param.forEach((item, i) => {
+          const val = prepareOpArg(q, item);
+          if (val) param[i] = val;
+        });
+      } else if (checkNested && param.constructor === Object) {
+        prepareWhereObj(q, param as RecordUnknown);
+      } else {
+        const val = prepareOpArg(q, param);
+        if (val) value[op] = val;
       }
     }
   }

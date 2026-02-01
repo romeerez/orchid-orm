@@ -14,7 +14,7 @@ describe('order', () => {
     expectSql(
       q.order('id', 'name').toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           ORDER BY "user"."id" ASC, "user"."name" ASC
         `,
     );
@@ -28,7 +28,7 @@ describe('order', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake"
           ORDER BY "snake"."snake_name" ASC, "snake"."tail_length" ASC
         `,
     );
@@ -40,7 +40,7 @@ describe('order', () => {
     expectSql(
       q.order({ id: 'ASC', name: 'DESC' }).toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           ORDER BY "user"."id" ASC, "user"."name" DESC
         `,
     );
@@ -53,7 +53,7 @@ describe('order', () => {
         })
         .toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
         `,
     );
@@ -65,7 +65,7 @@ describe('order', () => {
     expectSql(
       Snake.order({ snakeName: 'ASC', tailLength: 'DESC' }).toSQL(),
       `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake"
           ORDER BY "snake"."snake_name" ASC, "snake"."tail_length" DESC
         `,
     );
@@ -76,7 +76,7 @@ describe('order', () => {
         tailLength: 'DESC NULLS LAST',
       }).toSQL(),
       `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake"
           ORDER BY "snake"."snake_name" ASC NULLS FIRST, "snake"."tail_length" DESC NULLS LAST
         `,
     );
@@ -87,7 +87,7 @@ describe('order', () => {
     expectSql(
       q.order(testDb.sql`id ASC NULLS FIRST`).toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         ORDER BY id ASC NULLS FIRST
       `,
     );
@@ -102,8 +102,8 @@ describe('order', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT (SELECT count(*) FROM "user") "count"
-          FROM "user"
+          SELECT (SELECT count(*) FROM "schema"."user") "count"
+          FROM "schema"."user"
           ORDER BY "count" ASC
         `,
     );
@@ -130,7 +130,7 @@ describe('order', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT "user"."id" "name" FROM "user"
+          SELECT "user"."id" "name" FROM "schema"."user"
           ORDER BY "name" ASC
         `,
     );
@@ -147,10 +147,10 @@ describe('order', () => {
       q.toSQL(),
       `
           SELECT row_to_json("profile".*) "profile"
-          FROM "user"
+          FROM "schema"."user"
           LEFT JOIN LATERAL (
             SELECT "profile"."bio" "Bio"
-            FROM "profile"
+            FROM "schema"."profile"
             WHERE "profile"."user_id" = "user"."id"
               AND "profile"."profile_key" = "user"."user_key"
           ) "profile" ON true
@@ -167,7 +167,7 @@ describe('orderSql', () => {
     expectSql(
       q.orderSql`id ASC NULLS FIRST`.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         ORDER BY id ASC NULLS FIRST
       `,
     );

@@ -11,15 +11,15 @@ export {
   getConstraintName,
 } from './migration/migration.utils';
 export { promptSelect } from './prompt';
-export { migrate, migrateAndClose } from './commands/migrateOrRollback';
-export type { MigrateFnConfig } from './commands/migrateOrRollback';
+export { migrate, migrateAndClose } from './commands/migrate-or-rollback';
+export type { MigrateFnConfig } from './commands/migrate-or-rollback';
 export type { ChangeCallback } from './migration/change';
-export { introspectDbSchema } from './generate/dbStructure';
+export { introspectDbSchema } from './generate/db-structure';
 export type {
   DbStructure,
   IntrospectedStructure,
-} from './generate/dbStructure';
-export { astToMigration } from './generate/astToMigration';
+} from './generate/db-structure';
+export { astToMigration } from './generate/ast-to-migration';
 export { getSchemaAndTableFromName, concatSchemaAndName } from './common';
 export {
   getDbStructureTableData,
@@ -30,12 +30,12 @@ export {
   dbColumnToAst,
   getDbTableColumnsChecks,
   instantiateDbColumn,
-} from './generate/structureToAst';
+} from './generate/structure-to-ast';
 export type {
   StructureToAstCtx,
   StructureToAstTableData,
-} from './generate/structureToAst';
-export { makeFileVersion, writeMigrationFile } from './commands/newMigration';
+} from './generate/structure-to-ast';
+export { makeFileVersion, writeMigrationFile } from './commands/new-migration';
 export { migrationConfigDefaults, processRakeDbConfig } from './config';
 export type {
   AnyRakeDbConfig,
@@ -46,8 +46,9 @@ export type {
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';
 export type { SilentQueries, DbMigration } from './migration/migration';
-export { saveMigratedVersion } from './migration/manageMigratedVersions';
+export { saveMigratedVersion } from './migration/manage-migrated-versions';
 export { migrateFiles, makeMigrateAdapter } from './migration/migrate/migrate';
 export { RakeDbError } from './errors';
 export { rakeDbCommands } from './commands';
 export { runCommand } from './commands';
+export { getMigrationsSchemaAndTable } from './migration/migration.utils';

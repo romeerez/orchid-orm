@@ -327,14 +327,21 @@ describe('hooks', () => {
   });
 
   describe('set values in before hooks', () => {
-    const User = testDb('user', (t) => ({
-      id: t.identity().primaryKey(),
-      name: t.text().unique(),
-      password: t
-        .text()
-        .readOnly()
-        .default(() => 'password'),
-    }));
+    const User = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text().unique(),
+        password: t
+          .text()
+          .readOnly()
+          .default(() => 'password'),
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
     it('should set a readonly value in beforeCreate', async () => {
       let cols: string[] | undefined;
@@ -388,7 +395,7 @@ describe('hooks', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "user"
+          UPDATE "schema"."user"
           SET "name" = $1, "updated_at" = now()
           RETURNING "user"."id", "user"."name", "user"."age", "user"."password"
         `,
@@ -958,7 +965,7 @@ describe('hooks', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "user" SET "name" = $1, "updated_at" = now()
+          UPDATE "schema"."user" SET "name" = $1, "updated_at" = now()
           WHERE "user"."id" = $2
           RETURNING "user"."age", "user"."name"
         `,
@@ -1373,10 +1380,10 @@ describe('hooks', () => {
         ...Object.getOwnPropertyNames(Update.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
-        ...Object.keys(QueryUpsert).filter(
+        ...Object.getOwnPropertyNames(QueryUpsert.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
-        ...Object.keys(QueryOrCreate).filter(
+        ...Object.getOwnPropertyNames(QueryOrCreate.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
         ...Object.getOwnPropertyNames(Delete.prototype).filter(

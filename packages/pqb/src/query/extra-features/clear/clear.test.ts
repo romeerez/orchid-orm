@@ -36,13 +36,13 @@ describe('clear', () => {
           'offset',
         )
         .toSQL(),
-      `SELECT ${userColumnsSql} FROM "user"`,
+      `SELECT ${userColumnsSql} FROM "schema"."user"`,
     );
   });
 
   it('should clear increment and decrement', () => {
     const expectedSql = line(`
-      UPDATE "user" SET "name" = $1, "updated_at" = now()
+      UPDATE "schema"."user" SET "name" = $1, "updated_at" = now()
     `);
     const expectedValues = ['new name'];
 

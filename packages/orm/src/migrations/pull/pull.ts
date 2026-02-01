@@ -35,7 +35,7 @@ export const pull = async (
   const baseTableExportedAs = config.baseTable.exportAs;
 
   const [adapter] = adapters;
-  const currentSchema = adapter.schema || 'public';
+  const currentSchema = config.schema || 'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);
 

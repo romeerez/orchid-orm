@@ -143,6 +143,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     logger,
     autoPreparedStatements,
     noPrimaryKey = 'error',
+    schema,
     ...options
   }: OrchidOrmParam<
     ({ db: Query } | { adapter: AdapterBase }) & DbSharedOptions
@@ -214,7 +215,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
 
     const options: DbTableOptions<unknown, string, Column.Shape.QueryInit> = {
       ...commonOptions,
-      schema: table.schema,
+      schema: table.schema || schema,
       language: table.language,
       scopes: table.scopes as DbTableOptionScopes<
         string,
@@ -250,7 +251,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     (result as RecordUnknown)[key] = dbTable;
   }
 
-  applyRelations(qb, tableInstances, result);
+  applyRelations(qb, tableInstances, result, schema);
 
   for (const key in tables) {
     const table = tableInstances[key] as unknown as {

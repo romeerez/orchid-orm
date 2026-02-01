@@ -65,7 +65,7 @@ export const _queryUpsert = (
   return _orCreate(q as Query, data.create, updateData, mergeData) as Query;
 };
 
-export interface QueryUpsert {
+export class QueryUpsert {
   /**
    * `upsert` tries to update a single record, and then it creates the record if it doesn't yet exist.
    *
@@ -176,11 +176,7 @@ export interface QueryUpsert {
   upsert<T extends UpsertThis, Update extends UpdateData<T>>(
     this: T,
     data: UpsertData<T, Update>,
-  ): UpsertResult<T>;
-}
-
-export const QueryUpsert: QueryUpsert = {
-  upsert(data) {
+  ): UpsertResult<T> {
     return _queryUpsert(_clone(this), data as never) as never;
-  },
-};
+  }
+}

@@ -27,7 +27,7 @@ import {
   newDelayedRelationSelect,
 } from '../select/delayed-relational-select';
 import { isRelationQuery } from '../../relations';
-import { SingleSqlItem, Sql } from '../../sql/sql';
+import { quoteTableWithSchema, SingleSqlItem, Sql } from '../../sql/sql';
 import {
   addValue,
   emptyArray,
@@ -145,7 +145,7 @@ export const makeInsertSql = (
     quotedAs,
     isSubSql,
     returningPos: 0,
-    insertSql: `INSERT INTO ${quotedAs}${
+    insertSql: `INSERT INTO ${quoteTableWithSchema(q)}${
       quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
     }`,
   };

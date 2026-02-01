@@ -1,5 +1,26 @@
 # Breaking changes
 
+## orchid-orm 1.61
+
+Added much better support for database schemas!
+
+See [docs](https://orchid-orm.netlify.app/guide/orm-and-query-builder.html) - look for `schema` keyword.
+
+Had to undo certain functionality:
+previously, `node-postgres` and `postgres-js` adapters accepted `schema` config to set a `search_path`,
+it was conflicting with `schema` in OrchidORM config, so the `schema` parameter for the postgres drivers was renamed to `searchPath`.
+
+You can pass `searchPath: string` via `orchidORM` constructor - it will be set to the db drivers to configure the initial `search_path` when connecting.
+Alternatively, the `searchPath` parameter can be passed via database URL string as a URI parameter.
+
+`rake-db` was relying on the `schema` property of the mentioned db drivers, now this is removed.
+
+If you're using other schema than the default `public`:
+
+- change `migrationsTable` rake-db option to include the schema, e.g. `migrationsTable: 'my_schema.migrations'`
+- alternatively, set `schema: string` config of rake-db, it will be used for the migrations table,
+  and also to omit the default schema name when generating migrations with the `pull` command.
+
 ## orchid-orm 1.60
 
 Since orchid-orm 1.55 all queries inside a transaction were issues with a `SAVEPOINT`,

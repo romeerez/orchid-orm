@@ -7,14 +7,14 @@ import { asMock, TestAdapter } from 'test-utils';
 import {
   getMigratedVersionsMap,
   RakeDbAppliedVersions,
-} from '../migration/manageMigratedVersions';
-import { getMigrationVersionOrThrow } from '../migration/migrationsSet';
+} from '../migration/manage-migrated-versions';
+import { getMigrationVersionOrThrow } from '../migration/migrations-set';
 import { AdapterBase, RecordString } from 'pqb';
 import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
 
 jest.mock('fs/promises');
-jest.mock('../migration/manageMigratedVersions');
+jest.mock('../migration/manage-migrated-versions');
 jest.mock('../prompt');
 jest.mock('../common', () => ({
   transaction(adapter: AdapterBase, fn: (adapter: AdapterBase) => unknown) {

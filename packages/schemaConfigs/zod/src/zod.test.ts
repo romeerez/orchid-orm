@@ -390,7 +390,7 @@ describe('zod schema config', () => {
           type,
           'safe',
           Number.MAX_SAFE_INTEGER + 1,
-          `Too big: expected int to be <${Number.MAX_SAFE_INTEGER}`,
+          `Too big: expected int to be <=${Number.MAX_SAFE_INTEGER}`,
         );
       });
     },
@@ -592,7 +592,11 @@ describe('zod schema config', () => {
       const buffer = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
       expectAllParse(type, buffer, buffer);
 
-      expectAllThrow(type, [1, 0, 1], 'Input not instance of Buffer');
+      expectAllThrow(
+        type,
+        [1, 0, 1],
+        'Invalid input: expected Buffer, received array',
+      );
     });
   });
 
@@ -674,7 +678,7 @@ describe('zod schema config', () => {
       expectInputQueryThrow(
         type.min(min),
         now,
-        `Too small: expected date to be >=${min}`,
+        `Too small: expected date to be >=${min.getTime()}`,
       );
 
       expectInputQueryThrow(type.min(min, 'custom'), now, 'custom');
@@ -682,7 +686,7 @@ describe('zod schema config', () => {
       expectInputQueryThrow(
         type.max(max),
         now,
-        `Too big: expected date to be <=${max}`,
+        `Too big: expected date to be <=${max.getTime()}`,
       );
 
       expectInputQueryThrow(type.max(max, 'custom'), now, 'custom');

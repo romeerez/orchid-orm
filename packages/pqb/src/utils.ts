@@ -48,17 +48,15 @@ export type ShallowSimplify<T> = T extends any ? { [K in keyof T]: T[K] } : T;
  * @param constructors - classes to merge methods from
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function applyMixins(derivedCtor: any, constructors: any[]) {
-  constructors.forEach((baseCtor) => {
-    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
-      Object.defineProperty(
-        derivedCtor.prototype,
-        name,
-        Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
-          Object.create(null),
-      );
-    });
-  });
+export function applyMixins(targetClass: any, mixinClasses: any[]) {
+  const target = targetClass.prototype;
+  for (const mixinClass of mixinClasses) {
+    for (const key of Object.getOwnPropertyNames(mixinClass.prototype)) {
+      if (key !== 'constructor') {
+        target[key] = mixinClass.prototype[key];
+      }
+    }
+  }
 }
 
 /**

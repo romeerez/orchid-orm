@@ -12,7 +12,7 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "user" SET "deleted_at" = now()
+        UPDATE "schema"."user" SET "deleted_at" = now()
         WHERE ("user"."deleted_at" IS NULL)
       `,
     );
@@ -22,7 +22,7 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.toSQL(),
       `
-          SELECT ${userSoftDeleteColumnsSql} FROM "user"
+          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user"
           WHERE ("user"."deleted_at" IS NULL)
         `,
     );
@@ -32,7 +32,7 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.includeDeleted().toSQL(),
       `
-          SELECT ${userSoftDeleteColumnsSql} FROM "user"
+          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user"
         `,
     );
   });
@@ -42,7 +42,7 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
            SET "deleted_at" = now()
          WHERE ("user"."deleted_at" IS NULL)
       `,
@@ -67,6 +67,7 @@ describe('softDelete', () => {
       }),
       undefined,
       {
+        schema: () => 'schema',
         softDelete: true,
       },
     );
@@ -75,7 +76,7 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "user"
+        UPDATE "schema"."user"
            SET "deleted_at" = CURRENT_TIMESTAMP
          WHERE ("user"."deleted_at" IS NULL)
       `,
@@ -87,7 +88,7 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        DELETE FROM "user"
+        DELETE FROM "schema"."user"
       `,
     );
   });

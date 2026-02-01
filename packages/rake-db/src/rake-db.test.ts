@@ -1,10 +1,10 @@
-import { createDb, dropDb, resetDb } from './commands/createOrDrop';
+import { createDb, dropDb, resetDb } from './commands/create-or-drop';
 import {
   migrateCommand,
   redoCommand,
   rollbackCommand,
-} from './commands/migrateOrRollback';
-import { newMigration } from './commands/newMigration';
+} from './commands/migrate-or-rollback';
+import { newMigration } from './commands/new-migration';
 import { pullDbStructure } from './generate/pull';
 import { RakeDbError } from './errors';
 import { runRecurrentMigrations } from './commands/recurrent';
@@ -13,17 +13,17 @@ import { clearChanges, getCurrentChanges } from './migration/change';
 import { processRakeDbConfig } from './config';
 import { noop, DefaultSchemaConfig, IntegerColumn } from 'pqb';
 
-jest.mock('./commands/createOrDrop', () => ({
+jest.mock('./commands/create-or-drop', () => ({
   createDb: jest.fn(() => Promise.resolve()),
   dropDb: jest.fn(() => Promise.resolve()),
   resetDb: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('./commands/migrateOrRollback', () => ({
+jest.mock('./commands/migrate-or-rollback', () => ({
   migrateCommand: jest.fn(() => Promise.resolve()),
   rollbackCommand: jest.fn(() => Promise.resolve()),
   redoCommand: jest.fn(() => Promise.resolve()),
 }));
-jest.mock('./commands/newMigration');
+jest.mock('./commands/new-migration');
 jest.mock('./commands/recurrent', () => ({
   runRecurrentMigrations: jest.fn(() => Promise.resolve()),
 }));

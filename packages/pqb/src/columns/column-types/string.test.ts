@@ -5,9 +5,10 @@ import {
   TestSchemaConfig,
   useTestDatabase,
   sql,
+  db,
+  UserData,
 } from 'test-utils';
 import { raw } from '../../query/expressions/raw-sql';
-import { User, userData } from '../../test-utils/pqb.test-utils';
 import { z } from 'zod/v4';
 import { ColumnToCodeCtx } from '../code';
 
@@ -198,13 +199,13 @@ describe('string columns', () => {
         useTestDatabase();
 
         it('should be decoded to a Buffer when sub-selected', async () => {
-          await User.create(userData);
+          await db.user.create(UserData);
 
           const {
             sub: { bytea },
-          } = await User.take().select({
+          } = await db.user.take().select({
             sub: () =>
-              User.take().select({
+              db.user.take().select({
                 bytea: sql`'text'::bytea`.type(() => t.bytea()),
               }),
           });
@@ -215,13 +216,13 @@ describe('string columns', () => {
 
         // https://github.com/romeerez/orchid-orm/issues/557
         it('should be decoded to a Buffer when sub-selected when having a noop parse', async () => {
-          await User.create(userData);
+          await db.user.create(UserData);
 
           const {
             sub: { bytea },
-          } = await User.take().select({
+          } = await db.user.take().select({
             sub: () =>
-              User.take().select({
+              db.user.take().select({
                 bytea: sql`'text'::bytea`.type(() =>
                   t.bytea().parse(z.unknown(), (buf) => buf),
                 ),

@@ -156,9 +156,11 @@ export class Then implements QueryCatchers {
 let queryError: Error = undefined as unknown as Error;
 
 // `query.then` getter: it must be a getter to store the error with stacktrace prior to executing `await`.
-const getThen = function (
+export const getThen = function (): (
   this: Query,
-): (this: Query, resolve?: Resolve, reject?: Reject) => Promise<unknown> {
+  resolve?: Resolve,
+  reject?: Reject,
+) => Promise<unknown> {
   queryError = new Error();
   return maybeWrappedThen;
 };

@@ -23,7 +23,7 @@ describe('expressions', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name" || ' ' || "user"."password" FROM "user" LIMIT 1`,
+        `SELECT "user"."name" || ' ' || "user"."password" FROM "schema"."user" LIMIT 1`,
       );
     });
 
@@ -38,7 +38,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "user"
+          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "schema"."user"
         `,
         [1, 'name'],
       );
@@ -75,14 +75,14 @@ describe('expressions', () => {
             SELECT row_to_json(t.*)
             FROM (
               SELECT "u"."id"
-              FROM "user" "u"
+              FROM "schema"."user" "u"
               WHERE "u"."id" = "user"."id"
                 AND "u"."name" = "post"."title"
               LIMIT 1
             ) "t"
           ) "alias"
-          FROM "user"
-          JOIN "post" ON "post"."title" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."post" ON "post"."title" = "user"."id"
         `,
       );
     });
@@ -97,7 +97,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "user"
+          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "schema"."user"
         `,
         [1, 'name'],
       );
@@ -118,10 +118,10 @@ describe('expressions', () => {
             (
               SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
               FROM (
-                SELECT "user"."id" FROM "user" WHERE "user"."name" = "profile"."bio"
+                SELECT "user"."id" FROM "schema"."user" WHERE "user"."name" = "profile"."bio"
               ) "t"
             ) "sub"
-          FROM (SELECT "profile"."bio" FROM "profile") "profile"
+          FROM (SELECT "profile"."bio" FROM "schema"."profile") "profile"
         `,
       );
     });
@@ -144,7 +144,7 @@ describe('expressions', () => {
         q.toSQL(),
         `
           SELECT concat($1, "user"."name", $2, "user"."password") ILIKE '%' || $3 || '%' "value"
-          FROM "user"
+          FROM "schema"."user"
         `,
         ['one', 'two', 'lala'],
       );
@@ -166,7 +166,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(coalesce(one, two)) > 2 + 2 "count" FROM "user" LIMIT 1
+          SELECT count(coalesce(one, two)) > 2 + 2 "count" FROM "schema"."user" LIMIT 1
         `,
       );
     });
@@ -181,9 +181,9 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WHERE ((
-            (SELECT "user"."active" FROM "user" WHERE "user"."id" = $1 LIMIT 1)
+            (SELECT "user"."active" FROM "schema"."user" WHERE "user"."id" = $1 LIMIT 1)
             OR
             "user"."age" > $2
           ) = $3)

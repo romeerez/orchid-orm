@@ -1,6 +1,7 @@
-import { _clone } from '../../basic-features/clone/clone';
-import { SetQueryReturnsVoid } from '../../query';
+import { Query, SetQueryReturnsVoid } from '../../query';
 import { _queryExec } from '../../query.utils';
+import { makeTruncateSql } from './truncate.sql';
+import { _clone } from '../../basic-features/clone/clone';
 
 export class QueryTruncate {
   /**
@@ -23,15 +24,10 @@ export class QueryTruncate {
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoid<T> {
-    const query = _clone(this);
-    const { q } = query;
-    q.type = 'truncate';
-    if (options?.restartIdentity) {
-      q.restartIdentity = true;
-    }
-    if (options?.cascade) {
-      q.cascade = true;
-    }
+    const query = Object.create(_clone(this)) as Query;
+
+    query.toSQL = () => makeTruncateSql(query, options);
+
     return _queryExec(query) as never;
   }
 }

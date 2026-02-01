@@ -8,10 +8,10 @@ import {
   defaultSchemaConfig,
   DomainColumn,
   PickQueryInternal,
-  PickQueryQ,
   Query,
   QueryInternal,
   UnknownColumn,
+  getQuerySchema,
 } from 'pqb';
 import {
   AnyRakeDbConfig,
@@ -34,11 +34,13 @@ import { report } from './reportGeneratedMigration';
 import path from 'node:path';
 import { pathToFileURL } from 'url';
 
-export interface CodeTable
-  extends PickQueryQ,
-    PickQueryShape,
-    PickQueryInternal {
+export interface CodeTable extends PickQueryShape, PickQueryInternal {
   table: string;
+  q: CodeTableQueryData;
+}
+
+export interface CodeTableQueryData {
+  schema?: string;
 }
 
 export interface CodeItems {
@@ -91,7 +93,7 @@ export const generate = async (
   );
 
   const [adapter] = adapters;
-  const currentSchema = adapter.schema ?? 'public';
+  const currentSchema = config.schema ?? 'public';
 
   const db = await getDbFromConfig(config, dbPath);
   const { columnTypes, internal } = db.$qb;
@@ -324,7 +326,7 @@ const getActualItems = async (
       throw new Error(`Table ${key} is missing table property`);
     }
 
-    const { schema } = table.q;
+    const schema = getQuerySchema(table);
     const name = concatSchemaAndName({ schema, name: table.table });
     if (tableNames.has(name)) {
       throw new Error(`Table ${name} is defined more than once`);
@@ -334,7 +336,14 @@ const getActualItems = async (
 
     if (schema) codeItems.schemas.add(schema);
 
-    codeItems.tables.push(table as never);
+    codeItems.tables.push({
+      table: table.table as string,
+      shape: table.shape,
+      internal: table.internal,
+      q: {
+        schema: getQuerySchema(table),
+      },
+    });
 
     for (const key in table.relations) {
       const column = table.shape[key];

@@ -1,7 +1,7 @@
-import { introspectDbSchema } from './dbStructure';
+import { introspectDbSchema } from './db-structure';
 import { pullDbStructure } from './pull';
-import { makeFileVersion, writeMigrationFile } from '../commands/newMigration';
-import { saveMigratedVersion } from '../migration/manageMigratedVersions';
+import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
+import { saveMigratedVersion } from '../migration/manage-migrated-versions';
 import {
   makeColumnTypes,
   DefaultColumnTypes,
@@ -11,17 +11,18 @@ import {
 } from 'pqb';
 import { asMock, TestAdapter } from 'test-utils';
 import { processRakeDbConfig, RakeDbConfig } from '../config';
-import { dbStructureMockFactory } from './dbStructure.mockFactory';
+import { dbStructureMockFactory } from './db-structure.mockFactory';
 
-jest.mock('./dbStructure');
-
-jest.mock('../commands/newMigration', () => ({
-  makeFileVersion: jest.fn(),
-  writeMigrationFile: jest.fn(),
+jest.mock('../migration/manage-migrated-versions', () => ({
+  ...jest.requireActual('../migration/manage-migrated-versions'),
+  saveMigratedVersion: jest.fn(),
 }));
 
-jest.mock('../migration/manageMigratedVersions', () => ({
-  saveMigratedVersion: jest.fn(),
+jest.mock('./db-structure');
+
+jest.mock('../commands/new-migration', () => ({
+  makeFileVersion: jest.fn(),
+  writeMigrationFile: jest.fn(),
 }));
 
 const structure = {

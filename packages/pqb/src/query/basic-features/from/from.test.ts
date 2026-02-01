@@ -24,7 +24,7 @@ describe('from', () => {
 
     expectSql(
       q.toSQL(),
-      'SELECT "user"."name" FROM (SELECT "user"."name" FROM "user") "user"',
+      'SELECT "user"."name" FROM (SELECT "user"."name" FROM "schema"."user") "user"',
     );
   });
 
@@ -41,10 +41,10 @@ describe('from', () => {
       `
         WITH "w" AS (
           SELECT "profile"."user_id" "userId"
-          FROM "profile"
+          FROM "schema"."profile"
         )
         SELECT "w"."userId", "user"."id"
-        FROM (SELECT ${userColumnsSql} FROM "user") "user"
+        FROM (SELECT ${userColumnsSql} FROM "schema"."user") "user"
         JOIN "w" ON "w"."userId" = "user"."id"
       `,
     );
@@ -57,7 +57,7 @@ describe('from', () => {
 
     expectSql(
       q.toSQL(),
-      `SELECT "profile"."bio" FROM (SELECT ${profileColumnsSql} FROM "profile") "profile"`,
+      `SELECT "profile"."bio" FROM (SELECT ${profileColumnsSql} FROM "schema"."profile") "profile"`,
     );
   });
 
@@ -86,8 +86,8 @@ describe('from', () => {
         SELECT
           "user"."created_at" "createdAt",
           "user"."name" "alias",
-          (SELECT count(*) FROM "user") "count"
-        FROM "user"
+          (SELECT count(*) FROM "schema"."user") "count"
+        FROM "schema"."user"
       ) "user" WHERE "user"."alias" ILIKE '%' || $1 || '%'`,
         ['name'],
       );
@@ -136,8 +136,8 @@ describe('from multiple', () => {
         FROM
           "with1",
           "with2",
-          (SELECT "user"."updated_at" "updatedAt" FROM "user") "user",
-          (SELECT "profile"."created_at" "createdAt" FROM "profile") "profile"
+          (SELECT "user"."updated_at" "updatedAt" FROM "schema"."user") "user",
+          (SELECT "profile"."created_at" "createdAt" FROM "schema"."profile") "profile"
       `,
     );
 
@@ -195,6 +195,6 @@ describe('only', () => {
   it('should add `ONLY` keyword to `FROM`', () => {
     const q = User.only();
 
-    expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM ONLY "user"`);
+    expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM ONLY "schema"."user"`);
   });
 });

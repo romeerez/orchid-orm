@@ -52,7 +52,7 @@ describe('aggregate', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(*) > $1 FROM "user"
+          SELECT count(*) > $1 FROM "schema"."user"
         `,
         [3],
       );
@@ -61,41 +61,44 @@ describe('aggregate', () => {
 
   describe('aggregate options', () => {
     it('should work without options', async () => {
-      expectSql(User.count('*').toSQL(), 'SELECT count(*) FROM "user"');
+      expectSql(
+        User.count('*').toSQL(),
+        'SELECT count(*) FROM "schema"."user"',
+      );
     });
 
     it('should support a column with name', () => {
       expectSql(
         User.count('createdAt').toSQL(),
-        'SELECT count("user"."created_at") FROM "user"',
+        'SELECT count("user"."created_at") FROM "schema"."user"',
       );
     });
 
     it('should support distinct option', () => {
       expectSql(
         User.count('name', { distinct: true }).toSQL(),
-        'SELECT count(DISTINCT "user"."name") FROM "user"',
+        'SELECT count(DISTINCT "user"."name") FROM "schema"."user"',
       );
     });
 
     it('should support order', () => {
       expectSql(
         User.count('name', { order: { name: 'DESC' } }).toSQL(),
-        'SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "user"',
+        'SELECT count("user"."name" ORDER BY "user"."name" DESC) FROM "schema"."user"',
       );
     });
 
     it('should support order by column with name', () => {
       expectSql(
         User.count('createdAt', { order: { createdAt: 'DESC' } }).toSQL(),
-        'SELECT count("user"."created_at" ORDER BY "user"."created_at" DESC) FROM "user"',
+        'SELECT count("user"."created_at" ORDER BY "user"."created_at" DESC) FROM "schema"."user"',
       );
     });
 
     it('should support filter', () => {
       expectSql(
         User.count('name', { filter: { age: { not: null } } }).toSQL(),
-        'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"',
+        'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "schema"."user"',
       );
     });
 
@@ -104,7 +107,7 @@ describe('aggregate', () => {
         User.count('createdAt', {
           filter: { createdAt: { not: 'Bob' } },
         }).toSQL(),
-        'SELECT count("user"."created_at") FILTER (WHERE "user"."created_at" <> $1) FROM "user"',
+        'SELECT count("user"."created_at") FILTER (WHERE "user"."created_at" <> $1) FROM "schema"."user"',
         ['Bob'],
       );
     });
@@ -122,7 +125,7 @@ describe('aggregate', () => {
           }).toSQL(),
           `
             SELECT count("user"."name") OVER (PARTITION BY "user"."id" ORDER BY "user"."id" DESC)
-            FROM "user"
+            FROM "schema"."user"
           `,
         );
       });
@@ -139,7 +142,7 @@ describe('aggregate', () => {
           }).toSQL(),
           `
             SELECT count("user"."created_at") OVER (PARTITION BY "user"."created_at" ORDER BY "user"."created_at" DESC)
-            FROM "user"
+            FROM "schema"."user"
           `,
         );
       });
@@ -156,7 +159,7 @@ describe('aggregate', () => {
           }).toSQL(),
           `
             SELECT count("user"."name") OVER (PARTITION BY "user"."id", "user"."name" ORDER BY "user"."id" DESC)
-            FROM "user"
+            FROM "schema"."user"
           `,
         );
       });
@@ -173,7 +176,7 @@ describe('aggregate', () => {
           }).toSQL(),
           `
             SELECT count("user"."created_at") OVER (PARTITION BY "user"."created_at", "user"."updated_at" ORDER BY "user"."updated_at" DESC)
-            FROM "user"
+            FROM "schema"."user"
           `,
         );
       });
@@ -200,7 +203,7 @@ describe('aggregate', () => {
                 PARTITION BY "user"."id"
                 ORDER BY "user"."id" DESC
               )
-          FROM "user"
+          FROM "schema"."user"
         `,
       );
     });
@@ -216,7 +219,7 @@ describe('aggregate', () => {
         `
           SELECT count("user"."name")
           WITHIN GROUP (ORDER BY "user"."name" DESC)
-          FILTER (WHERE "user"."age" IS NOT NULL) FROM "user"
+          FILTER (WHERE "user"."age" IS NOT NULL) FROM "schema"."user"
         `,
       );
     });
@@ -241,7 +244,7 @@ describe('aggregate', () => {
       expectSql(
         q.toSQL(),
         `
-            SELECT count(*) "count" FROM "user" LIMIT 1
+            SELECT count(*) "count" FROM "schema"."user" LIMIT 1
           `,
       );
 
@@ -262,8 +265,8 @@ describe('aggregate', () => {
         q.toSQL(),
         `
           SELECT count("message".*) "messagesCount"
-          FROM "user"
-          JOIN "message" ON "message"."author_id" = "user"."id"
+          FROM "schema"."user"
+          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
         `,
       );
     });
@@ -284,10 +287,10 @@ describe('aggregate', () => {
         q.toSQL(),
         `
           SELECT sum("first"."messagesCount")
-          FROM "user"
+          FROM "schema"."user"
           LEFT JOIN LATERAL (
             SELECT count(*) "first", count(*) "messagesCount"
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "first" ON true
@@ -341,10 +344,10 @@ describe('aggregate', () => {
         q.toSQL(),
         `
           SELECT sum("first"."messagesSum")
-          FROM "user"
+          FROM "schema"."user"
           LEFT JOIN LATERAL (
             SELECT sum("messages"."id") "first", sum("messages"."id") "messagesSum"
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "first" ON true
@@ -542,7 +545,7 @@ describe('aggregate', () => {
 
       if (as) select += ` "${as}"`;
 
-      return `SELECT ${select} FROM "user"`;
+      return `SELECT ${select} FROM "schema"."user"`;
     };
 
     it('should have a column type', () => {
@@ -663,7 +666,7 @@ describe('aggregate', () => {
       const q = User.clone();
       expectSql(
         q[method as 'jsonObjectAgg']({ alias: 'name' }).toSQL(),
-        `SELECT ${functionName}($1::text, "user"."name") FROM "user"`,
+        `SELECT ${functionName}($1::text, "user"."name") FROM "schema"."user"`,
         ['alias'],
       );
       expectQueryNotMutated(q);
@@ -675,7 +678,7 @@ describe('aggregate', () => {
         q[method as 'jsonObjectAgg']({
           alias: testDb.sql`name`,
         }).toSQL(),
-        `SELECT ${functionName}($1::text, name) FROM "user"`,
+        `SELECT ${functionName}($1::text, name) FROM "schema"."user"`,
         ['alias'],
       );
       expectQueryNotMutated(q);
@@ -683,7 +686,7 @@ describe('aggregate', () => {
 
     it(`should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") "result" FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, "user"."name") "result" FROM "schema"."user"`;
       expectSql(
         q
           .select({
@@ -698,7 +701,7 @@ describe('aggregate', () => {
 
     it(`should select aggregated value with raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT ${functionName}($1::text, name) "result" FROM "user"`;
+      const expectedSql = `SELECT ${functionName}($1::text, name) "result" FROM "schema"."user"`;
       expectSql(
         q
           .select({
@@ -766,7 +769,7 @@ describe('aggregate', () => {
       const q = User.clone();
       expectSql(
         q.stringAgg('name', ' & ').toSQL(),
-        `SELECT string_agg("user"."name", $1) FROM "user"`,
+        `SELECT string_agg("user"."name", $1) FROM "schema"."user"`,
         [' & '],
       );
       expectQueryNotMutated(q);
@@ -781,7 +784,7 @@ describe('aggregate', () => {
             ' & ',
           )
           .toSQL(),
-        `SELECT string_agg(name, $1) FROM "user"`,
+        `SELECT string_agg(name, $1) FROM "schema"."user"`,
         [' & '],
       );
       expectQueryNotMutated(q);
@@ -789,14 +792,14 @@ describe('aggregate', () => {
 
     it(`.stringAgg should select aggregated value`, () => {
       const q = User.all();
-      const expectedSql = `SELECT string_agg("user"."name", $1) FROM "user"`;
+      const expectedSql = `SELECT string_agg("user"."name", $1) FROM "schema"."user"`;
       expectSql(q.stringAgg('name', ' & ').toSQL(), expectedSql, [' & ']);
       expectQueryNotMutated(q);
     });
 
     it(`.stringAgg supports raw sql`, () => {
       const q = User.all();
-      const expectedSql = `SELECT string_agg(name, $1) FROM "user"`;
+      const expectedSql = `SELECT string_agg(name, $1) FROM "schema"."user"`;
       expectSql(
         q
           .stringAgg(
@@ -848,7 +851,7 @@ describe('aggregate', () => {
             SELECT ${functionName}() OVER (
               PARTITION BY "user"."age"
               ORDER BY "user"."created_at" DESC
-            ) "result" FROM "user"
+            ) "result" FROM "schema"."user"
           `,
           [],
         );

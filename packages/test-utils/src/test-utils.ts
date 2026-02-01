@@ -26,8 +26,6 @@ import {
 } from 'pqb/postgres-js';
 import { orchidORM as postgresJsOrchidORM } from '../../orm/src/adapters/postgres-js';
 import { rakeDb as postgresJsRakeDb } from '../../rake-db/src/adapters/postgres-js';
-// is needed to get rid of TS portability error in zod column types
-import 'zod';
 
 export const testingWithPostgresJS = true;
 
@@ -91,6 +89,7 @@ export const testDb = createDbWithAdapter({
   adapter: testAdapter,
   columnTypes: testColumnTypes,
   log: !process.env.CI,
+  schema: () => 'schema',
 });
 
 export const { sql } = testDb;

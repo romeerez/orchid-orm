@@ -25,7 +25,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "user"."id"
-          FROM "user"
+          FROM "schema"."user"
           LIMIT 1
         `,
       );
@@ -45,7 +45,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "user"."id" > $1
-          FROM "user"
+          FROM "schema"."user"
           LIMIT 1
         `,
         [0],
@@ -67,7 +67,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "snake"."snake_name"
-          FROM "snake"
+          FROM "schema"."snake"
           LIMIT 1
         `,
       );
@@ -85,7 +85,7 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(*)::int FROM "user" LIMIT 1
+          SELECT count(*)::int FROM "schema"."user" LIMIT 1
         `,
       );
     });
@@ -111,7 +111,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "user"."id"
-          FROM "user"
+          FROM "schema"."user"
           LIMIT 1
         `,
       );
@@ -132,7 +132,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "snake"."snake_name"
-          FROM "snake"
+          FROM "schema"."snake"
           LIMIT 1
         `,
       );
@@ -153,7 +153,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT count(*)::int
-          FROM "user"
+          FROM "schema"."user"
           LIMIT 1
         `,
       );
@@ -172,7 +172,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "user"."id"
-          FROM "user"
+          FROM "schema"."user"
           LIMIT 1
         `,
       );

@@ -9,6 +9,7 @@ import {
   MaybeArray,
   noop,
   Column,
+  QuerySchema,
 } from 'pqb';
 import {
   ChangeCallback,
@@ -149,7 +150,7 @@ const assert = {
 const table = <Shape extends Column.Shape.QueryInit>(
   columns?: (t: typeof BaseTable.columnTypes) => Shape,
   dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
-  options?: { noPrimaryKey?: boolean; name?: string; schema?: string },
+  options?: { noPrimaryKey?: boolean; name?: string; schema?: QuerySchema },
 ) => {
   return class Table extends BaseTable {
     schema = options?.schema;

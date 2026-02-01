@@ -131,8 +131,10 @@ const getOrchidOrmImportName = (
 
     for (const element of elements) {
       if (
-        element.propertyName?.escapedText === 'orchidORM' ||
-        element.name.escapedText === 'orchidORM'
+        element.name.escapedText === 'orchidORM' ||
+        (element.propertyName &&
+          'escapedText' in element.propertyName &&
+          element.propertyName.escapedText === 'orchidORM')
       ) {
         return element.name.escapedText.toString();
       }

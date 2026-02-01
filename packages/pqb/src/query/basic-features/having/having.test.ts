@@ -10,7 +10,7 @@ describe('having', () => {
       q.toSQL(),
       `
         SELECT ${userColumnsSql}
-        FROM "user"
+        FROM "schema"."user"
         HAVING count(*) = $1
       `,
       [5],
@@ -27,7 +27,7 @@ describe('having', () => {
       q.toSQL(),
       `
         SELECT ${userColumnsSql}
-        FROM "user"
+        FROM "schema"."user"
         HAVING sum("user"."id") > $1 AND avg("user"."id") < $2
       `,
       [5, 20],
@@ -41,7 +41,7 @@ describe('having', () => {
       q.toSQL(),
       `
         SELECT ${userColumnsSql}
-        FROM "user"
+        FROM "schema"."user"
         HAVING min("user"."id") > $1 AND max("user"."id") < $2
       `,
       [1, 10],
@@ -61,7 +61,7 @@ describe('having', () => {
       q.toSQL(),
       `
         SELECT ${userColumnsSql}
-        FROM "user"
+        FROM "schema"."user"
         HAVING (min("user"."id") > $1 AND max("user"."id") < $2)
             OR (sum("user"."id") >= $3 AND avg("user"."id") <= $4)
       `,
@@ -78,7 +78,7 @@ describe('havingSql', () => {
       q.toSQL(),
       `
         SELECT ${userColumnsSql}
-        FROM "user"
+        FROM "schema"."user"
         HAVING count(*) = $1
       `,
       [5],

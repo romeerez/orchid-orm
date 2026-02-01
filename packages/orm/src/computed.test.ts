@@ -14,6 +14,7 @@ describe('computed', () => {
   useTestORM();
 
   class UserTable extends BaseTable {
+    schema = () => 'schema';
     readonly table = 'user';
     columns = this.setColumns((t) => ({
       Id: t.name('id').identity().primaryKey(),
@@ -38,6 +39,7 @@ describe('computed', () => {
   }
 
   class ProfileTable extends BaseTable {
+    schema = () => 'schema';
     readonly table = 'profile';
     columns = this.setColumns((t) => ({
       Id: t.name('id').bigSerial().primaryKey(),

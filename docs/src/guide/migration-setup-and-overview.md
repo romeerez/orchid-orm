@@ -248,6 +248,10 @@ type MigrationConfig = {
   // (for Orchid ORM) change this if ORM instance is exported under a different name than `db`.
   dbExportedAs?: string; // 'db' is the default
 
+  // to create the migrations-tracking table not in the default public schema,
+  // also to omit this schema name when generating migrations with the `pull` command.
+  schema: 'custom-schema';
+
   // or it can be set manually:
   columnTypes?: (t) => {
     // the same columnTypes config as in BaseTable definition
@@ -273,6 +277,8 @@ type MigrationConfig = {
 
   // table in your database to store migrated versions
   migrationsTable?: string;
+  // it can include a schema, example:
+  migrationsTable: 'my-schema.migrations';
 
   // function to import typescript migration file
   import?(path: string): void;

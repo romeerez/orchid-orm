@@ -356,6 +356,8 @@ export class PostTable extends BaseTable {
       // columns of the middle table to connect the columns to
       references: ['postId'],
       through: {
+        // optional: schema of the middle table, can be a function
+        schema: 'schema',
         // name of the middle table
         table: 'postTag',
         // columns of the middle table to connect to the related table

@@ -42,7 +42,7 @@ export interface PostgresJsAdapterOptions
   extends postgres.Options<any>,
     AdapterConfigBase {
   databaseURL?: string;
-  schema?: string;
+  searchPath?: string;
 }
 
 type RawResult = RowList<(Row & Iterable<Row>)[]>;
@@ -112,7 +112,7 @@ const types: Record<string, Partial<postgres.PostgresType>> = {
 
 export class PostgresJsAdapter implements AdapterBase {
   sql: postgres.Sql;
-  schema?: string;
+  searchPath?: string;
   config: PostgresJsAdapterOptions;
   errorClass = postgres.PostgresError;
 
@@ -122,11 +122,11 @@ export class PostgresJsAdapter implements AdapterBase {
   }
 
   private configure(config: PostgresJsAdapterOptions): postgres.Sql {
-    this.schema = config.schema;
-    if (this.schema) {
+    this.searchPath = config.searchPath;
+    if (this.searchPath) {
       this.config.connection = {
         ...config.connection,
-        search_path: this.schema,
+        search_path: this.searchPath,
       };
     }
 
@@ -140,13 +140,13 @@ export class PostgresJsAdapter implements AdapterBase {
         this.config.ssl = ssl === 'true';
       }
 
-      const schema = url.searchParams.get('schema');
-      if (schema) {
-        this.schema = schema;
-        url.searchParams.delete('schema');
+      const searchPath = url.searchParams.get('searchPath');
+      if (searchPath) {
+        this.searchPath = searchPath;
+        url.searchParams.delete('searchPath');
         this.config.connection = {
           ...config.connection,
-          search_path: schema,
+          search_path: searchPath,
         };
       }
 
@@ -183,7 +183,7 @@ export class PostgresJsAdapter implements AdapterBase {
     database?: string;
     user?: string;
     password?: string;
-    schema?: string;
+    searchPath?: string;
   }): AdapterBase {
     const url = this.getURL();
     if (url) {
@@ -199,8 +199,8 @@ export class PostgresJsAdapter implements AdapterBase {
         url.password = params.password;
       }
 
-      if (params.schema !== undefined) {
-        url.searchParams.set('schema', params.schema);
+      if (params.searchPath !== undefined) {
+        url.searchParams.set('searchPath', params.searchPath);
       }
 
       return new PostgresJsAdapter({
@@ -222,8 +222,8 @@ export class PostgresJsAdapter implements AdapterBase {
     return url ? url.username : (this.config.user as string);
   }
 
-  getSchema(): string | undefined {
-    return this.schema;
+  getSearchPath(): string | undefined {
+    return this.searchPath;
   }
 
   getHost(): string {
@@ -348,7 +348,7 @@ export class PostgresJsTransactionAdapter implements AdapterBase {
     database?: string;
     user?: string;
     password?: string;
-    schema?: string;
+    searchPath?: string;
   }): AdapterBase {
     return this.adapter.reconfigure(params);
   }
@@ -361,8 +361,8 @@ export class PostgresJsTransactionAdapter implements AdapterBase {
     return this.adapter.getUser();
   }
 
-  getSchema(): string | undefined {
-    return this.adapter.schema;
+  getSearchPath(): string | undefined {
+    return this.adapter.searchPath;
   }
 
   getHost(): string {

@@ -47,8 +47,8 @@ describe('using db', () => {
       q.toSQL(),
       `
         SELECT "message"."updated_at" "updatedAt"
-        FROM "user"
-        JOIN "message" ON "message"."author_id" = "user"."id"
+        FROM "schema"."user"
+        JOIN "schema"."message" ON "message"."author_id" = "user"."id"
       `,
     );
 
@@ -70,10 +70,10 @@ describe('using db', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "firstJoinName"."messagesCount" FROM "user"
+        SELECT "firstJoinName"."messagesCount" FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT count(*) "firstJoinName", count(*) "messagesCount"
-          FROM "message" "messages"
+          FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "firstJoinName" ON true
@@ -94,7 +94,7 @@ describe('join', () => {
     joinTarget: Message,
     fkey: 'authorId',
     text: 'text',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "user"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "schema"."user"`,
   });
 });
 
@@ -106,7 +106,7 @@ describe('join table with named columns', () => {
     joinTarget: Snake,
     fkey: 'tailLength',
     text: 'snakeName',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "user"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "schema"."user"`,
   });
 });
 
@@ -118,7 +118,7 @@ describe('join to table with named columns', () => {
     joinTarget: User,
     fkey: 'name',
     text: 'name',
-    selectFrom: `SELECT ${snakeSelectAllWithTable} FROM "snake"`,
+    selectFrom: `SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"`,
   });
 });
 
@@ -146,8 +146,8 @@ describe('join callback with query builder', () => {
     const q = User.all();
 
     const expectedSql = `
-      SELECT ${userTableColumnsSql} FROM "user"
-      JOIN "message"
+      SELECT ${userTableColumnsSql} FROM "schema"."user"
+      JOIN "schema"."message"
         ON "message"."author_id" = "user"."id"
         OR "message"."text" = "user"."name"
     `;
@@ -177,8 +177,8 @@ describe('join callback with query builder', () => {
 
   it('should have .on and .onOr properly working for named columns', () => {
     const expectedSql = `
-      SELECT ${snakeSelectAllWithTable} FROM "snake"
-      JOIN "user"
+      SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"
+      JOIN "schema"."user"
         ON "user"."name" = "snake"."snake_name"
         OR "user"."id" = "snake"."tail_length"
     `;
@@ -204,8 +204,8 @@ describe('join callback with query builder', () => {
 
   it('should have .on and .onOr properly working when joining table with named columns', () => {
     const reverseSql = `
-      SELECT ${userTableColumnsSql} FROM "user"
-      JOIN "snake"
+      SELECT ${userTableColumnsSql} FROM "schema"."user"
+      JOIN "schema"."snake"
         ON "snake"."snake_name" = "user"."name"
         OR "snake"."tail_length" = "user"."id"
     `;
@@ -235,8 +235,8 @@ describe('join callback with query builder', () => {
         q.onJsonPathEquals('otherUser.data', '$.name', 'user.data', '$.name'),
       ).toSQL(),
       `
-        SELECT ${userTableColumnsSql} FROM "user"
-        JOIN "user" "otherUser"
+        SELECT ${userTableColumnsSql} FROM "schema"."user"
+        JOIN "schema"."user" "otherUser"
           ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("user"."data", $2)
       `,
       ['$.name', '$.name'],
@@ -254,8 +254,8 @@ describe('join callback with query builder', () => {
         ),
       ).toSQL(),
       `
-        SELECT ${snakeSelectAllWithTable} FROM "snake"
-        JOIN "snake" "otherSnake"
+        SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"
+        JOIN "schema"."snake" "otherSnake"
           ON jsonb_path_query_first("otherSnake"."snake_data", $1) = jsonb_path_query_first("snake"."snake_data", $2)
       `,
       ['$.name', '$.name'],
@@ -264,8 +264,8 @@ describe('join callback with query builder', () => {
 
   describe('where methods', () => {
     describe('using main table columns', () => {
-      const sql = `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON `;
-      const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM "snake" JOIN "user" ON `;
+      const sql = `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."message" ON `;
+      const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" JOIN "schema"."user" ON `;
 
       it('should use main table column in .where', () => {
         const q = User.join(Message, (q) => q.where({ 'user.name': 'name' }));
@@ -468,14 +468,14 @@ describe('join callback with query builder', () => {
             SELECT
               "t"."messageId",
               "t"."content" "messageText"
-            FROM "user"
+            FROM "schema"."user"
             JOIN
               (
                 SELECT
                   "t"."id" "messageId",
                   "t"."author_id" "userId",
                   "t"."text" "content"
-                FROM "message" "t"
+                FROM "schema"."message" "t"
                 WHERE "t"."text" = $1
               ) "t"
               ON "t"."userId" = "user"."id"
@@ -509,13 +509,13 @@ describe('join callback with query builder', () => {
             SELECT
               "t"."snakeName" "name",
               "t"."tailLength" "length"
-            FROM "user"
+            FROM "schema"."user"
             JOIN
               (
                 SELECT
                   "t"."snake_name" "snakeName",
                   "t"."tail_length" "tailLength"
-                FROM "snake" "t"
+                FROM "schema"."snake" "t"
                 WHERE "t"."snake_name" = $1
               ) "t"
               ON "t"."tailLength" = "user"."id"
@@ -528,7 +528,7 @@ describe('join callback with query builder', () => {
 
     testWhere(
       (cb) => Message.join(User, cb as never).toSQL(),
-      `SELECT ${messageTableColumnsSql} FROM "message" JOIN "user" ON`,
+      `SELECT ${messageTableColumnsSql} FROM "schema"."message" JOIN "schema"."user" ON`,
       {
         model: User,
         pkey: 'user.id',
@@ -547,7 +547,7 @@ describe('join callback with query builder', () => {
 
     testWhere(
       (cb) => Snake.join(User, cb as never).toSQL(),
-      `SELECT ${snakeSelectAllWithTable} FROM "snake" JOIN "user" ON`,
+      `SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" JOIN "schema"."user" ON`,
       {
         model: User,
         pkey: 'user.id',
@@ -566,7 +566,7 @@ describe('join callback with query builder', () => {
 
     testWhere(
       (cb) => User.join(Snake, cb as never).toSQL(),
-      `SELECT ${userTableColumnsSql} FROM "user" JOIN "snake" ON`,
+      `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."snake" ON`,
       {
         model: Snake,
         pkey: 'snake.tailLength',
@@ -581,7 +581,7 @@ describe('join callback with query builder', () => {
       joinTarget: User,
       fkey: 'id',
       text: 'name',
-      selectFrom: `SELECT ${snakeSelectAll} FROM "snake"`,
+      selectFrom: `SELECT ${snakeSelectAll} FROM "schema"."snake"`,
     });
   });
 
@@ -624,7 +624,7 @@ describe('join callback with query builder', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userTableColumnsSql} FROM "user" LEFT JOIN "message" ON (false)`,
+        `SELECT ${userTableColumnsSql} FROM "schema"."user" LEFT JOIN "schema"."message" ON (false)`,
       );
     });
 
@@ -635,7 +635,7 @@ describe('join callback with query builder', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userTableColumnsSql} FROM "user" LEFT JOIN "message" ON (false)`,
+        `SELECT ${userTableColumnsSql} FROM "schema"."user" LEFT JOIN "schema"."message" ON (false)`,
       );
     });
   });
@@ -667,10 +667,10 @@ describe('implicit lateral joins', () => {
       q.toSQL(),
       `
         SELECT "message"."updated_at" "updatedAt"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "message".*
-          FROM "message"
+          FROM "schema"."message"
           WHERE "message"."author_id" = "user"."id" AND "message"."text" = $1
           LIMIT $2
         ) "message" ON true
@@ -698,10 +698,10 @@ describe('implicit lateral joins', () => {
       q.toSQL(),
       `
         SELECT "message"."author_id" "authorId"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "message".*
-          FROM "message"
+          FROM "schema"."message"
           WHERE "message"."id" = "user"."id" AND "message"."text" = $1
           LIMIT $2
           OFFSET $3
@@ -719,9 +719,9 @@ describe('implicit lateral joins', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "p" AS (SELECT ${profileColumnsSql} FROM "profile")
+        WITH "p" AS (SELECT ${profileColumnsSql} FROM "schema"."profile")
         SELECT ${userTableColumnsSql}
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT *
           FROM "p"
@@ -745,10 +745,10 @@ describe('implicit lateral joins', () => {
       q.toSQL(),
       `
         SELECT "snake"."snake_name" "snakeName"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "snake".*
-          FROM "snake"
+          FROM "schema"."snake"
           WHERE "snake"."snake_id" = "user"."id"
           LIMIT $1
         ) "snake" ON true
@@ -771,10 +771,10 @@ describe('implicit lateral joins', () => {
       q.toSQL(),
       `
         SELECT "snake"."snakeName"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "snake"."snake_name" "snakeName"
-          FROM "snake"
+          FROM "schema"."snake"
           WHERE "snake"."snake_id" = "user"."id"
         ) "snake" ON true
         WHERE "snake"."snakeName" = $1
@@ -819,7 +819,7 @@ describe('joinData', () => {
       q.toSQL(),
       `
         SELECT "user"."id", "data"."f" "foo", "data"."b" "bar"
-        FROM "user"
+        FROM "schema"."user"
         JOIN (VALUES ($1::int4, $2::timestamptz), ($3::int4, $4::timestamptz)) "data"("f", "b") ON true
         WHERE "data"."f" >= $5
       `,

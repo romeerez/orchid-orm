@@ -23,8 +23,8 @@ import {
   singleQuote,
   toSnakeCase,
 } from 'pqb';
-import { createTable, CreateTableResult } from './createTable';
-import { changeTable, TableChangeData, TableChanger } from './changeTable';
+import { createTable, CreateTableResult } from './create-table';
+import { changeTable, TableChangeData, TableChanger } from './change-table';
 import {
   getSchemaAndTableFromName,
   quoteNameFromString,
@@ -37,7 +37,7 @@ import {
   encodeColumnDefault,
   interpolateSqlValues,
 } from './migration.utils';
-import { createView } from './createView';
+import { createView } from './create-view';
 import { RakeDbConfig } from '../config';
 
 // Drop mode to use when dropping various database entities.
@@ -119,7 +119,6 @@ export const createMigrationInterface = <CT>(
   config: CreateMigrationInterfaceConfig<CT>,
 ): DbMigration<CT> => {
   const adapter = Object.create(tx) as MigrationAdapter;
-  adapter.schema = adapter.getSchema() ?? 'public';
 
   const { query, arrays } = adapter;
   const log = logParamToLogObject(config.logger || console, config.log);
@@ -156,9 +155,7 @@ export const createMigrationInterface = <CT>(
   });
 };
 
-export interface MigrationAdapter extends AdapterBase {
-  schema: string;
-}
+export type MigrationAdapter = AdapterBase;
 
 // Migration interface to use inside the `change` callback.
 export class Migration<CT> {
@@ -1745,7 +1742,7 @@ export const renameType = async (
   if (ast.fromSchema !== ast.toSchema) {
     await migration.adapter.query(
       `ALTER ${ast.kind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
-        ast.toSchema ?? migration.adapter.schema
+        ast.toSchema ?? migration.options.schema ?? 'public'
       }"`,
     );
   }
@@ -1879,7 +1876,7 @@ const recreateEnum = async (
   values: string[],
   errorMessage: (quotedName: string, table: string, column: string) => string,
 ) => {
-  const defaultSchema = migration.adapter.schema;
+  const defaultSchema = migration.options.schema ?? 'public';
   const quotedName = quoteTable(schema, name);
 
   const relKinds = ['r', 'm']; // r is for table, m is for materialized views, TODO: not sure if materialized views are needed here.

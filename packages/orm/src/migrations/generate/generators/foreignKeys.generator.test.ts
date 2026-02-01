@@ -1,5 +1,5 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { colors } from 'pqb';
+import { colors, NonUniqDataItem } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -399,7 +399,6 @@ change(async (db) => {
   it('should create a composite self-referencing foreign key', async () => {
     class Table extends BaseTable {
       table = 'table';
-      // @ts-expect-error what can I do
       columns = this.setColumns(
         (t) => ({
           fA: t.text().primaryKey(),
@@ -407,7 +406,8 @@ change(async (db) => {
           aA: t.text(),
           bB: t.text(),
         }),
-        (t) => t.foreignKey(['aA', 'bB'], () => Table, ['fA', 'fB']),
+        (t): NonUniqDataItem =>
+          t.foreignKey(['aA', 'bB'], () => Table, ['fA', 'fB']),
       );
     }
 

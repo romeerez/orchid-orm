@@ -15,7 +15,11 @@ import { Expression, isExpression } from '../../expressions/expression';
 import { _getQueryAliasOrName, getQueryAs } from '../as/as';
 import { addValue, RecordUnknown } from '../../../utils';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
-import { quoteSchemaAndTable } from '../../sql/sql';
+import {
+  quoteFromWithSchema,
+  quoteTableWithSchema,
+  requireTableOrStringFrom,
+} from '../../sql/sql';
 
 export type SimpleJoinItemNonSubQueryArgs =
   | [{ [K: string]: string | Expression } | Expression | true]
@@ -164,8 +168,8 @@ export const processJoinItem = (
       typeof j.q.from === 'string' ? j.q.from : j.table
     ) as string;
 
-    const quotedTable = quoteSchemaAndTable(j.q.schema, tableName);
-    target = quotedTable;
+    const joinTable = requireTableOrStringFrom(j);
+    target = quoteFromWithSchema(j.q.schema, joinTable);
 
     const as = j.q.as as string;
     const joinAs = `"${as}"`;
@@ -174,7 +178,14 @@ export const processJoinItem = (
     }
 
     if (r && s) {
-      target = subJoinToSql(ctx, j, quotedTable, !forbidLateral, joinAs, true);
+      target = subJoinToSql(
+        ctx,
+        j,
+        `"${joinTable}"`,
+        !forbidLateral,
+        joinAs,
+        true,
+      );
     } else {
       on = whereToSql(ctx, j, j.q, joinAs);
     }
@@ -313,9 +324,7 @@ const getArgQueryTarget = (
       joinAs: addAs ? qAs : joinAs,
     };
   } else {
-    let target =
-      quotedFrom ||
-      quoteSchemaAndTable(joinQuery.schema, first.table as string);
+    let target = quotedFrom || quoteTableWithSchema(first);
     if (addAs) {
       joinAs = qAs;
       target += ` ${qAs}`;

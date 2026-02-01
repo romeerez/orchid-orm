@@ -109,12 +109,12 @@ describe('adapter', () => {
       const dbErr = await testAdapter
         .transaction(undefined, async (trx) => {
           const res = await trx.query(
-            `INSERT INTO "user"("name", "password") VALUES ('name', 'password') RETURNING "id"`,
+            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password') RETURNING "id"`,
           );
           Id = res.rows[0].id;
 
           await trx.query(
-            `INSERT INTO "user"("id", "name", "password") VALUES (${Id}, 'name', 'password') RETURNING "id"`,
+            `INSERT INTO "schema"."user"("id", "name", "password") VALUES (${Id}, 'name', 'password') RETURNING "id"`,
           );
         })
         .catch((err) => err);
@@ -130,7 +130,7 @@ describe('adapter', () => {
         code: '23505',
         detail: `Key (id)=(${Id}) already exists.`,
         severity: 'ERROR',
-        schema: 'public',
+        schema: 'schema',
         table: 'user',
         constraint: 'user_pkey',
       });
@@ -158,7 +158,7 @@ describe('adapter', () => {
   describe('search path', () => {
     it('should support setting a default schema via url parameters', async () => {
       const url = new URL(testDbOptions.databaseURL as string);
-      url.searchParams.set('schema', 'custom');
+      url.searchParams.set('searchPath', 'custom');
       const adapter = new NodePostgresAdapter({
         ...testDbOptions,
         databaseURL: url.toString(),
@@ -175,7 +175,7 @@ describe('adapter', () => {
       const adapter = new NodePostgresAdapter({
         ...testDbOptions,
         databaseURL: testDbOptions.databaseURL,
-        schema: 'custom',
+        searchPath: 'custom',
       });
 
       const res = await adapter.query('SHOW search_path');

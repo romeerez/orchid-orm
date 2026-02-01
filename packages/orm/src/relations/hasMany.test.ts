@@ -3,8 +3,6 @@ import {
   useRelationCallback,
   chatSelectAll,
   messageSelectAll,
-  profileSelectAll,
-  userSelectAll,
   useTestORM,
   messageRowToJSON,
   messageJSONBuildObject,
@@ -24,6 +22,8 @@ import {
   MessageData,
   ChatData,
   UserData,
+  UserSelectAll,
+  ProfileSelectAll,
 } from 'test-utils';
 import { createBaseTable } from '../baseTable';
 
@@ -118,7 +118,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message" "messages"
+          SELECT ${messageSelectAll} FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = $1
             AND "messages"."message_key" = $2)
             AND ("messages"."deleted_at" IS NULL)
@@ -146,7 +146,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${messageSelectAll} FROM "message" "activeMessages"
+          SELECT ${messageSelectAll} FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."active" = $1
             AND "activeMessages"."author_id" = $2
             AND "activeMessages"."message_key" = $3)
@@ -170,7 +170,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "message"("author_id", "message_key", "chat_id", "text")
+          INSERT INTO "schema"."message"("author_id", "message_key", "chat_id", "text")
           VALUES ($1, $2, $3, $4)
         `,
         [1, 'key', 2, 'text'],
@@ -187,7 +187,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "message"("active", "author_id", "message_key", "chat_id", "text")
+          INSERT INTO "schema"."message"("active", "author_id", "message_key", "chat_id", "text")
           VALUES ($1, $2, $3, $4, $5)
         `,
         [true, 1, 'key', 2, 'text'],
@@ -199,9 +199,9 @@ describe('hasMany', () => {
     expectSql(
       db.user.whereExists('messages').toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user"
+        SELECT ${UserSelectAll} FROM "schema"."user"
         WHERE EXISTS (
-          SELECT 1 FROM "message"  "messages"
+          SELECT 1 FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id"
             AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
@@ -216,9 +216,9 @@ describe('hasMany', () => {
         .whereExists((q) => q.messages.where({ Text: 'text' }))
         .toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user" "u"
+        SELECT ${UserSelectAll} FROM "schema"."user" "u"
         WHERE EXISTS (
-          SELECT 1 FROM "message"  "messages"
+          SELECT 1 FROM "schema"."message" "messages"
           WHERE ("messages"."deleted_at" IS NULL)
             AND ("messages"."text" = $1
             AND "messages"."author_id" = "u"."id"
@@ -235,9 +235,9 @@ describe('hasMany', () => {
         .whereExists('messages', (q) => q.where({ 'messages.Text': 'text' }))
         .toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user" "u"
+        SELECT ${UserSelectAll} FROM "schema"."user" "u"
         WHERE EXISTS (
-          SELECT 1 FROM "message"  "messages"
+          SELECT 1 FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "u"."id"
             AND "messages"."message_key" = "u"."user_key"
             AND "messages"."text" = $1)
@@ -252,9 +252,9 @@ describe('hasMany', () => {
     expectSql(
       db.user.whereExists('activeMessages').toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user"
+        SELECT ${UserSelectAll} FROM "schema"."user"
         WHERE EXISTS (
-          SELECT 1 FROM "message"  "activeMessages"
+          SELECT 1 FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."active" = $1
             AND "activeMessages"."author_id" = "user"."id"
             AND "activeMessages"."message_key" = "user"."user_key")
@@ -271,9 +271,9 @@ describe('hasMany', () => {
         .whereExists((q) => q.activeMessages.where({ Text: 'text' }))
         .toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user" "u"
+        SELECT ${UserSelectAll} FROM "schema"."user" "u"
         WHERE EXISTS (
-          SELECT 1 FROM "message" "activeMessages"
+          SELECT 1 FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."deleted_at" IS NULL)
             AND ("activeMessages"."active" = $1
             AND "activeMessages"."text" = $2
@@ -293,9 +293,9 @@ describe('hasMany', () => {
         )
         .toSQL(),
       `
-        SELECT ${userSelectAll} FROM "user" "u"
+        SELECT ${UserSelectAll} FROM "schema"."user" "u"
         WHERE EXISTS (
-          SELECT 1 FROM "message"  "activeMessages"
+          SELECT 1 FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."active" = $1
             AND "activeMessages"."author_id" = "u"."id"
             AND "activeMessages"."message_key" = "u"."user_key"
@@ -316,11 +316,11 @@ describe('hasMany', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userSelectAll}
-        FROM "user"
+        SELECT ${UserSelectAll}
+        FROM "schema"."user"
         WHERE (
           SELECT true
-          FROM "message" "messages"
+          FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id"
             AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
@@ -336,11 +336,11 @@ describe('hasMany', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userSelectAll}
-        FROM "user"
+        SELECT ${UserSelectAll}
+        FROM "schema"."user"
         WHERE (
           SELECT true
-          FROM "message" "activeMessages"
+          FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."active" = $1
             AND "activeMessages"."author_id" = "user"."id"
             AND "activeMessages"."message_key" = "user"."user_key")
@@ -361,7 +361,7 @@ describe('hasMany', () => {
         ) as Query
       ).toSQL(),
       `
-        SELECT ${messageSelectAll} FROM "message" "m"
+        SELECT ${messageSelectAll} FROM "schema"."message" "m"
         WHERE ("m"."author_id" = "u"."id"
           AND "m"."message_key" = "u"."user_key")
           AND ("m"."deleted_at" IS NULL)
@@ -382,8 +382,8 @@ describe('hasMany', () => {
         q.toSQL(),
         `
         SELECT "u"."name" "Name", "messages"."text" "Text"
-        FROM "user" "u"
-        JOIN "message"  "messages"
+        FROM "schema"."user" "u"
+        JOIN "schema"."message" "messages"
           ON ("messages"."author_id" = "u"."id"
          AND "messages"."message_key" = "u"."user_key"
          AND "messages"."text" = $1)
@@ -405,8 +405,8 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "activeMessages"."text" "Text"
-          FROM "user" "u"
-          JOIN "message"  "activeMessages"
+          FROM "schema"."user" "u"
+          JOIN "schema"."message" "activeMessages"
             ON ("activeMessages"."active" = $1
            AND "activeMessages"."author_id" = "u"."id"
            AND "activeMessages"."message_key" = "u"."user_key"
@@ -433,8 +433,8 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "m"."text" "Text"
-          FROM "user" "u"
-          JOIN "message"  "m"
+          FROM "schema"."user" "u"
+          JOIN "schema"."message" "m"
             ON ("m"."text" = $1)
            AND ("m"."deleted_at" IS NULL)
            AND ("m"."chat_id" = $2
@@ -462,8 +462,8 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "m"."text" "Text"
-          FROM "user" "u"
-          JOIN "message"  "m"
+          FROM "schema"."user" "u"
+          JOIN "schema"."message" "m"
             ON ("m"."text" = $1)
            AND ("m"."deleted_at" IS NULL)
            AND ("m"."active" = $2
@@ -488,10 +488,10 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT "user"."name" "Name", ${messageRowToJSON('m')} "message"
-          FROM "user"
+          FROM "schema"."user"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
-            FROM "message" "m"
+            FROM "schema"."message" "m"
             WHERE ("m"."text" = $1
               AND "m"."author_id" = "user"."id"
               AND "m"."message_key" = "user"."user_key")
@@ -515,10 +515,10 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT "user"."name" "Name", ${messageRowToJSON('m')} "message"
-          FROM "user"
+          FROM "schema"."user"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
-            FROM "message" "m"
+            FROM "schema"."message" "m"
             WHERE ("m"."active" = $1
               AND "m"."text" = $2
               AND "m"."author_id" = "user"."id"
@@ -574,12 +574,12 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("messages"."messages", '[]') "messages"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg(${messageJSONBuildObject('t')}) "messages"
             FROM (
               SELECT ${messageSelectAll}
-              FROM "message" "messages"
+              FROM "schema"."message" "messages"
               WHERE ("messages"."text" = $1
                 AND "messages"."author_id" = "u"."id"
                 AND "messages"."message_key" = "u"."user_key")
@@ -631,12 +631,12 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("messages"."messages", '[]') "messages"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg(${messageJSONBuildObject('t')}) "messages"
             FROM (
               SELECT ${messageSelectAll}
-              FROM "message" "activeMessages"
+              FROM "schema"."message" "activeMessages"
               WHERE ("activeMessages"."active" = $1
                 AND "activeMessages"."text" = $2
                 AND "activeMessages"."author_id" = "u"."id"
@@ -658,12 +658,12 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT "u"."id" "Id", "p"."p" "p"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "p"
             FROM (
               SELECT "posts"."id" "Id"
-              FROM "post" "posts"
+              FROM "schema"."post" "posts"
               WHERE "posts"."user_id" = "u"."id"
                 AND "posts"."title" = "u"."user_key"
             ) "t"
@@ -685,10 +685,10 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             "messagesCount"."messagesCount" "messagesCount"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT count(*) "messagesCount"
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."author_id" = "u"."id"
               AND "messages"."message_key" = "u"."user_key")
               AND ("messages"."deleted_at" IS NULL)
@@ -710,10 +710,10 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             "messagesCount"."messagesCount" "messagesCount"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT count(*) "messagesCount"
-            FROM "message" "activeMessages"
+            FROM "schema"."message" "activeMessages"
             WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "u"."id"
               AND "activeMessages"."message_key" = "u"."user_key")
@@ -737,12 +737,12 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("texts"."texts", '[]') "texts"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Text") "texts"
             FROM (
               SELECT "messages"."text" "Text"
-              FROM "message" "messages"
+              FROM "schema"."message" "messages"
               WHERE ("messages"."author_id" = "u"."id"
                 AND "messages"."message_key" = "u"."user_key")
                 AND ("messages"."deleted_at" IS NULL)
@@ -765,12 +765,12 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("texts"."texts", '[]') "texts"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT json_agg("t"."Text") "texts"
             FROM (
               SELECT "activeMessages"."text" "Text"
-              FROM "message" "activeMessages"
+              FROM "schema"."message" "activeMessages"
               WHERE ("activeMessages"."active" = $1
                 AND "activeMessages"."author_id" = "u"."id"
                 AND "activeMessages"."message_key" = "u"."user_key")
@@ -795,10 +795,10 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("hasMessages"."hasMessages", false) "hasMessages"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT true "hasMessages"
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."author_id" = "u"."id"
               AND "messages"."message_key" = "u"."user_key")
               AND ("messages"."deleted_at" IS NULL)
@@ -821,10 +821,10 @@ describe('hasMany', () => {
           SELECT
             "u"."id" "Id",
             COALESCE("hasMessages"."hasMessages", false) "hasMessages"
-          FROM "user" "u"
+          FROM "schema"."user" "u"
           LEFT JOIN LATERAL (
             SELECT true "hasMessages"
-            FROM "message" "activeMessages"
+            FROM "schema"."message" "activeMessages"
             WHERE ("activeMessages"."active" = $1
               AND "activeMessages"."author_id" = "u"."id"
               AND "activeMessages"."message_key" = "u"."user_key")
@@ -851,20 +851,20 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT COALESCE("messages"."messages", '[]') "messages"
-          FROM "user" "sender"
+          FROM "schema"."user" "sender"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "messages"
             FROM (
               SELECT ${userRowToJSON('sender2')} "sender"
-              FROM "message" "messages"
+              FROM "schema"."message" "messages"
               LEFT JOIN LATERAL (
                 SELECT COALESCE("messages2"."messages", '[]') "messages"
-                FROM "user" "sender2"
+                FROM "schema"."user" "sender2"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(${messageJSONBuildObject('t')}) "messages"
                   FROM (
                     SELECT ${messageSelectAll}
-                    FROM "message" "messages2"
+                    FROM "schema"."message" "messages2"
                     WHERE ("messages2"."author_id" = "sender2"."id"
                       AND "messages2"."message_key" = "sender2"."user_key")
                       AND ("messages2"."deleted_at" IS NULL)
@@ -897,22 +897,22 @@ describe('hasMany', () => {
         q.toSQL(),
         `
           SELECT COALESCE("activeMessages"."activeMessages", '[]') "activeMessages"
-          FROM "user" "activeSender"
+          FROM "schema"."user" "activeSender"
           LEFT JOIN LATERAL (
             SELECT json_agg(row_to_json(t.*)) "activeMessages"
             FROM (
               SELECT ${userRowToJSON('activeSender2')} "activeSender"
-              FROM "message" "activeMessages"
+              FROM "schema"."message" "activeMessages"
               LEFT JOIN LATERAL (
                 SELECT COALESCE("activeMessages2"."activeMessages", '[]') "activeMessages"
-                FROM "user" "activeSender2"
+                FROM "schema"."user" "activeSender2"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(${messageJSONBuildObject(
                     't',
                   )}) "activeMessages"
                   FROM (
                     SELECT ${messageSelectAll}
-                    FROM "message" "activeMessages2"
+                    FROM "schema"."message" "activeMessages2"
                     WHERE ("activeMessages2"."active" = $1
                       AND "activeMessages2"."author_id" = "activeSender2"."id"
                       AND "activeMessages2"."message_key" = "activeSender2"."user_key")
@@ -3061,9 +3061,9 @@ describe('hasMany', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT ${userSelectAll} FROM "user" WHERE (
+          SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
             SELECT count(*) = $1
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."text" IN ($2, $3)
               AND "messages"."author_id" = "user"."id"
               AND "messages"."message_key" = "user"."user_key")
@@ -3082,9 +3082,9 @@ describe('hasMany', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT ${userSelectAll} FROM "user" WHERE (
+          SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
             SELECT count(*) = $1
-            FROM "message" "activeMessages"
+            FROM "schema"."message" "activeMessages"
             WHERE ("activeMessages"."active" = $2
               AND "activeMessages"."text" IN ($3, $4)
               AND "activeMessages"."author_id" = "user"."id"
@@ -3262,11 +3262,11 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" "chats"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "chats"
             WHERE EXISTS (
-              SELECT 1 FROM "user"
+              SELECT 1 FROM "schema"."user"
               WHERE EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                   AND "chatUser"."chat_key" = "chats"."chat_key"
                   AND "chatUser"."user_id" = "user"."id"
@@ -3289,12 +3289,12 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" "activeChats"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "activeChats"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "activeUser"
+              SELECT 1 FROM "schema"."user" "activeUser"
               WHERE "activeChats"."active" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                     AND "chatUser"."chat_key" = "activeChats"."chat_key"
                     AND "chatUser"."user_id" = "activeUser"."id"
@@ -3319,13 +3319,13 @@ describe('hasMany through', () => {
           ) as Query
         ).toSQL(),
         `
-          SELECT ${chatSelectAll} FROM "chat" "c"
+          SELECT ${chatSelectAll} FROM "schema"."chat" "c"
           WHERE
             EXISTS (
-              SELECT 1 FROM "user"
+              SELECT 1 FROM "schema"."user"
               WHERE
                 EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                     AND "chatUser"."chat_key" = "c"."chat_key"
                     AND "chatUser"."user_id" = "user"."id"
@@ -3343,13 +3343,13 @@ describe('hasMany through', () => {
         expectSql(
           db.profile.whereExists('chats').toSQL(),
           `
-          SELECT ${profileSelectAll} FROM "profile"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile"
           WHERE EXISTS (
-            SELECT 1 FROM "chat"  "chats"
+            SELECT 1 FROM "schema"."chat"  "chats"
             WHERE EXISTS (
-              SELECT 1 FROM "user"
+              SELECT 1 FROM "schema"."user"
               WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                     AND "chatUser"."chat_key" = "chats"."chat_key"
                     AND "chatUser"."user_id" = "user"."id"
@@ -3368,14 +3368,14 @@ describe('hasMany through', () => {
             .whereExists((q) => q.chats.where({ Title: 'title' }))
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat"  "chats"
+              SELECT 1 FROM "schema"."chat"  "chats"
               WHERE "chats"."title" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user"
+                  SELECT 1 FROM "schema"."user"
                   WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
@@ -3395,13 +3395,13 @@ describe('hasMany through', () => {
             .whereExists('chats', (q) => q.where({ 'chats.Title': 'title' }))
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat"  "chats"
+              SELECT 1 FROM "schema"."chat"  "chats"
               WHERE EXISTS (
-                SELECT 1 FROM "user"
+                SELECT 1 FROM "schema"."user"
                 WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                     AND "chatUser"."chat_key" = "chats"."chat_key"
                     AND "chatUser"."user_id" = "user"."id"
@@ -3421,14 +3421,14 @@ describe('hasMany through', () => {
         expectSql(
           db.profile.whereExists('activeChats').toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile"
             WHERE EXISTS (
-              SELECT 1 FROM "chat"  "activeChats"
+              SELECT 1 FROM "schema"."chat"  "activeChats"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeUser"
+                SELECT 1 FROM "schema"."user" "activeUser"
                 WHERE "activeChats"."active" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                       AND "chatUser"."chat_key" = "activeChats"."chat_key"
                       AND "chatUser"."user_id" = "activeUser"."id"
@@ -3449,15 +3449,15 @@ describe('hasMany through', () => {
             .whereExists((q) => q.activeChats.where({ Title: 'title' }))
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat"  "activeChats"
+              SELECT 1 FROM "schema"."chat"  "activeChats"
               WHERE "activeChats"."title" = $1
                 AND EXISTS (
-                    SELECT 1 FROM "user"  "activeUser"
+                    SELECT 1 FROM "schema"."user" "activeUser"
                     WHERE "activeChats"."active" = $2
                       AND EXISTS (
-                          SELECT 1 FROM "chatUser"
+                          SELECT 1 FROM "schema"."chatUser"
                           WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                             AND "chatUser"."chat_key" = "activeChats"."chat_key"
                             AND "chatUser"."user_id" = "activeUser"."id"
@@ -3480,15 +3480,15 @@ describe('hasMany through', () => {
             )
             .toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "p"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
-              SELECT 1 FROM "chat"  "activeChats"
+              SELECT 1 FROM "schema"."chat"  "activeChats"
               WHERE
                 EXISTS (
-                  SELECT 1 FROM "user"  "activeUser"
+                  SELECT 1 FROM "schema"."user" "activeUser"
                   WHERE "activeChats"."active" = $1
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -3522,12 +3522,12 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "chats"."title" "Title"
-            FROM "profile" "p"
-            JOIN "chat"  "chats"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."chat" "chats"
               ON EXISTS (
-                SELECT 1 FROM "user"
+                SELECT 1 FROM "schema"."user"
                 WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
@@ -3557,14 +3557,14 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "activeChats"."title" "Title"
-            FROM "profile" "p"
-            JOIN "chat"  "activeChats"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."chat"  "activeChats"
               ON
                 EXISTS (
-                  SELECT 1 FROM "user"  "activeUser"
+                  SELECT 1 FROM "schema"."user" "activeUser"
                   WHERE "activeChats"."active" = $1
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -3600,14 +3600,14 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "c"."title" "Title"
-            FROM "profile" "p"
-            JOIN "chat"  "c"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."chat" "c"
               ON "c"."title" = $1
               AND "c"."updated_at" = $2
               AND EXISTS (
-                SELECT 1 FROM "user"
+                SELECT 1 FROM "schema"."user"
                 WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                           AND "chatUser"."chat_key" = "c"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
@@ -3641,16 +3641,16 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "p"."bio" "Bio", "c"."title" "Title"
-            FROM "profile" "p"
-            JOIN "chat"  "c"
+            FROM "schema"."profile" "p"
+            JOIN "schema"."chat" "c"
               ON "c"."title" = $1
              AND "c"."updated_at" = $2
              AND
                EXISTS (
-                 SELECT 1 FROM "user"  "activeUser"
+                 SELECT 1 FROM "schema"."user" "activeUser"
                  WHERE "c"."active" = $3
                    AND EXISTS (
-                     SELECT 1 FROM "chatUser"
+                     SELECT 1 FROM "schema"."chatUser"
                      WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                        AND "chatUser"."chat_key" = "c"."chat_key"
                        AND "chatUser"."user_id" = "activeUser"."id"
@@ -3677,18 +3677,18 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN LATERAL (
               SELECT ${chatSelectAll}
-              FROM "chat" "c"
+              FROM "schema"."chat" "c"
               WHERE "c"."title" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"
+                  FROM "schema"."user"
                   WHERE
                     EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                             AND "chatUser"."chat_key" = "c"."chat_key"
                         AND "chatUser"."user_id" = "user"."id"
@@ -3716,18 +3716,18 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
-            FROM "profile"
+            FROM "schema"."profile"
             JOIN LATERAL (
               SELECT ${chatSelectAll}
-              FROM "chat" "c"
+              FROM "schema"."chat" "c"
               WHERE "c"."title" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"  "activeUser"
+                  FROM "schema"."user" "activeUser"
                   WHERE "c"."active" = $2
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "c"."id_of_chat"
                             AND "chatUser"."chat_key" = "c"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -3759,17 +3759,17 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("chats"."chats", '[]') "chats"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "chats"
               FROM (
                 SELECT ${chatSelectAll}
-                FROM "chat" "chats"
+                FROM "schema"."chat" "chats"
                 WHERE "chats"."title" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "user"
+                    SELECT 1 FROM "schema"."user"
                     WHERE EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                         AND "chatUser"."chat_key" = "chats"."chat_key"
                         AND "chatUser"."user_id" = "user"."id"
@@ -3798,18 +3798,18 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("chats"."chats", '[]') "chats"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "chats"
               FROM (
                 SELECT ${chatSelectAll}
-                FROM "chat" "activeChats"
+                FROM "schema"."chat" "activeChats"
                 WHERE "activeChats"."title" = $1
                   AND EXISTS (
-                  SELECT 1 FROM "user"  "activeUser"
+                  SELECT 1 FROM "schema"."user" "activeUser"
                   WHERE "activeChats"."active" = $2
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -3839,16 +3839,16 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               "chats"."chats" "chats"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "chats"
               FROM (
                  SELECT ${chatSelectAll}
-                 FROM "chat" "chats"
+                 FROM "schema"."chat" "chats"
                  WHERE EXISTS (
-                   SELECT 1 FROM "user"
+                   SELECT 1 FROM "schema"."user"
                    WHERE EXISTS (
-                     SELECT 1 FROM "chatUser"
+                     SELECT 1 FROM "schema"."chatUser"
                      WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                        AND "chatUser"."chat_key" = "chats"."chat_key"
                        AND "chatUser"."user_id" = "user"."id"
@@ -3876,14 +3876,14 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               "chatsCount"."chatsCount" "chatsCount"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT count(*) "chatsCount"
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               WHERE EXISTS (
-                SELECT 1 FROM "user"
+                SELECT 1 FROM "schema"."user"
                 WHERE EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                     AND "chatUser"."chat_key" = "chats"."chat_key"
                     AND "chatUser"."user_id" = "user"."id"
@@ -3910,15 +3910,15 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               "chatsCount"."chatsCount" "chatsCount"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT count(*) "chatsCount"
-              FROM "chat" "activeChats"
+              FROM "schema"."chat" "activeChats"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeUser"
+                SELECT 1 FROM "schema"."user" "activeUser"
                 WHERE "activeChats"."active" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                       AND "chatUser"."chat_key" = "activeChats"."chat_key"
                       AND "chatUser"."user_id" = "activeUser"."id"
@@ -3947,16 +3947,16 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("titles"."titles", '[]') "titles"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT json_agg("t"."Title") "titles"
               FROM (
                 SELECT "chats"."title" "Title"
-                FROM "chat" "chats"
+                FROM "schema"."chat" "chats"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user"
+                  SELECT 1 FROM "schema"."user"
                   WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
@@ -3984,17 +3984,17 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("titles"."titles", '[]') "titles"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT json_agg("t"."Title") "titles"
               FROM (
                  SELECT "activeChats"."title" "Title"
-                 FROM "chat" "activeChats"
+                 FROM "schema"."chat" "activeChats"
                  WHERE EXISTS (
-                   SELECT 1 FROM "user"  "activeUser"
+                   SELECT 1 FROM "schema"."user" "activeUser"
                    WHERE "activeChats"."active" = $1
                      AND EXISTS (
-                       SELECT 1 FROM "chatUser"
+                       SELECT 1 FROM "schema"."chatUser"
                        WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                          AND "chatUser"."chat_key" = "activeChats"."chat_key"
                          AND "chatUser"."user_id" = "activeUser"."id"
@@ -4024,14 +4024,14 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("hasChats"."hasChats", false) "hasChats"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT true "hasChats"
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               WHERE EXISTS (
-                  SELECT 1 FROM "user"
+                  SELECT 1 FROM "schema"."user"
                   WHERE EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
@@ -4059,15 +4059,15 @@ describe('hasMany through', () => {
             SELECT
               "p"."id" "Id",
               COALESCE("hasChats"."hasChats", false) "hasChats"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             LEFT JOIN LATERAL (
               SELECT true "hasChats"
-              FROM "chat" "activeChats"
+              FROM "schema"."chat" "activeChats"
               WHERE EXISTS (
-                  SELECT 1 FROM "user"  "activeUser"
+                  SELECT 1 FROM "schema"."user" "activeUser"
                   WHERE "activeChats"."active" = $1
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -4099,29 +4099,29 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT COALESCE("chats"."chats", '[]') "chats"
-            FROM "profile"
+            FROM "schema"."profile"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "chats"
               FROM (
                 SELECT COALESCE("profiles"."profiles", '[]') "profiles"
-                FROM "chat" "chats"
+                FROM "schema"."chat" "chats"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(row_to_json(t.*)) "profiles"
                   FROM (
                     SELECT COALESCE("chats2"."chats", '[]') "chats"
-                    FROM "profile" "profiles"
+                    FROM "schema"."profile" "profiles"
                     LEFT JOIN LATERAL (
                       SELECT json_agg(row_to_json(t.*)) "chats"
                       FROM (
                         SELECT ${chatSelectAll}
-                        FROM "chat" "chats2"
+                        FROM "schema"."chat" "chats2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user"
+                          FROM "schema"."user"
                           WHERE
                             EXISTS (
                               SELECT 1
-                              FROM "chatUser"
+                              FROM "schema"."chatUser"
                               WHERE "chatUser"."chat_id" = "chats2"."id_of_chat"
                                 AND "chatUser"."chat_key" = "chats2"."chat_key"
                                 AND "chatUser"."user_id" = "user"."id"
@@ -4134,12 +4134,12 @@ describe('hasMany through', () => {
                     ) "chats2" ON true
                     WHERE EXISTS (
                       SELECT 1
-                      FROM "user"  "users"
+                      FROM "schema"."user" "users"
                       WHERE "profiles"."user_id" = "users"."id"
                         AND "profiles"."profile_key" = "users"."user_key"
                         AND EXISTS (
                           SELECT 1
-                          FROM "chatUser"
+                          FROM "schema"."chatUser"
                           WHERE "chatUser"."user_id" = "users"."id"
                             AND "chatUser"."user_key" = "users"."user_key"
                             AND "chatUser"."chat_id" = "chats"."id_of_chat"
@@ -4150,10 +4150,10 @@ describe('hasMany through', () => {
                 ) "profiles" ON true
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "user"
+                  FROM "schema"."user"
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "chatUser"
+                    FROM "schema"."chatUser"
                     WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
@@ -4182,29 +4182,29 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT COALESCE("activeChats"."activeChats", '[]') "activeChats"
-            FROM "profile" "activeProfiles"
+            FROM "schema"."profile" "activeProfiles"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "activeChats"
               FROM (
                 SELECT COALESCE("activeProfiles2"."activeProfiles", '[]') "activeProfiles"
-                FROM "chat" "activeChats"
+                FROM "schema"."chat" "activeChats"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(row_to_json(t.*)) "activeProfiles"
                   FROM (
                     SELECT COALESCE("chats"."chats", '[]') "chats"
-                    FROM "profile" "activeProfiles2"
+                    FROM "schema"."profile" "activeProfiles2"
                     LEFT JOIN LATERAL (
                       SELECT json_agg(row_to_json(t.*)) "chats"
                       FROM (
                         SELECT ${chatSelectAll}
-                        FROM "chat" "activeChats2"
+                        FROM "schema"."chat" "activeChats2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user"  "activeUser"
+                          FROM "schema"."user" "activeUser"
                           WHERE "activeChats2"."active" = $1
                             AND EXISTS (
                               SELECT 1
-                              FROM "chatUser"
+                              FROM "schema"."chatUser"
                               WHERE "chatUser"."chat_id" = "activeChats2"."id_of_chat"
                                 AND "chatUser"."chat_key" = "activeChats2"."chat_key"
                                 AND "chatUser"."user_id" = "activeUser"."id"
@@ -4218,14 +4218,14 @@ describe('hasMany through', () => {
                     ) "chats" ON true
                     WHERE EXISTS (
                       SELECT 1
-                      FROM "user"  "activeUsers"
+                      FROM "schema"."user" "activeUsers"
                       WHERE "activeProfiles2"."active" = $3
                         AND "activeProfiles2"."user_id" = "activeUsers"."id"
                         AND "activeProfiles2"."profile_key" = "activeUsers"."user_key"
                         AND "activeUsers"."active" = $4
                         AND EXISTS (
                           SELECT 1
-                          FROM "chatUser"
+                          FROM "schema"."chatUser"
                           WHERE "chatUser"."user_id" = "activeUsers"."id"
                             AND "chatUser"."user_key" = "activeUsers"."user_key"
                             AND "chatUser"."chat_id" = "activeChats"."id_of_chat"
@@ -4236,11 +4236,11 @@ describe('hasMany through', () => {
                 ) "activeProfiles2" ON true
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "user"  "activeUser"
+                  FROM "schema"."user" "activeUser"
                   WHERE "activeChats"."active" = $5
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -4267,17 +4267,17 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" WHERE (
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" WHERE (
               SELECT count(*) = $1
-              FROM "chat" "chats"
+              FROM "schema"."chat" "chats"
               WHERE "chats"."title" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"
+                  FROM "schema"."user"
                   WHERE
                     EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                         AND "chatUser"."chat_key" = "chats"."chat_key"
                         AND "chatUser"."user_id" = "user"."id"
@@ -4300,17 +4300,17 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" WHERE (
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" WHERE (
               SELECT count(*) = $1
-              FROM "chat" "activeChats"
+              FROM "schema"."chat" "activeChats"
               WHERE "activeChats"."title" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"  "activeUser"
+                  FROM "schema"."user" "activeUser"
                   WHERE "activeChats"."active" = $4
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
                         AND "chatUser"."chat_key" = "activeChats"."chat_key"
                         AND "chatUser"."user_id" = "activeUser"."id"
@@ -4339,13 +4339,13 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "profiles"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "profiles"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "users"
+              SELECT 1 FROM "schema"."user" "users"
               WHERE "profiles"."user_id" = "users"."id"
                 AND "profiles"."profile_key" = "users"."user_key"
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."user_id" = "users"."id"
                   AND "chatUser"."user_key" = "users"."user_key"
                   AND "chatUser"."chat_id" = $1
@@ -4366,15 +4366,15 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileSelectAll} FROM "profile" "activeProfiles"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfiles"
             WHERE EXISTS (
-              SELECT 1 FROM "user"  "activeUsers"
+              SELECT 1 FROM "schema"."user" "activeUsers"
               WHERE "activeProfiles"."active" = $1
                 AND "activeProfiles"."user_id" = "activeUsers"."id"
                 AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                 AND "activeUsers"."active" = $2
                 AND EXISTS (
-                  SELECT 1 FROM "chatUser"
+                  SELECT 1 FROM "schema"."chatUser"
                   WHERE "chatUser"."user_id" = "activeUsers"."id"
                     AND "chatUser"."user_key" = "activeUsers"."user_key"
                     AND "chatUser"."chat_id" = $3
@@ -4396,13 +4396,13 @@ describe('hasMany through', () => {
           ) as Query
         ).toSQL(),
         `
-          SELECT ${profileSelectAll} FROM "profile" "p"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
           WHERE EXISTS (
-            SELECT 1 FROM "user"  "users"
+            SELECT 1 FROM "schema"."user" "users"
             WHERE "p"."user_id" = "users"."id"
               AND "p"."profile_key" = "users"."user_key"
               AND EXISTS (
-                SELECT 1 FROM "chatUser"
+                SELECT 1 FROM "schema"."chatUser"
                 WHERE "chatUser"."user_id" = "users"."id"
                   AND "chatUser"."user_key" = "users"."user_key"
                   AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4418,15 +4418,15 @@ describe('hasMany through', () => {
         expectSql(
           db.chat.whereExists('profiles').toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat"
+            SELECT ${chatSelectAll} FROM "schema"."chat"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "profiles"
+              SELECT 1 FROM "schema"."profile"  "profiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "users"
+                SELECT 1 FROM "schema"."user" "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "chat"."id_of_chat"
@@ -4443,16 +4443,16 @@ describe('hasMany through', () => {
             .whereExists((q) => q.profiles.where({ Bio: 'bio' }))
             .toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" "c"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "profiles"
+              SELECT 1 FROM "schema"."profile"  "profiles"
               WHERE "profiles"."bio" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user"  "users"
+                  SELECT 1 FROM "schema"."user" "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
                         AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4470,15 +4470,15 @@ describe('hasMany through', () => {
             .whereExists('profiles', (q) => q.where({ 'profiles.Bio': 'bio' }))
             .toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" "c"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "profiles"
+              SELECT 1 FROM "schema"."profile"  "profiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "users"
+                SELECT 1 FROM "schema"."user" "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4496,17 +4496,17 @@ describe('hasMany through', () => {
         expectSql(
           db.chat.whereExists('activeProfiles').toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat"
+            SELECT ${chatSelectAll} FROM "schema"."chat"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfiles"
+              SELECT 1 FROM "schema"."profile"  "activeProfiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeUsers"
+                SELECT 1 FROM "schema"."user" "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                   AND "activeUsers"."active" = $2
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "chat"."id_of_chat"
@@ -4524,18 +4524,18 @@ describe('hasMany through', () => {
             .whereExists((q) => q.activeProfiles.where({ Bio: 'bio' }))
             .toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" "c"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfiles"
+              SELECT 1 FROM "schema"."profile"  "activeProfiles"
               WHERE "activeProfiles"."bio" = $1
                 AND EXISTS (
-                  SELECT 1 FROM "user"  "activeUsers"
+                  SELECT 1 FROM "schema"."user" "activeUsers"
                   WHERE "activeProfiles"."active" = $2
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                     AND "activeUsers"."active" = $3
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
                         AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4555,17 +4555,17 @@ describe('hasMany through', () => {
             )
             .toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" "c"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "c"
             WHERE EXISTS (
-              SELECT 1 FROM "profile"  "activeProfiles"
+              SELECT 1 FROM "schema"."profile"  "activeProfiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeUsers"
+                SELECT 1 FROM "schema"."user" "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                   AND "activeUsers"."active" = $2
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4596,14 +4596,14 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "c"."title" "Title", "profiles"."bio" "Bio"
-            FROM "chat" "c"
-            JOIN "profile"  "profiles"
+            FROM "schema"."chat" "c"
+            JOIN "schema"."profile"  "profiles"
               ON EXISTS (
-                SELECT 1 FROM "user"  "users"
+                SELECT 1 FROM "schema"."user" "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4631,16 +4631,16 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "c"."title" "Title", "activeProfiles"."bio" "Bio"
-            FROM "chat" "c"
-            JOIN "profile"  "activeProfiles"
+            FROM "schema"."chat" "c"
+            JOIN "schema"."profile"  "activeProfiles"
               ON EXISTS (
-                SELECT 1 FROM "user"  "activeUsers"
+                SELECT 1 FROM "schema"."user" "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                   AND "activeUsers"."active" = $2
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4671,16 +4671,16 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "c"."title" "Title", "p"."bio" "Bio"
-            FROM "chat" "c"
-            JOIN "profile"  "p"
+            FROM "schema"."chat" "c"
+            JOIN "schema"."profile"  "p"
               ON "p"."bio" = $1
               AND "p"."user_id" = $2
               AND EXISTS (
-                SELECT 1 FROM "user"  "users"
+                SELECT 1 FROM "schema"."user" "users"
                 WHERE "p"."user_id" = "users"."id"
                   AND "p"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4710,18 +4710,18 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "c"."title" "Title", "p"."bio" "Bio"
-            FROM "chat" "c"
-            JOIN "profile"  "p"
+            FROM "schema"."chat" "c"
+            JOIN "schema"."profile"  "p"
               ON "p"."bio" = $1
               AND "p"."user_id" = $2
               AND EXISTS (
-                SELECT 1 FROM "user"  "activeUsers"
+                SELECT 1 FROM "schema"."user" "activeUsers"
                 WHERE "p"."active" = $3
                   AND "p"."user_id" = "activeUsers"."id"
                   AND "p"."profile_key" = "activeUsers"."user_key"
                   AND "activeUsers"."active" = $4
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4745,19 +4745,19 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
-            FROM "chat"
+            FROM "schema"."chat"
             JOIN LATERAL (
-              SELECT ${profileSelectAll}
-              FROM "profile" "p"
+              SELECT ${ProfileSelectAll}
+              FROM "schema"."profile" "p"
               WHERE "p"."bio" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"  "users"
+                  FROM "schema"."user" "users"
                   WHERE "p"."user_id" = "users"."id"
                     AND "p"."profile_key" = "users"."user_key"
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
                         AND "chatUser"."chat_id" = "chat"."id_of_chat"
@@ -4783,21 +4783,21 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
-            FROM "chat"
+            FROM "schema"."chat"
             JOIN LATERAL (
-              SELECT ${profileSelectAll}
-              FROM "profile" "p"
+              SELECT ${ProfileSelectAll}
+              FROM "schema"."profile" "p"
               WHERE "p"."bio" = $1
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"  "activeUsers"
+                  FROM "schema"."user" "activeUsers"
                   WHERE "p"."active" = $2
                     AND "p"."user_id" = "activeUsers"."id"
                     AND "p"."profile_key" = "activeUsers"."user_key"
                     AND "activeUsers"."active" = $3
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
                         AND "chatUser"."chat_id" = "chat"."id_of_chat"
@@ -4829,19 +4829,19 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               COALESCE("profiles"."profiles", '[]') "profiles"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "profiles"
               FROM (
-                SELECT ${profileSelectAll}
-                FROM "profile" "profiles"
+                SELECT ${ProfileSelectAll}
+                FROM "schema"."profile" "profiles"
                 WHERE "profiles"."bio" = $1
                   AND EXISTS (
-                    SELECT 1 FROM "user"  "users"
+                    SELECT 1 FROM "schema"."user" "users"
                     WHERE "profiles"."user_id" = "users"."id"
                       AND "profiles"."profile_key" = "users"."user_key"
                       AND EXISTS (
-                        SELECT 1 FROM "chatUser"
+                        SELECT 1 FROM "schema"."chatUser"
                         WHERE "chatUser"."user_id" = "users"."id"
                           AND "chatUser"."user_key" = "users"."user_key"
                           AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4871,21 +4871,21 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               COALESCE("profiles"."profiles", '[]') "profiles"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "profiles"
               FROM (
-                SELECT ${profileSelectAll}
-                FROM "profile" "activeProfiles"
+                SELECT ${ProfileSelectAll}
+                FROM "schema"."profile" "activeProfiles"
                 WHERE "activeProfiles"."bio" = $1
                   AND EXISTS (
-                  SELECT 1 FROM "user"  "activeUsers"
+                  SELECT 1 FROM "schema"."user" "activeUsers"
                   WHERE "activeProfiles"."active" = $2
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                     AND "activeUsers"."active" = $3
                     AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4910,18 +4910,18 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               "profiles"."profiles" "profiles"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "profiles"
               FROM (
-                SELECT ${profileSelectAll}
-                FROM "profile" "profiles"
+                SELECT ${ProfileSelectAll}
+                FROM "schema"."profile" "profiles"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user"  "users"
+                  SELECT 1 FROM "schema"."user" "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4950,16 +4950,16 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               "profilesCount"."profilesCount" "profilesCount"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT count(*) "profilesCount"
-              FROM "profile" "profiles"
+              FROM "schema"."profile" "profiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "users"
+                SELECT 1 FROM "schema"."user" "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -4988,18 +4988,18 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               "profilesCount"."profilesCount" "profilesCount"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT count(*) "profilesCount"
-              FROM "profile" "activeProfiles"
+              FROM "schema"."profile" "activeProfiles"
               WHERE EXISTS (
-                SELECT 1 FROM "user"  "activeUsers"
+                SELECT 1 FROM "schema"."user" "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                   AND "activeUsers"."active" = $2
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -5028,18 +5028,18 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               COALESCE("bios"."bios", '[]') "bios"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT json_agg("t"."Bio") "bios"
               FROM (
                 SELECT "profiles"."bio" "Bio"
-                FROM "profile" "profiles"
+                FROM "schema"."profile" "profiles"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user"  "users"
+                  SELECT 1 FROM "schema"."user" "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
                         AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -5068,20 +5068,20 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               COALESCE("bios"."bios", '[]') "bios"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT json_agg("t"."Bio") "bios"
               FROM (
                 SELECT "activeProfiles"."bio" "Bio"
-                FROM "profile" "activeProfiles"
+                FROM "schema"."profile" "activeProfiles"
                 WHERE EXISTS (
-                  SELECT 1 FROM "user"  "activeUsers"
+                  SELECT 1 FROM "schema"."user" "activeUsers"
                   WHERE "activeProfiles"."active" = $1
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                     AND "activeUsers"."active" = $2
                     AND EXISTS (
-                      SELECT 1 FROM "chatUser"
+                      SELECT 1 FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
                         AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -5111,17 +5111,17 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               COALESCE("hasProfiles"."hasProfiles", false) "hasProfiles"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT true "hasProfiles"
-              FROM "profile" "profiles"
+              FROM "schema"."profile" "profiles"
               WHERE EXISTS (
                 SELECT 1
-                FROM "user"  "users"
+                FROM "schema"."user" "users"
                 WHERE "profiles"."user_id" = "users"."id"
                   AND "profiles"."profile_key" = "users"."user_key"
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -5150,19 +5150,19 @@ describe('hasMany through', () => {
             SELECT
               "c"."id_of_chat" "IdOfChat",
               COALESCE("hasProfiles"."hasProfiles", false) "hasProfiles"
-            FROM "chat" "c"
+            FROM "schema"."chat" "c"
             LEFT JOIN LATERAL (
               SELECT true "hasProfiles"
-              FROM "profile" "activeProfiles"
+              FROM "schema"."profile" "activeProfiles"
               WHERE EXISTS (
                 SELECT 1
-                FROM "user"  "activeUsers"
+                FROM "schema"."user" "activeUsers"
                 WHERE "activeProfiles"."active" = $1
                   AND "activeProfiles"."user_id" = "activeUsers"."id"
                   AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                   AND "activeUsers"."active" = $2
                   AND EXISTS (
-                    SELECT 1 FROM "chatUser"
+                    SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
                       AND "chatUser"."chat_id" = "c"."id_of_chat"
@@ -5191,30 +5191,30 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT COALESCE("profiles"."profiles", '[]') "profiles"
-            FROM "chat"
+            FROM "schema"."chat"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "profiles"
               FROM (
                 SELECT COALESCE("chats"."chats", '[]') "chats"
-                FROM "profile" "profiles"
+                FROM "schema"."profile" "profiles"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(row_to_json(t.*)) "chats"
                   FROM (
                     SELECT COALESCE("profiles2"."profiles", '[]') "profiles"
-                    FROM "chat" "chats"
+                    FROM "schema"."chat" "chats"
                     LEFT JOIN LATERAL (
                       SELECT json_agg(row_to_json(t.*)) "profiles"
                       FROM (
-                        SELECT ${profileSelectAll}
-                        FROM "profile" "profiles2"
+                        SELECT ${ProfileSelectAll}
+                        FROM "schema"."profile" "profiles2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user"  "users"
+                          FROM "schema"."user" "users"
                           WHERE "profiles2"."user_id" = "users"."id"
                             AND "profiles2"."profile_key" = "users"."user_key"
                           AND EXISTS (
                             SELECT 1
-                            FROM "chatUser"
+                            FROM "schema"."chatUser"
                             WHERE "chatUser"."user_id" = "users"."id"
                               AND "chatUser"."user_key" = "users"."user_key"
                               AND "chatUser"."chat_id" = "chats"."id_of_chat"
@@ -5225,11 +5225,11 @@ describe('hasMany through', () => {
                   ) "profiles2" ON true
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user"
+                    FROM "schema"."user"
                     WHERE
                       EXISTS (
                         SELECT 1
-                        FROM "chatUser"
+                        FROM "schema"."chatUser"
                         WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
                           AND "chatUser"."chat_key" = "chats"."chat_key"
                           AND "chatUser"."user_id" = "user"."id"
@@ -5242,12 +5242,12 @@ describe('hasMany through', () => {
               ) "chats" ON true
                 WHERE EXISTS (
                   SELECT 1
-                  FROM "user"  "users"
+                  FROM "schema"."user" "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
                         AND "chatUser"."chat_id" = "chat"."id_of_chat"
@@ -5275,32 +5275,32 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT COALESCE("activeProfiles"."activeProfiles", '[]') "activeProfiles"
-            FROM "chat" "activeChats"
+            FROM "schema"."chat" "activeChats"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "activeProfiles"
               FROM (
                 SELECT COALESCE("activeChats2"."activeChats", '[]') "activeChats"
-                FROM "profile" "activeProfiles"
+                FROM "schema"."profile" "activeProfiles"
                 LEFT JOIN LATERAL (
                   SELECT json_agg(row_to_json(t.*)) "activeChats"
                   FROM (
                     SELECT COALESCE("activeProfiles2"."activeProfiles", '[]') "activeProfiles"
-                    FROM "chat" "activeChats2"
+                    FROM "schema"."chat" "activeChats2"
                     LEFT JOIN LATERAL (
                       SELECT json_agg(row_to_json(t.*)) "activeProfiles"
                       FROM (
-                        SELECT ${profileSelectAll}
-                        FROM "profile" "activeProfiles2"
+                        SELECT ${ProfileSelectAll}
+                        FROM "schema"."profile" "activeProfiles2"
                         WHERE EXISTS (
                           SELECT 1
-                          FROM "user"  "activeUsers"
+                          FROM "schema"."user" "activeUsers"
                           WHERE "activeProfiles2"."active" = $1
                             AND "activeProfiles2"."user_id" = "activeUsers"."id"
                             AND "activeProfiles2"."profile_key" = "activeUsers"."user_key"
                             AND "activeUsers"."active" = $2
                             AND EXISTS (
                               SELECT 1
-                              FROM "chatUser"
+                              FROM "schema"."chatUser"
                               WHERE "chatUser"."user_id" = "activeUsers"."id"
                                 AND "chatUser"."user_key" = "activeUsers"."user_key"
                                 AND "chatUser"."chat_id" = "activeChats2"."id_of_chat"
@@ -5311,11 +5311,11 @@ describe('hasMany through', () => {
                   ) "activeProfiles2" ON true
                   WHERE EXISTS (
                     SELECT 1
-                    FROM "user"  "activeUser"
+                    FROM "schema"."user" "activeUser"
                     WHERE "activeChats2"."active" = $3
                       AND EXISTS (
                         SELECT 1
-                        FROM "chatUser"
+                        FROM "schema"."chatUser"
                         WHERE "chatUser"."chat_id" = "activeChats2"."id_of_chat"
                           AND "chatUser"."chat_key" = "activeChats2"."chat_key"
                           AND "chatUser"."user_id" = "activeUser"."id"
@@ -5330,14 +5330,14 @@ describe('hasMany through', () => {
               WHERE
                 EXISTS (
                   SELECT 1
-                  FROM "user"  "activeUsers"
+                  FROM "schema"."user" "activeUsers"
                   WHERE "activeProfiles"."active" = $5
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                     AND "activeUsers"."active" = $6
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
                         AND "chatUser"."chat_id" = "activeChats"."id_of_chat"
@@ -5361,18 +5361,18 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" WHERE (
+            SELECT ${chatSelectAll} FROM "schema"."chat" WHERE (
               SELECT count(*) = $1
-              FROM "profile" "profiles"
+              FROM "schema"."profile" "profiles"
               WHERE "profiles"."bio" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"  "users"
+                  FROM "schema"."user" "users"
                   WHERE "profiles"."user_id" = "users"."id"
                     AND "profiles"."profile_key" = "users"."user_key"
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
                         AND "chatUser"."chat_id" = "chat"."id_of_chat"
@@ -5393,20 +5393,20 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "chat" WHERE (
+            SELECT ${chatSelectAll} FROM "schema"."chat" WHERE (
               SELECT count(*) = $1
-              FROM "profile" "activeProfiles"
+              FROM "schema"."profile" "activeProfiles"
               WHERE "activeProfiles"."bio" IN ($2, $3)
                 AND EXISTS (
                   SELECT 1
-                  FROM "user"  "activeUsers"
+                  FROM "schema"."user" "activeUsers"
                   WHERE "activeProfiles"."active" = $4
                     AND "activeProfiles"."user_id" = "activeUsers"."id"
                     AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
                     AND "activeUsers"."active" = $5
                     AND EXISTS (
                       SELECT 1
-                      FROM "chatUser"
+                      FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
                         AND "chatUser"."chat_id" = "chat"."id_of_chat"

@@ -500,6 +500,7 @@ export const db = orchidORMWithAdapter(
   {
     adapter: testAdapter,
     log: !process.env.CI,
+    schema: () => 'schema',
   },
   {
     user: UserTable,
@@ -555,3 +556,6 @@ export const PostTagData = {
 export const TagData = {
   Tag: 'tag',
 };
+
+export const UserSelectAll = db.user.q.selectAllColumns!.join(', ');
+export const ProfileSelectAll = db.profile.q.selectAllColumns!.join(', ');

@@ -1,11 +1,11 @@
 import { AnyRakeDbConfig } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
-import { getMigrations, MigrationItem } from '../migration/migrationsSet';
-import { getMigratedVersionsMap } from '../migration/manageMigratedVersions';
+import { getMigrations, MigrationItem } from '../migration/migrations-set';
+import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { RakeDbCtx } from '../common';
 import { AdapterBase, RecordOptionalString, colors } from 'pqb';
-import { redo } from './migrateOrRollback';
+import { redo } from './migrate-or-rollback';
 import { promptSelect } from '../prompt';
 
 interface RebaseFile extends MigrationItem {

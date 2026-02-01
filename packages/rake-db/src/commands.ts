@@ -6,18 +6,18 @@ import {
   RecordString,
 } from 'pqb';
 import { AnyRakeDbConfig, RakeDbConfig } from './config';
-import { createDb, dropDb, resetDb } from './commands/createOrDrop';
+import { createDb, dropDb, resetDb } from './commands/create-or-drop';
 import { runRecurrentMigrations } from './commands/recurrent';
 import {
   migrateCommand,
   redoCommand,
   rollbackCommand,
-} from './commands/migrateOrRollback';
+} from './commands/migrate-or-rollback';
 import { pullDbStructure } from './generate/pull';
-import { newMigration } from './commands/newMigration';
+import { newMigration } from './commands/new-migration';
 import { rebase } from './commands/rebase';
-import { changeIds } from './commands/changeIds';
-import { listMigrationsStatuses } from './commands/listMigrationsStatuses';
+import { changeIds } from './commands/change-ids';
+import { listMigrationsStatuses } from './commands/list-migrations-statuses';
 import { RakeDbResult } from './rake-db';
 
 export const rakeDbAliases: RecordOptionalString = {

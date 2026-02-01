@@ -18,6 +18,7 @@ import {
   StructureToAstTableData,
   tableToAst,
   getSchemaAndTableFromName,
+  getMigrationsSchemaAndTable,
 } from 'rake-db';
 import {
   CompareExpression,
@@ -182,9 +183,12 @@ const collectChangeAndDropTables = (
     return { schema, table };
   });
 
+  const { schema: migrationsSchema = 'public', table: migrationsTable } =
+    getMigrationsSchemaAndTable(config);
   for (const dbTable of dbStructure.tables) {
     if (
-      dbTable.name === config.migrationsTable ||
+      (dbTable.name === migrationsTable &&
+        dbTable.schemaName === migrationsSchema) ||
       generatorIgnore?.schemas?.includes(dbTable.schemaName) ||
       ignoreTables?.some(
         ({ schema, table }) =>

@@ -61,7 +61,7 @@ for (const key in types.builtins) {
 export interface AdapterConfig
   extends AdapterConfigBase,
     Omit<PoolConfig, 'types' | 'connectionString'> {
-  schema?: string;
+  searchPath?: string;
   databaseURL?: string;
 }
 
@@ -69,7 +69,7 @@ export type NodePostgresAdapterOptions = Omit<AdapterConfig, 'log'>;
 
 export class NodePostgresAdapter implements AdapterBase {
   pool: Pool;
-  schema?: string;
+  searchPath?: string;
   errorClass = DatabaseError;
 
   constructor(public config: NodePostgresAdapterOptions) {
@@ -77,7 +77,7 @@ export class NodePostgresAdapter implements AdapterBase {
   }
 
   private configure(config: NodePostgresAdapterOptions): Pool {
-    let schema = config.schema;
+    let searchPath = config.searchPath;
     if (config.databaseURL) {
       const url = new URL(config.databaseURL);
 
@@ -89,15 +89,16 @@ export class NodePostgresAdapter implements AdapterBase {
         config.ssl = true;
       }
 
-      if (!schema) {
-        schema = url.searchParams.get('schema') || undefined;
+      if (!searchPath) {
+        searchPath = url.searchParams.get('searchPath') || undefined;
       }
 
       config.databaseURL = url.toString();
       (config as PoolConfig).connectionString = config.databaseURL;
     }
 
-    if (schema) this.schema = schema === 'public' ? undefined : schema;
+    if (searchPath)
+      this.searchPath = searchPath === 'public' ? undefined : searchPath;
 
     const pool = new pg.Pool(config);
 
@@ -130,7 +131,7 @@ export class NodePostgresAdapter implements AdapterBase {
     database?: string;
     user?: string;
     password?: string;
-    schema?: string;
+    searchPath?: string;
   }): NodePostgresAdapter {
     const url = this.getURL();
     if (url) {
@@ -146,8 +147,8 @@ export class NodePostgresAdapter implements AdapterBase {
         url.password = params.password;
       }
 
-      if (params.schema !== undefined) {
-        url.searchParams.set('schema', params.schema);
+      if (params.searchPath !== undefined) {
+        url.searchParams.set('searchPath', params.searchPath);
       }
 
       return new NodePostgresAdapter({
@@ -169,8 +170,8 @@ export class NodePostgresAdapter implements AdapterBase {
     return url ? url.username : (this.config.user as string);
   }
 
-  getSchema(): string | undefined {
-    return this.schema;
+  getSearchPath(): string | undefined {
+    return this.searchPath;
   }
 
   getHost(): string {
@@ -203,7 +204,7 @@ export class NodePostgresAdapter implements AdapterBase {
   ): Promise<Result> {
     const client = await this.connect();
     try {
-      await setSearchPath(client, this.schema);
+      await setSearchPath(client, this.searchPath);
       await performQueryOnClient(
         client,
         options ? 'BEGIN ' + options : 'BEGIN',
@@ -259,13 +260,15 @@ const defaultTypesConfig = {
 };
 
 interface ConnectionSchema {
-  connection: { schema?: string };
+  connection: { searchPath?: string };
 }
 
-const setSearchPath = (client: PoolClient, schema?: string) => {
-  if ((client as unknown as ConnectionSchema).connection.schema !== schema) {
-    (client as unknown as ConnectionSchema).connection.schema = schema;
-    return client.query(`SET search_path = ${schema || 'public'}`);
+const setSearchPath = (client: PoolClient, searchPath?: string) => {
+  if (
+    (client as unknown as ConnectionSchema).connection.searchPath !== searchPath
+  ) {
+    (client as unknown as ConnectionSchema).connection.searchPath = searchPath;
+    return client.query(`SET search_path = ${searchPath || 'public'}`);
   }
   return;
 };
@@ -279,7 +282,7 @@ const performQuery = async (
 ) => {
   const client = await adapter.connect();
   try {
-    await setSearchPath(client, adapter.schema);
+    await setSearchPath(client, adapter.searchPath);
     return await performQueryOnClient(
       client,
       text,
@@ -359,13 +362,13 @@ const performQueryOnClientWithSavepoint = (
 export class NodePostgresTransactionAdapter implements AdapterBase {
   pool: Pool;
   config: PoolConfig;
-  schema?: string;
+  searchPath?: string;
   errorClass = DatabaseError;
 
   constructor(public adapter: NodePostgresAdapter, public client: PoolClient) {
     this.pool = adapter.pool;
     this.config = adapter.config;
-    this.schema = adapter.schema;
+    this.searchPath = adapter.searchPath;
   }
 
   updateConfig(config: NodePostgresAdapterOptions): Promise<void> {
@@ -376,7 +379,7 @@ export class NodePostgresTransactionAdapter implements AdapterBase {
     database?: string;
     user?: string;
     password?: string;
-    schema?: string;
+    searchPath?: string;
   }): AdapterBase {
     return this.adapter.reconfigure(params);
   }
@@ -389,8 +392,8 @@ export class NodePostgresTransactionAdapter implements AdapterBase {
     return this.adapter.getUser();
   }
 
-  getSchema(): string | undefined {
-    return this.adapter.getSchema();
+  getSearchPath(): string | undefined {
+    return this.adapter.getSearchPath();
   }
 
   getHost(): string {

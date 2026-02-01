@@ -103,7 +103,7 @@ An ORM does that for you.
 
 Other ORMs take different ways of defining models:
 
-- `Prisma` has its language for defining schema, which requires recompiling it to TS on each change.
+- `Prisma` has its language for defining schema, which requires recompiling it to TS on every change.
 - `Sequelize` was designed for JS, and it takes a lot of boilerplate for TS.
 - `Objection` was designed for JS, and it won't let TS autocomplete or check relation names or columns in your queries.
 - `TypeORM`, and `MikroORM` models rely on experimental TS decorators and require specific typescript settings.

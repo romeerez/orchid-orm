@@ -46,6 +46,7 @@ import {
   Column,
   DbSqlMethod,
   _createDbSqlMethod,
+  QuerySchema,
 } from 'pqb';
 import {
   RelationConfigSelf,
@@ -169,7 +170,7 @@ export interface ORMTableInput {
     data: MaybeArray<TableDataItem>;
   };
   // database schema containing this table
-  schema?: string;
+  schema?: QuerySchema;
   // column types defined in base table to use in `setColumns`
   types: unknown;
   // suppress no primary key warning
@@ -256,7 +257,7 @@ export interface SetColumnsResult<
 export interface BaseTableInstance<ColumnTypes> {
   table: string;
   columns: { shape: Column.Shape.QueryInit; data: MaybeArray<TableDataItem> };
-  schema?: string;
+  schema?: QuerySchema;
   noPrimaryKey?: boolean;
   snakeCase?: boolean;
   types: ColumnTypes;
@@ -634,7 +635,7 @@ export function createBaseTable<
 
     table!: string;
     columns = defaultColumns;
-    schema?: string;
+    schema?: QuerySchema;
     noPrimaryKey?: boolean;
     snakeCase = snakeCase;
     types = columnTypes;

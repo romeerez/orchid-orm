@@ -173,6 +173,8 @@ export class UserTable extends BaseTable {
 }
 ```
 
+## instantiate `orchidORM`
+
 After defining the table place it in the main `db` file as in [setup](#setup) step:
 
 ```ts
@@ -223,8 +225,8 @@ export class SnakeCaseTable extends BaseTable {
 
 Table classes are similar to Models or Entities in other ORMs.
 The key difference is that Model/Entity is meant to also contain business logic,
-while a table in OrchidORM is only meant for configuring a database table columns, relations, allows to define [softDelete](/guide/orm-and-query-builder#softdelete),
-query [hooks](/guide/hooks#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app's logic.
+while a table in OrchidORM is only meant for configuring a database table columns, relations, [softDelete](/guide/orm-and-query-builder#softdelete),
+[query hooks](/guide/hooks#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app logic.
 
 ```ts
 import { BaseTable, sql } from './baseTable';
@@ -232,7 +234,7 @@ import { PostTable } from './post.table';
 import { SubscriptionTable } from './subscription.table';
 
 export class UserTable extends BaseTable {
-  schema = 'customSchema';
+  // `readonly` is needed for TS to remember the string literal.
   readonly table = 'user';
 
   // The comment will be persisted to database's table metadata.
@@ -326,6 +328,43 @@ All table files must be linked into `orchidORM` instance, as was shown above in 
 
 When trying OrchidORM on an existing project that already has a database with tables,
 you can run a command to generate code for tables and a migration for it by running [db pull](/guide/migration-commands#pull).
+
+## table schemas
+
+Set a common database schema for all tables:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    schema: 'schema',
+  },
+  // ...
+);
+```
+
+The schema can be provided by a function, it will be invoked for every query and sub-query.
+It is useful for schema-based multi-tenancy. You can use `AsyncLocalStorage` to provide a dynamic schema value.
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    schema: () => tenantStorage.getStore().currentSchema,
+  },
+  // ...
+);
+```
+
+The schema can be overridden in a table class:
+
+```ts
+class UserTable extends BaseTable {
+  schema = 'customSchema';
+  // also supports a function:
+  schema = () => tenantManager.getStore().currentSchema;
+}
+```
 
 ## generate migrations
 

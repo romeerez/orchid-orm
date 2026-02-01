@@ -1,8 +1,7 @@
-import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
-import { QueryData } from '../../query-data';
+import { newToSqlCtx, ToSQLQuery } from '../../sql/to-sql';
 import { escapeString } from '../../../quote';
 import { pushWhereStatementSql } from '../../basic-features/where/where.sql';
-import { quoteSchemaAndTable } from '../../sql/sql';
+import { quoteTableWithSchema, SingleSql } from '../../sql/sql';
 
 export type CopyOptions<Column = string> = {
   columns?: Column[];
@@ -26,26 +25,26 @@ export type CopyOptions<Column = string> = {
     }
 );
 
-export const pushCopySql = (
-  ctx: ToSQLCtx,
+export const makeCopySql = (
   table: ToSQLQuery,
-  query: QueryData,
-  quotedAs?: string,
-) => {
-  const { sql } = ctx;
-  const { copy } = query;
+  copy: CopyOptions,
+): SingleSql => {
+  const ctx = newToSqlCtx(table);
+  const { q } = table;
+
+  const quotedAs = `"${q.as || table.table}"`;
 
   const columns = copy.columns
     ? `(${copy.columns
-        .map((item) => `"${query.shape[item]?.data.name || item}"`)
+        .map((item) => `"${q.shape[item]?.data.name || item}"`)
         .join(', ')})`
     : '';
 
   const target = 'from' in copy ? copy.from : copy.to;
 
-  const quotedTable = quoteSchemaAndTable(query.schema, table.table as string);
+  const quotedTable = quoteTableWithSchema(table);
 
-  sql.push(
+  ctx.sql.push(
     `COPY ${quotedTable}${columns} ${'from' in copy ? 'FROM' : 'TO'} ${
       typeof target === 'string'
         ? escapeString(target)
@@ -82,8 +81,13 @@ export const pushCopySql = (
       );
     if (copy.encoding) options.push(`ENCODING ${escapeString(copy.encoding)}`);
 
-    sql.push(`WITH (${options.join(', ')})`);
+    ctx.sql.push(`WITH (${options.join(', ')})`);
   }
 
-  pushWhereStatementSql(ctx, table, query, quotedAs);
+  pushWhereStatementSql(ctx, table, q, quotedAs);
+
+  return {
+    text: ctx.sql.join(' '),
+    values: ctx.values,
+  };
 };

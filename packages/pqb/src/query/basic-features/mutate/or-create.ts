@@ -38,7 +38,7 @@ export function _orCreate<T extends PickQueryHasSelectResultReturnType>(
   return query as never;
 }
 
-export interface QueryOrCreate {
+export class QueryOrCreate {
   /**
    * `orCreate` creates a record only if it was not found by conditions.
    *
@@ -108,11 +108,7 @@ export interface QueryOrCreate {
   orCreate<T extends UpsertThis>(
     this: T,
     data: OrCreateArg<CreateData<T>>,
-  ): UpsertResult<T>;
-}
-
-export const QueryOrCreate: QueryOrCreate = {
-  orCreate(data) {
+  ): UpsertResult<T> {
     return _orCreate(_clone(this) as never, data);
-  },
-};
+  }
+}

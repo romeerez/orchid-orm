@@ -9,12 +9,12 @@ import {
   ChatData,
   ProfileData,
   UserData,
+  ProfileSelectAll,
 } from 'test-utils';
 import {
   categorySelectAll,
   messageJSONBuildObject,
   messageSelectAll,
-  profileSelectAll,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
@@ -41,9 +41,9 @@ describe('relations', () => {
         SELECT
           row_to_json("profile".*) "profile",
           COALESCE("messages"."messages", '[]') "messages"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
-          SELECT ${profileSelectAll} FROM "profile"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile"
           WHERE "profile"."bio" = $1
             AND "profile"."user_id" = "user"."id"
             AND "profile"."profile_key" = "user"."user_key"
@@ -51,7 +51,7 @@ describe('relations', () => {
         LEFT JOIN LATERAL (
           SELECT json_agg(${messageJSONBuildObject('t')}) "messages"
           FROM (
-            SELECT ${messageSelectAll} FROM "message" "messages"
+            SELECT ${messageSelectAll} FROM "schema"."message" "messages"
             WHERE ("messages"."text" = $2 AND "messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "t"
@@ -94,12 +94,12 @@ describe('relations', () => {
         SELECT
           COALESCE("ids"."ids", '[]') "ids",
           COALESCE("dates"."dates", '[]') "dates"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT json_agg("t"."Id") "ids"
           FROM (
             SELECT "messages"."id" "Id"
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "t"
@@ -108,7 +108,7 @@ describe('relations', () => {
           SELECT json_agg("t"."createdAt") "dates"
           FROM (
             SELECT "messages"."created_at" "createdAt"
-            FROM "message" "messages"
+            FROM "schema"."message" "messages"
             WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "t"
@@ -168,16 +168,16 @@ describe('relations', () => {
         SELECT
           "message"."created_at" "createdAt",
           row_to_json("chatUser".*) "chatUser"
-        FROM "message"
+        FROM "schema"."message"
         LEFT JOIN LATERAL (
           SELECT
             "sender"."created_at" "createdAt",
             row_to_json("userProfile".*) "userProfile"
-          FROM "user" "sender"
+          FROM "schema"."user" "sender"
           LEFT JOIN LATERAL (
             SELECT
               "p"."created_at" "createdAt"
-            FROM "profile" "p"
+            FROM "schema"."profile" "p"
             WHERE "p"."bio" = $1
               AND "p"."user_id" = "sender"."id"
               AND "p"."profile_key" = "sender"."user_key"
@@ -213,10 +213,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT row_to_json("category2".*) "category"
-        FROM "category"
+        FROM "schema"."category"
         LEFT JOIN LATERAL (
           SELECT ${categorySelectAll}
-          FROM "category" "category2"
+          FROM "schema"."category" "category2"
           WHERE "category2"."category_name" = "category"."parent_name"
         ) "category2" ON true
       `,
@@ -236,10 +236,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "messagesCount"."messagesCount" "messagesCount"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT count(*) "messagesCount"
-          FROM "message" "messages"
+          FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "messagesCount" ON true
@@ -261,10 +261,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "bio"."bio" "bio"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT "profile"."bio" "bio"
-          FROM "profile"
+          FROM "schema"."profile"
           WHERE "profile"."user_id" = "user"."id"
             AND "profile"."profile_key" = "user"."user_key"
         ) "bio" ON true
@@ -287,10 +287,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT row_to_json("profile".*) "profile"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
-          SELECT ${profileSelectAll}
-          FROM "profile"
+          SELECT ${ProfileSelectAll}
+          FROM "schema"."profile"
           WHERE "profile"."user_id" = "user"."id"
             AND "profile"."profile_key" = "user"."user_key"
         ) "profile" ON true
@@ -310,13 +310,13 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT count(*)
-        FROM "user"
+        FROM "schema"."user"
         WHERE (
           SELECT count(*) > $1
-          FROM "post" "posts"
+          FROM "schema"."post" "posts"
           WHERE (
             SELECT true
-            FROM "postTag" "postTags"
+            FROM "schema"."postTag" "postTags"
             WHERE "postTags"."tag" = $2
               AND "postTags"."post_id" = "posts"."id"
             LIMIT 1
@@ -336,8 +336,8 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "user"."id" "Id"
-        FROM "user"
-        JOIN "post"  "posts"
+        FROM "schema"."user"
+        JOIN "schema"."post" "posts"
           ON "posts"."user_id" = "user"."id"
          AND "posts"."title" = "user"."user_key"
       `,
@@ -354,10 +354,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "user"."id" "Id"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "message".*
-          FROM "message" "messages"
+          FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
           LIMIT $1
@@ -378,10 +378,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "user"."id" "Id"
-        FROM "user"
+        FROM "schema"."user"
         JOIN LATERAL (
           SELECT "messages"."text" "Text"
-          FROM "message" "messages"
+          FROM "schema"."message" "messages"
           WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "messages" ON true
@@ -403,10 +403,10 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "postsCount"."postsCount" "postsCount"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT count(*) "postsCount"
-          FROM "post" "posts"
+          FROM "schema"."post" "posts"
           WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key"
         ) "postsCount" ON true
         WHERE "postsCount"."postsCount" > $1
@@ -423,8 +423,8 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "user"."id" "Id"
-        FROM "user"
-        JOIN "profile"  "p"
+        FROM "schema"."user"
+        JOIN "schema"."profile"  "p"
           ON "p"."user_id" = "user"."id"
          AND "p"."profile_key" = "user"."user_key"
       `,
@@ -538,12 +538,12 @@ describe('relations', () => {
         q.toSQL(),
         `
         SELECT COALESCE("posts"."posts", '[]') "posts"
-        FROM "user"
+        FROM "schema"."user"
         LEFT JOIN LATERAL (
           SELECT json_agg(row_to_json(t.*)) "posts"
           FROM (
             SELECT "posts"."id" "Id", "posts"."title" "Title"
-            FROM "post" "posts"
+            FROM "schema"."post" "posts"
             WHERE "posts"."user_id" = "user"."id"
               AND "posts"."title" = "user"."user_key"
           ) "t"

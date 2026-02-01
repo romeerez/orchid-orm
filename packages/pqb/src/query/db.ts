@@ -20,7 +20,7 @@ import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { DynamicRawSQL, raw, RawSql } from './expressions/raw-sql';
 import { SqlRefExpression } from './expressions/sql-ref-expression';
-import { ScopeArgumentQuery } from './extra-features/scope/scope.query';
+import { ScopeArgumentQuery } from './extra-features/scope/scope';
 import {
   defaultSchemaConfig,
   DefaultSchemaConfig,
@@ -79,6 +79,7 @@ import {
 } from './extra-features/hooks/hooks';
 import { QueryData, QueryDataScopes } from './query-data';
 import { QueryInternal } from './query-internal';
+import { QuerySchema } from './basic-features/schema/schema';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -120,6 +121,7 @@ export interface DbSharedOptions extends QueryLogOptions {
     [K: string]: DbDomainArg<DefaultColumnTypes<DefaultSchemaConfig>>;
   };
   generatorIgnore?: GeneratorIgnore;
+  schema?: QuerySchema;
 }
 
 export interface DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes>
@@ -149,7 +151,7 @@ export interface DbTableOptions<
   Table extends string | undefined,
   Shape extends Column.QueryColumns,
 > extends QueryLogOptions {
-  schema?: string;
+  schema?: QuerySchema;
   /**
    * Prepare all SQL queries before executing,
    * true by default
@@ -745,10 +747,12 @@ export const createDbWithAdapter = <
   snakeCase,
   schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
   columnTypes: ctOrFn = makeColumnTypes(schemaConfig) as unknown as ColumnTypes,
+  schema,
   ...options
 }: DbOptionsWithAdapter<SchemaConfig, ColumnTypes>): DbResult<ColumnTypes> => {
   const { adapter } = options;
-  const commonOptions = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const commonOptions: DbTableOptions<any, any, Column.QueryColumns> = {
     log,
     logger,
     autoPreparedStatements: options.autoPreparedStatements ?? false,
@@ -779,6 +783,8 @@ export const createDbWithAdapter = <
     commonOptions,
     options,
   );
+
+  commonOptions.schema = schema;
 
   const { nowSQL } = options;
   const tableConstructor: DbTableConstructor<ColumnTypes> = (

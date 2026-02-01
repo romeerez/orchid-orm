@@ -1,6 +1,7 @@
 import { PickQueryShape } from '../../pick-query-types';
-import { _clone } from '../../basic-features/clone/clone';
-import { CopyOptions } from './copy-table-data.sql';
+import { CopyOptions, makeCopySql } from './copy-table-data.sql';
+import { Query } from '../../query';
+import { ToSQLQuery } from '../../sql/to-sql';
 
 // argument of the `copy` function can accept various options
 type CopyArg<T extends PickQueryShape> = CopyOptions<keyof T['shape']>;
@@ -57,10 +58,10 @@ export function copyTableData<T extends PickQueryShape>(
   query: T,
   arg: CopyArg<T>,
 ): T {
-  const q = _clone(query);
-  Object.assign(q.q, {
-    type: 'copy',
-    copy: arg,
-  });
+  // not cloning because not mutating query.q
+  const q = Object.create(query) as Query;
+
+  q.toSQL = () => makeCopySql(q as unknown as ToSQLQuery, arg as CopyOptions);
+
   return q as never;
 }

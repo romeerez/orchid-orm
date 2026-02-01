@@ -14,13 +14,13 @@ import { RelationConfigBase } from '../../relations';
 
 describe('where', () => {
   describe('relation', () => {
-    it('should allow where-ing on a column of a selected relation', async () => {
+    it('should allow where-ing on a column of a selected relation', () => {
       db.user
         .select({ profile: (q) => q.profile })
         .where({ 'profile.Bio': 'bio' });
     });
 
-    it('should allow where-ing on a column of a selected relation returning multiple', async () => {
+    it('should allow where-ing on a column of a selected relation returning multiple', () => {
       db.user
         .select({ messages: (q) => q.messages })
         // @ts-expect-error forbidden
@@ -46,12 +46,12 @@ describe('where', () => {
         q.toSQL(),
         `
           SELECT row_to_json("user".*) "user"
-          FROM "profile"
+          FROM "schema"."profile"
           LEFT JOIN LATERAL (
-            SELECT FROM "user"
+            SELECT FROM "schema"."user"
             WHERE (
               SELECT count(*) > $1 "messages"
-              FROM "message" "messages"
+              FROM "schema"."message" "messages"
               WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
                 AND ("messages"."deleted_at" IS NULL)
             )
@@ -80,7 +80,7 @@ describe('where', () => {
 
   it('should ignore undefined values', () => {
     const q = User.where({ name: undefined });
-    expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
+    expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "schema"."user"`);
   });
 
   it('should allow expression for a column', () => {
@@ -91,28 +91,28 @@ describe('where', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE "user"."name" = "user"."password"
       `,
     );
   });
 
   it('should allow filtering by a sub query', () => {
-    const q = User.where({ id: User.get('id') });
+    const q = User.where({ id: () => User.get('id') });
 
     expectSql(
       q.toSQL(),
       `
         SELECT ${userColumnsSql}
-        FROM "user"
-        WHERE "user"."id" = (SELECT "user"."id" FROM "user" LIMIT 1)
+        FROM "schema"."user"
+        WHERE "user"."id" = (SELECT "user"."id" FROM "schema"."user" LIMIT 1)
       `,
     );
   });
 
   testWhere(
     (cb) => cb(User.all()).toSQL(),
-    `SELECT ${userColumnsSql} FROM "user" WHERE`,
+    `SELECT ${userColumnsSql} FROM "schema"."user" WHERE`,
     {
       model: User,
       pkey: 'id',
@@ -137,7 +137,7 @@ describe('whereOneOf', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE "user"."id" = $1 AND ("user"."name" = $2 OR "user"."name" = $3)
       `,
       [1, 'a', 'b'],
@@ -150,7 +150,7 @@ describe('whereOneOf', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
       `,
     );
   });
@@ -161,7 +161,7 @@ describe('whereOneOf', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE ("user"."id" = $1)
       `,
       [1],
@@ -176,7 +176,7 @@ describe('whereNotOneOf', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE "user"."id" = $1 AND NOT ("user"."name" = $2 OR "user"."name" = $3)
       `,
       [1, 'a', 'b'],
@@ -187,7 +187,7 @@ describe('whereNotOneOf', () => {
 describe('where with named columns', () => {
   testWhere(
     (cb) => cb(Snake.all()).toSQL(),
-    `SELECT ${snakeSelectAll} FROM "snake" WHERE`,
+    `SELECT ${snakeSelectAll} FROM "schema"."snake" WHERE`,
     {
       model: Snake,
       pkey: 'tailLength',
@@ -208,7 +208,7 @@ describe('where with named columns', () => {
 describe('where joined columns', () => {
   testWhere(
     (cb) => cb(User.join(Message, (q) => q.on('authorId', 'user.id'))).toSQL(),
-    `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON "message"."author_id" = "user"."id" WHERE `,
+    `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."message" ON "message"."author_id" = "user"."id" WHERE `,
     {
       model: User,
       columnsOf: Message,
@@ -225,14 +225,14 @@ describe('where joined columns', () => {
     columnsOf: Message,
     fkey: 'message.authorId',
     text: 'message.text',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "user" JOIN "message" ON "message"."author_id" = "user"."id"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."message" ON "message"."author_id" = "user"."id"`,
   });
 });
 
 describe('where joined named columns', () => {
   testWhere(
     (cb) => cb(User.join(Snake, (q) => q.on('tailLength', 'user.id'))).toSQL(),
-    `SELECT ${userTableColumnsSql} FROM "user" JOIN "snake" ON "snake"."tail_length" = "user"."id" WHERE `,
+    `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id" WHERE `,
     {
       model: User,
       columnsOf: Snake,
@@ -249,7 +249,7 @@ describe('where joined named columns', () => {
     columnsOf: Snake,
     fkey: 'snake.tailLength',
     text: 'snake.snakeName',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "user" JOIN "snake" ON "snake"."tail_length" = "user"."id"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id"`,
   });
 });
 
@@ -262,9 +262,16 @@ describe('where sub query', () => {
       },
     };
 
-    const User = testDb('user', (t) => ({
-      id: t.identity().primaryKey(),
-    }));
+    const User = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
     interface Rel extends RelationConfigBase {
       query: Query;
@@ -287,9 +294,9 @@ describe('where sub query', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT * FROM "user" WHERE (
+        SELECT * FROM "schema"."user" WHERE (
           SELECT count(*) = $1
-          FROM "message"
+          FROM "schema"."message"
           WHERE "message"."text" IN ($2, $3, $4)
         )
       `,
@@ -297,7 +304,7 @@ describe('where sub query', () => {
     );
   });
 
-  it('should handle sub-query when using `get`', async () => {
+  it('should handle sub-query when using `get`', () => {
     // previously the where callback was resolved in SQL composing phase, and the `q` had an expression metadata,
     // which was turning the sub-where into a sub-query
     const q = User.where((q) => q.where({ id: 1 })).get('id');
@@ -305,7 +312,7 @@ describe('where sub query', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" FROM "user"
+        SELECT "user"."id" FROM "schema"."user"
         WHERE ("user"."id" = $1)
         LIMIT 1
       `,
@@ -341,10 +348,10 @@ describe('whereIn', () => {
 
 describe.each`
   method            | whereKey     | sql
-  ${'whereIn'}      | ${'in'}      | ${`SELECT FROM "user" WHERE (1=1) AND "user"."id" IN ($1)`}
-  ${'orWhereIn'}    | ${undefined} | ${`SELECT FROM "user" WHERE (1=1) OR "user"."id" IN ($1)`}
-  ${'whereNotIn'}   | ${'notIn'}   | ${`SELECT FROM "user" WHERE (1=1) AND NOT "user"."id" IN ($1)`}
-  ${'orWhereNotIn'} | ${undefined} | ${`SELECT FROM "user" WHERE (1=1) OR NOT "user"."id" IN ($1)`}
+  ${'whereIn'}      | ${'in'}      | ${`SELECT FROM "schema"."user" WHERE (1=1) AND "user"."id" IN ($1)`}
+  ${'orWhereIn'}    | ${undefined} | ${`SELECT FROM "schema"."user" WHERE (1=1) OR "user"."id" IN ($1)`}
+  ${'whereNotIn'}   | ${'notIn'}   | ${`SELECT FROM "schema"."user" WHERE (1=1) AND NOT "user"."id" IN ($1)`}
+  ${'orWhereNotIn'} | ${undefined} | ${`SELECT FROM "schema"."user" WHERE (1=1) OR NOT "user"."id" IN ($1)`}
 `(
   '%method',
   ({
@@ -394,7 +401,7 @@ describe('orWhere', () => {
     expectSql(
       sql,
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE "user"."name" = $1 AND "user"."age" = $2
            OR "user"."id" = $3 AND "user"."age" = $4
            OR "user"."id" = $5 AND "user"."age" = $6
@@ -412,7 +419,7 @@ describe('orWhere', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE ("user"."age" = $1 OR "user"."age" = $2)
           AND "user"."name" = $3 AND "user"."age" = $4
       `,
@@ -429,7 +436,7 @@ describe('orWhere', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE ("user"."id" = $1 OR "user"."id" = $2) AND "user"."age" = $3
       `,
       [1, 2, 10],
@@ -460,9 +467,9 @@ describe('whereExists', () => {
     expectSql(
       sql,
       `
-        SELECT ${userColumnsSql} FROM "user"
+        SELECT ${userColumnsSql} FROM "schema"."user"
         WHERE EXISTS (
-          SELECT 1 FROM "snake" WHERE "user"."id" = "snake"."tail_length"
+          SELECT 1 FROM "schema"."snake" WHERE "user"."id" = "snake"."tail_length"
         )
       `,
     );

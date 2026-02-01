@@ -31,13 +31,16 @@ describe('queryMethods', () => {
 
       assertType<typeof sql, Sql>();
 
-      expectSql(sql, `SELECT ${userColumnsSql} FROM "user"`);
+      expectSql(sql, `SELECT ${userColumnsSql} FROM "schema"."user"`);
     });
   });
 
   describe('.all', () => {
     it('should produce correct sql', () => {
-      expectSql(User.all().toSQL(), `SELECT ${userColumnsSql} FROM "user"`);
+      expectSql(
+        User.all().toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user"`,
+      );
     });
   });
 
@@ -49,12 +52,12 @@ describe('queryMethods', () => {
 
       expectSql(
         q.take().toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`,
       );
       expectQueryNotMutated(q);
 
       const expected = await testAdapter
-        .query(`SELECT ${userColumnsSql} FROM "user" LIMIT 1`)
+        .query(`SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`)
         .then((res) => res.rows[0]);
 
       const user = await q.take();
@@ -124,12 +127,12 @@ describe('queryMethods', () => {
 
       expectSql(
         q.takeOptional().toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`,
       );
       expectQueryNotMutated(q);
 
       const expected = await testAdapter
-        .query(`SELECT ${userColumnsSql} FROM "user" LIMIT 1`)
+        .query(`SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`)
         .then((res) => res.rows[0]);
 
       const user = await q.takeOptional();
@@ -190,7 +193,7 @@ describe('queryMethods', () => {
   describe('rows', () => {
     it('returns array of rows', async () => {
       const { rows: expected } = await testAdapter.arrays(
-        `SELECT ${userColumnsSql} FROM "user"`,
+        `SELECT ${userColumnsSql} FROM "schema"."user"`,
       );
 
       const received = await User.rows();
@@ -268,7 +271,7 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             WHERE "user"."id" = $1
             LIMIT 1
         `,
@@ -283,7 +286,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake"
           WHERE "snake"."snake_id" = $1
           LIMIT 1
         `,
@@ -300,7 +303,7 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WHERE "user"."id" = $1 + $2
           LIMIT 1
         `,
@@ -326,7 +329,7 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-            SELECT ${userColumnsSql} FROM "user"
+            SELECT ${userColumnsSql} FROM "schema"."user"
             WHERE "user"."id" = $1
             LIMIT 1
         `,
@@ -341,7 +344,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake"
           WHERE "snake"."snake_id" = $1
           LIMIT 1
         `,
@@ -358,7 +361,7 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WHERE "user"."id" = $1 + $2
           LIMIT 1
         `,
@@ -376,7 +379,7 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "user"
+          SELECT ${userColumnsSql} FROM "schema"."user"
           WHERE "user"."id" = $1 + $2
           LIMIT 1
         `,
@@ -396,7 +399,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."name" = $1 LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."name" = $1 LIMIT 1`,
         ['s'],
       );
 
@@ -412,7 +415,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."name" = 'string' LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."name" = 'string' LIMIT 1`,
       );
 
       expectQueryNotMutated(q);
@@ -440,7 +443,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."id" = $1 LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."id" = $1 LIMIT 1`,
         [1],
       );
 
@@ -455,7 +458,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE "user"."id" = 1 LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."id" = 1 LIMIT 1`,
       );
 
       expectQueryNotMutated(q);
@@ -482,7 +485,7 @@ describe('queryMethods', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE (sql) LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (sql) LIMIT 1`,
       );
     });
   });
@@ -495,7 +498,7 @@ describe('queryMethods', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "user" WHERE (sql) LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (sql) LIMIT 1`,
       );
     });
   });
@@ -505,7 +508,7 @@ describe('queryMethods', () => {
       const q = User.all();
       expectSql(
         q.select('id').as('as').toSQL(),
-        'SELECT "as"."id" FROM "user" "as"',
+        'SELECT "as"."id" FROM "schema"."user" "as"',
       );
       expectQueryNotMutated(q);
     });
@@ -513,79 +516,9 @@ describe('queryMethods', () => {
     it('should apply the latest table alias to SQL', () => {
       const q = User.as('u').select('u.id').as('user').select('user.name');
 
-      expectSql(q.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
-    });
-  });
-
-  describe('withSchema', () => {
-    it('prefixes table with schema', () => {
-      const Country = testDb(
-        'country',
-        (t) => ({
-          id: t.serial().primaryKey(),
-          name: t.text(),
-        }),
-        undefined,
-        {
-          schema: 'geo',
-        },
-      );
-
-      const City = testDb('city', (t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        countryId: t.integer(),
-      }));
-
-      const q = City.all();
-
-      expectSql(
-        q
-          .join(Country, 'country.id', '=', 'city.countryId')
-          .select('name', { countryName: 'country.name' })
-          .withSchema('geo')
-          .toSQL(),
-        `
-          SELECT "city"."name", "country"."name" "countryName"
-          FROM "geo"."city"
-          JOIN "geo"."country" ON "country"."id" = "city"."country_id"
-        `,
-      );
-    });
-
-    it('prefixes insert with schema', () => {
-      const q = User.withSchema('geo').insert(userData);
-
       expectSql(
         q.toSQL(),
-        `
-          INSERT INTO "geo"."user"("name", "password")
-          VALUES ($1, $2)
-        `,
-        [userData.name, userData.password],
-      );
-    });
-
-    it('prefixes insertMany with schema', () => {
-      const q = User.withSchema('geo').insertMany([userData, userData]);
-
-      expectSql(
-        q.toSQL(),
-        `
-          INSERT INTO "geo"."user"("name", "password")
-          VALUES ($1, $2), ($3, $4)
-        `,
-        [userData.name, userData.password, userData.name, userData.password],
-      );
-    });
-
-    it('prefixes delete with schema', () => {
-      const q = User.withSchema('geo').where({ id: 1 }).delete();
-
-      expectSql(
-        q.toSQL(),
-        `DELETE FROM "geo"."user" "user" WHERE "user"."id" = $1`,
-        [1],
+        `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
       );
     });
   });
@@ -597,7 +530,7 @@ describe('queryMethods', () => {
       expectSql(
         q.select('id', 'name').group('id', 'name').toSQL(),
         `
-          SELECT "user"."id", "user"."name" FROM "user"
+          SELECT "user"."id", "user"."name" FROM "schema"."user"
           GROUP BY "user"."id", "user"."name"
         `,
       );
@@ -614,7 +547,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength" FROM "snake"
+          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength" FROM "schema"."snake"
           GROUP BY "snake"."snake_name", "snake"."tail_length"
         `,
       );
@@ -623,7 +556,7 @@ describe('queryMethods', () => {
     it('should group by raw sql', () => {
       const q = User.clone();
       const expectedSql = `
-        SELECT "user"."id", "user"."name" FROM "user"
+        SELECT "user"."id", "user"."name" FROM "schema"."user"
         GROUP BY id, name
       `;
       expectSql(
@@ -638,7 +571,7 @@ describe('queryMethods', () => {
 
     it('should group by selected value', () => {
       const q = User.select({
-        month: sql<string>`extract(month from "created_at)`,
+        month: sql<string>`extract(month from "created_at")`,
       }).group('month');
 
       assertType<Awaited<typeof q>, { month: string }[]>();
@@ -646,8 +579,8 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT extract(month from "created_at) "month"
-          FROM "user"
+          SELECT extract(month from "created_at") "month"
+          FROM "schema"."user"
           GROUP BY 1
         `,
       );
@@ -659,7 +592,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" "name" FROM "user"
+          SELECT "user"."id" "name" FROM "schema"."user"
           GROUP BY 1
         `,
       );
@@ -678,7 +611,7 @@ describe('queryMethods', () => {
 
       expect(await query).toBe(true);
 
-      expectSql(query.toSQL(), 'SELECT true FROM "user" LIMIT 1');
+      expectSql(query.toSQL(), 'SELECT true FROM "schema"."user" LIMIT 1');
 
       expectQueryNotMutated(q);
     });
@@ -706,7 +639,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT "user"."id", "user"."name"
-          FROM "user"
+          FROM "schema"."user"
           WHERE "user"."name" = $1
         `,
         ['name'],
@@ -733,7 +666,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT "user"."id", "user"."name"
-          FROM "user"
+          FROM "schema"."user"
         `,
       );
     });
@@ -748,7 +681,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT "user"."id"
-          FROM "user"
+          FROM "schema"."user"
           WHERE "user"."id" = $1 AND ("user"."name" = $2)
         `,
         [1, 'name'],
@@ -769,7 +702,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT "user"."id", "user"."name"
-          FROM "user"
+          FROM "schema"."user"
           WHERE "user"."name" = $1
         `,
         ['name'],
@@ -798,7 +731,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT "user"."id", "user"."name"
-          FROM "user"
+          FROM "schema"."user"
         `,
       );
     });
@@ -814,7 +747,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT "user"."id"
-          FROM "user"
+          FROM "schema"."user"
           WHERE "user"."id" = $1 AND "user"."name" = $2
         `,
         [1, 'name'],
@@ -902,11 +835,14 @@ describe('queryMethods', () => {
     it('should execute callback based on the condition', () => {
       const q1 = User.select('id').if(false, (q) => q.select('name'));
 
-      expectSql(q1.toSQL(), `SELECT "user"."id" FROM "user"`);
+      expectSql(q1.toSQL(), `SELECT "user"."id" FROM "schema"."user"`);
 
       const q2 = User.select('id').if(true, (q) => q.select('name'));
 
-      expectSql(q2.toSQL(), `SELECT "user"."id", "user"."name" FROM "user"`);
+      expectSql(
+        q2.toSQL(),
+        `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+      );
     });
 
     it('should add optional selection', () => {

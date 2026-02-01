@@ -62,14 +62,19 @@ describe('query log', () => {
       logger,
     });
 
-    await db('user', (t) => ({
-      name: t.text().primaryKey(),
-    })).where({ name: 'name' });
+    await db(
+      'user',
+      (t) => ({
+        name: t.text().primaryKey(),
+      }),
+      undefined,
+      { schema: () => 'schema' },
+    ).where({ name: 'name' });
 
     expect(logger.log.mock.calls).toEqual([
       [
         `${logColors.boldCyanBright('(1s 1.0ms)')} ${logColors.boldBlue(
-          `SELECT * FROM "user" WHERE "user"."name" = $1`,
+          `SELECT * FROM "schema"."user" WHERE "user"."name" = $1`,
         )} ${logColors.boldYellow(`['name']`)}`,
       ],
     ]);
@@ -82,12 +87,19 @@ describe('query log', () => {
       logger,
     });
 
-    await db('user', (t) => ({
-      name: t.text().primaryKey(),
-    })).where({ name: 'name' });
+    await db(
+      'user',
+      (t) => ({
+        name: t.text().primaryKey(),
+      }),
+      undefined,
+      { schema: () => 'schema' },
+    ).where({ name: 'name' });
 
     expect(logger.log.mock.calls).toEqual([
-      [`(1s 1.0ms) SELECT * FROM "user" WHERE "user"."name" = $1 ['name']`],
+      [
+        `(1s 1.0ms) SELECT * FROM "schema"."user" WHERE "user"."name" = $1 ['name']`,
+      ],
     ]);
   });
 
@@ -106,12 +118,14 @@ describe('query log', () => {
   it('should log in red in case of error', async () => {
     const db = createDbWithAdapter({ adapter: testAdapter, log: true, logger });
 
-    await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
+    await db('user', undefined, undefined, { schema: () => 'schema' })
+      .where({ wrongColumn: 'value' })
+      .then(noop, noop);
 
     expect(logger.error.mock.calls).toEqual([
       [
         `${logColors.boldMagenta('(1s 1.0ms)')} ${logColors.boldRed(
-          `SELECT * FROM "user" WHERE "user"."wrongColumn" = $1`,
+          `SELECT * FROM "schema"."user" WHERE "user"."wrongColumn" = $1`,
         )} ${logColors.boldYellow(`['value']`)} ${logColors.boldRed(
           'Error: column user.wrongColumn does not exist',
         )}`,
@@ -126,11 +140,13 @@ describe('query log', () => {
       logger,
     });
 
-    await db('user').where({ wrongColumn: 'value' }).then(noop, noop);
+    await db('user', undefined, undefined, { schema: () => 'schema' })
+      .where({ wrongColumn: 'value' })
+      .then(noop, noop);
 
     expect(logger.error.mock.calls).toEqual([
       [
-        `(1s 1.0ms) SELECT * FROM "user" WHERE "user"."wrongColumn" = $1 ['value'] Error: column user.wrongColumn does not exist`,
+        `(1s 1.0ms) SELECT * FROM "schema"."user" WHERE "user"."wrongColumn" = $1 ['value'] Error: column user.wrongColumn does not exist`,
       ],
     ]);
   });
@@ -157,12 +173,14 @@ describe('query log', () => {
     });
 
     await db.transaction(async () => {
-      await db('user').create(userData);
+      await db('user', undefined, undefined, { schema: () => 'schema' }).create(
+        userData,
+      );
     });
 
     expect(logger.log.mock.calls).toEqual([
       ['(1s 1.0ms) BEGIN'],
-      [expect.stringContaining('INSERT INTO "user"')],
+      [expect.stringContaining('INSERT INTO "schema"."user"')],
       ['(1s 1.0ms) COMMIT'],
     ]);
   });

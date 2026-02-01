@@ -1,7 +1,8 @@
-import { EnumColumn, AdapterBase, ColumnSchemaConfig, singleQuote } from 'pqb';
-import { TableQuery } from './migration/createTable';
-import { RAKE_DB_LOCK_KEY } from './commands/migrateOrRollback';
-import { MigrationsSet } from './migration/migrationsSet';
+import { AdapterBase, ColumnSchemaConfig, EnumColumn, singleQuote } from 'pqb';
+import { TableQuery } from './migration/create-table';
+import { MigrationsSet } from './migration/migrations-set';
+
+export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
 export interface RakeDbCtx {
   migrationsPromise?: Promise<MigrationsSet>;

@@ -12,11 +12,18 @@ import {
   useTestDatabase,
 } from 'test-utils';
 
-const TableWithReadOnly = testDb('user', (t) => ({
-  id: t.identity().primaryKey(),
-  name: t.string(),
-  password: t.integer().readOnly(),
-}));
+const TableWithReadOnly = testDb(
+  'user',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    name: t.string(),
+    password: t.integer().readOnly(),
+  }),
+  undefined,
+  {
+    schema: () => 'schema',
+  },
+);
 
 const TableWithSoftDelete = testDb(
   'user',
@@ -28,6 +35,7 @@ const TableWithSoftDelete = testDb(
   }),
   undefined,
   {
+    schema: () => 'schema',
     softDelete: true,
   },
 );
@@ -184,12 +192,15 @@ describe('upsert', () => {
     await User.find(123).upsert({ update: {}, create: userData }).forUpdate();
 
     expect(arraysSpy.mock.calls).toEqual([
-      ['UPDATE "user" SET "updated_at" = now() WHERE "user"."id" = $1', [123]],
+      [
+        'UPDATE "schema"."user" SET "updated_at" = now() WHERE "user"."id" = $1',
+        [123],
+      ],
       [
         'WITH "q" AS (' +
-          'UPDATE "user" SET "updated_at" = now() WHERE "user"."id" = $1 RETURNING NULL' +
+          'UPDATE "schema"."user" SET "updated_at" = now() WHERE "user"."id" = $1 RETURNING NULL' +
           '), "q2" AS (' +
-          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],
@@ -206,14 +217,14 @@ describe('upsert', () => {
 
     expect(arraysSpy.mock.calls).toEqual([
       [
-        'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
+        'SELECT FROM "schema"."user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
         [123],
       ],
       [
         'WITH "q" AS (' +
-          'SELECT FROM "user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)' +
+          'SELECT FROM "schema"."user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)' +
           '), "q2" AS (' +
-          'INSERT INTO "user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],
@@ -221,11 +232,18 @@ describe('upsert', () => {
   });
 
   describe('empty update', () => {
-    const UserWithoutTimestamps = testDb('user', (t) => ({
-      id: t.serial().primaryKey(),
-      name: t.text(),
-      password: t.text(),
-    }));
+    const UserWithoutTimestamps = testDb(
+      'user',
+      (t) => ({
+        id: t.serial().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+      }),
+      undefined,
+      {
+        schema: () => 'schema',
+      },
+    );
 
     interface UserRecord {
       id: number;

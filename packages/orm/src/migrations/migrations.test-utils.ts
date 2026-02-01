@@ -40,7 +40,7 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   },
   migrationsPath: testMigrationsPath,
   recurrentPath: join(testMigrationsPath, 'recurrent'),
-  migrationsTable: 'schemaMigrations',
+  migrationsTable: 'public.schemaMigrations',
   snakeCase: true,
   import: require,
   commands: {},

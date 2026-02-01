@@ -3,6 +3,7 @@ import { PickQueryQAndBaseQuery } from '../pick-query-types';
 
 export const skipQueryKeysForSubQuery: RecordBoolean = {
   adapter: true,
+  schema: true,
   updateData: true,
   parsers: true,
   as: true,
