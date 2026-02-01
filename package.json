@@ -6,6 +6,7 @@
   "author": "Roman K",
   "packageManager": "pnpm@10.13.1",
   "scripts": {
+    "prepare": "lefthook install",
     "check": "turbo run check",
     "types": "turbo run types",
     "build": "turbo run build",
@@ -47,6 +48,7 @@
     "rollup": "^4.24.0",
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-esbuild": "^6.1.1",
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "lefthook": "^1.7.18"
   }
 }
