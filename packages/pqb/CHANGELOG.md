@@ -1,5 +1,11 @@
 # pqb
 
+## 0.60.1
+
+### Patch Changes
+
+- cb44228: Export `_hookSelectColumns` from pqb (#631)
+
 ## 0.60.0
 
 ### Minor Changes
