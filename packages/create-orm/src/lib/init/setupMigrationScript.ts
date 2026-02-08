@@ -3,7 +3,7 @@ import { join } from 'path';
 import fs from 'fs/promises';
 
 export async function setupMigrationScript(config: InitConfig): Promise<void> {
-  const filePath = join(config.dbDirPath, 'dbScript.ts');
+  const filePath = join(config.dbDirPath, 'db-script.ts');
 
   const migrations =
     config.runner === 'vite-node'
@@ -14,9 +14,9 @@ export async function setupMigrationScript(config: InitConfig): Promise<void> {
     filePath,
     `import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
-export const change = rakeDb(${
+export const change = rakeDb.run(${
       config.testDatabase ? 'config.allDatabases' : 'config.database'
     }, {
   baseTable: BaseTable,

@@ -3,7 +3,7 @@ import { join } from 'path';
 import fs from 'fs/promises';
 
 export async function setupBaseTable(config: InitConfig): Promise<void> {
-  const filePath = join(config.dbDirPath, 'baseTable.ts');
+  const filePath = join(config.dbDirPath, 'base-table.ts');
 
   const { timestamp } = config;
   const customTimestamp = timestamp && timestamp !== 'string';

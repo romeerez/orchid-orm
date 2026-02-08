@@ -43,6 +43,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './table-methods';
 import { NoPrimaryKey } from '../errors';
+import { RakeDbConfig } from 'rake-db';
 
 export interface TableQuery {
   text: string;
@@ -115,6 +116,7 @@ export const createTable = async <
   }
 
   const ast = makeAst(
+    migration.options,
     up,
     tableName,
     shape,
@@ -125,7 +127,7 @@ export const createTable = async <
 
   fn && validatePrimaryKey(ast);
 
-  const queries = astToQueries(ast, snakeCase, language);
+  const queries = astToQueries(migration.options, ast, snakeCase, language);
   for (const { then, ...query } of queries) {
     const result = await migration.adapter.arrays(interpolateSqlValues(query));
     then?.(result);
@@ -149,6 +151,7 @@ export const createTable = async <
 };
 
 const makeAst = (
+  config: RakeDbConfig,
   up: boolean,
   tableName: string,
   shape: ColumnsShape,
@@ -165,7 +168,7 @@ const makeAst = (
   }
 
   const { primaryKey } = tableData;
-  const [schema, table] = getSchemaAndTableFromName(tableName);
+  const [schema, table] = getSchemaAndTableFromName(config, tableName);
 
   return {
     type: 'table',
@@ -214,6 +217,7 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
 };
 
 const astToQueries = (
+  config: RakeDbConfig,
   ast: RakeDbAst.Table,
   snakeCase?: boolean,
   language?: string,
@@ -225,7 +229,7 @@ const astToQueries = (
     const item = shape[key];
     if (!(item instanceof EnumColumn)) continue;
 
-    queries.push(makePopulateEnumQuery(item));
+    queries.push(makePopulateEnumQuery(config, item));
   }
 
   if (ast.action === 'drop') {
@@ -250,7 +254,14 @@ const astToQueries = (
     addColumnExclude(excludes, name, item);
     addColumnComment(comments, name, item);
     lines.push(
-      `\n  ${columnToSql(name, item, values, !!ast.primaryKey, snakeCase)}`,
+      `\n  ${columnToSql(
+        config,
+        name,
+        item,
+        values,
+        !!ast.primaryKey,
+        snakeCase,
+      )}`,
     );
   }
 
@@ -268,6 +279,7 @@ const astToQueries = (
   ast.constraints?.forEach((item) => {
     lines.push(
       `\n  ${constraintToSql(
+        config,
         ast,
         true,
         {
@@ -297,8 +309,8 @@ const astToQueries = (
       } ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
-    ...indexesToQuery(true, ast, indexes, snakeCase, language),
-    ...excludesToQuery(true, ast, excludes, snakeCase),
+    ...indexesToQuery(config, true, ast, indexes, snakeCase, language),
+    ...excludesToQuery(config, true, ast, excludes, snakeCase),
     ...commentsToQuery(ast, comments),
   );
 

@@ -34,9 +34,9 @@ const dependencies = `"dotenv": "^1.2.3",
 const devDependencies = `"@types/node": "^1.2.3",
     "typescript": "^1.2.3"`;
 
-const tsxScripts = `"db": "NODE_ENV=development tsx src/db/dbScript.ts",
+const tsxScripts = `"db": "NODE_ENV=development tsx src/db/db-script.ts",
     "build:migrations": "rimraf dist/db && node esbuild.migrations.mjs",
-    "db:compiled": "NODE_ENV=production node dist/db/dbScript.mjs"`;
+    "db:compiled": "NODE_ENV=production node dist/db/db-script.mjs"`;
 
 const tsxDeps = `"tsx": "4.9.0",
     "esbuild": "^1.2.3",
@@ -210,9 +210,9 @@ describe('setupPackageJSON', () => {
   "name": "project",
   "type": "module",
   "scripts": {
-    "db": "vite-node src/db/dbScript.ts --",
+    "db": "vite-node src/db/db-script.ts --",
     "build:migrations": "vite build --config vite.migrations.mts",
-    "db:compiled": "node dist/db/dbScript.mjs"
+    "db:compiled": "node dist/db/db-script.mjs"
   },
   "dependencies": {
     ${dependencies}
@@ -240,7 +240,7 @@ describe('setupPackageJSON', () => {
   "name": "project",
   "type": "module",
   "scripts": {
-    "db": "bun src/db/dbScript.ts"
+    "db": "bun src/db/db-script.ts"
   },
   "dependencies": {
     ${dependencies}
@@ -264,9 +264,9 @@ describe('setupPackageJSON', () => {
     expect(writeFile.mock.calls[0][1]).toBe(`{
   "name": "project",
   "scripts": {
-    "db": "ts-node src/db/dbScript.ts",
+    "db": "ts-node src/db/db-script.ts",
     "build": "tsc",
-    "db:compiled": "node dist/dbScript.js"
+    "db:compiled": "node dist/db-script.js"
   },
   "dependencies": {
     ${dependencies}

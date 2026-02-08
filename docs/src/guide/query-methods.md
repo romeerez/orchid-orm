@@ -165,7 +165,7 @@ await db.user.findBySqlOptional`
 
 ```ts
 import { NumberColumn } from 'orchid-orm';
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const firstName: string = await db.table.get('name');
 
@@ -305,7 +305,7 @@ Takes a list of columns to be selected, and by default, the query builder will s
 The last argument can be an object. Keys of the object are column aliases, value can be a column name, sub-query, or raw SQL expression.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // select columns of the table:
 db.table.select('id', 'name', { idAlias: 'id' });
@@ -406,7 +406,7 @@ db.table.distinct().select('name');
 Can accept column names or raw SQL expressions to place it to `DISTINCT ON (...)`:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // Distinct on the name and raw SQL
 db.table.distinct('name', sql`raw sql`).select('id', 'name');
@@ -547,7 +547,7 @@ const results = db.product
 Also, it's possible to group by a selected value:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const results = db.product
   .select({
@@ -659,7 +659,7 @@ db.table.having((q) =>
 Arguments of the aggregate function and of the comparison can be raw SQL:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 db.table.having((q) => q.count(sql('coalesce(one, two)')).gte(sql`2 + 2`));
 ```

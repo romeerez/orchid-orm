@@ -106,7 +106,7 @@ export interface AdapterBase {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
   assignError(to: QueryError, from: Error): void;
-
+  isInTransaction(): boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   updateConfig(config: any): Promise<void>;
 
@@ -132,7 +132,7 @@ export interface AdapterBase {
     catchingSavepoint?: string,
   ): Promise<QueryResult<T>>;
   // make a query to get rows as array of column values
-  arrays<R extends any[] = any[]>(
+  arrays<R extends any[] = any[]>( // eslint-disable-line @typescript-eslint/no-explicit-any
     text: string,
     values?: unknown[],
     // only has effect in a transaction
@@ -150,6 +150,13 @@ export interface AdapterBase {
   ): Promise<T>;
   // close connection
   close(): Promise<void>;
+}
+
+/**
+ * Use it as an argument type when need to enforce the call site to use a transaction
+ */
+export interface TransactionAdapterBase extends AdapterBase {
+  isInTransaction(): true;
 }
 
 // Wrapper type for transactions.

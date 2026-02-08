@@ -1,9 +1,9 @@
 import { DbExtension, AdapterBase, pathToLog } from 'pqb';
 import {
-  AnyRakeDbConfig,
   makeFileVersion,
   makeStructureToAstCtx,
   RakeDbAst,
+  RakeDbConfig,
   saveMigratedVersion,
   SilentQueries,
   structureToAst,
@@ -19,10 +19,7 @@ import {
 import { appCodeGenUpdateDbFile } from './appCodeGenerators/dbFile.appCodeGenerator';
 import { generate } from '../generate/generate';
 
-export const pull = async (
-  adapters: AdapterBase[],
-  config: AnyRakeDbConfig,
-) => {
+export const pull = async (adapters: AdapterBase[], config: RakeDbConfig) => {
   if (!config.dbPath || !config.baseTable) {
     throw new Error(
       `\`${
@@ -35,7 +32,9 @@ export const pull = async (
   const baseTableExportedAs = config.baseTable.exportAs;
 
   const [adapter] = adapters;
-  const currentSchema = config.schema || 'public';
+  const currentSchema =
+    (typeof config.schema === 'function' ? config.schema() : config.schema) ??
+    'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);
 

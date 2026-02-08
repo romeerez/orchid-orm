@@ -1,16 +1,13 @@
-import { AdapterBase, ColumnSchemaConfig } from 'pqb';
+import { AdapterBase } from 'pqb';
 import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
 import { saveMigratedVersion } from '../migration/manage-migrated-versions';
-import { RakeDbConfig } from '../config';
 import { astToMigration } from './ast-to-migration';
 import { structureToAst, makeStructureToAstCtx } from './structure-to-ast';
+import { RakeDbConfig } from '../config';
 
-export const pullDbStructure = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
+export const pullDbStructure = async (
   adapter: AdapterBase,
-  config: RakeDbConfig<SchemaConfig, CT>,
+  config: RakeDbConfig,
 ): Promise<void> => {
   const currentSchema = adapter.searchPath || 'public';
 

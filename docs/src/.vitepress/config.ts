@@ -163,6 +163,10 @@ export default {
             link: '/guide/migration-setup-and-overview',
           },
           {
+            text: 'Programmatic use',
+            link: '/guide/migration-programmatic-use',
+          },
+          {
             text: 'Commands',
             link: '/guide/migration-commands',
           },

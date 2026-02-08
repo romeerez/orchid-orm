@@ -3,6 +3,7 @@ import { singleQuote, raw, SingleSql, RawSqlBase } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { interpolateSqlValues } from './migration.utils';
 import { getSchemaAndTableFromName } from '../common';
+import { RakeDbConfig } from 'rake-db';
 
 export const createView = async <CT>(
   migration: Migration<CT>,
@@ -11,13 +12,14 @@ export const createView = async <CT>(
   options: RakeDbAst.ViewOptions,
   sql: string | RawSqlBase,
 ): Promise<void> => {
-  const ast = makeAst(up, name, options, sql);
+  const ast = makeAst(migration.options, up, name, options, sql);
   const query = astToQuery(ast);
 
   await migration.adapter.arrays(interpolateSqlValues(query));
 };
 
 const makeAst = (
+  config: RakeDbConfig,
   up: boolean,
   fullName: string,
   options: RakeDbAst.ViewOptions,
@@ -27,7 +29,7 @@ const makeAst = (
     sql = raw({ raw: sql });
   }
 
-  const [schema, name] = getSchemaAndTableFromName(fullName);
+  const [schema, name] = getSchemaAndTableFromName(config, fullName);
 
   return {
     type: 'view',

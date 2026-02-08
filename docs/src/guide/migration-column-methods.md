@@ -17,7 +17,7 @@ Set a default value for a column on a database level. Value can be a raw SQL.
 `default` can accept a callback when used in ORM table, but it's not applicable in migrations.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -30,7 +30,7 @@ change(async (db) => {
 If you provide a function to the `default`, it will be called by ORM before creating records, and it won't have any default value on a database level.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 import { uuidv7 } from 'uuidv7';
 
 change(async (db) => {
@@ -53,7 +53,7 @@ id: t.uuid().primaryKey().default(null),
 By default, `NOT NULL` is added to every column. Use `nullable` to prevent this:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -69,7 +69,7 @@ In the migration `enum` takes a single argument for enum name, unlike the `enum`
 To create a new enum type, use `createEnum` before creating a table.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createEnum('mood', ['sad', 'ok', 'happy']);
@@ -87,7 +87,7 @@ change(async (db) => {
 Define a generated column. `generated` accepts a raw SQL.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -101,7 +101,7 @@ change(async (db) => {
 For `tsvector` column type, it can also accept language (optional) and columns:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('post', (t) => ({
@@ -126,7 +126,7 @@ So if the primary key is of `integer` type, `.find` will accept the number,
 or if the primary key is of `uuid` type, `.find` will expect a string.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -144,7 +144,7 @@ Specify `primaryKey` on multiple columns to have a composite primary key. `.find
 Composite key is useful when defining a join table which is designed to connect other tables.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -162,7 +162,7 @@ By default, Postgres will name an underlying constraint as `${table name}_pkey`.
 In `createTable`, pass the composite primary key into a second function. Unlike `changeTable` that takes only a single function for all.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -194,7 +194,7 @@ Defines a reference between different tables to enforce data integrity.
 In [snakeCase](/guide/orm-and-query-builder#snakecase-option) mode, columns of both tables are translated to a snake_case.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -237,7 +237,7 @@ The first argument is an array of columns in the current table, the second argum
 Options are the same as in a single-column foreign key.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -264,7 +264,7 @@ change(async (db) => {
 Add an index to the column.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -344,7 +344,7 @@ interface IndexOptions {
 Example:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -376,7 +376,7 @@ For unique indexes on multiple columns, accepts the same parameters as [composit
 As well as [unique](#unique) defined for a single column, it is recognized by [findBy](/guide/query-methods#findby) and [onConflict(['column'])](/guide/create-update-delete#onconflict).
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -403,7 +403,7 @@ change(async (db) => {
 It can accept the same options as a regular `index`, but it is `USING GIN` by default, and it is concatenating columns into a `tsvector` database type.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -429,7 +429,7 @@ CREATE INDEX "table_title_body_idx" ON "table" USING GIN (
 You can set different search weights (`A` to `D`) on different columns inside the index:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -453,7 +453,7 @@ When the table has localized columns,
 you can define different indexes for different languages by setting the `language` parameter:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -477,7 +477,7 @@ Alternatively, different table records may correspond to a single language,
 then you can define a search index that relies on a language column by using `languageColumn` parameter:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -497,7 +497,7 @@ It can be more efficient to use a [generated](/guide/migration-column-methods#ge
 and to set a `searchIndex` on it:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -520,7 +520,7 @@ CREATE INDEX "table_generatedTsVector_idx" ON "table" USING GIN ("generatedTsVec
 Adds `createdAt` and `updatedAt` columns of type `timestamp` (with time zone) with default SQL `now()`.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -540,7 +540,7 @@ The same as `timestamps`, but without a time zone.
 Add [EXCLUDE constraint](https://www.postgresql.org/docs/current/sql-createtable.html#SQL-CREATETABLE-EXCLUDE) to the column.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -626,7 +626,7 @@ interface ExcludeOptions {
 Example:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -659,7 +659,7 @@ change(async (db) => {
 Set a database-level validation check to a column. `check` accepts a raw SQL.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -681,7 +681,7 @@ change(async (db) => {
 Define a check for multiple column by using a spread syntax:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
@@ -704,7 +704,7 @@ change(async (db) => {
 Add database comment to the column.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -718,7 +718,7 @@ change(async (db) => {
 Set compression for the column, see Postgres docs for it.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -732,7 +732,7 @@ change(async (db) => {
 Set collation for the column.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -750,7 +750,7 @@ When using `type` to define columns **in application**, you need to also specify
 In migration, `as` won't have effect.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({
@@ -768,7 +768,7 @@ Before adding a domain column, create the domain type itself, see [create domain
 `as` works exactly like as when using `type`, it has no effect in the migration.
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('table', (t) => ({

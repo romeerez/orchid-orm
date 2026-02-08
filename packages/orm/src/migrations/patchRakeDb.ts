@@ -1,11 +1,7 @@
 import { rakeDbCommands } from 'rake-db';
 import { generate } from './generate/generate';
 import { pull } from './pull/pull';
-import {
-  DefaultColumnTypes,
-  DefaultSchemaConfig,
-  ColumnSchemaConfig,
-} from 'pqb';
+import { ColumnSchemaConfig } from 'pqb';
 
 rakeDbCommands.g = rakeDbCommands.generate = {
   run: generate,
@@ -24,17 +20,16 @@ rakeDbCommands.pull.help =
   'generate ORM tables and a migration for an existing database';
 
 declare module 'rake-db' {
-  export interface RakeDbConfig<
-    SchemaConfig extends ColumnSchemaConfig,
-    CT = DefaultColumnTypes<DefaultSchemaConfig>,
-  > {
+  export interface RakeDbConfig {
     dbPath?: string;
     dbExportedAs?: string;
     generateTableTo?(tableName: string): string;
   }
 
-  export interface InputRakeDbConfigBase<
+  export interface RakeDbCliConfigInputBase<
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     SchemaConfig extends ColumnSchemaConfig,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     CT,
   > {
     dbPath?: string;

@@ -1,6 +1,5 @@
 import { rebase } from './rebase';
 import { testConfig } from '../rake-db.test-utils';
-import { AnyRakeDbConfig } from '../config';
 import fs from 'fs/promises';
 import path from 'path';
 import { asMock, TestAdapter } from 'test-utils';
@@ -12,6 +11,7 @@ import { getMigrationVersionOrThrow } from '../migration/migrations-set';
 import { AdapterBase, RecordString } from 'pqb';
 import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
+import { RakeDbConfig } from 'rake-db';
 
 jest.mock('fs/promises');
 jest.mock('../migration/manage-migrated-versions');
@@ -53,12 +53,12 @@ const defaultConfig = {
       config,
     });
   },
-} as AnyRakeDbConfig;
+} as RakeDbConfig;
 
 let config = defaultConfig;
 
 const arrange = (arg: {
-  config?: Partial<AnyRakeDbConfig>;
+  config?: Partial<RakeDbConfig>;
   files?: string[];
   migrated?: string[];
   promptResponses?: ('first' | 'second')[];

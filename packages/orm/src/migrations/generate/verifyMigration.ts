@@ -1,9 +1,9 @@
 import { AdapterBase } from 'pqb';
 import {
-  AnyRakeDbConfig,
   createMigrationInterface,
   ChangeCallback,
   introspectDbSchema,
+  RakeDbConfig,
 } from 'rake-db';
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { AbortSignal } from './generate';
@@ -12,7 +12,7 @@ const rollbackErr = new Error('Rollback');
 
 export const verifyMigration = async (
   adapter: AdapterBase,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,
 ): Promise<string | false | undefined> => {

@@ -44,7 +44,7 @@ describe('listMigrationsStatuses', () => {
       sequence: ['0001', '0002'],
     });
 
-    await listMigrationsStatuses(adapters, config, []);
+    await listMigrationsStatuses(adapters, config);
 
     expect(config.logger.log).toBeCalledWith(` Database: dbname
 
@@ -56,7 +56,7 @@ describe('listMigrationsStatuses', () => {
 ------------------------------------------`);
   });
 
-  it('should log a list of migrations with path to a migration when passing `p` argument', async () => {
+  it('should log a list of migrations with path to a migration when called with showUrl', async () => {
     const config = {
       ...testConfig,
       migrationsPath: path.resolve('app', 'migrations'),
@@ -88,7 +88,7 @@ describe('listMigrationsStatuses', () => {
       sequence: ['0001', '0002'],
     });
 
-    await listMigrationsStatuses(adapters, config, ['p']);
+    await listMigrationsStatuses(adapters, config, { showUrl: true });
 
     expect(config.logger.log).toBeCalledWith(` Database: dbname
 

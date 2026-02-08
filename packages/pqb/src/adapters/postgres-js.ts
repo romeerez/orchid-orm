@@ -17,6 +17,7 @@ import {
   createDbWithAdapter,
   DbResult,
   ColumnSchemaConfig,
+  TransactionAdapterBase,
 } from 'pqb';
 
 export interface CreatePostgresJsDbOptions<
@@ -119,6 +120,10 @@ export class PostgresJsAdapter implements AdapterBase {
   constructor(config: PostgresJsAdapterOptions) {
     this.config = { ...config, types };
     this.sql = this.configure(config);
+  }
+
+  isInTransaction(): boolean {
+    return false;
   }
 
   private configure(config: PostgresJsAdapterOptions): postgres.Sql {
@@ -238,6 +243,7 @@ export class PostgresJsAdapter implements AdapterBase {
     return query(this.sql, text, values);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
@@ -330,6 +336,7 @@ const query = <T extends QueryResultRow = QueryResultRow>(
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const arrays = <R extends any[] = any[]>(
   sql: postgres.Sql,
   text: string,
@@ -339,10 +346,14 @@ const arrays = <R extends any[] = any[]>(
   return query(sql, text, values, catchingSavepoint, true);
 };
 
-export class PostgresJsTransactionAdapter implements AdapterBase {
+export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
   errorClass = postgres.PostgresError;
 
   constructor(public adapter: PostgresJsAdapter, public sql: postgres.Sql) {}
+
+  isInTransaction(): true {
+    return true;
+  }
 
   updateConfig(config: PostgresJsAdapterOptions): Promise<void> {
     return this.adapter.updateConfig(config);

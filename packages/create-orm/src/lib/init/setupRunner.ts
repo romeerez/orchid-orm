@@ -22,9 +22,9 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, "dist", "db"),
     lib: {
-      entry: resolve(__dirname, "src/db/dbScript.ts"),
+      entry: resolve(__dirname, "src/db/db-script.ts"),
       formats: ["es"],
-      fileName: "dbScript",
+      fileName: "db-script",
     },
     rollupOptions: {
       external: ["orchid-orm"],
@@ -44,7 +44,7 @@ export default defineConfig({
 
 await Promise.all([
   build({
-    entryPoints: ["src/db/dbScript.ts"],
+    entryPoints: ["src/db/db-script.ts"],
     bundle: true,
     platform: "node",
     format: "esm",
@@ -68,7 +68,7 @@ await Promise.all([
     format: "esm",
     outdir: "dist/db/migrations",
     outExtension: { '.js': '.mjs' },
-    external: ['../dbScript'],
+    external: ['../db-script'],
     plugins: [{
       name: 'add-js-suffix',
       setup(build) {

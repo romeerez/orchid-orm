@@ -1,5 +1,6 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { colors } from 'pqb';
+import { testConfig } from '../../migrations.test-utils';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -16,6 +17,22 @@ const { green, red, yellow } = colors;
 
 describe('schemas', () => {
   const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+
+  it('should not try to drop the schema specified in config', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('custom');
+      },
+      config: {
+        ...testConfig,
+        schema: 'custom',
+      },
+    });
+
+    await act();
+
+    assert.report('No changes were detected');
+  });
 
   it('should not drop ignored schemas', async () => {
     await arrange({

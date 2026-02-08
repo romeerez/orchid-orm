@@ -38,7 +38,7 @@ describe('setupDemoTables', () => {
     const call = writeFile.mock.calls.find(([to]) => to === postTablePath);
     expect(call?.[1])
       .toBe(`import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
-import { BaseTable } from '../baseTable';
+import { BaseTable } from '../base-table';
 import { CommentTable } from './comment.table';
 
 // Post type returned from database.
@@ -79,7 +79,7 @@ export class PostTable extends BaseTable {
     const call = writeFile.mock.calls.find(([to]) => to === commentTablePath);
     expect(call?.[1])
       .toBe(`import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
-import { BaseTable } from '../baseTable';
+import { BaseTable } from '../base-table';
 import { PostTable } from './post.table';
 
 // Comment type returned from database.

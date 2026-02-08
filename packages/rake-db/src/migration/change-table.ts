@@ -56,6 +56,7 @@ import {
 } from './migration.utils';
 import { tableMethods } from './table-methods';
 import { TableQuery } from './create-table';
+import { RakeDbConfig } from 'rake-db';
 
 interface ChangeTableData {
   add: TableData;
@@ -142,7 +143,7 @@ const drop = function (this: TableChangeMethods, item, options) {
       ] instanceof Column
     ) {
       const result: Record<string, RakeDbAst.ChangeTableItem.Column> = {};
-      for (const key in item as any) {
+      for (const key in item) {
         result[key] = {
           type: 'drop',
           item: (item as Record<string, Column>)[key],
@@ -364,9 +365,16 @@ export const changeTable = async <CT>(
   addOrDropChanges.length = 0;
   const changeData = fn?.(tableChanger) || {};
 
-  const ast = makeAst(up, tableName, changeData, changeTableData, options);
+  const ast = makeAst(
+    migration.options,
+    up,
+    tableName,
+    changeData,
+    changeTableData,
+    options,
+  );
 
-  const queries = astToQueries(ast, snakeCase, language);
+  const queries = astToQueries(migration.options, ast, snakeCase, language);
   for (const query of queries) {
     const result = await migration.adapter.arrays(interpolateSqlValues(query));
     query.then?.(result);
@@ -374,6 +382,7 @@ export const changeTable = async <CT>(
 };
 
 const makeAst = (
+  config: RakeDbConfig,
   up: boolean,
   name: string,
   changeData: TableChangeData,
@@ -441,7 +450,7 @@ const makeAst = (
     shape[name] = arr;
   }
 
-  const [schema, table] = getSchemaAndTableFromName(name);
+  const [schema, table] = getSchemaAndTableFromName(config, name);
 
   return {
     type: 'changeTable',
@@ -468,6 +477,7 @@ interface PrimaryKey extends TableData.PrimaryKey {
 }
 
 const astToQueries = (
+  config: RakeDbConfig,
   ast: RakeDbAst.ChangeTable,
   snakeCase?: boolean,
   language?: string,
@@ -499,6 +509,7 @@ const astToQueries = (
     if (Array.isArray(item)) {
       for (const it of item) {
         handlePrerequisitesForTableItem(
+          config,
           key,
           it,
           queries,
@@ -509,6 +520,7 @@ const astToQueries = (
       }
     } else {
       handlePrerequisitesForTableItem(
+        config,
         key,
         item,
         queries,
@@ -552,6 +564,7 @@ const astToQueries = (
     if (Array.isArray(item)) {
       for (const it of item) {
         handleTableItemChange(
+          config,
           key,
           it,
           ast,
@@ -571,6 +584,7 @@ const astToQueries = (
       }
     } else {
       handleTableItemChange(
+        config,
         key,
         item,
         ast,
@@ -617,7 +631,14 @@ const astToQueries = (
   prependAlterTable.push(
     ...dropConstraints.map(
       (foreignKey) =>
-        `\n DROP ${constraintToSql(ast, false, foreignKey, values, snakeCase)}`,
+        `\n DROP ${constraintToSql(
+          config,
+          ast,
+          false,
+          foreignKey,
+          values,
+          snakeCase,
+        )}`,
     ),
   );
 
@@ -645,7 +666,14 @@ const astToQueries = (
   alterTable.push(
     ...addConstraints.map(
       (foreignKey) =>
-        `\n ADD ${constraintToSql(ast, true, foreignKey, values, snakeCase)}`,
+        `\n ADD ${constraintToSql(
+          config,
+          ast,
+          true,
+          foreignKey,
+          values,
+          snakeCase,
+        )}`,
     ),
   );
 
@@ -664,10 +692,14 @@ const astToQueries = (
     queries.push(alterTableSql(tableName, alterTable, values));
   }
 
-  queries.push(...indexesToQuery(false, ast, dropIndexes, snakeCase, language));
-  queries.push(...indexesToQuery(true, ast, addIndexes, snakeCase, language));
-  queries.push(...excludesToQuery(false, ast, dropExcludes, snakeCase));
-  queries.push(...excludesToQuery(true, ast, addExcludes, snakeCase));
+  queries.push(
+    ...indexesToQuery(config, false, ast, dropIndexes, snakeCase, language),
+  );
+  queries.push(
+    ...indexesToQuery(config, true, ast, addIndexes, snakeCase, language),
+  );
+  queries.push(...excludesToQuery(config, false, ast, dropExcludes, snakeCase));
+  queries.push(...excludesToQuery(config, true, ast, addExcludes, snakeCase));
   queries.push(...commentsToQuery(ast, comments));
 
   return queries;
@@ -684,6 +716,7 @@ const alterTableSql = (
 });
 
 const handlePrerequisitesForTableItem = (
+  config: RakeDbConfig,
   key: string,
   item: RakeDbAst.ChangeTableItem,
   queries: TableQuery[],
@@ -694,7 +727,7 @@ const handlePrerequisitesForTableItem = (
   if ('item' in item) {
     const { item: column } = item;
     if (column instanceof EnumColumn) {
-      queries.push(makePopulateEnumQuery(column));
+      queries.push(makePopulateEnumQuery(config, column));
     }
   }
 
@@ -708,11 +741,11 @@ const handlePrerequisitesForTableItem = (
     }
   } else if (item.type === 'change') {
     if (item.from.column instanceof EnumColumn) {
-      queries.push(makePopulateEnumQuery(item.from.column));
+      queries.push(makePopulateEnumQuery(config, item.from.column));
     }
 
     if (item.to.column instanceof EnumColumn) {
-      queries.push(makePopulateEnumQuery(item.to.column));
+      queries.push(makePopulateEnumQuery(config, item.to.column));
     }
 
     if (item.from.primaryKey) {
@@ -740,6 +773,7 @@ const handlePrerequisitesForTableItem = (
 };
 
 const handleTableItemChange = (
+  config: RakeDbConfig,
   key: string,
   item: RakeDbAst.ChangeTableItem,
   ast: RakeDbAst.ChangeTable,
@@ -765,6 +799,7 @@ const handleTableItemChange = (
 
     alterTable.push(
       `ADD COLUMN ${columnToSql(
+        config,
         name,
         column,
         values,
@@ -794,8 +829,8 @@ const handleTableItemChange = (
       const type =
         !to.column || to.column.data.isOfCustomType
           ? to.column && to.column instanceof DomainColumn
-            ? quoteNameFromString(to.type)
-            : quoteCustomType(to.type)
+            ? quoteNameFromString(config, to.type)
+            : quoteCustomType(config, to.type)
           : to.type;
 
       const using = item.using?.usingUp
@@ -808,7 +843,9 @@ const handleTableItemChange = (
 
       alterTable.push(
         `ALTER COLUMN "${name}" TYPE ${type}${
-          to.collate ? ` COLLATE ${quoteNameFromString(to.collate)}` : ''
+          to.collate
+            ? ` COLLATE ${quoteNameFromString(config, to.collate)}`
+            : ''
         }${using}`,
       );
     }
@@ -823,7 +860,7 @@ const handleTableItemChange = (
 
       if (to.identity) {
         alterTable.push(
-          `ALTER COLUMN "${name}" ADD ${identityToSql(to.identity)}`,
+          `ALTER COLUMN "${name}" ADD ${identityToSql(config, to.identity)}`,
         );
       }
     }

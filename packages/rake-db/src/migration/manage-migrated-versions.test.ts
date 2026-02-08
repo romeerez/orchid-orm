@@ -1,5 +1,5 @@
 import {
-  createMigrationsTable,
+  createMigrationsSchemaAndTable,
   deleteMigratedVersion,
   getMigratedVersionsMap,
   NoMigrationsTableError,
@@ -9,12 +9,22 @@ import { SilentQueries } from './migration';
 import { testConfig } from '../rake-db.test-utils';
 import { RakeDbCtx } from '../common';
 import { AdapterBase } from 'pqb';
-import { asMock, TestAdapter } from 'test-utils';
+import { TestAdapter } from 'test-utils';
+import { createSchema, createTable } from '../commands/create-or-drop';
 
-const config = testConfig;
+jest.mock('../commands/create-or-drop', () => ({
+  createSchema: jest.fn(() => 'done'),
+  createTable: jest.fn(() => 'done'),
+}));
+
+const logger = {
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+};
 
 describe('manageMigratedVersions', () => {
-  beforeEach(jest.resetAllMocks);
+  beforeEach(jest.clearAllMocks);
 
   describe('createMigrationsTable', () => {
     const mockedQuery = jest.fn();
@@ -28,99 +38,58 @@ describe('manageMigratedVersions', () => {
       jest.clearAllMocks();
     });
 
-    it('should create a "schemaMigrations" table', async () => {
-      mockedQuery.mockReturnValueOnce(undefined);
-
-      await createMigrationsTable(db, config);
-
-      expect(mockedQuery.mock.calls).toEqual([
-        [
-          `CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL, name TEXT NOT NULL )`,
-        ],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created versions table'],
-      ]);
-    });
-
-    it('supports migrationTable config with schema', async () => {
-      mockedQuery.mockReturnValueOnce(undefined);
-
-      await createMigrationsTable(db, {
-        ...config,
-        migrationsTable: 'custom-schema.custom-table',
+    it('should create a "schemaMigrations" table with a schema', async () => {
+      await createMigrationsSchemaAndTable(db, {
+        migrationsTable: 'schema.table',
+        logger,
       });
 
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE SCHEMA "custom-schema"`],
-        [
-          `CREATE TABLE "custom-schema"."custom-table" ( version TEXT NOT NULL, name TEXT NOT NULL )`,
-        ],
-      ]);
+      expect(createSchema).toHaveBeenCalledWith(db, 'schema');
+      expect(logger.log).toHaveBeenCalledWith(`Created schema "schema"`);
 
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created schema custom-schema'],
-        ['Created versions table'],
-      ]);
+      expect(createTable).toHaveBeenCalledWith(
+        db,
+        '"schema"."table" (version TEXT NOT NULL, name TEXT NOT NULL)',
+      );
+      expect(logger.log).toHaveBeenCalledWith(
+        `Created migration versions table "schema"."table"`,
+      );
     });
 
-    it('should inform if table already exists', async () => {
-      mockedQuery.mockRejectedValueOnce({ code: '42P07' });
+    it('should create a "schemaMigrations" table without a schema', async () => {
+      await createMigrationsSchemaAndTable(db, {
+        migrationsTable: 'table',
+        logger,
+      });
 
-      await createMigrationsTable(db, config);
+      expect(createSchema).not.toHaveBeenCalledWith(db, 'schema');
 
-      expect(mockedQuery.mock.calls).toEqual([
-        [
-          `CREATE TABLE "schemaMigrations" ( version TEXT NOT NULL, name TEXT NOT NULL )`,
-        ],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Versions table exists'],
-      ]);
+      expect(createTable).toHaveBeenCalledWith(
+        db,
+        '"table" (version TEXT NOT NULL, name TEXT NOT NULL)',
+      );
+      expect(logger.log).toHaveBeenCalledWith(
+        `Created migration versions table "table"`,
+      );
     });
 
-    it('should create a custom schema if config has a schema other than public', async () => {
-      config.schema = 'custom';
+    it('should create and use a schema set in the config', async () => {
+      await createMigrationsSchemaAndTable(db, {
+        schema: 'schema',
+        migrationsTable: 'table',
+        logger,
+      });
 
-      await createMigrationsTable(db, config);
+      expect(createSchema).toHaveBeenCalledWith(db, 'schema');
+      expect(logger.log).toHaveBeenCalledWith(`Created schema "schema"`);
 
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE SCHEMA "custom"`],
-        [
-          `CREATE TABLE "custom"."schemaMigrations" ( version TEXT NOT NULL, name TEXT NOT NULL )`,
-        ],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created schema custom'],
-        ['Created versions table'],
-      ]);
-
-      config.schema = undefined;
-    });
-
-    it('should be fine when the custom schema already exists', async () => {
-      mockedQuery.mockRejectedValueOnce({ code: '42P06' });
-      mockedQuery.mockResolvedValue(null);
-
-      config.schema = 'custom';
-
-      await createMigrationsTable(db, config);
-
-      expect(mockedQuery.mock.calls).toEqual([
-        [`CREATE SCHEMA "custom"`],
-        [
-          `CREATE TABLE "custom"."schemaMigrations" ( version TEXT NOT NULL, name TEXT NOT NULL )`,
-        ],
-      ]);
-
-      expect(asMock(testConfig.logger.log).mock.calls).toEqual([
-        ['Created versions table'],
-      ]);
-
-      config.schema = undefined;
+      expect(createTable).toHaveBeenCalledWith(
+        db,
+        '"schema"."table" (version TEXT NOT NULL, name TEXT NOT NULL)',
+      );
+      expect(logger.log).toHaveBeenCalledWith(
+        `Created migration versions table "schema"."table"`,
+      );
     });
   });
 
@@ -130,15 +99,12 @@ describe('manageMigratedVersions', () => {
         silentArrays: jest.fn(),
       };
 
-      await saveMigratedVersion(
-        db as unknown as SilentQueries,
-        '123',
-        'name',
-        config,
-      );
+      await saveMigratedVersion(db as unknown as SilentQueries, '123', 'name', {
+        migrationsTable: 'schema.table',
+      });
 
       expect(db.silentArrays).toBeCalledWith(
-        'INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)',
+        'INSERT INTO "schema"."table"(version, name) VALUES ($1, $2)',
         ['123', 'name'],
       );
     });
@@ -154,11 +120,13 @@ describe('manageMigratedVersions', () => {
         db as unknown as SilentQueries,
         '123',
         'name',
-        config,
+        {
+          migrationsTable: 'schema.table',
+        },
       );
 
       expect(db.silentArrays).toBeCalledWith(
-        'DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2',
+        'DELETE FROM "schema"."table" WHERE version = $1 AND name = $2',
         ['123', 'name'],
       );
     });
@@ -169,12 +137,9 @@ describe('manageMigratedVersions', () => {
       };
 
       await expect(
-        deleteMigratedVersion(
-          db as unknown as SilentQueries,
-          '123',
-          'name',
-          config,
-        ),
+        deleteMigratedVersion(db as unknown as SilentQueries, '123', 'name', {
+          migrationsTable: 'schema.table',
+        }),
       ).rejects.toThrow('Migration 123_name was not found in db');
     });
   });
@@ -187,7 +152,11 @@ describe('manageMigratedVersions', () => {
     const ctx: RakeDbCtx = {};
 
     const act = () =>
-      getMigratedVersionsMap(ctx, adapter as unknown as AdapterBase, config);
+      getMigratedVersionsMap(
+        ctx,
+        adapter as unknown as AdapterBase,
+        testConfig,
+      );
 
     it('should throw NoMigrationsTableError if no migration table', async () => {
       adapter.arrays.mockRejectedValueOnce(

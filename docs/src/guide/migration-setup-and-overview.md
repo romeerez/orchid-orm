@@ -13,7 +13,7 @@ Migrations allow you to evolve your database schema over time. This migration to
 
 If you're using OrchidORM, the migration toolkit is already bundled in, import it from `orchid-orm/migrations`, no need to install it separately.
 
-You can also use it as a standalone tool, install and use the `rake-db` package.
+You can also use it as a standalone tool by installing `rake-db` package.
 
 ## how it works
 
@@ -24,8 +24,8 @@ All changes are wrapped into a single transaction. If you have 3 pending migrati
 none of them will be applied.
 See [transaction per migration](/guide/migration-commands.html#transaction-per-migration) to change this strategy.
 
-The transaction beings with setting a lock ([pg_advisory_xact_lock](https://www.postgresql.org/docs/current/functions-admin.html)).
-If you're deploying a cluster of node.js applications, and each application tries to apply migrations at the same time,
+Migrations are **setting a lock** ([pg_advisory_xact_lock](https://www.postgresql.org/docs/current/functions-admin.html)):
+when deploying a cluster of node.js applications, every application tries to apply migrations at the same time,
 the first one will set a lock and apply the migrations, the rest will wait for a lock,
 and after the lock is released all migrations are already applied.
 
@@ -33,7 +33,7 @@ Locally, migrations are compiled from TS to JS on the fly before running.
 When deploying to a remote server, you may want to precompile migrations first to make migration process a bit faster on the server side.
 
 If you want to use `rake-db` together with OrchidORM, [ORM initializer script](/guide/quickstart) can generate configurations.
-When using it as a standalone tool, you can still use the same script and copy just the rake-db from it (config is in `dbScript.ts` file).
+When using it as a standalone tool, you can still use the same script and copy just the rake-db from it (config is in `db-script.ts` file).
 Generated script allows to choose between `tsx`, `vite`, and `ts-node` to run migrations, and generates different configs based on the chosen tool.
 Generated package.json will have `build:migrations` and `db:compiled` scripts for pre-compiling and running migrations in production.
 
@@ -66,12 +66,12 @@ src/
     ├── migrations/ - contains migrations files that can be migrated or rolled back.
     │   ├── recurrent/ - optional: sql files for triggers and functions
     │   │   └── my-function.sql - sql file containing CREATE OR REPLACE
-    │   ├── 0001_createPost.ts
-    │   └── 0002_createComment.ts
-    ├── baseTable.ts - for defining column type overrides.
+    │   ├── 0001_create-post.ts
+    │   └── 0002_create-comment.ts
+    ├── base-table.ts - for defining column type overrides.
     ├── config.ts - database credentials are exported from here.
     ├── db.ts - main file for the ORM, connects all tables into one `db` object.
-    ├── dbScript.ts - script run by `npm run db *command*`.
+    ├── db-script.ts - script run by `npm run db *command*`.
     └── seed.ts - for filling tables with data.
 ```
 
@@ -100,10 +100,10 @@ export const config = {
 };
 ```
 
-Configuring migrations in `db/dbScript.ts`:
+Configuring migrations in `db/db-script.ts`:
 
 ```ts
-// db/dbScript.ts
+// db/db-script.ts
 
 // for porsager/postgres driver:
 import { rakeDb } from 'orchid-orm/migrations/postgres-js'; // when using Orchid ORM
@@ -113,9 +113,9 @@ import { rakeDb } from 'orchid-orm/migrations/node-postgres'; // when using Orch
 import { rakeDb } from 'rake-db/node-postgres'; // when using a standalone rake-db
 
 import { config } from './config';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
-export const change = rakeDb(config.database, {
+export const change = rakeDb.run(config.database, {
   // relative path to the current file:
   migrationsPath: './migrations',
   // it also can be an absolute path:
@@ -158,7 +158,7 @@ Add the `db` script to your `package.json`:
 ```json
 {
   "scripts": {
-    "db": "tsx|vite-node|ts-node|bun src/db/dbScript.ts"
+    "db": "tsx|vite-node|ts-node|bun src/db/db-script.ts"
   }
 }
 ```
@@ -191,56 +191,28 @@ Using timestamps frees from file conflicts, at the cost of potential problems ca
 
 If you'd like to rename existing migrations from timestamps to serial numbers, there is a [change-ids](/guide/migration-commands#change-ids).
 
-## awaiting rakeDb
+## rakeDb.run
 
-`rakeDb` function starts executing immediately after it's called, `node.js` will keep the program alive until it has at least one pending promise, and it closes after `rakeDb` is finished.
-
-But some other environments may not wait for `rakeDb` to finish automatically, then you'll need to await for it manually in such a way:
+`rakeDb.run` function in the setup script takes connection options, migration config, and command line arguments:
 
 ```ts
-export const change = rakeDb(dbConfig, rakeDbConfig);
-
-// wait for `rakeDb` to finish:
-await change.promise;
-```
-
-The promise resolves into a result object:
-
-```ts
-interface RakeDbResult {
-  // database connection options
-  options: AdapterOptions[];
-  // rake-db config
-  config: AnyRakeDbConfig;
-  // command and arguments passed to `rakeDb.lazy` or taken from process.argv
-  args: string[];
-}
-```
-
-Aliases of commands are resolved, so if this was run with `pnpm db migrate`, the command will be `up`.
-See full list of aliases in `rakeDbAliases` exported from the `rake-db` package.
-
-## rakeDb
-
-`rakeDb` function in the setup script takes connection options, migration config, and command line arguments:
-
-```ts
-const rakeDb = async (
+rakeDb.run = (
   options: MaybeArray<AdapterOptions>,
-  partialConfig?: Partial<MigrationConfig>,
+  config: Config,
   args: string[] = process.argv.slice(2),
 ) => {
   // ...
 };
 ```
 
-The first is of the same type `AdapterOptions` which is used when configuring the query builder and the ORM.
-Provide an array of such options to migrate two and more databases at the same time, which helps maintain a test database.
+The first argument is of the same type `AdapterOptions` which is used when configuring the ORM.
+Provide an array of such options to migrate two and more databases at the same time,
+which is useful to keep a test database up to date.
 
-The second optional argument of type `MigrationConfig`, all properties are optional, here is the type:
+The second argument is a configuration, here is the type:
 
 ```ts
-type MigrationConfig = {
+type Config = {
   // (for Orchid ORM) columnTypes and snakeCase can be applied form ORM's BaseTable
   baseTable?: BaseTable;
   // (for Orchid ORM) import path to Orchid ORM `db` instance, used for auto-generating migrations.
@@ -248,25 +220,34 @@ type MigrationConfig = {
   // (for Orchid ORM) change this if ORM instance is exported under a different name than `db`.
   dbExportedAs?: string; // 'db' is the default
 
-  // to create the migrations-tracking table not in the default public schema,
-  // also to omit this schema name when generating migrations with the `pull` command.
+  // by default, all the migrated tables and the special table for tracking migrations are created in `public`.
+  // set this `schema` setting to use create everything in this schema instead.
   schema: 'custom-schema';
+  // the schema can be a function, for example, to get a tenant schema from AsyncLocalStorage
+  schema: () => string;
 
-  // or it can be set manually:
+  // column types are taken from the provided `baseTable`,
+  // alternatively they can be set with this option
   columnTypes?: (t) => {
     // the same columnTypes config as in BaseTable definition
   };
+
   // set to true to have all columns named in camelCase in the app, but in snake_case in the db
   // by default, camelCase is expected in both app and db
   snakeCase?: boolean;
 
-  // basePath and dbScript are determined automatically
-  // basePath is a dir name of the file which calls `rakeDb`, and dbScript is a name of this file
+  // basePath and db-script are determined automatically
+  // basePath is a dir name of the file which calls `rakeDb`, and db-script is a name of this file
   basePath?: string;
   dbScript?: string;
 
   // path to migrations directory
   migrationsPath?: string;
+  // alternatively, provide an object listing all the migrations:
+  migrations: {
+    // for example, '0001_create-users': () => import('../path-to-migration-file'),
+    [fileName: string]: () => Promise<unknown>;
+  };
 
   // prefix migration files with a serial number (default) or with a timestamp
   migrationId?: 'serial' | 'timestamp';
@@ -280,8 +261,8 @@ type MigrationConfig = {
   // it can include a schema, example:
   migrationsTable: 'my-schema.migrations';
 
-  // function to import typescript migration file
-  import?(path: string): void;
+  // function to import typescript migration file,
+  import: (path) => import(path);
 
   // specify behavior for what to do when no primary key was defined on a table
   noPrimaryKey?: 'error' | 'warn' | 'ignore';
@@ -312,15 +293,30 @@ Defaults are:
 
 - `basePath` is the dir name of the file you're calling `rakeDb` from
 - `migrationPath` is `src/db/migrations`
-- `recurrentPath` is `src/db/migrations/recurrent` (directory doesn't have to exist if you don't need it)
+- `recurrentPath` is `src/db/migrations/recurrent` (directory doesn't have to exist if not needed)
 - `migrationsTable` is `schemaMigrations`
 - `snakeCase` is `false`, so camelCase is expected in both the app and the database
-- `import` will use a standard `import` function
-- `noPrimaryKey` is `error`, it'll bite if you accidentally forgot to add a primary key to a new table
+- `noPrimaryKey` is `error`, it'll bite when forgetting to define a table primary key
 - `log` is on
-- `logger` is a standard `console`
+- `logger` is the standard `console`
 
 The third optional argument of `rakeDb` is an array of strings from the command line, by default it will use `process.argv` to get the arguments, but you can override it by passing arguments manually.
+
+## awaiting rakeDb
+
+`rakeDb.run` function starts executing immediately after it's called, `node.js` will keep the program alive until it has at least one pending promise, and it closes after `rakeDb` is finished.
+
+But some other environments may not wait for `rakeDb` to finish automatically, then you'll need to await it manually in such a way:
+
+```ts
+// pass the config with `migrationsPath` and such
+const migrator = rakeDb(rakeDbConfig);
+
+export const { change } = migrator;
+
+// one or multiple db connection settings
+await migrator.run(dbConfig);
+```
 
 ## snakeCase
 
@@ -351,7 +347,7 @@ export const seed = async () => {
 Add a custom command to `rake-db` config:
 
 ```ts
-// db/dbScript
+// db/db-script
 
 // ...snip imports
 
@@ -489,104 +485,4 @@ function dump(databaseURL: string) {
 
   console.log('Db structure was dumped to structure.sql');
 }
-```
-
-## run migrations from code
-
-### rakeDb lazy
-
-`rakeDb` is designed to be launched with CLI, it will execute one command, and finish.
-
-But in some cases you might want to run it programmatically, and you can do it with `rakeDb.lazy`:
-
-```ts
-export const { change, run } = rakeDb.lazy(dbConfig, rakeDbConfig);
-
-// run a command programmatically:
-await run(['migrate']);
-
-// optionally, you can provide a partial `rakeDbConfig` to override some values,
-// here we override the logger.
-const result = await run(['migrate'], {
-  log: true,
-  logger: {
-    log(message: string): void {
-      console.log(message);
-    },
-    warn(message: string): void {
-      console.warn(message);
-    },
-    error(message: string): void {
-      console.error(message);
-    },
-  },
-});
-
-// the same result type as in "awaiting rakeDb" section above.
-result.options;
-result.config;
-result.args;
-```
-
-`rakeDb.lazy` is accepting the same options as `rakeDb`, and returns two functions.
-
-`change` is to be used in migrations to wrap database changes with it.
-
-`run` is a function to execute a command,
-it accepts the same CLI args as `rakeDb` (see [commands section](./migration-commands.md)),
-optionally takes config overrides, returns a `Promise<void>`.
-
-### migrateFiles
-
-Useful in tests: use `migrateFiles` to apply only a given migrations.
-
-It works when using `rakeDb.lazy` for configuration, it won't work with `rakeDb`.
-
-This is a lightweight function that skips most of the normal migration command steps,
-all it does is it runs a given migrations.
-
-```ts
-// when using orchid-orm
-import { migrateFiles } from 'orchid-orm/migrations';
-// when using standalone rake-db
-import { migrateFiles } from 'rake-db';
-
-await migrateFiles(db, [
-  import('./0001_user_org_member'),
-  import('./0002_account_operator'),
-]);
-```
-
-`db` is `OrchidORM` instance returned by [orchidORM](/guide/orm-and-query-builder.html#setup).
-
-Unless the `migrateFiles` is called in a regular [transaction](/guide/transactions.html#transaction) or a [testTransaction](/guide/transactions.html#testtransaction),
-it wraps given migrations in a transaction.
-
-### makeConnectAndMigrate
-
-You can prepare a function beforehand, and then to run migrations dynamically from your app logic.
-
-```ts
-// for porsager/postgres driver:
-import { makeConnectAndMigrate } from 'orchid-orm/migrations/postgres-js';
-// for node-postgres driver:
-import { makeConnectAndMigrate } from 'orchid-orm/migrations/node-postgres';
-// when using standalone rake-db
-import { makeConnectAndMigrate } from 'rake-db/postgres-js'; // or 'rake-db/node-postgres'
-
-const connectAndMigrate = makeConnectAndMigrate({
-  // minimal config for file-reading approach:
-  migrationsPath: './path/to/migrations',
-  import: (path) => import(path),
-
-  // alternatively, if you're using Vite:
-  migrations: import.meta.glob('./migrations/*.ts'),
-});
-
-// later in the app logic:
-connectAndMigrate({ databaseURL: givenURL });
-// supports array:
-connectAndMigrate([{ databaseURL: givenURL }, { databaseURL: otherURL }]);
-// runs all pending migrations by default, you can limit it with `count`:
-connectAndMigrate({ databaseURL: givenURL }, { count: 1 });
 ```

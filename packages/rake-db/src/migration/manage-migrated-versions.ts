@@ -2,22 +2,13 @@ import { RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
 import {
   AdapterBase,
-  ColumnSchemaConfig,
+  QueryLogger,
+  QuerySchema,
   RecordOptionalString,
   RecordString,
   RecordUnknown,
 } from 'pqb';
-import {
-  PickBasePath,
-  PickImport,
-  PickMigrationId,
-  PickMigrations,
-  PickMigrationsPath,
-  PickMigrationsTable,
-  PickRenameMigrations,
-  RakeDbConfig,
-  RakeDbRenameMigrations,
-} from '../config';
+import { RakeDbConfig, RakeDbRenameMigrations } from '../config';
 import path from 'path';
 import {
   getDigitsPrefix,
@@ -32,12 +23,13 @@ import {
   getMigrationsSchemaAndTable,
   migrationsSchemaTableSql,
 } from './migration.utils';
+import { createSchema, createTable } from '../commands/create-or-drop';
 
 export const saveMigratedVersion = async (
   db: SilentQueries,
   version: string,
   name: string,
-  config: PickMigrationsTable,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
 ): Promise<void> => {
   await db.silentArrays(
     `INSERT INTO ${migrationsSchemaTableSql(
@@ -47,48 +39,44 @@ export const saveMigratedVersion = async (
   );
 };
 
-export const createMigrationsTable = async (
-  db: AdapterBase,
-  config: Pick<
-    RakeDbConfig<ColumnSchemaConfig>,
-    'migrationsTable' | 'logger' | 'schema'
-  >,
-) => {
-  const { schema } = getMigrationsSchemaAndTable(config);
+export const createMigrationsSchemaAndTable = async (
+  adapter: AdapterBase,
+  config: {
+    schema?: QuerySchema;
+    migrationsTable: string;
+    logger?: QueryLogger;
+  },
+): Promise<void> => {
+  const { schema, table } = getMigrationsSchemaAndTable(config);
   if (schema) {
-    try {
-      await db.query(`CREATE SCHEMA "${schema}"`);
-      config.logger?.log(`Created schema ${schema}`);
-    } catch (err) {
-      if ((err as { code: string }).code !== '42P06') {
-        throw err;
-      }
+    const res = await createSchema(adapter, schema);
+    if (res === 'done') {
+      config.logger?.log(`Created schema "${schema}"`);
     }
   }
 
-  try {
-    await db.query(
-      `CREATE TABLE ${migrationsSchemaTableSql(
-        config,
-      )} ( version TEXT NOT NULL, name TEXT NOT NULL )`,
+  const res = await createTable(
+    adapter,
+    `${
+      schema ? `"${schema}"."${table}"` : `"${table}"`
+    } (version TEXT NOT NULL, name TEXT NOT NULL)`,
+  );
+  if (res === 'done') {
+    config.logger?.log(
+      `Created migration versions table ${
+        schema ? `"${schema}".` : ''
+      }"${table}"`,
     );
-    config.logger?.log('Created versions table');
-  } catch (err) {
-    if ((err as RecordUnknown).code === '42P07') {
-      config.logger?.log('Versions table exists');
-    } else {
-      throw err;
-    }
   }
 };
 
 export const deleteMigratedVersion = async (
-  db: SilentQueries,
+  adapter: SilentQueries,
   version: string,
   name: string,
-  config: PickMigrationsTable,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
 ) => {
-  const res = await db.silentArrays(
+  const res = await adapter.silentArrays(
     `DELETE FROM ${migrationsSchemaTableSql(
       config,
     )} WHERE version = $1 AND name = $2`,
@@ -105,21 +93,21 @@ export type RakeDbAppliedVersions = {
   sequence: number[];
 };
 
-interface MigratedVersionsMapConfig
-  extends PickMigrationId,
-    PickMigrationsTable,
-    PickRenameMigrations,
-    PickMigrations,
-    PickBasePath,
-    PickImport,
-    PickMigrationsPath {}
-
 export class NoMigrationsTableError extends Error {}
 
 export const getMigratedVersionsMap = async (
   ctx: RakeDbCtx,
   adapter: AdapterBase,
-  config: MigratedVersionsMapConfig,
+  config: Pick<
+    RakeDbConfig,
+    | 'migrationId'
+    | 'migrationsTable'
+    | 'renameMigrations'
+    | 'migrations'
+    | 'basePath'
+    | 'import'
+    | 'migrationsPath'
+  >,
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   try {
@@ -182,10 +170,8 @@ export const getMigratedVersionsMap = async (
   }
 };
 
-interface RenameMigrationsConfig extends PickMigrationId, PickMigrationsTable {}
-
 async function renameMigrations(
-  config: RenameMigrationsConfig,
+  config: Pick<RakeDbConfig, 'migrationId' | 'migrationsTable'>,
   trx: AdapterBase,
   versions: RecordString,
   renameTo: RakeDbRenameMigrations,

@@ -10,7 +10,7 @@ import {
   concatSchemaAndName,
   getSchemaAndTableFromName,
   promptSelect,
-  AnyRakeDbConfig,
+  RakeDbConfig,
 } from 'rake-db';
 import {
   ArrayColumn,
@@ -39,7 +39,7 @@ type ColumnsToChange = Map<
 
 export const processColumns = async (
   adapter: AdapterBase,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -152,7 +152,7 @@ const groupColumns = (
 };
 
 const addOrRenameColumns = async (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   dbStructure: IntrospectedStructure,
   {
     dbTableData,
@@ -250,7 +250,7 @@ const dropColumns = (
 
 const changeColumns = async (
   adapter: AdapterBase,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,
@@ -277,6 +277,7 @@ const changeColumns = async (
     );
 
     const action = await compareColumns(
+      config,
       adapter,
       domainsMap,
       ast,
@@ -327,6 +328,7 @@ const changeColumns = async (
 };
 
 const compareColumns = async (
+  config: RakeDbConfig,
   adapter: AdapterBase,
   domainsMap: DbStructureDomainsMap,
   ast: RakeDbAst[],
@@ -345,8 +347,8 @@ const compareColumns = async (
     codeColumn = codeColumn.data.item;
   }
 
-  const dbType = getColumnDbType(dbColumn, currentSchema);
-  const codeType = getColumnDbType(codeColumn, currentSchema);
+  const dbType = getColumnDbType(config, dbColumn, currentSchema);
+  const codeType = getColumnDbType(config, codeColumn, currentSchema);
 
   if (dbType !== codeType) {
     const typeCasts = await getTypeCasts(adapter, typeCastsCache);
@@ -553,11 +555,13 @@ const changeColumn = (
 };
 
 export const getColumnDbType = (
+  config: RakeDbConfig,
   column: Column.Pick.DataAndDataType,
   currentSchema: string,
 ) => {
   if (column instanceof EnumColumn) {
     const [schema = currentSchema, name] = getSchemaAndTableFromName(
+      config,
       column.enumName,
     );
     return `${schema}.${name}`;

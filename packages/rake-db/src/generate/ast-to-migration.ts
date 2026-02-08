@@ -24,12 +24,12 @@ import {
   rawSqlToCode,
 } from 'pqb';
 import { quoteSchemaTable } from '../common';
-import { AnyRakeDbConfig } from '../config';
 import { astToGenerateItems } from './ast-to-generate-items';
+import { RakeDbConfig } from '../config';
 
 export const astToMigration = (
   currentSchema: string,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   asts: RakeDbAst[],
 ): string | undefined => {
   const items = astToGenerateItems(config, asts, currentSchema);
@@ -169,7 +169,7 @@ ${group
         astEncoders as {
           [K: string]: (
             ast: RakeDbAst,
-            config: AnyRakeDbConfig,
+            config: RakeDbConfig,
             currentSchema: string,
           ) => Code;
         }
@@ -189,7 +189,7 @@ ${group
 const astEncoders: {
   [K in RakeDbAst['type']]: (
     ast: RakeDbAst & { type: K },
-    config: AnyRakeDbConfig,
+    config: RakeDbConfig,
     currentSchema: string,
   ) => Code;
 } = {

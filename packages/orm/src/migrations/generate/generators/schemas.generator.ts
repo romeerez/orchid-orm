@@ -9,6 +9,7 @@ export const processSchemas = async (
     codeItems: { schemas },
     verifying,
     internal: { generatorIgnore },
+    currentSchema,
   }: ComposeMigrationParams,
 ): Promise<void> => {
   const createSchemas: string[] = [];
@@ -24,6 +25,7 @@ export const processSchemas = async (
     if (
       !schemas.has(schema) &&
       schema !== 'public' &&
+      schema !== currentSchema &&
       !generatorIgnore?.schemas?.includes(schema)
     ) {
       dropSchemas.push(schema);

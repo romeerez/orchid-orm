@@ -5,7 +5,6 @@ import {
   DefaultSchemaConfig,
   defaultSchemaConfig,
   AdapterBase,
-  ColumnSchemaConfig,
   MaybeArray,
   noop,
   QueryLogger,
@@ -18,11 +17,11 @@ let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 
 export const testMigrationsPath = 'migrations-path';
 
-export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
+export const testConfig: RakeDbConfig & {
   logger: QueryLogger;
-  migrationsPath: string;
 } = {
   ...migrationConfigDefaults,
+  __rakeDbConfig: true,
   transaction: 'single',
   basePath: __dirname,
   dbScript: 'dbScript.ts',
@@ -38,16 +37,23 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   migrationsTable: 'schemaMigrations',
   snakeCase: true,
   import: require,
-  commands: {},
+};
+
+export const makeDb = (config?: Partial<RakeDbConfig>) => {
+  const db = createMigrationInterface(
+    {} as unknown as AdapterBase,
+    true,
+    config ? { ...testConfig, ...config } : testConfig,
+  ) as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;
+  db.adapter.query = queryMock;
+  db.adapter.arrays = queryMock;
+  return db;
 };
 
 export const getDb = () => {
   if (db) return db;
 
-  db = createMigrationInterface({} as unknown as AdapterBase, true, testConfig);
-  db.adapter.query = queryMock;
-  db.adapter.arrays = queryMock;
-  return db as unknown as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;
+  return (db = makeDb());
 };
 
 export const queryMock = jest.fn();

@@ -1,19 +1,13 @@
-import {
-  AdapterBase,
-  ColumnSchemaConfig,
-  createDbWithAdapter,
-  DbResult,
-} from 'pqb';
+import { AdapterBase, createDbWithAdapter, DbResult, QueryLogger } from 'pqb';
 import { join } from 'path';
 import { readdir, stat, readFile } from 'fs/promises';
-import { RakeDbConfig } from '../config';
 
-export const runRecurrentMigrations = async <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
+export const runRecurrentMigrations = async (
   adapters: AdapterBase[],
-  config: RakeDbConfig<SchemaConfig, CT>,
+  config: {
+    recurrentPath: string;
+    logger?: QueryLogger;
+  },
 ): Promise<void> => {
   let dbs: DbResult<unknown>[] | undefined;
   let files = 0;

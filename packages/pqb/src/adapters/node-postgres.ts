@@ -18,6 +18,7 @@ import {
   DbOptions,
   DbResult,
   createDbWithAdapter,
+  TransactionAdapterBase,
 } from 'pqb';
 
 export const createDb = <
@@ -74,6 +75,10 @@ export class NodePostgresAdapter implements AdapterBase {
 
   constructor(public config: NodePostgresAdapterOptions) {
     this.pool = this.configure(config);
+  }
+
+  isInTransaction(): boolean {
+    return false;
   }
 
   private configure(config: NodePostgresAdapterOptions): Pool {
@@ -359,7 +364,7 @@ const performQueryOnClientWithSavepoint = (
   });
 };
 
-export class NodePostgresTransactionAdapter implements AdapterBase {
+export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   pool: Pool;
   config: PoolConfig;
   searchPath?: string;
@@ -369,6 +374,10 @@ export class NodePostgresTransactionAdapter implements AdapterBase {
     this.pool = adapter.pool;
     this.config = adapter.config;
     this.searchPath = adapter.searchPath;
+  }
+
+  isInTransaction(): true {
+    return true;
   }
 
   updateConfig(config: NodePostgresAdapterOptions): Promise<void> {

@@ -1,15 +1,5 @@
-import {
-  AnyRakeDbConfig,
-  migrationConfigDefaults,
-  RakeDbConfig,
-} from 'rake-db';
-import {
-  defaultSchemaConfig,
-  makeColumnTypes,
-  ColumnSchemaConfig,
-  noop,
-  QueryLogger,
-} from 'pqb';
+import { RakeDbConfig, migrationConfigDefaults } from 'rake-db';
+import { defaultSchemaConfig, makeColumnTypes, noop, QueryLogger } from 'pqb';
 import path from 'node:path';
 import { join } from 'path';
 import { createBaseTable } from '../baseTable';
@@ -21,14 +11,14 @@ export const BaseTable = createBaseTable({
 
 const testMigrationsPath = 'migrations-path';
 
-export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
+export const testConfig: RakeDbConfig & {
   logger: QueryLogger;
-  migrationsPath: string;
 } = {
   ...migrationConfigDefaults,
+  __rakeDbConfig: true,
   transaction: 'single',
   basePath: path.join(__dirname),
-  baseTable: BaseTable as unknown as AnyRakeDbConfig['baseTable'],
+  baseTable: BaseTable,
   dbPath: 'src/db/db.ts',
   dbScript: 'dbScript.ts',
   columnTypes: makeColumnTypes(defaultSchemaConfig),
@@ -43,5 +33,4 @@ export const testConfig: RakeDbConfig<ColumnSchemaConfig> & {
   migrationsTable: 'public.schemaMigrations',
   snakeCase: true,
   import: require,
-  commands: {},
 };

@@ -1,5 +1,78 @@
 # Breaking changes
 
+## orchid-orm 1.62
+
+Changed migrations interface to simplify programmatic use.
+
+See the new [Programmatic use](https://orchid-orm.netlify.app/guide/migration-programmatic-use.html) documentation.
+
+When using `rakeDb` for migrations simply as a CLI program, add `.run`:
+
+- before:
+  ```ts
+  export const change = rakeDb(config.database, config);
+  ```
+- after:
+  ```ts
+  export const change = rakeDb.run(config.database, config);
+  ```
+
+When using `rakeDb.lazy`, change it as follows:
+
+- before:
+
+  ```ts
+  export const { change, run } = rakeDb.lazy(config.database, config);
+
+  await run(['migrate']);
+  ```
+
+- after:
+
+  ```ts
+  const migrator = rakeDb.lazy(config);
+
+  export const { change } = migrator;
+
+  await migrator.run(config.database, ['migrate']);
+  ```
+
+Removed `migrateFiles`, use `runMigration` instead:
+
+- before:
+
+  ```ts
+  await migrateFiles(db, [
+    () => import('./0001_user_org_member'),
+    () => import('./0002_account_operator'),
+  ]);
+  ```
+
+- after:
+
+  ```ts
+  await runMigration(db, async () => {
+    await import('./0001_user_org_member');
+    await import('./0002_account_operator');
+  });
+  ```
+
+Removed `makeConnectAndMigrate`, use `migrate` instead:
+
+- before:
+
+  ```ts
+  const connectAndMigrate = makeConnectAndMigrate(config);
+
+  await connectAndMigrate({ databaseURL: givenURL });
+  ```
+
+- after:
+
+  ```ts
+  await migrate(db, config);
+  ```
+
 ## orchid-orm 1.61
 
 Added much better support for database schemas!

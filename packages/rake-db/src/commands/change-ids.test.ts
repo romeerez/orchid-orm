@@ -1,6 +1,6 @@
 import { changeIds, fileNamesToChangeMigrationId } from './change-ids';
 import { testConfig } from '../rake-db.test-utils';
-import { AnyRakeDbConfig, RakeDbMigrationId } from '../config';
+import { RakeDbConfig, RakeDbMigrationId } from '../config';
 import { getMigrations } from '../migration/migrations-set';
 import { asMock, TestAdapter } from 'test-utils';
 import fs from 'fs/promises';
@@ -21,7 +21,7 @@ const adapters = options.map((opts) => new TestAdapter(opts));
 let config = testConfig;
 
 const arrange = (arg: {
-  config?: Partial<AnyRakeDbConfig>;
+  config?: Partial<RakeDbConfig>;
   files?: string[];
   renameTo?: RakeDbMigrationId;
 }) => {
@@ -35,7 +35,7 @@ const arrange = (arg: {
       _config,
       _up,
       _allowDuplicates,
-      fn: (_: AnyRakeDbConfig, name: string) => string,
+      fn: (_: RakeDbConfig, name: string) => string,
     ) => {
       return {
         renameTo: { to: arg.renameTo },
@@ -51,19 +51,14 @@ const arrange = (arg: {
   asMock(generateTimeStamp).mockImplementation(() => `100${timestamp++}`);
 };
 
-const act = (arg: string) => changeIds(adapters, config, [arg]);
+const act = (format: 'serial' | 'timestamp') =>
+  changeIds(adapters, config, { format });
 
 const query = jest.fn();
 TestAdapter.prototype.arrays = query;
 
 describe('changeIds', () => {
   beforeEach(jest.resetAllMocks);
-
-  it('should throw on invalid argument', async () => {
-    await expect(act('')).rejects.toThrow(
-      `Pass "serial" or "timestamp" argument to the "change-ids" command`,
-    );
-  });
 
   it('should throw when file has no digits prefix', async () => {
     arrange({

@@ -74,7 +74,7 @@ Inserted values are properly handled to not allow SQL injections.
 <!-- prettier-ignore-start -->
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const posts = await db.customer
   .select({

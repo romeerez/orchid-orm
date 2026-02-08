@@ -1,6 +1,5 @@
 import { QueryInternal, AdapterBase } from 'pqb';
 import {
-  AnyRakeDbConfig,
   RakeDbAst,
   IntrospectedStructure,
   makeDomainsMap,
@@ -13,6 +12,7 @@ import { processDomains } from './generators/domains.generator';
 import { processEnums } from './generators/enums.generator';
 import { processTables } from './generators/tables.generator';
 import { CodeItems } from './generate';
+import { RakeDbConfig } from 'rake-db';
 
 export interface ComposeMigrationParams {
   structureToAstCtx: StructureToAstCtx;
@@ -37,7 +37,7 @@ export class PendingDbTypes {
 
 export const composeMigration = async (
   adapter: AdapterBase,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
   params: ComposeMigrationParams,
@@ -47,11 +47,12 @@ export const composeMigration = async (
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
   await processSchemas(ast, dbStructure, params);
-  processExtensions(ast, dbStructure, params);
+  processExtensions(config, ast, dbStructure, params);
 
   const pendingDbTypes = new PendingDbTypes();
 
   await processDomains(
+    config,
     ast,
     adapter,
     domainsMap,

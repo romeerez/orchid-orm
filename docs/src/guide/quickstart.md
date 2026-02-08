@@ -79,7 +79,7 @@ After running the script, take a look at the package.json file, and install depe
   "type": "module",
   "scripts": {
     // for running db scripts, like npm run db create, npm run db migrate
-    "db": "tsx src/db/dbScript.ts"
+    "db": "tsx src/db/db-script.ts"
   },
   "dependencies": {
     // dotenv loads variables from .env
@@ -119,11 +119,11 @@ If you chose `vite-node`, package.json will include:
   "type": "module",
   "scripts": {
     // to run db scripts
-    "db": "vite-node src/db/dbScript.ts --",
+    "db": "vite-node src/db/db-script.ts --",
     // build migrations
     "build:migrations": "vite build --config vite.migrations.mts",
     // run compiled migrations
-    "db:compiled": "node dist/db/dbScript.mjs"
+    "db:compiled": "node dist/db/db-script.mjs"
   },
   "devDependencies": {
     // vite bundler itself
@@ -159,11 +159,11 @@ If you chose `tsx`, package.json will include:
   "type": "module",
   "scripts": {
     // to run db scripts
-    "db": "NODE_ENV=development tsx src/db/dbScript.ts",
+    "db": "NODE_ENV=development tsx src/db/db-script.ts",
     // build migrations
     "build:migrations": "rimraf dist/db && node esbuild.migrations.js",
     // run compiled migrations
-    "db:compiled": "NODE_ENV=production node dist/db/dbScript.js"
+    "db:compiled": "NODE_ENV=production node dist/db/db-script.js"
   },
   "devDependencies": {
     // for executing TS
@@ -192,15 +192,15 @@ Consider the created structure:
 ├── src/
 │   └── db/
 │       ├── migrations/ - contains migrations files that can be migrated or rolled back.
-│       │   ├── timestamp_createPost.ts
-│       │   └── timestamp_createComment.ts
+│       │   ├── 0001_create-post.ts
+│       │   └── 0002_create-comment.ts
 │       ├── tables/ - tables are used in the app, define columns and relations here.
 │       │   ├── comment.table.ts
 │       │   └── post.table.ts
-│       ├── baseTable.ts - for defining column type overrides.
+│       ├── base-table.ts - for defining column type overrides.
 │       ├── config.ts - database credentials are exported from here.
 │       ├── db.ts - main file for the ORM, connects all tables into one `db` object.
-│       ├── dbScript.ts - script run by `npm run db *command*`.
+│       ├── db-script.ts - script run by `npm run db *command*`.
 │       └── seed.ts - for filling tables with data.
 ├── .env - contains database credentials.
 ├── .gitignore - .env must be ignored by git.
@@ -236,10 +236,10 @@ npm run db create
 
 By default, `camelCase` naming is used for columns in a database.
 If you prefer to have snake_case in the database (it will be `camelCase` on the app side anyway),
-set `snakeCase: true` option in `src/db/baseTable.ts`:
+set `snakeCase: true` option in `src/db/base-table.ts`:
 
 ```ts
-// src/db/baseTable.ts
+// src/db/base-table.ts
 
 export const BaseTable = createBaseTable({
   snakeCase: true,

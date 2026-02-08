@@ -1,10 +1,10 @@
 import path from 'path';
 import {
-  AnyRakeDbConfig,
+  RakeDbConfig,
   RakeDbRenameMigrations,
   RakeDbRenameMigrationsMap,
 } from '../config';
-import { RecordString } from 'pqb';
+import { MaybePromise, RecordString } from 'pqb';
 import { pathToFileURL } from 'node:url';
 import { Dirent } from 'node:fs';
 import { readdir } from 'fs/promises';
@@ -20,7 +20,7 @@ export interface MigrationItemHasLoad {
    * can store lazy import of a migration file.
    * Promise can return `{ default: x }` where `x` is a return of `change` or an array of such returns.
    */
-  load(): Promise<unknown>;
+  load(): MaybePromise<unknown>;
 }
 
 export interface MigrationItem extends MigrationItemHasLoad {
@@ -40,7 +40,7 @@ export interface MigrationsSet {
 export const getMigrations = async (
   ctx: RakeDbCtx,
   config: Pick<
-    AnyRakeDbConfig,
+    RakeDbConfig,
     | 'migrationId'
     | 'renameMigrations'
     | 'migrations'
@@ -72,7 +72,7 @@ export const getMigrations = async (
 // Converts user-provided migrations object into array of migration items.
 function getMigrationsFromConfig(
   config: Pick<
-    AnyRakeDbConfig,
+    RakeDbConfig,
     'migrationId' | 'renameMigrations' | 'migrations' | 'basePath'
   >,
   allowDuplicates?: boolean,
@@ -116,7 +116,7 @@ export const sortMigrationsAsc = (
 
 // Scans files under `migrationsPath` to convert files into migration items.
 export async function getMigrationsFromFiles(
-  config: Pick<AnyRakeDbConfig, 'migrationId' | 'migrationsPath' | 'import'>,
+  config: Pick<RakeDbConfig, 'migrationId' | 'migrationsPath' | 'import'>,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
@@ -210,7 +210,7 @@ export async function getMigrationsFromFiles(
 }
 
 const renameMigrationsMap = async (
-  config: Pick<AnyRakeDbConfig, 'migrationsPath'>,
+  config: Pick<RakeDbConfig, 'migrationsPath'>,
   fileName: string,
 ): Promise<RakeDbRenameMigrationsMap> => {
   const filePath = path.join(config.migrationsPath, fileName);
@@ -243,7 +243,7 @@ function checkExt(filePath: string): void {
 
 // Extract a 14-chars long timestamp from a beginning of a file name.
 export function getMigrationVersionOrThrow(
-  config: Pick<AnyRakeDbConfig, 'migrationId'>,
+  config: Pick<RakeDbConfig, 'migrationId'>,
   filePath: string,
 ): string {
   const name = path.basename(filePath);
@@ -264,7 +264,7 @@ To keep using timestamp ids, set \`migrationId\` option of rake-db to 'timestamp
 }
 
 export function getMigrationVersion(
-  config: Pick<AnyRakeDbConfig, 'migrationId'>,
+  config: Pick<RakeDbConfig, 'migrationId'>,
   name: string,
 ) {
   return (

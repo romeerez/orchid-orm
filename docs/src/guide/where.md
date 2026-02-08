@@ -11,7 +11,7 @@ outline: deep
 Constructing `WHERE` conditions:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 db.table.where({
   // column of the current table

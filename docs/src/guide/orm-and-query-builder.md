@@ -154,7 +154,7 @@ Note that the `table` property is marked as `readonly`, this is needed for TypeS
 ```ts
 import { Selectable, DefaultSelect, Insertable, Updatable } from 'orchid-orm';
 // import BaseTable from a file from the previous step:
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 // export types of User for various use-cases:
 export type User = Selectable<UserTable>;
@@ -208,7 +208,7 @@ await UserTable.findBy({ name: 'John' });
 `snakeCase` can be overridden for a table:
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export class SnakeCaseTable extends BaseTable {
   readonly table = 'table';
@@ -229,7 +229,7 @@ while a table in OrchidORM is only meant for configuring a database table column
 [query hooks](/guide/hooks#lifecycle-hooks) (aka callbacks), so to define the database table and querying specifics, but not for app logic.
 
 ```ts
-import { BaseTable, sql } from './baseTable';
+import { BaseTable, sql } from './base-table';
 import { PostTable } from './post.table';
 import { SubscriptionTable } from './subscription.table';
 
@@ -475,7 +475,7 @@ Domain is a custom database type that is based on other type and can include `NO
 Define a domain as follows for the migration generator to write a corresponding migration:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 export const db = orchidORM(
   {
@@ -667,7 +667,7 @@ By default, all column names are expected to be named in camelCase.
 If only some columns are named in snake_case, you can use `name` method to indicate it:
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 class Table extends BaseTable {
   readonly table = 'table';
@@ -783,7 +783,7 @@ When this is enabled, you can disable it for a specific table.
 And when this is disabled globally, you can enable it only for a specific table in the same way.
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export class MyTable extends BaseTable {
   autoForeignKey = false; // disable only for this table
@@ -794,7 +794,7 @@ export class MyTable extends BaseTable {
 Auto foreign keys can also be enabled, disabled, overridden for a concrete relation:
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export class MyTable extends BaseTable {
   relations = {
@@ -928,7 +928,7 @@ If you forgot to define a primary key, ORM will send a friendly remained by thro
 Disable the check for a specific table by setting `noPrimaryKey` property:
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export class NoPrimaryKeyTable extends BaseTable {
   readonly table = 'table';
@@ -975,7 +975,7 @@ const db2 = orchidORM(
 All queries on such table will filter out deleted records by default.
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export class SomeTable extends BaseTable {
   readonly table = 'some';
@@ -1030,7 +1030,7 @@ Only [where conditions](/guide/where) can be set in a scope.
 If you define a scope with name `default`, it will be applied for all table queries by default.
 
 ```ts
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export class SomeTable extends BaseTable {
   readonly table = 'some';
@@ -1084,7 +1084,7 @@ await db.some.unscope('default');
 [//]: # 'has JSDoc'
 
 ```ts
-import { BaseTable, sql } from './baseTable';
+import { BaseTable, sql } from './base-table';
 
 export class UserTable extends BaseTable {
   readonly table = 'user';
@@ -1133,7 +1133,7 @@ And we have articles translated to different languages, each article has `title_
 We can define a computed `title` by passing a function into `sql` method:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 type Locale = 'en' | 'uk' | 'be';
 const asyncLanguageStorage = new AsyncLocalStorage<Locale>();
@@ -1191,7 +1191,7 @@ await db.$transaction(async () => {
 Alternatively, provide a raw SQL object created with the `sql` function:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
 const result = await db.$query<{ one: number }>(

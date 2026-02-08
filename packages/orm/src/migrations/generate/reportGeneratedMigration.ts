@@ -1,4 +1,4 @@
-import { AnyRakeDbConfig, RakeDbAst, getSchemaAndTableFromName } from 'rake-db';
+import { RakeDbConfig, RakeDbAst, getSchemaAndTableFromName } from 'rake-db';
 import {
   exhaustive,
   pluralize,
@@ -15,7 +15,7 @@ import { fnOrTableToString } from './generators/foreignKeys.generator';
 
 export const report = (
   ast: RakeDbAst[],
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   currentSchema: string,
 ) => {
   if (!config.logger) return;
@@ -122,7 +122,8 @@ export const report = (
                     ? green('+ add column')
                     : red('- drop column')
                 } ${key} ${
-                  column.data.alias ?? getColumnDbType(column, currentSchema)
+                  column.data.alias ??
+                  getColumnDbType(config, column, currentSchema)
                 }${column.data.isNullable ? ' nullable' : ''}${
                   primaryKey ? ' primary key' : ''
                 }${
@@ -163,16 +164,20 @@ export const report = (
               inner.push(`${yellow('~ change column')} ${name}:`, changes);
               changes.push(`${yellow('from')}: `);
 
-              const fromCode = change.from.column!.toCode(toCodeCtx, key);
-              for (const code of fromCode) {
-                addCode(changes, code);
+              const fromCode = change.from.column?.toCode(toCodeCtx, key);
+              if (fromCode) {
+                for (const code of fromCode) {
+                  addCode(changes, code);
+                }
               }
 
               changes.push(`  ${yellow('to')}: `);
 
-              const toCode = change.to.column!.toCode(toCodeCtx, key);
-              for (const code of toCode) {
-                addCode(changes, code);
+              const toCode = change.to.column?.toCode(toCodeCtx, key);
+              if (toCode) {
+                for (const code of toCode) {
+                  addCode(changes, code);
+                }
               }
             } else if (change.type === 'rename') {
               inner.push(
@@ -221,6 +226,7 @@ export const report = (
             if (!references) continue;
 
             const [schema, name] = getSchemaAndTableFromName(
+              config,
               references.fnOrTable as string,
             );
 

@@ -33,7 +33,7 @@ import {
   getIndexName,
   getMigrationsSchemaAndTable,
 } from '../migration/migration.utils';
-import { AnyRakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config';
 
 const matchMap: Record<string, undefined | TableData.References.Match> = {
   s: undefined,
@@ -65,7 +65,7 @@ export interface StructureToAstTableData {
 }
 
 export const makeStructureToAstCtx = (
-  config: AnyRakeDbConfig,
+  config: Pick<RakeDbConfig, 'snakeCase' | 'schemaConfig'>,
   currentSchema: string,
 ): StructureToAstCtx => ({
   snakeCase: config.snakeCase,
@@ -78,7 +78,7 @@ export const makeStructureToAstCtx = (
 export const structureToAst = async (
   ctx: StructureToAstCtx,
   adapter: AdapterBase,
-  config: AnyRakeDbConfig,
+  config: Pick<RakeDbConfig, 'schema' | 'migrationsTable'>,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
 

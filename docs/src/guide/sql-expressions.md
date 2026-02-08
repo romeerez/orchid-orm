@@ -9,7 +9,7 @@ When there is a need to use a piece of raw SQL, use the `sql` exported from the 
 When selecting a custom SQL, specify a resulting type with `<generic>` syntax:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const result: { num: number }[] = await db.table.select({
   num: sql<number>`random() * 100`,
@@ -21,7 +21,7 @@ In a situation when you want the result to be parsed, such as when returning a t
 This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const result: { timestamp: Date }[] = await db.table.select({
   timestamp: sql`now()`.type((t) => t.timestamp()),
@@ -71,7 +71,7 @@ db.table.join(db.otherTable, 'id', 'other.otherId').where`
 SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // no interpolation is okay
 await db.table.where(sql({ raw: 'column = random() * 100' }));
@@ -88,7 +88,7 @@ To inject values into `sql({ raw: '...' })` SQL strings, denote it with `$` in t
 Use `$$` to provide column or/and table name (`column` or `ref` are preferable). Column names will be quoted so don't quote them manually.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // get value from user-provided params
 const { value } = req.params;
@@ -129,7 +129,7 @@ rows[0].one; // is a number
 Summarizing:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // simplest form:
 sql`key = ${value}`;
@@ -167,12 +167,12 @@ sql`($one + $two) / $one`.type((t) => t.numeric()).values({ one: 1, two: 2 });
 Use it when you need to dynamically reference an identifier in raw SQL.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const schema = 'my_schema';
 
 // Produces: SET LOCAL search_path TO "my_schema"
-await db.$query`SET LOCAL search_path TO ${sql.ref(schema)}`
+await db.$query`SET LOCAL search_path TO ${sql.ref(schema)}`;
 ```
 
 It handles dots to support qualified names:
@@ -209,7 +209,7 @@ await db.table.select({
 and other dynamically defined columns.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 await db.table.join('otherTable').select({
   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,
@@ -237,9 +237,11 @@ await db.table.join('otherTable').select({
 For example, calling `sqrt` function to get a square root from some numeric column:
 
 ```ts
-const q = await db.user.select({
-  sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
-}).take();
+const q = await db.user
+  .select({
+    sqrt: (q) => q.fn<number>('sqrt', ['numericColumn']),
+  })
+  .take();
 
 q.sqrt; // has type `number` just as provided
 ```
@@ -249,14 +251,16 @@ If this is an aggregate function, you can specify aggregation options (see [Aggr
 Use `type` method to specify a column type so that its operators such as `lt` and `gt` become available:
 
 ```ts
-const q = await db.user.select({
-  // Produces `sqrt("numericColumn") > 5`
-  sqrtIsGreaterThan5: (q) =>
-    q
-      .fn('sqrt', ['numericColumn'])
-      .type((t) => t.float())
-      .gt(5),
-}).take();
+const q = await db.user
+  .select({
+    // Produces `sqrt("numericColumn") > 5`
+    sqrtIsGreaterThan5: (q) =>
+      q
+        .fn('sqrt', ['numericColumn'])
+        .type((t) => t.float())
+        .gt(5),
+  })
+  .take();
 
 // Return type is boolean | null
 // todo: it should be just boolean if the column is not nullable, but for now it's always nullable

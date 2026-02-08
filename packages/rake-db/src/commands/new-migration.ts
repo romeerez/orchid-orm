@@ -7,11 +7,14 @@ import {
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { getImportPath, pathToLog } from 'pqb';
-import { AnyRakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrations-set';
+import { RakeDbConfig } from '../config';
 
 export const writeMigrationFile = async (
-  config: AnyRakeDbConfig,
+  config: Pick<
+    RakeDbConfig,
+    'migrationsPath' | 'basePath' | 'dbScript' | 'logger'
+  >,
   version: string,
   name: string,
   migrationCode: string,
@@ -36,18 +39,24 @@ export const writeMigrationFile = async (
 };
 
 export const newMigration = async (
-  config: AnyRakeDbConfig,
-  [name]: string[],
+  config: RakeDbConfig,
+  name: string,
 ): Promise<void> => {
-  if (!name) throw new Error('Migration name is missing');
-
   const version = await makeFileVersion({}, config);
   await writeMigrationFile(config, version, name, makeContent(name));
 };
 
 export const makeFileVersion = async (
   ctx: RakeDbCtx,
-  config: AnyRakeDbConfig,
+  config: Pick<
+    RakeDbConfig,
+    | 'migrationId'
+    | 'renameMigrations'
+    | 'migrations'
+    | 'basePath'
+    | 'import'
+    | 'migrationsPath'
+  >,
 ) => {
   if (config.migrationId === 'timestamp') {
     return generateTimeStamp();

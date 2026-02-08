@@ -5,8 +5,8 @@ import {
   DbResult,
   emptyArray,
   MaybeArray,
+  MaybePromise,
   pathToLog,
-  QueryLogOptions,
   toArray,
 } from 'pqb';
 import { queryLock, RakeDbCtx, transaction } from '../common';
@@ -17,11 +17,10 @@ import {
 } from '../migration/change';
 import {
   createMigrationInterface,
-  CreateMigrationInterfaceConfig,
   SilentQueries,
 } from '../migration/migration';
 import {
-  createMigrationsTable,
+  createMigrationsSchemaAndTable,
   deleteMigratedVersion,
   getMigratedVersionsMap,
   NoMigrationsTableError,
@@ -29,18 +28,7 @@ import {
   saveMigratedVersion,
 } from '../migration/manage-migrated-versions';
 import { RakeDbError } from '../errors';
-import {
-  PickAfterChangeCommit,
-  PickBasePath,
-  PickForceDefaultExports,
-  PickImport,
-  PickMigrationCallbacks,
-  PickMigrationId,
-  PickMigrationsPath,
-  PickMigrationsTable,
-  PickTransactionSetting,
-  RakeDbConfig,
-} from '../config';
+import { RakeDbConfig } from '../config';
 import path from 'path';
 import {
   getMigrations,
@@ -49,126 +37,90 @@ import {
   MigrationsSet,
 } from '../migration/migrations-set';
 import { versionToString } from '../migration/migration.utils';
+import {
+  DbParam,
+  ensureTransaction,
+  getMaybeTransactionAdapter,
+} from '../utils';
 
-export interface MigrateFnConfig
-  extends MigrateOrRollbackConfig,
-    PickAfterChangeCommit,
-    PickBasePath,
-    PickImport,
-    PickMigrationsPath,
-    PickTransactionSetting {}
-
-interface MigrateFnParams {
+export interface MigrateFnParams {
   ctx?: RakeDbCtx;
-  adapter: AdapterBase;
-  config: MigrateFnConfig;
   count?: number;
   force?: boolean;
 }
 
-type MigrateFn = (params: MigrateFnParams) => Promise<void>;
+export interface MigrateFn {
+  (db: DbParam, config: RakeDbConfig, params?: MigrateFnParams): Promise<void>;
+}
 
+// runs in transaction only if the adapter is not already in transaction and the `transaction` config is 'single'
 const transactionIfSingle = (
-  params: MigrateFnParams,
+  adapter: AdapterBase,
+  config: RakeDbConfig,
   fn: (trx: AdapterBase) => Promise<void>,
 ) => {
-  return params.config.transaction === 'single'
-    ? transaction(params.adapter, fn)
-    : fn(params.adapter);
+  return !adapter.isInTransaction() && config.transaction === 'single'
+    ? transaction(adapter, fn)
+    : fn(adapter);
 };
 
 function makeMigrateFn(
   up: boolean,
+  defaultCount: number,
   fn: (
     trx: AdapterBase,
-    config: MigrateFnConfig,
+    config: RakeDbConfig,
     set: MigrationsSet,
     versions: RakeDbAppliedVersions,
     count: number,
     force: boolean,
   ) => Promise<MigrationItem[]>,
 ): MigrateFn {
-  return async (params): Promise<void> => {
-    const ctx = params.ctx || {};
-    const set = await getMigrations(ctx, params.config, up);
-    const count = params.count ?? Infinity;
-    const force = params.force ?? false;
+  return async (db, config, params): Promise<void> => {
+    const ctx = params?.ctx || {};
+    const set = await getMigrations(ctx, config, up);
+    const count = params?.count ?? defaultCount;
+    const force = params?.force ?? false;
+    const adapter = getMaybeTransactionAdapter(db);
 
     let migrations: MigrationItem[] | undefined;
     try {
-      await transactionIfSingle(params, async (trx) => {
+      await transactionIfSingle(adapter, config, async (trx) => {
         const versions = await getMigratedVersionsMap(
           ctx,
           trx,
-          params.config,
+          config,
           set.renameTo,
         );
 
-        migrations = await fn(trx, params.config, set, versions, count, force);
+        migrations = await fn(trx, config, set, versions, count, force);
       });
     } catch (err) {
       if (err instanceof NoMigrationsTableError) {
-        await transactionIfSingle(params, async (trx) => {
-          await createMigrationsTable(trx, params.config);
+        await transactionIfSingle(adapter, config, async (trx) => {
+          await createMigrationsSchemaAndTable(trx, config);
 
           const versions = await getMigratedVersionsMap(
             ctx,
             trx,
-            params.config,
+            config,
             set.renameTo,
           );
 
-          migrations = await fn(
-            trx,
-            params.config,
-            set,
-            versions,
-            count,
-            force,
-          );
+          migrations = await fn(trx, config, set, versions, count, force);
         });
       } else {
         throw err;
       }
     }
 
-    params.config.afterChangeCommit?.({
-      adapter: params.adapter,
+    config.afterChangeCommit?.({
+      adapter,
       up,
       migrations: migrations as MigrationItem[],
     });
   };
 }
-
-type MigrateCommand = (
-  adapters: AdapterBase[],
-  config: RakeDbConfig<ColumnSchemaConfig>,
-  args: string[],
-) => Promise<void>;
-
-const makeMigrateCommand = (
-  migrateFn: MigrateFn,
-  defaultCount: number,
-): MigrateCommand => {
-  return async (adapters, config, args) => {
-    const arg = args[0];
-    let force = arg === 'force';
-    let count = defaultCount;
-    if (arg === 'force') {
-      force = true;
-    } else {
-      force = false;
-      const num = arg === 'all' ? Infinity : parseInt(arg || '');
-      if (!isNaN(num)) {
-        count = num;
-      }
-    }
-
-    for (const adapter of adapters) {
-      await migrateFn({ ctx: {}, adapter, config, count, force });
-    }
-  };
-};
 
 /**
  * Will run all pending yet migrations, sequentially in order,
@@ -180,16 +132,29 @@ const makeMigrateCommand = (
  */
 export const migrate: MigrateFn = makeMigrateFn(
   true,
+  Infinity,
   (trx, config, set, versions, count, force) =>
     migrateOrRollback(trx, config, set, versions, count, true, false, force),
 );
 
-export const migrateAndClose: MigrateFn = async (params) => {
-  await migrate(params);
-  await params.adapter.close();
+export const migrateAndClose: MigrateFn = async (db, config, params) => {
+  const adapter = getMaybeTransactionAdapter(db);
+  await migrate(adapter, config, params);
+  await adapter.close();
 };
 
-export const migrateCommand = makeMigrateCommand(migrate, Infinity);
+export const runMigration = async (
+  db: DbParam,
+  migration: () => MaybePromise<unknown>,
+) => {
+  await ensureTransaction(db, async (trx) => {
+    clearChanges();
+    const changes = await getChanges({ load: migration });
+    const config = changes[0]?.config;
+
+    await applyMigration(trx, true, changes, config);
+  });
+};
 
 /**
  * Will roll back one latest applied migration,
@@ -199,11 +164,10 @@ export const migrateCommand = makeMigrateCommand(migrate, Infinity);
  */
 export const rollback: MigrateFn = makeMigrateFn(
   false,
+  1,
   (trx, config, set, versions, count, force) =>
     migrateOrRollback(trx, config, set, versions, count, false, false, force),
 );
-
-export const rollbackCommand = makeMigrateCommand(rollback, 1);
 
 /**
  * Calls {@link rollback} and then {@link migrate}.
@@ -212,6 +176,7 @@ export const rollbackCommand = makeMigrateCommand(rollback, 1);
  */
 export const redo: MigrateFn = makeMigrateFn(
   true,
+  1,
   async (trx, config, set, versions, count, force) => {
     set.migrations.reverse();
 
@@ -233,24 +198,12 @@ export const redo: MigrateFn = makeMigrateFn(
   },
 );
 
-export const redoCommand = makeMigrateCommand(redo, 1);
-
 const getDb = (adapter: AdapterBase) =>
   createDbWithAdapter<ColumnSchemaConfig>({ adapter });
 
-interface MigrateOrRollbackConfig
-  extends PickMigrationCallbacks,
-    PickMigrationId,
-    QueryLogOptions,
-    PickForceDefaultExports,
-    PickMigrationsTable,
-    PickTransactionSetting {
-  columnTypes: unknown;
-}
-
 export const migrateOrRollback = async (
   trx: AdapterBase,
-  config: MigrateOrRollbackConfig,
+  config: RakeDbConfig,
   set: MigrationsSet,
   versions: RakeDbAppliedVersions,
   count: number,
@@ -307,8 +260,8 @@ export const migrateOrRollback = async (
   let migrations: MigrationItem[] | undefined;
 
   const migrationRunner =
-    config.transaction === 'single'
-      ? runMigration
+    trx.isInTransaction() || config.transaction === 'single'
+      ? applyMigration
       : runMigrationInOwnTransaction;
 
   for (const file of set.migrations) {
@@ -332,6 +285,7 @@ export const migrateOrRollback = async (
 
     const changes = await getChanges(file, config);
     const adapter = await migrationRunner(trx, up, changes, config);
+
     await changeMigratedVersion(adapter, up, file, config);
 
     (migrations ??= []).push(file);
@@ -363,7 +317,7 @@ export const migrateOrRollback = async (
 };
 
 const checkMigrationOrder = (
-  config: PickMigrationId,
+  config: Pick<RakeDbConfig, 'migrationId'>,
   set: MigrationsSet,
   { sequence, map }: RakeDbAppliedVersions,
   force?: boolean,
@@ -417,7 +371,7 @@ export const changeCache: Record<string, MigrationChange[] | undefined> = {};
 
 export const getChanges = async (
   file: MigrationItemHasLoad,
-  config?: PickForceDefaultExports,
+  config?: Pick<RakeDbConfig, 'forceDefaultExports'>,
 ): Promise<MigrationChange[]> => {
   clearChanges();
 
@@ -444,11 +398,11 @@ export const getChanges = async (
   return changes;
 };
 
-export const runMigrationInOwnTransaction: typeof runMigration = (
+export const runMigrationInOwnTransaction: typeof applyMigration = (
   adapter,
   ...rest
 ) => {
-  return transaction(adapter, (trx) => runMigration(trx, ...rest));
+  return transaction(adapter, (trx) => applyMigration(trx, ...rest));
 };
 
 /**
@@ -456,13 +410,13 @@ export const runMigrationInOwnTransaction: typeof runMigration = (
  * It performs a db transaction, loads `change` functions from a file, executes them in order specified by `up` parameter.
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
  */
-export const runMigration = async <CT>(
+export const applyMigration = async (
   trx: AdapterBase,
   up: boolean,
   changes: MigrationChange[],
-  config: CreateMigrationInterfaceConfig<CT>,
+  config: Pick<RakeDbConfig, 'log' | 'logger' | 'columnTypes'>,
 ): Promise<SilentQueries> => {
-  const db = createMigrationInterface<CT>(trx, up, config);
+  const db = createMigrationInterface(trx, up, config);
 
   if (changes.length) {
     // when up: for (let i = 0; i !== changes.length - 1; i++)
@@ -482,7 +436,7 @@ const changeMigratedVersion = async (
   adapter: SilentQueries,
   up: boolean,
   file: MigrationItem,
-  config: PickMigrationsTable,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
 ) => {
   await (up ? saveMigratedVersion : deleteMigratedVersion)(
     adapter,

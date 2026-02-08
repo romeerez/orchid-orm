@@ -2,14 +2,14 @@ import { RakeDbCtx } from '../common';
 import path from 'path';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { pathToFileURL } from 'node:url';
-import { AnyRakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrations-set';
 import { AdapterBase, colors } from 'pqb';
 
 export const listMigrationsStatuses = async (
   adapters: AdapterBase[],
-  config: AnyRakeDbConfig,
-  args: string[],
+  config: RakeDbConfig,
+  params?: { showUrl?: boolean },
 ) => {
   const ctx: RakeDbCtx = {};
 
@@ -77,7 +77,7 @@ export const listMigrationsStatuses = async (
     };
   }
 
-  const showUrl = args.includes('p') || args.includes('path');
+  const showUrl = params?.showUrl;
 
   const asIs = (s: string) => s;
 

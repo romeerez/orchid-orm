@@ -13,7 +13,7 @@ export async function setupDemoTables(config: InitConfig): Promise<void> {
   await fs.writeFile(
     join(tablesDir, 'post.table.ts'),
     `import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
-import { BaseTable } from '../baseTable';
+import { BaseTable } from '../base-table';
 import { CommentTable } from './comment.table';
 
 // Post type returned from database.
@@ -47,7 +47,7 @@ export class PostTable extends BaseTable {
   await fs.writeFile(
     join(tablesDir, 'comment.table.ts'),
     `import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
-import { BaseTable } from '../baseTable';
+import { BaseTable } from '../base-table';
 import { PostTable } from './post.table';
 
 // Comment type returned from database.

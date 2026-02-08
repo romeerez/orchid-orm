@@ -14,7 +14,7 @@ Use `with` to add a Common Table Expression (CTE) to the query.
 note that in the latter case it won't have customized column types to use for typing SQL.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // can access custom columns when using off a table
 db.anyTable.with('x', (q) =>
@@ -30,7 +30,7 @@ db.$qb.with('x', (q) =>
 `with` accepts query objects, callbacks returning query objects, and custom SQL expressions returned from callbacks.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 db.table
   .with(
@@ -153,7 +153,7 @@ Recursive query can be constructed with basic SQL instructions only, without ref
 In the following example, we recursively select numbers from 1 to 100, and additionally apply n > 10 filter in the end.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 db.$qb
   .withRecursive(
@@ -181,7 +181,7 @@ Use `withSql` to add a Common Table Expression (CTE) based on a custom SQL.
 Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$qb`.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 db.table
   .withSql(
@@ -208,7 +208,7 @@ db.table
 Options can be passed via a second argument:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 db.table
   .withSql(
@@ -253,7 +253,7 @@ SELECT "user"."id" FROM "customSchema"."user"
 Creates a union query, takes one or more queries or SQL expressions.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // The first query of the union
 db.one

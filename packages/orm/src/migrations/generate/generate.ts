@@ -14,7 +14,6 @@ import {
   getQuerySchema,
 } from 'pqb';
 import {
-  AnyRakeDbConfig,
   concatSchemaAndName,
   getSchemaAndTableFromName,
   introspectDbSchema,
@@ -24,6 +23,7 @@ import {
   migrate,
   migrateAndClose,
   RakeDbAst,
+  RakeDbConfig,
   writeMigrationFile,
 } from 'rake-db';
 import { EnumItem } from './generators/enums.generator';
@@ -63,7 +63,7 @@ export class AbortSignal extends Error {}
 
 export const generate = async (
   adapters: AdapterBase[],
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   args: string[],
   afterPull?: AfterPull,
 ): Promise<void> => {
@@ -93,12 +93,15 @@ export const generate = async (
   );
 
   const [adapter] = adapters;
-  const currentSchema = config.schema ?? 'public';
+  const currentSchema =
+    (typeof config.schema === 'function' ? config.schema() : config.schema) ??
+    'public';
 
   const db = await getDbFromConfig(config, dbPath);
   const { columnTypes, internal } = db.$qb;
 
   const codeItems = await getActualItems(
+    config,
     db,
     currentSchema,
     internal,
@@ -182,14 +185,14 @@ export const generate = async (
 
   if (up) {
     for (const adapter of adapters) {
-      await migrateAndClose({ adapter, config });
+      await migrateAndClose(adapter, config);
     }
   } else if (!afterPull) {
     await closeAdapters(adapters);
   }
 };
 
-const invalidConfig = (config: AnyRakeDbConfig) =>
+const invalidConfig = (config: RakeDbConfig) =>
   new Error(
     `\`${
       config.dbPath ? 'baseTable' : 'dbPath'
@@ -197,7 +200,7 @@ const invalidConfig = (config: AnyRakeDbConfig) =>
   );
 
 const getDbFromConfig = async (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   dbPath: string,
 ): Promise<DbInstance> => {
   const module = await config.import(
@@ -218,7 +221,7 @@ const getDbFromConfig = async (
 
 const migrateAndPullStructures = async (
   adapters: AdapterBase[],
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   afterPull?: AfterPull,
 ): Promise<{
   dbStructure: IntrospectedStructure;
@@ -242,7 +245,7 @@ const migrateAndPullStructures = async (
   }
 
   for (const adapter of adapters) {
-    await migrate({ adapter, config });
+    await migrate(adapter, config);
   }
 
   const dbStructures = await Promise.all(
@@ -300,6 +303,7 @@ const compareDbStructures = (
 };
 
 const getActualItems = async (
+  config: RakeDbConfig,
   db: DbInstance,
   currentSchema: string,
   internal: QueryInternal,
@@ -360,6 +364,7 @@ const getActualItems = async (
         delete table.shape[key];
       } else if (column instanceof DomainColumn) {
         const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
+          config,
           column.dataType,
         );
         domains.set(column.dataType, {
@@ -378,7 +383,7 @@ const getActualItems = async (
             : undefined;
 
         if (en) {
-          processEnumColumn(en, currentSchema, codeItems);
+          processEnumColumn(config, en, currentSchema, codeItems);
         }
       }
     }
@@ -386,14 +391,17 @@ const getActualItems = async (
 
   if (internal.extensions) {
     for (const extension of internal.extensions) {
-      const [schema] = getSchemaAndTableFromName(extension.name);
+      const [schema] = getSchemaAndTableFromName(config, extension.name);
       if (schema) codeItems.schemas.add(schema);
     }
   }
 
   if (internal.domains) {
     for (const key in internal.domains) {
-      const [schemaName = currentSchema, name] = getSchemaAndTableFromName(key);
+      const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
+        config,
+        key,
+      );
       const column = internal.domains[key](columnTypes);
 
       domains.set(key, {
@@ -413,6 +421,7 @@ const getActualItems = async (
 };
 
 const processEnumColumn = (
+  config: RakeDbConfig,
   column: Column.Pick.QueryColumn,
   currentSchema: string,
   codeItems: CodeItems,
@@ -422,7 +431,7 @@ const processEnumColumn = (
     options: [string, ...string[]];
   };
 
-  const [schema, name] = getSchemaAndTableFromName(enumName);
+  const [schema, name] = getSchemaAndTableFromName(config, enumName);
   const enumSchema = schema ?? currentSchema;
 
   codeItems.enums.set(`${enumSchema}.${name}`, {

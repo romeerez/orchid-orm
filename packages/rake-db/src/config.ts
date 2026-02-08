@@ -1,124 +1,28 @@
 import {
+  AdapterBase,
+  ColumnSchemaConfig,
   DbResult,
   DefaultColumnTypes,
   DefaultSchemaConfig,
   defaultSchemaConfig,
-  makeColumnTypes as defaultColumnTypes,
-  NoPrimaryKeyOption,
-  AdapterBase,
-  ColumnSchemaConfig,
   getStackTrace,
+  makeColumnTypes as defaultColumnTypes,
   MaybePromise,
+  NoPrimaryKeyOption,
   QueryLogOptions,
+  QuerySchema,
+  RecordString,
 } from 'pqb';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrations-set';
 import { getCliParam } from './common';
+import { rakeDbCommands } from './cli/rake-db.cli';
 
-export interface CommandFn<SchemaConfig extends ColumnSchemaConfig, CT> {
-  (
-    adapters: AdapterBase[],
-    config: RakeDbConfig<SchemaConfig, CT>,
-    args: string[],
-  ): void | Promise<void>;
-}
-
-export interface PickBasePath {
-  basePath: string;
-}
-
-export interface PickImport {
-  import(path: string): Promise<unknown>;
-}
-
-export interface PickMigrationId {
-  migrationId: RakeDbMigrationId;
-}
-
-export interface PickMigrations {
-  migrations?: ModuleExportsRecord;
-}
-
-export interface PickMigrationsPath {
-  migrationsPath: string;
-}
-
-export interface PickOptionalMigrationsPath {
-  migrationsPath?: string;
-}
-
-export interface PickRenameMigrations {
-  renameMigrations?: RakeDbRenameMigrationsInput;
-}
-
-export interface PickMigrationsTable {
-  schema?: string;
-  migrationsTable: string;
-}
-
-export interface PickTransactionSetting {
-  transaction: 'single' | 'per-migration';
-}
-
-export interface PickMigrationCallbacks {
-  beforeChange?: ChangeCallback;
-  afterChange?: ChangeCallback;
-  beforeMigrate?: MigrationCallback;
-  afterMigrate?: MigrationCallback;
-  beforeRollback?: MigrationCallback;
-  afterRollback?: MigrationCallback;
-}
-
-export interface PickAfterChangeCommit {
-  afterChangeCommit?: ChangeCommitCallback;
-}
-
-export interface PickForceDefaultExports {
-  // throw if a migration doesn't have a default export
-  forceDefaultExports?: boolean;
-}
-
-interface RakeDbBaseConfig<
+export interface RakeDbCliConfigInputBase<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<DefaultSchemaConfig>,
-> extends QueryLogOptions,
-    PickImport,
-    PickMigrationId,
-    PickMigrationsPath,
-    PickMigrations,
-    PickRenameMigrations,
-    PickMigrationsTable,
-    PickMigrationCallbacks,
-    PickForceDefaultExports,
-    PickAfterChangeCommit {
-  // schema is used when creating the migrations-tracking table,
-  // and in pull command to omit current schema from the generated migrations.
-  schema?: string;
-  schemaConfig: SchemaConfig;
-  snakeCase: boolean;
-  language?: string;
-  commands: Record<string, CommandFn<SchemaConfig, CT>>;
-  noPrimaryKey?: NoPrimaryKeyOption;
-  baseTable?: RakeDbBaseTable<CT>;
-}
-
-export interface RakeDbConfig<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT = DefaultColumnTypes<DefaultSchemaConfig>,
-> extends RakeDbBaseConfig<SchemaConfig, CT>,
-    PickBasePath,
-    PickTransactionSetting {
-  columnTypes: CT;
-  dbScript: string;
-  recurrentPath: string;
-}
-
-export interface InputRakeDbConfigBase<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> extends QueryLogOptions,
-    PickOptionalMigrationsPath {
+> extends QueryLogOptions {
   columnTypes?: CT | ((t: DefaultColumnTypes<DefaultSchemaConfig>) => CT);
   baseTable?: RakeDbBaseTable<CT>;
   schemaConfig?: SchemaConfig;
@@ -129,14 +33,9 @@ export interface InputRakeDbConfigBase<
   migrationsTable?: string;
   snakeCase?: boolean;
   language?: string;
-  commands?: Record<
-    string,
-    (
-      adapter: AdapterBase[],
-      config: RakeDbConfig<SchemaConfig, CT>,
-      args: string[],
-    ) => void | Promise<void>
-  >;
+  commands?: {
+    [commandName: string]: RakeDbCommandFn | RakeDbCommand;
+  };
   noPrimaryKey?: NoPrimaryKeyOption;
   forceDefaultExports?: boolean;
   /**
@@ -196,38 +95,115 @@ export interface InputRakeDbConfigBase<
    * @param arg.migrations - rolled back migrations
    */
   afterRollback?: MigrationCallback;
-}
-
-interface InputRakeDbConfigFileBased<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> extends InputRakeDbConfigBase<SchemaConfig, CT> {
-  /**
-   * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
-   */
-  import(path: string): Promise<unknown>;
-}
-
-interface InputRakeDbConfigCodeBased<
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
-> extends InputRakeDbConfigBase<SchemaConfig, CT> {
-  /**
-   * To specify array of migrations explicitly, without loading them from files.
-   */
-  migrations: ModuleExportsRecord;
-  renameMigrations?: RakeDbRenameMigrationsInput;
   /**
    * It may look odd, but it's required for `tsx` and other bundlers to have such `import` config specified explicitly.
    */
   import?(path: string): Promise<unknown>;
 }
 
-export type InputRakeDbConfig<SchemaConfig extends ColumnSchemaConfig, CT> =
-  | InputRakeDbConfigFileBased<SchemaConfig, CT>
-  | InputRakeDbConfigCodeBased<SchemaConfig, CT>;
+interface RakeDbCliConfigInputFileBased<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = DefaultColumnTypes<DefaultSchemaConfig>,
+> extends RakeDbCliConfigInputBase<SchemaConfig, CT> {
+  migrationsPath?: string;
+  /**
+   * required for `tsx` and other bundlers to have such `import` config specified explicitly.
+   */
+  import(path: string): Promise<unknown>;
+}
 
-interface ChangeCallback {
+interface RakeDbCliConfigInputCodeBased<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = DefaultColumnTypes<DefaultSchemaConfig>,
+> extends RakeDbCliConfigInputBase<SchemaConfig, CT> {
+  /**
+   * To specify array of migrations explicitly, without loading them from files.
+   */
+  migrations: ModuleExportsRecord;
+  renameMigrations?: RakeDbRenameMigrationsInput;
+}
+
+export type RakeDbCliConfigInput<
+  SchemaConfig extends ColumnSchemaConfig,
+  CT = DefaultColumnTypes<DefaultSchemaConfig>,
+> =
+  | RakeDbCliConfigInputFileBased<SchemaConfig, CT>
+  | RakeDbCliConfigInputCodeBased<SchemaConfig, CT>;
+
+export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
+  /**
+   * Set by makeRakeDbConfig to distinguish between the user-provided initial config from the processed one.
+   */
+  __rakeDbConfig: true;
+  migrationsTable: string;
+  /**
+   * by default, all the migrated tables and the special table for tracking migrations are created in `public`.
+   * set this `schema` setting to use create everything in this schema instead.
+   */
+  schema?: QuerySchema;
+  recurrentPath?: string;
+  columnTypes: ColumnTypes;
+  beforeChange?: ChangeCallback;
+  afterChange?: ChangeCallback;
+  beforeMigrate?: MigrationCallback;
+  afterMigrate?: MigrationCallback;
+  beforeRollback?: MigrationCallback;
+  afterRollback?: MigrationCallback;
+  migrationId: RakeDbMigrationId;
+  // throw if a migration doesn't have a default export
+  forceDefaultExports?: boolean;
+  afterChangeCommit?: ChangeCommitCallback;
+  basePath: string;
+  import(path: string): Promise<unknown>;
+  migrationsPath: string;
+  transaction: 'single' | 'per-migration';
+  snakeCase?: boolean;
+  schemaConfig: ColumnSchemaConfig;
+  migrations?: ModuleExportsRecord;
+  dbScript: string;
+  renameMigrations?: RakeDbRenameMigrationsInput;
+  language?: string;
+  noPrimaryKey?: NoPrimaryKeyOption;
+  baseTable?: RakeDbBaseTable<unknown>;
+  commands: RakeDbCommands;
+}
+
+export const migrationConfigDefaults = {
+  schemaConfig: defaultSchemaConfig,
+  migrationsPath: path.join('src', 'db', 'migrations'),
+  migrationId: { serial: 4 },
+  migrationsTable: 'schemaMigrations',
+  snakeCase: false,
+  commands: {},
+  log: true,
+  logger: console,
+  import() {
+    throw new Error(
+      'Add `import: (path) => import(path),` setting to `rakeDb` config',
+    );
+  },
+};
+
+export interface RakeDbCommandFn {
+  (
+    adapters: AdapterBase[],
+    config: RakeDbConfig,
+    args: string[],
+  ): MaybePromise<unknown>;
+}
+
+export interface RakeDbCommand {
+  run: RakeDbCommandFn;
+  help?: string;
+  helpArguments?: RecordString;
+  helpAfter?: string;
+}
+
+export interface RakeDbCommands {
+  [K: string]: RakeDbCommand;
+}
+
+export interface ChangeCallback {
   (arg: {
     db: DbResult<unknown>;
     up: boolean;
@@ -236,7 +212,7 @@ interface ChangeCallback {
   }): void | Promise<void>;
 }
 
-interface ChangeCommitCallback {
+export interface ChangeCommitCallback {
   (arg: {
     adapter: AdapterBase;
     up: boolean;
@@ -244,15 +220,12 @@ interface ChangeCommitCallback {
   }): void | Promise<void>;
 }
 
-interface MigrationCallback {
+export interface MigrationCallback {
   (arg: {
     db: DbResult<unknown>;
     migrations: MigrationItem[];
   }): void | Promise<void>;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyRakeDbConfig = RakeDbConfig<any, any>;
 
 export interface RakeDbBaseTable<CT> {
   exportAs: string;
@@ -269,7 +242,7 @@ export interface RakeDbBaseTable<CT> {
 }
 
 export interface ModuleExportsRecord {
-  [K: string]: () => Promise<unknown>;
+  [fileName: string]: () => Promise<unknown>;
 }
 
 export type RakeDbMigrationId = 'timestamp' | { serial: number };
@@ -287,22 +260,6 @@ export interface RakeDbRenameMigrationsInput {
   to: RakeDbMigrationId;
   map: RakeDbRenameMigrationsMap;
 }
-
-export const migrationConfigDefaults: RakeDbBaseConfig<ColumnSchemaConfig> = {
-  schemaConfig: defaultSchemaConfig,
-  migrationsPath: path.join('src', 'db', 'migrations'),
-  migrationId: { serial: 4 },
-  migrationsTable: 'schemaMigrations',
-  snakeCase: false,
-  commands: {},
-  log: true,
-  logger: console,
-  import() {
-    throw new Error(
-      'Add `import: (path) => import(path),` setting to `rakeDb` config',
-    );
-  },
-};
 
 export const ensureMigrationsPath = <
   T extends {
@@ -363,23 +320,29 @@ export const ensureBasePathAndDbScript = <
   return config as never;
 };
 
-export const processRakeDbConfig = <
-  SchemaConfig extends ColumnSchemaConfig,
-  CT,
->(
-  config: InputRakeDbConfig<SchemaConfig, CT>,
+let intermediateCallers = 0;
+export const incrementIntermediateCaller = () => {
+  intermediateCallers++;
+};
+
+export const makeRakeDbConfig = <ColumnTypes>(
+  config: RakeDbCliConfigInput<ColumnSchemaConfig, ColumnTypes>,
   args?: string[],
-): RakeDbConfig<SchemaConfig, CT> => {
-  const result = { ...migrationConfigDefaults, ...config } as RakeDbConfig<
-    SchemaConfig,
-    CT
-  >;
+): RakeDbConfig<ColumnTypes> => {
+  const ic = intermediateCallers;
+  intermediateCallers = 0;
+
+  const result = {
+    ...migrationConfigDefaults,
+    ...config,
+    __rakeDbConfig: true,
+  } as unknown as RakeDbConfig<ColumnTypes>;
 
   if (!result.log) {
     delete result.logger;
   }
 
-  ensureBasePathAndDbScript(result, 1);
+  ensureBasePathAndDbScript(result, ic);
   ensureMigrationsPath(result);
 
   if (!result.recurrentPath) {
@@ -401,10 +364,10 @@ export const processRakeDbConfig = <
   } else {
     const ct = 'columnTypes' in config && config.columnTypes;
     result.columnTypes = ((typeof ct === 'function'
-      ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => CT)(
+      ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => unknown)(
           defaultColumnTypes(defaultSchemaConfig),
         )
-      : ct) || defaultColumnTypes(defaultSchemaConfig)) as CT;
+      : ct) || defaultColumnTypes(defaultSchemaConfig)) as ColumnTypes;
   }
 
   if (config.migrationId === 'serial') {
@@ -423,5 +386,16 @@ export const processRakeDbConfig = <
     result.transaction = 'single';
   }
 
-  return result as RakeDbConfig<SchemaConfig, CT>;
+  let c = rakeDbCommands;
+  if (config.commands) {
+    c = { ...c };
+    const commands = config.commands;
+    for (const key in commands) {
+      const command = commands[key];
+      c[key] = typeof command === 'function' ? { run: command } : command;
+    }
+  }
+  result.commands = c;
+
+  return result;
 };

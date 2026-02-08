@@ -68,20 +68,20 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
   const scripts = (json.scripts ??= {});
 
   if (config.runner === 'vite-node') {
-    scripts.db = 'vite-node src/db/dbScript.ts --';
+    scripts.db = 'vite-node src/db/db-script.ts --';
     scripts['build:migrations'] = 'vite build --config vite.migrations.mts';
-    scripts['db:compiled'] = 'node dist/db/dbScript.mjs';
+    scripts['db:compiled'] = 'node dist/db/db-script.mjs';
   } else if (config.runner === 'tsx') {
-    scripts.db = 'NODE_ENV=development tsx src/db/dbScript.ts';
+    scripts.db = 'NODE_ENV=development tsx src/db/db-script.ts';
     scripts['build:migrations'] =
       'rimraf dist/db && node esbuild.migrations.mjs';
-    scripts['db:compiled'] = 'NODE_ENV=production node dist/db/dbScript.mjs';
+    scripts['db:compiled'] = 'NODE_ENV=production node dist/db/db-script.mjs';
   } else {
-    scripts.db = `${config.runner} src/db/dbScript.ts`;
+    scripts.db = `${config.runner} src/db/db-script.ts`;
 
     if (config.runner === 'ts-node') {
       scripts.build = 'tsc';
-      scripts['db:compiled'] = 'node dist/dbScript.js';
+      scripts['db:compiled'] = 'node dist/db-script.js';
     }
   }
 

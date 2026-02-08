@@ -108,7 +108,7 @@ npm run db new enableCitext
 ```
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createExtension('citext');
@@ -412,7 +412,7 @@ await db.post.find(1).update({ data: null });
 To insert or update JSON null, provide SQL for this:
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // 'null' is in single quotes
 await db.post.create({ data: () => sql`'null'` });

@@ -44,6 +44,25 @@ describe('create and drop table', () => {
     `);
   });
 
+  it('should pick up schema from the config', async () => {
+    db.options.schema = 'custom';
+
+    await testUpAndDown(
+      (action) => db[action]('name'),
+      () =>
+        expectSql(`
+          CREATE TABLE "custom"."name" (
+          )
+        `),
+      () =>
+        expectSql(`
+          DROP TABLE "custom"."name"
+        `),
+    );
+
+    db.options.schema = undefined;
+  });
+
   it('create and drop an empty table', async () => {
     await testUpAndDown(
       (action) => db[action]('name'),

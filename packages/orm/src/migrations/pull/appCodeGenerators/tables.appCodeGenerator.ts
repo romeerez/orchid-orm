@@ -10,7 +10,7 @@ import {
   toCamelCase,
   toPascalCase,
 } from 'pqb';
-import { AnyRakeDbConfig, RakeDbAst } from 'rake-db';
+import { RakeDbAst, RakeDbConfig } from 'rake-db';
 import path from 'node:path';
 
 interface TableInfo {
@@ -39,7 +39,7 @@ interface FKeys {
 
 export const getTableInfosAndFKeys = (
   asts: RakeDbAst[],
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
 ): { tableInfos: TableInfos; fkeys: FKeys } => {
   const generateTableTo =
     config.generateTableTo ?? ((name: string) => `./tables/${name}.table.ts`);

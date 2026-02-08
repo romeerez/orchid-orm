@@ -1,18 +1,85 @@
-import { AdapterBase, ColumnSchemaConfig, RecordUnknown } from 'pqb';
-import { migrate } from './migrate-or-rollback';
-import { RakeDbConfig } from '../config';
-import { promptConfirm, promptText } from '../prompt';
-import { createMigrationsTable } from '../migration/manage-migrated-versions';
+import { RecordUnknown } from 'pqb';
+import { DbParam, getNonTransactionAdapter, runSqlInSavePoint } from '../utils';
 
-const execute = async (
-  adapter: AdapterBase,
+export class CreateOrDropError extends Error {
+  constructor(
+    message: string,
+    public status: 'forbidden' | 'auth-failed' | 'ssl-required',
+    public cause: unknown,
+  ) {
+    super(message);
+  }
+}
+
+export type CreateOrDropOk = 'done' | 'already';
+
+/**
+ * To create a database, reconfigure the connection with a power user and an existing database to connect to.
+ *
+ * ```ts
+ * import { createDatabase } from 'orchid-orm/migrations';
+ *
+ * const adapter = db.$adapter.reconfigure({
+ *   user: 'postgres',
+ *   database: 'postgres',
+ * });
+ *
+ * await createDatabase(adapter, {
+ *   database: 'database-to-create',
+ *   owner: 'username', // optional
+ * });
+ * ```
+ */
+export const createDatabase = async (
+  db: DbParam,
+  {
+    database,
+    owner,
+  }: {
+    database: string;
+    owner?: string;
+  },
+) => {
+  return createOrDrop(
+    db,
+    `CREATE DATABASE "${database}"${owner ? ` OWNER "${owner}"` : ''}`,
+  );
+};
+
+/**
+ * To drop a database, reconfigure the connection with a power user and a different database to connect to.
+ *
+ * Ensure the connections to the database are closed before dropping, because Postgres won't be able to drop it otherwise.
+ *
+ * ```ts
+ * import { createDatabase } from 'orchid-orm/migrations';
+ *
+ * const adapter = db.$adapter.reconfigure({
+ *   user: 'postgres',
+ *   database: 'postgres',
+ * });
+ *
+ * await createDatabase(adapter, {
+ *   database: 'database-to-create',
+ *   owner: 'username', // optional
+ * });
+ * ```
+ */
+export const dropDatabase = async (
+  db: DbParam,
+  { database }: { database: string },
+): Promise<CreateOrDropOk> => {
+  return createOrDrop(db, `DROP DATABASE "${database}"`);
+};
+
+const createOrDrop = async (
+  db: DbParam,
   sql: string,
-): Promise<
-  'ok' | 'already' | 'forbidden' | 'ssl required' | { error: unknown }
-> => {
+): Promise<CreateOrDropOk> => {
   try {
+    const adapter = getNonTransactionAdapter(db);
     await adapter.query(sql);
-    return 'ok';
+    return 'done';
   } catch (error) {
     const err = error as RecordUnknown;
 
@@ -20,161 +87,92 @@ const execute = async (
       typeof err.message === 'string' &&
       err.message.includes('sslmode=require')
     ) {
-      return 'ssl required';
+      throw new CreateOrDropError('SSL required', 'ssl-required', err);
     }
 
     if (err.code === '42P04' || err.code === '3D000') {
       return 'already';
-    } else if (
-      err.code === '42501' ||
-      (typeof err.message === 'string' &&
-        err.message.includes('password authentication failed'))
+    }
+
+    if (err.code === '42501') {
+      throw new CreateOrDropError('Insufficient privilege', 'forbidden', err);
+    }
+
+    if (
+      typeof err.message === 'string' &&
+      err.message.includes('password authentication failed')
     ) {
-      return 'forbidden';
-    } else {
-      return { error };
-    }
-  } finally {
-    await adapter.close();
-  }
-};
-
-const createOrDrop = async (
-  adapter: AdapterBase,
-  adminAdapter: AdapterBase,
-  config: Pick<RakeDbConfig<ColumnSchemaConfig>, 'migrationsTable' | 'logger'>,
-  args: {
-    sql(params: { database: string; user: string }): string;
-    successMessage(params: { database: string }): string;
-    alreadyMessage(params: { database: string }): string;
-    create?: boolean;
-  },
-) => {
-  const params = {
-    database: adapter.getDatabase(),
-    user: adapter.getUser(),
-  };
-
-  const result = await execute(
-    adminAdapter.reconfigure({ database: 'postgres' }),
-    args.sql(params),
-  );
-  if (result === 'ok') {
-    config.logger?.log(args.successMessage(params));
-  } else if (result === 'already') {
-    config.logger?.log(args.alreadyMessage(params));
-  } else if (result === 'ssl required') {
-    config.logger?.log(
-      'SSL is required: append ?ssl=true to the database url string',
-    );
-    return;
-  } else if (result === 'forbidden') {
-    let message = `Permission denied to ${
-      args.create ? 'create' : 'drop'
-    } database.`;
-
-    const host = adminAdapter.getHost();
-
-    const isLocal = host === 'localhost';
-    if (!isLocal) {
-      message += `\nDon't use this command for database service providers, only for a local db.`;
+      throw new CreateOrDropError('Authentication failed', 'auth-failed', err);
     }
 
-    config.logger?.log(message);
-
-    const params = await askForAdminCredentials(args.create);
-    if (!params) return;
-
-    await createOrDrop(adapter, adminAdapter.reconfigure(params), config, args);
-    return;
-  } else {
-    throw result.error;
-  }
-
-  if (!args.create) return;
-
-  const newlyConnectedAdapter = adapter.reconfigure({});
-
-  await createMigrationsTable(newlyConnectedAdapter, config);
-  await newlyConnectedAdapter.close();
-};
-
-export const createDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  adapters: AdapterBase[],
-  config: RakeDbConfig<SchemaConfig, CT>,
-) => {
-  for (const adapter of adapters) {
-    await createOrDrop(adapter, adapter, config, {
-      sql({ database, user }) {
-        return `CREATE DATABASE "${database}"${user ? ` OWNER "${user}"` : ''}`;
-      },
-      successMessage({ database }) {
-        return `Database ${database} successfully created`;
-      },
-      alreadyMessage({ database }) {
-        return `Database ${database} already exists`;
-      },
-      create: true,
-    });
+    throw err;
   }
 };
 
-export const dropDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  adapters: AdapterBase[],
-  config: RakeDbConfig<SchemaConfig, CT>,
-) => {
-  for (const adapter of adapters) {
-    await createOrDrop(adapter, adapter, config, {
-      sql({ database }) {
-        return `DROP DATABASE "${database}"`;
-      },
-      successMessage({ database }) {
-        return `Database ${database} was successfully dropped`;
-      },
-      alreadyMessage({ database }) {
-        return `Database ${database} does not exist`;
-      },
-    });
-  }
-};
+/**
+ * `createSchema` uses a savepoint when it is called in a transaction to not break it if the schema already exists.
+ *
+ * Prepends `CREATE SCHEMA` to a given SQL.
+ *
+ * ```ts
+ * import { createSchema } from 'orchid-orm/migrations';
+ *
+ * const result: 'done' | 'already' = await createSchema(db, '"schema"');
+ * ```
+ */
+export const createSchema = async (
+  db: DbParam,
+  sql: string,
+): Promise<'done' | 'already'> =>
+  runSqlInSavePoint(db, `CREATE SCHEMA ${sql}`, '42P06');
 
-export const resetDb = async <SchemaConfig extends ColumnSchemaConfig, CT>(
-  adapters: AdapterBase[],
-  config: RakeDbConfig<SchemaConfig, CT>,
-) => {
-  await dropDb(adapters, config);
-  await createDb(adapters, config);
-  for (const adapter of adapters) {
-    await migrate({ adapter, config });
-  }
-};
+/**
+ * `dropSchema` uses a savepoint when it is called in a transaction to not break it if the schema does not exist.
+ *
+ * Prepends `DROP SCHEMA` to a given SQL.
+ *
+ * ```ts
+ * import { dropSchema } from 'orchid-orm/migrations';
+ *
+ * const result: 'done' | 'already' = await dropSchema(db, '"schema"');
+ * ```
+ */
+export const dropSchema = async (
+  db: DbParam,
+  sql: string,
+): Promise<'done' | 'already'> =>
+  runSqlInSavePoint(db, `DROP SCHEMA ${sql}`, '3F000');
 
-export const askForAdminCredentials = async (
-  create?: boolean,
-): Promise<{ user: string; password?: string } | undefined> => {
-  const ok = await promptConfirm({
-    message: `Would you like to share admin credentials to ${
-      create ? 'create' : 'drop'
-    } a database?`,
-  });
+/**
+ * `createTable` uses a savepoint when it is called in a transaction to not break it if the table already exists.
+ *
+ * Prepends `CREATE TABLE` to a given SQL.
+ *
+ * ```ts
+ * import { createTable } from 'orchid-orm/migrations';
+ *
+ * const result: 'done' | 'already' = await createTable(db, '"table"');
+ * ```
+ */
+export const createTable = async (
+  db: DbParam,
+  sql: string,
+): Promise<'done' | 'already'> =>
+  runSqlInSavePoint(db, `CREATE TABLE ${sql}`, '42P07');
 
-  if (!ok) {
-    return;
-  }
-
-  const user = await promptText({
-    message: 'Enter admin user:',
-    default: 'postgres',
-    min: 1,
-  });
-
-  const password = await promptText({
-    message: 'Enter admin password:',
-    password: true,
-  });
-
-  return {
-    user,
-    password: password || undefined,
-  };
-};
+/**
+ * `dropTable` uses a savepoint when it is called in a transaction to not break it if the table does not exist.
+ *
+ * Prepends `DROP TABLE` to a given SQL.
+ *
+ * ```ts
+ * import { dropTable } from 'orchid-orm/migrations';
+ *
+ * const result: 'done' | 'already' = await dropTable(db, '"table"');
+ * ```
+ */
+export const dropTable = async (
+  db: DbParam,
+  sql: string,
+): Promise<'done' | 'already'> =>
+  runSqlInSavePoint(db, `DROP TABLE ${sql}`, '42P01');

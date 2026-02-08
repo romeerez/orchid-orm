@@ -1,4 +1,4 @@
-import { AnyRakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrations-set';
@@ -13,10 +13,7 @@ interface RebaseFile extends MigrationItem {
   serial: number;
 }
 
-export const rebase = async (
-  adapters: AdapterBase[],
-  config: AnyRakeDbConfig,
-) => {
+export const rebase = async (adapters: AdapterBase[], config: RakeDbConfig) => {
   if (config.migrations) {
     throw new Error('Cannot rebase migrations defined in the config');
   }
@@ -204,11 +201,7 @@ export const rebase = async (
   };
 
   for (const adapter of adapters) {
-    await redo({
-      ctx,
-      adapter,
-      config: redoConfig,
-    });
+    await redo(adapter, redoConfig, { ctx, count: Infinity });
   }
 
   for (let i = renames.length - 1; i >= 0; i--) {

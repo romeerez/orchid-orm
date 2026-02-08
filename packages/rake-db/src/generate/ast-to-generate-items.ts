@@ -16,7 +16,7 @@ import {
   exhaustive,
 } from 'pqb';
 import { getSchemaAndTableFromName } from '../common';
-import { AnyRakeDbConfig } from 'rake-db';
+import { RakeDbConfig } from '../config';
 
 export interface GenerateItem {
   ast: RakeDbAst;
@@ -32,7 +32,7 @@ type TableColumn = [
 ];
 
 export const astToGenerateItems = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   asts: RakeDbAst[],
   currentSchema: string,
 ): GenerateItem[] => {
@@ -40,7 +40,7 @@ export const astToGenerateItems = (
 };
 
 export const astToGenerateItem = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   ast: RakeDbAst,
   currentSchema: string,
 ): GenerateItem => {
@@ -51,7 +51,10 @@ export const astToGenerateItem = (
   const resolveType = (type: string): string => {
     let dep = typeSchemaCache.get(type);
     if (!dep) {
-      const [schema = currentSchema, name] = getSchemaAndTableFromName(type);
+      const [schema = currentSchema, name] = getSchemaAndTableFromName(
+        config,
+        type,
+      );
       dep = `${schema}.${name}`;
       typeSchemaCache.set(type, dep);
     }
@@ -216,7 +219,7 @@ export const astToGenerateItem = (
 };
 
 const analyzeTableColumns = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   currentSchema: string,
   schema: string,
   table: string,
@@ -281,7 +284,10 @@ const analyzeTableColumns = (
               ),
         );
 
-        const [s = currentSchema, t] = getForeignKeyTable(fkey.fnOrTable);
+        const [s = currentSchema, t] = getForeignKeyTable(
+          config,
+          fkey.fnOrTable,
+        );
         const foreignTable = `${s}.${t}`;
         if (foreignTable !== table) {
           deps.push(foreignTable);
@@ -333,7 +339,7 @@ const pushIndexesOrExcludesKeys = (
 };
 
 const analyzeTableData = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   currentSchema: string,
   schema: string,
   table: string,
@@ -359,6 +365,7 @@ const analyzeTableData = (
 
       if (constraint.references) {
         const [s = currentSchema, t] = getForeignKeyTable(
+          config,
           constraint.references.fnOrTable,
         );
         deps.push(`${s}.${t}`);

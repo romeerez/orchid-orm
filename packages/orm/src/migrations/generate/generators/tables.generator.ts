@@ -11,7 +11,6 @@ import {
 import {
   DbStructure,
   IntrospectedStructure,
-  AnyRakeDbConfig,
   RakeDbAst,
   getDbStructureTableData,
   StructureToAstCtx,
@@ -19,6 +18,7 @@ import {
   tableToAst,
   getSchemaAndTableFromName,
   getMigrationsSchemaAndTable,
+  RakeDbConfig,
 } from 'rake-db';
 import {
   CompareExpression,
@@ -75,7 +75,7 @@ export const processTables = async (
   domainsMap: DbStructureDomainsMap,
   adapter: AdapterBase,
   dbStructure: IntrospectedStructure,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   {
     structureToAstCtx,
     codeItems: { tables },
@@ -162,7 +162,7 @@ const collectCreateTables = (
 };
 
 const collectChangeAndDropTables = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   tables: CodeTable[],
   dbStructure: IntrospectedStructure,
   currentSchema: string,
@@ -179,7 +179,10 @@ const collectChangeAndDropTables = (
   const dropTables: DbStructure.Table[] = [];
   const tableShapes: TableShapes = {};
   const ignoreTables = generatorIgnore?.tables?.map((name) => {
-    const [schema = currentSchema, table] = getSchemaAndTableFromName(name);
+    const [schema = currentSchema, table] = getSchemaAndTableFromName(
+      config,
+      name,
+    );
     return { schema, table };
   });
 
@@ -256,7 +259,7 @@ const applyChangeTables = async (
   domainsMap: DbStructureDomainsMap,
   ast: RakeDbAst[],
   currentSchema: string,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   compareSql: CompareSql,
   tableExpressions: TableExpression[],
   verifying: boolean | undefined,
@@ -501,7 +504,7 @@ const processTableChange = async (
   domainsMap: DbStructureDomainsMap,
   ast: RakeDbAst[],
   currentSchema: string,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   changeTableData: ChangeTableData,
   compareSql: CompareSql,
   compareExpressions: CompareExpression[],

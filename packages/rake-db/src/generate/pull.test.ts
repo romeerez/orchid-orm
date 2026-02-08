@@ -7,10 +7,9 @@ import {
   DefaultColumnTypes,
   defaultSchemaConfig,
   DefaultSchemaConfig,
-  ColumnSchemaConfig,
 } from 'pqb';
 import { asMock, TestAdapter } from 'test-utils';
-import { processRakeDbConfig, RakeDbConfig } from '../config';
+import { makeRakeDbConfig, RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 
 jest.mock('../migration/manage-migrated-versions', () => ({
@@ -57,15 +56,15 @@ class BaseTable {
 }
 BaseTable.prototype.types = makeColumnTypes(defaultSchemaConfig);
 
-const makeConfig = (config: Partial<RakeDbConfig<ColumnSchemaConfig>> = {}) =>
-  processRakeDbConfig({
+const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
+  makeRakeDbConfig({
     baseTable: BaseTable,
     logger: {
       ...console,
       warn,
       log,
     },
-    import: (path) => import(path),
+    import: (path: string) => import(path),
     ...config,
   });
 

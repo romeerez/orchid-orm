@@ -14,9 +14,9 @@ import {
 import {
   ChangeCallback,
   promptSelect,
-  AnyRakeDbConfig,
   createMigrationInterface,
   migrate,
+  RakeDbConfig,
 } from 'rake-db';
 import {
   asMock,
@@ -48,7 +48,7 @@ const makeAdapters = (): AdapterBase[] => {
 
 let adapters = makeAdapters();
 
-let config: AnyRakeDbConfig = testConfig;
+let config: RakeDbConfig = testConfig;
 
 let prepareDbTransactionPromise: Promise<void> | undefined;
 let resolvePrepareDbTransaction: ((err: Error) => void) | undefined;
@@ -57,7 +57,7 @@ let arrangedAdapters: AdapterBase[] | undefined;
 const rollbackError = new Error('Rollback');
 
 const arrange = async (arg: {
-  config?: AnyRakeDbConfig;
+  config?: RakeDbConfig;
   options?: { databaseURL: string }[];
   tables?: (typeof BaseTable)[];
   selects?: number[];
@@ -107,9 +107,7 @@ const arrange = async (arg: {
 
               adapters[0] = trx;
 
-              const db = createMigrationInterface<
-                DefaultColumnTypes<DefaultSchemaConfig>
-              >(trx, true, config);
+              const db = createMigrationInterface(trx, true, config);
 
               await prepareDb(db, true);
 

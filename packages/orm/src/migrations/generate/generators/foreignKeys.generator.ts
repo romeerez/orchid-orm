@@ -4,7 +4,7 @@ import {
   concatSchemaAndName,
   getSchemaAndTableFromName,
   getConstraintName,
-  AnyRakeDbConfig,
+  RakeDbConfig,
 } from 'rake-db';
 import { Column, TableData, deepCompare, toSnakeCase } from 'pqb';
 import { ChangeTableData, TableShapes } from './tables.generator';
@@ -64,7 +64,7 @@ for (const key in mapActionToDb) {
 }
 
 export const processForeignKeys = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   ast: RakeDbAst[],
   changeTables: ChangeTableData[],
   currentSchema: string,
@@ -189,7 +189,7 @@ export const processForeignKeys = (
 };
 
 const collectCodeFkeys = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   { codeTable, changeTableAst: { shape } }: ChangeTableData,
   currentSchema: string,
 ): CodeForeignKey[] => {
@@ -277,13 +277,13 @@ export const fnOrTableToString = (
 };
 
 const parseForeignKey = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   codeConstraint: Constraint,
   references: ReferencesWithStringTable,
   currentSchema: string,
 ): CodeForeignKey => {
   const { fnOrTable, columns, foreignColumns, options } = references;
-  const [schema, table] = getSchemaAndTableFromName(fnOrTable);
+  const [schema, table] = getSchemaAndTableFromName(config, fnOrTable);
 
   return {
     references: {
@@ -302,7 +302,7 @@ const parseForeignKey = (
 };
 
 const dbForeignKeyToCodeForeignKey = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   dbConstraint: DbStructure.Constraint,
   dbReferences: DbStructure.References,
 ): { name?: string; references: TableData.References } => ({

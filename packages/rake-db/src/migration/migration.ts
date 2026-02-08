@@ -16,12 +16,13 @@ import {
   emptyObject,
   MaybeArray,
   QueryLogObject,
-  QueryLogOptions,
   RawSqlBase,
   RecordString,
   RecordUnknown,
   singleQuote,
   toSnakeCase,
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
 } from 'pqb';
 import { createTable, CreateTableResult } from './create-table';
 import { changeTable, TableChangeData, TableChanger } from './change-table';
@@ -101,10 +102,6 @@ export type DbMigration<CT> = DbResult<CT> &
     adapter: SilentQueries;
   };
 
-export interface CreateMigrationInterfaceConfig<CT> extends QueryLogOptions {
-  columnTypes: CT;
-}
-
 /**
  * Creates a new `db` instance that is an instance of `pqb` with mixed in migration methods from the `Migration` class.
  * It overrides `query` and `array` db adapter methods to intercept SQL for the logging.
@@ -113,11 +110,11 @@ export interface CreateMigrationInterfaceConfig<CT> extends QueryLogOptions {
  * @param up - migrate or rollback
  * @param config - config of `rakeDb`
  */
-export const createMigrationInterface = <CT>(
+export const createMigrationInterface = (
   tx: AdapterBase,
   up: boolean,
-  config: CreateMigrationInterfaceConfig<CT>,
-): DbMigration<CT> => {
+  config: Pick<RakeDbConfig, 'log' | 'logger' | 'columnTypes'>,
+): DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> => {
   const adapter = Object.create(tx) as MigrationAdapter;
 
   const { query, arrays } = adapter;
@@ -140,7 +137,7 @@ export const createMigrationInterface = <CT>(
   const db = createDbWithAdapter({
     adapter,
     columnTypes: config.columnTypes,
-  }) as unknown as DbMigration<CT>;
+  });
 
   const { prototype: proto } = Migration;
   for (const key of Object.getOwnPropertyNames(proto)) {
@@ -152,13 +149,13 @@ export const createMigrationInterface = <CT>(
     log,
     up,
     options: config,
-  });
+  }) as never;
 };
 
 export type MigrationAdapter = AdapterBase;
 
 // Migration interface to use inside the `change` callback.
-export class Migration<CT> {
+export class Migration<CT = unknown> {
   // Database adapter to perform queries with.
   public adapter!: MigrationAdapter;
   // The logger config.
@@ -166,7 +163,7 @@ export class Migration<CT> {
   // Is migrating or rolling back.
   public up!: boolean;
   // `rakeDb` config.
-  public options!: RakeDbConfig<ColumnSchemaConfig>;
+  public options!: RakeDbConfig;
   // Available column types that may be customized by a user.
   // They are pulled from a `baseTable` or a `columnTypes` option of the `rakeDb` config.
   public columnTypes!: CT;
@@ -953,7 +950,7 @@ export class Migration<CT> {
     enumName: string,
     values: RecordString,
   ): Promise<void> {
-    const [schema, name] = getSchemaAndTableFromName(enumName);
+    const [schema, name] = getSchemaAndTableFromName(this.options, enumName);
 
     const ast: RakeDbAst.RenameEnumValues = {
       type: 'renameEnumValues',
@@ -1335,9 +1332,20 @@ export class Migration<CT> {
    * @param tableName - name of the table
    */
   async tableExists(tableName: string): Promise<boolean> {
+    let text = `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1`;
+
+    const [schema, table] = getSchemaAndTableFromName(this.options, tableName);
+
+    const values = [table];
+
+    if (schema) {
+      text += ' AND "table_schema" = $2';
+      values.push(schema);
+    }
+
     return queryExists(this, {
-      text: `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1`,
-      values: [tableName],
+      text,
+      values,
     });
   }
 
@@ -1360,12 +1368,23 @@ export class Migration<CT> {
    * @param columnName - name of the column
    */
   async columnExists(tableName: string, columnName: string): Promise<boolean> {
+    let text = `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2`;
+
+    const [schema, table] = getSchemaAndTableFromName(this.options, tableName);
+
+    const values = [
+      table,
+      this.options.snakeCase ? toSnakeCase(columnName) : columnName,
+    ];
+
+    if (schema) {
+      text += ' AND "table_schema" = $3';
+      values.push(schema);
+    }
+
     return queryExists(this, {
-      text: `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2`,
-      values: [
-        tableName,
-        this.options.snakeCase ? toSnakeCase(columnName) : columnName,
-      ],
+      text,
+      values,
     });
   }
 
@@ -1446,7 +1465,7 @@ const addColumn = <CT>(
  * See {@link Migration.prototype.addIndex}
  */
 const addIndex = (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   tableName: string,
   columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
@@ -1461,7 +1480,7 @@ const addIndex = (
  * See {@link Migration.prototype.addForeignKey}
  */
 const addForeignKey = (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -1478,7 +1497,7 @@ const addForeignKey = (
  * See {@link Migration.prototype.addPrimaryKey}
  */
 const addPrimaryKey = (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -1493,7 +1512,7 @@ const addPrimaryKey = (
  * See {@link Migration.prototype.addCheck}
  */
 const addCheck = (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   tableName: string,
   check: RawSqlBase,
@@ -1507,7 +1526,7 @@ const addCheck = (
  * See {@link Migration.prototype.createSchema}
  */
 const createSchema = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   name: string,
 ): Promise<void> => {
@@ -1526,12 +1545,12 @@ const createSchema = async (
  * See {@link Migration.createExtension}
  */
 const createExtension = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   fullName: string,
   options?: RakeDbAst.ExtensionArg,
 ): Promise<void> => {
-  const [schema, name] = getSchemaAndTableFromName(fullName);
+  const [schema, name] = getSchemaAndTableFromName(migration.options, fullName);
 
   const ast: RakeDbAst.Extension = {
     type: 'extension',
@@ -1561,7 +1580,7 @@ const createExtension = async (
  * See {@link Migration.prototype.createEnum}
  */
 const createEnum = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   name: string,
   values: [string, ...string[]],
@@ -1570,7 +1589,7 @@ const createEnum = async (
     'type' | 'action' | 'name' | 'values' | 'schema'
   > = {},
 ): Promise<void> => {
-  const [schema, enumName] = getSchemaAndTableFromName(name);
+  const [schema, enumName] = getSchemaAndTableFromName(migration.options, name);
 
   const ast: RakeDbAst.Enum = {
     type: 'enum',
@@ -1605,7 +1624,10 @@ const createDomain = async <CT>(
   name: string,
   fn: DbDomainArg<CT>,
 ): Promise<void> => {
-  const [schema, domainName] = getSchemaAndTableFromName(name);
+  const [schema, domainName] = getSchemaAndTableFromName(
+    migration.options,
+    name,
+  );
 
   const ast: RakeDbAst.Domain = {
     type: 'domain',
@@ -1620,7 +1642,10 @@ const createDomain = async <CT>(
   const quotedName = quoteWithSchema(ast);
   if (ast.action === 'create') {
     const column = ast.baseType;
-    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(column)}${
+    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(
+      migration.options,
+      column,
+    )}${
       column.data.collate
         ? `
 COLLATE "${column.data.collate}"`
@@ -1654,12 +1679,15 @@ DEFAULT ${encodeColumnDefault(column.data.default, values)}`
  * See {@link Migration.prototype.createCollation}
  */
 const createCollation = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   name: string,
   options: Omit<RakeDbAst.Collation, 'type' | 'action' | 'schema' | 'name'>,
 ): Promise<void> => {
-  const [schema, collationName] = getSchemaAndTableFromName(name);
+  const [schema, collationName] = getSchemaAndTableFromName(
+    migration.options,
+    name,
+  );
 
   const ast: RakeDbAst.Collation = {
     type: 'collation',
@@ -1677,7 +1705,10 @@ const createCollation = async (
     } ${quotedName} `;
 
     if (ast.fromExisting) {
-      query += `FROM ${quoteNameFromString(ast.fromExisting)}`;
+      query += `FROM ${quoteNameFromString(
+        migration.options,
+        ast.fromExisting,
+      )}`;
     } else {
       const config: string[] = [];
       if (ast.locale) config.push(`locale = '${ast.locale}'`);
@@ -1706,7 +1737,7 @@ const createCollation = async (
  * @param sql - raw SQL object to execute
  */
 const queryExists = (
-  db: Migration<unknown>,
+  db: Migration,
   sql: { text: string; values: unknown[] },
 ): Promise<boolean> => {
   return db.adapter
@@ -1715,13 +1746,19 @@ const queryExists = (
 };
 
 export const renameType = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   from: string,
   to: string,
   kind: RakeDbAst.RenameType['kind'],
 ): Promise<void> => {
-  const [fromSchema, f] = getSchemaAndTableFromName(migration.up ? from : to);
-  const [toSchema, t] = getSchemaAndTableFromName(migration.up ? to : from);
+  const [fromSchema, f] = getSchemaAndTableFromName(
+    migration.options,
+    migration.up ? from : to,
+  );
+  const [toSchema, t] = getSchemaAndTableFromName(
+    migration.options,
+    migration.up ? to : from,
+  );
   const ast: RakeDbAst.RenameType = {
     type: 'renameType',
     kind,
@@ -1749,13 +1786,16 @@ export const renameType = async (
 };
 
 const renameTableItem = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   tableName: string,
   from: string,
   to: string,
   kind: RakeDbAst.RenameTableItem['kind'],
 ) => {
-  const [schema, table] = getSchemaAndTableFromName(tableName);
+  const [schema, table] = getSchemaAndTableFromName(
+    migration.options,
+    tableName,
+  );
   const [f, t] = migration.up ? [from, to] : [to, from];
   await migration.adapter.query(
     kind === 'INDEX'
@@ -1777,13 +1817,13 @@ interface AddEnumValueOptions {
 }
 
 export const addOrDropEnumValues = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   up: boolean,
   enumName: string,
   values: string[],
   options?: AddEnumValueOptions,
 ): Promise<void> => {
-  const [schema, name] = getSchemaAndTableFromName(enumName);
+  const [schema, name] = getSchemaAndTableFromName(migration.options, enumName);
   const quotedName = quoteTable(schema, name);
 
   const ast: RakeDbAst.EnumValues = {
@@ -1834,12 +1874,12 @@ export const addOrDropEnumValues = async (
 };
 
 export const changeEnumValues = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   enumName: string,
   fromValues: string[],
   toValues: string[],
 ): Promise<void> => {
-  const [schema, name] = getSchemaAndTableFromName(enumName);
+  const [schema, name] = getSchemaAndTableFromName(migration.options, enumName);
 
   if (!migration.up) {
     const values = fromValues;
@@ -1871,12 +1911,16 @@ export const changeEnumValues = async (
 };
 
 const recreateEnum = async (
-  migration: Migration<unknown>,
+  migration: Migration,
   { schema, name }: { schema?: string; name: string },
   values: string[],
   errorMessage: (quotedName: string, table: string, column: string) => string,
 ) => {
-  const defaultSchema = migration.options.schema ?? 'public';
+  const configSchema = migration.options.schema;
+  const defaultSchema =
+    (typeof configSchema === 'function' ? configSchema() : undefined) ??
+    'public';
+
   const quotedName = quoteTable(schema, name);
 
   const relKinds = ['r', 'm']; // r is for table, m is for materialized views, TODO: not sure if materialized views are needed here.

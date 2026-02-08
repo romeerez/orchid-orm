@@ -31,7 +31,7 @@
     "dist"
   ],
   "scripts": {
-    "db": "ts-node -r tsconfig-paths/register app/dbScript.ts",
+    "db": "ts-node -r tsconfig-paths/register app/db-script.ts",
     "prompt": "ts-node src/prompt.ts",
     "test": "jest --watch --verbose false",
     "check": "jest",

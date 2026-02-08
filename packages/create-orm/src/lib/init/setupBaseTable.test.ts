@@ -3,7 +3,7 @@ import { initSteps } from '../init';
 import { resolve } from 'path';
 import { mockFn, testInitConfig } from '../../testUtils';
 
-const baseTablePath = resolve(testInitConfig.dbDirPath, 'baseTable.ts');
+const baseTablePath = resolve(testInitConfig.dbDirPath, 'base-table.ts');
 
 const writeFile = mockFn(fs, 'writeFile');
 

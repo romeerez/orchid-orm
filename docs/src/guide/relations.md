@@ -40,7 +40,7 @@ For example, `Book` belongs to `Author`:
 
 ```ts
 import { Selectable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export type Author = Selectable<AuthorTable>;
 export class AuthorTable extends BaseTable {
@@ -84,7 +84,7 @@ For example, if each supplier in your application has only one account, you'd de
 
 ```ts
 import { Selectable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export type Supplier = Selectable<SupplierTable>;
 export class SupplierTable extends BaseTable {
@@ -131,7 +131,7 @@ For example, if each supplier has one account, and each account is associated wi
 
 ```ts
 import { Selectable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export type Supplier = Selectable<SupplierTable>;
 export class SupplierTable extends BaseTable {
@@ -207,7 +207,7 @@ For example, in an application containing authors and books, the author table co
 
 ```ts
 import { Selectable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export type Author = Selectable<AuthorTable>;
 export class AuthorTable extends BaseTable {
@@ -250,7 +250,7 @@ For example, consider a medical practice where patients make appointments to see
 
 ```ts
 import { Selectable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export type Physician = Selectable<PhysicianTable>;
 export class PhysicianTable extends BaseTable {
@@ -339,7 +339,7 @@ For example, if your application includes posts and tags, with each post having 
 
 ```ts
 import { Selectable } from 'orchid-orm';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
 export type Post = Selectable<PostTable>;
 export class PostTable extends BaseTable {

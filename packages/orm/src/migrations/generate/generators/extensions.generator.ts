@@ -2,6 +2,7 @@ import {
   RakeDbAst,
   IntrospectedStructure,
   getSchemaAndTableFromName,
+  RakeDbConfig,
 } from 'rake-db';
 import { ComposeMigrationParams } from '../composeMigration';
 
@@ -12,6 +13,7 @@ interface Extension {
 }
 
 export const processExtensions = (
+  config: RakeDbConfig,
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
   {
@@ -20,7 +22,7 @@ export const processExtensions = (
   }: ComposeMigrationParams,
 ) => {
   const codeExtensions = extensions?.map((ext): Extension => {
-    const [schema, name] = getSchemaAndTableFromName(ext.name);
+    const [schema, name] = getSchemaAndTableFromName(config, ext.name);
     return { schema, name, version: ext.version };
   });
 

@@ -167,7 +167,7 @@ const objects: { id: number }[] = await db.table
 Each column may accept a specific value, a raw SQL, or a query that returns a single value.
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 const oneRecord = await db.table.create({
   name: 'John',
@@ -463,6 +463,7 @@ or the [set](#onconflict-set) to specify own values for the update.
 To specify a constraint, its name also must be explicitly set in `primaryKey` or `unique` in the table code.
 
 `onConflict` can accept:
+
 - No arguments to handle any conflict
 - A column name or array of column names to target a specific unique constraint
 - A constraint name using the `{ constraint: 'name' }` syntax
@@ -482,7 +483,10 @@ db.table.create(data).onConflict(['email', 'name']).merge();
 db.table.create(data).onConflict({ constraint: 'unique_index_name' }).merge();
 
 // Use raw SQL expression
-db.table.create(data).onConflict(sql`(email) where active`).merge();
+db.table
+  .create(data)
+  .onConflict(sql`(email) where active`)
+  .merge();
 ```
 
 Postgres has a limitation that a single `INSERT` query can have only a single `ON CONFLICT` clause that can target only a single unique constraint
@@ -760,7 +764,7 @@ or to use a [jsonSet](/guide/advanced-queries#jsonset),
 and [jsonRemove](/guide/advanced-queries#jsonremove) for a JSON column (see `jsonColumn` below).
 
 ```ts
-import { sql } from './baseTable';
+import { sql } from './base-table';
 
 // returns number of updated records by default
 const updatedCount = await db.table

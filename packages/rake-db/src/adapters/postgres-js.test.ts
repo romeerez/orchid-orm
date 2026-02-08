@@ -1,37 +1,27 @@
-import { makeConnectAndMigrate } from './postgres-js';
-import { makeMigrateAdapter } from '../migration/migrate/migrate';
-import { asMock } from 'test-utils';
-import { AdapterBase } from 'pqb';
+import { rakeDb } from './postgres-js';
+import { rakeDbCliWithAdapter, setRakeDbCliRunFn } from '../cli/rake-db.cli';
 
-jest.mock('../migration/migrate/migrate', () => ({
-  makeMigrateAdapter: jest.fn(),
+jest.mock('../cli/rake-db.cli', () => ({
+  rakeDbCliWithAdapter: Object.assign(jest.fn(), { run: jest.fn() }),
+  setRakeDbCliRunFn: jest.fn((rakeDb) => {
+    rakeDb.run = jest.fn();
+  }),
 }));
 
 describe('postgres-js', () => {
-  describe('makeConnectAndMigrate', () => {
-    it('should instantiate adapters and call makeMigrateAdapterFn', async () => {
-      const config = {};
+  it('should instantiate rakeDb with postgres-js adapter', () => {
+    const config = {
+      migrations: {},
+    };
+    const args = ['arg'];
 
-      const migrateAdapter = jest.fn();
-      asMock(makeMigrateAdapter).mockReturnValueOnce(migrateAdapter);
+    rakeDb(config, args);
 
-      const connectAndMigrate = makeConnectAndMigrate(config);
-      expect(makeMigrateAdapter).toBeCalledWith(config);
+    expect(rakeDbCliWithAdapter).toHaveBeenCalledWith(config, args);
 
-      await connectAndMigrate([
-        { databaseURL: 'postgres://user:pass@localhost:5432/db1' },
-        { databaseURL: 'postgres://user:pass@localhost:5432/db2' },
-      ]);
-
-      expect(migrateAdapter).toHaveBeenCalledTimes(2);
-
-      const adapters = migrateAdapter.mock.calls.map(
-        (call) => call[0],
-      ) as AdapterBase[];
-      expect(adapters.map((adapter) => adapter.getDatabase())).toEqual([
-        'db1',
-        'db2',
-      ]);
-    });
+    expect(setRakeDbCliRunFn).toHaveBeenCalledWith(
+      rakeDb,
+      expect.any(Function),
+    );
   });
 });

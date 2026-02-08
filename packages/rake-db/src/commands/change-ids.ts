@@ -1,4 +1,4 @@
-import { AnyRakeDbConfig, PickMigrationsTable } from '../config';
+import { RakeDbConfig } from '../config';
 import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './new-migration';
@@ -13,23 +13,14 @@ export const fileNamesToChangeMigrationId = {
 };
 
 export const fileNamesToChangeMigrationIdMap = Object.fromEntries(
-  Object.entries(fileNamesToChangeMigrationId).map(([_, name]) => [name, true]),
+  Object.entries(fileNamesToChangeMigrationId).map(([, name]) => [name, true]),
 );
 
 export const changeIds = async (
   adapters: AdapterBase[],
-  config: AnyRakeDbConfig,
-  [arg, digitsArg]: string[],
+  config: RakeDbConfig,
+  { format, digits = 4 }: { format: 'serial' | 'timestamp'; digits?: number },
 ) => {
-  if (arg !== 'serial' && arg !== 'timestamp') {
-    throw new Error(
-      `Pass "serial" or "timestamp" argument to the "change-ids" command`,
-    );
-  }
-
-  let digits = digitsArg && parseInt(digitsArg);
-  if (!digits || isNaN(digits)) digits = 4;
-
   const data = await getMigrations({}, config, true, false, (_, filePath) => {
     const fileName = path.basename(filePath);
     const match = fileName.match(/^(\d+)\D/);
@@ -44,15 +35,15 @@ export const changeIds = async (
 
   if (data.renameTo) {
     if (
-      (arg === 'serial' &&
+      (format === 'serial' &&
         typeof data.renameTo.to === 'object' &&
         digits === data.renameTo.to.serial) ||
-      (arg === 'timestamp' && data.renameTo.to === 'timestamp')
+      (format === 'timestamp' && data.renameTo.to === 'timestamp')
     ) {
       config.logger?.log(
         config.migrations
           ? '`renameMigrations` setting is already set'
-          : `${fileNamesToChangeMigrationId[arg]} already exists`,
+          : `${fileNamesToChangeMigrationId[format]} already exists`,
       );
       return;
     }
@@ -69,17 +60,17 @@ export const changeIds = async (
     }
   }
 
-  const version = arg === 'timestamp' ? parseInt(generateTimeStamp()) : 1;
+  const version = format === 'timestamp' ? parseInt(generateTimeStamp()) : 1;
 
   const rename: Record<string, number> = Object.fromEntries(
     data.migrations.map((item, i) => [path.basename(item.path), version + i]),
   );
 
   if (config.migrations) {
-    const to = arg === 'timestamp' ? `'${arg}'` : `{ serial: ${digits} }`;
+    const to = format === 'timestamp' ? `'${format}'` : `{ serial: ${digits} }`;
     config.logger?.log(
       `Save the following settings into your rake-db config under the \`migrations\` setting, it will instruct rake-db to rename migration entries during the next deploy:\n${
-        arg !== 'serial' || digits !== 4 ? `\nmigrationId: ${to},` : ''
+        format !== 'serial' || digits !== 4 ? `\nmigrationId: ${to},` : ''
       }\nrenameMigrations: {\n  to: ${to},\n  map: {\n    ` +
         Object.entries(rename)
           .map(([key, value]) => `"${key}": ${value},`)
@@ -88,7 +79,7 @@ export const changeIds = async (
     );
   } else {
     await fs.writeFile(
-      path.join(config.migrationsPath, fileNamesToChangeMigrationId[arg]),
+      path.join(config.migrationsPath, fileNamesToChangeMigrationId[format]),
       JSON.stringify(rename, null, 2),
     );
   }
@@ -97,7 +88,7 @@ export const changeIds = async (
     (item, i) => {
       let newVersion = String(version + i);
 
-      if (arg === 'serial') newVersion = newVersion.padStart(digits, '0');
+      if (format === 'serial') newVersion = newVersion.padStart(digits, '0');
 
       const name = path.basename(item.path).slice(item.version.length + 1);
 
@@ -140,11 +131,11 @@ export const changeIds = async (
 
   config.logger?.log(
     `Migration files were renamed, a config file ${
-      fileNamesToChangeMigrationId[arg]
+      fileNamesToChangeMigrationId[format]
     } for renaming migrations after deploy was created, and migrations in local db were renamed successfully.\n\n${
-      arg === 'timestamp' || digits !== 4
+      format === 'timestamp' || digits !== 4
         ? `Set \`migrationId\`: ${
-            arg === 'timestamp' ? `'timestamp'` : `{ serial: ${digits} }`
+            format === 'timestamp' ? `'timestamp'` : `{ serial: ${digits} }`
           }`
         : `Remove \`migrationId\``
     } setting in the rake-db config`,
@@ -158,7 +149,7 @@ export type RenameMigrationVersionsValue = [
 ];
 
 export const renameMigrationVersionsInDb = async (
-  config: PickMigrationsTable,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
   adapter: AdapterBase,
   values: RenameMigrationVersionsValue[],
 ) => {

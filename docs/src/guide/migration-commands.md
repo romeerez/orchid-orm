@@ -76,7 +76,7 @@ CREATE TABLE "snake" (
 When snakeCase is `false` (default), `db pull` will produce the following migration, where snake_case columns are explicitly named and `timestampsSnakeCase` is used:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('camel', (t) => ({
@@ -97,7 +97,7 @@ change(async (db) => {
 When snakeCase is `true`, `db pull` will produce the following migration, this time camelCase columns are explicitly named, and timestamps have no shortcut:
 
 ```ts
-import { change } from '../dbScript';
+import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('camel', (t) => ({

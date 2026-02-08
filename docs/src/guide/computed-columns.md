@@ -19,7 +19,7 @@ SQL computed column is going to unwrap into the given SQL when selecting it from
 In the following example, selecting `fullName` will unwrap into `"firstName" || ' ' || "lastName"` SQL:
 
 ```ts
-import { BaseTable, sql } from './baseTable';
+import { BaseTable, sql } from './base-table';
 
 export class UserTable extends BaseTable {
   readonly table = 'user';
@@ -78,7 +78,7 @@ You can reuse a SQL computed column in a definition of a new SQL computed column
 by defining the new one as a function and referencing the other column by `this.columnName`.
 
 ```ts
-import { BaseTable, sql } from './baseTable';
+import { BaseTable, sql } from './base-table';
 
 export class MyTable extends BaseTable {
   // ...snip

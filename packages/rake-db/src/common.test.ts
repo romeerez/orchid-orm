@@ -9,12 +9,13 @@ import { defaultSchemaConfig } from 'pqb';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'pqb';
-import { processRakeDbConfig } from './config';
+import { makeRakeDbConfig } from './config';
+import { rakeDbCommands } from './cli/rake-db.cli';
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
-      const result = processRakeDbConfig({
+      const result = makeRakeDbConfig({
         columnTypes: {},
         basePath: __dirname,
         dbScript: 'dbScript.ts',
@@ -25,6 +26,7 @@ describe('common', () => {
       const migrationsPath = path.resolve(__dirname, 'custom-path');
 
       expect(result).toEqual({
+        __rakeDbConfig: true,
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         columnTypes: {},
@@ -37,7 +39,7 @@ describe('common', () => {
         import: expect.any(Function),
         log: true,
         logger: console,
-        commands: {},
+        commands: rakeDbCommands,
         transaction: 'single',
       });
     });
@@ -47,7 +49,7 @@ describe('common', () => {
       asMock(getStackTrace).mockReturnValueOnce([]);
 
       expect(() =>
-        processRakeDbConfig({
+        makeRakeDbConfig({
           import: (path) => import(path),
         }),
       ).toThrow(
@@ -61,12 +63,11 @@ describe('common', () => {
         null,
         null,
         null,
-        null,
         { getFileName: () => 'some-path' },
       ]);
 
       expect(() =>
-        processRakeDbConfig({
+        makeRakeDbConfig({
           import: (path) => import(path),
         }),
       ).toThrow('Add a .ts suffix to the "some-path" when calling it');

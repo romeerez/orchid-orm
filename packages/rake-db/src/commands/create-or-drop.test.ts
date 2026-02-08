@@ -1,256 +1,170 @@
+import { testAdapter } from 'test-utils';
 import {
-  createDb,
-  dropDb,
-  resetDb,
-  askForAdminCredentials,
+  createDatabase,
+  CreateOrDropError,
+  createSchema,
+  createTable,
+  dropDatabase,
+  dropSchema,
+  dropTable,
 } from './create-or-drop';
-import { migrate } from './migrate-or-rollback';
-import { testConfig } from '../rake-db.test-utils';
-import { asMock, TestAdapter } from 'test-utils';
-import { MaybeArray, toArray } from 'pqb';
-import { promptConfirm, promptText } from '../prompt';
-import { createMigrationsTable } from '../migration/manage-migrated-versions';
 
-jest.mock('../prompt', () => ({
-  promptConfirm: jest.fn(),
-  promptText: jest.fn(),
-}));
+const adapter = testAdapter;
+const query = jest.spyOn(adapter, 'query').mockImplementation();
+jest.spyOn(adapter, 'transaction').mockImplementation((_, fn) => {
+  const trx = Object.create(adapter);
+  trx.query = query;
+  trx.isInTransaction = () => true;
+  return fn(trx);
+});
 
-jest.mock('../migration/manage-migrated-versions', () => ({
-  createMigrationsTable: jest.fn(),
-}));
+describe('create-or-drop', () => {
+  beforeEach(jest.clearAllMocks);
 
-jest.mock('./migrate-or-rollback', () => ({
-  migrate: jest.fn(),
-}));
+  describe.each`
+    method              | fn
+    ${'createDatabase'} | ${createDatabase}
+    ${'dropDatabase'}   | ${dropDatabase}
+  `('$method', ({ method, fn }) => {
+    const act = () =>
+      fn(adapter, {
+        database: 'db-name',
+        owner: 'username',
+      });
 
-const options = { database: 'dbname', user: 'user', password: 'password' };
-const queryMock = jest.fn();
-TestAdapter.prototype.query = queryMock;
+    it('should run successfully', async () => {
+      const result = await act();
 
-const config = testConfig;
-const logMock = asMock(testConfig.logger.log);
+      expect(result).toEqual('done');
+      expect(query).toHaveBeenCalledWith(
+        method === 'createDatabase'
+          ? `CREATE DATABASE "db-name" OWNER "username"`
+          : `DROP DATABASE "db-name"`,
+      );
+    });
 
-type AdapterOptions = {
-  database: string;
-  user?: string;
-  password: string;
-};
+    it('should return ok: already if db is already created/dropped', async () => {
+      const err = Object.assign(new Error(), {
+        code: method === 'createDatabase' ? '42P04' : '3D000',
+      });
+      query.mockRejectedValueOnce(err);
 
-const create = (options: MaybeArray<AdapterOptions>): Promise<void> => {
-  return createDb(
-    toArray(options).map((opts) => new TestAdapter(opts)),
-    config,
+      const result = await act();
+
+      expect(result).toEqual('already');
+    });
+
+    it('should return ssl error if it is required', async () => {
+      const err = new Error('sslmode=require');
+      query.mockRejectedValueOnce(err);
+
+      await expect(act()).rejects.toThrow(
+        new CreateOrDropError('SSL required', 'ssl-required', err),
+      );
+    });
+
+    it('should return forbidden error if insufficient privilege', async () => {
+      const err = Object.assign(new Error(), {
+        code: '42501',
+      });
+      query.mockRejectedValueOnce(err);
+
+      await expect(act()).rejects.toThrow(
+        new CreateOrDropError('Insufficient privilege', 'forbidden', err),
+      );
+    });
+
+    it('should return auth-failed error if auth failed', async () => {
+      const err = new Error('password authentication failed');
+      query.mockRejectedValueOnce(err);
+
+      await expect(act()).rejects.toThrow(
+        new CreateOrDropError('Authentication failed', 'auth-failed', err),
+      );
+    });
+
+    it('should return unexpected error', async () => {
+      const err = new Error();
+      query.mockRejectedValueOnce(err);
+
+      await expect(act()).rejects.toThrow(err);
+    });
+  });
+
+  describe.each`
+    name              | fn              | code
+    ${'createSchema'} | ${createSchema} | ${'42P06'}
+    ${'dropSchema'}   | ${dropSchema}   | ${'3F000'}
+    ${'createTable'}  | ${createTable}  | ${'42P07'}
+    ${'dropTable'}    | ${dropTable}    | ${'42P01'}
+  `(
+    '$name',
+    ({
+      fn,
+      code,
+    }: {
+      fn:
+        | typeof createSchema
+        | typeof dropSchema
+        | typeof createTable
+        | typeof dropTable;
+      code: string;
+    }) => {
+      const sql = fn.name.endsWith('Table')
+        ? fn.name.startsWith('create')
+          ? '"schema"."table" (name text)'
+          : '"schema"."table"'
+        : '"schema"';
+      const action = fn.name.startsWith('create') ? 'CREATE' : 'DROP';
+      const keyword = fn.name.endsWith('Table') ? 'TABLE' : 'SCHEMA';
+
+      const act = () => fn(adapter, sql);
+      const actInTransaction = () =>
+        adapter.transaction(undefined, (trx) => fn(trx, sql));
+
+      it('should do the thing', async () => {
+        const res = await act();
+
+        expect(res).toBe('done');
+        expect(query).toHaveBeenCalledWith(`${action} ${keyword} ${sql}`);
+      });
+
+      it('should do the thing in transaction', async () => {
+        const res = await actInTransaction();
+
+        expect(res).toBe('done');
+        expect(query).toHaveBeenCalledWith(
+          `SAVEPOINT s; ${action} ${keyword} ${sql}; RELEASE SAVEPOINT s`,
+        );
+      });
+
+      it('should return `already` if it is already done', async () => {
+        query.mockRejectedValueOnce({
+          code,
+        });
+
+        const res = await act();
+
+        expect(res).toBe('already');
+      });
+
+      it('should rollback when in transaction and it was already done', async () => {
+        query.mockRejectedValueOnce({
+          code,
+        });
+
+        const res = await actInTransaction();
+
+        expect(res).toBe('already');
+        expect(query).toHaveBeenCalledWith(`ROLLBACK TO SAVEPOINT s`);
+      });
+
+      it('should rethrow error', async () => {
+        const err = new Error();
+        query.mockRejectedValueOnce(err);
+
+        await expect(act()).rejects.toThrow(err);
+      });
+    },
   );
-};
-
-const drop = (options: MaybeArray<AdapterOptions>): Promise<void> => {
-  return dropDb(
-    toArray(options).map((opts) => new TestAdapter(opts)),
-    config,
-  );
-};
-
-describe('createOrDrop', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-
-    asMock(promptConfirm).mockResolvedValueOnce(true);
-    asMock(promptText).mockResolvedValueOnce('admin-user');
-    asMock(promptText).mockResolvedValueOnce('admin-password');
-  });
-
-  describe('createDb', () => {
-    it('should create a database without a specified user', async () => {
-      queryMock.mockResolvedValueOnce(undefined);
-
-      await create({ ...options, user: undefined });
-
-      expect(queryMock.mock.calls).toEqual([[`CREATE DATABASE "dbname"`]]);
-
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname successfully created`],
-      ]);
-
-      expect(createMigrationsTable).toHaveBeenCalled();
-    });
-
-    it('should create database when user is an admin', async () => {
-      queryMock.mockResolvedValueOnce(undefined);
-
-      await create(options);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname successfully created`],
-      ]);
-      expect(createMigrationsTable).toHaveBeenCalled();
-    });
-
-    it('should create databases for each provided option', async () => {
-      queryMock.mockResolvedValue(undefined);
-
-      await create([options, { ...options, database: 'dbname-test' }]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-        [`CREATE DATABASE "dbname-test" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname successfully created`],
-        [`Database dbname-test successfully created`],
-      ]);
-      expect(createMigrationsTable).toHaveBeenCalledTimes(2);
-    });
-
-    it('should inform if database already exists', async () => {
-      queryMock.mockRejectedValueOnce({ code: '42P04' });
-
-      await create([options]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([[`Database dbname already exists`]]);
-      expect(createMigrationsTable).toHaveBeenCalled();
-    });
-
-    it('should inform if ssl is required', async () => {
-      queryMock.mockRejectedValueOnce({
-        code: 'XX000',
-        message: 'sslmode=require',
-      });
-
-      await create([options]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        ['SSL is required: append ?ssl=true to the database url string'],
-      ]);
-      expect(createMigrationsTable).not.toHaveBeenCalled();
-    });
-
-    it('should ask and use admin credentials when cannot connect', async () => {
-      queryMock.mockRejectedValueOnce({ code: '42501' });
-
-      await create([options]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [
-          `Permission denied to create database.\nDon't use this command for database service providers, only for a local db.`,
-        ],
-        [`Database dbname successfully created`],
-      ]);
-      expect(createMigrationsTable).toHaveBeenCalled();
-    });
-  });
-
-  describe('dropDb', () => {
-    it('should drop database when user is an admin', async () => {
-      queryMock.mockResolvedValueOnce(undefined);
-
-      await drop([options]);
-
-      expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname was successfully dropped`],
-      ]);
-    });
-
-    it('should drop databases for each provided option', async () => {
-      queryMock.mockResolvedValue(undefined);
-
-      await drop([options, { ...options, database: 'dbname-test' }]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`DROP DATABASE "dbname"`],
-        [`DROP DATABASE "dbname-test"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname was successfully dropped`],
-        [`Database dbname-test was successfully dropped`],
-      ]);
-    });
-
-    it('should inform if database does not exist', async () => {
-      queryMock.mockRejectedValueOnce({ code: '3D000' });
-
-      await drop([options]);
-
-      expect(queryMock.mock.calls).toEqual([[`DROP DATABASE "dbname"`]]);
-      expect(logMock.mock.calls).toEqual([[`Database dbname does not exist`]]);
-    });
-
-    it('should inform if ssl is required', async () => {
-      queryMock.mockRejectedValueOnce({
-        code: 'XX000',
-        message: 'sslmode=require',
-      });
-
-      await create([options]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        ['SSL is required: append ?ssl=true to the database url string'],
-      ]);
-      expect(createMigrationsTable).not.toHaveBeenCalled();
-    });
-
-    it('should ask and use admin credentials when cannot connect', async () => {
-      queryMock.mockRejectedValueOnce({ code: '42501' });
-
-      await drop([options]);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`DROP DATABASE "dbname"`],
-        [`DROP DATABASE "dbname"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [
-          `Permission denied to drop database.\nDon't use this command for database service providers, only for a local db.`,
-        ],
-        [`Database dbname was successfully dropped`],
-      ]);
-    });
-  });
-
-  describe('reset', () => {
-    it('should drop and create database', async () => {
-      queryMock.mockResolvedValue(undefined);
-
-      await resetDb([new TestAdapter(options)], config);
-
-      expect(queryMock.mock.calls).toEqual([
-        [`DROP DATABASE "dbname"`],
-        [`CREATE DATABASE "dbname" OWNER "user"`],
-      ]);
-      expect(logMock.mock.calls).toEqual([
-        [`Database dbname was successfully dropped`],
-        [`Database dbname successfully created`],
-      ]);
-      expect(createMigrationsTable).toHaveBeenCalled();
-      expect(migrate).toBeCalled();
-    });
-  });
-
-  describe('askForAdminCredentials', () => {
-    it('should return user and password', async () => {
-      const result = await askForAdminCredentials(true);
-
-      expect(result).toEqual({
-        user: 'admin-user',
-        password: 'admin-password',
-      });
-    });
-  });
 });

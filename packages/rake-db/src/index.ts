@@ -1,9 +1,9 @@
-export { rakeDbWithAdapters, makeChange } from './rake-db';
-export type {
-  RakeDbChangeFn,
-  RakeDbChangeFnWithPromise,
-  RakeDbFn,
-} from './rake-db';
+export type { RakeDbFn } from './cli/rake-db.cli';
+export {
+  rakeDbCliWithAdapter,
+  rakeDbCommands,
+  setRakeDbCliRunFn,
+} from './cli/rake-db.cli';
 export {
   getExcludeName,
   getIndexName,
@@ -11,8 +11,13 @@ export {
   getConstraintName,
 } from './migration/migration.utils';
 export { promptSelect } from './prompt';
-export { migrate, migrateAndClose } from './commands/migrate-or-rollback';
-export type { MigrateFnConfig } from './commands/migrate-or-rollback';
+export {
+  migrate,
+  migrateAndClose,
+  runMigration,
+  rollback,
+  redo,
+} from './commands/migrate-or-rollback';
 export type { ChangeCallback } from './migration/change';
 export { introspectDbSchema } from './generate/db-structure';
 export type {
@@ -36,19 +41,16 @@ export type {
   StructureToAstTableData,
 } from './generate/structure-to-ast';
 export { makeFileVersion, writeMigrationFile } from './commands/new-migration';
-export { migrationConfigDefaults, processRakeDbConfig } from './config';
-export type {
-  AnyRakeDbConfig,
-  InputRakeDbConfigBase,
-  RakeDbConfig,
-  InputRakeDbConfig,
+export {
+  migrationConfigDefaults,
+  makeRakeDbConfig,
+  incrementIntermediateCaller,
 } from './config';
+export type { RakeDbCliConfigInput, RakeDbConfig } from './config';
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';
 export type { SilentQueries, DbMigration } from './migration/migration';
 export { saveMigratedVersion } from './migration/manage-migrated-versions';
-export { migrateFiles, makeMigrateAdapter } from './migration/migrate/migrate';
 export { RakeDbError } from './errors';
-export { rakeDbCommands } from './commands';
-export { runCommand } from './commands';
 export { getMigrationsSchemaAndTable } from './migration/migration.utils';
+export type { RakeDbChangeFn } from './migration/change';

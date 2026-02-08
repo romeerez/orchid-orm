@@ -14,6 +14,24 @@ describe('migration', () => {
   describe('renameTable', () => {
     const testRenameTable = makeTestUpAndDown('renameTable');
 
+    it('should pick schema name from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testRenameTable(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."to" RENAME TO "from"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should rename a table', async () => {
       await testRenameTable(
         (action) => db[action]('from', 'to'),
@@ -94,6 +112,26 @@ describe('migration', () => {
   describe('addColumn and dropColumn', () => {
     const testUpAndDown = makeTestUpAndDown('addColumn', 'dropColumn');
 
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('table', 'colUmn', (t) => t.text()),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            ADD COLUMN "col_umn" text NOT NULL
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            DROP COLUMN "col_umn"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should use changeTable to add and drop a column', async () => {
       await testUpAndDown(
         (action) => db[action]('table', 'colUmn', (t) => t.text()),
@@ -113,6 +151,24 @@ describe('migration', () => {
 
   describe('addIndex and dropIndex', () => {
     const testUpAndDown = makeTestUpAndDown('addIndex', 'dropIndex');
+
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('table', ['iD']),
+        () =>
+          expectSql(`
+            CREATE INDEX "table_i_d_idx" ON "schema"."table" ("i_d")
+          `),
+        () =>
+          expectSql(`
+            DROP INDEX "table_i_d_idx"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it('should use changeTable to add and drop an index (deprecated name argument)', async () => {
       await testUpAndDown(
@@ -161,6 +217,24 @@ describe('migration', () => {
   describe('renameIndex', () => {
     const test = makeTestUpAndDown('renameIndex');
 
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await test(
+        (action) => db[action]('table', 'from', 'to'),
+        () =>
+          expectSql(`
+            ALTER INDEX "schema"."from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER INDEX "schema"."to" RENAME TO "from"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should rename an index', async () => {
       await test(
         (action) => db[action]('schema.table', 'from', 'to'),
@@ -179,13 +253,37 @@ describe('migration', () => {
   describe('addForeignKey and dropForeignKey', () => {
     const testUpAndDown = makeTestUpAndDown('addForeignKey', 'dropForeignKey');
 
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('table', ['iD'], 'otherTable', ['foreignId']),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            ${toLine(`
+              ADD CONSTRAINT "table_i_d_fkey"
+                FOREIGN KEY ("i_d")
+                REFERENCES "schema"."otherTable"("foreign_id")
+            `)}
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            DROP CONSTRAINT "table_i_d_fkey"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should use changeTable to add and drop a foreignKey', async () => {
       await testUpAndDown(
         (action) =>
           db[action](
-            'table',
+            'schema.table',
             ['iD', 'naMe'],
-            'otherTable',
+            'schema.otherTable',
             ['foreignId', 'foreignName'],
             {
               name: 'constraintName',
@@ -197,11 +295,11 @@ describe('migration', () => {
           ),
         () =>
           expectSql(`
-            ALTER TABLE "table"
+            ALTER TABLE "schema"."table"
             ${toLine(`
               ADD CONSTRAINT "constraintName"
                 FOREIGN KEY ("i_d", "na_me")
-                REFERENCES "otherTable"("foreign_id", "foreign_name")
+                REFERENCES "schema"."otherTable"("foreign_id", "foreign_name")
                 MATCH FULL
                 ON DELETE CASCADE
                 ON UPDATE CASCADE
@@ -209,7 +307,7 @@ describe('migration', () => {
           `),
         () =>
           expectSql(`
-            ALTER TABLE "table"
+            ALTER TABLE "schema"."table"
             DROP CONSTRAINT "constraintName" CASCADE
           `),
       );
@@ -218,6 +316,26 @@ describe('migration', () => {
 
   describe('addCheck and dropCheck', () => {
     const testUpAndDown = makeTestUpAndDown('addCheck', 'dropCheck');
+
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('table', raw({ raw: 'check' })),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+              ADD CONSTRAINT "table_check" CHECK (check)
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+              DROP CONSTRAINT "table_check"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it('should use changeTable to add and drop a check', async () => {
       await testUpAndDown(
@@ -239,6 +357,24 @@ describe('migration', () => {
   describe('renameConstraint', () => {
     const testUpAndDown = makeTestUpAndDown('renameConstraint');
 
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('table', 'from', 'to'),
+        () =>
+          expectSql(
+            `ALTER TABLE "schema"."table" RENAME CONSTRAINT "from" TO "to"`,
+          ),
+        () =>
+          expectSql(
+            `ALTER TABLE "schema"."table" RENAME CONSTRAINT "to" TO "from"`,
+          ),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should rename a constraint', async () => {
       await testUpAndDown(
         (action) => db[action]('schema.table', 'from', 'to'),
@@ -256,6 +392,26 @@ describe('migration', () => {
 
   describe('addPrimaryKey and dropPrimaryKey', () => {
     const testUpAndDown = makeTestUpAndDown('addPrimaryKey', 'dropPrimaryKey');
+
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('table', ['iD', 'naMe']),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            ADD PRIMARY KEY ("i_d", "na_me")
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            DROP CONSTRAINT "table_pkey"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it('should use changeTable to add and drop primary key', async () => {
       await testUpAndDown(
@@ -292,6 +448,26 @@ describe('migration', () => {
 
   describe('renameColumn', () => {
     const testUpAndDown = makeTestUpAndDown('renameColumn');
+
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        () => db.renameColumn('table', 'frOm', 'tO'),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            RENAME COLUMN "fr_om" TO "t_o"
+          `),
+        () =>
+          expectSql(`
+            ALTER TABLE "schema"."table"
+            RENAME COLUMN "t_o" TO "fr_om"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it('should use changeTable to rename a column', async () => {
       await testUpAndDown(
@@ -347,6 +523,24 @@ describe('migration', () => {
   describe('createExtension and dropExtension', () => {
     const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
 
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('extensionName'),
+        () =>
+          expectSql(`
+            CREATE EXTENSION "extensionName" SCHEMA "schema"
+          `),
+        () =>
+          expectSql(`
+            DROP EXTENSION "extensionName"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it(`should add and drop an extension`, async () => {
       await testUpAndDown(
         (action) =>
@@ -371,6 +565,24 @@ describe('migration', () => {
   describe('createEnum and dropEnum', () => {
     const testUpAndDown = makeTestUpAndDown('createEnum', 'dropEnum');
 
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('enumName', ['one', 'two']),
+        () =>
+          expectSql(`
+            CREATE TYPE "schema"."enumName" AS ENUM ('one', 'two')
+          `),
+        () =>
+          expectSql(`
+            DROP TYPE "schema"."enumName"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it(`should add and drop an enum`, async () => {
       await testUpAndDown(
         (action) =>
@@ -392,6 +604,24 @@ describe('migration', () => {
 
   describe('renameType', () => {
     const testRenameType = makeTestUpAndDown('renameType');
+
+    it('should pick the schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testRenameType(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER TYPE "schema"."from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER TYPE "schema"."to" RENAME TO "from"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it('should rename a type', async () => {
       await testRenameType(
@@ -520,7 +750,7 @@ JOIN pg_catalog.pg_namespace n ON n.oid = relnamespace
 JOIN pg_type bt ON bt.typname = 'enumName'
 JOIN pg_type t ON t.oid = bt.oid OR t.typelem = bt.oid
 JOIN pg_attribute a ON a.attrelid = c.oid AND a.atttypid = t.oid
-JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schemaName'
+JOIN pg_namespace tn ON tn.oid = t.typnamespace AND tn.nspname = 'schema'
 WHERE c.relkind IN ('r', 'm')
 GROUP BY n.nspname, c.relname`,
       `ALTER TABLE "public"."one"
@@ -528,41 +758,76 @@ GROUP BY n.nspname, c.relname`,
   ALTER COLUMN "columnTwo" TYPE text;
 ALTER TABLE "custom"."two"
   ALTER COLUMN "columnThree" TYPE text;
-DROP TYPE "schemaName"."enumName";
-CREATE TYPE "schemaName"."enumName" AS ENUM (${values
+DROP TYPE "schema"."enumName";
+CREATE TYPE "schema"."enumName" AS ENUM (${values
         .map(singleQuote)
         .join(', ')})`,
       `ALTER TABLE "public"."one"
-  ALTER COLUMN "columnOne" TYPE "schemaName"."enumName" USING "columnOne"::"schemaName"."enumName"`,
+  ALTER COLUMN "columnOne" TYPE "schema"."enumName" USING "columnOne"::"schema"."enumName"`,
       `ALTER TABLE "public"."one"
-  ALTER COLUMN "columnTwo" TYPE "schemaName"."enumName" USING "columnTwo"::"schemaName"."enumName"`,
+  ALTER COLUMN "columnTwo" TYPE "schema"."enumName" USING "columnTwo"::"schema"."enumName"`,
       `ALTER TABLE "custom"."two"
-  ALTER COLUMN "columnThree" TYPE "schemaName"."enumName" USING "columnThree"::"schemaName"."enumName"`,
+  ALTER COLUMN "columnThree" TYPE "schema"."enumName" USING "columnThree"::"schema"."enumName"`,
     ];
 
-    it('should add and drop enum value', async () => {
+    it('should add and drop enum value using schema from the config', async () => {
+      db.options.schema = 'schema';
+
       await testUpAndDown(
         (action) =>
-          db[action]('schemaName.enumName', ['three'], {
+          db[action]('enumName', ['three'], {
             after: 'two',
             ifNotExists: true,
           }),
         () =>
           expectSql(`
-            ALTER TYPE "schemaName"."enumName" ADD VALUE IF NOT EXISTS 'three' AFTER 'two'
+            ALTER TYPE "schema"."enumName" ADD VALUE IF NOT EXISTS 'three' AFTER 'two'
           `),
         () =>
           expectSql([
-            `SELECT unnest(enum_range(NULL::"schemaName"."enumName"))::text value`,
+            `SELECT unnest(enum_range(NULL::"schema"."enumName"))::text value`,
+            ...changeEnumTemplateSql(['one', 'two', 'four']),
+          ]),
+      );
+
+      db.options.schema = undefined;
+    });
+
+    it('should add and drop enum value', async () => {
+      await testUpAndDown(
+        (action) =>
+          db[action]('schema.enumName', ['three'], {
+            after: 'two',
+            ifNotExists: true,
+          }),
+        () =>
+          expectSql(`
+            ALTER TYPE "schema"."enumName" ADD VALUE IF NOT EXISTS 'three' AFTER 'two'
+          `),
+        () =>
+          expectSql([
+            `SELECT unnest(enum_range(NULL::"schema"."enumName"))::text value`,
             ...changeEnumTemplateSql(['one', 'two', 'four']),
           ]),
       );
     });
 
+    it('should change enum values using schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await makeTestUpAndDown('changeEnumValues')(
+        (action) => db[action]('enumName', ['one', 'two'], ['three', 'four']),
+        () => expectSql(changeEnumTemplateSql(['three', 'four'])),
+        () => expectSql(changeEnumTemplateSql(['one', 'two'])),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should change enum values', async () => {
       await makeTestUpAndDown('changeEnumValues')(
         (action) =>
-          db[action]('schemaName.enumName', ['one', 'two'], ['three', 'four']),
+          db[action]('schema.enumName', ['one', 'two'], ['three', 'four']),
         () => expectSql(changeEnumTemplateSql(['three', 'four'])),
         () => expectSql(changeEnumTemplateSql(['one', 'two'])),
       );
@@ -570,6 +835,26 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
   });
 
   describe('renameEnumValues', () => {
+    it('should use schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await makeTestUpAndDown('renameEnumValues')(
+        (action) => db[action]('enum', { a: 'b', c: 'd' }),
+        () =>
+          expectSql([
+            `ALTER TYPE "schema"."enum" RENAME VALUE "a" TO "b"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE "c" TO "d"`,
+          ]),
+        () =>
+          expectSql([
+            `ALTER TYPE "schema"."enum" RENAME VALUE "b" TO "a"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE "d" TO "c"`,
+          ]),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it('should rename enum values', async () => {
       await makeTestUpAndDown('renameEnumValues')(
         (action) => db[action]('schema.enum', { a: 'b', c: 'd' }),
@@ -589,6 +874,25 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
 
   describe('createDomain and dropDomain', () => {
     const testUpAndDown = makeTestUpAndDown('createDomain', 'dropDomain');
+
+    it('should use schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) => db[action]('domain', (t) => t.integer()),
+        () =>
+          expectSql(`
+            CREATE DOMAIN "schema"."domain" AS int4
+            NOT NULL
+          `),
+        () =>
+          expectSql(`
+            DROP DOMAIN "schema"."domain"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it(`should create and drop domain`, async () => {
       await testUpAndDown(
@@ -632,6 +936,24 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
 
   describe('renameDomain', () => {
     const testRenameType = makeTestUpAndDown('renameDomain');
+
+    it('should use schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testRenameType(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "schema"."from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER DOMAIN "schema"."to" RENAME TO "from"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
 
     it('should rename a domain', async () => {
       await testRenameType(
@@ -697,6 +1019,29 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
   describe('createCollation and dropCollation', () => {
     const testUpAndDown = makeTestUpAndDown('createCollation', 'dropCollation');
 
+    it('should use schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('collation', {
+            locale: 'en-u-kn-true',
+          }),
+        () =>
+          expectSql(`
+            CREATE COLLATION "schema"."collation" (
+              locale = 'en-u-kn-true'
+            )
+          `),
+        () =>
+          expectSql(`
+            DROP COLLATION "schema"."collation"
+          `),
+      );
+
+      db.options.schema = undefined;
+    });
+
     it(`should create and drop collation with options`, async () => {
       await testUpAndDown(
         (action) =>
@@ -748,6 +1093,28 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
   });
 
   describe('tableExists', () => {
+    beforeEach(jest.clearAllMocks);
+
+    it('should use schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      queryMock.mockResolvedValueOnce({ rowCount: 1 });
+      await db.tableExists('table');
+      expectSql(
+        `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1 AND "table_schema" = $2`,
+      );
+
+      db.options.schema = undefined;
+    });
+
+    it('should support table with schema', async () => {
+      queryMock.mockResolvedValueOnce({ rowCount: 1 });
+      await db.tableExists('schema.table');
+      expectSql(
+        `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1 AND "table_schema" = $2`,
+      );
+    });
+
     it('should return boolean', async () => {
       queryMock.mockResolvedValueOnce({ rowCount: 1 });
       expect(await db.tableExists('table')).toBe(true);
@@ -758,6 +1125,28 @@ CREATE TYPE "schemaName"."enumName" AS ENUM (${values
   });
 
   describe('columnExists', () => {
+    beforeEach(jest.clearAllMocks);
+
+    it('should use schema from the config', async () => {
+      db.options.schema = 'schema';
+
+      queryMock.mockResolvedValueOnce({ rowCount: 1 });
+      expect(await db.columnExists('table', 'colum')).toBe(true);
+      expectSql(
+        `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2 AND "table_schema" = $3`,
+      );
+
+      db.options.schema = undefined;
+    });
+
+    it('should support table with schema', async () => {
+      queryMock.mockResolvedValueOnce({ rowCount: 1 });
+      expect(await db.columnExists('schema.table', 'colum')).toBe(true);
+      expectSql(
+        `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2 AND "table_schema" = $3`,
+      );
+    });
+
     it('should return boolean', async () => {
       queryMock.mockResolvedValueOnce({ rowCount: 1 });
       expect(await db.columnExists('table', 'colum')).toBe(true);

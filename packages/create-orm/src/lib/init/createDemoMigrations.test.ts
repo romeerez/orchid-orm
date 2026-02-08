@@ -24,9 +24,9 @@ describe('createDemoMigrations', () => {
     });
 
     const postCall = writeFile.mock.calls.find(([to]) =>
-      (to as string).endsWith('createPost.ts'),
+      (to as string).endsWith('create-post.ts'),
     );
-    expect(postCall?.[1]).toBe(`import { change } from '../dbScript';
+    expect(postCall?.[1]).toBe(`import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('post', (t) => ({
@@ -39,9 +39,9 @@ change(async (db) => {
 `);
 
     const commentCall = writeFile.mock.calls.find(([to]) =>
-      (to as string).endsWith('createComment.ts'),
+      (to as string).endsWith('create-comment.ts'),
     );
-    expect(commentCall?.[1]).toBe(`import { change } from '../dbScript';
+    expect(commentCall?.[1]).toBe(`import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('comment', (t) => ({

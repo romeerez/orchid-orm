@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import { initSteps } from '../init';
 import { mockFn, testInitConfig } from '../../testUtils';
 
-const migrationScriptPath = resolve(testInitConfig.dbDirPath, 'dbScript.ts');
+const migrationScriptPath = resolve(testInitConfig.dbDirPath, 'db-script.ts');
 
 const writeFile = mockFn(fs, 'writeFile');
 
@@ -19,9 +19,9 @@ describe('setupMigrationScript', () => {
     expect(call?.[1])
       .toBe(`import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
-export const change = rakeDb(config.database, {
+export const change = rakeDb.run(config.database, {
   baseTable: BaseTable,
   dbPath: './db',
   migrationsPath: './migrations',
@@ -48,9 +48,9 @@ export const change = rakeDb(config.database, {
     expect(call?.[1])
       .toBe(`import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
-import { BaseTable } from './baseTable';
+import { BaseTable } from './base-table';
 
-export const change = rakeDb(config.allDatabases, {
+export const change = rakeDb.run(config.allDatabases, {
   baseTable: BaseTable,
   dbPath: './db',
   migrationsPath: './migrations',

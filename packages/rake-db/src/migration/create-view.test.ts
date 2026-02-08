@@ -47,6 +47,24 @@ describe('create and drop view', () => {
     );
   });
 
+  it('should pick up schema from the config', async () => {
+    db.options.schema = 'schema';
+
+    await testUpAndDown(
+      (action) => db[action]('schema.name', 'sql'),
+      () =>
+        expectSql(`
+          CREATE VIEW "schema"."name" AS (sql)
+        `),
+      () =>
+        expectSql(`
+          DROP VIEW "schema"."name"
+        `),
+    );
+
+    db.options.schema = undefined;
+  });
+
   it('should create and drop view withing a schema', async () => {
     await testUpAndDown(
       (action) => db[action]('schema.name', 'sql'),

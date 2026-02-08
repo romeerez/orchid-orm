@@ -1,10 +1,10 @@
-import { AnyRakeDbConfig } from 'rake-db';
 import { Column, toArray, toSnakeCase } from 'pqb';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
+import { RakeDbConfig } from 'rake-db';
 
 export const processPrimaryKey = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   changeTableData: ChangeTableData,
 ) => {
   const { codeTable } = changeTableData;
@@ -22,7 +22,7 @@ export const processPrimaryKey = (
 };
 
 const changePrimaryKey = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   columnsPrimaryKey: { key: string; name: string }[],
   {
     codeTable,

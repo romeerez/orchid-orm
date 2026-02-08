@@ -1,9 +1,8 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { BaseTable } from './baseTable';
 import os from 'os';
 import { AdapterConfigBase } from 'pqb';
-import { testRakeDb } from 'test-utils';
+import { migrator } from './db-config';
 
 config({ path: path.resolve('..', '..', '.env') });
 
@@ -31,8 +30,4 @@ if (['create', 'drop'].includes(command)) {
   }
 }
 
-export const change = testRakeDb(options, {
-  baseTable: BaseTable,
-  migrationsPath: 'migrations',
-  import: (path) => import(path),
-});
+migrator.run(options);

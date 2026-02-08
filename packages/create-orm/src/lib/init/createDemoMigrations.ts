@@ -10,10 +10,10 @@ export async function createDemoMigrations(config: InitConfig): Promise<void> {
 
   const now = new Date();
 
-  const postPath = join(migrationsPath, `0001_createPost.ts`);
+  const postPath = join(migrationsPath, `0001_create-post.ts`);
   await fs.writeFile(
     postPath,
-    `import { change } from '../dbScript';
+    `import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('post', (t) => ({
@@ -28,10 +28,10 @@ change(async (db) => {
 
   now.setTime(now.getTime() + 1000);
 
-  const commentPath = join(migrationsPath, `0002_createComment.ts`);
+  const commentPath = join(migrationsPath, `0002_create-comment.ts`);
   await fs.writeFile(
     commentPath,
-    `import { change } from '../dbScript';
+    `import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable('comment', (t) => ({

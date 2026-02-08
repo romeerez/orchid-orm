@@ -1,9 +1,9 @@
 import {
-  AnyRakeDbConfig,
   RakeDbAst,
   getIndexName,
   DbStructure,
   getExcludeName,
+  RakeDbConfig,
 } from 'rake-db';
 import {
   Column,
@@ -88,7 +88,7 @@ interface Wait {
 }
 
 interface ProcessParams {
-  config: AnyRakeDbConfig;
+  config: RakeDbConfig;
   changeTableData: ChangeTableData;
   codeComparableItems: ComparableItems;
   codeItems: CodeItems;
@@ -100,7 +100,7 @@ interface ProcessParams {
 }
 
 export const processIndexesAndExcludes = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   changeTableData: ChangeTableData,
   ast: RakeDbAst[],
   compareExpressions: CompareExpression[],
@@ -269,7 +269,7 @@ const processItems = (
 };
 
 const collectCodeIndexes = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   { codeTable, changeTableAst: { shape } }: ChangeTableData,
 ): CodeItems => {
   const codeItems: CodeItems = { indexes: [], excludes: [] };
@@ -292,7 +292,7 @@ const collectCodeIndexes = (
 };
 
 const pushCodeColumnItems = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   codeItems: CodeItems,
   columnKey: string,
   name: string,
@@ -348,7 +348,7 @@ const pushCodeColumnItems = (
 };
 
 const pushCodeCompositeItems = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   codeTable: CodeTable,
   codeItems: CodeItems,
   key: 'indexes' | 'excludes',
@@ -378,7 +378,7 @@ const pushCodeCompositeItems = (
 };
 
 const collectCodeComparableItems = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   codeItems: CodeItems,
 ): ComparableItems => {
   return {
@@ -388,7 +388,7 @@ const collectCodeComparableItems = (
 };
 
 const collectCodeComparableItemsType = (
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   codeItems: CodeItems,
   key: 'indexes' | 'excludes',
 ): ComparableExclude[] => {
@@ -472,7 +472,7 @@ const findMatchingItem = (
   codeItems: CodeItems,
   skipCodeItems: SkipCodeItems,
   tableName: string,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   key: 'indexes' | 'excludes',
 ) => {
   const dbComparableItem = itemToComparable(
@@ -509,7 +509,7 @@ const findMatchingItemWithoutSql = (
   codeItems: CodeItems,
   skipCodeItems: SkipCodeItems,
   tableName: string,
-  config: AnyRakeDbConfig,
+  config: RakeDbConfig,
   key: 'indexes' | 'excludes',
 ): ItemChange => {
   const found: (TableData.Index | TableData.Exclude)[] = [];
@@ -555,6 +555,7 @@ const findMatchingItemWithoutSql = (
         const {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           columnKeys,
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           includeKeys,
           ...codeItemWithoutKeys
         } = codeItem;
