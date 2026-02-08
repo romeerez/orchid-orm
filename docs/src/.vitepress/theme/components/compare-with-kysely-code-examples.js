@@ -1,5 +1,6 @@
 export const tables = {
-  orchid: `import { createBaseTable, Insertable, orchidORM, Queryable, Updatable } from 'orchid-orm';
+  orchid: `import { orchidORM } from 'orchid-orm/postgres-js';
+import { createBaseTable, Insertable, Queryable, Updatable } from 'orchid-orm';
 
 export const BaseTable = createBaseTable();
 

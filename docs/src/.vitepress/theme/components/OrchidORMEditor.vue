@@ -20,11 +20,17 @@ fetchTypes({
   pqb: 'https://cdn.jsdelivr.net/npm/pqb@latest/dist/index.d.ts',
   'orchid-orm':
     'https://cdn.jsdelivr.net/npm/orchid-orm@latest/dist/index.d.ts',
+  'orchid-orm/postgres-js':
+    'https://cdn.jsdelivr.net/npm/orchid-orm@latest/dist/postgres-js.d.ts',
 });
 
 const fetchLibs = {
   pqb: 'https://cdn.jsdelivr.net/npm/pqb@latest/dist/index.js',
+  'pqb/postgres-js':
+    'https://cdn.jsdelivr.net/npm/pqb@latest/dist/postgres-js.js',
   'orchid-orm': 'https://cdn.jsdelivr.net/npm/orchid-orm@latest/dist/index.js',
+  'orchid-orm/postgres-js':
+    'https://cdn.jsdelivr.net/npm/orchid-orm@latest/dist/postgres-js.js',
 };
 
 let libsPromise;

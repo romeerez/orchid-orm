@@ -33,13 +33,19 @@ export const mockAdapter = {
       },
     );
 
-    return Promise.resolve({ rows: [proxy] });
+    const result = Object.assign(Promise.resolve(proxy), {
+      values: () => result,
+    });
+    return result;
+  },
+  unsafe(...args) {
+    return this.query(...args);
   },
 };
 
 let stores = [];
 
-const modules = {
+export const modules = {
   pg: {
     types: {
       builtins: {},
@@ -66,6 +72,9 @@ const modules = {
       }
     },
   },
+  postgres: Object.assign(() => mockAdapter, {
+    PostgresError: class PostgresError extends Error {},
+  }),
 };
 
 const process = {
