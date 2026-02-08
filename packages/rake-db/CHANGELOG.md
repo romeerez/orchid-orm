@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.29.2
+
+### Patch Changes
+
+- ced3c34: Fix inferring migrations path (#639)
+
 ## 2.29.1
 
 ### Patch Changes
