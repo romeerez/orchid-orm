@@ -96,18 +96,15 @@ export const rakeDbCliWithAdapter = ((
   };
 }) as RakeDbFn<MaybeArray<AdapterBase>>;
 
-export const setRakeDbCliRunFn = <T>(
-  rakeDbCli: RakeDbFn<T>,
-  mapper: (options: T) => unknown,
-) => {
-  rakeDbCli.run = (adapter, inputConfig, args) => {
+export const setRakeDbCliRunFn = <T>(rakeDbCli: RakeDbFn<T>) => {
+  rakeDbCli.run = (options, inputConfig, args) => {
     const { change, run } = rakeDbCli(inputConfig, args);
-    run(mapper(adapter) as never);
+    run(options);
     return change;
   };
 };
 
-setRakeDbCliRunFn(rakeDbCliWithAdapter, (x) => x);
+setRakeDbCliRunFn(rakeDbCliWithAdapter);
 
 const runCommand = async (
   adapters: AdapterBase[],

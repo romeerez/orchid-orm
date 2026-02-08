@@ -19,9 +19,6 @@ describe('node-postgres', () => {
 
     expect(rakeDbCliWithAdapter).toHaveBeenCalledWith(config, args);
 
-    expect(setRakeDbCliRunFn).toHaveBeenCalledWith(
-      rakeDb,
-      expect.any(Function),
-    );
+    expect(setRakeDbCliRunFn).toHaveBeenCalledWith(rakeDb);
   });
 });

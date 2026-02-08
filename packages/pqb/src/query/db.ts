@@ -18,7 +18,13 @@ import {
 } from '../columns';
 import { inspect } from 'node:util';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { DynamicRawSQL, raw, RawSql } from './expressions/raw-sql';
+import {
+  DynamicRawSQL,
+  raw,
+  RawSql,
+  sqlFn,
+  UnsafeSqlExpression,
+} from './expressions/raw-sql';
 import { SqlRefExpression } from './expressions/sql-ref-expression';
 import { ScopeArgumentQuery } from './extra-features/scope/scope';
 import {
@@ -650,6 +656,7 @@ export interface DbSqlMethod<ColumnTypes> {
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
   ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   ref(name: string): SqlRefExpression;
+  unsafe(sql: string | number | boolean): UnsafeSqlExpression;
 }
 
 export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
@@ -831,13 +838,15 @@ export function _createDbSqlMethod<ColumnTypes>(
   columnTypes: ColumnTypes,
 ): DbSqlMethod<ColumnTypes> {
   // bind column types
-  const sqlFn = ((...args: unknown[]) => {
+  const fn = ((...args: unknown[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sql = (raw as any)(...args);
     sql.columnTypes = columnTypes;
     return sql;
   }) as DbSqlMethod<ColumnTypes>;
-  sqlFn.ref = (name) => new SqlRefExpression(name);
-  return sqlFn;
+  fn.ref = sqlFn.ref;
+  fn.unsafe = sqlFn.unsafe;
+  return fn;
 }
 
 export const _initQueryBuilder = (

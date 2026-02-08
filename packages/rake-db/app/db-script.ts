@@ -1,10 +1,7 @@
-import { config } from 'dotenv';
-import path from 'path';
 import os from 'os';
 import { AdapterConfigBase } from 'pqb';
-import { migrator } from './db-config';
-
-config({ path: path.resolve('..', '..', '.env') });
+import { rakeDbConfig } from './db-config';
+import { testRakeDb } from 'test-utils';
 
 const options: AdapterConfigBase[] = [];
 
@@ -30,4 +27,4 @@ if (['create', 'drop'].includes(command)) {
   }
 }
 
-migrator.run(options);
+export const change = testRakeDb.run(options, rakeDbConfig);

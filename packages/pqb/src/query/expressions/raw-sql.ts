@@ -61,8 +61,11 @@ export interface RawSqlBase extends Expression {
 }
 
 // RawSql extends both Expression and ExpressionTypeMethod, so it needs a separate interface.
-export interface RawSql<T extends Column.Pick.QueryColumn, ColumnTypes>
-  extends Expression<T>,
+export interface RawSql<
+  T extends Column.Pick.QueryColumn,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ColumnTypes,
+> extends Expression<T>,
     RawSqlBase,
     ExpressionTypeMethod {}
 
@@ -218,9 +221,15 @@ export class DynamicRawSQL<
 
 DynamicRawSQL.prototype.type = ExpressionTypeMethod.prototype.type;
 
+/**
+ * @deprecated use `sql` instead
+ */
 export function raw<T = never>(
   ...args: StaticSQLArgs
 ): RawSql<Column.Pick.QueryColumnOfType<T>>;
+/**
+ * @deprecated use `sql` instead
+ */
 export function raw<T = never>(
   ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
 ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>>;
@@ -245,7 +254,7 @@ export interface SqlFn {
   <
     T,
     Args extends
-      | [sql: TemplateStringsArray, ...values: unknown[]]
+      | TemplateLiteralArgs
       | [sql: string]
       | [values: RecordUnknown, sql?: string],
   >(
@@ -276,6 +285,7 @@ export interface SqlFn {
    * ```
    */
   ref(name: string): SqlRefExpression;
+  unsafe(sql: string | number | boolean): UnsafeSqlExpression;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -298,3 +308,18 @@ export const sqlFn: SqlFn = ((...args: any[]): any => {
 }) as SqlFn;
 
 sqlFn.ref = (name) => new SqlRefExpression(name);
+sqlFn.unsafe = (sql) => new UnsafeSqlExpression(sql);
+
+export class UnsafeSqlExpression extends Expression {
+  declare result: { value: Column.Pick.QueryColumn };
+  q: ExpressionData;
+
+  constructor(public sql: string | number | boolean) {
+    super();
+    this.q = { expr: this };
+  }
+
+  makeSQL(): string {
+    return String(this.sql);
+  }
+}

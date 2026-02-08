@@ -83,8 +83,8 @@ export const resetDatabaseCommand = async (
   adapters: AdapterBase[],
   config: RakeDbConfig,
 ) => {
-  await createOrDropDatabase('create', adapters, config);
-  await createOrDropDatabase('drop', adapters, config, true);
+  await createOrDropDatabase('drop', adapters, config);
+  await createOrDropDatabase('create', adapters, config, true);
   for (const adapter of adapters) {
     await migrate(adapter, config);
   }

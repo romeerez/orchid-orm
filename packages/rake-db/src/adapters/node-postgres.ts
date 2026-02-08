@@ -19,12 +19,12 @@ export const rakeDb = ((inputConfig, args = process.argv.slice(2)) => {
   return {
     ...rakeDb,
     run(options) {
-      return rakeDb.run(optionsToAdapters(options));
+      const adapters = toArray(options).map(
+        (opts) => new NodePostgresAdapter(opts),
+      );
+      return rakeDb.run(adapters);
     },
   };
 }) as RakeDbFn<MaybeArray<NodePostgresAdapterOptions>>;
 
-const optionsToAdapters = (options: MaybeArray<NodePostgresAdapterOptions>) =>
-  toArray(options).map((opts) => new NodePostgresAdapter(opts));
-
-setRakeDbCliRunFn(rakeDb, optionsToAdapters);
+setRakeDbCliRunFn(rakeDb);

@@ -1,8 +1,12 @@
 import { testRakeDb } from 'test-utils';
 import { makeRakeDbConfig } from 'rake-db';
 import { BaseTable } from './base-table';
+import { config } from 'dotenv';
+import path from 'path';
 
-const rakeDbConfig = makeRakeDbConfig({
+config({ path: path.resolve('..', '..', '.env') });
+
+export const rakeDbConfig = makeRakeDbConfig({
   baseTable: BaseTable,
   migrationsPath: 'migrations',
   import: (path) => import(path),
