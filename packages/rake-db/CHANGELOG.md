@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.29.1
+
+### Patch Changes
+
+- e8e195d: Fix rakeDb.run; add `sql.unsafe`; deprecate `raw` (#637)
+- Updated dependencies [e8e195d]
+  - pqb@0.60.3
+
 ## 2.29.0
 
 ### Minor Changes

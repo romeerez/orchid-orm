@@ -1,5 +1,11 @@
 # pqb
 
+## 0.60.3
+
+### Patch Changes
+
+- e8e195d: Fix rakeDb.run; add `sql.unsafe`; deprecate `raw` (#637)
+
 ## 0.60.2
 
 ### Patch Changes
