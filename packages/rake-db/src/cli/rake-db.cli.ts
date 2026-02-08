@@ -98,6 +98,9 @@ export const rakeDbCliWithAdapter = ((
 
 export const setRakeDbCliRunFn = <T>(rakeDbCli: RakeDbFn<T>) => {
   rakeDbCli.run = (options, inputConfig, args) => {
+    if (!('__rakeDbConfig' in inputConfig)) {
+      incrementIntermediateCaller();
+    }
     const { change, run } = rakeDbCli(inputConfig, args);
     run(options);
     return change;

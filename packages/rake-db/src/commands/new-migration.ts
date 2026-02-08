@@ -11,10 +11,7 @@ import { getMigrations } from '../migration/migrations-set';
 import { RakeDbConfig } from '../config';
 
 export const writeMigrationFile = async (
-  config: Pick<
-    RakeDbConfig,
-    'migrationsPath' | 'basePath' | 'dbScript' | 'logger'
-  >,
+  config: RakeDbConfig,
   version: string,
   name: string,
   migrationCode: string,
@@ -46,18 +43,7 @@ export const newMigration = async (
   await writeMigrationFile(config, version, name, makeContent(name));
 };
 
-export const makeFileVersion = async (
-  ctx: RakeDbCtx,
-  config: Pick<
-    RakeDbConfig,
-    | 'migrationId'
-    | 'renameMigrations'
-    | 'migrations'
-    | 'basePath'
-    | 'import'
-    | 'migrationsPath'
-  >,
-) => {
+export const makeFileVersion = async (ctx: RakeDbCtx, config: RakeDbConfig) => {
   if (config.migrationId === 'timestamp') {
     return generateTimeStamp();
   } else {

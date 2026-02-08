@@ -81,15 +81,17 @@ describe('migrationsSet', () => {
       ]);
     });
 
-    it('should return empty array on error', async () => {
-      asMock(readdir).mockRejectedValue(new Error());
+    it('should return empty array on ENOENT error', async () => {
+      asMock(readdir).mockRejectedValue(
+        Object.assign(new Error(), { code: 'ENOENT' }),
+      );
 
       const result = await getMigrations({}, config, true);
       expect(result.migrations).toEqual([]);
     });
 
     it('should skip files (or dirs) without extension', async () => {
-      asMock(readdir).mockRejectedValue([
+      asMock(readdir).mockResolvedValue([
         { path: 'path', isFile: () => false },
       ]);
 

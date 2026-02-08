@@ -6,7 +6,6 @@ import {
 } from '../config';
 import { MaybePromise, RecordString } from 'pqb';
 import { pathToFileURL } from 'node:url';
-import { Dirent } from 'node:fs';
 import { readdir } from 'fs/promises';
 import { RakeDbCtx } from '../common';
 import { fileNamesToChangeMigrationIdMap } from '../commands/change-ids';
@@ -39,15 +38,7 @@ export interface MigrationsSet {
 // `up` value determines sorting of files: `true` for ascending, `false` for descending.
 export const getMigrations = async (
   ctx: RakeDbCtx,
-  config: Pick<
-    RakeDbConfig,
-    | 'migrationId'
-    | 'renameMigrations'
-    | 'migrations'
-    | 'basePath'
-    | 'import'
-    | 'migrationsPath'
-  >,
+  config: RakeDbConfig,
   up: boolean,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
@@ -71,10 +62,7 @@ export const getMigrations = async (
 
 // Converts user-provided migrations object into array of migration items.
 function getMigrationsFromConfig(
-  config: Pick<
-    RakeDbConfig,
-    'migrationId' | 'renameMigrations' | 'migrations' | 'basePath'
-  >,
+  config: RakeDbConfig,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
@@ -116,15 +104,28 @@ export const sortMigrationsAsc = (
 
 // Scans files under `migrationsPath` to convert files into migration items.
 export async function getMigrationsFromFiles(
-  config: Pick<RakeDbConfig, 'migrationId' | 'migrationsPath' | 'import'>,
+  config: RakeDbConfig,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
   const { migrationsPath, import: imp } = config;
 
   const entries = await readdir(migrationsPath, { withFileTypes: true }).catch(
-    () => [] as Dirent[],
+    (err) => ({ err }),
   );
+
+  if ('err' in entries) {
+    if (entries.err.code === 'ENOENT') {
+      config.logger?.log(`Directory ${migrationsPath} does not exist`);
+      return { migrations: [] };
+    } else {
+      throw entries.err;
+    }
+  } else if (!entries) {
+    config.logger?.log(
+      `Could not find any migration files in ${migrationsPath}`,
+    );
+  }
 
   const versions: RecordString = {};
 

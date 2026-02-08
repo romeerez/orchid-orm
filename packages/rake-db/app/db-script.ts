@@ -1,7 +1,11 @@
 import os from 'os';
 import { AdapterConfigBase } from 'pqb';
-import { rakeDbConfig } from './db-config';
 import { testRakeDb } from 'test-utils';
+import { config } from 'dotenv';
+import path from 'path';
+import { BaseTable } from './base-table';
+
+config({ path: path.resolve('..', '..', '.env') });
 
 const options: AdapterConfigBase[] = [];
 
@@ -27,4 +31,8 @@ if (['create', 'drop'].includes(command)) {
   }
 }
 
-export const change = testRakeDb.run(options, rakeDbConfig);
+export const change = testRakeDb.run(options, {
+  baseTable: BaseTable,
+  migrationsPath: 'migrations',
+  import: (path) => import(path),
+});

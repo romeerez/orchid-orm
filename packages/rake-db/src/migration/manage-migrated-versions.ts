@@ -98,16 +98,7 @@ export class NoMigrationsTableError extends Error {}
 export const getMigratedVersionsMap = async (
   ctx: RakeDbCtx,
   adapter: AdapterBase,
-  config: Pick<
-    RakeDbConfig,
-    | 'migrationId'
-    | 'migrationsTable'
-    | 'renameMigrations'
-    | 'migrations'
-    | 'basePath'
-    | 'import'
-    | 'migrationsPath'
-  >,
+  config: RakeDbConfig,
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   try {
