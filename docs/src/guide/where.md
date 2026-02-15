@@ -558,18 +558,18 @@ Takes a string, or sub-query returning string, or raw SQL expression as well as 
 ```ts
 db.table.where({
   textColumn: {
-    // WHERE "textColumn" LIKE '%string%'
-    contains: 'string',
     // WHERE "textColumn" ILIKE '%string%'
-    containsInsensitive: 'string',
-    // WHERE "textColumn" LIKE 'string%'
-    startsWith: 'string',
+    contains: 'string',
+    // WHERE "textColumn" LIKE '%string%'
+    containsSensitive: 'string',
     // WHERE "textColumn" ILIKE 'string%'
-    startsWithInsensitive: 'string',
-    // WHERE "textColumn" LIKE '%string'
-    endsWith: 'string',
+    startsWith: 'string',
+    // WHERE "textColumn" LIKE 'string%'
+    startsWithSensitive: 'string',
     // WHERE "textColumn" ILIKE '%string'
-    endsWithInsensitive: 'string',
+    endsWith: 'string',
+    // WHERE "textColumn" LIKE '%string'
+    endsWithSensitive: 'string',
   },
 });
 ```
