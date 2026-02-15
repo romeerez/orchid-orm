@@ -16,6 +16,8 @@ export * from './basic-features/mutate/or-create';
 export * from './basic-features/mutate/update';
 export * from './basic-features/mutate/upsert';
 export * from './basic-features/order/order.sql';
+// requested in https://github.com/romeerez/orchid-orm/issues/643
+export { OrderArg } from './basic-features/order/order';
 export * from './basic-features/schema/schema';
 export * from './basic-features/select/delayed-relational-select';
 export * from './basic-features/select/hook-select';
