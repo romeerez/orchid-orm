@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.62.3
+
+### Patch Changes
+
+- 5db3963: Fix `autoForeignKeys` type for type utilities to work (#642)
+- Updated dependencies [eb92c70]
+- Updated dependencies [61c25a0]
+  - pqb@0.60.4
+  - rake-db@2.29.3
+
 ## 1.62.2
 
 ### Patch Changes

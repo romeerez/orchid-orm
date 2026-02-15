@@ -1,5 +1,12 @@
 # pqb
 
+## 0.60.4
+
+### Patch Changes
+
+- eb92c70: Expose `OrderArg` type (#643)
+- 61c25a0: Handle empty array with `in` in `where` (#644)
+
 ## 0.60.3
 
 ### Patch Changes
