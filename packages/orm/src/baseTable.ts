@@ -190,7 +190,7 @@ export interface ORMTableInput {
   // database table comment
   comment?: string;
   // automatically create foreign keys for relations
-  autoForeignKeys?: TableData.References.BaseOptions;
+  autoForeignKeys?: TableData.References.BaseOptions | boolean;
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
