@@ -125,6 +125,16 @@ describe('operators', () => {
         `,
       );
     });
+
+    it('should use `WHERE false` for empty array', () => {
+      expectSql(
+        db.user.where({ Name: { in: [] } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE false
+        `,
+      );
+    });
   });
 
   describe('notIn', () => {
@@ -155,6 +165,16 @@ describe('operators', () => {
         `
           SELECT ${UserSelectAll} FROM "schema"."user"
           WHERE NOT "user"."name" IN ('a', 'b')
+        `,
+      );
+    });
+
+    it('should use `WHERE true` for empty array', () => {
+      expectSql(
+        db.user.where({ Name: { notIn: [] } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE true
         `,
       );
     });
@@ -1066,6 +1086,20 @@ describe('operators', () => {
             ['$.name', '"name"'],
           );
         });
+
+        it('should use `false` for empty array', () => {
+          const q = db.user.get('Data').jsonPathQueryFirst('$.name').in([]);
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT false
+                FROM "schema"."user"
+                LIMIT 1
+              `,
+            ['$.name'],
+          );
+        });
       });
 
       describe('notIn', () => {
@@ -1083,6 +1117,20 @@ describe('operators', () => {
                 LIMIT 1
               `,
             ['$.name', '"name"'],
+          );
+        });
+
+        it('should use `true` for empty array', () => {
+          const q = db.user.get('Data').jsonPathQueryFirst('$.name').notIn([]);
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT true
+                FROM "schema"."user"
+                LIMIT 1
+              `,
+            ['$.name'],
           );
         });
       });

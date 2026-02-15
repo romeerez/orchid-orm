@@ -243,13 +243,15 @@ const base = {
       ? `${key} IS NOT NULL`
       : `${key} <> ${quoteValue(value, ctx, quotedAs)}`,
   ),
-  in: make(
-    (key, value, ctx, quotedAs) =>
-      `${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
+  in: make((key, value, ctx, quotedAs) =>
+    Array.isArray(value) && !value.length
+      ? 'false'
+      : `${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
-  notIn: make(
-    (key, value, ctx, quotedAs) =>
-      `NOT ${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
+  notIn: make((key, value, ctx, quotedAs) =>
+    Array.isArray(value) && !value.length
+      ? 'true'
+      : `NOT ${key} IN ${quoteValue(value, ctx, quotedAs, true)}`,
   ),
 } as Base<unknown>;
 
@@ -657,13 +659,15 @@ const json = {
       ? `nullif(${key}, 'null'::jsonb) IS NOT NULL`
       : `${key} != ${quoteJsonValue(value, ctx, quotedAs)}`,
   ),
-  in: make(
-    (key, value, ctx, quotedAs) =>
-      `${key} IN ${quoteJsonValue(value, ctx, quotedAs, true)}`,
+  in: make((key, value, ctx, quotedAs) =>
+    Array.isArray(value) && !value.length
+      ? 'false'
+      : `${key} IN ${quoteJsonValue(value, ctx, quotedAs, true)}`,
   ),
-  notIn: make(
-    (key, value, ctx, quotedAs) =>
-      `NOT ${key} IN ${quoteJsonValue(value, ctx, quotedAs, true)}`,
+  notIn: make((key, value, ctx, quotedAs) =>
+    Array.isArray(value) && !value.length
+      ? 'true'
+      : `NOT ${key} IN ${quoteJsonValue(value, ctx, quotedAs, true)}`,
   ),
   jsonPathQueryFirst: Object.assign(
     function (
