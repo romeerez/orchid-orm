@@ -151,7 +151,7 @@ export const makeInsertSql = (
   };
   ctx.sql.push(null as never, null as never);
 
-  pushOnConflictSql(
+  const hasOnConflictWhere = pushOnConflictSql(
     ctx,
     query,
     quotedAs,
@@ -162,7 +162,7 @@ export const makeInsertSql = (
 
   const upsert = query.type === 'upsert';
 
-  if (upsert || (insertFrom && !isRelationQuery(q)) || query.onConflict) {
+  if (upsert || (insertFrom && !isRelationQuery(q)) || hasOnConflictWhere) {
     pushWhereStatementSql(ctx, q, query, quotedAs);
   }
 
@@ -322,8 +322,8 @@ const pushOnConflictSql = (
   columns: string[],
   quotedColumns: string[],
   runtimeDefaultColumns?: string[],
-): void => {
-  if (!query.onConflict) return;
+): boolean => {
+  if (!query.onConflict) return false;
 
   const { shape } = query;
 
@@ -378,6 +378,7 @@ const pushOnConflictSql = (
     }
 
     ctx.sql.push(sql);
+    return true;
   } else if (query.onConflict.set) {
     const { set } = query.onConflict;
     const arr: string[] = [];
@@ -391,8 +392,10 @@ const pushOnConflictSql = (
     }
 
     ctx.sql.push('DO UPDATE SET', arr.join(', '));
+    return true;
   } else {
     ctx.sql.push('DO NOTHING');
+    return false;
   }
 };
 

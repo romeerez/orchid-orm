@@ -13,6 +13,7 @@ import {
   userData,
   UserInsert,
   UserRecord,
+  UserSoftDelete,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
@@ -1152,13 +1153,14 @@ describe('create functions', () => {
   });
 
   describe('onConflict', () => {
-    it('should accept where condition', () => {
+    it('should accept where condition for merge', () => {
       const q = User.all();
 
       const query = q
         .select('id')
         .create(userData)
-        .onConflictDoNothing('name')
+        .onConflict('name')
+        .merge()
         .where({ name: 'where name' });
 
       expectSql(
@@ -1166,7 +1168,8 @@ describe('create functions', () => {
         `
             INSERT INTO "schema"."user"("name", "password")
             VALUES ($2, $3)
-            ON CONFLICT ("name") DO NOTHING
+            ON CONFLICT ("name")
+            DO UPDATE SET "password" = excluded."password"
             WHERE "user"."name" = $1
             RETURNING "user"."id"
           `,
@@ -1206,6 +1209,22 @@ describe('create functions', () => {
     });
 
     describe('ignore', () => {
+      it('should not append soft delete scope as WHERE', () => {
+        const query = UserSoftDelete.insert({
+          name: userData.name,
+        }).onConflictDoNothing();
+
+        expectSql(
+          query.toSQL(),
+          `
+            INSERT INTO "schema"."user"("name")
+            VALUES ($1)
+            ON CONFLICT DO NOTHING
+          `,
+          [userData.name],
+        );
+      });
+
       it('should perform `ON CONFLICT` without a target', () => {
         const q = User.all();
 
