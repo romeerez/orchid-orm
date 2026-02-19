@@ -111,6 +111,9 @@ import { rakeDb } from 'rake-db/postgres-js'; // when using a standalone rake-db
 // for node-postgres driver
 import { rakeDb } from 'orchid-orm/migrations/node-postgres'; // when using Orchid ORM
 import { rakeDb } from 'rake-db/node-postgres'; // when using a standalone rake-db
+// for Bun SQL driver
+import { rakeDb } from 'orchid-orm/migrations/bun-sql'; // when using Orchid ORM
+import { rakeDb } from 'rake-db/bun-sql'; // when using a standalone rake-db
 
 import { config } from './config';
 import { BaseTable } from './base-table';

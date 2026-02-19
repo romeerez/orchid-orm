@@ -46,7 +46,7 @@ describe('postgres-js', () => {
       });
     });
 
-    it('should can query arrays', async () => {
+    it('should query arrays', async () => {
       const res = await testAdapter.arrays('SELECT 1 as num');
 
       expect(res).toMatchObject({

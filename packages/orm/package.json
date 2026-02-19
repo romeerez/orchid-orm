@@ -31,6 +31,11 @@
       "import": "./dist/postgres-js.mjs",
       "types": "./dist/postgres-js.d.ts"
     },
+    "./bun-sql": {
+      "require": "./dist/bun-sql.js",
+      "import": "./dist/bun-sql.mjs",
+      "types": "./dist/bun-sql.d.ts"
+    },
     "./migrations": {
       "require": "./dist/migrations/index.js",
       "import": "./dist/migrations/index.mjs",
@@ -45,6 +50,11 @@
       "require": "./dist/migrations/postgres-js.js",
       "import": "./dist/migrations/postgres-js.mjs",
       "types": "./dist/migrations/postgres-js.d.ts"
+    },
+    "./migrations/bun-sql": {
+      "require": "./dist/migrations/bun-sql.js",
+      "import": "./dist/migrations/bun-sql.mjs",
+      "types": "./dist/migrations/bun-sql.d.ts"
     }
   },
   "files": [

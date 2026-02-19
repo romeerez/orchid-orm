@@ -34,6 +34,8 @@ Returns an instance with tables and some specific functions prefixed with a `$` 
 import { orchidORM } from 'orchid-orm/postgres-js';
 // for node-postgres driver:
 import { orchidORM } from 'orchid-orm/node-postgres';
+// for Bun SQL driver:
+import { orchidORM } from 'orchid-orm/bun-sql';
 
 // import all tables
 import { UserTable } from './tables/user';
@@ -81,6 +83,8 @@ import { orchidORMWithAdapter } from 'orchid-orm';
 import { Adapter } from 'orchid-orm/postgres-js';
 // for node-postgres driver:
 import { Adapter } from 'orchid-orm/node-postgres';
+// for Bun SQL driver:
+import { Adapter } from 'orchid-orm/bun-sql';
 
 const adapter = new Adapter({ databaseURL: process.env.DATABASE_URL });
 
@@ -577,6 +581,8 @@ It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 import { createDb } from 'pqb/postgres-js';
 // for node-postgres driver:
 import { createDb } from 'pqb/node-postgres';
+// for Bun SQL driver:
+import { createDb } from 'pqb/bun-sql';
 
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 // or
