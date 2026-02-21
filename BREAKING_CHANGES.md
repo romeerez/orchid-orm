@@ -30,7 +30,7 @@ When using `rakeDb.lazy`, change it as follows:
 - after:
 
   ```ts
-  const migrator = rakeDb.lazy(config);
+  const migrator = rakeDb(config);
 
   export const { change } = migrator;
 
