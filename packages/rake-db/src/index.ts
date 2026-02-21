@@ -42,6 +42,14 @@ export type {
 } from './generate/structure-to-ast';
 export { makeFileVersion, writeMigrationFile } from './commands/new-migration';
 export {
+  createDatabase,
+  dropDatabase,
+  createSchema,
+  dropSchema,
+  createTable,
+  dropTable,
+} from './commands/create-or-drop';
+export {
   migrationConfigDefaults,
   makeRakeDbConfig,
   incrementIntermediateCaller,
