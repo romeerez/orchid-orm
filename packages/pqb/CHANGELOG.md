@@ -1,5 +1,11 @@
 # pqb
 
+## 0.60.5
+
+### Patch Changes
+
+- 5be3ae4: Fix `onConflictDoNothing` with soft-delete (#649)
+
 ## 0.60.4
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.29.4
+
+### Patch Changes
+
+- 138071b: Add missing exports of `createDatabase`, `createSchema`, etc.
+- Updated dependencies [5be3ae4]
+  - pqb@0.60.5
+
 ## 2.29.3
 
 ### Patch Changes
