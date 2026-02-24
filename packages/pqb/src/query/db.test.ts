@@ -10,7 +10,6 @@ import {
   testAdapter,
   testDb,
   testDbOptions,
-  testingWithPostgresJS,
   useTestDatabase,
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
@@ -25,18 +24,15 @@ import { QueryLogger } from 'pqb';
 import { orchidORMWithAdapter } from 'orchid-orm';
 
 describe('db connection', () => {
-  // not supported by postgres.js
-  if (!testingWithPostgresJS) {
-    it('should be able to open connection after closing it', async () => {
-      const db = createTestDb(testDbOptions);
+  it('should be able to open connection after closing it', async () => {
+    const db = createTestDb(testDbOptions);
 
-      await db.close();
+    await db.close();
 
-      await expect(db.adapter.query('SELECT 1')).resolves.not.toThrow();
+    await expect(db.adapter.query('SELECT 1')).resolves.not.toThrow();
 
-      await db.close();
-    });
-  }
+    await db.close();
+  });
 
   it('should support setting a searchPath via url parameters', async () => {
     const url = new URL(testDbOptions.databaseURL as string);
