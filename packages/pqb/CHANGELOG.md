@@ -1,5 +1,11 @@
 # pqb
 
+## 0.60.6
+
+### Patch Changes
+
+- 38f6105: Allow postgres-js connections to be reopened after close (#656)
+
 ## 0.60.5
 
 ### Patch Changes
