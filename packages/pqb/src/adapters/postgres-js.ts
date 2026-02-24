@@ -116,6 +116,7 @@ export class PostgresJsAdapter implements AdapterBase {
   searchPath?: string;
   config: PostgresJsAdapterOptions;
   errorClass = postgres.PostgresError;
+  private wrappedWithConnectRetry?: boolean;
 
   constructor(config: PostgresJsAdapterOptions) {
     this.config = { ...config, types };
@@ -166,8 +167,11 @@ export class PostgresJsAdapter implements AdapterBase {
         config.connectRetry === true ? emptyObject : config.connectRetry,
       );
 
-      this.query = wrapAdapterFnWithConnectRetry(this, this.query);
-      this.arrays = wrapAdapterFnWithConnectRetry(this, this.arrays);
+      if (!this.wrappedWithConnectRetry) {
+        this.query = wrapAdapterFnWithConnectRetry(this, this.query);
+        this.arrays = wrapAdapterFnWithConnectRetry(this, this.arrays);
+        this.wrappedWithConnectRetry = true;
+      }
     }
 
     return sql;
@@ -179,9 +183,15 @@ export class PostgresJsAdapter implements AdapterBase {
       : undefined;
   }
 
+  private replaceSql(config: PostgresJsAdapterOptions): Promise<void> {
+    const { sql } = this;
+    // Swap the client before ending the old one so the adapter remains reusable
+    this.sql = this.configure(config);
+    return sql.end();
+  }
+
   async updateConfig(config: PostgresJsAdapterOptions): Promise<void> {
-    await this.close();
-    this.sql = this.configure({ ...this.config, ...config });
+    await this.replaceSql({ ...this.config, ...config });
   }
 
   reconfigure(params: {
@@ -284,7 +294,7 @@ export class PostgresJsAdapter implements AdapterBase {
   }
 
   close(): Promise<void> {
-    return this.sql.end();
+    return this.replaceSql(this.config);
   }
 
   assignError(to: QueryError, dbError: Error) {

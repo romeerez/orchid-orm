@@ -135,6 +135,21 @@ describe('postgres-js', () => {
     expect(ssl.sql.options.ssl).toBe(true);
   });
 
+  it('should recreate client on close so it can be reused', async () => {
+    const adapter = new PostgresJsAdapter({
+      databaseURL: 'postgres://user:@host:123/db',
+    });
+    const { sql } = adapter;
+    const endSpy = jest.spyOn(sql, 'end').mockResolvedValue();
+
+    await adapter.close();
+
+    expect(endSpy).toHaveBeenCalled();
+    expect(adapter.sql).not.toBe(sql);
+
+    await adapter.sql.end();
+  });
+
   describe('search path', () => {
     it('should support setting a default schema via url parameters', async () => {
       const url = new URL(testDbOptions.databaseURL as string);
