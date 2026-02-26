@@ -2,3 +2,7 @@ packages:
   - 'packages/*'
   - 'packages/schemaConfigs/*'
   - '!packages/benchmarks'
+
+patchedDependencies:
+  # For Bun, see https://github.com/oven-sh/bun/issues/16933
+  jest-runtime@29.7.0: patches/jest-runtime@29.7.0.patch

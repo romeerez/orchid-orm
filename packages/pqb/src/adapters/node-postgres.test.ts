@@ -7,7 +7,7 @@ import { RecordUnknown } from '../utils';
 
 const testAdapter = new NodePostgresAdapter(testDbOptions);
 
-describe('adapter', () => {
+describe('node-postgres', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('queries', () => {
@@ -44,7 +44,7 @@ describe('adapter', () => {
       });
     });
 
-    it('should can query arrays', async () => {
+    it('should query arrays', async () => {
       const res = await testAdapter.arrays('SELECT 1 as num');
 
       expect(res).toMatchObject({

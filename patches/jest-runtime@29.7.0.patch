@@ -1,0 +1,13 @@
+diff --git a/build/index.js b/build/index.js
+index 01cb4206525dab0e564e07366bb0de1cc68ae2d1..57f8a3ac2336842c8a92b8bbfe280dd11edef009 100644
+--- a/build/index.js
++++ b/build/index.js
+@@ -1635,7 +1635,7 @@ class Runtime {
+     class Module extends _module().default.Module {}
+     Object.entries(_module().default.Module).forEach(([key, value]) => {
+       // @ts-expect-error: no index signature
+-      Module[key] = value;
++      try { Module[key] = value; } catch {}
+     });
+     Module.Module = Module;
+     if ('createRequire' in _module().default) {
