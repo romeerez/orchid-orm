@@ -110,6 +110,14 @@ describe('map', () => {
       ]);
     });
 
+    it('should map `pluck` query to object', async () => {
+      const res = await User.pluck('id').map((id) => ({ id, age: 18 }));
+
+      assertType<typeof res, { id: number; age: number }[]>();
+
+      expect(res).toEqual([{ id: expect.any(Number), age: 18 }]);
+    });
+
     it('should map a single record', async () => {
       const res = await User.select('name', 'createdAt')
         .take()
