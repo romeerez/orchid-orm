@@ -1,8 +1,4 @@
-import {
-  Query,
-  QueryReturnTypeAll,
-  QueryReturnTypeOptional,
-} from '../../query';
+import { QueryReturnTypeAll, QueryReturnTypeOptional } from '../../query';
 import { Column } from '../../../columns/column';
 import { PickQueryReturnType } from '../../pick-query-types';
 import { RecordUnknown } from '../../../utils';
@@ -74,12 +70,16 @@ export class QueryMap {
           ? { [K in keyof Result]: Column.Pick.QueryColumnOfType<Result[K]> }
           : K extends 'then'
           ? QueryThen<
-              T['returnType'] extends QueryReturnTypeAll
+              T['returnType'] extends QueryReturnTypeAll | 'pluck'
                 ? Result[]
                 : T['returnType'] extends QueryReturnTypeOptional
                 ? Result | undefined
                 : Result
             >
+          : K extends 'returnType'
+          ? T['returnType'] extends 'pluck'
+            ? 'all'
+            : T[K]
           : T[K];
       }
     : // When the map returns a scalar value, a query type should adjust to a single value
