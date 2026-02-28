@@ -46,7 +46,7 @@ To create a database, reconfigure the connection with a power user and an existi
 ```ts
 import { createDatabase } from 'orchid-orm/migrations';
 
-const adapter = db.$adapter.reconfigure({
+const adapter = db.$getAdapter().reconfigure({
   user: 'postgres',
   database: 'postgres',
 });
@@ -68,7 +68,7 @@ Ensure the connections to the database are closed before dropping, because Postg
 ```ts
 import { createDatabase } from 'orchid-orm/migrations';
 
-const adapter = db.$adapter.reconfigure({
+const adapter = db.$getAdapter().reconfigure({
   user: 'postgres',
   database: 'postgres',
 });

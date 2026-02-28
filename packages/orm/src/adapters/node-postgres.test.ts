@@ -11,7 +11,7 @@ describe('node-postgres', () => {
       {},
     );
 
-    const adapter = db.$qb.adapter as NodePostgresAdapter;
+    const adapter = db.$qb.adapterNotInTransaction as NodePostgresAdapter;
     expect('log' in adapter.config).toBe(false);
   });
 });

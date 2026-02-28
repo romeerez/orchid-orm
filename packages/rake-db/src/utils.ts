@@ -1,19 +1,13 @@
-import { AdapterBase, Query } from 'pqb';
+import { AdapterBase } from 'pqb';
 
 export interface OrmParam {
-  $qb: Query;
-  $adapter: AdapterBase;
+  $getAdapter(): AdapterBase;
 }
 
 export type DbParam = OrmParam | AdapterBase;
 
-export const getNonTransactionAdapter = (db: DbParam): AdapterBase =>
-  '$adapter' in db ? db.$adapter : db;
-
 export const getMaybeTransactionAdapter = (db: DbParam): AdapterBase =>
-  '$qb' in db
-    ? db.$qb.internal.transactionStorage.getStore()?.adapter || db.$adapter
-    : db;
+  '$getAdapter' in db ? db.$getAdapter() : db;
 
 export const ensureTransaction = (
   db: DbParam,

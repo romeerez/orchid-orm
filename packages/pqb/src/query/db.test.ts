@@ -10,6 +10,7 @@ import {
   testAdapter,
   testDb,
   testDbOptions,
+  TestTransactionAdapter,
   useTestDatabase,
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
@@ -601,6 +602,27 @@ describe('db', () => {
         .delete();
       assertType<typeof deleted, RecordUnknown>();
       expect(deleted).toMatchObject(userData);
+    });
+  });
+
+  describe('$getAdapter', () => {
+    it('returns a default adapter when not in transaction', () => {
+      const db = createDbWithAdapter({
+        adapter: testAdapter,
+      });
+
+      expect(db.$getAdapter()).toBe(testAdapter);
+    });
+
+    it('returns a current transaction adapter when not in transaction', async () => {
+      let adapter;
+
+      await testDb.transaction(async () => {
+        adapter = testDb.$getAdapter();
+      });
+
+      expect(adapter).not.toBe(testAdapter);
+      expect(adapter).toBeInstanceOf(TestTransactionAdapter);
     });
   });
 });

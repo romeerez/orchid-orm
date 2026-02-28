@@ -1,5 +1,13 @@
 # Breaking changes
 
+## orchid-orm 1.63
+
+`db.$adapter` on ORM instance and `db.adapter` on the query builder instance were confusing because you might expect it
+to work with the current transaction, but they did not.
+
+- renaming `db.$adapter` to `db.$adapterNotInTransaction`
+- adding `db.$getAdapter()` to get an adapter instance that's related to the current transaction if it is present.
+
 ## orchid-orm 1.62
 
 Changed migrations interface to simplify programmatic use.

@@ -61,8 +61,18 @@ interface OrchidORMMethods {
    * @see import('pqb').Transaction.prototype.afterCommit
    */
   $afterCommit: typeof afterCommit;
-  $adapter: AdapterBase;
   $qb: Db;
+  $adapterNotInTransaction: AdapterBase;
+
+  /**
+   * Adapter is a wrapper on top of `postgres-js`, `node-postgres`, or other db driver.
+   *
+   * When in transaction, returns a db adapter object for the transaction,
+   * returns a default adapter object otherwise.
+   *
+   * Treat the adapter as implementation detail and avoid accessing it directly.
+   */
+  $getAdapter(): AdapterBase;
 
   /**
    * Use `$query` to perform raw SQL queries.
@@ -186,7 +196,8 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     $ensureTransaction: ensureTransaction,
     $isInTransaction: isInTransaction,
     $afterCommit: afterCommit,
-    $adapter: adapter,
+    $adapterNotInTransaction: adapter,
+    $getAdapter,
     $qb: qb,
     get $query() {
       return qb.query;
@@ -271,3 +282,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
 
   return result as unknown as OrchidORM<T>;
 };
+
+function $getAdapter(this: OrchidORM) {
+  return this.$qb.$getAdapter();
+}

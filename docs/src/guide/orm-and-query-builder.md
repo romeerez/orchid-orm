@@ -1280,6 +1280,21 @@ const row = result.rows[0];
 row[0]; // our value
 ```
 
+## $adapter
+
+[//]: # 'has JSDoc'
+
+Adapter is a wrapper on top of `postgres-js`, `node-postgres`, or other db driver.
+
+When in transaction, returns a db adapter object for the transaction,
+returns a default adapter object otherwise.
+
+Treat the adapter as implementation detail and avoid accessing it directly.
+
+```ts
+const adapter = db.$getAdapter();
+```
+
 ## $from
 
 Use `$from` to build a queries around sub queries similar to the following:

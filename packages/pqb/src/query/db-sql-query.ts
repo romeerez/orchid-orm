@@ -97,7 +97,7 @@ export const performQuery = async <Result = QueryResult>(
   q: {
     qb: QueryBuilder;
     internal: QueryInternal;
-    adapter: AdapterBase;
+    adapterNotInTransaction: AdapterBase;
     q: QueryData;
   },
   args: SQLQueryArgs,
@@ -135,10 +135,9 @@ export const performQuery = async <Result = QueryResult>(
   if (log) logData = log.beforeQuery(sql);
 
   try {
-    const result = await (trx?.adapter || q.adapter)[method as 'query'](
-      sql.text,
-      sql.values,
-    );
+    const result = await (trx?.adapter || q.adapterNotInTransaction)[
+      method as 'query'
+    ](sql.text, sql.values);
 
     if (log) log.afterQuery(sql, logData);
 

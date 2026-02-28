@@ -8,6 +8,7 @@ import {
   MessageData,
   ChatData,
   UserData,
+  testAdapter,
 } from 'test-utils';
 import { Selectable } from './baseTable';
 import { Db, raw } from 'pqb';
@@ -79,7 +80,7 @@ describe('orm', () => {
       },
     );
 
-    expect('$adapter' in local).toBe(true);
+    expect('$adapterNotInTransaction' in local).toBe(true);
     expect(local.$close).toBeInstanceOf(Function);
     expect(local.$transaction).toBeInstanceOf(Function);
     expect(Object.keys(local)).toEqual(
@@ -208,6 +209,19 @@ describe('orm', () => {
           messagesCount: 2,
         },
       ]);
+    });
+  });
+
+  describe('$getAdapter', () => {
+    it('should proxy call the $qb.$getAdapter', () => {
+      const spy = jest
+        .spyOn(db.$qb, '$getAdapter')
+        .mockReturnValueOnce(testAdapter);
+
+      const result = db.$getAdapter();
+
+      expect(result).toBe(testAdapter);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 });

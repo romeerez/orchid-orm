@@ -1,5 +1,9 @@
 import { RecordUnknown } from 'pqb';
-import { DbParam, getNonTransactionAdapter, runSqlInSavePoint } from '../utils';
+import {
+  DbParam,
+  getMaybeTransactionAdapter,
+  runSqlInSavePoint,
+} from '../utils';
 
 export class CreateOrDropError extends Error {
   constructor(
@@ -77,7 +81,7 @@ const createOrDrop = async (
   sql: string,
 ): Promise<CreateOrDropOk> => {
   try {
-    const adapter = getNonTransactionAdapter(db);
+    const adapter = getMaybeTransactionAdapter(db);
     await adapter.query(sql);
     return 'done';
   } catch (error) {

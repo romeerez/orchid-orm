@@ -359,7 +359,7 @@ describe('transaction', () => {
 describe('hooks with no test transaction', () => {
   beforeEach(() => {
     jest
-      .spyOn(User.adapter, 'query')
+      .spyOn(User.adapterNotInTransaction, 'query')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockResolvedValueOnce({ rowCount: 1, rows: [] } as any);
   });

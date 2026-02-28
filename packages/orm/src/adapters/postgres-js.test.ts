@@ -11,7 +11,7 @@ describe('postgres-js', () => {
       {},
     );
 
-    const adapter = db.$qb.adapter as PostgresJsAdapter;
+    const adapter = db.$qb.adapterNotInTransaction as PostgresJsAdapter;
     expect('log' in adapter.config).toBe(false);
   });
 });

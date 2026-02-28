@@ -280,7 +280,7 @@ export class Db<
   declare catch: QueryCatch;
 
   constructor(
-    public adapter: AdapterBase,
+    public adapterNotInTransaction: AdapterBase,
     public qb: QueryBuilder,
     public table: Table = undefined as Table,
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
@@ -380,7 +380,7 @@ export class Db<
     } as QueryInternal;
 
     this.q = {
-      adapter,
+      adapter: adapterNotInTransaction,
       shape: shape as Column.QueryColumnsInit,
       handleResult,
       logger,
@@ -493,6 +493,17 @@ export class Db<
         }
       }
     }
+  }
+
+  /**
+   * When in transaction, returns a db adapter object for the transaction,
+   * returns a default adapter object otherwise.
+   */
+  $getAdapter() {
+    return (
+      this.internal.transactionStorage.getStore()?.adapter ||
+      this.adapterNotInTransaction
+    );
   }
 
   [inspect.custom]() {
