@@ -280,7 +280,7 @@ export const _queryUpdateOrThrow = <T extends UpdateSelf>(
   return _queryUpdate(q, arg);
 };
 
-export class Update {
+export class QueryUpdate {
   /**
    * `update` takes an object with columns and values to update records.
    *

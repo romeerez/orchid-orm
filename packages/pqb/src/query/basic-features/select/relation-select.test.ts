@@ -151,10 +151,7 @@ describe('relation-select', () => {
 
     it('should wrap queries in a transaction', async () => {
       // ignore the test transaction once
-      const getStore = jest.spyOn(
-        db.$qb.internal.transactionStorage,
-        'getStore',
-      );
+      const getStore = jest.spyOn(db.$qb.internal.asyncStorage, 'getStore');
       getStore.mockReturnValueOnce(undefined);
 
       // spy on transaction method

@@ -1,7 +1,7 @@
 import { emptyObject } from '../utils';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
-import { Query, QueryLogObject } from '../query';
+import { Query } from '../query';
 
 /**
  * Generic result returning from query methods.
@@ -146,7 +146,7 @@ export interface AdapterBase {
    */
   transaction<T>(
     options: string | undefined,
-    cb: (adapter: AdapterBase) => Promise<T>,
+    cb: (adapter: TransactionAdapterBase) => Promise<T>,
   ): Promise<T>;
   // close connection
   close(): Promise<void>;
@@ -159,26 +159,8 @@ export interface TransactionAdapterBase extends AdapterBase {
   isInTransaction(): true;
 }
 
-// Wrapper type for transactions.
-export interface TransactionState {
-  // Database adapter that is connected to a currently running transaction.
-  adapter: AdapterBase;
-  // Number of transaction nesting.
-  // Top transaction has id = 0, transaction inside of transaction will have id = 1, and so on.
-  transactionId: number;
-  // Array of data and functions to call after commit.
-  // 1st element is a query result, 2nd element is a query object, 3rd element is array of functions to call with the query result and object.
-  afterCommit?: TransactionAfterCommitHook[];
-  // To log all the queries inside a transaction.
-  log?: QueryLogObject;
-  // number of test transaction wrapping the current one
-  testTransactionCount?: number;
-  // sequential number for catching save-points
-  catchI?: number;
-}
-
 /**
- * Element of `afterCommit` transaction array. See {@link TransactionState.afterCommit}.
+ * Element of `afterCommit` transaction array. See {@link AsyncState.afterCommit}.
  */
 export type TransactionAfterCommitHook =
   | unknown[]

@@ -1,6 +1,7 @@
 import { Query, QueryReturnType } from '../query';
 import {
   _runAfterCommitHooks,
+  AsyncTransactionState,
   commitSql,
   isInUserTransaction,
 } from '../basic-features/transaction/transaction';
@@ -12,7 +13,6 @@ import {
   AdapterBase,
   AfterCommitHook,
   QueryResult,
-  TransactionState,
 } from '../../adapters/adapter';
 import {
   callWithThis,
@@ -37,6 +37,10 @@ import { applyTransforms } from '../extra-features/data-transform/transform';
 import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../query-data';
 import { SelectAsValue, SelectItem } from '../basic-features/select/select.sql';
 import { PickQueryReturnType } from '../pick-query-types';
+import {
+  AsyncState,
+  setCurrentDefaultSchema,
+} from '../basic-features/storage/storage';
 
 // This is a standard Promise['then'] method
 // copied from TS standard library because the original `then` is not decoupled from the Promise
@@ -99,6 +103,7 @@ export interface QueryCatch {
   <Q, TResult = never>(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this: { then: (onfulfilled?: (value: Q) => any) => any },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onrejected?: (reason: any) => TResult | PromiseLike<TResult>,
   ): Promise<Q | TResult>;
 }
@@ -227,20 +232,20 @@ function maybeWrappedThen(
       ? before
       : beforeActionHooks;
 
-  const trx = this.internal.transactionStorage.getStore();
+  const state = this.internal.asyncStorage.getStore();
   if (
     (q.wrapInTransaction || (q.selectRelation && q.type) || afterHooks) &&
-    !trx
+    !state?.transactionAdapter
   ) {
     return this.transaction(
       () =>
         new Promise((resolve, reject) => {
-          const trx =
-            this.internal.transactionStorage.getStore() as TransactionState;
+          const state =
+            this.internal.asyncStorage.getStore() as AsyncTransactionState;
           return then(
             this,
-            trx.adapter,
-            trx,
+            state.transactionAdapter,
+            state,
             beforeHooks,
             afterHooks,
             afterSaveHooks,
@@ -255,8 +260,8 @@ function maybeWrappedThen(
   } else {
     return then(
       this,
-      trx?.adapter || this.q.adapter,
-      trx,
+      state?.transactionAdapter || this.q.adapter,
+      state,
       beforeHooks,
       afterHooks,
       afterSaveHooks,
@@ -284,7 +289,7 @@ const beginSql: SingleSqlItem = { text: 'BEGIN' };
 const then = async (
   q: Query,
   adapter: AdapterBase,
-  trx?: TransactionState,
+  state?: AsyncState,
   beforeHooks?: QueryBeforeHook[],
   afterHooks?: QueryAfterHook[],
   afterSaveHooks?: QueryAfterHook[],
@@ -300,7 +305,8 @@ const then = async (
 
   let sql: (Sql & { name?: string }) | undefined;
   let logData: unknown | undefined;
-  const log = trx?.log ?? query.log;
+  const log = state?.log ?? query.log;
+  setCurrentDefaultSchema(state?.schema);
 
   // save error to a local variable before async operations
   const localError = queryError;
@@ -310,7 +316,7 @@ const then = async (
       await Promise.all(beforeHooks.map(callWithThis, q));
     }
 
-    const localSql = (sql = q.toSQL());
+    const localSql = (sql = q.toSQL(true));
 
     if (q.q.dynamicBefore) {
       let promises: Promise<unknown>[] | undefined;
@@ -353,7 +359,7 @@ const then = async (
       }
 
       const method = queryMethodByReturnType[tempReturnType];
-      queryResult = await execQuery(adapter, method, sql, shouldCatch && trx);
+      queryResult = await execQuery(adapter, method, sql, shouldCatch && state);
       const { runAfterQuery } = sql;
 
       if (log) {
@@ -409,7 +415,7 @@ const then = async (
             adapter,
             queryMethod,
             sql,
-            shouldCatch && trx,
+            shouldCatch && state,
           );
 
           if (queryResult) {
@@ -428,7 +434,7 @@ const then = async (
         sql = undefined;
       };
 
-      if (trx) {
+      if (state) {
         await queryBatch(sql.batch);
       } else {
         const { batch } = sql;
@@ -485,8 +491,10 @@ const then = async (
     let cteAfterHooks: (() => unknown)[] | undefined;
     let cteAfterCommitHooks: (() => unknown)[] | undefined;
     if (localSql.cteHooks) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const addedAfterHooks = new Set<(data: unknown, query: any) => unknown>();
       const addedAfterCommitHooks = new Set<
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (data: unknown, query: any) => unknown
       >();
 
@@ -623,9 +631,9 @@ const then = async (
           ...(afterSaveCommitHooks || emptyArray),
         ];
 
-        if (isInUserTransaction(trx)) {
+        if (isInUserTransaction(state)) {
           if (afterActionAndSaveCommit) {
-            (trx.afterCommit ??= []).push(
+            (state.afterCommit ??= []).push(
               result as unknown[],
               q,
               afterActionAndSaveCommit,
@@ -633,7 +641,7 @@ const then = async (
           }
 
           if (cteAfterCommitHooks) {
-            (trx.afterCommit ??= []).push(
+            (state.afterCommit ??= []).push(
               result as unknown[],
               q,
               cteAfterCommitHooks,
@@ -843,7 +851,7 @@ const execQuery = (
   adapter: AdapterBase,
   method: 'query' | 'arrays',
   sql: SingleSql,
-  catchTrx: TransactionState | false | undefined,
+  catchTrx: AsyncState | false | undefined,
 ) => {
   const catchingSavepoint = catchTrx
     ? `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`

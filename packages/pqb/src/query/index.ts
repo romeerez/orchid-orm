@@ -61,3 +61,7 @@ export * from './query-internal';
 export * from './relations';
 export * from './query-data';
 export * from './query-methods';
+export type {
+  AsyncState,
+  StorageOptions,
+} from './basic-features/storage/storage';

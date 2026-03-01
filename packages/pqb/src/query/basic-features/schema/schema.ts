@@ -30,6 +30,8 @@ export class QueryWithSchema {
    * SELECT "user"."id" FROM "customSchema"."user"
    * ```
    *
+   * You can set a **default** schema for all tables in a callback by using {@link $withOptions}.
+   *
    * @param schema - a name of the database schema to use
    */
   withSchema<T>(this: T, schema: QuerySchema | undefined): T {

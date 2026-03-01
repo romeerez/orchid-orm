@@ -263,7 +263,7 @@ export class PostgresJsAdapter implements AdapterBase {
 
   async transaction<Result>(
     options: string | undefined,
-    cb: (adapter: AdapterBase) => Promise<Result>,
+    cb: (adapter: TransactionAdapterBase) => Promise<Result>,
   ): Promise<Result> {
     let ok: boolean | undefined;
     let result: unknown;

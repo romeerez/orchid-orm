@@ -44,7 +44,7 @@ export const _queryDelete = <T extends PickQueryHasSelectResultReturnType>(
   return query as never;
 };
 
-export class Delete {
+export class QueryDelete {
   /**
    * This method deletes one or more rows, based on other conditions specified in the query.
    *
@@ -104,9 +104,9 @@ export class Delete {
    *   .from('b');
    * ```
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   delete<T extends PickQueryHasSelectHasWhereResultReturnType>(
     this: T,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {
     return _queryDelete(_clone(this)) as never;

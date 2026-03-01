@@ -7,3 +7,4 @@ export * from './query/expressions/fn-expression';
 export * from './testTransaction';
 export * from './tableData';
 export * from './utils';
+export type { AsyncState, StorageOptions } from './query';

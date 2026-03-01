@@ -7,9 +7,9 @@ import {
   userData,
 } from '../../../test-utils/pqb.test-utils';
 import { QueryCreate } from '../../basic-features/mutate/create';
-import { Update } from '../../basic-features/mutate/update';
+import { QueryUpdate } from '../../basic-features/mutate/update';
 import { QueryUpsert } from '../../basic-features/mutate/upsert';
-import { Delete } from '../../basic-features/mutate/delete';
+import { QueryDelete } from '../../basic-features/mutate/delete';
 import { QueryOrCreate } from '../../basic-features/mutate/or-create';
 import { QueryCreateFrom } from '../../basic-features/mutate/create-from';
 import { noop } from '../../../utils';
@@ -1377,7 +1377,7 @@ describe('hooks', () => {
           ...Object.getOwnPropertyNames(QueryCreate.prototype),
           ...Object.getOwnPropertyNames(QueryCreateFrom.prototype),
         ].filter((key) => !createExclude.includes(key)),
-        ...Object.getOwnPropertyNames(Update.prototype).filter(
+        ...Object.getOwnPropertyNames(QueryUpdate.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
         ...Object.getOwnPropertyNames(QueryUpsert.prototype).filter(
@@ -1386,7 +1386,7 @@ describe('hooks', () => {
         ...Object.getOwnPropertyNames(QueryOrCreate.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
-        ...Object.getOwnPropertyNames(Delete.prototype).filter(
+        ...Object.getOwnPropertyNames(QueryDelete.prototype).filter(
           (key) => !constructorExclude.includes(key),
         ),
       ].sort(),

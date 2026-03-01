@@ -1,6 +1,5 @@
 import { QueryInternalColumnNameToKey } from './query-columns/query-columns';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TransactionState } from '../adapters/adapter';
 import { RecordUnknown } from '../utils';
 import { TableData } from '../tableData';
 import {
@@ -9,6 +8,7 @@ import {
   GeneratorIgnore,
   Query,
 } from './query';
+import { AsyncState } from './basic-features/storage/storage';
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
@@ -25,7 +25,7 @@ export interface QueryInternal<
   UniqueConstraints = any,
 > extends QueryInternalColumnNameToKey {
   runtimeDefaultColumns?: string[];
-  transactionStorage: AsyncLocalStorage<TransactionState>;
+  asyncStorage: AsyncLocalStorage<AsyncState>;
   // Store scopes data, used for adding or removing a scope to the query.
   scopes?: RecordUnknown;
   // `camelCase` by default, set to true to map column names to and from `snake_case`

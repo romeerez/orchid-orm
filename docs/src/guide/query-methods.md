@@ -815,6 +815,8 @@ db.table
 
 ## log
 
+[//]: # 'has JSDoc'
+
 Override the `log` option, which can also be set in `createDb` or when creating a table instance:
 
 ```ts
@@ -825,6 +827,8 @@ await db.table.all().log(); // no argument for true
 // turn log off for this query:
 await db.table.all().log(false);
 ```
+
+Use [$withOptions](/guide/orm-and-query-builder.html#withoptions) to override `log` for a scope of a callback.
 
 ## clear
 

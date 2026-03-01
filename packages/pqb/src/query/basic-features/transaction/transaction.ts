@@ -1,17 +1,25 @@
 import { Query } from '../../query';
-import { logParamToLogObject } from '../log/log';
 import {
-  AdapterBase,
   AfterCommitHook,
   AfterCommitStandaloneHook,
+  TransactionAdapterBase,
   TransactionAfterCommitHook,
-  TransactionState,
 } from '../../../adapters/adapter';
 import { emptyArray, emptyObject } from '../../../utils';
 import { SingleSqlItem } from '../../sql/sql';
 import { OrchidOrmError } from '../../errors';
 import { PickQueryQAndInternal } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
+import {
+  AsyncState,
+  processStorageOptions,
+  StorageOptions,
+} from '../storage/storage';
+
+export interface AsyncTransactionState extends AsyncState {
+  transactionAdapter: TransactionAdapterBase;
+  transactionId: number;
+}
 
 export const commitSql: SingleSqlItem = {
   text: 'COMMIT',
@@ -27,11 +35,10 @@ export type IsolationLevel =
   | 'READ COMMITTED'
   | 'READ UNCOMMITTED';
 
-export interface TransactionOptions {
+export interface TransactionOptions extends StorageOptions {
   level?: IsolationLevel;
   readOnly?: boolean;
   deferrable?: boolean;
-  log?: boolean;
 }
 
 export interface AfterCommitErrorFulfilledResult
@@ -137,15 +144,13 @@ export const _runAfterCommitHooks = async (
  * Check if inside transaction started by user (not test transaction).
  */
 export const isInUserTransaction = (
-  trx: TransactionState | undefined,
-): trx is TransactionState =>
-  !!(
-    trx &&
-    // when inside test transactions, compare transaction counts to ensure there is a user transaction.
-    (!trx.testTransactionCount || trx.transactionId >= trx.testTransactionCount)
-  );
+  trx: AsyncState | undefined,
+): trx is AsyncState =>
+  trx?.transactionId !== undefined &&
+  // when inside test transactions, compare transaction counts to ensure there is a user transaction.
+  (!trx.testTransactionCount || trx.transactionId >= trx.testTransactionCount);
 
-export class Transaction {
+export class QueryTransaction {
   /**
    * In Orchid ORM the method is `$transaction`, when using `pqb` on its own it is `transaction`.
    *
@@ -275,38 +280,40 @@ export class Transaction {
       values: emptyArray,
     } as unknown as SingleSqlItem;
 
-    const log =
-      options.log !== undefined
-        ? this.q.log ?? logParamToLogObject(this.q.logger, options.log)
-        : this.q.log;
+    const opts = processStorageOptions(this, options);
+
+    const log = opts?.log || this.q.log;
 
     let logData: unknown | undefined;
 
-    let trx = this.internal.transactionStorage.getStore();
-    const transactionId = trx ? trx.transactionId + 1 : 0;
+    let state = this.internal.asyncStorage.getStore();
+    const transactionId =
+      state?.transactionId !== undefined ? state.transactionId + 1 : 0;
 
-    const callback = (adapter: AdapterBase) => {
+    const callback = (transactionAdapter: TransactionAdapterBase) => {
       if (log) log.afterQuery(sql, logData);
       if (log) logData = log.beforeQuery(commitSql);
 
-      if (trx) {
-        trx.transactionId = transactionId;
+      if (state) {
+        state.transactionId = transactionId;
         return fn();
       }
 
-      trx = {
-        adapter,
+      state = {
+        ...opts,
+        transactionAdapter,
         transactionId,
       };
 
       if (options.log !== undefined) {
-        trx.log = log;
+        state.log = log;
       }
 
-      return this.internal.transactionStorage.run(trx, fn);
+      return this.internal.asyncStorage.run(state, fn);
     };
 
-    if (!trx) {
+    const transactionAdapter = state?.transactionAdapter;
+    if (!state || !transactionAdapter) {
       let beginOptions: string | undefined = undefined;
 
       if (options.level) {
@@ -340,8 +347,8 @@ export class Transaction {
 
       if (log) log.afterQuery(commitSql, logData);
 
-      // trx was defined in the callback above;
-      runAfterCommit((trx as unknown as TransactionState).afterCommit, result);
+      // state was defined in the callback above;
+      runAfterCommit((state as AsyncState).afterCommit, result);
 
       return result;
     } else {
@@ -349,36 +356,35 @@ export class Transaction {
         sql.text = `SAVEPOINT "t${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
 
-        const { adapter } = trx;
-        await adapter.arrays(sql.text, sql.values);
+        await transactionAdapter.arrays(sql.text, sql.values);
 
         let result;
         try {
-          result = await callback(adapter);
+          result = await callback(transactionAdapter);
         } catch (err) {
           sql.text = `ROLLBACK TO SAVEPOINT "t${transactionId}"`;
           if (log) logData = log.beforeQuery(sql);
-          await adapter.arrays(sql.text, sql.values);
+          await transactionAdapter.arrays(sql.text, sql.values);
           if (log) log.afterQuery(sql, logData);
           throw err;
         }
 
         sql.text = `RELEASE SAVEPOINT "t${transactionId}"`;
         if (log) logData = log.beforeQuery(sql);
-        await adapter.arrays(sql.text, sql.values);
+        await transactionAdapter.arrays(sql.text, sql.values);
         if (log) log.afterQuery(sql, logData);
 
         // transactionId is trx.testTransactionCount when only the test transactions are left,
         // and it's time to execute after commit hooks, because they won't be executed for test transactions.
-        if (transactionId === trx.testTransactionCount) {
-          const { afterCommit } = trx as unknown as TransactionState;
-          (trx as unknown as TransactionState).afterCommit = undefined;
+        if (transactionId === state.testTransactionCount) {
+          const { afterCommit } = state;
+          state.afterCommit = undefined;
           runAfterCommit(afterCommit, result);
         }
 
         return result;
       } finally {
-        trx.transactionId = transactionId - 1;
+        state.transactionId = transactionId - 1;
       }
     }
   }
@@ -407,18 +413,16 @@ export class Transaction {
     this: PickQueryQAndInternal,
     cb: () => Promise<Result>,
   ): Promise<Result> {
-    const trx = this.internal.transactionStorage.getStore();
+    const trx = this.internal.asyncStorage.getStore();
     if (trx) return cb();
 
     return (
-      Transaction.prototype.transaction as (cb: unknown) => Promise<Result>
+      QueryTransaction.prototype.transaction as (cb: unknown) => Promise<Result>
     ).call(this, cb) as Promise<Result>;
   }
 
   isInTransaction(): boolean {
-    const trx = (
-      this as unknown as Query
-    ).internal.transactionStorage.getStore();
+    const trx = (this as unknown as Query).internal.asyncStorage.getStore();
 
     return isInUserTransaction(trx);
   }
@@ -449,7 +453,7 @@ export class Transaction {
    * this will cause `uncaughtException` if the callback is sync and `unhandledRejection` if it is async.
    */
   afterCommit(this: Query, hook: AfterCommitStandaloneHook): void {
-    const trx = this.internal.transactionStorage.getStore();
+    const trx = this.internal.asyncStorage.getStore();
     if (isInUserTransaction(trx)) {
       (trx.afterCommit ??= []).push(hook);
     } else {

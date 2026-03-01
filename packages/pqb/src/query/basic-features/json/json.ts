@@ -2,7 +2,7 @@ import { SetQueryReturnsColumnOptional } from '../../query';
 import { queryJson } from './json.utils';
 import { Column } from '../../../columns';
 
-export abstract class JsonMethods {
+export abstract class QueryJsonMethods {
   /**
    * Wraps the query in a way to select a single JSON string.
    * So that JSON encoding is done on a database side, and the application doesn't have to turn a response to a JSON.

@@ -16,8 +16,9 @@ import {
   MaybeArray,
   QueryLogOptions,
   RecordUnknown,
-  TransactionState,
+  AsyncState,
   Column,
+  StorageOptions,
 } from 'pqb';
 import {
   ORMTableInput,
@@ -46,19 +47,19 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
 
 interface OrchidORMMethods {
   /**
-   * @see import('pqb').Transaction.prototype.transaction
+   * @see import('pqb').QueryTransaction.prototype.transaction
    */
   $transaction: typeof transaction;
   /**
-   * @see import('pqb').Transaction.prototype.ensureTransaction
+   * @see import('pqb').QueryTransaction.prototype.ensureTransaction
    */
   $ensureTransaction: typeof ensureTransaction;
   /**
-   * @see import('pqb').Transaction.prototype.isInTransaction
+   * @see import('pqb').QueryTransaction.prototype.isInTransaction
    */
   $isInTransaction: typeof isInTransaction;
   /**
-   * @see import('pqb').Transaction.prototype.afterCommit
+   * @see import('pqb').QueryTransaction.prototype.afterCommit
    */
   $afterCommit: typeof afterCommit;
   $qb: Db;
@@ -140,6 +141,26 @@ interface OrchidORMMethods {
     arg: Arg,
   ): FromResult<FromQuery, Arg>;
 
+  /**
+   * `$withOptions` supports overriding `log` and `schema`.
+   *
+   * - `log`: boolean, enables or disables logging in the scope of the callback.
+   * - `schema`: set a **default** schema, note that it does not override
+   *   if you already have a schema set in the ORM config or for a specific table.
+   *
+   * ```ts
+   * await db.$withOptions({ log: true, schema: 'custom' }, async () => {
+   *   // will log this query, and will use the custom schema for this table,
+   *   // unless this table already has a configured schema.
+   *   await db.table.find(123);
+   * });
+   * ```
+   */
+  $withOptions<Result>(
+    options: StorageOptions,
+    cb: () => Promise<Result>,
+  ): Promise<Result>;
+
   $close(): Promise<void>;
 }
 
@@ -171,21 +192,21 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
   };
 
   let adapter: AdapterBase;
-  let transactionStorage;
+  let asyncStorage;
   let qb: Db;
   if ('db' in options) {
     adapter = options.db.q.adapter;
-    transactionStorage = options.db.internal.transactionStorage;
+    asyncStorage = options.db.internal.asyncStorage;
     qb = options.db.qb as Db;
   } else {
     adapter = options.adapter;
 
-    transactionStorage = new AsyncLocalStorage<TransactionState>();
+    asyncStorage = new AsyncLocalStorage<AsyncState>();
 
     qb = _initQueryBuilder(
       adapter,
       makeColumnTypes(defaultSchemaConfig),
-      transactionStorage,
+      asyncStorage,
       commonOptions,
       options,
     );
@@ -209,6 +230,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     $withSql: qb.withSql.bind(qb),
     $from: qb.from.bind(qb),
     $close: adapter.close.bind(adapter),
+    $withOptions: qb.withOptions.bind(qb),
   } as unknown as OrchidORM;
 
   const tableInstances: Record<string, ORMTableInput> = {};
@@ -249,7 +271,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
       table.table,
       table.columns.shape,
       table.types,
-      transactionStorage,
+      asyncStorage,
       options,
       table.constructor.prototype.columns?.data ?? {},
     );
@@ -276,9 +298,6 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
       Object.assign(result[key].baseQuery.q, table.q);
     }
   }
-
-  const db = result as unknown as OrchidORM<T>;
-  db.$adapter;
 
   return result as unknown as OrchidORM<T>;
 };

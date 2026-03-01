@@ -20,6 +20,7 @@ import {
   quoteTableWithSchema,
   requireTableOrStringFrom,
 } from '../../sql/sql';
+import { getQuerySchema } from '../storage/storage';
 
 export type SimpleJoinItemNonSubQueryArgs =
   | [{ [K: string]: string | Expression } | Expression | true]
@@ -169,7 +170,7 @@ export const processJoinItem = (
     ) as string;
 
     const joinTable = requireTableOrStringFrom(j);
-    target = quoteFromWithSchema(j.q.schema, joinTable);
+    target = quoteFromWithSchema(getQuerySchema(j), joinTable);
 
     const as = j.q.as as string;
     const joinAs = `"${as}"`;

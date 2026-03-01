@@ -45,8 +45,8 @@ export const testTransaction = {
    */
   start(arg: Arg): Promise<void> {
     const db = argToDb(arg);
-    const { transactionStorage } = db.internal;
-    const { getStore } = transactionStorage;
+    const { asyncStorage } = db.internal;
+    const { getStore } = asyncStorage;
     const { adapter } = db.baseQuery.q;
     const data: TrxData = {
       adapter: {
@@ -62,16 +62,16 @@ export const testTransaction = {
         .transaction(() => {
           resolve();
           return new Promise<void>((_, rej) => {
-            const trx = transactionStorage.getStore();
-            db.internal.transactionStorage.getStore = () => trx;
-            if (trx) {
-              const t = trx.adapter as unknown as typeof adapter;
+            const state = asyncStorage.getStore();
+            db.internal.asyncStorage.getStore = () => state;
+            const t = state?.transactionAdapter;
+            if (t) {
               adapter.query = t.query.bind(t);
               adapter.arrays = t.arrays.bind(t);
               adapter.transaction = t.transaction.bind(t);
 
-              trx.testTransactionCount = trx.testTransactionCount
-                ? trx.testTransactionCount + 1
+              state.testTransactionCount = state.testTransactionCount
+                ? state.testTransactionCount + 1
                 : 1;
             }
             data.reject = rej;
@@ -83,12 +83,12 @@ export const testTransaction = {
           }
         })
         .finally(() => {
-          const trx = db.internal.transactionStorage.getStore();
-          if (trx?.testTransactionCount) {
-            trx.testTransactionCount--;
+          const state = db.internal.asyncStorage.getStore();
+          if (state?.testTransactionCount) {
+            state.testTransactionCount--;
           }
 
-          db.internal.transactionStorage.getStore = getStore;
+          db.internal.asyncStorage.getStore = getStore;
         });
     });
   },

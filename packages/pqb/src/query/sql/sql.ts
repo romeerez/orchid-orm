@@ -13,6 +13,7 @@ import { QueryType } from '../query-data';
 import { wrapMainQueryInCte } from './wrap-main-query-in-cte';
 import { OrchidOrmInternalError } from '../errors';
 import { QuerySchema } from '../basic-features/schema/schema';
+import { getQuerySchema } from '../basic-features/storage/storage';
 
 export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
   delayedRelationSelect?: DelayedRelationSelect;
@@ -93,7 +94,7 @@ export const requireTableOrStringFrom = (query: ToSQLQuery): string => {
 };
 
 export const quoteTableWithSchema = (query: ToSQLQuery): string =>
-  quoteFromWithSchema(query.q.schema, requireTableOrStringFrom(query));
+  quoteFromWithSchema(getQuerySchema(query), requireTableOrStringFrom(query));
 
 export const quoteFromWithSchema = (
   schema: QuerySchema | undefined,

@@ -7,6 +7,7 @@ import { getQueryAs } from '../as/as';
 import { searchSourcesToSql } from '../../extra-features/search/search.sql';
 import { quoteFromWithSchema, quoteTableWithSchema } from '../../sql/sql';
 import { checkIfASimpleQuery } from '../../sql/check-if-a-simple-query';
+import { getQuerySchema } from '../storage/storage';
 
 let fromQuery: SubQueryForSql | undefined;
 
@@ -95,7 +96,7 @@ const fromToSql = (
       fromQuery = from;
     }
   } else {
-    sql = quoteFromWithSchema(query.q.schema, from);
+    sql = quoteFromWithSchema(getQuerySchema(query), from);
   }
 
   return (only === undefined ? data.only : only) ? `ONLY ${sql}` : sql;

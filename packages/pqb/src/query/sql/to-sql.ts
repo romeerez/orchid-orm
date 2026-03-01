@@ -39,6 +39,7 @@ import { DelayedRelationSelect } from '../basic-features/select/delayed-relation
 import { isExpression } from '../expressions/expression';
 import { pushUnionSql } from '../basic-features/union/union.sql';
 import { pushForSql } from '../basic-features/for/for.sql';
+import { setCurrentDefaultSchema } from '../basic-features/storage/storage';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -97,6 +98,7 @@ export interface ToSql {
     topCtx?: TopToSqlCtx,
     isSubSql?: boolean,
     cteName?: string,
+    calledByThen?: boolean,
   ): Sql;
 }
 
@@ -115,11 +117,19 @@ export const newToSqlCtx = (query: ToSQLQuery): ToSQLCtx => {
   return ctx;
 };
 
-export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
+export const toSql: ToSql = (
+  table,
+  type,
+  topCtx,
+  isSubSql,
+  cteName,
+  calledByThen,
+) => {
   const query = table.q;
   const sql: string[] = [];
   const values = topCtx?.values || [];
   const ctx: ToSQLCtx = {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     topCtx: topCtx!,
     qb: table.qb,
     q: query,
@@ -134,8 +144,11 @@ export const toSql: ToSql = (table, type, topCtx, isSubSql, cteName) => {
 
   if (topCtx) {
     if (type) topCtx.hasNonSelect = true;
-  } else if (!topCtx) {
+  } else {
     ctx.topCtx = ctx as TopToSqlCtx;
+    if (!calledByThen) {
+      setCurrentDefaultSchema(table.internal.asyncStorage.getStore()?.schema);
+    }
   }
 
   ctesToSql(ctx, query.with);

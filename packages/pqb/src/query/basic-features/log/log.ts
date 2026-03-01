@@ -114,6 +114,20 @@ export const logParamToLogObject = (
 };
 
 export class QueryLog {
+  /**
+   * Override the `log` option, which can also be set in `createDb` or when creating a table instance:
+   *
+   * ```ts
+   * // turn log on for this query:
+   * await db.table.all().log(true);
+   * await db.table.all().log(); // no argument for true
+   *
+   * // turn log off for this query:
+   * await db.table.all().log(false);
+   * ```
+   *
+   * Use {@link $withOptions} to override `log` for a scope of a callback.
+   */
   log<T>(this: T, log = true): T {
     const q = _clone(this);
     q.q.log = logParamToLogObject(q.q.logger, log);

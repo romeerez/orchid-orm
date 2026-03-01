@@ -366,6 +366,8 @@ class UserTable extends BaseTable {
 }
 ```
 
+[$withOptions](#withoptions) allows to run queries with a given schema, but only if the schema wasn't set as shown above.
+
 ## generate migrations
 
 After defining, modifying, or deleting tables or columns in the app code,
@@ -1280,7 +1282,25 @@ const row = result.rows[0];
 row[0]; // our value
 ```
 
-## $adapter
+## $withOptions
+
+[//]: # 'has JSDoc'
+
+`$withOptions` supports overriding `log` and `schema`.
+
+- `log`: boolean, enables or disables logging in the scope of the callback.
+- `schema`: set a **default** schema, note that it does not override
+  if you already have a schema set in the ORM config or for a specific table.
+
+```ts
+await db.$withOptions({ log: true, schema: 'custom' }, async () => {
+  // will log this query, and will use the custom schema for this table,
+  // unless this table already has a configured schema.
+  await db.table.find(123);
+});
+```
+
+## $getAdapter
 
 [//]: # 'has JSDoc'
 

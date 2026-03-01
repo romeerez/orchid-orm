@@ -246,6 +246,8 @@ Resulting SQL:
 SELECT "user"."id" FROM "customSchema"."user"
 ```
 
+You can set a **default** schema for all tables in a callback by using [$withOptions](/guide/orm-and-query-builder.html#withoptions).
+
 ## union, unionAll, intersect, intersectAll, except, exceptAll
 
 [//]: # 'has JSDoc'

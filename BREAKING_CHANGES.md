@@ -8,6 +8,11 @@ to work with the current transaction, but they did not.
 - renaming `db.$adapter` to `db.$adapterNotInTransaction`
 - adding `db.$getAdapter()` to get an adapter instance that's related to the current transaction if it is present.
 
+---
+
+`db.internal.transactionStorage` has `internal` to indicate that it's an internal functionality,
+but nevertheless, `transactionStorage` was renamed to `asyncStorage`.
+
 ## orchid-orm 1.62
 
 Changed migrations interface to simplify programmatic use.

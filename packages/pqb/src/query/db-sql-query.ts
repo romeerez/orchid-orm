@@ -103,7 +103,7 @@ export const performQuery = async <Result = QueryResult>(
   args: SQLQueryArgs,
   method: 'query' | 'arrays',
 ): Promise<Result> => {
-  const trx = q.internal.transactionStorage.getStore();
+  const trx = q.internal.asyncStorage.getStore();
   let sql: Sql;
   if (isRawSQL(args[0])) {
     const values: unknown[] = [];
@@ -135,7 +135,7 @@ export const performQuery = async <Result = QueryResult>(
   if (log) logData = log.beforeQuery(sql);
 
   try {
-    const result = await (trx?.adapter || q.adapterNotInTransaction)[
+    const result = await (trx?.transactionAdapter || q.adapterNotInTransaction)[
       method as 'query'
     ](sql.text, sql.values);
 

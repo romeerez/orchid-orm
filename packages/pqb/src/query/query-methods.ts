@@ -38,12 +38,12 @@ import {
 } from './basic-features/join/join';
 import { CteQuery } from './basic-features/cte/cte.query';
 import { Union } from './basic-features/union/union';
-import { JsonMethods } from './basic-features/json/json';
+import { QueryJsonMethods } from './basic-features/json/json';
 import { QueryCreate } from './basic-features/mutate/create';
 import { QueryCreateFrom } from './basic-features/mutate/create-from';
-import { Update } from './basic-features/mutate/update';
-import { Delete } from './basic-features/mutate/delete';
-import { Transaction } from './basic-features/transaction/transaction';
+import { QueryUpdate } from './basic-features/mutate/update';
+import { QueryDelete } from './basic-features/mutate/delete';
+import { QueryTransaction } from './basic-features/transaction/transaction';
 import { For } from './basic-features/for/for';
 import {
   _queryFindBy,
@@ -106,6 +106,7 @@ import { QueryOrder } from './basic-features/order/order';
 import { QueryTruncate } from './extra-features/truncate/truncate';
 import { QueryWindow } from './basic-features/window/window';
 import { QueryWithSchema } from './basic-features/schema/schema';
+import { QueryStorage } from './basic-features/storage/storage';
 
 export type GroupArgs<T extends PickQueryResult> = (
   | {
@@ -301,12 +302,13 @@ export interface QueryMethods<ColumnTypes>
     QueryLimitOffset,
     CteQuery,
     Union,
-    JsonMethods,
+    QueryJsonMethods,
     QueryCreate,
     QueryCreateFrom,
-    Update,
-    Delete,
-    Transaction,
+    QueryUpdate,
+    QueryDelete,
+    QueryStorage,
+    QueryTransaction,
     QueryTruncate,
     For,
     Where,
@@ -331,6 +333,7 @@ export interface QueryMethods<ColumnTypes>
     QueryWrap,
     QueryWindow {}
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class QueryMethods<ColumnTypes> {
   /**
    * `.all` is a default behavior, that returns an array of objects:
@@ -460,8 +463,15 @@ export class QueryMethods<ColumnTypes> {
    * };
    * ```
    */
-  toSQL(this: ToSQLQuery): Sql {
-    return toSql(this, this.q.type);
+  toSQL(this: ToSQLQuery, callFromThen?: boolean): Sql {
+    return toSql(
+      this,
+      this.q.type,
+      undefined,
+      undefined,
+      undefined,
+      callFromThen,
+    );
   }
 
   /**
@@ -845,6 +855,7 @@ export class QueryMethods<ColumnTypes> {
    * ```
    *
    * @param fn - function to useHelper the query with. The result type will be merged with the main query as if the `merge` method was used.
+   * @param args
    */
   useHelper<
     T extends MergeQueryArg,
@@ -1029,12 +1040,13 @@ applyMixins(QueryMethods, [
   OnMethods,
   CteQuery,
   Union,
-  JsonMethods,
+  QueryJsonMethods,
   QueryCreate,
   QueryCreateFrom,
-  Update,
-  Delete,
-  Transaction,
+  QueryUpdate,
+  QueryDelete,
+  QueryStorage,
+  QueryTransaction,
   QueryTruncate,
   For,
   Where,

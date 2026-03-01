@@ -8,9 +8,10 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../sql/sql-constants';
-import { QueryResultRow, TransactionState } from '../../adapters/adapter';
+import { QueryResultRow } from '../../adapters/adapter';
 import { NotFoundError, QueryError } from '../errors';
 import { noop } from '../../utils';
+import { AsyncState } from '../basic-features/storage/storage';
 
 const setMaxBindingParams = (value: number) => {
   (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
@@ -309,16 +310,17 @@ describe('batch queries', () => {
     ).pluck('num');
 
     const { queryArrays, result } = await Table.transaction(async () => {
-      const trx =
-        Table.internal.transactionStorage.getStore() as TransactionState;
-      const queryArrays = jest.spyOn(trx.adapter, 'arrays');
+      const state = Table.internal.asyncStorage.getStore() as AsyncState;
+      const queryArrays =
+        state.transactionAdapter &&
+        jest.spyOn(state.transactionAdapter, 'arrays');
 
       const result = await q.recoverable();
 
       return { queryArrays, result };
     });
 
-    expect(queryArrays.mock.calls).toEqual([
+    expect(queryArrays?.mock.calls).toEqual([
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],

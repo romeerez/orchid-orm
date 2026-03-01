@@ -63,11 +63,7 @@ import {
   RecordUnknown,
   toSnakeCase,
 } from '../utils';
-import {
-  AdapterBase,
-  QueryArraysResult,
-  TransactionState,
-} from '../adapters/adapter';
+import { AdapterBase, QueryArraysResult } from '../adapters/adapter';
 import { NotFoundError, QueryError, QueryErrorName } from './errors';
 import { ColumnsParsers } from './query-columns/query-column-parsers';
 import { MaybeArray } from 'rollup';
@@ -86,6 +82,7 @@ import {
 import { QueryData, QueryDataScopes } from './query-data';
 import { QueryInternal } from './query-internal';
 import { QuerySchema } from './basic-features/schema/schema';
+import { AsyncState } from './basic-features/storage/storage';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -285,7 +282,7 @@ export class Db<
     public table: Table = undefined as Table,
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
     public columnTypes: ColumnTypes,
-    transactionStorage: AsyncLocalStorage<TransactionState>,
+    asyncStorage: AsyncLocalStorage<AsyncState>,
     options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
     tableData: TableData = {},
   ) {
@@ -369,7 +366,7 @@ export class Db<
 
     this.internal = {
       runtimeDefaultColumns,
-      transactionStorage,
+      asyncStorage,
       scopes,
       snakeCase: options.snakeCase,
       noPrimaryKey: options.noPrimaryKey === 'ignore',
@@ -501,7 +498,7 @@ export class Db<
    */
   $getAdapter() {
     return (
-      this.internal.transactionStorage.getStore()?.adapter ||
+      this.internal.asyncStorage.getStore()?.transactionAdapter ||
       this.adapterNotInTransaction
     );
   }
@@ -800,12 +797,12 @@ export const createDbWithAdapter = <
     (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
   }
 
-  const transactionStorage = new AsyncLocalStorage<TransactionState>();
+  const asyncStorage = new AsyncLocalStorage<AsyncState>();
 
   const qb = _initQueryBuilder(
     adapter,
     ct,
-    transactionStorage,
+    asyncStorage,
     commonOptions,
     options,
   );
@@ -827,7 +824,7 @@ export const createDbWithAdapter = <
         ? getColumnTypes(ct, shape, nowSQL, options?.language)
         : shape,
       ct,
-      transactionStorage,
+      asyncStorage,
       { ...commonOptions, ...options },
       parseTableData(dataFn),
     ) as never;
@@ -863,7 +860,7 @@ export function _createDbSqlMethod<ColumnTypes>(
 export const _initQueryBuilder = (
   adapter: AdapterBase,
   columnTypes: unknown,
-  transactionStorage: AsyncLocalStorage<TransactionState>,
+  asyncStorage: AsyncLocalStorage<AsyncState>,
   commonOptions: DbTableOptions<unknown, undefined, Column.QueryColumns>,
   options: DbSharedOptions,
 ): Db => {
@@ -873,7 +870,7 @@ export const _initQueryBuilder = (
     undefined,
     anyShape,
     columnTypes,
-    transactionStorage,
+    asyncStorage,
     commonOptions,
   );
 
