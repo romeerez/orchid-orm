@@ -1,5 +1,12 @@
 # orchid-orm
 
+## 1.63.4
+
+### Patch Changes
+
+- Updated dependencies [af36d28]
+  - rake-db@2.29.9
+
 ## 1.63.3
 
 ### Patch Changes

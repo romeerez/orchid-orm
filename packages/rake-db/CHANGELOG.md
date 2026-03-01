@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.29.9
+
+### Patch Changes
+
+- af36d28: Expose createMigrationsSchemaAndTable to create migrations table (#646)
+
 ## 2.29.8
 
 ### Patch Changes
