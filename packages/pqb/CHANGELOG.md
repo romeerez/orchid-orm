@@ -1,5 +1,12 @@
 # pqb
 
+## 0.61.0
+
+### Minor Changes
+
+- 232526b: Add $getAdapter() method, rename .adapter to .adapterNotInTransaction (#652)
+- 9496a1a: Add $withOptions to override `log` and `schema` via AsyncLocalStorage (#648)
+
 ## 0.60.6
 
 ### Patch Changes
