@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.29.7
+
+### Patch Changes
+
+- e6e197c: Change migration generator to output current `now` values for timestamps (#647)
+- Updated dependencies [e6e197c]
+  - pqb@0.61.1
+
 ## 2.29.6
 
 ### Patch Changes

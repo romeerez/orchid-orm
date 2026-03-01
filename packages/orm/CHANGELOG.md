@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.63.1
+
+### Patch Changes
+
+- e6e197c: Change migration generator to output current `now` values for timestamps (#647)
+- Updated dependencies [e6e197c]
+  - rake-db@2.29.7
+  - pqb@0.61.1
+
 ## 1.63.0
 
 ### Minor Changes

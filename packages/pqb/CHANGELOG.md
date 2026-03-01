@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.1
+
+### Patch Changes
+
+- e6e197c: Change migration generator to output current `now` values for timestamps (#647)
+
 ## 0.61.0
 
 ### Minor Changes
