@@ -58,7 +58,10 @@ export type { RakeDbCliConfigInput, RakeDbConfig } from './config';
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';
 export type { SilentQueries, DbMigration } from './migration/migration';
-export { saveMigratedVersion } from './migration/manage-migrated-versions';
+export {
+  saveMigratedVersion,
+  createMigrationsSchemaAndTable,
+} from './migration/manage-migrated-versions';
 export { RakeDbError } from './errors';
 export { getMigrationsSchemaAndTable } from './migration/migration.utils';
 export type { RakeDbChangeFn } from './migration/change';

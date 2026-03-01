@@ -79,6 +79,33 @@ await createDatabase(adapter, {
 });
 ```
 
+### createMigrationsSchemaAndTable
+
+`createMigrationsSchemaAndTable` creates a schema, if it is present and is not "public",
+and a table to track applied migrations.
+
+Can be called in a transaction, it won't throw or fail the transaction if the schema or table already exist.
+
+```ts
+import { createSchema, makeRakeDbConfig } from 'orchid-orm/migrations';
+
+await createMigrationsSchemaAndTable(db, {
+  schema: 'custom', // can be a function
+  migrationsTable: 'migrations',
+  logger: console, // will log if logger is provided
+});
+
+// you can use existing config
+const config = makeRakeDbConfig({
+  schema: 'custom',
+  // createMigrationsSchemaAndTable will log when log is true
+  log: true,
+  import: (path) => import(path),
+});
+
+await createMigrationsSchemaAndTable(db, config);
+```
+
 ### create schema
 
 [//]: # 'has JSDoc'
@@ -196,8 +223,14 @@ Add `transaction: 'per-migration'` to the config to run every migration file in 
 
 `migrate` won't start new transactions if it is already wrapped in one.
 
+`migrate` creates a migration table if it doesn't exist, but it doesn't work when calling `migrate` in a transaction.
+
 ```ts
-import { migrate } from 'orchid-orm/migrations';
+import {
+  migrate,
+  makeRakeDbConfig,
+  createMigrationsSchemaAndTable,
+} from 'orchid-orm/migrations';
 
 // apply all pending migrations
 await migrate(db, config);
@@ -208,6 +241,13 @@ await migrate(db, config, {
   count: Infinity,
   // for timestamp-based only: force migrate when having out-of-order migrations
   force: false,
+});
+
+// Ensure the migrations table is created first when calling `migrate` in a transaction
+await db.$transaction(async () => {
+  await createMigrationsSchemaAndTable(db, config);
+
+  await migrate(db, config);
 });
 ```
 

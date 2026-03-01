@@ -24,6 +24,7 @@ import {
   migrationsSchemaTableSql,
 } from './migration.utils';
 import { createSchema, createTable } from '../commands/create-or-drop';
+import { DbParam } from '../utils';
 
 export const saveMigratedVersion = async (
   db: SilentQueries,
@@ -40,7 +41,7 @@ export const saveMigratedVersion = async (
 };
 
 export const createMigrationsSchemaAndTable = async (
-  adapter: AdapterBase,
+  db: DbParam,
   config: {
     schema?: QuerySchema;
     migrationsTable: string;
@@ -49,14 +50,14 @@ export const createMigrationsSchemaAndTable = async (
 ): Promise<void> => {
   const { schema, table } = getMigrationsSchemaAndTable(config);
   if (schema) {
-    const res = await createSchema(adapter, schema);
+    const res = await createSchema(db, schema);
     if (res === 'done') {
       config.logger?.log(`Created schema "${schema}"`);
     }
   }
 
   const res = await createTable(
-    adapter,
+    db,
     `${
       schema ? `"${schema}"."${table}"` : `"${table}"`
     } (version TEXT NOT NULL, name TEXT NOT NULL)`,
