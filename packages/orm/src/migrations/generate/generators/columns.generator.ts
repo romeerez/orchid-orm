@@ -453,7 +453,7 @@ const compareColumns = async (
       codeData.default,
       compareSql.values,
       codeColumn,
-    ) as string;
+    );
     const codeValues = compareSql.values.slice(valuesBeforeLen);
 
     if (
@@ -464,16 +464,18 @@ const compareColumns = async (
       compareSql.values.length = valuesBeforeLen;
       return 'change';
     } else if (dbDefault !== codeDefault && dbDefault !== `(${codeDefault})`) {
+      const change = () => {
+        changeColumn(changeTableData, key, dbName, dbColumn, codeColumn);
+        if (!changeTableData.pushedAst) {
+          changeTableData.pushedAst = true;
+          ast.push(changeTableData.changeTableAst);
+        }
+      };
+
       compareSql.expressions.push({
         inDb: dbDefault,
         inCode: codeDefault,
-        change: () => {
-          changeColumn(changeTableData, key, dbName, dbColumn, codeColumn);
-          if (!changeTableData.pushedAst) {
-            changeTableData.pushedAst = true;
-            ast.push(changeTableData.changeTableAst);
-          }
-        },
+        change,
       });
     }
   }

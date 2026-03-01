@@ -134,7 +134,7 @@ export const encodeColumnDefault = (
 ): string | null => {
   if (def !== undefined && def !== null && typeof def !== 'function') {
     if (isRawSQL(def)) {
-      return def.toSQL({ values });
+      return `(${def.toSQL({ values })})`;
     } else {
       return escapeForMigration(
         column instanceof ArrayColumn && Array.isArray(def)

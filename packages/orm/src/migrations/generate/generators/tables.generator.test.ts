@@ -24,6 +24,31 @@ const { green, red, yellow } = colors;
 describe('tables', () => {
   const { arrange, act, assert, BaseTable, table } = useGeneratorsTestUtils();
 
+  it('should support a specific clock_timestamp() timestamp default', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', (t) => ({
+          id: t.identity().primaryKey(),
+          timeStamp: t
+            .timestamp()
+            .default(t.sql`clock_timestamp() AT TIME ZONE 'UTC'`),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          id: t.identity().primaryKey(),
+          timeStamp: t
+            .timestamp()
+            .default(t.sql`clock_timestamp() AT TIME ZONE 'UTC'`),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(undefined);
+  });
+
   it('should not drop ignored tables', async () => {
     await arrange({
       async prepareDb(db) {

@@ -34,7 +34,7 @@ describe('timestamps methods', () => {
           q.toSQL(),
           `
             UPDATE "schema"."user"
-            SET "${updatedAtName}" = (custom_now())
+            SET "${updatedAtName}" = custom_now()
           `,
         );
       });

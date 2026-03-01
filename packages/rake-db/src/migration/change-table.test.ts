@@ -32,7 +32,7 @@ describe('changeTable', () => {
 
     expectSql(`
       ALTER TABLE "table"
-      ADD COLUMN "co_l" int4 NOT NULL DEFAULT 1 + 2
+      ADD COLUMN "co_l" int4 NOT NULL DEFAULT (1 + 2)
     `);
   });
 
@@ -126,7 +126,7 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-                ADD COLUMN "i_d" uuid PRIMARY KEY DEFAULT gen_random_uuid()
+                ADD COLUMN "i_d" uuid PRIMARY KEY DEFAULT (gen_random_uuid())
             `),
           () =>
             expectSql(`
@@ -324,7 +324,7 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-                ADD COLUMN "with_default_raw" date NOT NULL DEFAULT now()
+                ADD COLUMN "with_default_raw" date NOT NULL DEFAULT (now())
             `),
           () =>
             expectSql(`
@@ -477,8 +477,8 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-                ADD COLUMN "created_at" timestamp with time zone NOT NULL DEFAULT now(),
-                ADD COLUMN "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+                ADD COLUMN "created_at" timestamp with time zone NOT NULL DEFAULT (now()),
+                ADD COLUMN "updated_at" timestamp with time zone NOT NULL DEFAULT (now())
             `),
           () =>
             expectSql(`
@@ -1643,7 +1643,7 @@ describe('changeTable', () => {
           () =>
             expectSql(`
             ALTER TABLE "table"
-              ALTER COLUMN "change_default" SET DEFAULT 'to',
+              ALTER COLUMN "change_default" SET DEFAULT ('to'),
               ALTER COLUMN "change_json_default" SET DEFAULT '[]'
           `),
           () =>
@@ -1666,7 +1666,7 @@ describe('changeTable', () => {
           () =>
             expectSql(`
             ALTER TABLE "table"
-              ALTER COLUMN "name" SET DEFAULT 'to'
+              ALTER COLUMN "name" SET DEFAULT ('to')
           `),
           () =>
             expectSql(`
@@ -1738,7 +1738,7 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
-              ALTER COLUMN "col_umn" SET DEFAULT gen_random_uuid()
+              ALTER COLUMN "col_umn" SET DEFAULT (gen_random_uuid())
             `),
         );
       });

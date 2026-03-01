@@ -325,7 +325,7 @@ describe('baseTable', () => {
       expectSql(
         user.find(1).update({}).toSQL(),
         `
-          UPDATE "user" SET "updated_at" = (now() AT TIME ZONE 'UTC') WHERE "user"."id" = $1
+          UPDATE "user" SET "updated_at" = now() AT TIME ZONE 'UTC' WHERE "user"."id" = $1
         `,
         [1],
       );

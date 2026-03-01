@@ -38,7 +38,7 @@ export interface CompareSql {
   values: unknown[];
   expressions: {
     inDb: string;
-    inCode: string;
+    inCode: string | null;
     change(): void;
   }[];
 }
@@ -350,6 +350,11 @@ const getColumnDbTypeForComparison = (
   }
 };
 
+// https://github.com/romeerez/orchid-orm/issues/647
+// two clock_timestamp() statements aren't equal to each other, confusing SQL comparator
+const freezeSqlClock = (sql: string) =>
+  sql.replaceAll('clock_timestamp()', 'now()');
+
 const applyCompareSql = async (
   compareSql: CompareSql,
   adapter: AdapterBase,
@@ -360,7 +365,12 @@ const applyCompareSql = async (
     } = await adapter.arrays(
       'SELECT ' +
         compareSql.expressions
-          .map((x) => `${x.inDb} = (${x.inCode})`)
+          .map(
+            (x) =>
+              `${freezeSqlClock(x.inDb)} = (${
+                x.inCode && freezeSqlClock(x.inCode)
+              })`,
+          )
           .join(', '),
       compareSql.values,
     );

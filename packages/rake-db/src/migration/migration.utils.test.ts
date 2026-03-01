@@ -8,7 +8,7 @@ describe('migration utils', () => {
 
       const result = encodeColumnDefault(sql`1 + ${2}`, values);
 
-      expect(result).toBe('1 + $1');
+      expect(result).toBe('(1 + $1)');
       expect(values).toEqual([2]);
     });
 

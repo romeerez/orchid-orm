@@ -608,7 +608,7 @@ let currentNowFn = defaultNowFn;
 
 // change default SQL for updatedAt and createdAt
 export const setDefaultNowFn = (sql: string) => {
-  currentNowFn = `(${sql})`; // sql should be wrapped into parenthesis to work properly in migrations
+  currentNowFn = sql;
 };
 
 // get default SQL for updatedAt and createdAt
@@ -1356,6 +1356,7 @@ export abstract class Column<
     options?: TableData.References.Options,
   ): T;
   foreignKey(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fnOrTable: any,
     column: string,
     options: TableData.References.Options = emptyObject,

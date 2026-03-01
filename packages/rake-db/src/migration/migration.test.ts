@@ -909,7 +909,7 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
           expectSql(`
             CREATE DOMAIN "schema"."domain" AS int4
             COLLATE "C"
-            DEFAULT 1 + 2
+            DEFAULT (1 + 2)
             NOT NULL CHECK (VALUE = 10) CHECK (VALUE = 20)
           `),
         () =>
