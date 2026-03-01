@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.63.3
+
+### Patch Changes
+
+- 7074748: Fix clock_timestamp migration (#647)
+
 ## 1.63.2
 
 ### Patch Changes
