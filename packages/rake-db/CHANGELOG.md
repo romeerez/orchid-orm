@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.29.8
+
+### Patch Changes
+
+- 1a97bb0: Fix migrator for clock_timestamp() default (#647)
+- Updated dependencies [1a97bb0]
+  - pqb@0.61.2
+
 ## 2.29.7
 
 ### Patch Changes

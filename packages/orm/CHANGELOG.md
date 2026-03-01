@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.63.2
+
+### Patch Changes
+
+- 1a97bb0: Fix migrator for clock_timestamp() default (#647)
+- Updated dependencies [1a97bb0]
+  - rake-db@2.29.8
+  - pqb@0.61.2
+
 ## 1.63.1
 
 ### Patch Changes

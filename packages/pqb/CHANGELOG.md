@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.2
+
+### Patch Changes
+
+- 1a97bb0: Fix migrator for clock_timestamp() default (#647)
+
 ## 0.61.1
 
 ### Patch Changes

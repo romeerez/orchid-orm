@@ -1,5 +1,12 @@
 # orchid-orm-valibot
 
+## 0.3.110
+
+### Patch Changes
+
+- Updated dependencies [1a97bb0]
+  - pqb@0.61.2
+
 ## 0.3.109
 
 ### Patch Changes
