@@ -351,9 +351,10 @@ const getColumnDbTypeForComparison = (
 };
 
 // https://github.com/romeerez/orchid-orm/issues/647
-// two clock_timestamp() statements aren't equal to each other, confusing SQL comparator
+// two clock_timestamp() statements aren't equal to each other, confusing SQL comparator.
+// adding 0.1ms to keep clock_timestamp() different from now(), so user can migrate from now() to clock_timestamp().
 const freezeSqlClock = (sql: string) =>
-  sql.replaceAll('clock_timestamp()', 'now()');
+  sql.replaceAll('clock_timestamp()', `'0.1ms'::interval + now()`);
 
 const applyCompareSql = async (
   compareSql: CompareSql,
