@@ -103,7 +103,8 @@ const timestampToCode = (
   const { dateTimePrecision: p } = self.data;
 
   const { defaultTimestamp } = self.data;
-  if (defaultTimestamp) {
+  // migrations should capture the current `nowSQL`, it can be changed by user later.
+  if (!ctx.migration && defaultTimestamp) {
     const noTz = self instanceof TimestampColumn ? 'NoTZ' : '';
 
     const def = self.data.default;

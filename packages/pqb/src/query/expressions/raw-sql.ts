@@ -177,7 +177,9 @@ export const rawSqlToCode = (rawSql: RawSqlBase, t: string): string => {
 
   code +=
     typeof sql === 'string'
-      ? `({ raw: '${sql.replace(/'/g, "\\'")}' })`
+      ? values
+        ? `({ raw: '${sql.replace(/'/g, "\\'")}' })`
+        : `\`${sql.replace(/`/g, '\\`')}\``
       : templateLiteralSQLToCode(sql);
 
   if (values) {

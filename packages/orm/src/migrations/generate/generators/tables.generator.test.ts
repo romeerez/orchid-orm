@@ -50,7 +50,7 @@ describe('tables', () => {
     assert.report('No changes were detected');
   });
 
-  it('should throw if found more than one table with same schema and naMe', async () => {
+  it('should throw if found more than one table with same schema and name', async () => {
     await arrange({
       tables: [
         class One extends BaseTable {
@@ -121,8 +121,8 @@ change(async (db) => {
       iNt: t.integer(),
       ` +
           // when creating, logic can see that `createdAt` and `updatedAt` are indeed coming from `timestamps` and can rely on this fact.
-          `creatEd: t.timestamps().createdAt,
-      updatEd: t.timestamps().updatedAt,
+          `creatEd: t.timestamp().default(t.sql\`now()\`),
+      updatEd: t.timestamp().default(t.sql\`now()\`),
     }),
     (t) => [
       t.primaryKey(['naMe', 'iNt']),

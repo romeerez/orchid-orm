@@ -268,6 +268,8 @@ export const columnsShapeToCode = (
   shape: Column.Shape.QueryInit,
 ): Codes => {
   const hasTimestamps =
+    // migration should capture the current `nowSQL`, it can be changed later by user
+    !ctx.migration &&
     'createdAt' in shape &&
     isDefaultTimeStamp(
       shape.createdAt as unknown as Column.Pick.DataAndDataType,
@@ -903,7 +905,7 @@ export const columnCode = (
 
   if (data.collate) addCode(code, `.collate(${singleQuote(data.collate)})`);
 
-  if (data.modifyQuery)
+  if (data.modifyQuery && !ctx.migration)
     addCode(code, `.modifyQuery(${data.modifyQuery.toString()})`);
 
   return code.length === 1 && typeof code[0] === 'string' ? code[0] : code;
