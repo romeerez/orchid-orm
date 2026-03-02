@@ -87,7 +87,10 @@ and a table to track applied migrations.
 Can be called in a transaction, it won't throw or fail the transaction if the schema or table already exist.
 
 ```ts
-import { createSchema, makeRakeDbConfig } from 'orchid-orm/migrations';
+import {
+  createMigrationsSchemaAndTable,
+  makeRakeDbConfig,
+} from 'orchid-orm/migrations';
 
 await createMigrationsSchemaAndTable(db, {
   schema: 'custom', // can be a function
