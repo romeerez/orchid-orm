@@ -1,5 +1,12 @@
 # orchid-orm-test-factory
 
+## 1.0.101
+
+### Patch Changes
+
+- Updated dependencies [0637755]
+  - pqb@0.61.3
+
 ## 1.0.100
 
 ### Patch Changes

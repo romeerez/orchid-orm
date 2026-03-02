@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.3
+
+### Patch Changes
+
+- 0637755: Fix pluck().map() to infer an array result type (#661)
+
 ## 0.61.2
 
 ### Patch Changes
