@@ -244,6 +244,14 @@ describe('map', () => {
 
         expect(res).toEqual([{ nested: ['name mapped'] }]);
       });
+
+      it('should map `pluck` values to array of objects', async () => {
+        const res = await User.pluck('id').map((id) => ({ id, age: 18 }));
+
+        assertType<typeof res, { id: number; age: number }[]>();
+
+        expect(res).toEqual([{ id: expect.any(Number), age: 18 }]);
+      });
     });
   });
 });
