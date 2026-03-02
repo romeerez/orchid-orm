@@ -76,10 +76,6 @@ export class QueryMap {
                 ? Result | undefined
                 : Result
             >
-          : K extends 'returnType'
-          ? T['returnType'] extends 'pluck'
-            ? 'all'
-            : T[K]
           : T[K];
       }
     : // When the map returns a scalar value, a query type should adjust to a single value
