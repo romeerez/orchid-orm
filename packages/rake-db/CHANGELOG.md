@@ -1,5 +1,18 @@
 # rake-db
 
+## 2.30.0
+
+### Minor Changes
+
+- 38f6948: Use `schema` property from db options in `rake-db`, remove `schema` property from `rake-db` config (#664)
+
+### Patch Changes
+
+- 9c4eb6d: Add `transactionSearchPath` for multi-tenancy in migrations (#654)
+- Updated dependencies [5ca8893]
+- Updated dependencies [9c4eb6d]
+  - pqb@0.61.4
+
 ## 2.29.10
 
 ### Patch Changes

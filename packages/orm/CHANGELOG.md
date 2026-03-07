@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.64.0
+
+### Minor Changes
+
+- 38f6948: Use `schema` property from db options in `rake-db`, remove `schema` property from `rake-db` config (#664)
+
+### Patch Changes
+
+- 9c4eb6d: Add `transactionSearchPath` for multi-tenancy in migrations (#654)
+- Updated dependencies [5ca8893]
+- Updated dependencies [9c4eb6d]
+- Updated dependencies [38f6948]
+  - pqb@0.61.4
+  - rake-db@2.30.0
+
 ## 1.63.5
 
 ### Patch Changes

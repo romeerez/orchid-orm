@@ -1,5 +1,12 @@
 # pqb
 
+## 0.61.4
+
+### Patch Changes
+
+- 5ca8893: Change `get query()` to `getQuery` in error classes to prevent endless recursion when Vitest tries to print an error (#669)
+- 9c4eb6d: Add `transactionSearchPath` for multi-tenancy in migrations (#654)
+
 ## 0.61.3
 
 ### Patch Changes
