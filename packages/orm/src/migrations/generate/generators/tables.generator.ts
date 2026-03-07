@@ -94,6 +94,7 @@ export const processTables = async (
   const tableExpressions: TableExpression[] = [];
   const { changeTables, changeTableSchemas, dropTables, tableShapes } =
     collectChangeAndDropTables(
+      adapter,
       config,
       tables,
       dbStructure,
@@ -162,6 +163,7 @@ const collectCreateTables = (
 };
 
 const collectChangeAndDropTables = (
+  adapter: AdapterBase,
   config: RakeDbConfig,
   tables: CodeTable[],
   dbStructure: IntrospectedStructure,
@@ -180,14 +182,14 @@ const collectChangeAndDropTables = (
   const tableShapes: TableShapes = {};
   const ignoreTables = generatorIgnore?.tables?.map((name) => {
     const [schema = currentSchema, table] = getSchemaAndTableFromName(
-      config,
+      currentSchema,
       name,
     );
     return { schema, table };
   });
 
   const { schema: migrationsSchema = 'public', table: migrationsTable } =
-    getMigrationsSchemaAndTable(config);
+    getMigrationsSchemaAndTable(adapter, config);
   for (const dbTable of dbStructure.tables) {
     if (
       (dbTable.name === migrationsTable &&

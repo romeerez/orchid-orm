@@ -52,7 +52,7 @@ export const astToGenerateItem = (
     let dep = typeSchemaCache.get(type);
     if (!dep) {
       const [schema = currentSchema, name] = getSchemaAndTableFromName(
-        config,
+        currentSchema,
         type,
       );
       dep = `${schema}.${name}`;
@@ -285,7 +285,7 @@ const analyzeTableColumns = (
         );
 
         const [s = currentSchema, t] = getForeignKeyTable(
-          config,
+          currentSchema,
           fkey.fnOrTable,
         );
         const foreignTable = `${s}.${t}`;
@@ -365,7 +365,7 @@ const analyzeTableData = (
 
       if (constraint.references) {
         const [s = currentSchema, t] = getForeignKeyTable(
-          config,
+          currentSchema,
           constraint.references.fnOrTable,
         );
         deps.push(`${s}.${t}`);

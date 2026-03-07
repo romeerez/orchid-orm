@@ -209,7 +209,7 @@ const astEncoders: {
     if (isShifted) {
       addCode(code, `await db.${ast.action}Table(`);
 
-      const inner: Code[] = [`${quoteSchemaTable(ast)},`];
+      const inner: Code[] = [`${quoteSchemaTable(ast, currentSchema)},`];
       code.push(inner);
       code = inner;
 
@@ -226,7 +226,10 @@ const astEncoders: {
     } else {
       addCode(
         code,
-        `await db.${ast.action}Table(${quoteSchemaTable(ast)}, (t) => ({`,
+        `await db.${ast.action}Table(${quoteSchemaTable(
+          ast,
+          currentSchema,
+        )}, (t) => ({`,
       );
     }
 
@@ -493,9 +496,9 @@ const astEncoders: {
       ast.to,
     )});`;
   },
-  extension(ast) {
+  extension(ast, _, currentSchema) {
     const code: Code[] = [
-      `await db.${ast.action}Extension(${quoteSchemaTable(ast)}`,
+      `await db.${ast.action}Extension(${quoteSchemaTable(ast, currentSchema)}`,
     ];
     if (ast.version) {
       addCode(code, ', {');
@@ -539,12 +542,13 @@ const astEncoders: {
   domain(ast, _, currentSchema) {
     return `await db.${ast.action}Domain(${quoteSchemaTable(
       ast,
+      currentSchema,
     )}, (t) => ${ast.baseType.toCode(
       { t: 't', table: ast.name, currentSchema },
       ast.baseType.data.name ?? '',
     )});`;
   },
-  collation(ast) {
+  collation(ast, _, currentSchema) {
     const params: string[] = [];
     if (ast.locale) params.push(`locale: '${ast.locale}',`);
     if (ast.lcCollate) params.push(`lcCollate: '${ast.lcCollate}',`);
@@ -554,7 +558,7 @@ const astEncoders: {
     if (ast.version) params.push(`version: '${ast.version}',`);
 
     return [
-      `await db.createCollation(${quoteSchemaTable(ast)}, {`,
+      `await db.createCollation(${quoteSchemaTable(ast, currentSchema)}, {`,
       params,
       '});',
     ];
@@ -591,8 +595,10 @@ const astEncoders: {
       })}, ${singleQuote(ast.from)}, ${singleQuote(ast.to)});`,
     ];
   },
-  view(ast) {
-    const code: Code[] = [`await db.createView(${quoteSchemaTable(ast)}`];
+  view(ast, _, currentSchema) {
+    const code: Code[] = [
+      `await db.createView(${quoteSchemaTable(ast, currentSchema)}`,
+    ];
 
     const options: Code[] = [];
     if (ast.options.recursive) options.push('recursive: true,');

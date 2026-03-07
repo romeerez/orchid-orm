@@ -6,16 +6,20 @@ import {
   toLine,
 } from '../rake-db.test-utils';
 import { raw, singleQuote } from 'pqb';
-import { sql } from 'test-utils';
+import { asMock, sql } from 'test-utils';
 
 const db = getDb();
 
 describe('migration', () => {
+  beforeEach(() => {
+    asMock(db.adapter.getSchema)?.mockRestore?.();
+  });
+
   describe('renameTable', () => {
     const testRenameTable = makeTestUpAndDown('renameTable');
 
     it('should pick schema name from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testRenameTable(
         (action) => db[action]('from', 'to'),
@@ -28,8 +32,6 @@ describe('migration', () => {
             ALTER TABLE "schema"."to" RENAME TO "from"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should rename a table', async () => {
@@ -113,7 +115,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('addColumn', 'dropColumn');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('table', 'colUmn', (t) => t.text()),
@@ -128,8 +130,6 @@ describe('migration', () => {
             DROP COLUMN "col_umn"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should use changeTable to add and drop a column', async () => {
@@ -153,7 +153,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('addIndex', 'dropIndex');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('table', ['iD']),
@@ -166,8 +166,6 @@ describe('migration', () => {
             DROP INDEX "table_i_d_idx"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should use changeTable to add and drop an index (deprecated name argument)', async () => {
@@ -218,7 +216,7 @@ describe('migration', () => {
     const test = makeTestUpAndDown('renameIndex');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await test(
         (action) => db[action]('table', 'from', 'to'),
@@ -231,8 +229,6 @@ describe('migration', () => {
             ALTER INDEX "schema"."to" RENAME TO "from"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should rename an index', async () => {
@@ -254,7 +250,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('addForeignKey', 'dropForeignKey');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('table', ['iD'], 'otherTable', ['foreignId']),
@@ -273,8 +269,6 @@ describe('migration', () => {
             DROP CONSTRAINT "table_i_d_fkey"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should use changeTable to add and drop a foreignKey', async () => {
@@ -318,7 +312,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('addCheck', 'dropCheck');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('table', raw({ raw: 'check' })),
@@ -333,8 +327,6 @@ describe('migration', () => {
               DROP CONSTRAINT "table_check"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should use changeTable to add and drop a check', async () => {
@@ -358,7 +350,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('renameConstraint');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('table', 'from', 'to'),
@@ -371,8 +363,6 @@ describe('migration', () => {
             `ALTER TABLE "schema"."table" RENAME CONSTRAINT "to" TO "from"`,
           ),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should rename a constraint', async () => {
@@ -394,7 +384,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('addPrimaryKey', 'dropPrimaryKey');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('table', ['iD', 'naMe']),
@@ -409,8 +399,6 @@ describe('migration', () => {
             DROP CONSTRAINT "table_pkey"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should use changeTable to add and drop primary key', async () => {
@@ -450,7 +438,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('renameColumn');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         () => db.renameColumn('table', 'frOm', 'tO'),
@@ -465,8 +453,6 @@ describe('migration', () => {
             RENAME COLUMN "t_o" TO "fr_om"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should use changeTable to rename a column', async () => {
@@ -524,7 +510,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('createExtension', 'dropExtension');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('extensionName'),
@@ -537,8 +523,6 @@ describe('migration', () => {
             DROP EXTENSION "extensionName"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it(`should add and drop an extension`, async () => {
@@ -566,7 +550,7 @@ describe('migration', () => {
     const testUpAndDown = makeTestUpAndDown('createEnum', 'dropEnum');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('enumName', ['one', 'two']),
@@ -579,8 +563,6 @@ describe('migration', () => {
             DROP TYPE "schema"."enumName"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it(`should add and drop an enum`, async () => {
@@ -606,7 +588,7 @@ describe('migration', () => {
     const testRenameType = makeTestUpAndDown('renameType');
 
     it('should pick the schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testRenameType(
         (action) => db[action]('from', 'to'),
@@ -619,8 +601,6 @@ describe('migration', () => {
             ALTER TYPE "schema"."to" RENAME TO "from"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should rename a type', async () => {
@@ -771,7 +751,7 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     ];
 
     it('should add and drop enum value using schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) =>
@@ -789,8 +769,6 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
             ...changeEnumTemplateSql(['one', 'two', 'four']),
           ]),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should add and drop enum value', async () => {
@@ -813,15 +791,13 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     });
 
     it('should change enum values using schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await makeTestUpAndDown('changeEnumValues')(
         (action) => db[action]('enumName', ['one', 'two'], ['three', 'four']),
         () => expectSql(changeEnumTemplateSql(['three', 'four'])),
         () => expectSql(changeEnumTemplateSql(['one', 'two'])),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should change enum values', async () => {
@@ -836,7 +812,7 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
 
   describe('renameEnumValues', () => {
     it('should use schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await makeTestUpAndDown('renameEnumValues')(
         (action) => db[action]('enum', { a: 'b', c: 'd' }),
@@ -851,8 +827,6 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
             `ALTER TYPE "schema"."enum" RENAME VALUE "d" TO "c"`,
           ]),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should rename enum values', async () => {
@@ -876,7 +850,7 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     const testUpAndDown = makeTestUpAndDown('createDomain', 'dropDomain');
 
     it('should use schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) => db[action]('domain', (t) => t.integer()),
@@ -890,8 +864,6 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
             DROP DOMAIN "schema"."domain"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it(`should create and drop domain`, async () => {
@@ -938,7 +910,7 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     const testRenameType = makeTestUpAndDown('renameDomain');
 
     it('should use schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testRenameType(
         (action) => db[action]('from', 'to'),
@@ -951,8 +923,6 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
             ALTER DOMAIN "schema"."to" RENAME TO "from"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it('should rename a domain', async () => {
@@ -1020,7 +990,7 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     const testUpAndDown = makeTestUpAndDown('createCollation', 'dropCollation');
 
     it('should use schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       await testUpAndDown(
         (action) =>
@@ -1038,8 +1008,6 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
             DROP COLLATION "schema"."collation"
           `),
       );
-
-      db.options.schema = undefined;
     });
 
     it(`should create and drop collation with options`, async () => {
@@ -1096,15 +1064,13 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     beforeEach(jest.clearAllMocks);
 
     it('should use schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       queryMock.mockResolvedValueOnce({ rowCount: 1 });
       await db.tableExists('table');
       expectSql(
         `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1 AND "table_schema" = $2`,
       );
-
-      db.options.schema = undefined;
     });
 
     it('should support table with schema', async () => {
@@ -1128,15 +1094,13 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     beforeEach(jest.clearAllMocks);
 
     it('should use schema from the config', async () => {
-      db.options.schema = 'schema';
+      jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
       queryMock.mockResolvedValueOnce({ rowCount: 1 });
       expect(await db.columnExists('table', 'colum')).toBe(true);
       expectSql(
         `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2 AND "table_schema" = $3`,
       );
-
-      db.options.schema = undefined;
     });
 
     it('should support table with schema', async () => {

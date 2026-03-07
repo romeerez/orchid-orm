@@ -277,7 +277,6 @@ const changeColumns = async (
     );
 
     const action = await compareColumns(
-      config,
       adapter,
       domainsMap,
       ast,
@@ -328,7 +327,6 @@ const changeColumns = async (
 };
 
 const compareColumns = async (
-  config: RakeDbConfig,
   adapter: AdapterBase,
   domainsMap: DbStructureDomainsMap,
   ast: RakeDbAst[],
@@ -347,8 +345,8 @@ const compareColumns = async (
     codeColumn = codeColumn.data.item;
   }
 
-  const dbType = getColumnDbType(config, dbColumn, currentSchema);
-  const codeType = getColumnDbType(config, codeColumn, currentSchema);
+  const dbType = getColumnDbType(dbColumn, currentSchema);
+  const codeType = getColumnDbType(codeColumn, currentSchema);
 
   if (dbType !== codeType) {
     const typeCasts = await getTypeCasts(adapter, typeCastsCache);
@@ -557,13 +555,12 @@ const changeColumn = (
 };
 
 export const getColumnDbType = (
-  config: RakeDbConfig,
   column: Column.Pick.DataAndDataType,
   currentSchema: string,
 ) => {
   if (column instanceof EnumColumn) {
     const [schema = currentSchema, name] = getSchemaAndTableFromName(
-      config,
+      currentSchema,
       column.enumName,
     );
     return `${schema}.${name}`;

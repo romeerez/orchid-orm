@@ -45,7 +45,7 @@ describe('create and drop table', () => {
   });
 
   it('should pick up schema from the config', async () => {
-    db.options.schema = 'custom';
+    jest.spyOn(db.adapter, 'getSchema').mockReturnValue('custom');
 
     await testUpAndDown(
       (action) => db[action]('name'),
@@ -60,7 +60,7 @@ describe('create and drop table', () => {
         `),
     );
 
-    db.options.schema = undefined;
+    jest.resetAllMocks();
   });
 
   it('create and drop an empty table', async () => {

@@ -471,7 +471,11 @@ export const db = custom({ databaseURL: 'url' }, {
           },
         });
 
-        await pull(adapters, { ...testConfig, schema: 'custom' });
+        adapters = options.map(
+          (opts) => new TestAdapter({ ...opts, schema: 'schema' }),
+        );
+
+        await pull(adapters, testConfig);
 
         assert.dbFile([
           [

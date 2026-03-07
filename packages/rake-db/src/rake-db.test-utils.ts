@@ -41,7 +41,9 @@ export const testConfig: RakeDbConfig & {
 
 export const makeDb = (config?: Partial<RakeDbConfig>) => {
   const db = createMigrationInterface(
-    {} as unknown as AdapterBase,
+    {
+      getSchema() {},
+    } as unknown as AdapterBase,
     true,
     config ? { ...testConfig, ...config } : testConfig,
   ) as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;

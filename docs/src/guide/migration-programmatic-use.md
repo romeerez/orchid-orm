@@ -81,10 +81,10 @@ await createDatabase(adapter, {
 
 ### createMigrationsSchemaAndTable
 
-`createMigrationsSchemaAndTable` creates a schema, if it is present and is not "public",
-and a table to track applied migrations.
+`createMigrationsSchemaAndTable` creates a table to keep track of applied migrations.
+If the db connection config has `schema` or if `migrationsTable` has it, it will also try to create the schema.
 
-Can be called in a transaction, it won't throw or fail the transaction if the schema or table already exist.
+Can be called in a transaction, it won't throw or fail the transaction if the schema or the table already exist.
 
 ```ts
 import {
@@ -93,16 +93,17 @@ import {
 } from 'orchid-orm/migrations';
 
 await createMigrationsSchemaAndTable(db, {
-  schema: 'custom', // can be a function
   migrationsTable: 'migrations',
+  // can contain schema
+  migrationsTable: 'custom-schema.migrations',
+
   logger: console, // will log if logger is provided
 });
 
-// you can use existing config
+// to provide `log: true` instead of a logger, prepare the config with `makeRakeDbConfig`
 const config = makeRakeDbConfig({
-  schema: 'custom',
-  // createMigrationsSchemaAndTable will log when log is true
   log: true,
+  migrationsTable: 'migrations',
   import: (path) => import(path),
 });
 

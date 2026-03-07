@@ -19,6 +19,7 @@ import {
   DbResult,
   createDbWithAdapter,
   TransactionAdapterBase,
+  QuerySchema,
 } from 'pqb';
 
 export const createDb = <
@@ -66,7 +67,9 @@ export interface AdapterConfig
   databaseURL?: string;
 }
 
-export type NodePostgresAdapterOptions = Omit<AdapterConfig, 'log'>;
+export interface NodePostgresAdapterOptions extends Omit<AdapterConfig, 'log'> {
+  schema?: QuerySchema;
+}
 
 export class NodePostgresAdapter implements AdapterBase {
   pool: Pool;
@@ -182,6 +185,10 @@ export class NodePostgresAdapter implements AdapterBase {
   getHost(): string {
     const url = this.getURL();
     return url ? url.hostname : (this.config.host as string);
+  }
+
+  getSchema(): QuerySchema | undefined {
+    return this.config.schema;
   }
 
   connect(): Promise<PoolClient> {
@@ -407,6 +414,10 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
 
   getHost(): string {
     return this.adapter.getHost();
+  }
+
+  getSchema(): QuerySchema | undefined {
+    return this.adapter.getSchema();
   }
 
   connect(): Promise<PoolClient> {

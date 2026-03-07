@@ -18,6 +18,7 @@ import {
   DbResult,
   ColumnSchemaConfig,
   TransactionAdapterBase,
+  QuerySchema,
 } from 'pqb';
 
 export interface CreatePostgresJsDbOptions<
@@ -44,6 +45,7 @@ export interface PostgresJsAdapterOptions
     AdapterConfigBase {
   databaseURL?: string;
   searchPath?: string;
+  schema?: QuerySchema;
 }
 
 type RawResult = RowList<(Row & Iterable<Row>)[]>;
@@ -246,6 +248,10 @@ export class PostgresJsAdapter implements AdapterBase {
     return url ? url.hostname : (this.config.host as string);
   }
 
+  getSchema(): QuerySchema | undefined {
+    return this.config.schema;
+  }
+
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
@@ -392,6 +398,10 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
 
   getHost(): string {
     return this.adapter.getHost();
+  }
+
+  getSchema(): QuerySchema | undefined {
+    return this.adapter.getSchema();
   }
 
   query<T extends QueryResultRow = QueryResultRow>(

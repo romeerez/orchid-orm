@@ -10,7 +10,6 @@ import {
   MaybePromise,
   NoPrimaryKeyOption,
   QueryLogOptions,
-  QuerySchema,
   RecordString,
 } from 'pqb';
 import path from 'path';
@@ -136,11 +135,6 @@ export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
    */
   __rakeDbConfig: true;
   migrationsTable: string;
-  /**
-   * by default, all the migrated tables and the special table for tracking migrations are created in `public`.
-   * set this `schema` setting to use create everything in this schema instead.
-   */
-  schema?: QuerySchema;
   recurrentPath?: string;
   columnTypes: ColumnTypes;
   beforeChange?: ChangeCallback;

@@ -13,7 +13,8 @@ npm run db drop
 
 Unless `databaseURL` contains db superuser credentials, these commands will ask for a database administrator username and password.
 
-If a custom `schema` is chosen for a connection, `db create` will also try to create this schema (won't fail if it is already exists).
+When the `schema` config is specified in the db connection settings or when `migrationsTable` contains a schema,
+`db create` will also try to create this schema (won't fail if it is already exists).
 
 ## reset a database
 

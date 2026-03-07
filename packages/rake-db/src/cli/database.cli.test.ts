@@ -49,7 +49,9 @@ const database = 'dbname';
 const owner = 'username';
 
 const makeAdapter = () => {
-  const adapter = new PostgresJsAdapter({});
+  const adapter = new PostgresJsAdapter({
+    schema: 'common-schema',
+  });
 
   adapter.getDatabase = () => database;
   adapter.getUser = () => owner;
@@ -68,7 +70,6 @@ const makeAdapter = () => {
 const { adapter } = makeAdapter();
 const config = {
   ...testConfig,
-  schema: 'common-schema',
   migrationsTable: 'migrations-schema.migrations-table',
   recurrentPath: 'recurrent',
 };

@@ -122,8 +122,7 @@ export const report = (
                     ? green('+ add column')
                     : red('- drop column')
                 } ${key} ${
-                  column.data.alias ??
-                  getColumnDbType(config, column, currentSchema)
+                  column.data.alias ?? getColumnDbType(column, currentSchema)
                 }${column.data.isNullable ? ' nullable' : ''}${
                   primaryKey ? ' primary key' : ''
                 }${
@@ -226,7 +225,7 @@ export const report = (
             if (!references) continue;
 
             const [schema, name] = getSchemaAndTableFromName(
-              config,
+              currentSchema,
               references.fnOrTable as string,
             );
 

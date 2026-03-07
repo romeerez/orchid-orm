@@ -93,15 +93,15 @@ export const generate = async (
   );
 
   const [adapter] = adapters;
+  const adapterSchema = adapter.getSchema();
   const currentSchema =
-    (typeof config.schema === 'function' ? config.schema() : config.schema) ??
+    (typeof adapterSchema === 'function' ? adapterSchema() : adapterSchema) ??
     'public';
 
   const db = await getDbFromConfig(config, dbPath);
   const { columnTypes, internal } = db.$qb;
 
   const codeItems = await getActualItems(
-    config,
     db,
     currentSchema,
     internal,
@@ -303,7 +303,6 @@ const compareDbStructures = (
 };
 
 const getActualItems = async (
-  config: RakeDbConfig,
   db: DbInstance,
   currentSchema: string,
   internal: QueryInternal,
@@ -364,7 +363,7 @@ const getActualItems = async (
         delete table.shape[key];
       } else if (column instanceof DomainColumn) {
         const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
-          config,
+          currentSchema,
           column.dataType,
         );
         domains.set(column.dataType, {
@@ -383,7 +382,7 @@ const getActualItems = async (
             : undefined;
 
         if (en) {
-          processEnumColumn(config, en, currentSchema, codeItems);
+          processEnumColumn(en, currentSchema, codeItems);
         }
       }
     }
@@ -391,7 +390,7 @@ const getActualItems = async (
 
   if (internal.extensions) {
     for (const extension of internal.extensions) {
-      const [schema] = getSchemaAndTableFromName(config, extension.name);
+      const [schema] = getSchemaAndTableFromName(currentSchema, extension.name);
       if (schema) codeItems.schemas.add(schema);
     }
   }
@@ -399,7 +398,7 @@ const getActualItems = async (
   if (internal.domains) {
     for (const key in internal.domains) {
       const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
-        config,
+        currentSchema,
         key,
       );
       const column = internal.domains[key](columnTypes);
@@ -421,7 +420,6 @@ const getActualItems = async (
 };
 
 const processEnumColumn = (
-  config: RakeDbConfig,
   column: Column.Pick.QueryColumn,
   currentSchema: string,
   codeItems: CodeItems,
@@ -431,7 +429,7 @@ const processEnumColumn = (
     options: [string, ...string[]];
   };
 
-  const [schema, name] = getSchemaAndTableFromName(config, enumName);
+  const [schema, name] = getSchemaAndTableFromName(currentSchema, enumName);
   const enumSchema = schema ?? currentSchema;
 
   codeItems.enums.set(`${enumSchema}.${name}`, {

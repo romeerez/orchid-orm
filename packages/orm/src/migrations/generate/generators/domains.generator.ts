@@ -14,7 +14,6 @@ import {
   DbStructure,
   IntrospectedStructure,
   instantiateDbColumn,
-  RakeDbConfig,
 } from 'rake-db';
 import { getColumnDbType } from './columns.generator';
 import {
@@ -44,7 +43,6 @@ export interface CodeDomain {
 }
 
 export const processDomains = async (
-  config: RakeDbConfig,
   ast: RakeDbAst[],
   adapter: AdapterBase,
   domainsMap: DbStructureDomainsMap,
@@ -61,7 +59,7 @@ export const processDomains = async (
   if (domains) {
     for (const { schemaName, name, column } of domains) {
       codeDomains.push(
-        makeComparableDomain(config, currentSchema, schemaName, name, column),
+        makeComparableDomain(currentSchema, schemaName, name, column),
       );
     }
   }
@@ -105,7 +103,6 @@ export const processDomains = async (
     }
 
     const dbDomain = makeComparableDomain(
-      config,
       currentSchema,
       domain.schemaName,
       domain.name,
@@ -126,7 +123,6 @@ export const processDomains = async (
       pushCompareChecks(compare, domain, found);
 
       const source = `(VALUES (NULL::${getColumnDbType(
-        config,
         dbColumn,
         currentSchema,
       )})) t(value)`;
@@ -189,7 +185,6 @@ export const processDomains = async (
 };
 
 const makeComparableDomain = (
-  config: RakeDbConfig,
   currentSchema: string,
   schemaName: string,
   name: string,
@@ -202,9 +197,9 @@ const makeComparableDomain = (
     inner = inner.data.item;
     arrayDims++;
   }
-  const fullType = getColumnDbType(config, inner, currentSchema);
+  const fullType = getColumnDbType(inner, currentSchema);
   const [typeSchema = 'pg_catalog', type] = getSchemaAndTableFromName(
-    config,
+    currentSchema,
     fullType,
   );
 

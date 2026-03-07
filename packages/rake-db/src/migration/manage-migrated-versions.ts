@@ -3,7 +3,6 @@ import { SilentQueries } from './migration';
 import {
   AdapterBase,
   QueryLogger,
-  QuerySchema,
   RecordOptionalString,
   RecordString,
   RecordUnknown,
@@ -24,7 +23,7 @@ import {
   migrationsSchemaTableSql,
 } from './migration.utils';
 import { createSchema, createTable } from '../commands/create-or-drop';
-import { DbParam } from '../utils';
+import { DbParam, getMaybeTransactionAdapter } from '../utils';
 
 export const saveMigratedVersion = async (
   db: SilentQueries,
@@ -34,6 +33,7 @@ export const saveMigratedVersion = async (
 ): Promise<void> => {
   await db.silentArrays(
     `INSERT INTO ${migrationsSchemaTableSql(
+      db,
       config,
     )}(version, name) VALUES ($1, $2)`,
     [version, name],
@@ -43,12 +43,12 @@ export const saveMigratedVersion = async (
 export const createMigrationsSchemaAndTable = async (
   db: DbParam,
   config: {
-    schema?: QuerySchema;
     migrationsTable: string;
     logger?: QueryLogger;
   },
 ): Promise<void> => {
-  const { schema, table } = getMigrationsSchemaAndTable(config);
+  const adapter = getMaybeTransactionAdapter(db);
+  const { schema, table } = getMigrationsSchemaAndTable(adapter, config);
   if (schema) {
     const res = await createSchema(db, schema);
     if (res === 'done') {
@@ -79,6 +79,7 @@ export const deleteMigratedVersion = async (
 ) => {
   const res = await adapter.silentArrays(
     `DELETE FROM ${migrationsSchemaTableSql(
+      adapter,
       config,
     )} WHERE version = $1 AND name = $2`,
     [version, name],
@@ -103,7 +104,7 @@ export const getMigratedVersionsMap = async (
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   try {
-    const table = migrationsSchemaTableSql(config);
+    const table = migrationsSchemaTableSql(adapter, config);
 
     const result = await adapter.arrays<[string, string]>(
       `SELECT * FROM ${table} ORDER BY version`,

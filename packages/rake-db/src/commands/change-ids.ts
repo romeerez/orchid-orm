@@ -155,6 +155,7 @@ export const renameMigrationVersionsInDb = async (
 ) => {
   await adapter.arrays(
     `UPDATE ${migrationsSchemaTableSql(
+      adapter,
       config,
     )} AS t SET version = v.version FROM (VALUES ${values
       .map(

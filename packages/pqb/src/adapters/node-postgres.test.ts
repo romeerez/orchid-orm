@@ -232,4 +232,61 @@ describe('adapter', () => {
       ]);
     });
   });
+
+  describe('getters', () => {
+    it('should have getDatabase', () => {
+      const adapter = new NodePostgresAdapter({
+        databaseURL: 'postgres://user:@host:123/db',
+      });
+      expect(adapter.getDatabase()).toBe('db');
+
+      const adapter2 = new NodePostgresAdapter({
+        database: 'db',
+      });
+      expect(adapter2.getDatabase()).toBe('db');
+    });
+
+    it('should have getUser', () => {
+      const adapter = new NodePostgresAdapter({
+        databaseURL: 'postgres://user:@host:123/db',
+      });
+      expect(adapter.getUser()).toBe('user');
+
+      const adapter2 = new NodePostgresAdapter({
+        user: 'user',
+      });
+      expect(adapter2.getUser()).toBe('user');
+    });
+
+    it('should have getSearchPath', () => {
+      const adapter = new NodePostgresAdapter({
+        databaseURL: 'postgres://user:@host:123/db?searchPath=path',
+      });
+      expect(adapter.getSearchPath()).toBe('path');
+
+      const adapter2 = new NodePostgresAdapter({
+        searchPath: 'path',
+      });
+      expect(adapter2.getSearchPath()).toBe('path');
+    });
+
+    it('should have getHost', () => {
+      const adapter = new NodePostgresAdapter({
+        databaseURL: 'postgres://user:@host:123/db',
+      });
+      expect(adapter.getHost()).toBe('host');
+
+      const adapter2 = new NodePostgresAdapter({
+        host: 'host',
+      });
+      expect(adapter2.getHost()).toBe('host');
+    });
+
+    it('should have getSchema', () => {
+      const adapter = new NodePostgresAdapter({
+        schema: 'schema',
+      });
+      expect(adapter.getSchema()).toBe('schema');
+    });
+  });
 });

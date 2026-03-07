@@ -61,8 +61,11 @@ export const createOrDropDatabase = async (
 
     if (action === 'create') {
       await adapter.transaction(undefined, async (tx) => {
-        if (config.schema) {
-          const quoted = `"${config.schema}"`;
+        const schema = tx.getSchema();
+        if (schema) {
+          const quoted = `"${
+            typeof schema === 'function' ? schema() : schema
+          }"`;
           const res = await createSchema(tx, quoted);
           if (res === 'done') {
             config.logger?.log(`Created schema ${quoted}`);

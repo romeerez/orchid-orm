@@ -1,5 +1,42 @@
 # Breaking changes
 
+## orchid-orm 1.64
+
+`rake-db` config change:
+
+`schema` is a default db schema where your tables live.
+When querying, tables will be prefixed with it: `SELECT * FROM "custom-schema"."table"`.
+In the `rake-db` migrator the tables will be created inside it.
+
+Instead of `schema` property in `rake-db` config like this:
+
+```ts
+export const change = rakeDb.run(
+  {
+    databaseURL: 'url',
+  },
+  {
+    schema: 'custom-schema',
+  },
+);
+```
+
+The `schema` is now taken from the first argument's options:
+
+```ts
+export const change = rakeDb.run(
+  {
+    databaseURL: 'url',
+    schema: 'custom-schema',
+  },
+  {
+    // other configs
+  },
+);
+```
+
+It's recommended to keep the db connection options in a separate config that you can reuse in both `orchidORM` and the `rake-db` migrator.
+
 ## orchid-orm 1.63
 
 `db.$adapter` on ORM instance and `db.adapter` on the query builder instance were confusing because you might expect it

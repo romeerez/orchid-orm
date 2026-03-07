@@ -20,6 +20,7 @@ import {
   snakeCaseKey,
   toArray,
   toSnakeCase,
+  QuerySchema,
 } from 'pqb';
 import {
   ChangeTableCallback,
@@ -56,7 +57,6 @@ import {
 } from './migration.utils';
 import { tableMethods } from './table-methods';
 import { TableQuery } from './create-table';
-import { RakeDbConfig } from 'rake-db';
 
 interface ChangeTableData {
   add: TableData;
@@ -365,8 +365,10 @@ export const changeTable = async <CT>(
   addOrDropChanges.length = 0;
   const changeData = fn?.(tableChanger) || {};
 
+  const schema = migration.adapter.getSchema();
+
   const ast = makeAst(
-    migration.options,
+    schema,
     up,
     tableName,
     changeData,
@@ -374,7 +376,8 @@ export const changeTable = async <CT>(
     options,
   );
 
-  const queries = astToQueries(migration.options, ast, snakeCase, language);
+  const queries = astToQueries(schema, ast, snakeCase, language);
+
   for (const query of queries) {
     const result = await migration.adapter.arrays(interpolateSqlValues(query));
     query.then?.(result);
@@ -382,7 +385,7 @@ export const changeTable = async <CT>(
 };
 
 const makeAst = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   up: boolean,
   name: string,
   changeData: TableChangeData,
@@ -450,11 +453,11 @@ const makeAst = (
     shape[name] = arr;
   }
 
-  const [schema, table] = getSchemaAndTableFromName(config, name);
+  const [s, table] = getSchemaAndTableFromName(schema, name);
 
   return {
     type: 'changeTable',
-    schema,
+    schema: s,
     name: table,
     comment: comment
       ? up
@@ -477,7 +480,7 @@ interface PrimaryKey extends TableData.PrimaryKey {
 }
 
 const astToQueries = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   ast: RakeDbAst.ChangeTable,
   snakeCase?: boolean,
   language?: string,
@@ -509,7 +512,7 @@ const astToQueries = (
     if (Array.isArray(item)) {
       for (const it of item) {
         handlePrerequisitesForTableItem(
-          config,
+          schema,
           key,
           it,
           queries,
@@ -520,7 +523,7 @@ const astToQueries = (
       }
     } else {
       handlePrerequisitesForTableItem(
-        config,
+        schema,
         key,
         item,
         queries,
@@ -564,7 +567,7 @@ const astToQueries = (
     if (Array.isArray(item)) {
       for (const it of item) {
         handleTableItemChange(
-          config,
+          schema,
           key,
           it,
           ast,
@@ -584,7 +587,7 @@ const astToQueries = (
       }
     } else {
       handleTableItemChange(
-        config,
+        schema,
         key,
         item,
         ast,
@@ -632,7 +635,7 @@ const astToQueries = (
     ...dropConstraints.map(
       (foreignKey) =>
         `\n DROP ${constraintToSql(
-          config,
+          schema,
           ast,
           false,
           foreignKey,
@@ -667,7 +670,7 @@ const astToQueries = (
     ...addConstraints.map(
       (foreignKey) =>
         `\n ADD ${constraintToSql(
-          config,
+          schema,
           ast,
           true,
           foreignKey,
@@ -692,14 +695,10 @@ const astToQueries = (
     queries.push(alterTableSql(tableName, alterTable, values));
   }
 
-  queries.push(
-    ...indexesToQuery(config, false, ast, dropIndexes, snakeCase, language),
-  );
-  queries.push(
-    ...indexesToQuery(config, true, ast, addIndexes, snakeCase, language),
-  );
-  queries.push(...excludesToQuery(config, false, ast, dropExcludes, snakeCase));
-  queries.push(...excludesToQuery(config, true, ast, addExcludes, snakeCase));
+  queries.push(...indexesToQuery(false, ast, dropIndexes, snakeCase, language));
+  queries.push(...indexesToQuery(true, ast, addIndexes, snakeCase, language));
+  queries.push(...excludesToQuery(false, ast, dropExcludes, snakeCase));
+  queries.push(...excludesToQuery(true, ast, addExcludes, snakeCase));
   queries.push(...commentsToQuery(ast, comments));
 
   return queries;
@@ -716,7 +715,7 @@ const alterTableSql = (
 });
 
 const handlePrerequisitesForTableItem = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   key: string,
   item: RakeDbAst.ChangeTableItem,
   queries: TableQuery[],
@@ -727,7 +726,7 @@ const handlePrerequisitesForTableItem = (
   if ('item' in item) {
     const { item: column } = item;
     if (column instanceof EnumColumn) {
-      queries.push(makePopulateEnumQuery(config, column));
+      queries.push(makePopulateEnumQuery(schema, column));
     }
   }
 
@@ -741,11 +740,11 @@ const handlePrerequisitesForTableItem = (
     }
   } else if (item.type === 'change') {
     if (item.from.column instanceof EnumColumn) {
-      queries.push(makePopulateEnumQuery(config, item.from.column));
+      queries.push(makePopulateEnumQuery(schema, item.from.column));
     }
 
     if (item.to.column instanceof EnumColumn) {
-      queries.push(makePopulateEnumQuery(config, item.to.column));
+      queries.push(makePopulateEnumQuery(schema, item.to.column));
     }
 
     if (item.from.primaryKey) {
@@ -773,7 +772,7 @@ const handlePrerequisitesForTableItem = (
 };
 
 const handleTableItemChange = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   key: string,
   item: RakeDbAst.ChangeTableItem,
   ast: RakeDbAst.ChangeTable,
@@ -799,7 +798,7 @@ const handleTableItemChange = (
 
     alterTable.push(
       `ADD COLUMN ${columnToSql(
-        config,
+        schema,
         name,
         column,
         values,
@@ -829,8 +828,8 @@ const handleTableItemChange = (
       const type =
         !to.column || to.column.data.isOfCustomType
           ? to.column && to.column instanceof DomainColumn
-            ? quoteNameFromString(config, to.type)
-            : quoteCustomType(config, to.type)
+            ? quoteNameFromString(schema, to.type)
+            : quoteCustomType(schema, to.type)
           : to.type;
 
       const using = item.using?.usingUp
@@ -844,7 +843,7 @@ const handleTableItemChange = (
       alterTable.push(
         `ALTER COLUMN "${name}" TYPE ${type}${
           to.collate
-            ? ` COLLATE ${quoteNameFromString(config, to.collate)}`
+            ? ` COLLATE ${quoteNameFromString(schema, to.collate)}`
             : ''
         }${using}`,
       );
@@ -860,7 +859,7 @@ const handleTableItemChange = (
 
       if (to.identity) {
         alterTable.push(
-          `ALTER COLUMN "${name}" ADD ${identityToSql(config, to.identity)}`,
+          `ALTER COLUMN "${name}" ADD ${identityToSql(schema, to.identity)}`,
         );
       }
     }

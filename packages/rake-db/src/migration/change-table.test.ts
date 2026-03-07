@@ -36,8 +36,8 @@ describe('changeTable', () => {
     `);
   });
 
-  it('should pick up schema from the config', async () => {
-    db.options.schema = 'schema';
+  it('should pick up schema from the adapter', async () => {
+    jest.spyOn(db.adapter, 'getSchema').mockReturnValue('schema');
 
     await testUpAndDown(
       () =>
@@ -56,7 +56,7 @@ describe('changeTable', () => {
         `),
     );
 
-    db.options.schema = undefined;
+    jest.resetAllMocks();
   });
 
   it('should work for table with schema', async () => {

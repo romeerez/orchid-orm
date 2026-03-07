@@ -283,7 +283,7 @@ const parseForeignKey = (
   currentSchema: string,
 ): CodeForeignKey => {
   const { fnOrTable, columns, foreignColumns, options } = references;
-  const [schema, table] = getSchemaAndTableFromName(config, fnOrTable);
+  const [schema, table] = getSchemaAndTableFromName(currentSchema, fnOrTable);
 
   return {
     references: {

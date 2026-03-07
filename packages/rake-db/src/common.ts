@@ -1,7 +1,12 @@
-import { AdapterBase, ColumnSchemaConfig, EnumColumn, singleQuote } from 'pqb';
+import {
+  AdapterBase,
+  ColumnSchemaConfig,
+  EnumColumn,
+  QuerySchema,
+  singleQuote,
+} from 'pqb';
 import { TableQuery } from './migration/create-table';
 import { MigrationsSet } from './migration/migrations-set';
-import { RakeDbConfig } from './config';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
@@ -74,28 +79,31 @@ export const quoteTable = (schema: string | undefined, table: string) =>
   schema ? `"${schema}"."${table}"` : `"${table}"`;
 
 export const getSchemaAndTableFromName = (
-  config: Pick<RakeDbConfig, 'schema'>,
+  schema: QuerySchema | undefined,
   name: string,
 ): [string | undefined, string] => {
   const i = name.indexOf('.');
   return i !== -1
     ? [name.slice(0, i), name.slice(i + 1)]
-    : [
-        typeof config.schema === 'function' ? config.schema() : config.schema,
-        name,
-      ];
+    : [typeof schema === 'function' ? schema() : schema, name];
 };
 
-export const quoteNameFromString = (config: RakeDbConfig, string: string) => {
-  return quoteTable(...getSchemaAndTableFromName(config, string));
+export const quoteNameFromString = (
+  schema: QuerySchema | undefined,
+  string: string,
+) => {
+  return quoteTable(...getSchemaAndTableFromName(schema, string));
 };
 
 /**
  * Do not quote the type itself because it can be an expression like `geography(point)` for postgis.
  */
-export const quoteCustomType = (config: RakeDbConfig, s: string) => {
-  const [schema, type] = getSchemaAndTableFromName(config, s);
-  return schema ? '"' + schema + '".' + type : type;
+export const quoteCustomType = (
+  schema: QuerySchema | undefined,
+  type: string,
+) => {
+  const [s, t] = getSchemaAndTableFromName(schema, type);
+  return s ? '"' + s + '".' + t : t;
 };
 
 export const quoteSchemaTable = (
@@ -119,12 +127,12 @@ export const concatSchemaAndName = (
 };
 
 export const makePopulateEnumQuery = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   item: EnumColumn<ColumnSchemaConfig, unknown, readonly string[]>,
 ): TableQuery => {
-  const [schema, name] = getSchemaAndTableFromName(config, item.enumName);
+  const [s, name] = getSchemaAndTableFromName(schema, item.enumName);
   return {
-    text: `SELECT unnest(enum_range(NULL::${quoteTable(schema, name)}))::text`,
+    text: `SELECT unnest(enum_range(NULL::${quoteTable(s, name)}))::text`,
     then(result) {
       // populate empty options array with values from db
       (item.options as string[]).push(...result.rows.map(([value]) => value));

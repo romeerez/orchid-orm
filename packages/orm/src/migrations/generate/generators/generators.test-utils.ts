@@ -58,11 +58,12 @@ const rollbackError = new Error('Rollback');
 
 const arrange = async (arg: {
   config?: RakeDbConfig;
-  options?: { databaseURL: string }[];
+  options?: { databaseURL: string; schema?: string }[];
   tables?: (typeof BaseTable)[];
   selects?: number[];
   dbOptions?: DbSharedOptions;
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
+  schema?: string;
 }) => {
   config = {
     dbPath: './db',
@@ -89,6 +90,9 @@ const arrange = async (arg: {
   };
 
   options = arg.options ?? defaultOptions;
+  if (arg.schema) {
+    options = options.map((opts) => ({ ...opts, schema: arg.schema }));
+  }
 
   adapters = makeAdapters();
   arrangedAdapters = [...adapters];

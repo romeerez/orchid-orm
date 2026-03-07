@@ -78,7 +78,7 @@ export const makeStructureToAstCtx = (
 export const structureToAst = async (
   ctx: StructureToAstCtx,
   adapter: AdapterBase,
-  config: Pick<RakeDbConfig, 'schema' | 'migrationsTable'>,
+  config: Pick<RakeDbConfig, 'migrationsTable'>,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
 
@@ -106,7 +106,7 @@ export const structureToAst = async (
   const domains = makeDomainsMap(ctx, data);
 
   const { schema: migrationsSchema = 'public', table: migrationsTable } =
-    getMigrationsSchemaAndTable(config);
+    getMigrationsSchemaAndTable(adapter, config);
   for (const table of data.tables) {
     if (table.name === migrationsTable && table.schemaName === migrationsSchema)
       continue;

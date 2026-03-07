@@ -74,8 +74,13 @@ describe('manageMigratedVersions', () => {
     });
 
     it('should create and use a schema set in the config', async () => {
+      const db = new TestAdapter({
+        databaseURL: 'postgres://user:password@host:1234/db-name',
+        schema: () => 'schema',
+      });
+      db.query = mockedQuery;
+
       await createMigrationsSchemaAndTable(db, {
-        schema: 'schema',
         migrationsTable: 'table',
         logger,
       });
@@ -97,6 +102,7 @@ describe('manageMigratedVersions', () => {
     it('should save migrated version', async () => {
       const db = {
         silentArrays: jest.fn(),
+        getSchema() {},
       };
 
       await saveMigratedVersion(db as unknown as SilentQueries, '123', 'name', {
@@ -114,6 +120,7 @@ describe('manageMigratedVersions', () => {
     it('should delete migrated version', async () => {
       const db = {
         silentArrays: jest.fn(() => ({ rowCount: 1 })),
+        getSchema() {},
       };
 
       await deleteMigratedVersion(
@@ -134,6 +141,7 @@ describe('manageMigratedVersions', () => {
     it('should throw when version was not found', async () => {
       const db = {
         silentArrays: jest.fn(() => ({ rowCount: 0 })),
+        getSchema() {},
       };
 
       await expect(
@@ -147,6 +155,7 @@ describe('manageMigratedVersions', () => {
   describe('getMigratedVersionsMap', () => {
     const adapter = {
       arrays: jest.fn(),
+      getSchema() {},
     };
 
     const ctx: RakeDbCtx = {};

@@ -32,8 +32,9 @@ export const pull = async (adapters: AdapterBase[], config: RakeDbConfig) => {
   const baseTableExportedAs = config.baseTable.exportAs;
 
   const [adapter] = adapters;
+  const adapterSchema = adapter.getSchema();
   const currentSchema =
-    (typeof config.schema === 'function' ? config.schema() : config.schema) ??
+    (typeof adapterSchema === 'function' ? adapterSchema() : adapterSchema) ??
     'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);

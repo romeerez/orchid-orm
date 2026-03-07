@@ -47,12 +47,11 @@ export const composeMigration = async (
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
   await processSchemas(ast, dbStructure, params);
-  processExtensions(config, ast, dbStructure, params);
+  processExtensions(ast, dbStructure, params);
 
   const pendingDbTypes = new PendingDbTypes();
 
   await processDomains(
-    config,
     ast,
     adapter,
     domainsMap,

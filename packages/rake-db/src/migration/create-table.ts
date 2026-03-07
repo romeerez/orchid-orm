@@ -14,6 +14,7 @@ import {
   QueryArraysResult,
   RecordUnknown,
   snakeCaseKey,
+  QuerySchema,
 } from 'pqb';
 import {
   ColumnComment,
@@ -43,7 +44,6 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './table-methods';
 import { NoPrimaryKey } from '../errors';
-import { RakeDbConfig } from 'rake-db';
 
 export interface TableQuery {
   text: string;
@@ -115,8 +115,10 @@ export const createTable = async <
     shape = (tableData = emptyObject) as Shape;
   }
 
+  const schema = migration.adapter.getSchema();
+
   const ast = makeAst(
-    migration.options,
+    schema,
     up,
     tableName,
     shape,
@@ -127,7 +129,7 @@ export const createTable = async <
 
   fn && validatePrimaryKey(ast);
 
-  const queries = astToQueries(migration.options, ast, snakeCase, language);
+  const queries = astToQueries(schema, ast, snakeCase, language);
   for (const { then, ...query } of queries) {
     const result = await migration.adapter.arrays(interpolateSqlValues(query));
     then?.(result);
@@ -151,7 +153,7 @@ export const createTable = async <
 };
 
 const makeAst = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   up: boolean,
   tableName: string,
   shape: ColumnsShape,
@@ -168,12 +170,12 @@ const makeAst = (
   }
 
   const { primaryKey } = tableData;
-  const [schema, table] = getSchemaAndTableFromName(config, tableName);
+  const [s, table] = getSchemaAndTableFromName(schema, tableName);
 
   return {
     type: 'table',
     action: up ? 'create' : 'drop',
-    schema,
+    schema: s,
     name: table,
     shape,
     ...tableData,
@@ -217,7 +219,7 @@ const validatePrimaryKey = (ast: RakeDbAst.Table) => {
 };
 
 const astToQueries = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   ast: RakeDbAst.Table,
   snakeCase?: boolean,
   language?: string,
@@ -229,7 +231,7 @@ const astToQueries = (
     const item = shape[key];
     if (!(item instanceof EnumColumn)) continue;
 
-    queries.push(makePopulateEnumQuery(config, item));
+    queries.push(makePopulateEnumQuery(schema, item));
   }
 
   if (ast.action === 'drop') {
@@ -255,7 +257,7 @@ const astToQueries = (
     addColumnComment(comments, name, item);
     lines.push(
       `\n  ${columnToSql(
-        config,
+        schema,
         name,
         item,
         values,
@@ -279,7 +281,7 @@ const astToQueries = (
   ast.constraints?.forEach((item) => {
     lines.push(
       `\n  ${constraintToSql(
-        config,
+        schema,
         ast,
         true,
         {
@@ -309,8 +311,8 @@ const astToQueries = (
       } ${quoteWithSchema(ast)} (${lines.join(',')}\n)`,
       values,
     },
-    ...indexesToQuery(config, true, ast, indexes, snakeCase, language),
-    ...excludesToQuery(config, true, ast, excludes, snakeCase),
+    ...indexesToQuery(true, ast, indexes, snakeCase, language),
+    ...excludesToQuery(true, ast, excludes, snakeCase),
     ...commentsToQuery(ast, comments),
   );
 

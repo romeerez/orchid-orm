@@ -52,6 +52,7 @@ TestAdapter.prototype.transaction = jest.fn((_, cb) => {
     isInTransaction: () => true,
     transaction: jest.fn(),
     getDatabase: () => 'db',
+    getSchema() {},
   } as never);
 }) as AdapterBase['transaction'];
 

@@ -88,12 +88,12 @@ export type ChangeTableCallback<CT> = (t: TableChanger<CT>) => TableChangeData;
 export type ColumnComment = { column: string; comment: string | null };
 
 // Database adapter methods to perform queries without logging
-export type SilentQueries = {
+export interface SilentQueries extends AdapterBase {
   // Query without logging
   silentQuery: AdapterBase['query'];
   // Query arrays without logging
   silentArrays: AdapterBase['arrays'];
-};
+}
 
 // Combined queryable database instance and a migration interface
 export type DbMigration<CT> = DbResult<CT> &
@@ -950,7 +950,10 @@ export class Migration<CT = unknown> {
     enumName: string,
     values: RecordString,
   ): Promise<void> {
-    const [schema, name] = getSchemaAndTableFromName(this.options, enumName);
+    const [schema, name] = getSchemaAndTableFromName(
+      this.adapter.getSchema(),
+      enumName,
+    );
 
     const ast: RakeDbAst.RenameEnumValues = {
       type: 'renameEnumValues',
@@ -1334,7 +1337,10 @@ export class Migration<CT = unknown> {
   async tableExists(tableName: string): Promise<boolean> {
     let text = `SELECT 1 FROM "information_schema"."tables" WHERE "table_name" = $1`;
 
-    const [schema, table] = getSchemaAndTableFromName(this.options, tableName);
+    const [schema, table] = getSchemaAndTableFromName(
+      this.adapter.getSchema(),
+      tableName,
+    );
 
     const values = [table];
 
@@ -1370,7 +1376,10 @@ export class Migration<CT = unknown> {
   async columnExists(tableName: string, columnName: string): Promise<boolean> {
     let text = `SELECT 1 FROM "information_schema"."columns" WHERE "table_name" = $1 AND "column_name" = $2`;
 
-    const [schema, table] = getSchemaAndTableFromName(this.options, tableName);
+    const [schema, table] = getSchemaAndTableFromName(
+      this.adapter.getSchema(),
+      tableName,
+    );
 
     const values = [
       table,
@@ -1550,7 +1559,10 @@ const createExtension = async (
   fullName: string,
   options?: RakeDbAst.ExtensionArg,
 ): Promise<void> => {
-  const [schema, name] = getSchemaAndTableFromName(migration.options, fullName);
+  const [schema, name] = getSchemaAndTableFromName(
+    migration.adapter.getSchema(),
+    fullName,
+  );
 
   const ast: RakeDbAst.Extension = {
     type: 'extension',
@@ -1589,7 +1601,10 @@ const createEnum = async (
     'type' | 'action' | 'name' | 'values' | 'schema'
   > = {},
 ): Promise<void> => {
-  const [schema, enumName] = getSchemaAndTableFromName(migration.options, name);
+  const [schema, enumName] = getSchemaAndTableFromName(
+    migration.adapter.getSchema(),
+    name,
+  );
 
   const ast: RakeDbAst.Enum = {
     type: 'enum',
@@ -1625,7 +1640,7 @@ const createDomain = async <CT>(
   fn: DbDomainArg<CT>,
 ): Promise<void> => {
   const [schema, domainName] = getSchemaAndTableFromName(
-    migration.options,
+    migration.adapter.getSchema(),
     name,
   );
 
@@ -1642,10 +1657,7 @@ const createDomain = async <CT>(
   const quotedName = quoteWithSchema(ast);
   if (ast.action === 'create') {
     const column = ast.baseType;
-    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(
-      migration.options,
-      column,
-    )}${
+    query = `CREATE DOMAIN ${quotedName} AS ${columnTypeToSql(schema, column)}${
       column.data.collate
         ? `
 COLLATE "${column.data.collate}"`
@@ -1685,7 +1697,7 @@ const createCollation = async (
   options: Omit<RakeDbAst.Collation, 'type' | 'action' | 'schema' | 'name'>,
 ): Promise<void> => {
   const [schema, collationName] = getSchemaAndTableFromName(
-    migration.options,
+    migration.adapter.getSchema(),
     name,
   );
 
@@ -1706,7 +1718,7 @@ const createCollation = async (
 
     if (ast.fromExisting) {
       query += `FROM ${quoteNameFromString(
-        migration.options,
+        migration.adapter.getSchema(),
         ast.fromExisting,
       )}`;
     } else {
@@ -1752,11 +1764,11 @@ export const renameType = async (
   kind: RakeDbAst.RenameType['kind'],
 ): Promise<void> => {
   const [fromSchema, f] = getSchemaAndTableFromName(
-    migration.options,
+    migration.adapter.getSchema(),
     migration.up ? from : to,
   );
   const [toSchema, t] = getSchemaAndTableFromName(
-    migration.options,
+    migration.adapter.getSchema(),
     migration.up ? to : from,
   );
   const ast: RakeDbAst.RenameType = {
@@ -1777,9 +1789,12 @@ export const renameType = async (
   }
 
   if (ast.fromSchema !== ast.toSchema) {
+    const schema = migration.adapter.getSchema();
     await migration.adapter.query(
       `ALTER ${ast.kind} ${quoteTable(ast.fromSchema, ast.to)} SET SCHEMA "${
-        ast.toSchema ?? migration.options.schema ?? 'public'
+        ast.toSchema ??
+        (typeof schema === 'function' ? schema() : schema) ??
+        'public'
       }"`,
     );
   }
@@ -1793,7 +1808,7 @@ const renameTableItem = async (
   kind: RakeDbAst.RenameTableItem['kind'],
 ) => {
   const [schema, table] = getSchemaAndTableFromName(
-    migration.options,
+    migration.adapter.getSchema(),
     tableName,
   );
   const [f, t] = migration.up ? [from, to] : [to, from];
@@ -1823,7 +1838,10 @@ export const addOrDropEnumValues = async (
   values: string[],
   options?: AddEnumValueOptions,
 ): Promise<void> => {
-  const [schema, name] = getSchemaAndTableFromName(migration.options, enumName);
+  const [schema, name] = getSchemaAndTableFromName(
+    migration.adapter.getSchema(),
+    enumName,
+  );
   const quotedName = quoteTable(schema, name);
 
   const ast: RakeDbAst.EnumValues = {
@@ -1879,7 +1897,10 @@ export const changeEnumValues = async (
   fromValues: string[],
   toValues: string[],
 ): Promise<void> => {
-  const [schema, name] = getSchemaAndTableFromName(migration.options, enumName);
+  const [schema, name] = getSchemaAndTableFromName(
+    migration.adapter.getSchema(),
+    enumName,
+  );
 
   if (!migration.up) {
     const values = fromValues;
@@ -1916,7 +1937,7 @@ const recreateEnum = async (
   values: string[],
   errorMessage: (quotedName: string, table: string, column: string) => string,
 ) => {
-  const configSchema = migration.options.schema;
+  const configSchema = migration.adapter.getSchema();
   const defaultSchema =
     (typeof configSchema === 'function' ? configSchema() : undefined) ??
     'public';

@@ -1,7 +1,7 @@
 import { emptyObject } from '../utils';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
-import { Query } from '../query';
+import { Query, QuerySchema } from '../query';
 
 /**
  * Generic result returning from query methods.
@@ -121,6 +121,8 @@ export interface AdapterBase {
   getUser(): string;
   getSearchPath(): string | undefined;
   getHost(): string;
+  // adapter is not using the schema anyhow on its own, it just stores it for rake-db
+  getSchema(): QuerySchema | undefined;
 
   connect?(): Promise<unknown>;
 

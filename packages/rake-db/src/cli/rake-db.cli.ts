@@ -70,7 +70,7 @@ export const rakeDbCliWithAdapter = ((
   inputConfig,
   args = process.argv.slice(2),
 ) => {
-  let config;
+  let config: RakeDbConfig;
   if ('__rakeDbConfig' in inputConfig) {
     config = inputConfig;
   } else {

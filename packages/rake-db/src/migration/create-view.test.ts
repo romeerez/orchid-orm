@@ -48,7 +48,7 @@ describe('create and drop view', () => {
   });
 
   it('should pick up schema from the config', async () => {
-    db.options.schema = 'schema';
+    jest.spyOn(db.adapter, 'getSchema').mockReturnValueOnce('schema');
 
     await testUpAndDown(
       (action) => db[action]('schema.name', 'sql'),
@@ -62,7 +62,7 @@ describe('create and drop view', () => {
         `),
     );
 
-    db.options.schema = undefined;
+    jest.resetAllMocks();
   });
 
   it('should create and drop view withing a schema', async () => {

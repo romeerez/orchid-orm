@@ -1,6 +1,5 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { colors } from 'pqb';
-import { testConfig } from '../../migrations.test-utils';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -23,10 +22,7 @@ describe('schemas', () => {
       async prepareDb(db) {
         await db.createSchema('custom');
       },
-      config: {
-        ...testConfig,
-        schema: 'custom',
-      },
+      schema: 'custom',
     });
 
     await act();

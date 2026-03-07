@@ -172,6 +172,27 @@ yarn db new create-a-table
 pnpm db new "create a table" # spaces are replaced with dashes
 ```
 
+## migrations db schema
+
+Add a `schema` to db connection options, and it will be a default schema for all tables that are created when running migrations.
+
+It's also used to host the `migrationsTable`, unless `migrationsTables` explicitly states its schema.
+
+```ts
+const dbConfig = {
+  databaseURL: process.env.DATABASE_URL,
+  // by default, all the migrated tables and the special table for tracking migrations are created in `public`.
+  // set this `schema` setting to use create everything in this schema instead.
+  schema: 'custom-schema',
+  // the schema can be a function, for example, to get a tenant schema from AsyncLocalStorage
+  schema: () => 'custom-schema',
+};
+
+export const change = rakeDb.run(dbConfig, {
+  /* ... */
+});
+```
+
 ## serial vs timestamp
 
 Migration files can be prefixed with serial numbers (0001, 0002, and so on), or with timestamps.
@@ -219,12 +240,6 @@ type Config = {
   dbPath?: string;
   // (for Orchid ORM) change this if ORM instance is exported under a different name than `db`.
   dbExportedAs?: string; // 'db' is the default
-
-  // by default, all the migrated tables and the special table for tracking migrations are created in `public`.
-  // set this `schema` setting to use create everything in this schema instead.
-  schema: 'custom-schema';
-  // the schema can be a function, for example, to get a tenant schema from AsyncLocalStorage
-  schema: () => string;
 
   // column types are taken from the provided `baseTable`,
   // alternatively they can be set with this option

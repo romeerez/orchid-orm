@@ -1,4 +1,5 @@
 import {
+  AdapterBase,
   ArrayColumn,
   Column,
   DomainColumn,
@@ -33,13 +34,13 @@ export const versionToString = (
     : `${version}`.padStart(config.migrationId.serial, '0');
 
 export const columnTypeToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   item: Column.Pick.Data,
 ) => {
   return item.data.isOfCustomType
     ? item instanceof DomainColumn
-      ? quoteNameFromString(config, item.dataType)
-      : quoteCustomType(config, (item as Column).toSQL())
+      ? quoteNameFromString(schema, item.dataType)
+      : quoteCustomType(schema, (item as Column).toSQL())
     : (item as Column).toSQL();
 };
 
@@ -52,25 +53,25 @@ export const getColumnName = (
 };
 
 export const columnToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   name: string,
   item: Column,
   values: unknown[],
   hasMultiplePrimaryKeys: boolean,
   snakeCase: boolean | undefined,
 ): string => {
-  const line = [`"${name}" ${columnTypeToSql(config, item)}`];
+  const line = [`"${name}" ${columnTypeToSql(schema, item)}`];
 
   if (item.data.compression) {
     line.push(`COMPRESSION ${item.data.compression}`);
   }
 
   if (item.data.collate) {
-    line.push(`COLLATE ${quoteNameFromString(config, item.data.collate)}`);
+    line.push(`COLLATE ${quoteNameFromString(schema, item.data.collate)}`);
   }
 
   if (item.data.identity) {
-    line.push(identityToSql(config, item.data.identity));
+    line.push(identityToSql(schema, item.data.identity));
   } else if (item.data.generated) {
     line.push(
       `GENERATED ALWAYS AS (${item.data.generated.toSQL({
@@ -113,7 +114,7 @@ export const columnToSql = (
 
       line.push(
         referencesToSql(
-          config,
+          schema,
           {
             columns: [name],
             ...foreignKey,
@@ -155,17 +156,17 @@ export const encodeColumnDefault = (
 };
 
 export const identityToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   identity: TableData.Identity,
 ) => {
-  const options = sequenceOptionsToSql(config, identity);
+  const options = sequenceOptionsToSql(schema, identity);
   return `GENERATED ${identity.always ? 'ALWAYS' : 'BY DEFAULT'} AS IDENTITY${
     options ? ` (${options})` : ''
   }`;
 };
 
 const sequenceOptionsToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   item: TableData.SequenceOptions,
 ) => {
   const line: string[] = [];
@@ -177,8 +178,8 @@ const sequenceOptionsToSql = (
   if (item.cache !== undefined) line.push(`CACHE ${item.cache}`);
   if (item.cycle) line.push(`CYCLE`);
   if (item.ownedBy) {
-    const [schema, table] = getSchemaAndTableFromName(config, item.ownedBy);
-    line.push(`OWNED BY ${quoteTable(schema, table)}`);
+    const [s, table] = getSchemaAndTableFromName(schema, item.ownedBy);
+    line.push(`OWNED BY ${quoteTable(s, table)}`);
   }
   return line.join(' ');
 };
@@ -224,11 +225,11 @@ export const addColumnComment = (
 };
 
 export const getForeignKeyTable = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   fnOrTable: (() => Column.ForeignKey.TableParam) | string,
 ): [string | undefined, string] => {
   if (typeof fnOrTable === 'string') {
-    return getSchemaAndTableFromName(config, fnOrTable);
+    return getSchemaAndTableFromName(schema, fnOrTable);
   }
 
   const item = new (fnOrTable())();
@@ -257,7 +258,7 @@ export const getConstraintName = (
 };
 
 export const constraintToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   { name }: { schema?: string; name: string },
   up: boolean,
   constraint: TableData.Constraint,
@@ -275,7 +276,7 @@ export const constraintToSql = (
   const sql = [`CONSTRAINT "${constraintName}"`];
 
   if (constraint.references) {
-    sql.push(foreignKeyToSql(config, constraint.references, snakeCase));
+    sql.push(foreignKeyToSql(schema, constraint.references, snakeCase));
   }
 
   if (constraint.check) {
@@ -290,24 +291,24 @@ const checkToSql = (check: RawSqlBase, values: unknown[]) => {
 };
 
 const foreignKeyToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   item: TableData.References,
   snakeCase?: boolean,
 ) => {
   return `FOREIGN KEY (${joinColumns(
     snakeCase ? item.columns.map(toSnakeCase) : item.columns,
-  )}) ${referencesToSql(config, item, snakeCase)}`;
+  )}) ${referencesToSql(schema, item, snakeCase)}`;
 };
 
 export const referencesToSql = (
-  config: RakeDbConfig,
+  schema: QuerySchema | undefined,
   references: TableData.References,
   snakeCase: boolean | undefined,
 ) => {
-  const [schema, table] = getForeignKeyTable(config, references.fnOrTable);
+  const [s, table] = getForeignKeyTable(schema, references.fnOrTable);
 
   const sql: string[] = [
-    `REFERENCES ${quoteTable(schema, table)}(${joinColumns(
+    `REFERENCES ${quoteTable(s, table)}(${joinColumns(
       snakeCase
         ? references.foreignColumns.map(toSnakeCase)
         : references.foreignColumns,
@@ -403,7 +404,6 @@ export const getExcludeName: GetIndexOrExcludeName = (table, columns) =>
   getIndexOrExcludeName(table, columns, 'exclude');
 
 export const indexesToQuery = (
-  config: RakeDbConfig,
   up: boolean,
   { schema, name: tableName }: { schema?: string; name: string },
   indexes: TableData.Index[],
@@ -459,7 +459,7 @@ export const indexesToQuery = (
           ? `(${column.expression})`
           : `"${column.column}"`,
         column.collate &&
-          `COLLATE ${quoteNameFromString(config, column.collate)}`,
+          `COLLATE ${quoteNameFromString(schema, column.collate)}`,
         column.opclass,
         column.order,
       ]
@@ -522,7 +522,6 @@ export const indexesToQuery = (
 };
 
 export const excludesToQuery = (
-  config: RakeDbConfig,
   up: boolean,
   { schema, name: tableName }: { schema?: string; name: string },
   excludes: TableData.Exclude[],
@@ -556,7 +555,7 @@ export const excludesToQuery = (
             ? `(${column.expression})`
             : `"${column.column}"`,
           column.collate &&
-            `COLLATE ${quoteNameFromString(config, column.collate)}`,
+            `COLLATE ${quoteNameFromString(schema, column.collate)}`,
           column.opclass,
           column.order,
           `WITH ${column.with}`,
@@ -677,34 +676,39 @@ export const cmpRawSql = (a: RawSqlBase, b: RawSqlBase) => {
   return aSql === bSql && aValues === bValues;
 };
 
-export const getMigrationsSchemaAndTable = (config: {
-  schema?: QuerySchema;
-  migrationsTable: string;
-}): {
+export const getMigrationsSchemaAndTable = (
+  adapter: AdapterBase,
+  config: {
+    migrationsTable: string;
+  },
+): {
   schema?: string;
   table: string;
 } => {
+  const schema = adapter.getSchema();
   const [tableSchema, table] = getSchemaAndTableFromName(
-    config,
+    schema,
     config.migrationsTable,
   );
 
-  let schema = tableSchema;
-  if (!schema) {
-    schema =
-      typeof config.schema === 'function' ? config.schema() : config.schema;
+  let s = tableSchema;
+  if (!s) {
+    s = typeof schema === 'function' ? schema() : schema;
 
-    if (schema === 'public') {
-      schema = undefined;
+    if (s === 'public') {
+      s = undefined;
     }
   }
 
-  return { schema, table };
+  return { schema: s, table };
 };
 
 export const migrationsSchemaTableSql = (
-  config: Pick<RakeDbConfig, 'migrationsTable'>,
+  adapter: AdapterBase,
+  config: {
+    migrationsTable: string;
+  },
 ) => {
-  const { schema, table } = getMigrationsSchemaAndTable(config);
+  const { schema, table } = getMigrationsSchemaAndTable(adapter, config);
   return `${schema ? `"${schema}".` : ''}"${table}"`;
 };
