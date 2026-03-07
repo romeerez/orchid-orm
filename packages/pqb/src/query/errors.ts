@@ -15,6 +15,8 @@ export abstract class OrchidOrmError extends Error {}
  */
 export class NotFoundError extends OrchidOrmError {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
+  // it is exposed with `getQuery` method which prevents this problem from both Vitest and Jest.
+  // Exposing it with `get query()` still leaves the issue in Vitest.
   readonly #query: Query;
 
   constructor(query: IsQuery, message = 'Record is not found') {
@@ -22,13 +24,15 @@ export class NotFoundError extends OrchidOrmError {
     this.#query = query as Query;
   }
 
-  get query() {
+  getQuery() {
     return this.#query;
   }
 }
 
 export class OrchidOrmInternalError extends Error {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
+  // it is exposed with `getQuery` method which prevents this problem from both Vitest and Jest.
+  // Exposing it with `get query()` still leaves the issue in Vitest.
   readonly #query: Query;
 
   constructor(query: IsQuery, message?: string, public data?: RecordUnknown) {
@@ -36,7 +40,7 @@ export class OrchidOrmInternalError extends Error {
     this.#query = query as Query;
   }
 
-  get query() {
+  getQuery() {
     return this.#query;
   }
 }
@@ -97,9 +101,9 @@ export abstract class QueryError<
     return this.code === '23505';
   }
 
-  columnsCache?: { [K in keyof T['shape']]?: true };
+  #columnsCache?: { [K in keyof T['shape']]?: true };
   get columns() {
-    if (this.columnsCache) return this.columnsCache;
+    if (this.#columnsCache) return this.#columnsCache;
 
     const columns: { [K in keyof T['shape']]?: true } = {};
 
@@ -112,13 +116,13 @@ export abstract class QueryError<
           ) as keyof T['shape'];
 
           const key =
-            queryColumnNameToKey(this.query, column as string) ?? column;
+            queryColumnNameToKey(this.getQuery(), column as string) ?? column;
           columns[key as keyof T['shape']] = true;
         });
       }
     }
 
-    return (this.columnsCache = columns);
+    return (this.#columnsCache = columns);
   }
 }
 

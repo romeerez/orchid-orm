@@ -40,7 +40,7 @@ describe('errors', () => {
       }
     }
 
-    expect(err?.query).toBe(UniqueTable);
+    expect(err?.getQuery()).toBe(UniqueTable);
     expect(err?.isUnique).toBe(true);
     expect(err?.columns).toEqual({
       one: true,
@@ -70,7 +70,7 @@ describe('errors', () => {
       }
     }
 
-    expect(err?.query).toBe(UniqueTable);
+    expect(err?.getQuery()).toBe(UniqueTable);
     expect(err?.isUnique).toBe(true);
     expect(err?.columns).toEqual({
       thirdColumn: true,
