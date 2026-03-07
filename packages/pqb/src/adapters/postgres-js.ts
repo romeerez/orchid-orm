@@ -1,4 +1,4 @@
-import postgres, { Error, Row, RowList } from 'postgres';
+import postgres, { Error, Row, RowList, TransactionSql } from 'postgres';
 import {
   AdapterBase,
   AdapterConfigBase,
@@ -19,6 +19,7 @@ import {
   ColumnSchemaConfig,
   TransactionAdapterBase,
   QuerySchema,
+  AdapterTransactionOptions,
 } from 'pqb';
 
 export interface CreatePostgresJsDbOptions<
@@ -268,30 +269,33 @@ export class PostgresJsAdapter implements AdapterBase {
   }
 
   async transaction<Result>(
-    options: string | undefined,
     cb: (adapter: TransactionAdapterBase) => Promise<Result>,
+    options?: AdapterTransactionOptions,
   ): Promise<Result> {
     let ok: boolean | undefined;
     let result: unknown;
 
+    const fn = (sql: TransactionSql) => {
+      if (options?.searchPath) {
+        sql.unsafe(`SET LOCAL search_path=${options.searchPath}`).execute();
+      }
+
+      return cb(
+        new PostgresJsTransactionAdapter(
+          this,
+          sql as never,
+          options?.searchPath,
+        ),
+      ).then((res) => {
+        ok = true;
+        return (result = res);
+      });
+    };
+
     return (
-      options
-        ? this.sql.begin(options, (sql) =>
-            cb(new PostgresJsTransactionAdapter(this, sql as never)).then(
-              (res) => {
-                ok = true;
-                return (result = res);
-              },
-            ),
-          )
-        : this.sql.begin((sql) =>
-            cb(new PostgresJsTransactionAdapter(this, sql as never)).then(
-              (res) => {
-                ok = true;
-                return (result = res);
-              },
-            ),
-          )
+      options?.options
+        ? this.sql.begin(options.options, fn)
+        : this.sql.begin(fn)
     ).catch((err) => {
       if (ok) return result;
 
@@ -365,7 +369,11 @@ const arrays = <R extends any[] = any[]>(
 export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
   errorClass = postgres.PostgresError;
 
-  constructor(public adapter: PostgresJsAdapter, public sql: postgres.Sql) {}
+  constructor(
+    public adapter: PostgresJsAdapter,
+    public sql: postgres.Sql,
+    public searchPath?: string,
+  ) {}
 
   isInTransaction(): true {
     return true;
@@ -422,10 +430,21 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
   }
 
   async transaction<Result>(
-    _options: string | undefined,
-    cb: (adapter: PostgresJsTransactionAdapter) => Promise<Result>,
+    cb: (adapter: TransactionAdapterBase) => Promise<Result>,
+    options?: AdapterTransactionOptions,
   ): Promise<Result> {
-    return await cb(this);
+    if (options?.searchPath) {
+      this.sql.unsafe(`SET LOCAL search_path=${options.searchPath}`).execute();
+      const res = await cb(this);
+      await this.sql.unsafe(
+        `SET LOCAL search_path=${
+          this.searchPath || this.adapter.searchPath || '"$user", public'
+        }`,
+      );
+      return res;
+    }
+
+    return cb(this);
   }
 
   close(): Promise<void> {

@@ -18,6 +18,8 @@ import { MigrationItem } from './migration/migrations-set';
 import { getCliParam } from './common';
 import { rakeDbCommands } from './cli/rake-db.cli';
 
+export type SearchPath = (() => string) | string;
+
 export interface RakeDbCliConfigInputBase<
   SchemaConfig extends ColumnSchemaConfig,
   CT = DefaultColumnTypes<DefaultSchemaConfig>,
@@ -36,6 +38,12 @@ export interface RakeDbCliConfigInputBase<
     [commandName: string]: RakeDbCommandFn | RakeDbCommand;
   };
   noPrimaryKey?: NoPrimaryKeyOption;
+  transactionSearchPath?: SearchPath;
+  /**
+   * Throw if a migration doesn't have a default export.
+   * This is needed when in your setup you're importing migration files first and execute them later,
+   * in that case you should export changes in migrations.
+   */
   forceDefaultExports?: boolean;
   /**
    * Is called once per db before migrating or rolling back a set of migrations.
@@ -144,7 +152,7 @@ export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
   beforeRollback?: MigrationCallback;
   afterRollback?: MigrationCallback;
   migrationId: RakeDbMigrationId;
-  // throw if a migration doesn't have a default export
+  transactionSearchPath?: SearchPath;
   forceDefaultExports?: boolean;
   afterChangeCommit?: ChangeCommitCallback;
   basePath: string;

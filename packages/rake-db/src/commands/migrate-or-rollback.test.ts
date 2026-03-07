@@ -6,22 +6,25 @@ import {
   rollback,
   runMigration,
 } from './migrate-or-rollback';
-import {
-  AdapterBase,
-  noop,
-  pathToLog,
-  DefaultColumnTypes,
-  DefaultSchemaConfig,
-  Sql,
-} from 'pqb';
+import { noop, pathToLog, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
 import { ChangeCallback, pushChange } from '../migration/change';
-import { asMock, TestAdapter, TestTransactionAdapter } from 'test-utils';
+import { asMock, testAdapter, TestAdapter } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
 import { getMigrations } from '../migration/migrations-set';
-import { createMigrationsSchemaAndTable } from '../migration/manage-migrated-versions';
-import { RAKE_DB_LOCK_KEY } from '../common';
+import {
+  createMigrationsSchemaAndTable,
+  deleteMigratedVersion,
+  getMigratedVersionsMap,
+  NoMigrationsTableError,
+  saveMigratedVersion,
+} from '../migration/manage-migrated-versions';
 import { RakeDbConfig } from 'rake-db';
 import { mockChangeLogger } from './mock-migrations/mock-change';
+
+jest.mock('../common', () => ({
+  ...jest.requireActual('../common'),
+  queryLock: jest.fn(),
+}));
 
 jest.mock('../migration/migrations-set', () => ({
   getMigrations: jest.fn(),
@@ -29,13 +32,16 @@ jest.mock('../migration/migrations-set', () => ({
 
 jest.mock('../migration/manage-migrated-versions', () => ({
   ...jest.requireActual('../migration/manage-migrated-versions'),
+  saveMigratedVersion: jest.fn(),
+  getMigratedVersionsMap: jest.fn(),
+  deleteMigratedVersion: jest.fn(),
   createMigrationsSchemaAndTable: jest.fn(),
 }));
 
-const options = { databaseURL: 'postgres://user@localhost/dbname' };
-const adapter = new TestAdapter(options);
+const adapter = testAdapter;
+const dbName = adapter.getDatabase();
 
-const makeFile = (version: number, load = jest.fn()) => ({
+const makeFile = (version: number, load: () => void = jest.fn()) => ({
   path: `path/000${version}_file.ts`,
   name: `file.ts`,
   version: `000${version}`,
@@ -44,39 +50,7 @@ const makeFile = (version: number, load = jest.fn()) => ({
 
 const files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
 
-TestAdapter.prototype.getDatabase = () => 'db';
-TestAdapter.prototype.transaction = jest.fn((_, cb) => {
-  return cb({
-    query: transactionQueryMock,
-    arrays: transactionQueryMock,
-    isInTransaction: () => true,
-    transaction: jest.fn(),
-    getDatabase: () => 'db',
-    getSchema() {},
-  } as never);
-}) as AdapterBase['transaction'];
-
 let migratedVersions: string[] = [];
-const queries: (string | { text: string; values: unknown[] })[] = [];
-const transactionQueryMock = jest.fn().mockImplementation(((text, values) => {
-  if (text === 'SELECT * FROM "schemaMigrations" ORDER BY version') {
-    return {
-      rows: migratedVersions.map((version) => [version, 'name']),
-      fields: [{}, {}],
-    } as never;
-  } else {
-    queries.push(values ? { text, values } : text);
-    return {
-      rows: [],
-      fields: [{}, {}],
-    } as never;
-  }
-}) as AdapterBase['query']);
-
-TestAdapter.prototype.query = TestTransactionAdapter.prototype.query =
-  transactionQueryMock;
-TestAdapter.prototype.arrays = TestTransactionAdapter.prototype.arrays =
-  transactionQueryMock;
 
 const config = testConfig;
 
@@ -103,7 +77,15 @@ const arrange = <
   config: T,
 ): T => {
   if (config.files) migrationFiles = config.files;
-  if (config.versions) migratedVersions = config.versions;
+
+  const versions = config.versions || migratedVersions;
+  asMock(getMigratedVersionsMap).mockResolvedValueOnce({
+    map: Object.fromEntries(
+      versions.map((version) => [version, version + '.ts']),
+    ),
+    sequence: versions.map(Number),
+  });
+
   currentConfig = config.config ??= testConfig;
   return config;
 };
@@ -113,35 +95,6 @@ const act = (
   params?: MigrateFnParams,
 ) => fn(adapter, currentConfig, params);
 
-const sql = (text: string, values: unknown[]) => ({
-  text,
-  values,
-});
-
-const insertMigration = ({
-  version,
-  name,
-}: {
-  version: string;
-  name: string;
-}) =>
-  sql('INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)', [
-    version,
-    name,
-  ]);
-
-const deleteMigration = ({
-  version,
-  name,
-}: {
-  version: string;
-  name: string;
-}) =>
-  sql('DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2', [
-    version,
-    name,
-  ]);
-
 const assert = {
   getMigrationsUp: (conf: RakeDbConfig) =>
     expect(getMigrations).toBeCalledWith(expect.any(Object), conf, true),
@@ -149,11 +102,25 @@ const assert = {
   getMigrationsDown: (conf: RakeDbConfig) =>
     expect(getMigrations).toBeCalledWith(expect.any(Object), conf, false),
 
-  queries: (sqls: Sql[]) =>
-    expect(queries).toEqual([
-      `SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`,
-      ...sqls,
-    ]),
+  savedMigrationVersions: (files: { version: string; name: string }[]) =>
+    expect(
+      asMock(saveMigratedVersion).mock.calls.map((call) => ({
+        version: call[1],
+        name: call[2],
+      })),
+    ).toEqual(
+      files.map((file) => ({ version: file.version, name: file.name })),
+    ),
+
+  deletedMigratedVersions: (files: { version: string; name: string }[]) =>
+    expect(
+      asMock(deleteMigratedVersion).mock.calls.map((call) => ({
+        version: call[1],
+        name: call[2],
+      })),
+    ).toEqual(
+      files.map((file) => ({ version: file.version, name: file.name })),
+    ),
 
   logs: (
     startMessage: 'migrating' | 'rolling back' | 'reapplying' | undefined,
@@ -164,10 +131,10 @@ const assert = {
     if (startMessage) {
       expected.push([
         startMessage === 'migrating'
-          ? 'Migrating database db\n'
+          ? `Migrating database ${dbName}\n`
           : startMessage === 'rolling back'
-          ? 'Rolling back database db\n'
-          : 'Reapplying migrations for database db\n',
+          ? `Rolling back database ${dbName}\n`
+          : `Reapplying migrations for database ${dbName}\n`,
       ]);
     }
 
@@ -183,16 +150,75 @@ const assert = {
   },
 };
 
+const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+
 describe('migrateOrRollback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    queries.length = 0;
     for (const key in changeCache) {
       delete changeCache[key];
     }
   });
 
+  afterAll(async () => {
+    await adapter.close();
+  });
+
   describe('migrate', () => {
+    it('should use transactionSearchPath with a single transaction', async () => {
+      let searchPath: string | undefined;
+
+      arrange({
+        files: [
+          makeFile(1, () => {
+            change(async (db) => {
+              const {
+                rows: [row],
+              } = await db.query`SHOW search_path`;
+
+              searchPath = row.search_path;
+            });
+          }),
+        ],
+        config: {
+          ...testConfig,
+          transaction: 'single',
+          transactionSearchPath: () => 'schema',
+        },
+      });
+
+      await act(migrate);
+
+      expect(searchPath).toBe('schema');
+    });
+
+    it('should use transactionSearchPath with a per-migration transaction', async () => {
+      let searchPath: string | undefined;
+
+      arrange({
+        files: [
+          makeFile(1, () => {
+            change(async (db) => {
+              const {
+                rows: [row],
+              } = await db.query`SHOW search_path`;
+
+              searchPath = row.search_path;
+            });
+          }),
+        ],
+        config: {
+          ...testConfig,
+          transaction: 'per-migration',
+          transactionSearchPath: () => 'schema',
+        },
+      });
+
+      await act(migrate);
+
+      expect(searchPath).toBe('schema');
+    });
+
     it('should fail on gaps in sequential migrations', async () => {
       arrange({
         files: [files[0], files[2]],
@@ -230,7 +256,7 @@ describe('migrateOrRollback', () => {
 
       await act(migrate);
 
-      expect(TestAdapter.prototype.transaction).toBeCalledTimes(1);
+      expect(transactionSpy).toBeCalledTimes(1);
 
       assert.getMigrationsUp(env.config);
 
@@ -248,7 +274,7 @@ describe('migrateOrRollback', () => {
         }
       });
 
-      assert.queries([insertMigration(files[1]), insertMigration(files[2])]);
+      assert.savedMigrationVersions([files[1], files[2]]);
 
       assert.logs('migrating', [
         { migrated: files[1] },
@@ -257,24 +283,27 @@ describe('migrateOrRollback', () => {
     });
 
     it('should create migrations table if it not exist', async () => {
+      asMock(getMigratedVersionsMap).mockRejectedValueOnce(
+        new NoMigrationsTableError(),
+      );
+
       arrange({
         files: [],
         config,
       });
 
-      transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
       asMock(createMigrationsSchemaAndTable).mockResolvedValueOnce(undefined);
 
       await act(migrate);
 
       assert.getMigrationsUp(config);
-      expect(createMigrationsSchemaAndTable).toBeCalled();
+      expect(createMigrationsSchemaAndTable).toHaveBeenCalled();
 
       for (const file of files) {
         expect(file.load).not.toBeCalled();
       }
 
-      expect(queries).toHaveLength(1);
+      assert.savedMigrationVersions([]);
       assert.logs(undefined, []);
     });
 
@@ -286,7 +315,7 @@ describe('migrateOrRollback', () => {
       });
 
       const called: string[] = [];
-      files[0].load.mockImplementation(() => {
+      asMock(files[0].load).mockImplementation(() => {
         change(async () => {
           called.push('one');
         });
@@ -378,7 +407,7 @@ describe('migrateOrRollback', () => {
       });
 
       await expect(act(migrate)).rejects.toThrow(
-        `Cannot migrate 0002_file.ts because the higher position name was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
+        `Cannot migrate 0002_file.ts because the higher position 0003.ts was already migrated.\nRun \`**db command** up force\` to rollback the above migrations and migrate all`,
       );
     });
   });
@@ -473,18 +502,21 @@ describe('migrateOrRollback', () => {
         }
       });
 
-      assert.queries([deleteMigration(files[1])]);
+      assert.deletedMigratedVersions([files[1]]);
 
       assert.logs('rolling back', [{ rolledBack: files[1] }]);
     });
 
     it('should create migrations table if it not exist', async () => {
+      asMock(getMigratedVersionsMap).mockRejectedValueOnce(
+        new NoMigrationsTableError(),
+      );
+
       arrange({
         files: [],
         config,
       });
 
-      transactionQueryMock.mockRejectedValueOnce({ code: '42P01' });
       asMock(createMigrationsSchemaAndTable).mockResolvedValueOnce(undefined);
 
       await act(rollback);
@@ -496,7 +528,7 @@ describe('migrateOrRollback', () => {
         expect(file.load).not.toBeCalled();
       }
 
-      assert.queries([]);
+      assert.deletedMigratedVersions([]);
       assert.logs(undefined, []);
     });
 
@@ -507,7 +539,7 @@ describe('migrateOrRollback', () => {
       });
 
       const called: string[] = [];
-      files[0].load.mockImplementation(() => {
+      asMock(files[0].load).mockImplementation(() => {
         change(async () => {
           called.push('one');
         });
@@ -559,7 +591,7 @@ describe('migrateOrRollback', () => {
 
       const ranMigrations: [string, boolean][] = [];
       for (const file of files) {
-        file.load.mockImplementationOnce(() => {
+        asMock(file.load).mockImplementationOnce(() => {
           change(async (_, up) => {
             ranMigrations.push([file.path, up]);
           });
@@ -591,24 +623,8 @@ describe('migrateOrRollback', () => {
         [files[2].path, true],
       ]);
 
-      assert.queries([
-        sql(`DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2`, [
-          '0003',
-          'file.ts',
-        ]),
-        sql(`DELETE FROM "schemaMigrations" WHERE version = $1 AND name = $2`, [
-          '0002',
-          'file.ts',
-        ]),
-        sql(`INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)`, [
-          '0002',
-          'file.ts',
-        ]),
-        sql(`INSERT INTO "schemaMigrations"(version, name) VALUES ($1, $2)`, [
-          '0003',
-          'file.ts',
-        ]),
-      ]);
+      assert.deletedMigratedVersions([files[2], files[1]]);
+      assert.savedMigrationVersions([files[1], files[2]]);
 
       assert.logs('reapplying', [
         { rolledBack: files[2] },
@@ -691,7 +707,7 @@ describe('migrateOrRollback', () => {
 
       await act(migrate);
 
-      expect(TestAdapter.prototype.transaction).toBeCalledTimes(2);
+      expect(transactionSpy).toBeCalledTimes(2);
 
       assert.getMigrationsUp(env.config);
 
@@ -703,7 +719,7 @@ describe('migrateOrRollback', () => {
         }
       });
 
-      assert.queries([insertMigration(files[1]), insertMigration(files[2])]);
+      assert.savedMigrationVersions([files[1], files[2]]);
 
       assert.logs('migrating', [
         { migrated: files[1] },
@@ -726,18 +742,13 @@ describe('migrateOrRollback', () => {
     });
 
     it('should not start a transaction if already in a transaction', async () => {
-      expect(adapter.isInTransaction()).toBe(false);
+      jest.spyOn(adapter, 'isInTransaction').mockReturnValue(true);
 
-      let transactionAdapter: AdapterBase | undefined;
-      await adapter.transaction(undefined, async (trx) => {
-        transactionAdapter = trx;
-
-        await runMigration(adapter, () => {
-          change(async () => {});
-        });
+      await runMigration(adapter, () => {
+        change(async () => {});
       });
 
-      expect(transactionAdapter?.transaction).not.toHaveBeenCalled();
+      expect(transactionSpy).not.toHaveBeenCalled();
     });
 
     it('should run provided migration files', async () => {

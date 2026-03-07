@@ -59,7 +59,6 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
     await new Promise<void>((resolve) => {
       prepareDbTransactionPromise = adapter
         .transaction(
-          undefined,
           (trx) =>
             new Promise<void>(async (_, rejectTransaction) => {
               TestAdapter.prototype.query = (...args) => trx.query(...args);

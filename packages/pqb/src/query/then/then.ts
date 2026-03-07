@@ -440,7 +440,7 @@ const then = async (
         const { batch } = sql;
 
         if (log) logData = log.beforeQuery(beginSql);
-        await adapter.transaction(undefined, async () => {
+        await adapter.transaction(async () => {
           if (log) log.afterQuery(beginSql, logData);
           const res = await queryBatch(batch);
           if (log) logData = log.beforeQuery(commitSql);

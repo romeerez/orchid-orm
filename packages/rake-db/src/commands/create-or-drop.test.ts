@@ -1,4 +1,4 @@
-import { testAdapter } from 'test-utils';
+import { asMock, testAdapter } from 'test-utils';
 import {
   createDatabase,
   CreateOrDropError,
@@ -11,7 +11,7 @@ import {
 
 const adapter = testAdapter;
 const query = jest.spyOn(adapter, 'query').mockImplementation();
-jest.spyOn(adapter, 'transaction').mockImplementation((_, fn) => {
+asMock(jest.spyOn(adapter, 'transaction')).mockImplementation((fn) => {
   const trx = Object.create(adapter);
   trx.query = query;
   trx.isInTransaction = () => true;
@@ -119,8 +119,7 @@ describe('create-or-drop', () => {
       const keyword = fn.name.endsWith('Table') ? 'TABLE' : 'SCHEMA';
 
       const act = () => fn(adapter, sql);
-      const actInTransaction = () =>
-        adapter.transaction(undefined, (trx) => fn(trx, sql));
+      const actInTransaction = () => adapter.transaction((trx) => fn(trx, sql));
 
       it('should do the thing', async () => {
         const res = await act();

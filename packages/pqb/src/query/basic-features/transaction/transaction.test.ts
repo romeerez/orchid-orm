@@ -98,10 +98,10 @@ describe('transaction', () => {
       async () => {},
     );
 
-    expect(transactionSpy.mock.calls.map((call) => call[0])).toEqual([
-      'ISOLATION LEVEL REPEATABLE READ',
-      'ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE',
-      'ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
+    expect(transactionSpy.mock.calls.map((call) => call[1])).toEqual([
+      { options: 'ISOLATION LEVEL REPEATABLE READ' },
+      { options: 'ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE' },
+      { options: 'ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE' },
     ]);
   });
 

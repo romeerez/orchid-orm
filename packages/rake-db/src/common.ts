@@ -7,6 +7,7 @@ import {
 } from 'pqb';
 import { TableQuery } from './migration/create-table';
 import { MigrationsSet } from './migration/migrations-set';
+import { RakeDbConfig } from './config';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 
@@ -142,9 +143,19 @@ export const makePopulateEnumQuery = (
 
 export const transaction = <T>(
   adapter: AdapterBase,
+  config: Pick<RakeDbConfig, 'transactionSearchPath'>,
   fn: (trx: AdapterBase) => Promise<T>,
 ): Promise<T> => {
-  return adapter.transaction<T>(undefined, fn);
+  const searchPath = config.transactionSearchPath;
+  return adapter.transaction<T>(
+    fn,
+    searchPath
+      ? {
+          searchPath:
+            typeof searchPath === 'function' ? searchPath() : searchPath,
+        }
+      : undefined,
+  );
 };
 
 export const queryLock = (trx: AdapterBase) =>

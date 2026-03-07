@@ -14,9 +14,7 @@ export const ensureTransaction = (
   fn: (trx: AdapterBase) => Promise<void>,
 ) => {
   const adapter = getMaybeTransactionAdapter(db);
-  return adapter.isInTransaction()
-    ? fn(adapter)
-    : adapter.transaction(undefined, fn);
+  return adapter.isInTransaction() ? fn(adapter) : adapter.transaction(fn);
 };
 
 export const runSqlInSavePoint = async (

@@ -103,7 +103,6 @@ const arrange = async (arg: {
       const adapter = adapters[0];
       prepareDbTransactionPromise = adapter
         .transaction(
-          undefined,
           (trx) =>
             new Promise<void>(async (_, rejectTransaction) => {
               // `generate` will attempt to close the adapter, but we need to keep it open in the test

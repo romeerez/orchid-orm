@@ -21,7 +21,7 @@ export const verifyMigration = async (
   let code: string | false | undefined;
 
   try {
-    await adapter.transaction(undefined, async (trx) => {
+    await adapter.transaction(async (trx) => {
       const changeFns: ChangeCallback<unknown>[] = [];
       migrationFn((changeCb: ChangeCallback<unknown>) => {
         changeFns.push(changeCb);

@@ -20,6 +20,7 @@ import {
   createDbWithAdapter,
   TransactionAdapterBase,
   QuerySchema,
+  AdapterTransactionOptions,
 } from 'pqb';
 
 export const createDb = <
@@ -211,19 +212,25 @@ export class NodePostgresAdapter implements AdapterBase {
   }
 
   async transaction<Result>(
-    options: string | undefined,
     cb: (adapter: NodePostgresTransactionAdapter) => Promise<Result>,
+    options?: AdapterTransactionOptions,
   ): Promise<Result> {
     const client = await this.connect();
     try {
-      await setSearchPath(client, this.searchPath);
       await performQueryOnClient(
         client,
-        options ? 'BEGIN ' + options : 'BEGIN',
+        options?.options ? 'BEGIN ' + options.options : 'BEGIN',
       );
+
+      if (options?.searchPath) {
+        await client.query(`SET LOCAL search_path=${options.searchPath}`);
+      }
+
       let result;
       try {
-        result = await cb(new NodePostgresTransactionAdapter(this, client));
+        result = await cb(
+          new NodePostgresTransactionAdapter(this, client, options?.searchPath),
+        );
       } catch (err) {
         await performQueryOnClient(client, 'ROLLBACK');
         throw err;
@@ -374,13 +381,15 @@ const performQueryOnClientWithSavepoint = (
 export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   pool: Pool;
   config: PoolConfig;
-  searchPath?: string;
   errorClass = DatabaseError;
 
-  constructor(public adapter: NodePostgresAdapter, public client: PoolClient) {
+  constructor(
+    public adapter: NodePostgresAdapter,
+    public client: PoolClient,
+    public searchPath?: string,
+  ) {
     this.pool = adapter.pool;
     this.config = adapter.config;
-    this.searchPath = adapter.searchPath;
   }
 
   isInTransaction(): true {
@@ -454,10 +463,21 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   }
 
   async transaction<Result>(
-    _options: string | undefined,
     cb: (adapter: NodePostgresTransactionAdapter) => Promise<Result>,
+    options: AdapterTransactionOptions,
   ): Promise<Result> {
-    return await cb(this);
+    if (options?.searchPath) {
+      await this.query(`SET LOCAL search_path=${options.searchPath}`);
+      const res = await cb(this);
+      await this.query(
+        `SET LOCAL search_path=${
+          this.searchPath || this.adapter.searchPath || '"$user", public'
+        }`,
+      );
+      return res;
+    }
+
+    return cb(this);
   }
 
   close() {

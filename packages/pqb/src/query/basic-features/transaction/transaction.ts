@@ -1,5 +1,6 @@
 import { Query } from '../../query';
 import {
+  AdapterTransactionOptions,
   AfterCommitHook,
   AfterCommitStandaloneHook,
   TransactionAdapterBase,
@@ -314,31 +315,37 @@ export class QueryTransaction {
 
     const transactionAdapter = state?.transactionAdapter;
     if (!state || !transactionAdapter) {
-      let beginOptions: string | undefined = undefined;
+      let transactionOptions: AdapterTransactionOptions | undefined;
 
       if (options.level) {
-        beginOptions = `ISOLATION LEVEL ${options.level}`;
+        transactionOptions = {
+          options: `ISOLATION LEVEL ${options.level}`,
+        };
       }
 
       if (options.readOnly !== undefined) {
         const add = `READ ${options.readOnly ? 'ONLY' : 'WRITE'}`;
-        if (beginOptions) beginOptions += ' ' + add;
-        else beginOptions = add;
+        const opts = (transactionOptions ??= {});
+        if (opts.options) opts.options += ' ' + add;
+        else opts.options = add;
       }
 
       if (options.deferrable !== undefined) {
         const add = `${options.deferrable ? '' : 'NOT '}DEFERRABLE`;
-        if (beginOptions) beginOptions += ' ' + add;
-        else beginOptions = add;
+        const opts = (transactionOptions ??= {});
+        if (opts.options) opts.options += ' ' + add;
+        else opts.options = add;
       }
 
       if (log) {
-        sql.text = beginOptions ? `BEGIN ${beginOptions}` : 'BEGIN';
+        sql.text = transactionOptions?.options
+          ? `BEGIN ${transactionOptions.options}`
+          : 'BEGIN';
         logData = log.beforeQuery(sql);
       }
 
       const result = await this.q.adapter
-        .transaction(beginOptions, callback)
+        .transaction(callback, transactionOptions)
         .catch((err) => {
           if (log) log.afterQuery(rollbackSql, logData);
 

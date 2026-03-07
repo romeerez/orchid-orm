@@ -60,7 +60,7 @@ const transactionIfSingle = (
   fn: (trx: AdapterBase) => Promise<void>,
 ) => {
   return !adapter.isInTransaction() && config.transaction === 'single'
-    ? transaction(adapter, fn)
+    ? transaction(adapter, config, fn)
     : fn(adapter);
 };
 
@@ -400,9 +400,13 @@ export const getChanges = async (
 
 export const runMigrationInOwnTransaction: typeof applyMigration = (
   adapter,
-  ...rest
+  up,
+  changes,
+  config,
 ) => {
-  return transaction(adapter, (trx) => applyMigration(trx, ...rest));
+  return transaction(adapter, config, (trx) =>
+    applyMigration(trx, up, changes, config),
+  );
 };
 
 /**
@@ -414,7 +418,10 @@ export const applyMigration = async (
   trx: AdapterBase,
   up: boolean,
   changes: MigrationChange[],
-  config: Pick<RakeDbConfig, 'log' | 'logger' | 'columnTypes'>,
+  config: Pick<
+    RakeDbConfig,
+    'log' | 'logger' | 'columnTypes' | 'transactionSearchPath'
+  >,
 ): Promise<SilentQueries> => {
   const db = createMigrationInterface(trx, up, config);
 

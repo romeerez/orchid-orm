@@ -229,6 +229,9 @@ Add `transaction: 'per-migration'` to the config to run every migration file in 
 
 `migrate` creates a migration table if it doesn't exist, but it doesn't work when calling `migrate` in a transaction.
 
+Note that the `config` supports `transactionSearchPath` for dynamically switching a current db schema,
+this may be useful in multi-schema scenarios.
+
 ```ts
 import {
   migrate,
@@ -253,6 +256,12 @@ await db.$transaction(async () => {
 
   await migrate(db, config);
 });
+
+// using `transactionSearchPath` for multi-tenancy, applies migrations for different schemas
+for (const schemaName of ['tenant-1', 'tenant-2']) {
+  config.transactionSearchPath = schemaName;
+  await migrate(db, config);
+}
 ```
 
 ### rollback

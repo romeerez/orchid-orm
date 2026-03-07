@@ -60,7 +60,7 @@ const makeAdapter = () => {
 
   const tx = Object.create(adapter) as unknown as PostgresJsTransactionAdapter;
 
-  jest.spyOn(adapter, 'transaction').mockImplementation((_, fn) => fn(tx));
+  jest.spyOn(adapter, 'transaction').mockImplementation((fn) => fn(tx));
 
   jest.spyOn(adapter, 'close').mockImplementation(() => Promise.resolve());
 

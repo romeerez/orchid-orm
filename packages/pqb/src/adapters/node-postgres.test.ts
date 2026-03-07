@@ -4,6 +4,7 @@ import pg from 'pg';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
 import { RecordUnknown } from '../utils';
+import { AdapterBase } from 'pqb';
 
 const testAdapter = new NodePostgresAdapter(testDbOptions);
 
@@ -68,7 +69,7 @@ describe('adapter', () => {
           return client;
         };
 
-        const res = await testAdapter.transaction(undefined, async (trx) => {
+        const res = await testAdapter.transaction(async (trx) => {
           return trx.query('SELECT 1 as one');
         });
 
@@ -90,9 +91,14 @@ describe('adapter', () => {
           return client;
         };
 
-        const res = await testAdapter.transaction('read write', async (trx) => {
-          return trx.query('SELECT 1 as one');
-        });
+        const res = await testAdapter.transaction(
+          async (trx) => {
+            return trx.query('SELECT 1 as one');
+          },
+          {
+            options: 'read write',
+          },
+        );
 
         expect(res.rows[0]).toEqual({ one: 1 });
 
@@ -102,12 +108,52 @@ describe('adapter', () => {
           'COMMIT',
         ]);
       });
+
+      it('sets a searchPath', async () => {
+        const res = await testAdapter.transaction(
+          async (trx) => {
+            return trx.query('SHOW search_path');
+          },
+          {
+            searchPath: 'schema',
+          },
+        );
+
+        expect(res.rows[0].search_path).toBe('schema');
+      });
+
+      it('sets temporary in a nested transaction call', async () => {
+        const getSearchPath = (adapter: AdapterBase) =>
+          adapter
+            .query('SHOW search_path')
+            .then((result) => result.rows[0].search_path);
+
+        const res = await testAdapter.transaction(async (trx) => {
+          const before = await getSearchPath(trx);
+          const nested = await trx.transaction(
+            async (trx) => {
+              return getSearchPath(trx);
+            },
+            {
+              searchPath: 'schema',
+            },
+          );
+          const after = await getSearchPath(trx);
+          return { before, nested, after };
+        });
+
+        expect(res).toEqual({
+          before: `"$user", public`,
+          nested: `schema`,
+          after: `"$user", public`,
+        });
+      });
     });
 
     it('should assign error properties', async () => {
       let Id;
       const dbErr = await testAdapter
-        .transaction(undefined, async (trx) => {
+        .transaction(async (trx) => {
           const res = await trx.query(
             `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password') RETURNING "id"`,
           );

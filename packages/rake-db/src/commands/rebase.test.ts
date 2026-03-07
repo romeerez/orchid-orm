@@ -17,7 +17,11 @@ jest.mock('fs/promises');
 jest.mock('../migration/manage-migrated-versions');
 jest.mock('../prompt');
 jest.mock('../common', () => ({
-  transaction(adapter: AdapterBase, fn: (adapter: AdapterBase) => unknown) {
+  transaction(
+    adapter: AdapterBase,
+    _config: RakeDbConfig,
+    fn: (adapter: AdapterBase) => unknown,
+  ) {
     return fn(adapter);
   },
   queryLock: () => {},

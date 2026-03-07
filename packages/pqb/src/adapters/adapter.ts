@@ -99,6 +99,11 @@ interface AdapterConfigConnectRetryStrategy {
   (attempt: number, attempts: number): Promise<void> | void;
 }
 
+export interface AdapterTransactionOptions {
+  options?: string;
+  searchPath?: string;
+}
+
 // Interface of a database adapter to use for different databases.
 export interface AdapterBase {
   connectRetryConfig?: AdapterConfigConnectRetry;
@@ -143,12 +148,12 @@ export interface AdapterBase {
   /**
    * Run a transaction
    *
-   * @param options - optional transaction parameters
    * @param cb - callback will be called with a db client with a dedicated connection.
+   * @param options - optional transaction parameters
    */
   transaction<T>(
-    options: string | undefined,
     cb: (adapter: TransactionAdapterBase) => Promise<T>,
+    options?: AdapterTransactionOptions,
   ): Promise<T>;
   // close connection
   close(): Promise<void>;

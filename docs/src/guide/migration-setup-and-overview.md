@@ -133,6 +133,12 @@ export const change = rakeDb.run(config.database, {
   // (when using it for ORM) path to ORM `db` instance, this is needed to automatically generate migrations.
   dbPath: './db',
 
+  // Calls `SET LOCAL search_path=...` in the beginning of migration transactions,
+  // then you can execute raw SQL in migrations and it will query and/or create tables in a given schema.
+  transactionSearchPath: 'schema',
+  // can be a function, useful for multi-schema scenarios for keeping current schema in AsyncLocalStorage.
+  transactionSearchPath: () => 'schema',
+
   // 'single' is the default (recommended), set to 'per-migration' to run every migration in its own transaction:
   transaction: 'single',
 
