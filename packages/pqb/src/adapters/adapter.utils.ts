@@ -3,6 +3,7 @@ import {
   TransactionAdapterBase,
   TransactionArgs,
 } from './adapter';
+import { RecordStringOrNumber } from 'pqb';
 
 interface SolvedTransactionArgs {
   options: AdapterTransactionOptions | undefined;
@@ -24,12 +25,34 @@ export const getTransactionArgs = (args: TransactionArgs<unknown>) => {
   return transactionArgs;
 };
 
+export const mergeLocals = (
+  locals: RecordStringOrNumber,
+  options?: AdapterTransactionOptions,
+): RecordStringOrNumber =>
+  options?.locals ? { ...locals, ...options.locals } : locals;
+
 export const getSetLocalsSql = (
   options?: AdapterTransactionOptions,
 ): string | undefined => {
   if (!options?.locals) return;
 
-  return Object.entries(options?.locals)
+  return Object.entries(options.locals)
     .map(([key, value]) => `SET LOCAL ${key}=${value}`)
+    .join('; ');
+};
+
+export const getResetLocalsSql = (
+  parentLocals: RecordStringOrNumber,
+  options?: AdapterTransactionOptions,
+): string | undefined => {
+  if (!options?.locals) return;
+
+  return Object.entries(options.locals)
+    .reduce<string[]>((acc, [key, value]) => {
+      if (parentLocals[key] !== value) {
+        acc.push(`SET LOCAL ${key}=${parentLocals[key]}`);
+      }
+      return acc;
+    }, [])
     .join('; ');
 };

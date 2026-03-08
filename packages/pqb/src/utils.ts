@@ -1,11 +1,11 @@
 import url from 'url';
 import path from 'node:path';
 
-export type UnionToIntersection<U> = (
-  U extends any ? (x: U) => void : never
-) extends (x: infer I) => void
-  ? I
-  : never;
+export type UnionToIntersection<U> =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (U extends any ? (x: U) => void : never) extends (x: infer I) => void
+    ? I
+    : never;
 
 // It may be a value or an array of such values.
 export type MaybeArray<T> = T | T[];
@@ -25,6 +25,10 @@ export interface RecordKeyTrue {
 
 export interface RecordString {
   [K: string]: string;
+}
+
+export interface RecordStringOrNumber {
+  [K: string]: string | number;
 }
 
 export interface RecordOptionalString {

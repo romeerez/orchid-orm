@@ -20,8 +20,14 @@ import {
   TransactionAdapterBase,
   QuerySchema,
   TransactionArgs,
+  RecordStringOrNumber,
 } from 'pqb';
-import { getSetLocalsSql, getTransactionArgs } from './adapter.utils';
+import {
+  getResetLocalsSql,
+  getSetLocalsSql,
+  getTransactionArgs,
+  mergeLocals,
+} from './adapter.utils';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -120,11 +126,17 @@ export class PostgresJsAdapter implements AdapterBase {
   searchPath?: string;
   config: PostgresJsAdapterOptions;
   errorClass = postgres.PostgresError;
+  locals: RecordStringOrNumber;
   private wrappedWithConnectRetry?: boolean;
 
   constructor(config: PostgresJsAdapterOptions) {
     this.config = { ...config, types };
     this.sql = this.configure(config);
+    this.locals = config.searchPath
+      ? {
+          search_path: config.searchPath,
+        }
+      : emptyObject;
   }
 
   isInTransaction(): boolean {
@@ -281,12 +293,14 @@ export class PostgresJsAdapter implements AdapterBase {
         sql.unsafe(localsSql).execute();
       }
 
-      return cb(new PostgresJsTransactionAdapter(this, sql as never)).then(
-        (res) => {
-          ok = true;
-          return (result = res);
-        },
-      );
+      const locals = mergeLocals(this.locals, options);
+
+      return cb(
+        new PostgresJsTransactionAdapter(this, sql as never, this, locals),
+      ).then((res) => {
+        ok = true;
+        return (result = res);
+      });
     };
 
     return (
@@ -366,7 +380,12 @@ const arrays = <R extends any[] = any[]>(
 export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
   errorClass = postgres.PostgresError;
 
-  constructor(public adapter: PostgresJsAdapter, public sql: postgres.Sql) {}
+  constructor(
+    public adapter: PostgresJsAdapter,
+    public sql: postgres.Sql,
+    public parent: AdapterBase,
+    public locals: RecordStringOrNumber,
+  ) {}
 
   isInTransaction(): true {
     return true;
@@ -429,7 +448,18 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
       this.sql.unsafe(localsSql).execute();
     }
 
-    return cb(this) as Result;
+    const locals = mergeLocals(this.locals, options);
+
+    const res = (await cb(
+      new PostgresJsTransactionAdapter(this.adapter, this.sql, this, locals),
+    )) as Result;
+
+    const resetLocalsSql = getResetLocalsSql(this.locals, options);
+    if (resetLocalsSql) {
+      await this.sql.unsafe(resetLocalsSql);
+    }
+
+    return res;
   }
 
   close(): Promise<void> {

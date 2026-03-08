@@ -741,16 +741,6 @@ describe('migrateOrRollback', () => {
       expect(isInTransaction).toBe(true);
     });
 
-    it('should not start a transaction if already in a transaction', async () => {
-      jest.spyOn(adapter, 'isInTransaction').mockReturnValue(true);
-
-      await runMigration(adapter, () => {
-        change(async () => {});
-      });
-
-      expect(transactionSpy).not.toHaveBeenCalled();
-    });
-
     it('should run provided migration files', async () => {
       await runMigration(adapter, async () => {
         await import('./mock-migrations/migrations/1001_migrate.test.file1');
@@ -761,6 +751,21 @@ describe('migrateOrRollback', () => {
         [expect.stringContaining(`SELECT 'test query 1'`)],
         [expect.stringContaining(`SELECT 'test query 2'`)],
       ]);
+    });
+
+    it('should support config with `transactionSearchPath`', async () => {
+      let searchPath: string | undefined;
+
+      await runMigration(adapter, { transactionSearchPath: 'schema' }, () => {
+        change(async (db) => {
+          const {
+            rows: [row],
+          } = await db.query`SHOW search_path`;
+          searchPath = row.search_path;
+        });
+      });
+
+      expect(searchPath).toBe('schema');
     });
   });
 });

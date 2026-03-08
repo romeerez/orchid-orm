@@ -152,7 +152,7 @@ describe('adapter', () => {
         expect(res).toEqual({
           before: 'public',
           nested: 'schema',
-          after: 'schema',
+          after: 'public',
         });
       });
 
@@ -184,7 +184,7 @@ describe('adapter', () => {
         expect(res).toEqual({
           before: '1',
           nested: '2',
-          after: '2',
+          after: '1',
         });
       });
     });

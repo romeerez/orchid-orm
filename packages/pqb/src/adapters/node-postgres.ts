@@ -21,8 +21,14 @@ import {
   TransactionAdapterBase,
   QuerySchema,
   TransactionArgs,
+  RecordStringOrNumber,
 } from 'pqb';
-import { getSetLocalsSql, getTransactionArgs } from './adapter.utils';
+import {
+  getResetLocalsSql,
+  getSetLocalsSql,
+  getTransactionArgs,
+  mergeLocals,
+} from './adapter.utils';
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -77,9 +83,13 @@ export class NodePostgresAdapter implements AdapterBase {
   pool: Pool;
   searchPath?: string;
   errorClass = DatabaseError;
+  locals: RecordStringOrNumber;
 
   constructor(public config: NodePostgresAdapterOptions) {
     this.pool = this.configure(config);
+    this.locals = this.searchPath
+      ? { search_path: this.searchPath }
+      : emptyObject;
   }
 
   isInTransaction(): boolean {
@@ -228,9 +238,13 @@ export class NodePostgresAdapter implements AdapterBase {
         await client.query(localsSql);
       }
 
+      const locals = mergeLocals(this.locals, options);
+
       let result;
       try {
-        result = await cb(new NodePostgresTransactionAdapter(this, client));
+        result = await cb(
+          new NodePostgresTransactionAdapter(this, client, this, locals),
+        );
       } catch (err) {
         await performQueryOnClient(client, 'ROLLBACK');
         throw err;
@@ -384,7 +398,12 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   searchPath?: string;
   errorClass = DatabaseError;
 
-  constructor(public adapter: NodePostgresAdapter, public client: PoolClient) {
+  constructor(
+    public adapter: NodePostgresAdapter,
+    public client: PoolClient,
+    public parent: AdapterBase,
+    public locals: RecordStringOrNumber,
+  ) {
     this.pool = adapter.pool;
     this.config = adapter.config;
     this.searchPath = adapter.searchPath;
@@ -468,7 +487,23 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
       await this.query(localsSql);
     }
 
-    return cb(this) as Result;
+    const locals = mergeLocals(this.locals, options);
+
+    const res = (await cb(
+      new NodePostgresTransactionAdapter(
+        this.adapter,
+        this.client,
+        this,
+        locals,
+      ),
+    )) as Result;
+
+    const resetLocalsSql = getResetLocalsSql(this.locals, options);
+    if (resetLocalsSql) {
+      await this.query(resetLocalsSql);
+    }
+
+    return res;
   }
 
   close() {

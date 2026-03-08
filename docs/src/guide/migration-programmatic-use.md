@@ -307,6 +307,8 @@ await rollback(db, config, {
 Use `runMigration` when to execute a specific migration file or an inline `change` block without tracking the migration versions.
 It's primarily for testing purposes.
 
+The 2nd argument may be a config object supporting `transactionSearchPath` to run migrations withing a given `search_path` context.
+
 ```ts
 import { runMigration } from 'orchid-orm/migrations';
 
@@ -327,5 +329,9 @@ await runMigration(db, () => import('./migrations/0001_migration-file'));
 await runMigration(db, async () => {
   await import('./migrations/0001_migration-file');
   await import('./migrations/0002_another-file');
+});
+
+await runMigration(db, { transactionSearchPath: 'test-schema' }, async () => {
+  await import('./migrations/0001_migration-file');
 });
 ```

@@ -9,14 +9,6 @@ export type DbParam = OrmParam | AdapterBase;
 export const getMaybeTransactionAdapter = (db: DbParam): AdapterBase =>
   '$getAdapter' in db ? db.$getAdapter() : db;
 
-export const ensureTransaction = (
-  db: DbParam,
-  fn: (trx: AdapterBase) => Promise<void>,
-) => {
-  const adapter = getMaybeTransactionAdapter(db);
-  return adapter.isInTransaction() ? fn(adapter) : adapter.transaction(fn);
-};
-
 export const runSqlInSavePoint = async (
   db: DbParam,
   sql: string,

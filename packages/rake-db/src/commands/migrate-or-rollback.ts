@@ -37,11 +37,7 @@ import {
   MigrationsSet,
 } from '../migration/migrations-set';
 import { versionToString } from '../migration/migration.utils';
-import {
-  DbParam,
-  ensureTransaction,
-  getMaybeTransactionAdapter,
-} from '../utils';
+import { DbParam, getMaybeTransactionAdapter } from '../utils';
 
 export interface MigrateFnParams {
   ctx?: RakeDbCtx;
@@ -53,13 +49,13 @@ export interface MigrateFn {
   (db: DbParam, config: RakeDbConfig, params?: MigrateFnParams): Promise<void>;
 }
 
-// runs in transaction only if the adapter is not already in transaction and the `transaction` config is 'single'
+// for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible locals
 const transactionIfSingle = (
   adapter: AdapterBase,
   config: RakeDbConfig,
   fn: (trx: AdapterBase) => Promise<void>,
 ) => {
-  return !adapter.isInTransaction() && config.transaction === 'single'
+  return config.transaction === 'single'
     ? transaction(adapter, config, fn)
     : fn(adapter);
 };
@@ -143,18 +139,36 @@ export const migrateAndClose: MigrateFn = async (db, config, params) => {
   await adapter.close();
 };
 
-export const runMigration = async (
+export function runMigration(
   db: DbParam,
   migration: () => MaybePromise<unknown>,
-) => {
-  await ensureTransaction(db, async (trx) => {
+): Promise<void>;
+export function runMigration(
+  db: DbParam,
+  config: Pick<RakeDbConfig, 'transactionSearchPath'>,
+  migration: () => MaybePromise<unknown>,
+): Promise<void>;
+export async function runMigration(
+  db: DbParam,
+  ...args:
+    | [migration: () => MaybePromise<unknown>]
+    | [
+        config: Pick<RakeDbConfig, 'transactionSearchPath'>,
+        migration: () => MaybePromise<unknown>,
+      ]
+): Promise<void> {
+  const [config, migration] =
+    args.length === 1 ? [{}, args[0]] : [args[0], args[1]];
+
+  const adapter = getMaybeTransactionAdapter(db);
+  await transaction(adapter, config, async (trx) => {
     clearChanges();
     const changes = await getChanges({ load: migration });
     const config = changes[0]?.config;
 
     await applyMigration(trx, true, changes, config);
   });
-};
+}
 
 /**
  * Will roll back one latest applied migration,
@@ -260,7 +274,7 @@ export const migrateOrRollback = async (
   let migrations: MigrationItem[] | undefined;
 
   const migrationRunner =
-    trx.isInTransaction() || config.transaction === 'single'
+    config.transaction === 'single'
       ? applyMigration
       : runMigrationInOwnTransaction;
 
