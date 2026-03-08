@@ -345,7 +345,7 @@ export class QueryTransaction {
       }
 
       const result = await this.q.adapter
-        .transaction(callback, transactionOptions)
+        .transaction(transactionOptions, callback)
         .catch((err) => {
           if (log) log.afterQuery(rollbackSql, logData);
 

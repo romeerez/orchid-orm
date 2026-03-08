@@ -148,13 +148,15 @@ export const transaction = <T>(
 ): Promise<T> => {
   const searchPath = config.transactionSearchPath;
   return adapter.transaction<T>(
-    fn,
     searchPath
       ? {
-          searchPath:
-            typeof searchPath === 'function' ? searchPath() : searchPath,
+          locals: {
+            search_path:
+              typeof searchPath === 'function' ? searchPath() : searchPath,
+          },
         }
       : undefined,
+    fn,
   );
 };
 

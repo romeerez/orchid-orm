@@ -54,6 +54,7 @@ const structure = {
   enums: [],
   domains: [],
   collations: [],
+  roles: [],
 } as Awaited<ReturnType<typeof introspectDbSchema>>;
 
 asMock(introspectDbSchema).mockResolvedValue(structure);
@@ -66,7 +67,8 @@ describe('structureToAst', () => {
     ctx.snakeCase = false;
 
     for (const key in structure) {
-      structure[key as keyof typeof structure].length = 0;
+      const arr = structure[key as keyof typeof structure];
+      if (arr) arr.length = 0;
     }
   });
 
@@ -1441,6 +1443,23 @@ describe('structureToAst', () => {
 
       const column = ast.shape.column;
       expect(column.dataType).toBe('int4');
+    });
+  });
+
+  describe('roles', () => {
+    it('should add a role', async () => {
+      const role = dbStructureMockFactory.role();
+      structure.roles = [role];
+
+      const ast = await structureToAst(ctx, adapter, config);
+
+      expect(ast).toEqual([
+        {
+          type: 'role',
+          action: 'create',
+          ...role,
+        },
+      ]);
     });
   });
 });

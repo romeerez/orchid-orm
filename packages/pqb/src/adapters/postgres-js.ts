@@ -19,8 +19,9 @@ import {
   ColumnSchemaConfig,
   TransactionAdapterBase,
   QuerySchema,
-  AdapterTransactionOptions,
+  TransactionArgs,
 } from 'pqb';
+import { getSetLocalsSql, getTransactionArgs } from './adapter.utils';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -268,28 +269,24 @@ export class PostgresJsAdapter implements AdapterBase {
     return arrays(this.sql, text, values);
   }
 
-  async transaction<Result>(
-    cb: (adapter: TransactionAdapterBase) => Promise<Result>,
-    options?: AdapterTransactionOptions,
-  ): Promise<Result> {
+  async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
     let ok: boolean | undefined;
     let result: unknown;
 
+    const { cb, options } = getTransactionArgs(args);
+
     const fn = (sql: TransactionSql) => {
-      if (options?.searchPath) {
-        sql.unsafe(`SET LOCAL search_path=${options.searchPath}`).execute();
+      const localsSql = getSetLocalsSql(options);
+      if (localsSql) {
+        sql.unsafe(localsSql).execute();
       }
 
-      return cb(
-        new PostgresJsTransactionAdapter(
-          this,
-          sql as never,
-          options?.searchPath,
-        ),
-      ).then((res) => {
-        ok = true;
-        return (result = res);
-      });
+      return cb(new PostgresJsTransactionAdapter(this, sql as never)).then(
+        (res) => {
+          ok = true;
+          return (result = res);
+        },
+      );
     };
 
     return (
@@ -369,11 +366,7 @@ const arrays = <R extends any[] = any[]>(
 export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
   errorClass = postgres.PostgresError;
 
-  constructor(
-    public adapter: PostgresJsAdapter,
-    public sql: postgres.Sql,
-    public searchPath?: string,
-  ) {}
+  constructor(public adapter: PostgresJsAdapter, public sql: postgres.Sql) {}
 
   isInTransaction(): true {
     return true;
@@ -429,22 +422,14 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
     return arrays(this.sql, text, values, catchingSavepoint);
   }
 
-  async transaction<Result>(
-    cb: (adapter: TransactionAdapterBase) => Promise<Result>,
-    options?: AdapterTransactionOptions,
-  ): Promise<Result> {
-    if (options?.searchPath) {
-      this.sql.unsafe(`SET LOCAL search_path=${options.searchPath}`).execute();
-      const res = await cb(this);
-      await this.sql.unsafe(
-        `SET LOCAL search_path=${
-          this.searchPath || this.adapter.searchPath || '"$user", public'
-        }`,
-      );
-      return res;
+  async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
+    const { cb, options } = getTransactionArgs(args);
+    const localsSql = getSetLocalsSql(options);
+    if (localsSql) {
+      this.sql.unsafe(localsSql).execute();
     }
 
-    return cb(this);
+    return cb(this) as Result;
   }
 
   close(): Promise<void> {

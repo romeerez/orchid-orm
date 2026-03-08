@@ -2,6 +2,7 @@ import { RakeDbAst } from '../ast';
 import { astToGenerateItem, GenerateItem } from './ast-to-generate-items';
 import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
 import { testConfig } from '../rake-db.test-utils';
+import { dbStructureMockFactory } from './db-structure.mockFactory';
 
 const t = makeColumnTypes(defaultSchemaConfig);
 
@@ -1175,5 +1176,20 @@ describe('astToGenerateItem', () => {
         ]);
       });
     });
+  });
+
+  it('should handle role', () => {
+    const role = dbStructureMockFactory.role();
+
+    arrange({
+      type: 'role',
+      action: 'create',
+      ...role,
+    });
+
+    act();
+
+    assertKeys([]);
+    assertDeps([]);
   });
 });

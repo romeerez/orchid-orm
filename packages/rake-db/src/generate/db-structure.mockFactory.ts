@@ -190,6 +190,18 @@ const columns = [
   { ...textColumn, name: 'name' },
 ];
 
+const role: DbStructure.Role = {
+  name: 'name',
+  super: false,
+  inherit: false,
+  createRole: false,
+  createDb: false,
+  canLogin: false,
+  replication: false,
+  connLimit: -1,
+  bypassRls: false,
+};
+
 export const dbStructureMockFactory = {
   table: (data: Partial<DbStructure.Table> = {}): DbStructure.Table => {
     const schemaName = data.schemaName ?? defaultTable.schemaName;
@@ -350,6 +362,10 @@ export const dbStructureMockFactory = {
   }),
   view: (data: Partial<DbStructure.View> = {}): DbStructure.View => ({
     ...view,
+    ...data,
+  }),
+  role: (data: Partial<DbStructure.Role> = {}): DbStructure.Role => ({
+    ...role,
     ...data,
   }),
 };

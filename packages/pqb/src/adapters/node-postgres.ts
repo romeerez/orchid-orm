@@ -20,8 +20,9 @@ import {
   createDbWithAdapter,
   TransactionAdapterBase,
   QuerySchema,
-  AdapterTransactionOptions,
+  TransactionArgs,
 } from 'pqb';
+import { getSetLocalsSql, getTransactionArgs } from './adapter.utils';
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -211,32 +212,31 @@ export class NodePostgresAdapter implements AdapterBase {
     return performQuery(this, text, values, 'array') as never;
   }
 
-  async transaction<Result>(
-    cb: (adapter: NodePostgresTransactionAdapter) => Promise<Result>,
-    options?: AdapterTransactionOptions,
-  ): Promise<Result> {
+  async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
     const client = await this.connect();
+
+    const { cb, options } = getTransactionArgs(args);
+
     try {
       await performQueryOnClient(
         client,
         options?.options ? 'BEGIN ' + options.options : 'BEGIN',
       );
 
-      if (options?.searchPath) {
-        await client.query(`SET LOCAL search_path=${options.searchPath}`);
+      const localsSql = getSetLocalsSql(options);
+      if (localsSql) {
+        await client.query(localsSql);
       }
 
       let result;
       try {
-        result = await cb(
-          new NodePostgresTransactionAdapter(this, client, options?.searchPath),
-        );
+        result = await cb(new NodePostgresTransactionAdapter(this, client));
       } catch (err) {
         await performQueryOnClient(client, 'ROLLBACK');
         throw err;
       }
       await performQueryOnClient(client, 'COMMIT');
-      return result;
+      return result as Result;
     } finally {
       client.release();
     }
@@ -381,15 +381,13 @@ const performQueryOnClientWithSavepoint = (
 export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   pool: Pool;
   config: PoolConfig;
+  searchPath?: string;
   errorClass = DatabaseError;
 
-  constructor(
-    public adapter: NodePostgresAdapter,
-    public client: PoolClient,
-    public searchPath?: string,
-  ) {
+  constructor(public adapter: NodePostgresAdapter, public client: PoolClient) {
     this.pool = adapter.pool;
     this.config = adapter.config;
+    this.searchPath = adapter.searchPath;
   }
 
   isInTransaction(): true {
@@ -462,22 +460,15 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
     );
   }
 
-  async transaction<Result>(
-    cb: (adapter: NodePostgresTransactionAdapter) => Promise<Result>,
-    options: AdapterTransactionOptions,
-  ): Promise<Result> {
-    if (options?.searchPath) {
-      await this.query(`SET LOCAL search_path=${options.searchPath}`);
-      const res = await cb(this);
-      await this.query(
-        `SET LOCAL search_path=${
-          this.searchPath || this.adapter.searchPath || '"$user", public'
-        }`,
-      );
-      return res;
+  async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
+    const { cb, options } = getTransactionArgs(args);
+
+    const localsSql = getSetLocalsSql(options);
+    if (localsSql) {
+      await this.query(localsSql);
     }
 
-    return cb(this);
+    return cb(this) as Result;
   }
 
   close() {

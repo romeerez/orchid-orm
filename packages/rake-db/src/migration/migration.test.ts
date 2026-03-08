@@ -1129,4 +1129,84 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
       expect(await db.constraintExists('constraintName')).toBe(false);
     });
   });
+
+  describe('createRole and dropRole', () => {
+    const testUpAndDown = makeTestUpAndDown('createRole', 'dropRole');
+
+    it('should create and drop a role', async () => {
+      const now = new Date();
+
+      await testUpAndDown(
+        (action) =>
+          db[action]('name', {
+            super: true,
+            inherit: true,
+            createRole: true,
+            createDb: true,
+            canLogin: true,
+            replication: true,
+            connLimit: 10,
+            validUntil: now,
+            bypassRls: true,
+            config: {
+              statement_timeout: '30s',
+              work_mem: '64MB',
+            },
+          }),
+        () =>
+          expectSql(`
+            CREATE ROLE "name" WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION CONNECTION LIMIT 10 BYPASSRLS VALID UNTIL '${now.toISOString()}';
+            ALTER ROLE "name" SET statement_timeout = '30s';
+            ALTER ROLE "name" SET work_mem = '64MB'
+          `),
+        () =>
+          expectSql(`
+            DROP ROLE "name"
+          `),
+      );
+    });
+  });
+
+  describe('changeRole', () => {
+    it('should change role', async () => {
+      const now = new Date();
+
+      await makeTestUpAndDown('changeRole')(
+        (action) =>
+          db[action]('from-name', {
+            from: {},
+            to: {
+              name: 'to-name',
+              super: true,
+              inherit: true,
+              createRole: true,
+              createDb: true,
+              canLogin: true,
+              replication: true,
+              connLimit: 10,
+              validUntil: now,
+              bypassRls: true,
+              config: {
+                statement_timeout: '30s',
+                work_mem: '64MB',
+              },
+            },
+          }),
+        () =>
+          expectSql(`
+            ALTER ROLE "from-name" RENAME TO "to-name";
+            ALTER ROLE "to-name" WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION CONNECTION LIMIT 10 VALID UNTIL '${now.toISOString()}' BYPASSRLS;
+            ALTER ROLE "to-name" SET statement_timeout = '30s';
+            ALTER ROLE "to-name" SET work_mem = '64MB'
+          `),
+        () =>
+          expectSql(`
+            ALTER ROLE "to-name" RENAME TO "from-name";
+            ALTER ROLE "from-name" WITH NOSUPERUSER NOINHERIT NOCREATEROLE NOCREATEDB NOLOGIN NOREPLICATION CONNECTION LIMIT -1 VALID UNTIL 'infinity' NOBYPASSRLS;
+            ALTER ROLE "from-name" RESET statement_timeout;
+            ALTER ROLE "from-name" RESET work_mem
+          `),
+      );
+    });
+  });
 });

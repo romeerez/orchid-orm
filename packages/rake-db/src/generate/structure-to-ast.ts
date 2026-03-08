@@ -62,6 +62,7 @@ export interface StructureToAstTableData {
   indexes: DbStructure.Index[];
   excludes: DbStructure.Exclude[];
   constraints: DbStructure.Constraint[];
+  roles?: DbStructure.Role[];
 }
 
 export const makeStructureToAstCtx = (
@@ -168,6 +169,16 @@ export const structureToAst = async (
 
   for (const view of data.views) {
     ast.push(viewToAst(ctx, data, domains, view));
+  }
+
+  if (data.roles) {
+    for (const role of data.roles) {
+      ast.push({
+        type: 'role',
+        action: 'create',
+        ...role,
+      });
+    }
   }
 
   return ast;
@@ -434,6 +445,7 @@ export const getDbStructureTableData = (
     indexes: data.indexes.filter(filterFn),
     excludes: data.excludes.filter(filterFn),
     constraints,
+    roles: data.roles,
   };
 };
 

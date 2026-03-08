@@ -4,8 +4,8 @@ import { RakeDbAst } from '../ast';
 import { interpolateSqlValues } from './migration.utils';
 import { getSchemaAndTableFromName } from '../common';
 
-export const createView = async <CT>(
-  migration: Migration<CT>,
+export const createView = async (
+  migration: Migration,
   up: boolean,
   name: string,
   options: RakeDbAst.ViewOptions,

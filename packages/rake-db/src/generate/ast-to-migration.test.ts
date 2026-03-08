@@ -2,6 +2,7 @@ import { astToMigration } from './ast-to-migration';
 import { makeColumnTypes, raw, defaultSchemaConfig, TableData } from 'pqb';
 import { RakeDbAst } from '../ast';
 import { makeRakeDbConfig } from '../config';
+import { dbStructureMockFactory } from './db-structure.mockFactory';
 
 const columnTypes = makeColumnTypes(defaultSchemaConfig);
 const t = {
@@ -118,6 +119,12 @@ const view: RakeDbAst.View = {
     },
   },
   deps: [],
+};
+
+const role: RakeDbAst.Role = {
+  type: 'role',
+  action: 'create',
+  ...dbStructureMockFactory.role(),
 };
 
 const expectResult = (code: string | undefined, expected: string) => {
@@ -1231,6 +1238,191 @@ change(async (db) => {
     securityBarrier: true,
     securityInvoker: true,
   }, db.sql({ raw: '$a' }).values({"a":1}));
+});
+`,
+      );
+    });
+  });
+
+  describe('role', () => {
+    it('should create role', () => {
+      const result = act([role]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createRole('name');
+});
+`,
+      );
+    });
+
+    it('should ignore -1 connLimit', () => {
+      const result = act([{ ...role, connLimit: -1 }]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createRole('name');
+});
+`,
+      );
+    });
+
+    it('should create role with options', () => {
+      const now = new Date();
+
+      const result = act([
+        {
+          ...role,
+          super: true,
+          inherit: true,
+          createRole: true,
+          createDb: true,
+          canLogin: true,
+          replication: true,
+          connLimit: 10,
+          validUntil: now,
+          bypassRls: true,
+          config: {
+            a: '1',
+            b: '2',
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createRole('name', {
+    super: true,
+    inherit: true,
+    createRole: true,
+    createDb: true,
+    canLogin: true,
+    replication: true,
+    connLimit: 10,
+    validUntil: '${now.toISOString()}',
+    bypassRls: true,
+    config: {"a":"1","b":"2"},
+  });
+});
+`,
+      );
+    });
+  });
+
+  describe('changeRole', () => {
+    it('should rename role', () => {
+      const role = dbStructureMockFactory.role();
+
+      const result = act([
+        {
+          type: 'changeRole',
+          name: 'from-name',
+          from: {
+            ...role,
+            name: 'from-name',
+          },
+          to: {
+            name: 'to-name',
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeRole('from-name', {
+    to: {
+      name: 'to-name',
+    },
+  });
+});
+`,
+      );
+    });
+
+    it('should change role', () => {
+      const now = new Date();
+
+      const result = act([
+        {
+          type: 'changeRole',
+          name: 'from-name',
+          from: {
+            name: 'from-name',
+            super: false,
+            inherit: false,
+            createRole: false,
+            createDb: false,
+            canLogin: false,
+            replication: false,
+            connLimit: -1,
+            validUntil: now,
+            bypassRls: false,
+            config: {
+              a: '1',
+            },
+          },
+          to: {
+            name: 'to-name',
+            super: true,
+            inherit: true,
+            createRole: true,
+            createDb: true,
+            canLogin: true,
+            replication: true,
+            connLimit: 10,
+            validUntil: undefined,
+            bypassRls: true,
+            config: {
+              b: '2',
+            },
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeRole('from-name', {
+    from: {
+      super: false,
+      inherit: false,
+      createRole: false,
+      createDb: false,
+      canLogin: false,
+      replication: false,
+      connLimit: -1,
+      validUntil: '${now.toISOString()}',
+      bypassRls: false,
+      config: {"a":"1"},
+    },
+    to: {
+      name: 'to-name',
+      super: true,
+      inherit: true,
+      createRole: true,
+      createDb: true,
+      canLogin: true,
+      replication: true,
+      connLimit: 10,
+      validUntil: undefined,
+      bypassRls: true,
+      config: {"b":"2"},
+    },
+  });
 });
 `,
       );

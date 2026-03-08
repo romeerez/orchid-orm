@@ -92,11 +92,11 @@ describe('adapter', () => {
         };
 
         const res = await testAdapter.transaction(
-          async (trx) => {
-            return trx.query('SELECT 1 as one');
-          },
           {
             options: 'read write',
+          },
+          async (trx) => {
+            return trx.query('SELECT 1 as one');
           },
         );
 
@@ -111,41 +111,80 @@ describe('adapter', () => {
 
       it('sets a searchPath', async () => {
         const res = await testAdapter.transaction(
+          {
+            locals: {
+              search_path: 'schema',
+            },
+          },
           async (trx) => {
             return trx.query('SHOW search_path');
-          },
-          {
-            searchPath: 'schema',
           },
         );
 
         expect(res.rows[0].search_path).toBe('schema');
       });
 
-      it('sets temporary in a nested transaction call', async () => {
+      it('sets searchPath in a nested transaction call', async () => {
         const getSearchPath = (adapter: AdapterBase) =>
           adapter
             .query('SHOW search_path')
             .then((result) => result.rows[0].search_path);
 
-        const res = await testAdapter.transaction(async (trx) => {
-          const before = await getSearchPath(trx);
-          const nested = await trx.transaction(
-            async (trx) => {
-              return getSearchPath(trx);
-            },
-            {
-              searchPath: 'schema',
-            },
-          );
-          const after = await getSearchPath(trx);
-          return { before, nested, after };
-        });
+        const res = await testAdapter.transaction(
+          { locals: { search_path: 'public' } },
+          async (trx) => {
+            const before = await getSearchPath(trx);
+            const nested = await trx.transaction(
+              {
+                locals: {
+                  search_path: 'schema',
+                },
+              },
+              async (trx) => {
+                return getSearchPath(trx);
+              },
+            );
+            const after = await getSearchPath(trx);
+            return { before, nested, after };
+          },
+        );
 
         expect(res).toEqual({
-          before: `"$user", public`,
-          nested: `schema`,
-          after: `"$user", public`,
+          before: 'public',
+          nested: 'schema',
+          after: 'schema',
+        });
+      });
+
+      it('sets arbitrary locals', async () => {
+        const getLocal = (adapter: AdapterBase) =>
+          adapter
+            .query('SHOW app.user_id')
+            .then((result) => result.rows[0]['app.user_id']);
+
+        const res = await testAdapter.transaction(
+          { locals: { 'app.user_id': 1 } },
+          async (trx) => {
+            const before = await getLocal(trx);
+            const nested = await trx.transaction(
+              {
+                locals: {
+                  'app.user_id': 2,
+                },
+              },
+              async (trx) => {
+                return getLocal(trx);
+              },
+            );
+            const after = await getLocal(trx);
+            return { before, nested, after };
+          },
+        );
+
+        expect(res).toEqual({
+          before: '1',
+          nested: '2',
+          after: '2',
         });
       });
     });

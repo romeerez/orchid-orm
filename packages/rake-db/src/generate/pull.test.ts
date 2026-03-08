@@ -36,6 +36,7 @@ const structure = {
   enums: [],
   domains: [],
   collations: [],
+  roles: [],
 } as Awaited<ReturnType<typeof introspectDbSchema>>;
 
 asMock(makeFileVersion).mockReturnValue('timestamp');
@@ -80,7 +81,8 @@ describe('pull', () => {
     jest.clearAllMocks();
 
     for (const key in structure) {
-      structure[key as keyof typeof structure].length = 0;
+      const arr = structure[key as keyof typeof structure];
+      if (arr) arr.length = 0;
     }
 
     asMock(introspectDbSchema).mockResolvedValue(structure);

@@ -1,7 +1,7 @@
 import { introspectDbSchema } from './db-structure';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 import { StructureToAstTableData } from './structure-to-ast';
-import { TestAdapter } from 'test-utils';
+import { asMock, TestAdapter } from 'test-utils';
 
 const adapter = new TestAdapter({
   databaseURL: process.env.PG_URL,
@@ -25,6 +25,8 @@ const mockQueryResult = (data: Partial<StructureToAstTableData>) => {
       {
         tables: [],
         domains: [],
+        roles: [],
+        indexes: [],
         ...data,
       },
     ],
@@ -32,6 +34,7 @@ const mockQueryResult = (data: Partial<StructureToAstTableData>) => {
 };
 
 describe('dbStructure', () => {
+  beforeEach(jest.clearAllMocks);
   afterAll(() => adapter.close());
 
   it('should ignore indexes with `exclude` and collect them into `excludes` instead', async () => {
@@ -155,5 +158,35 @@ describe('dbStructure', () => {
         languageColumn: 'lang',
       }),
     );
+  });
+
+  it('should parse roles, should use default roles WHERE', async () => {
+    const now = new Date();
+    const role = dbStructureMockFactory.role({
+      validUntil: now.toISOString() as never,
+      config: [
+        'statement_timeout=60s',
+        `search_path="""someSchema"", public"`,
+      ] as never,
+    });
+    mockQueryResult({
+      roles: [role],
+    });
+
+    const { roles } = await introspectDbSchema(adapter, { roles: {} });
+
+    expect(roles).toEqual([
+      {
+        ...role,
+        validUntil: now,
+        config: {
+          statement_timeout: '60s',
+          search_path: `"someSchema", public`,
+        },
+      },
+    ]);
+
+    const sql = asMock(adapter.query).mock.calls[1][0];
+    expect(sql.includes(`name != 'postgres' AND name !~ '^pg_'`)).toBe(true);
   });
 });

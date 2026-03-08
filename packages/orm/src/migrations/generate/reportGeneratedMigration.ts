@@ -428,6 +428,11 @@ export const report = (
         );
         break;
       }
+      case 'role':
+      case 'changeRole': {
+        // TODO
+        break;
+      }
       default:
         exhaustive(a);
     }

@@ -1,4 +1,10 @@
-import { AdapterBase, EmptyObject, RecordUnknown, SearchWeight } from 'pqb';
+import {
+  AdapterBase,
+  EmptyObject,
+  RecordOptionalString,
+  RecordUnknown,
+  SearchWeight,
+} from 'pqb';
 import { RakeDbAst } from '../ast';
 
 export namespace DbStructure {
@@ -162,6 +168,20 @@ export namespace DbStructure {
     lcCType?: string;
     locale?: string;
     version?: string;
+  }
+
+  export interface Role {
+    name: string;
+    super: boolean;
+    inherit: boolean;
+    createRole: boolean;
+    createDb: boolean;
+    canLogin: boolean;
+    replication: boolean;
+    connLimit: number;
+    validUntil?: Date;
+    bypassRls: boolean;
+    config?: RecordOptionalString;
   }
 }
 
@@ -565,6 +585,23 @@ FROM pg_collation
 JOIN pg_namespace n on pg_collation.collnamespace = n.oid
 WHERE ${filterSchema('n.nspname')}`;
 
+const roleSql = (params: {
+  whereSql?: string;
+}) => `SELECT json_agg(json_build_object(
+  'name', rolname,
+  'super', rolsuper,
+  'inherit', rolinherit,
+  'createRole', rolcreaterole,
+  'canLogin', rolcanlogin,
+  'replication', rolreplication,
+  'connLimit', rolconnlimit,
+  'validUntil', rolvaliduntil,
+  'bypassRls', rolbypassrls,
+  'config', rolconfig
+)) FROM pg_roles WHERE ${
+  params.whereSql ?? `name != 'postgres' AND name !~ '^pg_'`
+}`;
+
 // procedures
 // `SELECT
 //   n.nspname AS "schemaName",
@@ -591,7 +628,7 @@ WHERE ${filterSchema('n.nspname')}`;
 // JOIN pg_namespace n ON p.pronamespace = n.oid
 // WHERE ${filterSchema('n.nspname')}`
 
-const sql = (version: number) =>
+const sql = (version: number, params?: IntrospectDbStructureParams) =>
   `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
     tablesSql,
     'tables',
@@ -607,7 +644,7 @@ const sql = (version: number) =>
   )}, ${jsonAgg(domainsSql, 'domains')}, ${jsonAgg(
     collationsSql(version),
     'collations',
-  )}`;
+  )}${params?.roles ? `, (${roleSql(params.roles)}) AS "roles"` : ''}`;
 
 export interface IntrospectedStructure {
   schemas: string[];
@@ -621,10 +658,18 @@ export interface IntrospectedStructure {
   enums: DbStructure.Enum[];
   domains: DbStructure.Domain[];
   collations: DbStructure.Collation[];
+  roles?: DbStructure.Role[];
+}
+
+interface IntrospectDbStructureParams {
+  roles?: {
+    whereSql?: string;
+  };
 }
 
 export async function introspectDbSchema(
   db: AdapterBase,
+  params?: IntrospectDbStructureParams,
 ): Promise<IntrospectedStructure> {
   const {
     rows: [{ version: versionString }],
@@ -632,7 +677,7 @@ export async function introspectDbSchema(
 
   const version = +(versionString.match(/\d+/) as string[])[0];
 
-  const data = await db.query<IntrospectedStructure>(sql(version));
+  const data = await db.query<IntrospectedStructure>(sql(version, params));
   const result = data.rows[0];
 
   for (const domain of result.domains) {
@@ -737,6 +782,29 @@ export async function introspectDbSchema(
 
   result.indexes = indexes;
   result.excludes = excludes;
+
+  if (result.roles) {
+    for (const role of result.roles) {
+      nullsToUndefined(role);
+      if (role.validUntil) role.validUntil = new Date(role.validUntil);
+      if (role.config) {
+        const arr = role.config as unknown as string[];
+        role.config = Object.fromEntries(
+          arr.map((item) => {
+            const i = item.indexOf('=');
+            const key = item.slice(0, i);
+            const value = item.slice(i + 1);
+            return [
+              key,
+              value[0] === '"'
+                ? value.slice(1, -1).replaceAll('""', '"')
+                : value,
+            ];
+          }),
+        );
+      }
+    }
+  }
 
   return result;
 }

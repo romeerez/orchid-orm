@@ -26,6 +26,7 @@ import {
 import { quoteSchemaTable } from '../common';
 import { astToGenerateItems } from './ast-to-generate-items';
 import { RakeDbConfig } from '../config';
+import { DbStructure } from './db-structure';
 
 export const astToMigration = (
   currentSchema: string,
@@ -640,6 +641,83 @@ const astEncoders: {
     addCode(code, ');');
     return code;
   },
+  role(ast) {
+    const params = ast.action === 'create' ? roleParams(ast) : undefined;
+
+    const arr: Code = [
+      `await db.${ast.action}Role(${singleQuote(ast.name)}${
+        params?.length ? ', {' : ');'
+      }`,
+    ];
+
+    if (params?.length) {
+      arr.push(params);
+      arr.push('});');
+    }
+
+    return arr;
+  },
+  changeRole(ast) {
+    const from = roleParams(ast.from, ast.to);
+    const to = roleParams(ast.to, ast.from, true);
+
+    return [
+      `await db.changeRole(${singleQuote(ast.name)}, {`,
+      [...(from.length ? ['from: {', from, '},'] : []), 'to: {', to, '},'],
+      '});',
+    ];
+  },
+};
+
+const roleParams = (
+  ast: Partial<DbStructure.Role>,
+  compare?: Partial<DbStructure.Role>,
+  to?: boolean,
+): string[] => {
+  const params: string[] = [];
+
+  for (const key of [
+    'name',
+    'super',
+    'inherit',
+    'createRole',
+    'createDb',
+    'canLogin',
+    'replication',
+    'connLimit',
+    'validUntil',
+    'bypassRls',
+    'config',
+  ] as const) {
+    if (key === 'name' && !to) continue;
+
+    let value: unknown = ast[key];
+    if (!compare && (!value || (key === 'connLimit' && value === -1))) {
+      continue;
+    }
+
+    value =
+      value instanceof Date
+        ? `'${value.toISOString()}'`
+        : key === 'config'
+        ? JSON.stringify(value)
+        : typeof value === 'string'
+        ? singleQuote(value)
+        : value;
+
+    if (compare) {
+      const a = value === -1 || value === false ? undefined : value;
+      const other = compare[key];
+      const b = other === -1 || other === false ? undefined : other;
+      if (a === b) {
+        continue;
+      }
+    }
+
+    params.push(`${key}: ${value},`);
+  }
+
+  return params;
 };
 
 const isTimestamp = (

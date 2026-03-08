@@ -8,6 +8,7 @@ import {
   RawSqlBase,
 } from 'pqb';
 import { DropMode } from './migration/migration';
+import { DbStructure } from './generate/db-structure';
 
 export type RakeDbAst =
   | RakeDbAst.Table
@@ -24,7 +25,9 @@ export type RakeDbAst =
   | RakeDbAst.Collation
   | RakeDbAst.Constraint
   | RakeDbAst.RenameTableItem
-  | RakeDbAst.View;
+  | RakeDbAst.View
+  | RakeDbAst.Role
+  | RakeDbAst.ChangeRole;
 
 export namespace RakeDbAst {
   export interface Table extends TableData {
@@ -262,5 +265,17 @@ export namespace RakeDbAst {
       securityBarrier?: boolean;
       securityInvoker?: boolean;
     };
+  }
+
+  export interface Role extends DbStructure.Role {
+    type: 'role';
+    action: 'create' | 'drop';
+  }
+
+  export interface ChangeRole {
+    type: 'changeRole';
+    name: string;
+    from: Partial<DbStructure.Role>;
+    to: Partial<DbStructure.Role>;
   }
 }

@@ -206,6 +206,10 @@ export const astToGenerateItem = (
       deps.push(tableSchema, `${tableSchema}.${tableName}`);
       break;
     }
+    case 'role':
+    case 'changeRole': {
+      break;
+    }
     default:
       exhaustive(ast);
   }
