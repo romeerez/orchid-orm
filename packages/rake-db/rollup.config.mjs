@@ -5,4 +5,5 @@ export default [
   ...config,
   ...rollupExportFile('src/adapters/node-postgres', 'dist/node-postgres'),
   ...rollupExportFile('src/adapters/postgres-js', 'dist/postgres-js'),
+  ...rollupExportFile('src/adapters/bun-sql', 'dist/bun-sql'),
 ];

@@ -76,6 +76,15 @@ jobs:
       - name: Run tests
         run: pnpm test:ci
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Run Bun adapter tests
+        run: |
+          (cd packages/pqb && bunx --bun jest bun-sql)
+          (cd packages/orm && bunx --bun jest bun-sql)
+          (cd packages/rake-db && bunx --bun jest bun-sql)
+
       - name: Run and type-check build
         run: pnpm build
 
@@ -151,7 +160,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add coverage-badge.svg
-          
+
           # Will give error if badge did not changed
           git commit -m "Update coverage badge" || true
 

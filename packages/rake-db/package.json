@@ -25,6 +25,11 @@
       "require": "./dist/postgres-js.js",
       "import": "./dist/postgres-js.mjs",
       "types": "./dist/postgres-js.d.ts"
+    },
+    "./bun-sql": {
+      "require": "./dist/bun-sql.js",
+      "import": "./dist/bun-sql.mjs",
+      "types": "./dist/bun-sql.d.ts"
     }
   },
   "files": [
