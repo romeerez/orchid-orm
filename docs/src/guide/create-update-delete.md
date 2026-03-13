@@ -403,7 +403,9 @@ const user = await db.user
   });
 ```
 
-The data can be returned from a function, it won't be called if the record was found:
+The data can be returned from a function, the function won't be normally called if the record was found.
+
+It's also called when a record is created by someone else between find and create, don't rely on it not being called for important side effects.
 
 ```ts
 const user = await db.user
@@ -974,7 +976,9 @@ await db.user
   });
 ```
 
-The data for `create` may be returned from a function, it won't be called if a record was updated:
+The data for `create` may be returned from a function, it won't be normally called if a record was found.
+
+It's also called when a record is created by someone else between find and create, don't rely on it not being called for important side effects.
 
 ```ts
 await db.user

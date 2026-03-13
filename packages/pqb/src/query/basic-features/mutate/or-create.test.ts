@@ -47,6 +47,15 @@ const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
 describe('orCreate', () => {
   useTestDatabase();
 
+  it('should not call create callback producing data when the record is found', async () => {
+    const fn = jest.fn(() => UserData);
+    const id = await db.user.get('Id').insert(UserData);
+
+    await db.user.find(id).orCreate(fn);
+
+    expect(fn).not.toHaveBeenCalled();
+  });
+
   it('should not allow using appReadOnly columns in create', async () => {
     expect(() =>
       TableWithReadOnly.find(1).orCreate({

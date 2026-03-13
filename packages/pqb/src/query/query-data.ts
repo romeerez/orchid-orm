@@ -299,6 +299,8 @@ export interface QueryData
   // this signals SQL code to run the second query for the same query object.
   upsertUpdate?: boolean;
   upsertSecond?: boolean;
+  // only for tha data function, it's called only in toSQL after the first query is made.
+  upsertInsert?(): unknown;
 
   /** insert **/
 

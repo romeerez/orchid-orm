@@ -6,9 +6,11 @@ import {
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
+  db,
   sql,
   testDb,
   TestTransactionAdapter,
+  UserData,
   useTestDatabase,
 } from 'test-utils';
 
@@ -44,6 +46,20 @@ const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
 
 describe('upsert', () => {
   useTestDatabase();
+
+  it('should not call create callback producing data when the record is found', async () => {
+    const fn = jest.fn(() => UserData);
+    const id = await db.user.get('Id').insert(UserData);
+
+    await db.user.find(id).upsert({
+      update: {
+        Name: 'new name',
+      },
+      create: fn,
+    });
+
+    expect(fn).not.toHaveBeenCalled();
+  });
 
   it('should not allow using appReadOnly columns in update', () => {
     expect(() =>

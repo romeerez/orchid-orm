@@ -13,6 +13,7 @@ import { pushUpdateSql } from '../basic-features/mutate/update.sql';
 import { pushDeleteSql } from '../basic-features/mutate/delete.sql';
 import {
   _clone,
+  _queryInsert,
   JoinItem,
   makeRowToJson,
   makeSql,
@@ -221,6 +222,12 @@ export const toSql: ToSql = (
           // use raw SQL rather than _queryWhereNotExists to avoid soft delete being appended
           new RawSql(`NOT EXISTS (SELECT 1 FROM "${as}")`),
         ];
+
+        if (query.upsertInsert) {
+          const insertData = query.upsertInsert();
+          _queryInsert(upsertOrCreate as never, insertData as never);
+          upsertOrCreate.q.type = 'upsert';
+        }
 
         const { makeSql: makeSecondSql } = moveMutativeQueryToCteBase(
           toSql,

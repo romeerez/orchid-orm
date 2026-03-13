@@ -26,12 +26,19 @@ export function _orCreate<T extends PickQueryHasSelectResultReturnType>(
   }
 
   if (typeof data === 'function') {
-    data = data(updateData);
+    q.upsertInsert = () =>
+      mergeData
+        ? {
+            ...mergeData,
+            ...((data as FnUnknownToUnknown)(updateData) as RecordUnknown),
+          }
+        : (data as FnUnknownToUnknown)(updateData);
+  } else {
+    if (mergeData) {
+      data = { ...mergeData, ...(data as RecordUnknown) };
+    }
+    _queryInsert(query as never, data as never);
   }
-
-  if (mergeData) data = { ...mergeData, ...(data as RecordUnknown) };
-
-  _queryInsert(query as never, data as never);
 
   q.type = 'upsert';
 
