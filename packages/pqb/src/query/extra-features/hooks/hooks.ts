@@ -59,13 +59,26 @@ const after = <T extends PickQueryShape, S extends HookSelectArg<T>>(
     cb,
   );
 
+  if (key === 'Save') {
+    addSelect(q, 'Create', select);
+    addSelect(q, 'Update', select);
+  } else {
+    addSelect(q, key, select);
+  }
+
+  return query;
+};
+
+const addSelect = (
+  q: PickQueryQ,
+  key: 'Create' | 'Update' | 'Delete',
+  select: string[],
+) => {
   const prop = `after${key}Select` as const;
   const set = (q.q[prop] = new Set(q.q[prop]));
   for (const column of select) {
     set.add(column);
   }
-
-  return query;
 };
 
 export const _queryHookBeforeQuery = <T extends PickQueryShape>(

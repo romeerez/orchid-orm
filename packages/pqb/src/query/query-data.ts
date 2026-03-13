@@ -223,8 +223,6 @@ export interface QueryData
   afterSave?: QueryAfterHook[];
   // run functions after create or update commit
   afterSaveCommit?: QueryAfterHook[];
-  // additional select for afterSave hooks
-  afterSaveSelect?: Set<string>;
   // run functions before delete
   beforeDelete?: QueryBeforeHook[];
   // run functions after delete in transaction

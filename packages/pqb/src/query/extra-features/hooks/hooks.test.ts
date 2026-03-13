@@ -300,6 +300,48 @@ describe('hooks', () => {
 
   const tested: Record<string, boolean> = {};
 
+  describe('afterSave and afterSaveCommit applied without afterCreate or afterUpdate', () => {
+    it('afterSave should be called properly when creating', async () => {
+      const fn = jest.fn();
+
+      const q = UserNoHooks.afterSave(['name'], fn).insert(userData);
+      await q;
+
+      expect(fn.mock.calls).toMatchObject([[[{ name: userData.name }], q]]);
+    });
+
+    it('afterSaveCommit should be called properly when creating', async () => {
+      const fn = jest.fn();
+
+      const q = UserNoHooks.afterSaveCommit(['name'], fn).insert(userData);
+      await q;
+
+      expect(fn.mock.calls).toMatchObject([[[{ name: userData.name }], q]]);
+    });
+
+    it('afterSave should be called properly when updating', async () => {
+      const fn = jest.fn();
+      const id = await UserNoHooks.get('id').insert(userData);
+
+      const q = UserNoHooks.afterSave(['name'], fn).find(id).insert(userData);
+      await q;
+
+      expect(fn.mock.calls).toMatchObject([[[{ name: userData.name }], q]]);
+    });
+
+    it('afterSaveCommit should be called properly when updating', async () => {
+      const fn = jest.fn();
+      const id = await UserNoHooks.get('id').insert(userData);
+
+      const q = UserNoHooks.afterSaveCommit(['name'], fn)
+        .find(id)
+        .insert(userData);
+      await q;
+
+      expect(fn.mock.calls).toMatchObject([[[{ name: userData.name }], q]]);
+    });
+  });
+
   describe('columns parsing', () => {
     it('should parse columns selected by hooks', async () => {
       const fn = jest.fn();

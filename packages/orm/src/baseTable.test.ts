@@ -399,17 +399,18 @@ describe('baseTable', () => {
       expect(db.table.baseQuery.q).toMatchObject({
         before: [fns.beforeQuery],
         after: [fns.afterQuery],
-        // beforeCreate: [fns.beforeCreate, fns.beforeSave],
+        // wraps callbacks
+        beforeCreate: [expect.any(Function), expect.any(Function)],
         afterCreate: [fns.afterCreate],
         afterCreateCommit: [fns.afterCreateCommit],
-        afterCreateSelect: new Set(['one', 'two']),
-        // beforeUpdate: [fns.beforeUpdate, fns.beforeSave],
+        afterCreateSelect: new Set(['one', 'two', 'seven', 'eight']),
+        // wraps callbacks
+        beforeUpdate: [expect.any(Function), expect.any(Function)],
         afterUpdate: [fns.afterUpdate],
         afterUpdateCommit: [fns.afterUpdateCommit],
-        afterUpdateSelect: new Set(['three', 'four']),
+        afterUpdateSelect: new Set(['three', 'four', 'seven', 'eight']),
         afterSave: [fns.afterSave],
         afterSaveCommit: [fns.afterSaveCommit],
-        afterSaveSelect: new Set(['seven', 'eight']),
         beforeDelete: [fns.beforeDelete],
         afterDelete: [fns.afterDelete],
         afterDeleteCommit: [fns.afterDeleteCommit],
