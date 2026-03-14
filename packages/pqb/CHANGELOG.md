@@ -1,5 +1,12 @@
 # pqb
 
+## 0.61.6
+
+### Patch Changes
+
+- 5a09abb: Fix orCreate/upsert calling a data function preemptively (#673)
+- 6684e0d: Fix afterSave hook to handle data argument properly (#670)
+
 ## 0.61.5
 
 ### Patch Changes

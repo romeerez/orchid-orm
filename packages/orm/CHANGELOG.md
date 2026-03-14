@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.64.2
+
+### Patch Changes
+
+- 6684e0d: Fix afterSave hook to handle data argument properly (#670)
+- Updated dependencies [5a09abb]
+- Updated dependencies [6684e0d]
+  - pqb@0.61.6
+  - rake-db@2.30.2
+
 ## 1.64.1
 
 ### Patch Changes
