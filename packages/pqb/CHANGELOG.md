@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.8
+
+### Patch Changes
+
+- 506bc7b: Updated npm secret in CI - republishing
+
 ## 0.61.7
 
 ### Patch Changes
