@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.64.3
+
+### Patch Changes
+
+- 3e2d5e7: Bump versions to republish
+- Updated dependencies [3e2d5e7]
+  - pqb@0.61.7
+  - rake-db@2.30.3
+
 ## 1.64.2
 
 ### Patch Changes

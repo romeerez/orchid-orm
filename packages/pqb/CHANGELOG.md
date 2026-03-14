@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.7
+
+### Patch Changes
+
+- 3e2d5e7: Bump versions to republish
+
 ## 0.61.6
 
 ### Patch Changes
