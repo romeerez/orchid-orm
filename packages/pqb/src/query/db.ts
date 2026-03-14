@@ -537,15 +537,17 @@ export class Db<
    * const value = 1;
    *
    * // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
-   * const result = await db.query<{ one: number }>({
+   * import { raw } from 'orchid-orm';
+   *
+   * const result = await db.query<{ one: number }>(raw({
    *   raw: 'SELECT $1 AS one',
    *   values: [value],
-   * });
+   * }));
    * // data is inside `rows` array:
    * result.rows[0].one;
    * ```
    *
-   * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
+   * @param args - SQL template literal, or a raw SQL object created by `raw()` or `sql()` function
    */
   get query(): DbSqlQuery {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -609,7 +611,7 @@ export class Db<
    * row[0]; // our value
    * ```
    *
-   * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
+   * @param args - SQL template literal, or a raw SQL object created by `raw()` or `sql()` function
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queryArrays<R extends any[] = any[]>(
