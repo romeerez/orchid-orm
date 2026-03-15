@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.10
+
+### Patch Changes
+
+- cb09b51: Support managing db roles (#611)
+
 ## 0.61.9
 
 ### Patch Changes

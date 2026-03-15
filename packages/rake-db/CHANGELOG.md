@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.30.6
+
+### Patch Changes
+
+- cb09b51: Support managing db roles (#611)
+- Updated dependencies [cb09b51]
+  - pqb@0.61.10
+
 ## 2.30.5
 
 ### Patch Changes
