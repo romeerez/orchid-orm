@@ -15,6 +15,7 @@ export const verifyMigration = async (
   config: RakeDbConfig,
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,
+  roles?: { whereSql?: string },
 ): Promise<string | false | undefined> => {
   const migrationFn = new Function('change', migrationCode);
 
@@ -38,7 +39,9 @@ export const verifyMigration = async (
         await changeFn(db, true);
       }
 
-      const dbStructure = await introspectDbSchema(trx);
+      const dbStructure = await introspectDbSchema(trx, {
+        roles,
+      });
       generateMigrationParams.verifying = true;
 
       try {

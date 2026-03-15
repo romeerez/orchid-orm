@@ -1,6 +1,5 @@
 import { Migration } from './migration';
 import { DbStructure, RakeDbAst } from 'rake-db';
-import { emptyObject, RecordOptionalString } from 'pqb';
 
 type Option =
   | 'super'
@@ -148,14 +147,10 @@ const changeAstToQuery = ({ name, from, to }: RakeDbAst.ChangeRole): string => {
   const w: string[] = [];
   for (const key in to) {
     let value = to[key as keyof DbStructure.Role];
-    if (key !== 'config') {
+    if (key !== 'config' && key !== 'name') {
       if (value instanceof Date) value = value.toISOString();
-      let other = from[key as keyof DbStructure.Role];
-      if (other instanceof Date) other = other.toISOString();
 
-      if (value !== other && key in serializers) {
-        w.push(serializers[key as Option](value));
-      }
+      w.push(serializers[key as Option](value));
     }
   }
 
@@ -163,21 +158,48 @@ const changeAstToQuery = ({ name, from, to }: RakeDbAst.ChangeRole): string => {
     queries.push(`ALTER ROLE "${name}" WITH ${w.join(' ')}`);
   }
 
-  const config = to.config;
-  if (config) {
-    const fromConfig: RecordOptionalString = from.config ?? emptyObject;
-    for (const key in config) {
-      const value = config[key];
-      const other = fromConfig[key];
-      if (value !== other) {
-        queries.push(
-          `ALTER ROLE "${name}" ${
-            value ? `SET ${key} = '${value}'` : `RESET ${key}`
-          }`,
-        );
-      }
+  if (to.config) {
+    for (const key in to.config) {
+      const value = to.config[key];
+      queries.push(
+        `ALTER ROLE "${name}" ${
+          value ? `SET ${key} = '${value}'` : `RESET ${key}`
+        }`,
+      );
+    }
+  } else if (from.config) {
+    for (const key in from.config) {
+      queries.push(`ALTER ROLE "${name}" RESET ${key}`);
     }
   }
 
   return queries.join(';\n');
+};
+
+export const renameRole = async (
+  migration: Migration,
+  up: boolean,
+  from: string,
+  to: string,
+) => {
+  if (!up) {
+    const f = from;
+    from = to;
+    to = f;
+  }
+
+  const ast = makeRenameAst(from, to);
+  const sql = renameAstToQuery(ast);
+
+  if (sql) await migration.adapter.arrays(sql);
+};
+
+const makeRenameAst = (from: string, to: string): RakeDbAst.RenameRole => ({
+  type: 'renameRole',
+  from,
+  to,
+});
+
+const renameAstToQuery = (ast: RakeDbAst.RenameRole): string => {
+  return `ALTER ROLE "${ast.from}" RENAME TO "${ast.to}"`;
 };

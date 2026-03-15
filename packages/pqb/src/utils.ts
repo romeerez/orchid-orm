@@ -277,21 +277,32 @@ export const deepCompare = (a: unknown, b: unknown): boolean => {
   }
 
   if (typeof a === 'object') {
-    if (a === null) return b === null;
+    if (a === null) {
+      return b === null;
+    }
 
     if (Array.isArray(a)) {
-      if (!Array.isArray(b) || a.length !== b.length) return false;
+      if (!Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
 
       return a.every((item, i) => deepCompare(item, (b as unknown[])[i]));
     }
 
+    if (a instanceof Date && b instanceof Date) {
+      return a.getTime() === b.getTime();
+    }
+
     for (const key in a) {
-      if (!deepCompare((a as RecordUnknown)[key], (b as RecordUnknown)[key]))
+      if (!deepCompare((a as RecordUnknown)[key], (b as RecordUnknown)[key])) {
         return false;
+      }
     }
 
     for (const key in b as RecordUnknown) {
-      if (!(key in a) && (b as RecordUnknown)[key] !== undefined) return false;
+      if (!(key in a) && (b as RecordUnknown)[key] !== undefined) {
+        return false;
+      }
     }
 
     return true;

@@ -642,24 +642,29 @@ const astEncoders: {
     return code;
   },
   role(ast) {
-    const params = ast.action === 'create' ? roleParams(ast) : undefined;
+    const params = roleParams(ast.name, ast);
 
     const arr: Code = [
       `await db.${ast.action}Role(${singleQuote(ast.name)}${
-        params?.length ? ', {' : ');'
+        params.length ? ', {' : ');'
       }`,
     ];
 
-    if (params?.length) {
+    if (params.length) {
       arr.push(params);
       arr.push('});');
     }
 
     return arr;
   },
+  renameRole(ast) {
+    return `await db.renameRole(${singleQuote(ast.from)}, ${singleQuote(
+      ast.to,
+    )});`;
+  },
   changeRole(ast) {
-    const from = roleParams(ast.from, ast.to);
-    const to = roleParams(ast.to, ast.from, true);
+    const from = roleParams(ast.name, ast.from, ast.to);
+    const to = roleParams(ast.name, ast.to, ast.from, true);
 
     return [
       `await db.changeRole(${singleQuote(ast.name)}, {`,
@@ -670,6 +675,7 @@ const astEncoders: {
 };
 
 const roleParams = (
+  name: string,
   ast: Partial<DbStructure.Role>,
   compare?: Partial<DbStructure.Role>,
   to?: boolean,
@@ -689,7 +695,7 @@ const roleParams = (
     'bypassRls',
     'config',
   ] as const) {
-    if (key === 'name' && !to) continue;
+    if (key === 'name' && (!to || ast.name === name)) continue;
 
     let value: unknown = ast[key];
     if (!compare && (!value || (key === 'connLimit' && value === -1))) {

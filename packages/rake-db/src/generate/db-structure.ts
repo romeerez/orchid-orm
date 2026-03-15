@@ -587,19 +587,20 @@ WHERE ${filterSchema('n.nspname')}`;
 
 const roleSql = (params: {
   whereSql?: string;
-}) => `SELECT json_agg(json_build_object(
+}) => `SELECT COALESCE(json_agg(json_build_object(
   'name', rolname,
   'super', rolsuper,
   'inherit', rolinherit,
   'createRole', rolcreaterole,
+  'createDb', rolcreatedb,
   'canLogin', rolcanlogin,
   'replication', rolreplication,
   'connLimit', rolconnlimit,
   'validUntil', rolvaliduntil,
   'bypassRls', rolbypassrls,
   'config', rolconfig
-)) FROM pg_roles WHERE ${
-  params.whereSql ?? `name != 'postgres' AND name !~ '^pg_'`
+)), '[]') FROM pg_roles WHERE ${
+  params.whereSql ?? `rolname != 'postgres' AND rolname !~ '^pg_'`
 }`;
 
 // procedures
@@ -659,6 +660,7 @@ export interface IntrospectedStructure {
   domains: DbStructure.Domain[];
   collations: DbStructure.Collation[];
   roles?: DbStructure.Role[];
+  managedRolesSql?: string;
 }
 
 interface IntrospectDbStructureParams {
@@ -786,7 +788,14 @@ export async function introspectDbSchema(
   if (result.roles) {
     for (const role of result.roles) {
       nullsToUndefined(role);
-      if (role.validUntil) role.validUntil = new Date(role.validUntil);
+
+      if (role.validUntil) {
+        role.validUntil =
+          (role.validUntil as unknown) === 'infinity'
+            ? undefined
+            : new Date(role.validUntil);
+      }
+
       if (role.config) {
         const arr = role.config as unknown as string[];
         role.config = Object.fromEntries(

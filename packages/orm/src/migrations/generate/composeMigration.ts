@@ -13,6 +13,7 @@ import { processEnums } from './generators/enums.generator';
 import { processTables } from './generators/tables.generator';
 import { CodeItems } from './generate';
 import { RakeDbConfig } from 'rake-db';
+import { processRoles } from './generators/roles.generator';
 
 export interface ComposeMigrationParams {
   structureToAstCtx: StructureToAstCtx;
@@ -43,6 +44,8 @@ export const composeMigration = async (
   params: ComposeMigrationParams,
 ): Promise<string | undefined> => {
   const { structureToAstCtx, currentSchema } = params;
+
+  await processRoles(ast, dbStructure, params);
 
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 

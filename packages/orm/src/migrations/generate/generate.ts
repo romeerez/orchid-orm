@@ -12,6 +12,7 @@ import {
   QueryInternal,
   UnknownColumn,
   getQuerySchema,
+  emptyObject,
 } from 'pqb';
 import {
   concatSchemaAndName,
@@ -29,7 +30,7 @@ import {
 import { EnumItem } from './generators/enums.generator';
 import { CodeDomain } from './generators/domains.generator';
 import { composeMigration, ComposeMigrationParams } from './composeMigration';
-import { verifyMigration } from './verifyMigration';
+import { verifyMigration } from './verify-migration';
 import { report } from './reportGeneratedMigration';
 import path from 'node:path';
 import { pathToFileURL } from 'url';
@@ -86,9 +87,19 @@ export const generate = async (
     adapters = [afterPull.adapter];
   }
 
+  const db = await getDbFromConfig(config, dbPath);
+  const { columnTypes, internal } = db.$qb;
+
+  const rolesDbStructureParam = internal.roles
+    ? internal.managedRolesSql
+      ? { whereSql: internal.managedRolesSql }
+      : emptyObject
+    : undefined;
+
   const { dbStructure } = await migrateAndPullStructures(
     adapters,
     config,
+    rolesDbStructureParam,
     afterPull,
   );
 
@@ -97,9 +108,6 @@ export const generate = async (
   const currentSchema =
     (typeof adapterSchema === 'function' ? adapterSchema() : adapterSchema) ??
     'public';
-
-  const db = await getDbFromConfig(config, dbPath);
-  const { columnTypes, internal } = db.$qb;
 
   const codeItems = await getActualItems(
     db,
@@ -142,6 +150,7 @@ export const generate = async (
       config,
       migrationCode,
       generateMigrationParams,
+      rolesDbStructureParam,
     );
 
     if (result !== undefined) {
@@ -222,6 +231,7 @@ const getDbFromConfig = async (
 const migrateAndPullStructures = async (
   adapters: AdapterBase[],
   config: RakeDbConfig,
+  roles?: { whereSql?: string },
   afterPull?: AfterPull,
 ): Promise<{
   dbStructure: IntrospectedStructure;
@@ -249,7 +259,11 @@ const migrateAndPullStructures = async (
   }
 
   const dbStructures = await Promise.all(
-    adapters.map((adapter) => introspectDbSchema(adapter)),
+    adapters.map((adapter) =>
+      introspectDbSchema(adapter, {
+        roles,
+      }),
+    ),
   );
 
   const dbStructure = dbStructures[0];

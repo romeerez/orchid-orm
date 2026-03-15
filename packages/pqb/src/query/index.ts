@@ -42,6 +42,7 @@ export * from './extra-features/computed/computed';
 export * from './extra-features/data-transform/transform';
 export * from './extra-features/hooks/hooks';
 export * from './extra-features/merge/merge';
+export * from './extra-features/roles/roles';
 export * from './extra-features/scope/scope';
 export * from './extra-features/search/search.sql';
 export * from './query-columns/query-columns';

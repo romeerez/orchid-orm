@@ -207,7 +207,8 @@ export const astToGenerateItem = (
       break;
     }
     case 'role':
-    case 'changeRole': {
+    case 'changeRole':
+    case 'renameRole': {
       break;
     }
     default:

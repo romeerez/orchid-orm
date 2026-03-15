@@ -27,6 +27,7 @@ export type RakeDbAst =
   | RakeDbAst.RenameTableItem
   | RakeDbAst.View
   | RakeDbAst.Role
+  | RakeDbAst.RenameRole
   | RakeDbAst.ChangeRole;
 
 export namespace RakeDbAst {
@@ -270,6 +271,12 @@ export namespace RakeDbAst {
   export interface Role extends DbStructure.Role {
     type: 'role';
     action: 'create' | 'drop';
+  }
+
+  export interface RenameRole {
+    type: 'renameRole';
+    from: string;
+    to: string;
   }
 
   export interface ChangeRole {

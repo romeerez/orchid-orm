@@ -9,6 +9,7 @@ import {
   Query,
 } from './query';
 import { AsyncState } from './basic-features/storage/storage';
+import { DbRole } from './extra-features/roles/roles';
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
@@ -44,6 +45,8 @@ export interface QueryInternal<
   extensions?: DbExtension[];
   domains?: DbDomainArgRecord;
   generatorIgnore?: GeneratorIgnore;
+  roles?: DbRole[];
+  managedRolesSql?: string;
   // primary keys, indexes, checks and constraints of the table
   tableData: TableData;
   // For customizing `now()` sql

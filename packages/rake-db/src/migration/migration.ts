@@ -40,7 +40,7 @@ import {
 } from './migration.utils';
 import { createView } from './create-view';
 import { RakeDbConfig } from '../config';
-import { changeRole, createOrDropRole } from './role';
+import { changeRole, createOrDropRole, renameRole } from './role';
 import { DbStructure } from '../generate/db-structure';
 
 // Drop mode to use when dropping various database entities.
@@ -1421,12 +1421,16 @@ export class Migration<CT = unknown> {
     });
   }
 
-  createRole(name: string, params: Partial<DbStructure.Role>) {
+  createRole(name: string, params?: Partial<DbStructure.Role>) {
     return createOrDropRole(this, this.up, name, params);
   }
 
   dropRole(name: string, params?: Partial<DbStructure.Role>) {
     return createOrDropRole(this, !this.up, name, params);
+  }
+
+  renameRole(from: string, to: string) {
+    return renameRole(this, this.up, from, to);
   }
 
   changeRole(

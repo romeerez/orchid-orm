@@ -1318,6 +1318,28 @@ change(async (db) => {
     });
   });
 
+  describe('renameRole', () => {
+    it('should rename role', () => {
+      const result = act([
+        {
+          type: 'renameRole',
+          from: 'from',
+          to: 'to',
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.renameRole('from', 'to');
+});
+`,
+      );
+    });
+  });
+
   describe('changeRole', () => {
     it('should rename role', () => {
       const role = dbStructureMockFactory.role();

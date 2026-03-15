@@ -429,8 +429,19 @@ export const report = (
         break;
       }
       case 'role':
+        code.push(
+          `${
+            a.action === 'create' ? green('+ create role') : red('- drop role')
+          } ${a.name}`,
+        );
+        break;
+      case 'renameRole':
+        code.push(
+          `${yellow('~ rename role')} ${a.from} ${yellow('=>')} ${a.to}`,
+        );
+        break;
       case 'changeRole': {
-        // TODO
+        code.push(`${yellow('~ change role')} ${a.name}`);
         break;
       }
       default:

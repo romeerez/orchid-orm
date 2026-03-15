@@ -187,6 +187,8 @@ describe('dbStructure', () => {
     ]);
 
     const sql = asMock(adapter.query).mock.calls[1][0];
-    expect(sql.includes(`name != 'postgres' AND name !~ '^pg_'`)).toBe(true);
+    expect(sql.includes(`rolname != 'postgres' AND rolname !~ '^pg_'`)).toBe(
+      true,
+    );
   });
 });

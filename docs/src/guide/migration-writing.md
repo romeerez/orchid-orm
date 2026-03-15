@@ -1032,6 +1032,80 @@ change(async (db) => {
 });
 ```
 
+## createRole, dropRole
+
+Create and drop database roles.
+
+`dropRole` accepts the same arguments as `createRole`, it will create the role back when rolling back the migration.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  // options are optional
+  await db.createRole('name');
+
+  await db.createRole('name', {
+    super: true,
+    inherit: true,
+    createRole: true,
+    createDb: true,
+    canLogin: true,
+    replication: true,
+    connLimit: 123,
+    validUntil: new Date('2030-01-01'),
+    bypassRls: true,
+    // config is of type Record<string, string>:
+    // consult with Postgres docs for supported variables.
+    config: {
+      statement_timeout: '30s',
+      work_mem: '128MB',
+    },
+  });
+});
+```
+
+## renameRole
+
+Renames a database role.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.renameRole('old-name', 'new-name');
+});
+```
+
+## changeRole
+
+Alters a database role. Alters it back on a migration rollback.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.changeRole('old-name', {
+    from: {
+      // since it is not present in `to`, it will be disabled
+      canLogin: true,
+      config: {
+        // not present in `to` - this will reset the option
+        statement_timeout: '30s',
+      },
+      connLimit: 10,
+    },
+    to: {
+      // the role will be renamed if `to` has a new name
+      name: 'new-name',
+      // grants a permission to create a database
+      createDb: true,
+      connLimit: 20,
+    },
+  });
+});
+```
+
 ## tableExists
 
 [//]: # 'has JSDoc'

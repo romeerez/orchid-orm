@@ -414,7 +414,63 @@ When renaming a table, the table primary key will be also renamed. When renaming
 The tool handles migration generation for
 tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, exclude constraints, extensions, domain types.
 
-Please let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
+Let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
+
+### roles
+
+By default, migrations generator doesn't track Postgres ORMs, you can manage them manually if needed.
+
+Provide `roles` array to the options to activate role management:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    roles: [
+      {
+        // a simple role with no options
+        name: 'guest',
+      },
+      {
+        name: 'admin',
+        super: true,
+        inherit: true,
+        createRole: true,
+        createDb: true,
+        canLogin: true,
+        replication: true,
+        connLimit: 123,
+        validUntil: new Date('2030-01-01'),
+        bypassRls: true,
+        // config is of type Record<string, string>:
+        // consult with Postgres docs for supported variables.
+        config: {
+          statement_timeout: '30s',
+          work_mem: '128MB',
+        },
+      },
+    ],
+  },
+  { ...tables },
+);
+```
+
+The migration logic will ignore the `postgres` role and all the roles that starts with `pg_`,
+it will synchronize all other roles.
+
+You can tweak this filter by setting `managedRolesSql` that's being applied to a query of `pg_roles` table:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    roles: [...roles],
+    // it's a default SQL
+    managedRolesSql: `rolname != 'postgres' AND rolname !~ '^pg_'`,
+  },
+  { ...tables },
+);
+```
 
 ### generatorIgnore
 

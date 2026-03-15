@@ -1167,6 +1167,22 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
     });
   });
 
+  describe('renameRole', () => {
+    it('should rename role', async () => {
+      await makeTestUpAndDown('renameRole')(
+        (action) => db[action]('from', 'to'),
+        () =>
+          expectSql(`
+            ALTER ROLE "from" RENAME TO "to"
+          `),
+        () =>
+          expectSql(`
+            ALTER ROLE "to" RENAME TO "from"
+          `),
+      );
+    });
+  });
+
   describe('changeRole', () => {
     it('should change role', async () => {
       const now = new Date();

@@ -1,7 +1,7 @@
 import { introspectDbSchema } from 'rake-db';
 import { useGeneratorsTestUtils } from './generators/generators.test-utils';
 import { asMock } from 'test-utils';
-import { verifyMigration } from './verifyMigration';
+import { verifyMigration } from './verify-migration';
 
 jest.mock('rake-db', () => {
   const actual = jest.requireActual('../../../../rake-db/src');
@@ -14,7 +14,7 @@ jest.mock('rake-db', () => {
     ),
   };
 });
-jest.mock('./verifyMigration');
+jest.mock('./verify-migration');
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),

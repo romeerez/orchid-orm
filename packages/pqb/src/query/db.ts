@@ -83,6 +83,7 @@ import { QueryData, QueryDataScopes } from './query-data';
 import { QueryInternal } from './query-internal';
 import { QuerySchema } from './basic-features/schema/schema';
 import { AsyncState } from './basic-features/storage/storage';
+import { DbRole } from './extra-features/roles/roles';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -133,6 +134,8 @@ export interface DbSharedOptions extends QueryLogOptions {
    * A single query is more efficient on lower amount of records and on lower latency to a database.
    */
   nestedCreateBatchMax?: number;
+  roles?: DbRole[];
+  managedRolesSql?: string;
 }
 
 export interface DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes>
@@ -894,6 +897,8 @@ export const _initQueryBuilder = (
 
   qb.internal.domains = options.domains;
   qb.internal.generatorIgnore = options.generatorIgnore;
+  qb.internal.roles = options.roles;
+  qb.internal.managedRolesSql = options.managedRolesSql;
 
   return (qb.qb = qb as never);
 };
