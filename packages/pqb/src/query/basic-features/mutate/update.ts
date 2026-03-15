@@ -16,6 +16,7 @@ import {
 import {
   _joinReturningArgs,
   JoinArgs,
+  JoinCallbackArgs,
   JoinFirstArg,
   JoinResultFromArgs,
   joinSubQuery,
@@ -567,12 +568,12 @@ export class QueryUpdate {
   updateFrom<
     T extends UpdateSelf,
     Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
+    Cb extends JoinCallbackArgs<T, Arg>,
   >(
     this: T,
     arg: Arg,
-    ...args: Args
-  ): JoinResultFromArgs<T, Arg, Args, true, true> & QueryHasWhere {
+    ...args: Cb | JoinArgs<T, Arg>
+  ): JoinResultFromArgs<T, Arg, Cb, true, true> & QueryHasWhere {
     const q = _clone(this);
 
     const joinArgs = _joinReturningArgs(

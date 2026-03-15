@@ -7,7 +7,7 @@ import {
 import {
   Chat,
   db,
-  User,
+  UserDefaultSelect,
   assertType,
   expectSql,
   now,
@@ -982,7 +982,7 @@ describe('hasAndBelongsToMany', () => {
         Name,
         Active = null,
       }: {
-        user: User;
+        user: UserDefaultSelect;
         Name: string;
         Active?: boolean | null;
       }) {
@@ -1141,7 +1141,7 @@ describe('hasAndBelongsToMany', () => {
           .order('IdOfChat')
           .pluck('IdOfChat');
 
-        const [_, createChatsSqlCall] = querySpy.mock.calls;
+        const [, createChatsSqlCall] = querySpy.mock.calls;
         const createChatsSql = {
           text: createChatsSqlCall[0],
           values: createChatsSqlCall[1],

@@ -1,5 +1,5 @@
 import { isQuery, IsQuery, Query } from '../../query';
-import { JoinArgs, JoinFirstArg, JoinQueryBuilder } from './join';
+import { JoinArgs, JoinCallback, JoinFirstArg, JoinQueryBuilder } from './join';
 import { pushQueryArrayImmutable } from '../../query.utils';
 import { ColumnsShape } from '../../../columns/columns-shape';
 import { Column } from '../../../columns/column';
@@ -22,6 +22,7 @@ import { JoinedShapes, QueryData, QueryDataJoinTo } from '../../query-data';
  * Detects if the join should be an implicit lateral join.
  *
  * @param joinTo - main query
+ * @param joinKey - joining as
  * @param first - first join argument
  * @param args - rest join arguments
  * @param joinSubQuery - callee should find out whether first argument should result in a sub-queried join
@@ -32,21 +33,33 @@ import { JoinedShapes, QueryData, QueryDataJoinTo } from '../../query-data';
 export const processJoinArgs = (
   joinTo: Query,
   first: JoinFirstArg<never>,
-  args: JoinArgs<Query, JoinFirstArg<Query>>,
+  args:
+    | [JoinCallback<Query, JoinFirstArg<Query>>]
+    | JoinArgs<Query, JoinFirstArg<Query>>,
   joinSubQuery: boolean,
   shape: Column.QueryColumns | undefined,
   whereExists?: boolean,
+  joinKey?: string,
   forbidLateral?: boolean,
 ): JoinItemArgs => {
   if (typeof first === 'string') {
     if (first in joinTo.relations) {
-      const { query: toQuery, joinQuery } = joinTo.relations[first];
+      const rel = joinTo.relations[first];
+      let relQuery = rel.query as Query;
 
-      const j = joinQuery(toQuery as never, joinTo) as Query;
+      // clone in case the callback changes alias
+      if (typeof args[0] === 'function') relQuery = _clone(relQuery);
+
+      const j = rel.joinQuery(relQuery, joinTo) as Query;
       if (typeof args[0] === 'function') {
         const r = args[0](
           makeJoinQueryBuilder(j, j.q.joinedShapes, joinTo, shape) as never,
         ) as Query;
+
+        if (r.q.as !== joinKey) {
+          relQuery.q.as = r.q.as;
+        }
+
         return {
           j: j.merge(r),
           s: whereExists ? false : joinSubQuery || getIsJoinSubQuery(r),
@@ -209,6 +222,13 @@ const makeJoinQueryBuilder = (
   q.q.as = (joinedQuery as Query).q.as;
   q.q.joinedShapes = joinedShapes;
   q.q.joinTo = joinTo;
+
+  // scopes are applied when handling 1st join argument,
+  // prevent them to be applied a second time by a callback.
+  if (q.q.scopes) {
+    q.q.scopes = undefined;
+  }
+
   if (shape) {
     q.q.shape = shape as ColumnsShape;
   }

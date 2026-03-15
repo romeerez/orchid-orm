@@ -11,7 +11,7 @@ import {
   BaseTable,
   db,
   Profile,
-  User,
+  UserDefaultSelect,
   assertType,
   expectSql,
   MessageData,
@@ -406,7 +406,10 @@ describe('belongsTo', () => {
           .where({ 'u.Name': 'two' })
           .select('Bio', 'u.*');
 
-        assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
+        assertType<
+          Awaited<typeof q>,
+          { Bio: string | null; u: UserDefaultSelect }[]
+        >();
 
         expectSql(
           q.toSQL(),
@@ -432,7 +435,10 @@ describe('belongsTo', () => {
           .where({ 'u.Name': 'two' })
           .select('Bio', 'u.*');
 
-        assertType<Awaited<typeof q>, { Bio: string | null; u: User }[]>();
+        assertType<
+          Awaited<typeof q>,
+          { Bio: string | null; u: UserDefaultSelect }[]
+        >();
 
         expectSql(
           q.toSQL(),

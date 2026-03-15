@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "author": "Roman K",
-  "packageManager": "pnpm@10.13.1",
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "prepare": "lefthook install",
     "check": "turbo run check",

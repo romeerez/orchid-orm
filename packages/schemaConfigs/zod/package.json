@@ -5,7 +5,8 @@
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
   "repository": {
     "type": "git",
-    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/schema-to-zod"
+    "url": "https://github.com/romeerez/orchid-orm.git",
+    "directory": "packages/schemaConfigs/zod"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",

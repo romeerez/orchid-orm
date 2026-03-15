@@ -5,7 +5,8 @@
   "homepage": "https://orchid-orm.netlify.app/guide/migration-setup-and-overview.html",
   "repository": {
     "type": "git",
-    "url": "https://github.com/romeerez/orchid-orm/tree/main/packages/rake-db"
+    "url": "https://github.com/romeerez/orchid-orm.git",
+    "directory": "packages/rake-db"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",

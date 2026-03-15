@@ -1006,22 +1006,24 @@ export class QueryMethods<ColumnTypes> {
   >(
     this: T,
     relName: RelName,
-  ): [
-    T['__subQuery'],
-    T['returnType'],
-    T['relations'][RelName]['returnsOne'],
-  ] extends [true | undefined, 'one' | 'oneOrThrow', true]
-    ? {
-        [K in
-          | keyof T['relations'][RelName]['maybeSingle']]: K extends '__selectable'
-          ? T['relations'][RelName]['maybeSingle']['__selectable'] &
-              Omit<T['__selectable'], keyof T['shape']>
-          : T['relations'][RelName]['maybeSingle'][K];
-      } & IsSubQuery
-    : JoinResultRequireMain<
-        T['relations'][RelName]['query'],
-        Omit<T['__selectable'], keyof T['shape']>
-      > {
+  ): // Adding `selectable` context of a parent table only if it is a sub query
+  T['__subQuery'] extends true | undefined
+    ? [T['returnType'], T['relations'][RelName]['returnsOne']] extends [
+        'one' | 'oneOrThrow',
+        true,
+      ]
+      ? {
+          [K in
+            | keyof T['relations'][RelName]['maybeSingle']]: K extends '__selectable'
+            ? T['relations'][RelName]['maybeSingle']['__selectable'] &
+                Omit<T['__selectable'], keyof T['shape']>
+            : T['relations'][RelName]['maybeSingle'][K];
+        } & IsSubQuery
+      : JoinResultRequireMain<
+          T['relations'][RelName]['query'],
+          Omit<T['__selectable'], keyof T['shape']>
+        >
+    : T['relations'][RelName]['query'] {
     const rel = this.relations[relName as string];
 
     return _chain(this as unknown as IsQuery, _clone(rel.query), rel) as never;

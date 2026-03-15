@@ -15,7 +15,7 @@ import {
   testZodColumnTypes as t,
   db,
   UserData,
-  User,
+  UserDefaultSelect,
 } from 'test-utils';
 import { raw } from '../query/expressions/raw-sql';
 import { Operators } from './operators';
@@ -363,7 +363,7 @@ describe('column type', () => {
     });
 
     describe('parsing columns', () => {
-      let user = {} as User;
+      let user = {} as UserDefaultSelect;
       beforeEach(async () => {
         user = await db.user.create(UserData);
       });
@@ -549,6 +549,7 @@ describe('column type', () => {
     );
 
     const userColumnsSql =
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       UserWithCustomTimestamps.q.selectAllColumns!.join(', ');
 
     describe.each`
@@ -1025,6 +1026,7 @@ describe('column type', () => {
     it('should have toSQL', () => {
       const values: unknown[] = [];
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const sql = column.generated`1 + ${2}`.data.generated!.toSQL({
         values,
         snakeCase: undefined,
@@ -1035,20 +1037,23 @@ describe('column type', () => {
     });
 
     it('should have toCode', () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const sql = column.generated`1 + ${2}`.data.generated!;
 
       expect(sql.toCode()).toBe('.generated`1 + ${2}`');
     });
 
     it('should have toCode for raw argument', () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const sql = column.generated({ raw: 'raw' }).data.generated!;
 
       expect(sql.toCode()).toBe(".generated({ raw: 'raw' })");
     });
 
     it('should have toCode for raw argument with values', () => {
-      const sql = column.generated({ raw: 'raw', values: { num: 123 } }).data
-        .generated!;
+      const sql =
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        column.generated({ raw: 'raw', values: { num: 123 } }).data.generated!;
 
       expect(sql.toCode()).toBe(
         '.generated({ raw: \'raw\', values: {"num":123} })',

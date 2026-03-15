@@ -2,6 +2,7 @@ import {
   createBaseTable,
   DefaultSelect,
   orchidORMWithAdapter,
+  PickQueryQ,
 } from 'orchid-orm';
 import { now, testAdapter, testColumnTypes } from './test-utils';
 
@@ -10,7 +11,7 @@ export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
 });
 
-export type User = DefaultSelect<UserTable>;
+export type UserDefaultSelect = DefaultSelect<UserTable>;
 export class UserTable extends BaseTable {
   readonly table = 'user';
   columns = this.setColumns((t) => ({
@@ -585,5 +586,13 @@ export const TagData = {
   Tag: 'tag',
 };
 
+const selectAllAs = (as: string, table: PickQueryQ) =>
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  `"${as}".${table.q.selectAllColumns!.join(`, "${as}".`)}`;
+
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const UserSelectAll = db.user.q.selectAllColumns!.join(', ');
+export const UserSelectAllWithTable = selectAllAs('user', db.user);
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export const ProfileSelectAll = db.profile.q.selectAllColumns!.join(', ');
+export const ProfileSelectAllWithTable = selectAllAs('profile', db.profile);

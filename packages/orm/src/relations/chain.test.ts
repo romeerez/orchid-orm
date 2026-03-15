@@ -13,7 +13,7 @@ import {
   db,
   Post,
   PostTag,
-  User,
+  UserDefaultSelect,
   assertType,
   expectSql,
   TagData,
@@ -32,8 +32,13 @@ const activeUserData = { ...UserData, Active: true };
 describe('relations chain', () => {
   useTestORM();
 
+  it('should not allow selecting from a table it is chained to unless it is in a select callback', async () => {
+    // @ts-expect-error selecting parent table records in not supported
+    db.user.chain('profile').select('user.Id');
+  });
+
   describe('chain select', () => {
-    it('should support selecting all columns via row_number', () => {
+    it('should support selecting all columns via row_number', async () => {
       const q = db.chat.select({
         users: (q) => q.messages.chain('sender').order('messages.createdAt'),
       });
@@ -167,7 +172,7 @@ describe('relations chain', () => {
 
       const res = await query;
 
-      assertType<typeof res, User[]>();
+      assertType<typeof res, UserDefaultSelect[]>();
 
       expect(res.length).toBe(2);
     });
@@ -209,7 +214,7 @@ describe('relations chain', () => {
 
       const res = await query;
 
-      assertType<typeof res, User[]>();
+      assertType<typeof res, UserDefaultSelect[]>();
 
       expect(res.length).toBe(2);
     });
@@ -250,7 +255,7 @@ describe('relations chain', () => {
 
       const res = await query;
 
-      assertType<typeof res, User[]>();
+      assertType<typeof res, UserDefaultSelect[]>();
 
       expect(res.length).toBe(2);
     });
@@ -264,7 +269,7 @@ describe('relations chain', () => {
         .where({ Name: 'name' })
         .limit(3);
 
-      assertType<Awaited<typeof q>, User[]>();
+      assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
       expectSql(
         q.toSQL(),
@@ -301,7 +306,7 @@ describe('relations chain', () => {
         .chain('activeUser')
         .where({ Name: 'name' });
 
-      assertType<Awaited<typeof q>, User[]>();
+      assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
       expectSql(
         q.toSQL(),

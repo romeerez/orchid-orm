@@ -15,7 +15,7 @@ import {
   Message,
   BaseTable,
   Profile,
-  User,
+  UserDefaultSelect,
   db,
   assertType,
   expectSql,
@@ -222,7 +222,6 @@ describe('hasMany', () => {
       `,
     );
 
-    // TODO: redundant deleted at scope
     expectSql(
       db.user
         .as('u')
@@ -232,8 +231,7 @@ describe('hasMany', () => {
         SELECT ${UserSelectAll} FROM "schema"."user" "u"
         WHERE EXISTS (
           SELECT 1 FROM "schema"."message" "messages"
-          WHERE ("messages"."deleted_at" IS NULL)
-            AND ("messages"."text" = $1
+          WHERE ("messages"."text" = $1
             AND "messages"."author_id" = "u"."id"
             AND "messages"."message_key" = "u"."user_key")
             AND ("messages"."deleted_at" IS NULL)
@@ -277,7 +275,6 @@ describe('hasMany', () => {
       [true],
     );
 
-    // TODO: redundant deleted at scope
     expectSql(
       db.user
         .as('u')
@@ -287,8 +284,7 @@ describe('hasMany', () => {
         SELECT ${UserSelectAll} FROM "schema"."user" "u"
         WHERE EXISTS (
           SELECT 1 FROM "schema"."message" "activeMessages"
-          WHERE ("activeMessages"."deleted_at" IS NULL)
-            AND ("activeMessages"."active" = $1
+          WHERE ("activeMessages"."active" = $1
             AND "activeMessages"."text" = $2
             AND "activeMessages"."author_id" = "u"."id"
             AND "activeMessages"."message_key" = "u"."user_key")
@@ -441,15 +437,13 @@ describe('hasMany', () => {
 
       assertType<Awaited<typeof q>, { Name: string; Text: string }[]>();
 
-      // TODO: redundant deleted at scope
       expectSql(
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "m"."text" "Text"
           FROM "schema"."user" "u"
           JOIN "schema"."message" "m"
-            ON ("m"."text" = $1)
-           AND ("m"."deleted_at" IS NULL)
+            ON "m"."text" = $1
            AND ("m"."chat_id" = $2
            AND "m"."author_id" = "u"."id"
            AND "m"."message_key" = "u"."user_key")
@@ -470,15 +464,13 @@ describe('hasMany', () => {
 
       assertType<Awaited<typeof q>, { Name: string; Text: string }[]>();
 
-      // TODO: redundant deleted at scope
       expectSql(
         q.toSQL(),
         `
           SELECT "u"."name" "Name", "m"."text" "Text"
           FROM "schema"."user" "u"
           JOIN "schema"."message" "m"
-            ON ("m"."text" = $1)
-           AND ("m"."deleted_at" IS NULL)
+            ON "m"."text" = $1
            AND ("m"."active" = $2
            AND "m"."chat_id" = $3
            AND "m"."author_id" = "u"."id"
@@ -950,7 +942,11 @@ describe('hasMany', () => {
 
   describe('create', () => {
     const assert = {
-      user(user: User, Name: string, Active: boolean | null = null) {
+      user(
+        user: UserDefaultSelect,
+        Name: string,
+        Active: boolean | null = null,
+      ) {
         expect(user).toEqual({
           ...omit(UserData, ['Password']),
           Id: user.Id,

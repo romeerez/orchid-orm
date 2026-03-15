@@ -18,7 +18,9 @@ export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
       column,
     ];
   } else {
-    const column = (shape[key] as unknown as Column.Pick.Data).data.name || key;
+    if (!shape[key]) console.log(key, shape);
+    const column =
+      (shape[key] as unknown as Column.Pick.Data)?.data?.name || key;
     return [
       `"${table}"."${column}"`,
       column === key ? '' : ` "${key}"`,

@@ -8,9 +8,7 @@ import {
   userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
 import { testWhere, testWhereExists } from './test-where';
-import { assertType, db, expectSql, sql, testDb } from 'test-utils';
-import { Query } from '../../query';
-import { RelationConfigBase } from '../../relations';
+import { assertType, db, expectSql, sql } from 'test-utils';
 
 describe('where', () => {
   describe('relation', () => {
@@ -255,49 +253,24 @@ describe('where joined named columns', () => {
 
 describe('where sub query', () => {
   it('should handle boolean operator on aggregate sub query', () => {
-    const messageRelation = {
-      query: Message,
-      joinQuery(q: Query, _baseQuery: Query) {
-        return q;
-      },
-    };
-
-    const User = testDb(
-      'user',
-      (t) => ({
-        id: t.identity().primaryKey(),
-      }),
-      undefined,
-      {
-        schema: () => 'schema',
-      },
-    );
-
-    interface Rel extends RelationConfigBase {
-      query: Query;
-    }
-
-    const UserWithRelation = Object.assign(User, {
-      relations: {
-        messages: messageRelation,
-      },
-      messages: messageRelation,
-    }) as unknown as typeof User & {
-      relations: { messages: Rel };
-      messages: Rel;
-    };
-
-    const q = UserWithRelation.where((q) =>
-      q.messages.whereIn('text', ['a', 'b', 'c']).count().equals(10),
-    );
+    const q = db.user
+      .select('Id')
+      .where((q) =>
+        q.messages.whereIn('Text', ['a', 'b', 'c']).count().equals(10),
+      );
 
     expectSql(
       q.toSQL(),
       `
-        SELECT * FROM "schema"."user" WHERE (
+        SELECT "user"."id" "Id"
+        FROM "schema"."user" WHERE (
           SELECT count(*) = $1
-          FROM "schema"."message"
-          WHERE "message"."text" IN ($2, $3, $4)
+          FROM "schema"."message" "messages"
+          WHERE (
+            "messages"."text" IN ($2, $3, $4)
+            AND "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
+          ) AND ("messages"."deleted_at" IS NULL)
         )
       `,
       [10, 'a', 'b', 'c'],

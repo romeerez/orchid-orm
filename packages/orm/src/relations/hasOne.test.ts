@@ -8,7 +8,7 @@ import {
 import { Db, Query, NotFoundError, omit } from 'pqb';
 import { orchidORMWithAdapter } from '../orm';
 import {
-  User,
+  UserDefaultSelect,
   Profile,
   BaseTable,
   db,
@@ -739,7 +739,7 @@ describe('hasOne', () => {
 
   describe('create', () => {
     const assert = {
-      user({ user, Name }: { user: User; Name: string }) {
+      user({ user, Name }: { user: UserDefaultSelect; Name: string }) {
         expect(user).toEqual({
           ...omit(UserData, ['Password']),
           Id: user.Id,

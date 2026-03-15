@@ -70,6 +70,7 @@ const mergableObjects = new Set([
   'defaults',
   'joinedShapes',
   'joinedParsers',
+  'joined',
   'joinedBatchParsers',
   'selectedComputeds',
 ]);

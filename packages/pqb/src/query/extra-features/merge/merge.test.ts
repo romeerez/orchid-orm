@@ -1,17 +1,13 @@
-import {
-  Message,
-  Profile,
-  User,
-  userColumnsSql,
-  UserRecord,
-  userTableColumnsSql,
-} from '../../../test-utils/pqb.test-utils';
 import { logParamToLogObject } from '../../basic-features/log/log';
 import {
   assertType,
   expectSql,
   testZodColumnTypes as t,
   testDb,
+  db,
+  UserDefaultSelect,
+  UserSelectAll,
+  UserSelectAllWithTable,
 } from 'test-utils';
 import { emptyObject, noop } from '../../../utils';
 import { ComputedColumn } from '../computed/computed';
@@ -22,79 +18,79 @@ import { getValueKey } from '../../basic-features/get/get-value-key';
 describe('merge queries', () => {
   describe('select', () => {
     it('should use second select when no select', () => {
-      const q = User.merge(User.select('id'));
+      const q = db.user.merge(db.user.select('Id'));
 
-      assertType<Awaited<typeof q>, { id: number }[]>();
+      assertType<Awaited<typeof q>, { Id: number }[]>();
 
-      expectSql(q.toSQL(), `SELECT "user"."id" FROM "schema"."user"`);
+      expectSql(q.toSQL(), `SELECT "user"."id" "Id" FROM "schema"."user"`);
     });
 
     it('should merge selects when both have it', () => {
-      const q = User.select('id').merge(User.select('name'));
+      const q = db.user.select('Id').merge(db.user.select('Name'));
 
-      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; Name: string }[]>();
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+        `SELECT "user"."id" "Id", "user"."name" "Name" FROM "schema"."user"`,
       );
     });
   });
 
   describe('returnType', () => {
     it('should have default return type if none of the queries have it', () => {
-      const q = User.merge(User);
+      const q = db.user.merge(db.user);
 
       assertType<typeof q.returnType, undefined>();
-      assertType<Awaited<typeof q>, UserRecord[]>();
+      assertType<Awaited<typeof q>, UserDefaultSelect[]>();
     });
 
     it('should use left return type unless right has it', () => {
-      const q = User.take().merge(User);
+      const q = db.user.take().merge(db.user);
 
       assertType<typeof q.returnType, 'oneOrThrow'>();
-      assertType<Awaited<typeof q>, UserRecord>();
+      assertType<Awaited<typeof q>, UserDefaultSelect>();
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" LIMIT 1`,
       );
     });
 
     it('should prefer right return type', () => {
-      const q = User.take().merge(User.all());
+      const q = db.user.take().merge(db.user.all());
 
       assertType<typeof q.returnType, 'all'>();
-      assertType<Awaited<typeof q>, UserRecord[]>();
+      assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
-      expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM "schema"."user"`);
+      expectSql(q.toSQL(), `SELECT ${UserSelectAll} FROM "schema"."user"`);
     });
   });
 
   describe('where', () => {
     it('should use right where when left has no where', () => {
-      const q = User.merge(User.where({ id: 1 }));
+      const q = db.user.merge(db.user.where({ Id: 1 }));
 
       assertType<(typeof q)['__hasWhere'], true>();
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."id" = $1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" WHERE "user"."id" = $1`,
         [1],
       );
     });
 
     it('should merge where when both have it', () => {
-      const q = User.where({ id: 1, name: 'name' }).merge(
-        User.where({ id: 2 }),
-      );
+      const q = db.user
+        .where({ Id: 1, Name: 'name' })
+        .merge(db.user.where({ Id: 2 }));
 
       assertType<(typeof q)['__hasWhere'], true>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
           WHERE "user"."id" = $1 AND "user"."name" = $2 AND "user"."id" = $3
         `,
         [1, 'name', 2],
@@ -104,40 +100,42 @@ describe('merge queries', () => {
 
   describe('join', () => {
     it('should keep join from left and have joined table in selectable if right query does not have it', () => {
-      const joined = User.join(Message, 'authorId', 'id');
+      const joined = db.user.join(db.message, 'AuthorId', 'Id');
 
-      const q = joined.merge(User);
+      const q = joined.merge(db.user);
 
       assertType<typeof q.__selectable, typeof joined.__selectable>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user"
           JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+           AND ("message"."deleted_at" IS NULL)
         `,
       );
     });
 
     it('should use join from right and have joined table in selectable when left query does not have it', () => {
-      const joined = User.join(Message, 'authorId', 'id');
+      const joined = db.user.join(db.message, 'AuthorId', 'Id');
 
-      const q = User.merge(joined);
+      const q = db.user.merge(joined);
 
       assertType<typeof q.__selectable, typeof joined.__selectable>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user"
           JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+           AND ("message"."deleted_at" IS NULL)
         `,
       );
     });
 
     it('should merge joins when both have it', () => {
-      const left = User.join(Message, 'authorId', 'id');
-      const right = User.join(Profile, 'userId', 'id');
+      const left = db.user.join(db.message, 'AuthorId', 'Id');
+      const right = db.user.join(db.profile, 'UserId', 'Id');
 
       const q = left.merge(right);
 
@@ -149,8 +147,9 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user"
           JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+           AND ("message"."deleted_at" IS NULL)
           JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
         `,
       );
@@ -159,28 +158,30 @@ describe('merge queries', () => {
 
   describe('windows', () => {
     it('should keep windows from left when right does not have it', () => {
-      const q = User.window({
-        w: {
-          partitionBy: 'id',
-        },
-      }).merge(User);
+      const q = db.user
+        .window({
+          w: {
+            partitionBy: 'Id',
+          },
+        })
+        .merge(db.user);
 
       assertType<typeof q.windows, { w: true }>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
           WINDOW "w" AS (PARTITION BY "user"."id")
         `,
       );
     });
 
     it('should use windows from right when left does not have it', () => {
-      const q = User.merge(
-        User.window({
+      const q = db.user.merge(
+        db.user.window({
           w: {
-            partitionBy: 'id',
+            partitionBy: 'Id',
           },
         }),
       );
@@ -190,31 +191,33 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
           WINDOW "w" AS (PARTITION BY "user"."id")
         `,
       );
     });
 
     it('should merge windows when both have it', () => {
-      const q = User.window({
-        a: {
-          partitionBy: 'id',
-        },
-      }).merge(
-        User.window({
-          b: {
-            partitionBy: 'name',
+      const q = db.user
+        .window({
+          a: {
+            partitionBy: 'Id',
           },
-        }),
-      );
+        })
+        .merge(
+          db.user.window({
+            b: {
+              partitionBy: 'Name',
+            },
+          }),
+        );
 
       assertType<typeof q.windows, { a: true; b: true }>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
           WINDOW "a" AS (PARTITION BY "user"."id"),
                  "b" AS (PARTITION BY "user"."name")
         `,
@@ -224,9 +227,9 @@ describe('merge queries', () => {
 
   describe('with', () => {
     it('should keep with from left when right does not have it', () => {
-      const withQuery = User.select('id');
+      const withQuery = db.user.select('Id');
 
-      const q = User.with('withAlias', withQuery).merge(User);
+      const q = db.user.with('withAlias', withQuery).merge(db.user);
 
       assertType<
         typeof q.withData,
@@ -242,17 +245,17 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "withAlias" AS (
-            SELECT "user"."id" FROM "schema"."user"
+            SELECT "user"."id" "Id" FROM "schema"."user"
           )
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
         `,
       );
     });
 
     it('should use with from right when left does not have it', () => {
-      const withQuery = User.select('id');
+      const withQuery = db.user.select('Id');
 
-      const q = User.merge(User.with('withAlias', withQuery));
+      const q = db.user.merge(db.user.with('withAlias', withQuery));
 
       assertType<
         typeof q.withData,
@@ -268,18 +271,20 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "withAlias" AS (
-            SELECT "user"."id" FROM "schema"."user"
+            SELECT "user"."id" "Id" FROM "schema"."user"
           )
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
         `,
       );
     });
 
     it('should merge withes when both have it', () => {
-      const firstWith = User.select('id');
-      const secondWith = User.select('name');
+      const firstWith = db.user.select('Id');
+      const secondWith = db.user.select('Name');
 
-      const q = User.with('a', firstWith).merge(User.with('b', secondWith));
+      const q = db.user
+        .with('a', firstWith)
+        .merge(db.user.with('b', secondWith));
 
       assertType<
         typeof q.withData,
@@ -299,11 +304,11 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "a" AS (
-            SELECT "user"."id" FROM "schema"."user"
+            SELECT "user"."id" "Id" FROM "schema"."user"
           ), "b" AS (
-            SELECT "user"."name" FROM "schema"."user"
+            SELECT "user"."name" "Name" FROM "schema"."user"
           )
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user"
         `,
       );
     });
@@ -311,8 +316,8 @@ describe('merge queries', () => {
 
   describe('queryData', () => {
     it('should merge query data', () => {
-      const query1 = User.clone();
-      const query2 = User.clone();
+      const query1 = db.user.clone();
+      const query2 = db.user.clone();
       const q1 = query1.q;
       const q2 = query2.q;
 
@@ -368,20 +373,22 @@ describe('merge queries', () => {
       q2.joinedShapes = { b: q2.shape };
       q1.joinedParsers = { a: q1.parsers };
       q2.joinedParsers = { b: q2.parsers };
+      q1.joined = { a: db.user };
+      q2.joined = { b: db.user };
       q1.group = ['a'];
       q2.group = ['b'];
 
-      const sum = [User.sum('id').gt(1).q.expr as Expression];
-      const avg = [User.avg('id').lt(10).q.expr as Expression];
+      const sum = [db.user.sum('Id').gt(1).q.expr as Expression];
+      const avg = [db.user.avg('Id').lt(10).q.expr as Expression];
       q1.having = [sum];
       q2.having = [avg];
 
       q1.union = {
-        b: prepareSubQueryForSql(User, User),
+        b: prepareSubQueryForSql(db.user, db.user),
         u: [{ a: testDb.sql`a`, k: 'UNION' }],
       };
       q2.union = {
-        b: prepareSubQueryForSql(User, User),
+        b: prepareSubQueryForSql(db.user, db.user),
         u: [{ a: testDb.sql`b`, k: 'EXCEPT' }],
       };
       q1.order = [{ id: 'ASC' }];
@@ -472,9 +479,16 @@ describe('merge queries', () => {
         ...q1.joinedParsers,
         ...q2.joinedParsers,
       });
+      expect(q.joined).toEqual({
+        ...q1.joined,
+        ...q2.joined,
+      });
       expect(q.group).toEqual([...q1.group, ...q2.group]);
       expect(q.having).toEqual([sum, avg]);
-      expect(q.union).toEqual({ b: User, u: [...q1.union.u, ...q2.union.u] });
+      expect(q.union).toEqual({
+        b: db.user,
+        u: [...q1.union.u, ...q2.union.u],
+      });
       expect(q.order).toEqual([...q1.order, ...q2.order]);
       expect(q.limit).toEqual(q2.limit);
       expect(q.offset).toEqual(q2.offset);

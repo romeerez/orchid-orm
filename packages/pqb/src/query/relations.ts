@@ -5,6 +5,7 @@ import {
   PickQueryShape,
   PickQueryTable,
   PickQueryResult,
+  PickQueryRelations,
 } from './pick-query-types';
 import { RecordUnknown } from '../utils';
 import { IsQuery } from './query';
@@ -18,7 +19,8 @@ export interface RelationConfigQuery
     PickQuerySelectable,
     PickQueryShape,
     PickQueryTable,
-    PickQueryAs {}
+    PickQueryAs,
+    PickQueryRelations {}
 
 export interface RelationConfigBase extends IsQuery {
   returnsOne: boolean;

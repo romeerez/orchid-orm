@@ -153,6 +153,7 @@ export interface QueryData
   joinedParsers?: JoinedParsers;
   joinedBatchParsers?: { [K: string]: BatchParsers };
   joinedComputeds?: { [K: string]: ComputedColumns | undefined };
+  joined?: { [K: string]: Query };
   joinedForSelect?: string;
   innerJoinLateral?: true;
   // to select values with `get` or aggregate them when they were joined inside `select`.

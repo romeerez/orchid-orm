@@ -1,3 +1,7 @@
+---
+outline: deep
+---
+
 # Join
 
 ## select relation
@@ -55,7 +59,7 @@ db.post.select('*', {
 });
 ```
 
-# Joins
+## join
 
 [//]: # 'has JSDoc'
 
@@ -99,42 +103,9 @@ export class MessageTable extends BaseTable {
 }
 ```
 
-## join
-
-[//]: # 'has JSDoc'
-
 `join` is a method for SQL `JOIN`, which is equivalent to `INNER JOIN`, `LEFT INNERT JOIN`.
 
 When no matching record is found, it will skip records of the main table.
-
-When joining the same table with the same condition more than once, duplicated joins will be ignored:
-
-```ts
-// joining a relation
-db.post.join('comments').join('comments');
-
-// joining a table with a condition
-db.post
-  .join('comments', 'comments.postId', 'post.id')
-  .join('comments', 'comments.postId', 'post.id');
-```
-
-Both queries will produce SQL with only 1 join
-
-```sql
-SELECT * FROM post JOIN comments ON comments.postId = post.id
-```
-
-However, this is only possible if the join has no dynamic values:
-
-```ts
-db.post
-  .join('comments', (q) => q.where({ rating: { gt: 5 } }))
-  .join('comments', (q) => q.where({ rating: { gt: 5 } }));
-```
-
-Both joins above have the same `{ gt: 5 }`, but still, the `5` is a dynamic value and in this case joins will be duplicated,
-resulting in a database error.
 
 ### join relation
 
@@ -180,7 +151,58 @@ const result = await db.user.join(
 );
 ```
 
-### Selecting full joined records
+### join a relation of the joined
+
+After joining a relation or a table:
+
+```ts
+db.post.join('comments');
+
+db.post.join(() => db.comment);
+```
+
+You can join a relation of that joined table:
+
+```ts
+db.post.join('comments').join('comments.author');
+
+db.post.join(() => db.comment).join('comment.author');
+```
+
+Note that in the first case it's `comments` - a relation name, while in the second case it is a table name.
+
+### joins deduplication
+
+When joining the same table with the same condition more than once, duplicated joins will be ignored:
+
+```ts
+// joining a relation
+db.post.join('comments').join('comments');
+
+// joining a table with explicit conditions
+db.post
+  .join(db.comments, 'comments.postId', 'post.id')
+  .join(db.comments, 'comments.postId', 'post.id');
+```
+
+Both queries will produce SQL with only a single join
+
+```sql
+SELECT * FROM post JOIN comments ON comments.postId = post.id
+```
+
+However, this is only possible if the join has no dynamic values:
+
+```ts
+db.post
+  .join('comments', (q) => q.where({ rating: { gt: 5 } }))
+  .join('comments', (q) => q.where({ rating: { gt: 5 } }));
+```
+
+Both joins above have the same `{ gt: 5 }`, but still, the `5` is a dynamic value and in this case joins will be duplicated,
+resulting in a database error.
+
+### select full joined records
 
 [//]: # 'has JSDoc'
 

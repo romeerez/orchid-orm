@@ -4,11 +4,7 @@ import {
   expectQueryNotMutated,
   Message,
   messageData,
-  messageTableColumnsSql,
-  Profile,
-  profileColumnsSql,
   Snake,
-  snakeSelectAll,
   snakeSelectAllWithTable,
   User,
   userData,
@@ -16,7 +12,17 @@ import {
 } from '../../../test-utils/pqb.test-utils';
 import { testWhere, testWhereExists } from '../where/test-where';
 import { testJoin } from './test-join';
-import { assertType, db, expectSql, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  db,
+  expectSql,
+  ProfileSelectAll,
+  ProfileSelectAllWithTable,
+  UserData,
+  UserSelectAll,
+  UserSelectAllWithTable,
+  useTestDatabase,
+} from 'test-utils';
 import { isQueryNone } from '../../extra-features/none/none';
 
 const insertMessage = async () => {
@@ -440,154 +446,93 @@ describe('join callback with query builder', () => {
     });
 
     describe('join sub query', () => {
-      it('should join a sub query', () => {
-        const q = User.join(
-          Message.select({
-            messageId: 'id',
-            userId: 'authorId',
-            content: 'text',
-          })
-            .where({
-              text: 'text',
-            })
-            .as('t'),
-          'userId',
-          'id',
-        )
-          .where({
-            't.messageId': 1,
-          })
-          .select({
-            messageId: 't.messageId',
-            messageText: 't.content',
-          });
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT
-              "t"."messageId",
-              "t"."content" "messageText"
-            FROM "schema"."user"
-            JOIN
-              (
-                SELECT
-                  "t"."id" "messageId",
-                  "t"."author_id" "userId",
-                  "t"."text" "content"
-                FROM "schema"."message" "t"
-                WHERE "t"."text" = $1
-              ) "t"
-              ON "t"."userId" = "user"."id"
-            WHERE "t"."messageId" = $2
-          `,
-          ['text', 1],
-        );
-      });
-
       it('should join a sub query with named columns', () => {
-        const q = User.join(
-          Snake.select('snakeName', 'tailLength')
-            .where({
-              snakeName: 'name',
-            })
-            .as('t'),
-          'tailLength',
-          'id',
-        )
+        const q = db.user
+          .join(
+            db.profile
+              .select('Bio', 'UserId')
+              .where({
+                Bio: 'bio',
+              })
+              .as('t'),
+            'UserId',
+            'Id',
+          )
           .where({
-            't.tailLength': 1,
+            't.UserId': 1,
           })
           .select({
-            name: 't.snakeName',
-            length: 't.tailLength',
+            bio: 't.Bio',
+            userId: 't.UserId',
           });
 
         expectSql(
           q.toSQL(),
           `
             SELECT
-              "t"."snakeName" "name",
-              "t"."tailLength" "length"
+              "t"."Bio" "bio",
+              "t"."UserId" "userId"
             FROM "schema"."user"
             JOIN
               (
                 SELECT
-                  "t"."snake_name" "snakeName",
-                  "t"."tail_length" "tailLength"
-                FROM "schema"."snake" "t"
-                WHERE "t"."snake_name" = $1
+                  "t"."bio" "Bio",
+                  "t"."user_id" "UserId"
+                FROM "schema"."profile" "t"
+                WHERE "t"."bio" = $1
               ) "t"
-              ON "t"."tailLength" = "user"."id"
-            WHERE "t"."tailLength" = $2
+              ON "t"."UserId" = "user"."id"
+            WHERE "t"."UserId" = $2
           `,
-          ['name', 1],
+          ['bio', 1],
         );
       });
     });
 
     testWhere(
-      (cb) => Message.join(User, cb as never).toSQL(),
-      `SELECT ${messageTableColumnsSql} FROM "schema"."message" JOIN "schema"."user" ON`,
+      (cb) => db.profile.join(db.user, cb as never).toSQL(),
+      `SELECT ${ProfileSelectAllWithTable} FROM "schema"."profile" JOIN "schema"."user" ON`,
       {
-        model: User,
-        pkey: 'user.id',
-        nullable: 'picture',
-        text: 'name',
+        model: db.user,
+        pkey: 'user.Id',
+        nullable: 'Picture',
+        text: 'Name',
       },
     );
 
     testWhereExists({
-      joinTo: User,
-      pkey: 'user.id',
-      joinTarget: Message,
-      fkey: 'authorId',
-      text: 'text',
+      joinTo: db.user,
+      pkey: 'user.Id',
+      joinTarget: db.profile,
+      fkey: 'UserId',
+      text: 'Bio',
+      selectFrom: `SELECT ${UserSelectAll} FROM "schema"."user"`,
     });
 
     testWhere(
-      (cb) => Snake.join(User, cb as never).toSQL(),
-      `SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" JOIN "schema"."user" ON`,
+      (cb) => db.user.join(db.profile, cb as never).toSQL(),
+      `SELECT ${UserSelectAllWithTable} FROM "schema"."user" JOIN "schema"."profile" ON`,
       {
-        model: User,
-        pkey: 'user.id',
-        nullable: 'picture',
-        text: 'name',
+        model: db.profile,
+        pkey: 'profile.UserId',
+        nullable: 'Bio',
+        text: 'Bio',
       },
     );
 
     testWhereExists({
-      joinTo: User,
-      pkey: 'user.id',
-      joinTarget: Snake,
-      fkey: 'tailLength',
-      text: 'snakeName',
-    });
-
-    testWhere(
-      (cb) => User.join(Snake, cb as never).toSQL(),
-      `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."snake" ON`,
-      {
-        model: Snake,
-        pkey: 'snake.tailLength',
-        nullable: 'snakeData',
-        text: 'snakeName',
-      },
-    );
-
-    testWhereExists({
-      joinTo: Snake,
-      pkey: 'snake.tailLength',
-      joinTarget: User,
-      fkey: 'id',
-      text: 'name',
-      selectFrom: `SELECT ${snakeSelectAll} FROM "schema"."snake"`,
+      joinTo: db.profile,
+      pkey: 'profile.UserId',
+      joinTarget: db.user,
+      fkey: 'Id',
+      text: 'Name',
+      selectFrom: `SELECT ${ProfileSelectAll} FROM "schema"."profile"`,
     });
   });
 
   // for https://github.com/romeerez/orchid-orm/issues/247
   it('should have a proper table type in the callback', () => {
-    User.join(Message, (q) => {
+    db.user.join(db.message, (q) => {
       assertType<typeof q.table, 'message'>();
       return q;
     });
@@ -595,14 +540,14 @@ describe('join callback with query builder', () => {
 
   describe('join `none` sub-query', () => {
     it('should handle `none` sub-query', () => {
-      const q = User.join(Message.none(), (q) => q);
+      const q = db.user.join(db.message.none(), (q) => q);
 
       expect(isQueryNone(q)).toBe(true);
     });
 
     it('should handle 1st callback `none`', () => {
-      const q = User.join(
-        () => Message.none(),
+      const q = db.user.join(
+        () => db.message.none(),
         (q) => q,
       );
 
@@ -610,7 +555,7 @@ describe('join callback with query builder', () => {
     });
 
     it('should handle 2nd callback `none`', () => {
-      const q = User.join(Message, (q) => q.none());
+      const q = db.user.join(db.message, (q) => q.none());
 
       expect(isQueryNone(q)).toBe(true);
     });
@@ -618,24 +563,31 @@ describe('join callback with query builder', () => {
 
   describe('left join `none` sub-query', () => {
     it('should join with `where false`', () => {
-      const q = User.leftJoin(Message.none(), (q) => q);
+      const q = db.user.leftJoin(db.message.none(), (q) => q);
 
       expect(isQueryNone(q)).toBe(false);
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userTableColumnsSql} FROM "schema"."user" LEFT JOIN "schema"."message" ON (false)`,
+        `
+          SELECT ${UserSelectAllWithTable}
+          FROM "schema"."user"
+          LEFT JOIN "schema"."message" ON ((false)) AND ("message"."deleted_at" IS NULL)`,
       );
     });
 
     it('should join with `where false` for 2nd callback `none`', () => {
-      const q = User.leftJoin(Message, (q) => q.none());
+      const q = db.user.leftJoin(db.message, (q) => q.none());
 
       expect(isQueryNone(q)).toBe(false);
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userTableColumnsSql} FROM "schema"."user" LEFT JOIN "schema"."message" ON (false)`,
+        `
+          SELECT ${UserSelectAllWithTable}
+          FROM "schema"."user"
+          LEFT JOIN "schema"."message" ON (false) AND ("message"."deleted_at" IS NULL)
+        `,
       );
     });
   });
@@ -645,23 +597,26 @@ describe('implicit lateral joins', () => {
   useTestDatabase();
 
   it(`should disallow selecting joined columns that weren't selected inside join`, () => {
-    User.join(Message, (q) => q.on('authorId', 'user.id').select('text'))
-      .select('message.text')
+    db.user
+      .join(db.message, (q) => q.on('AuthorId', 'user.Id').select('Text'))
+      .select('message.Text')
       .select(
         // @ts-expect-error the column is not selected inside join
-        'message.id',
+        'message.Id',
       );
   });
 
   it('should work when joining a table', async () => {
     await insertMessage();
 
-    const q = User.join(Message, (q) =>
-      q
-        .on('message.authorId', 'user.id')
-        .where({ text: messageData.text })
-        .limit(5),
-    ).select('message.updatedAt');
+    const q = db.user
+      .join(db.message, (q) =>
+        q
+          .on('message.AuthorId', 'user.Id')
+          .where({ Text: messageData.text })
+          .limit(5),
+      )
+      .select('message.updatedAt');
 
     expectSql(
       q.toSQL(),
@@ -671,7 +626,8 @@ describe('implicit lateral joins', () => {
         JOIN LATERAL (
           SELECT "message".*
           FROM "schema"."message"
-          WHERE "message"."author_id" = "user"."id" AND "message"."text" = $1
+          WHERE ("message"."author_id" = "user"."id" AND "message"."text" = $1)
+            AND ("message"."deleted_at" IS NULL)
           LIMIT $2
         ) "message" ON true
       `,
@@ -684,25 +640,28 @@ describe('implicit lateral joins', () => {
   });
 
   it('should work when joining a sub-query', () => {
-    const q = User.join(
-      () => Message.limit(5),
-      (q) =>
-        q
-          .on('message.id', 'user.id')
-          .where({ text: 'text' })
-          .limit(5)
-          .offset(10),
-    ).select('message.authorId');
+    const q = db.user
+      .join(
+        () => db.message.limit(5),
+        (q) =>
+          q
+            .on('message.Id', 'user.Id')
+            .where({ Text: 'text' })
+            .limit(5)
+            .offset(10),
+      )
+      .select('message.AuthorId');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "message"."author_id" "authorId"
+        SELECT "message"."author_id" "AuthorId"
         FROM "schema"."user"
         JOIN LATERAL (
           SELECT "message".*
           FROM "schema"."message"
-          WHERE "message"."id" = "user"."id" AND "message"."text" = $1
+          WHERE ("message"."id" = "user"."id" AND "message"."text" = $1)
+            AND ("message"."deleted_at" IS NULL)
           LIMIT $2
           OFFSET $3
         ) "message" ON true
@@ -712,20 +671,20 @@ describe('implicit lateral joins', () => {
   });
 
   it('should work when joining with statement', () => {
-    const q = User.with('p', Profile).join('p', (q) =>
-      q.on('userId', 'user.id').limit(5).offset(10),
-    );
+    const q = db.user
+      .with('p', db.profile)
+      .join('p', (q) => q.on('UserId', 'user.Id').limit(5).offset(10));
 
     expectSql(
       q.toSQL(),
       `
-        WITH "p" AS (SELECT ${profileColumnsSql} FROM "schema"."profile")
-        SELECT ${userTableColumnsSql}
+        WITH "p" AS (SELECT ${ProfileSelectAll} FROM "schema"."profile")
+        SELECT ${UserSelectAllWithTable}
         FROM "schema"."user"
         JOIN LATERAL (
           SELECT *
           FROM "p"
-          WHERE "p"."userId" = "user"."id"
+          WHERE "p"."UserId" = "user"."id"
           LIMIT $1
           OFFSET $2
         ) "p" ON true
@@ -735,51 +694,53 @@ describe('implicit lateral joins', () => {
   });
 
   it('should not resolve column names inside join closure if nothing was selected explicitly', () => {
-    const q = User.join(Snake, (q) => q.on('snake.snakeId', 'user.id').limit(1))
+    const q = db.user
+      .join(db.profile, (q) => q.on('profile.UserId', 'user.Id').limit(1))
       .where({
-        'snake.snakeName': 'name',
+        'profile.Bio': 'bio',
       })
-      .select('snake.snakeName');
+      .select('profile.Bio');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "snake"."snake_name" "snakeName"
+        SELECT "profile"."bio" "Bio"
         FROM "schema"."user"
         JOIN LATERAL (
-          SELECT "snake".*
-          FROM "schema"."snake"
-          WHERE "snake"."snake_id" = "user"."id"
+          SELECT "profile".*
+          FROM "schema"."profile"
+          WHERE "profile"."user_id" = "user"."id"
           LIMIT $1
-        ) "snake" ON true
-        WHERE "snake"."snake_name" = $2
+        ) "profile" ON true
+        WHERE "profile"."bio" = $2
       `,
-      [1, 'name'],
+      [1, 'bio'],
     );
   });
 
   it('should use resolved column names outside of join closure when names are resolved inside', () => {
-    const q = User.join(Snake, (q) =>
-      q.on('snake.snakeId', 'user.id').select('snake.snakeName'),
-    )
+    const q = db.user
+      .join(db.profile, (q) =>
+        q.on('profile.UserId', 'user.Id').select('profile.Bio'),
+      )
       .where({
-        'snake.snakeName': 'name',
+        'profile.Bio': 'bio',
       })
-      .select('snake.snakeName');
+      .select('profile.Bio');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "snake"."snakeName"
+        SELECT "profile"."Bio"
         FROM "schema"."user"
         JOIN LATERAL (
-          SELECT "snake"."snake_name" "snakeName"
-          FROM "schema"."snake"
-          WHERE "snake"."snake_id" = "user"."id"
-        ) "snake" ON true
-        WHERE "snake"."snakeName" = $1
+          SELECT "profile"."bio" "Bio"
+          FROM "schema"."profile"
+          WHERE "profile"."user_id" = "user"."id"
+        ) "profile" ON true
+        WHERE "profile"."Bio" = $1
       `,
-      ['name'],
+      ['bio'],
     );
   });
 });
@@ -788,42 +749,218 @@ describe('joinData', () => {
   useTestDatabase();
 
   it('should join a on-the-fly constructed table containing user-provided data', async () => {
-    const userId = await User.get('id').insert(userData);
+    const userId = await db.user.get('Id').insert(UserData);
 
     const now = new Date();
 
-    const q = User.joinData(
-      'data',
-      (t) => ({
-        foo: t.integer().name('f'),
-        bar: t.timestamp().asDate().name('b').nullable(),
-      }),
-      [{ foo: 1, bar: now.getTime() }, { foo: 2 }],
-    )
+    const q = db.user
+      .joinData(
+        'data',
+        (t) => ({
+          foo: t.integer().name('f'),
+          bar: t.timestamp().asDate().name('b').nullable(),
+        }),
+        [{ foo: 1, bar: now.getTime() }, { foo: 2 }],
+      )
       .where({ 'data.foo': { gte: 1 } })
-      .select('id', 'data.foo', 'data.bar');
+      .select('Id', 'data.foo', 'data.bar');
 
     const result = await q;
 
     assertType<
       typeof result,
-      { id: number; foo: number; bar: Date | null }[]
+      { Id: number; foo: number; bar: Date | null }[]
     >();
 
     expect(result).toEqual([
-      { id: userId, foo: 1, bar: now },
-      { id: userId, foo: 2, bar: null },
+      { Id: userId, foo: 1, bar: now },
+      { Id: userId, foo: 2, bar: null },
     ]);
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id", "data"."f" "foo", "data"."b" "bar"
+        SELECT "user"."id" "Id", "data"."f" "foo", "data"."b" "bar"
         FROM "schema"."user"
         JOIN (VALUES ($1::int4, $2::timestamptz), ($3::int4, $4::timestamptz)) "data"("f", "b") ON true
         WHERE "data"."f" >= $5
       `,
       [1, now, 2, null, 1],
+    );
+  });
+});
+
+describe('adding relations of relations to the context', () => {
+  it('should work for a 2st arg callback', () => {
+    const q = db.user
+      .join('messages', (q) => q.as('m'))
+      .join('m.chat')
+      .select('chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { IdOfChat: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        JOIN "schema"."message" "m"
+          ON (
+            "m"."author_id" = "user"."id"
+            AND "m"."message_key" = "user"."user_key"
+          ) AND ("m"."deleted_at" IS NULL)
+        JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "m"."chat_id"
+         AND "chat"."chat_key" = "m"."message_key"
+      `,
+    );
+  });
+
+  it('should work for a 1st arg query object', () => {
+    const q = db.user
+      .join(db.message, 'message.AuthorId', 'user.Id')
+      .join('message.chat')
+      .select('chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { IdOfChat: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        JOIN "schema"."message"
+          ON "message"."author_id" = "user"."id"
+         AND ("message"."deleted_at" IS NULL)
+        JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "message"."chat_id"
+         AND "chat"."chat_key" = "message"."message_key"
+      `,
+    );
+  });
+
+  it('should work for a 1st arg relation name', () => {
+    const q = db.user
+      .join('messages')
+      .join('messages.chat')
+      .select('chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { IdOfChat: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        JOIN "schema"."message" "messages"
+          ON (
+            "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
+          ) AND ("messages"."deleted_at" IS NULL)
+        JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "messages"."chat_id"
+         AND "chat"."chat_key" = "messages"."message_key"
+      `,
+    );
+  });
+
+  it('should work for a 1st arg function returning a query', () => {
+    const q = db.user
+      .join((q) => q.messages)
+      .join('messages.chat')
+      .select('chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { IdOfChat: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        JOIN "schema"."message" "messages"
+          ON (
+            "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
+          ) AND ("messages"."deleted_at" IS NULL)
+        JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "messages"."chat_id"
+         AND "chat"."chat_key" = "messages"."message_key"
+      `,
+    );
+  });
+
+  it('should work for a 1st arg function returning a query', () => {
+    const q = db.user
+      .join((q) => q.messages)
+      .join('messages.chat')
+      .select('chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { IdOfChat: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        JOIN "schema"."message" "messages"
+          ON (
+            "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
+          ) AND ("messages"."deleted_at" IS NULL)
+        JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "messages"."chat_id"
+         AND "chat"."chat_key" = "messages"."message_key"
+      `,
+    );
+  });
+
+  it('should work in rightJoin when the main table data becomes optional', () => {
+    const q = db.user
+      .rightJoin('messages')
+      .rightJoin('messages.chat')
+      .select('Id', 'chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { Id: number | null; IdOfChat: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id", "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        RIGHT JOIN "schema"."message" "messages"
+          ON (
+            "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
+          ) AND ("messages"."deleted_at" IS NULL)
+        RIGHT JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "messages"."chat_id"
+         AND "chat"."chat_key" = "messages"."message_key"
+      `,
+    );
+  });
+
+  it('should work in leftJoin when the joined table data becomes optional', () => {
+    const q = db.user
+      .leftJoin('messages')
+      .leftJoin('messages.chat')
+      .select('Id', 'chat.IdOfChat');
+
+    assertType<Awaited<typeof q>, { Id: number; IdOfChat: number | null }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "user"."id" "Id", "chat"."id_of_chat" "IdOfChat"
+        FROM "schema"."user"
+        LEFT JOIN "schema"."message" "messages"
+          ON (
+            "messages"."author_id" = "user"."id"
+            AND "messages"."message_key" = "user"."user_key"
+          ) AND ("messages"."deleted_at" IS NULL)
+        LEFT JOIN "schema"."chat"
+          ON "chat"."id_of_chat" = "messages"."chat_id"
+         AND "chat"."chat_key" = "messages"."message_key"
+      `,
     );
   });
 });

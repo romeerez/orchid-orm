@@ -20,6 +20,14 @@ jobs:
   test-and-release:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      id-token: write
+
+    strategy:
+      matrix:
+        node-version: [24]
+
     outputs:
       coverage: ${{ steps.coverage.outputs.COVERAGE }}
 
@@ -33,13 +41,14 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           # fetch all history to get the tags needed for `changeset tag` command when publishing
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache turbo build setup
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-${{ github.sha }}
@@ -47,13 +56,13 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
         with:
-          version: 10.13.1
+          version: 10.32.1
 
       - name: Setup pnpm config
         run: pnpm config set store-dir $PNPM_CACHE_FOLDER
@@ -97,15 +106,6 @@ jobs:
           git commit -m "Version packages" || echo "No changes to commit"
           git push
 
-      - name: Creating .npmrc
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cat << EOF > "$HOME/.npmrc"
-            //registry.npmjs.org/:_authToken=$NPM_TOKEN
-          EOF
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Release
         if: github.ref == 'refs/heads/main'
         uses: changesets/action@v1
@@ -113,7 +113,6 @@ jobs:
           publish: pnpm publish:ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Get total coverage
         id: coverage

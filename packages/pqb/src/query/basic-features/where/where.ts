@@ -11,7 +11,12 @@ import {
   _queryTakeOptional,
   pushQueryArrayImmutable,
 } from '../../query.utils';
-import { JoinArgs, JoinFirstArg } from '../join/join';
+import {
+  JoinArgs,
+  JoinCallback,
+  JoinCallbackArgs,
+  JoinFirstArg,
+} from '../join/join';
 import { sqlQueryArgsToExpression } from '../../expressions/raw-sql';
 import { preprocessJoinArg, processJoinArgs } from '../join/process-join-args';
 import { _queryNone } from '../../extra-features/none/none';
@@ -515,7 +520,7 @@ export const _queryWhereExists = <
 >(
   q: T,
   arg: Arg,
-  args: JoinArgs<T, Arg>,
+  args: [JoinCallback<T, Arg>] | JoinArgs<T, Arg>,
 ): T & QueryHasWhere => {
   return _queryWhere(
     q as never,
@@ -1191,17 +1196,21 @@ export class Where {
   whereExists<
     T extends PickQuerySelectableShapeRelationsWithDataAs,
     Arg extends JoinFirstArg<T>,
-    Args extends JoinArgs<T, Arg>,
+    Cb extends JoinCallbackArgs<T, Arg>,
   >(
     this: T,
     arg: Arg,
-    ...args: Args
+    ...args: Cb | JoinArgs<T, Arg>
   ): Arg extends QueryFnReturningSelect
     ? { error: 'Cannot select in whereExists' }
-    : Args[0] extends QueryFnReturningSelect
+    : Cb[0] extends QueryFnReturningSelect
     ? { error: 'Cannot select in whereExists' }
     : T & QueryHasWhere {
-    return _queryWhereExists(_clone(this) as unknown as T, arg, args) as never;
+    return _queryWhereExists(
+      _clone(this) as unknown as T,
+      arg,
+      args as never,
+    ) as never;
   }
 
   /**
