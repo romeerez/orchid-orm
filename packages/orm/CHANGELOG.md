@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.64.5
+
+### Patch Changes
+
+- bb3a3e1: Support joining relation of a joined table; fix `chain` type to disallow selecting from a parent table (#665)
+- Updated dependencies [bb3a3e1]
+  - pqb@0.61.9
+  - rake-db@2.30.5
+
 ## 1.64.4
 
 ### Patch Changes

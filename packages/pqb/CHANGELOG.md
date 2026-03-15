@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.9
+
+### Patch Changes
+
+- bb3a3e1: Support joining relation of a joined table; fix `chain` type to disallow selecting from a parent table (#665)
+
 ## 0.61.8
 
 ### Patch Changes
