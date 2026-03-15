@@ -117,7 +117,7 @@ jobs:
       - name: Get total coverage
         id: coverage
         if: github.ref == 'refs/heads/main'
-        run: echo "COVERAGE=$(./node_modules/.bin/ts-node scripts/getTestCoverageTotal.ts)" >> $GITHUB_OUTPUT
+        run: echo "COVERAGE=$(./node_modules/.bin/ts-node scripts/get-test-coverage-total.ts)" >> $GITHUB_OUTPUT
 
   badge:
     name: Generate badge image with test coverage value

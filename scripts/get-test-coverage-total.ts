@@ -23,7 +23,6 @@ const calculatePackageCoverage = async (name: string) => {
 const main = async () => {
   const values = await Promise.all(
     [
-      'core',
       'create-orm',
       'orm',
       'pqb',
