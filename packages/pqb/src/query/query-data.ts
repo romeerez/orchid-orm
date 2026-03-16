@@ -308,7 +308,7 @@ export interface QueryData
   insertFrom?: SubQueryForSql;
   insertValuesAs?: string;
   queryColumnsCount?: number;
-  values: InsertQueryDataObjectValues;
+  values: unknown[][];
   onConflict?: {
     target?: OnConflictTarget;
     set?: OnConflictSet;
@@ -318,9 +318,15 @@ export interface QueryData
   /** update **/
 
   updateData: UpdateQueryDataItem[];
+  updateMany?: {
+    keys: string[];
+    columns: string[];
+    setColumns: string[];
+    values: unknown[][];
+    count: number;
+    strict?: boolean;
+  };
 }
-
-export type InsertQueryDataObjectValues = unknown[][];
 
 export interface UpdateQueryDataObject {
   [K: string]: Expression | { op: string; arg: unknown } | unknown;

@@ -11,7 +11,7 @@ import { selectToSql } from '../select/select.sql';
 import { countSelect } from '../../expressions/raw-sql';
 import { Query } from '../../query';
 import { processJoinItem } from '../join/join.sql';
-import { moveMutativeQueryToCte } from '../cte/cte.sql';
+import { moveMutativeQueryToCte, setFreeTopCteAs } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
 import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
@@ -26,6 +26,8 @@ import {
   newDelayedRelationSelect,
 } from '../select/delayed-relational-select';
 import { isExpression } from '../../expressions/expression';
+import { OrchidOrmInternalError } from '../../errors';
+import { Column } from '../../../columns/column';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -34,6 +36,10 @@ export const pushUpdateSql = (
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
+  if (q.updateMany) {
+    return pushUpdateManySql(ctx, query, q, quotedAs, isSubSql);
+  }
+
   const quotedTable = `"${query.table || (q.from as string)}"`;
   const from = quoteTableWithSchema(query);
 
@@ -258,4 +264,154 @@ const processValue = (
   }
 
   return addValue(ctx.values, value);
+};
+
+const pushUpdateManySql = (
+  ctx: ToSQLCtx,
+  query: ToSQLQuery,
+  q: QueryData,
+  quotedAs: string,
+  isSubSql?: boolean,
+): Sql => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const updateMany = q.updateMany!;
+  const { shape } = q;
+  const from = quoteTableWithSchema(query);
+
+  // Post-updateMany conflict guard (catches updateFrom/join chained AFTER updateMany)
+  if (q.updateFrom) {
+    throw new OrchidOrmInternalError(
+      query as unknown as Query,
+      'updateMany cannot be combined with updateFrom',
+    );
+  }
+  if (q.join) {
+    throw new OrchidOrmInternalError(
+      query as unknown as Query,
+      'updateMany cannot be combined with join',
+    );
+  }
+
+  // For strict variants, set up CTE infrastructure BEFORE generating SQL
+  if (updateMany.strict) {
+    const wrapAs = setFreeTopCteAs(ctx);
+    ctx.wrapAs = wrapAs;
+    const cteHooks = (ctx.topCtx.cteHooks ??= {
+      hasSelect: true,
+      tableHooks: {},
+    });
+    cteHooks.hasSelect = true;
+    (cteHooks.ensureCount ??= {})[wrapAs] = updateMany.count;
+  }
+
+  // 1. Build per-row SET: "col" = "v"."col"::dataType
+  const set: string[] = [];
+  for (const col of updateMany.setColumns) {
+    const column = shape[col] as unknown as Column;
+    const dbName = column.data.name || col;
+    set.push(`"${dbName}" = "v"."${dbName}"::${column.dataType}`);
+  }
+
+  // 2. Build hookSet that includes per-row setColumns + hookUpdateSet
+  //    This handles per-row-wins-over-shared AND updatedAt dedup
+  const hookSet: RecordUnknown = {};
+  for (const col of updateMany.setColumns) hookSet[col] = true;
+  if (q.hookUpdateSet) {
+    for (const item of q.hookUpdateSet) Object.assign(hookSet, item);
+  }
+
+  // 3. Build shared SET from updateData (.set() + updatedAt injector)
+  if (q.updateData) {
+    processData(ctx, query, set, q.updateData, hookSet, quotedAs);
+  }
+
+  // 4. Build shared SET from hookUpdateSet, skipping per-row columns
+  if (q.hookUpdateSet) {
+    const perRowSkip: RecordUnknown = {};
+    for (const col of updateMany.setColumns) perRowSkip[col] = true;
+    const merged: RecordUnknown = {};
+    for (const item of q.hookUpdateSet) Object.assign(merged, item);
+    applySet(ctx, query, set, merged, perRowSkip, quotedAs);
+  }
+
+  // 5. Empty SET check
+  if (!set.length) {
+    throw new OrchidOrmInternalError(
+      query as unknown as Query,
+      'updateMany: no columns to set. Provide non-key columns in data or use .set()',
+    );
+  }
+
+  // 6. Build FROM (VALUES ...) "v"("col1", "col2")
+  const valueRows: string[] = [];
+  for (const row of updateMany.values) {
+    const cells: string[] = [];
+    for (let i = 0; i < updateMany.columns.length; i++) {
+      const col = updateMany.columns[i];
+      const column = shape[col] as unknown as Column;
+      const value = row[i];
+      if (isExpression(value)) {
+        cells.push(value.toSQL(ctx, quotedAs));
+      } else {
+        cells.push(addValue(ctx.values, value));
+      }
+      // Cast the first row's values so Postgres knows the types
+      if (valueRows.length === 0 && column) {
+        cells[cells.length - 1] += `::${column.dataType}`;
+      }
+    }
+    valueRows.push(`(${cells.join(', ')})`);
+  }
+
+  const quotedColumnNames = updateMany.columns.map((col) => {
+    const column = shape[col] as unknown as Column;
+    return `"${column?.data.name || col}"`;
+  });
+
+  const valuesSql = `(VALUES ${valueRows.join(
+    ', ',
+  )}) "v"(${quotedColumnNames.join(', ')})`;
+
+  // 7. Build WHERE: "table"."key" = "v"."key"::dataType
+  const whereParts: string[] = [];
+  for (const key of updateMany.keys) {
+    const column = shape[key] as unknown as Column;
+    const dbName = column.data.name || key;
+    whereParts.push(
+      `${quotedAs}."${dbName}" = "v"."${dbName}"::${column.dataType}`,
+    );
+  }
+
+  // Build the UPDATE statement
+  ctx.sql.push(`UPDATE ${from}`);
+  if (`"${query.table || (q.from as string)}"` !== quotedAs) {
+    ctx.sql.push(quotedAs);
+  }
+  ctx.sql.push('SET', set.join(', '));
+  ctx.sql.push('FROM', valuesSql);
+  ctx.sql.push('WHERE', whereParts.join(' AND '));
+
+  // 8. Handle delayedRelationSelect
+  const delayedRelationSelect: DelayedRelationSelect | undefined =
+    q.selectRelation ? newDelayedRelationSelect(query) : undefined;
+
+  // 9. RETURNING via makeReturningSql with hookPurpose: 'Update'
+  const returning = makeReturningSql(
+    ctx,
+    query,
+    q,
+    quotedAs,
+    delayedRelationSelect,
+    'Update',
+    undefined,
+    isSubSql || !!ctx.topCtx.cteHooks,
+  );
+  if (returning) ctx.sql.push('RETURNING', returning);
+
+  if (delayedRelationSelect) {
+    ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
+  }
+
+  // makeSql handles CTE wrapping automatically for type='update' when cteHooks is set
+  return makeSql(ctx, 'update', isSubSql);
 };

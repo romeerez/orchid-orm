@@ -924,6 +924,107 @@ db.books
   .set({ authorName: (q) => q.ref('author.name') });
 ```
 
+### updateMany
+
+[//]: # 'has JSDoc'
+
+Updates multiple records with different per-row data in a single query.
+
+Each row must include the primary key and the columns to update.
+All rows must have the same set of non-key columns.
+
+Returns a count of updated records by default.
+Place `select` or `selectAll` before `updateMany` to return updated records.
+
+Throws [NotFoundError](/guide/error-handling) if any record is not found.
+Use `updateManyOptional` to update existing records without throwing.
+
+```ts
+// returns count of updated records
+const count = await db.table.updateMany([
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+]);
+
+// returns array of updated records
+const records = await db.table.select('id', 'name').updateMany([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+]);
+```
+
+`.set()` applies shared values to all rows.
+Per-row values take precedence over `.set()` values for the same column.
+
+```ts
+await db.table
+  .updateMany([
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' },
+  ])
+  .set({ updatedBy: currentUser.id });
+
+// keys-only data + shared .set() — all records get the same values
+await db.table
+  .updateMany([{ id: 1 }, { id: 2 }, { id: 3 }])
+  .set({ active: false });
+```
+
+### updateManyOptional
+
+[//]: # 'has JSDoc'
+
+Same as `updateMany`, but does **not** throw when some records are not found.
+
+```ts
+// updates what it can, doesn't throw for missing id: 999
+const count = await db.table.updateManyOptional([
+  { id: 1, name: 'Alice' },
+  { id: 999, name: 'Ghost' },
+]);
+```
+
+### updateManyBy
+
+[//]: # 'has JSDoc'
+
+Like `updateMany`, but accepts key columns matching primary keys, unique columns, or compound unique constraints defined on the table.
+
+Throws [NotFoundError](/guide/error-handling) if any record is not found.
+
+```ts
+// single unique column
+await db.table.updateManyBy(
+  ['email'],
+  [
+    { email: 'alice@test.com', name: 'Alice' },
+    { email: 'bob@test.com', name: 'Bob' },
+  ],
+);
+
+// compound unique constraint
+await db.table.updateManyBy(
+  ['firstName', 'lastName'],
+  [{ firstName: 'John', lastName: 'Doe', bio: 'updated' }],
+);
+```
+
+### updateManyByOptional
+
+[//]: # 'has JSDoc'
+
+Same as `updateManyBy`, but does **not** throw when some records are not found.
+
+```ts
+await db.table.updateManyByOptional(
+  ['email'],
+  [
+    { email: 'alice@test.com', name: 'Alice' },
+    { email: 'unknown@test.com', name: 'Ghost' },
+  ],
+);
+```
+
 ## upsert
 
 [//]: # 'has JSDoc'
