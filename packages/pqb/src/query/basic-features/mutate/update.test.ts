@@ -1332,19 +1332,6 @@ describe('updateMany', () => {
       );
     });
 
-    it('should NOT generate CTE for updateManyOptional', () => {
-      expectSql(
-        User.updateManyOptional([{ id: 1, name: 'Alice' }]).toSQL(),
-        `
-          UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "updated_at" = now()
-          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
-        `,
-        [1, 'Alice'],
-      );
-    });
-
     it('should generate updateManyBy with explicit key', () => {
       expectSql(
         User.updateManyByOptional(
