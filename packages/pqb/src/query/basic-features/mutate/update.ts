@@ -886,9 +886,6 @@ export class QueryUpdate {
    * Throws {@link NotFoundError} if any record is not found.
    * Use {@link updateManyOptional} to update existing records without throwing.
    *
-   * `.set()` applies shared values to all rows.
-   * Per-row values take precedence over `.set()` values for the same column.
-   *
    * ```ts
    * // returns count of updated records
    * const count = await db.table.updateMany([
@@ -901,6 +898,18 @@ export class QueryUpdate {
    *   { id: 1, name: 'Alice' },
    *   { id: 2, name: 'Bob' },
    * ]);
+   * ```
+   *
+   * `.set()` applies shared values to all rows.
+   * Per-row values take precedence over `.set()` values for the same column.
+   *
+   * ```ts
+   * await db.table
+   *   .updateMany([
+   *     { id: 1, name: 'Alice' },
+   *     { id: 2, name: 'Bob' },
+   *   ])
+   *   .set({ updatedBy: currentUser.id });
    * ```
    */
   updateMany<

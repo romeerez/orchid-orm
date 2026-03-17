@@ -963,11 +963,6 @@ await db.table
     { id: 2, name: 'Bob' },
   ])
   .set({ updatedBy: currentUser.id });
-
-// keys-only data + shared .set() — all records get the same values
-await db.table
-  .updateMany([{ id: 1 }, { id: 2 }, { id: 3 }])
-  .set({ active: false });
 ```
 
 ### updateManyOptional
