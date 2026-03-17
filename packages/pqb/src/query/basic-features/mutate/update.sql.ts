@@ -3,6 +3,7 @@ import { pushWhereStatementSql, whereToSql } from '../where/where.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import {
   QueryData,
+  UpdateManyQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from '../../query-data';
@@ -37,7 +38,7 @@ export const pushUpdateSql = (
   isSubSql?: boolean,
 ): Sql => {
   if (q.updateMany) {
-    return pushUpdateManySql(ctx, query, q, quotedAs, isSubSql);
+    return pushUpdateManySql(ctx, query, q, q.updateMany, quotedAs, isSubSql);
   }
 
   const quotedTable = `"${query.table || (q.from as string)}"`;
@@ -270,11 +271,10 @@ const pushUpdateManySql = (
   ctx: ToSQLCtx,
   query: ToSQLQuery,
   q: QueryData,
+  updateMany: UpdateManyQueryData,
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const updateMany = q.updateMany!;
   const { shape } = q;
   const from = quoteTableWithSchema(query);
 
