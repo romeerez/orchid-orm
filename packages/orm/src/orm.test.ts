@@ -10,8 +10,8 @@ import {
   UserData,
   testAdapter,
 } from 'test-utils';
-import { Selectable } from './baseTable';
-import { Db, raw } from 'pqb';
+import { createBaseTable, Selectable } from './baseTable';
+import { Db, QuerySchema, raw } from 'pqb';
 
 describe('orm', () => {
   useTestORM();
@@ -36,6 +36,44 @@ describe('orm', () => {
       id: t.identity().primaryKey(),
     }));
   }
+
+  it('should use child schema override when parent instance was created first', () => {
+    const BaseTable = createBaseTable();
+
+    class ParentTable extends BaseTable {
+      schema: QuerySchema = () => 'tenant';
+      readonly table = 'item';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+      }));
+    }
+
+    class ChildTable extends ParentTable {
+      schema: QuerySchema = 'saas';
+    }
+
+    orchidORMWithAdapter(
+      { adapter: testAdapter },
+      {
+        parent: ParentTable,
+      },
+    );
+
+    const local = orchidORMWithAdapter(
+      { adapter: testAdapter },
+      {
+        item: ChildTable,
+      },
+    );
+
+    expectSql(
+      local.item.select('id').toSQL(),
+      `
+        SELECT "item"."id"
+        FROM "saas"."item"
+      `,
+    );
+  });
 
   it('should save `tableData` to the table`s query builder `internal`', () => {
     const checkSql = raw({ raw: 'one > 5' });
