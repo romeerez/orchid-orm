@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.64.7
+
+### Patch Changes
+
+- 3eb1b19: Fix inherited table instance cache in `BaseTable`
+
 ## 1.64.6
 
 ### Patch Changes
