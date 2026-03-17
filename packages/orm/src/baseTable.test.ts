@@ -11,6 +11,7 @@ import {
   Column,
   makeColumnTypes,
   Operators,
+  QuerySchema,
   TextColumn,
   getCallerFilePath,
   QueryHookUtils,
@@ -721,6 +722,32 @@ describe('baseTable', () => {
           ) "rel" ON true
         `,
       );
+    });
+  });
+
+  describe('inheritance', () => {
+    it('should create a separate cached instance for a subclass when parent was instantiated first', () => {
+      const BaseTable = createBaseTable();
+
+      class ParentTable extends BaseTable {
+        schema: QuerySchema = () => 'tenant';
+        readonly table = 'item';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      }
+
+      class ChildTable extends ParentTable {
+        schema: QuerySchema = 'saas';
+      }
+
+      const parent = ParentTable.instance();
+      const child = ChildTable.instance();
+
+      expect(parent).toBeInstanceOf(ParentTable);
+      expect(child).toBeInstanceOf(ChildTable);
+      expect(child).not.toBe(parent);
+      expect(child.schema).toBe('saas');
     });
   });
 });

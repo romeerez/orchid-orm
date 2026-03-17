@@ -558,6 +558,8 @@ export function createBaseTable<
     data: emptyArray,
   };
 
+  const instances = new WeakMap<typeof base, InstanceType<typeof base>>();
+
   const base = class BaseTable {
     static nowSQL = nowSQL;
     static exportAs = exportAs;
@@ -628,9 +630,14 @@ export function createBaseTable<
       );
     }
 
-    private static _instance?: BaseTable;
     static instance(): BaseTable {
-      return (this._instance ??= new this());
+      let instance = instances.get(this);
+      if (!instance) {
+        instance = new this();
+        instances.set(this, instance);
+      }
+
+      return instance;
     }
 
     table!: string;
