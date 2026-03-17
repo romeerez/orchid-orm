@@ -137,7 +137,7 @@ To perform custom actions before or after creating records, see `beforeCreate`, 
 
 `create*` and `insert*` methods require columns that are not nullable and don't have a default.
 
-Place `select`, or `get` before or after `create` or `insert` to specify returning columns:
+Use `select`, `selectAll`, `get`, or `pluck` alongside `create` or `insert` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
@@ -743,7 +743,7 @@ db.table
 
 By default, `update` will return a count of updated records.
 
-Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
+Use `select`, `selectAll`, `get`, or `pluck` alongside `update` to specify returning columns.
 
 You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
 To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
@@ -934,7 +934,7 @@ Each row must include the primary key and the columns to update.
 All rows must have the same set of non-key columns.
 
 Returns a count of updated records by default.
-Place `select` or `selectAll` before `updateMany` to return updated records.
+Use `select`, `selectAll`, `get`, or `pluck` alongside `updateMany` to return updated records.
 
 Throws [NotFoundError](/guide/error-handling) if any record is not found.
 Use `updateManyOptional` to update existing records without throwing.

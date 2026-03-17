@@ -469,7 +469,8 @@ export class QueryUpdate {
    *
    * By default, `update` will return a count of updated records.
    *
-   * Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
+   * Use `select`, `selectAll`, `get`, or `pluck` alongside `update` to specify
+   * returning columns.
    *
    * You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
    * To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
@@ -879,7 +880,8 @@ export class QueryUpdate {
    * All rows must have the same set of non-key columns.
    *
    * Returns a count of updated records by default.
-   * Place `select` or `selectAll` before `updateMany` to return updated records.
+   * Use `select`, `selectAll`, `get`, or `pluck` alongside `updateMany` to return
+   * updated records.
    *
    * Throws {@link NotFoundError} if any record is not found.
    * Use {@link updateManyOptional} to update existing records without throwing.

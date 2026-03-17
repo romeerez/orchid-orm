@@ -658,6 +658,9 @@ export class QueryCreate {
   /**
    * `create` and `insert` create a single record.
    *
+   * Use `select`, `selectAll`, `get`, or `pluck` alongside `create` or `insert` to
+   * specify returning columns.
+   *
    * Each column may accept a specific value, a raw SQL, or a query that returns a single value.
    *
    * ```ts
