@@ -884,7 +884,7 @@ export class QueryUpdate {
    * updated records.
    *
    * Throws {@link NotFoundError} if any record is not found.
-   * Use {@link updateManyOptional} to update existing records without throwing.
+   * Use {@link updateManyOptional} to skip missing records without throwing.
    *
    * ```ts
    * // returns count of updated records
@@ -929,7 +929,7 @@ export class QueryUpdate {
   }
 
   /**
-   * Same as {@link updateMany}, but does **not** throw when some records are not found.
+   * Same as {@link updateMany}, but skips missing records rather than throwing.
    *
    * ```ts
    * // updates what it can, doesn't throw for missing id: 999
@@ -959,6 +959,7 @@ export class QueryUpdate {
    * Like {@link updateMany}, but accepts key columns matching primary keys, unique columns, or compound unique constraints defined on the table.
    *
    * Throws {@link NotFoundError} if any record is not found.
+   * Use {@link updateManyByOptional} to skip records with no matching key without throwing.
    *
    * ```ts
    * // single unique column
@@ -996,7 +997,7 @@ export class QueryUpdate {
   }
 
   /**
-   * Same as {@link updateManyBy}, but does **not** throw when some records are not found.
+   * Same as {@link updateManyBy}, but skips records with no matching key rather than throwing.
    *
    * ```ts
    * await db.table.updateManyByOptional(['email'], [

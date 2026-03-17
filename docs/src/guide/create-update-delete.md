@@ -937,7 +937,7 @@ Returns a count of updated records by default.
 Use `select`, `selectAll`, `get`, or `pluck` alongside `updateMany` to return updated records.
 
 Throws [NotFoundError](/guide/error-handling) if any record is not found.
-Use `updateManyOptional` to update existing records without throwing.
+Use `updateManyOptional` to skip missing records without throwing.
 
 ```ts
 // returns count of updated records
@@ -969,7 +969,7 @@ await db.table
 
 [//]: # 'has JSDoc'
 
-Same as `updateMany`, but does **not** throw when some records are not found.
+Same as `updateMany`, but skips missing records rather than throwing.
 
 ```ts
 // updates what it can, doesn't throw for missing id: 999
@@ -986,6 +986,7 @@ const count = await db.table.updateManyOptional([
 Like `updateMany`, but accepts key columns matching primary keys, unique columns, or compound unique constraints defined on the table.
 
 Throws [NotFoundError](/guide/error-handling) if any record is not found.
+Use `updateManyByOptional` to skip records with no matching key without throwing.
 
 ```ts
 // single unique column
@@ -1008,7 +1009,7 @@ await db.table.updateManyBy(
 
 [//]: # 'has JSDoc'
 
-Same as `updateManyBy`, but does **not** throw when some records are not found.
+Same as `updateManyBy`, but skips records with no matching key rather than throwing.
 
 ```ts
 await db.table.updateManyByOptional(
