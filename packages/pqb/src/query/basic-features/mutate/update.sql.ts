@@ -27,7 +27,6 @@ import {
   newDelayedRelationSelect,
 } from '../select/delayed-relational-select';
 import { isExpression } from '../../expressions/expression';
-import { OrchidOrmInternalError } from '../../errors';
 import { Column } from '../../../columns/column';
 
 export const pushUpdateSql = (
@@ -278,18 +277,6 @@ const pushUpdateManySql = (
   const { shape } = q;
   const from = quoteTableWithSchema(query);
 
-  // For strict variants, set up CTE infrastructure BEFORE generating SQL
-  if (updateMany.strict) {
-    const wrapAs = setFreeTopCteAs(ctx);
-    ctx.wrapAs = wrapAs;
-    const cteHooks = (ctx.topCtx.cteHooks ??= {
-      hasSelect: true,
-      tableHooks: {},
-    });
-    cteHooks.hasSelect = true;
-    (cteHooks.ensureCount ??= {})[wrapAs] = updateMany.count;
-  }
-
   // 1. Build per-row SET: "col" = "v"."col"::dataType
   const set: string[] = [];
   for (const col of updateMany.setColumns) {
@@ -320,15 +307,7 @@ const pushUpdateManySql = (
     applySet(ctx, query, set, merged, perRowSkip, quotedAs);
   }
 
-  // 5. Empty SET check
-  if (!set.length) {
-    throw new OrchidOrmInternalError(
-      query as unknown as Query,
-      'updateMany: no columns to set. Provide non-key columns in data or use .set()',
-    );
-  }
-
-  // 6. Build FROM (VALUES ...) "v"("col1", "col2")
+  // 5. Build FROM (VALUES ...) "v"("col1", "col2")
   const valueRows: string[] = [];
   for (const row of updateMany.values) {
     const cells: string[] = [];
@@ -358,7 +337,7 @@ const pushUpdateManySql = (
     ', ',
   )}) "v"(${quotedColumnNames.join(', ')})`;
 
-  // 7. Build WHERE: "table"."key" = "v"."key"::dataType
+  // 6. Build WHERE: "table"."key" = "v"."key"::dataType
   const whereParts: string[] = [];
   for (const key of updateMany.keys) {
     const column = shape[key] as unknown as Column;
@@ -368,36 +347,65 @@ const pushUpdateManySql = (
     );
   }
 
-  // Build the UPDATE statement
-  ctx.sql.push(`UPDATE ${from}`);
-  if (`"${query.table || (q.from as string)}"` !== quotedAs) {
-    ctx.sql.push(quotedAs);
-  }
-  ctx.sql.push('SET', set.join(', '));
-  ctx.sql.push('FROM', valuesSql);
-  ctx.sql.push('WHERE', whereParts.join(' AND '));
-
-  // 8. Handle delayedRelationSelect
   const delayedRelationSelect: DelayedRelationSelect | undefined =
     q.selectRelation ? newDelayedRelationSelect(query) : undefined;
 
-  // 9. RETURNING via makeReturningSql with hookPurpose: 'Update'
-  const returning = makeReturningSql(
-    ctx,
-    query,
-    q,
-    quotedAs,
-    delayedRelationSelect,
-    'Update',
-    undefined,
-    isSubSql || !!ctx.topCtx.cteHooks,
-  );
-  if (returning) ctx.sql.push('RETURNING', returning);
+  // If nothing to set, make a SELECT query (like regular update does)
+  if (!set.length) {
+    if (!q.select) {
+      q.select = countSelect;
+    }
+
+    pushUpdateReturning(
+      ctx,
+      query,
+      q,
+      quotedAs,
+      'SELECT',
+      delayedRelationSelect,
+      isSubSql,
+    );
+
+    ctx.sql.push(`FROM ${from}, ${valuesSql}`);
+    ctx.sql.push('WHERE', whereParts.join(' AND '));
+  } else {
+    // For strict variants, set up CTE infrastructure
+    if (updateMany.strict) {
+      const wrapAs = setFreeTopCteAs(ctx);
+      ctx.wrapAs = wrapAs;
+      const cteHooks = (ctx.topCtx.cteHooks ??= {
+        hasSelect: true,
+        tableHooks: {},
+      });
+      cteHooks.hasSelect = true;
+      (cteHooks.ensureCount ??= {})[wrapAs] = updateMany.count;
+    }
+
+    // Build the UPDATE statement
+    ctx.sql.push(`UPDATE ${from}`);
+    if (`"${query.table || (q.from as string)}"` !== quotedAs) {
+      ctx.sql.push(quotedAs);
+    }
+    ctx.sql.push('SET', set.join(', '));
+    ctx.sql.push('FROM', valuesSql);
+    ctx.sql.push('WHERE', whereParts.join(' AND '));
+
+    const returning = makeReturningSql(
+      ctx,
+      query,
+      q,
+      quotedAs,
+      delayedRelationSelect,
+      'Update',
+      undefined,
+      isSubSql || !!ctx.topCtx.cteHooks,
+    );
+    if (returning) ctx.sql.push('RETURNING', returning);
+  }
 
   if (delayedRelationSelect) {
     ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
   }
 
-  // makeSql handles CTE wrapping automatically for type='update' when cteHooks is set
   return makeSql(ctx, 'update', isSubSql);
 };

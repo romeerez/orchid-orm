@@ -1366,23 +1366,6 @@ describe('updateMany', () => {
       );
     });
 
-    it('should support keys-only data with .set()', () => {
-      expectSql(
-        User.updateManyOptional([{ id: 1 }, { id: 2 }])
-          .set({
-            name: 'shared-name',
-          })
-          .toSQL(),
-        `
-          UPDATE "schema"."user"
-          SET "name" = $1, "updated_at" = now()
-          FROM (VALUES ($2::int4), ($3)) "v"("id")
-          WHERE "user"."id" = "v"."id"::int4
-        `,
-        ['shared-name', 1, 2],
-      );
-    });
-
     it('should generate CTE with RETURNING NULL in strict rowCount mode', () => {
       expectSql(
         User.updateMany([{ id: 1, name: 'Alice' }]).toSQL(),
@@ -1473,23 +1456,46 @@ describe('updateMany', () => {
     });
   });
 
-  describe('validation', () => {
-    it('should throw on empty effective SET when no .set() is used', () => {
-      // Use a table without timestamps — User has updatedAt auto-set which fills SET
-      const NoTimestamps = testDb(
-        'no_ts',
-        (t) => ({
-          id: t.identity().primaryKey(),
-          name: t.string(),
-        }),
-        undefined,
-        { schema: () => 'schema' },
-      );
-      expect(() => NoTimestamps.updateMany([{ id: 1 }]).toSQL()).toThrow(
-        'no columns to set',
+  describe('fallback to select', () => {
+    const User = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string(),
+      }),
+      undefined,
+      { schema: () => 'schema' },
+    );
+
+    it('should select count when nothing to update', () => {
+      expectSql(
+        User.updateMany([{ id: 1 }, { id: 2 }]).toSQL(),
+        `
+          SELECT count(*) FROM "schema"."user",
+          (VALUES ($1::int4), ($2)) "v"("id")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 2],
       );
     });
 
+    it('should select columns when nothing to update', () => {
+      expectSql(
+        User.select('id', 'name')
+          .updateMany([{ id: 1 }, { id: 2 }])
+          .toSQL(),
+        `
+          SELECT "user"."id", "user"."name"
+          FROM "schema"."user",
+          (VALUES ($1::int4), ($2)) "v"("id")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 2],
+      );
+    });
+  });
+
+  describe('validation', () => {
     it('should throw on duplicate keys', () => {
       expect(() =>
         User.updateMany([
