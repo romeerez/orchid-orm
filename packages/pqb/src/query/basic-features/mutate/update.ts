@@ -60,8 +60,6 @@ export interface UpdateSelf
     PickQueryHasSelect,
     PickQueryHasWhere {}
 
-interface UpdateManySelf extends UpdateSelf, PickQuerySinglePrimaryKey {}
-
 // Type of argument for `update` and `updateOrThrow`
 //
 // It maps the `inputType` of a table into object with column values.
@@ -159,10 +157,33 @@ type ShapePrimaryKeyQueryTypes<Shape extends Column.QueryColumns> = {
     : never]: Shape[K]['queryType'];
 };
 
+export interface UpdateManySelf extends UpdateSelf, PickQuerySinglePrimaryKey {}
+
+// `type` instead of `interface`: PickQueryResultReturnTypeUniqueColumns and
+// PickQueryUniqueProperties both declare `internal` with different shapes,
+// which `interface extends` cannot merge.
+type UpdateManyBySelf = UpdateSelf &
+  PickQueryResultReturnTypeUniqueColumns &
+  PickQueryUniqueProperties;
+
 // Allow Expression as an alternative value for each column in updateMany data
 type InputTypeOrExpression<InputType> = {
   [K in keyof InputType]: InputType[K] | Expression;
 };
+
+// Data type for updateMany / updateManyOptional (PK-based)
+type UpdateManyData<T extends UpdateManySelf> = (ShapePrimaryKeyQueryTypes<
+  T['shape']
+> &
+  Partial<InputTypeOrExpression<T['inputType']>>)[];
+
+// Data type for updateManyBy / updateManyByOptional (custom keys)
+type UpdateManyByData<T extends UpdateSelf, K extends string> = (Required<
+  Pick<T['inputType'], K & keyof T['inputType']>
+> &
+  Partial<
+    Omit<InputTypeOrExpression<T['inputType']>, K & keyof T['inputType']>
+  >)[];
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult
 type UpdateManyResult<T extends UpdateSelf> = T['__hasSelect'] extends true
@@ -902,8 +923,7 @@ export class QueryUpdate {
    */
   updateMany<T extends UpdateManySelf>(
     this: T,
-    data: (ShapePrimaryKeyQueryTypes<T['shape']> &
-      Partial<InputTypeOrExpression<T['inputType']>>)[],
+    data: UpdateManyData<T>,
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
     const pk = q.internal.singlePrimaryKey as string;
@@ -928,8 +948,7 @@ export class QueryUpdate {
    */
   updateManyOptional<T extends UpdateManySelf>(
     this: T,
-    data: (ShapePrimaryKeyQueryTypes<T['shape']> &
-      Partial<InputTypeOrExpression<T['inputType']>>)[],
+    data: UpdateManyData<T>,
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
     const pk = q.internal.singlePrimaryKey as string;
@@ -961,9 +980,7 @@ export class QueryUpdate {
    * ```
    */
   updateManyBy<
-    T extends PickQueryResultReturnTypeUniqueColumns &
-      PickQueryUniqueProperties &
-      UpdateSelf,
+    T extends UpdateManyBySelf,
     Keys extends
       | readonly [T['internal']['uniqueColumnNames']]
       | T['internal']['uniqueColumnTuples'],
@@ -971,10 +988,7 @@ export class QueryUpdate {
   >(
     this: T,
     keys: Keys,
-    data: (Required<Pick<T['inputType'], K & keyof T['inputType']>> &
-      Partial<
-        Omit<InputTypeOrExpression<T['inputType']>, K & keyof T['inputType']>
-      >)[],
+    data: UpdateManyByData<T, K>,
   ): UpdateManyResult<T> & QueryHasWhere {
     return _queryUpdateMany(
       _clone(this) as never,
@@ -995,9 +1009,7 @@ export class QueryUpdate {
    * ```
    */
   updateManyByOptional<
-    T extends PickQueryResultReturnTypeUniqueColumns &
-      PickQueryUniqueProperties &
-      UpdateSelf,
+    T extends UpdateManyBySelf,
     Keys extends
       | readonly [T['internal']['uniqueColumnNames']]
       | T['internal']['uniqueColumnTuples'],
@@ -1005,10 +1017,7 @@ export class QueryUpdate {
   >(
     this: T,
     keys: Keys,
-    data: (Required<Pick<T['inputType'], K & keyof T['inputType']>> &
-      Partial<
-        Omit<InputTypeOrExpression<T['inputType']>, K & keyof T['inputType']>
-      >)[],
+    data: UpdateManyByData<T, K>,
   ): UpdateManyResult<T> & QueryHasWhere {
     return _queryUpdateMany(
       _clone(this) as never,
