@@ -5,6 +5,7 @@ import {
   SnakeRecord,
   snakeSelectAll,
   User,
+  UserSoftDelete,
   Message,
   Profile,
   userData,
@@ -1363,6 +1364,34 @@ describe('updateMany', () => {
           WHERE "user"."id" = "v"."id"::int4
         `,
         ['shared-pass', 1, 'Alice'],
+      );
+    });
+
+    it('should support .where() conditions', () => {
+      expectSql(
+        User.where({ age: 18 })
+          .updateManyOptional([{ id: 1, name: 'Alice' }])
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4 AND "user"."age" = $3
+        `,
+        [1, 'Alice', 18],
+      );
+    });
+
+    it('should apply softDelete filter', () => {
+      expectSql(
+        UserSoftDelete.updateManyOptional([{ id: 1, name: 'Alice' }]).toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::varchar
+          FROM (VALUES ($1::int4, $2::varchar)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4 AND ("user"."deleted_at" IS NULL)
+        `,
+        [1, 'Alice'],
       );
     });
 

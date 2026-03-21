@@ -27,7 +27,6 @@ import {
   newDelayedRelationSelect,
 } from '../select/delayed-relational-select';
 import { isExpression } from '../../expressions/expression';
-import { Column } from '../../../columns/column';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -280,7 +279,7 @@ const pushUpdateManySql = (
   // 1. Build per-row SET: "col" = "v"."col"::dataType
   const set: string[] = [];
   for (const col of updateMany.setColumns) {
-    const column = shape[col] as unknown as Column;
+    const column = shape[col];
     const dbName = column.data.name || col;
     set.push(`"${dbName}" = "v"."${dbName}"::${column.dataType}`);
   }
@@ -313,7 +312,7 @@ const pushUpdateManySql = (
     const cells: string[] = [];
     for (let i = 0; i < updateMany.columns.length; i++) {
       const col = updateMany.columns[i];
-      const column = shape[col] as unknown as Column;
+      const column = shape[col];
       const value = row[i];
       if (isExpression(value)) {
         cells.push(value.toSQL(ctx, quotedAs));
@@ -329,7 +328,7 @@ const pushUpdateManySql = (
   }
 
   const quotedColumnNames = updateMany.columns.map((col) => {
-    const column = shape[col] as unknown as Column;
+    const column = shape[col];
     return `"${column?.data.name || col}"`;
   });
 
@@ -337,14 +336,18 @@ const pushUpdateManySql = (
     ', ',
   )}) "v"(${quotedColumnNames.join(', ')})`;
 
-  // 6. Build WHERE: "table"."key" = "v"."key"::dataType
-  const whereParts: string[] = [];
-  for (const key of updateMany.keys) {
-    const column = shape[key] as unknown as Column;
-    const dbName = column.data.name || key;
-    whereParts.push(
-      `${quotedAs}."${dbName}" = "v"."${dbName}"::${column.dataType}`,
-    );
+  // 6. Build WHERE: "table"."key" = "v"."key"::dataType + user conditions
+  let whereSql = updateMany.keys
+    .map((key) => {
+      const column = shape[key];
+      const dbName = column.data.name || key;
+      return `${quotedAs}."${dbName}" = "v"."${dbName}"::${column.dataType}`;
+    })
+    .join(' AND ');
+
+  const userWhere = whereToSql(ctx, query, q, quotedAs);
+  if (userWhere) {
+    whereSql += ' AND ' + userWhere;
   }
 
   const delayedRelationSelect: DelayedRelationSelect | undefined =
@@ -367,7 +370,7 @@ const pushUpdateManySql = (
     );
 
     ctx.sql.push(`FROM ${from}, ${valuesSql}`);
-    ctx.sql.push('WHERE', whereParts.join(' AND '));
+    ctx.sql.push('WHERE', whereSql);
   } else {
     // For strict variants, set up CTE infrastructure
     if (updateMany.strict) {
@@ -388,7 +391,7 @@ const pushUpdateManySql = (
     }
     ctx.sql.push('SET', set.join(', '));
     ctx.sql.push('FROM', valuesSql);
-    ctx.sql.push('WHERE', whereParts.join(' AND '));
+    ctx.sql.push('WHERE', whereSql);
 
     const returning = makeReturningSql(
       ctx,
