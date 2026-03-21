@@ -198,7 +198,7 @@ const _queryUpdateMany = <T extends UpdateSelf>(
     }
   }
 
-  // Normalize return type (must happen before .none() for empty data)
+  // Normalize return type
   q.type = 'update';
   const returnCount = !q.select;
   if (returnCount) {
