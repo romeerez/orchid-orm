@@ -1137,13 +1137,10 @@ describe('hooks', () => {
           ]);
           jest.clearAllMocks();
 
-          await User[method](
-            ['name'],
-            [
-              { name: 'umby1', password: 'pw1' },
-              { name: 'umby2', password: 'pw2' },
-            ],
-          );
+          await User[method]('name', [
+            { name: 'umby1', password: 'pw1' },
+            { name: 'umby2', password: 'pw2' },
+          ]);
 
           assert.updateHooksBeingCalled({
             data: [{ name: 'umby1' }, { name: 'umby2' }],

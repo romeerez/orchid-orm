@@ -983,20 +983,17 @@ const count = await db.table.updateManyOptional([
 
 [//]: # 'has JSDoc'
 
-Like `updateMany`, but accepts key columns matching primary keys, unique columns, or compound unique constraints defined on the table.
+Like `updateMany`, but matches rows by a unique column or a compound unique constraint instead of the primary key.
 
 Throws [NotFoundError](/guide/error-handling) if any record is not found.
 Use `updateManyByOptional` to skip records with no matching key without throwing.
 
 ```ts
 // single unique column
-await db.table.updateManyBy(
-  ['email'],
-  [
-    { email: 'alice@test.com', name: 'Alice' },
-    { email: 'bob@test.com', name: 'Bob' },
-  ],
-);
+await db.table.updateManyBy('email', [
+  { email: 'alice@test.com', name: 'Alice' },
+  { email: 'bob@test.com', name: 'Bob' },
+]);
 
 // compound unique constraint
 await db.table.updateManyBy(
@@ -1012,13 +1009,10 @@ await db.table.updateManyBy(
 Same as `updateManyBy`, but skips records with no matching key rather than throwing.
 
 ```ts
-await db.table.updateManyByOptional(
-  ['email'],
-  [
-    { email: 'alice@test.com', name: 'Alice' },
-    { email: 'unknown@test.com', name: 'Ghost' },
-  ],
-);
+await db.table.updateManyByOptional('email', [
+  { email: 'alice@test.com', name: 'Alice' },
+  { email: 'unknown@test.com', name: 'Ghost' },
+]);
 ```
 
 ## upsert

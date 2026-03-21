@@ -1350,12 +1350,11 @@ describe('updateMany', () => {
       );
     });
 
-    it('should generate updateManyBy with explicit key', () => {
+    it('should generate updateManyBy with a string key', () => {
       expectSql(
-        User.updateManyByOptional(
-          ['name'],
-          [{ name: 'Alice', password: 'new-pass' }],
-        ).toSQL(),
+        User.updateManyByOptional('name', [
+          { name: 'Alice', password: 'new-pass' },
+        ]).toSQL(),
         `
           UPDATE "schema"."user"
           SET "password" = "v"."password"::text, "updated_at" = now()
@@ -1363,6 +1362,23 @@ describe('updateMany', () => {
           WHERE "user"."name" = "v"."name"::text
         `,
         ['Alice', 'new-pass'],
+      );
+    });
+
+    it('should generate updateManyBy with a tuple key', () => {
+      expectSql(
+        UniqueTable.updateManyByOptional(
+          ['thirdColumn', 'fourthColumn'],
+          [{ thirdColumn: 'a', fourthColumn: 1, one: 'updated' }],
+        ).toSQL(),
+        `
+          UPDATE "schema"."uniqueTable"
+          SET "one" = "v"."one"::text
+          FROM (VALUES ($1::text, $2::int4, $3::text)) "v"("third_column", "fourth_column", "one")
+          WHERE "uniqueTable"."third_column" = "v"."third_column"::text
+            AND "uniqueTable"."fourth_column" = "v"."fourth_column"::int4
+        `,
+        ['a', 1, 'updated'],
       );
     });
 

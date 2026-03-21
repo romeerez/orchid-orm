@@ -171,13 +171,15 @@ type UpdateManyData<T extends UpdateSelf> = (ShapePrimaryKeyQueryTypes<
   [P in keyof T['inputType']]?: T['inputType'][P] | Expression;
 })[];
 
-// Valid key tuples for updateManyBy / updateManyByOptional
+// Valid keys for updateManyBy: a single unique column name or a compound tuple
 type UpdateManyByKeys<T extends UpdateManyBySelf> =
-  | [T['internal']['uniqueColumnNames']]
+  | T['internal']['uniqueColumnNames']
   | T['internal']['uniqueColumnTuples'];
 
-// Extract key column names from a Keys tuple
-type UpdateManyByKeyColumns<Keys> = Keys extends unknown[]
+// Extract key column names from a string or tuple
+type UpdateManyByKeyColumns<Keys> = Keys extends string
+  ? Keys
+  : Keys extends unknown[]
   ? Keys[number] & string
   : never;
 
@@ -965,14 +967,14 @@ export class QueryUpdate {
   }
 
   /**
-   * Like {@link updateMany}, but accepts key columns matching primary keys, unique columns, or compound unique constraints defined on the table.
+   * Like {@link updateMany}, but matches rows by a unique column or a compound unique constraint instead of the primary key.
    *
    * Throws {@link NotFoundError} if any record is not found.
    * Use {@link updateManyByOptional} to skip records with no matching key without throwing.
    *
    * ```ts
    * // single unique column
-   * await db.table.updateManyBy(['email'], [
+   * await db.table.updateManyBy('email', [
    *   { email: 'alice@test.com', name: 'Alice' },
    *   { email: 'bob@test.com', name: 'Bob' },
    * ]);
@@ -994,7 +996,7 @@ export class QueryUpdate {
   ): UpdateManyResult<T> & QueryHasWhere {
     return _queryUpdateMany(
       _clone(this) as never,
-      keys as unknown as string[],
+      typeof keys === 'string' ? [keys] : (keys as unknown as string[]),
       data as RecordUnknown[],
       true,
     ) as never;
@@ -1004,7 +1006,7 @@ export class QueryUpdate {
    * Same as {@link updateManyBy}, but skips records with no matching key rather than throwing.
    *
    * ```ts
-   * await db.table.updateManyByOptional(['email'], [
+   * await db.table.updateManyByOptional('email', [
    *   { email: 'alice@test.com', name: 'Alice' },
    *   { email: 'unknown@test.com', name: 'Ghost' },
    * ]);
@@ -1021,7 +1023,7 @@ export class QueryUpdate {
   ): UpdateManyResult<T> & QueryHasWhere {
     return _queryUpdateMany(
       _clone(this) as never,
-      keys as unknown as string[],
+      typeof keys === 'string' ? [keys] : (keys as unknown as string[]),
       data as RecordUnknown[],
       false,
     ) as never;
