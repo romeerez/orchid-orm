@@ -1430,6 +1430,25 @@ describe('updateMany', () => {
       );
     });
 
+    it('should support whereExists', () => {
+      expectSql(
+        User.whereExists(Message, 'authorId', 'id')
+          .updateManyOptional([{ id: 1, name: 'Alice' }])
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+            AND EXISTS (
+              SELECT 1 FROM "schema"."message"
+              WHERE "message"."author_id" = "user"."id"
+            )
+        `,
+        [1, 'Alice'],
+      );
+    });
+
     it('should apply softDelete filter', () => {
       expectSql(
         UserSoftDelete.updateManyOptional([{ id: 1, name: 'Alice' }]).toSQL(),
