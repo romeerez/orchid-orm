@@ -34,7 +34,7 @@ import {
   PickQueryReturnType,
   PickQuerySelectable,
   PickQueryShape,
-  PickQueryShapeResultReturnTypeSinglePrimaryKey,
+  PickQuerySinglePrimaryKey,
   PickQueryResultReturnTypeUniqueColumns,
   PickQueryUniqueProperties,
   PickQueryWithData,
@@ -56,10 +56,11 @@ export interface UpdateSelf
     PickQueryReturnType,
     PickQueryShape,
     PickQueryInputType,
-    PickQueryShape,
     PickQueryAs,
     PickQueryHasSelect,
     PickQueryHasWhere {}
+
+interface UpdateManySelf extends UpdateSelf, PickQuerySinglePrimaryKey {}
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -151,11 +152,11 @@ const throwOnReadOnly = (q: unknown, column: Column.Pick.Data, key: string) => {
   }
 };
 
-// Helper: extract PK columns from shape (concrete values only, no expressions)
-type ShapePrimaryKeys<Shape> = {
+// Helper: require PK columns with their query types (for WHERE matching)
+type ShapePrimaryKeyQueryTypes<Shape extends Column.QueryColumns> = {
   [K in keyof Shape as Shape[K] extends { data: { primaryKey: string } }
     ? K
-    : never]: Shape[K] extends { queryType: infer QT } ? QT : never;
+    : never]: Shape[K]['queryType'];
 };
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult
@@ -892,11 +893,9 @@ export class QueryUpdate {
    *   .set({ updatedBy: currentUser.id });
    * ```
    */
-  updateMany<
-    T extends PickQueryShapeResultReturnTypeSinglePrimaryKey & UpdateSelf,
-  >(
+  updateMany<T extends UpdateManySelf>(
     this: T,
-    data: (ShapePrimaryKeys<T['shape']> & Partial<T['inputType']>)[],
+    data: (ShapePrimaryKeyQueryTypes<T['shape']> & Partial<T['inputType']>)[],
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
     const pk = q.internal.singlePrimaryKey as string;
@@ -919,11 +918,9 @@ export class QueryUpdate {
    * ]);
    * ```
    */
-  updateManyOptional<
-    T extends PickQueryShapeResultReturnTypeSinglePrimaryKey & UpdateSelf,
-  >(
+  updateManyOptional<T extends UpdateManySelf>(
     this: T,
-    data: (ShapePrimaryKeys<T['shape']> & Partial<T['inputType']>)[],
+    data: (ShapePrimaryKeyQueryTypes<T['shape']> & Partial<T['inputType']>)[],
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
     const pk = q.internal.singlePrimaryKey as string;
