@@ -164,24 +164,32 @@ type UpdateManyBySelf = UpdateSelf &
   PickQueryResultReturnTypeUniqueColumns &
   PickQueryUniqueProperties;
 
-// Allow Expression as an alternative value for each column in updateMany data
-type InputTypeOrExpression<InputType> = {
-  [K in keyof InputType]: InputType[K] | Expression;
-};
-
 // Data type for updateMany / updateManyOptional (PK-based)
 type UpdateManyData<T extends UpdateSelf> = (ShapePrimaryKeyQueryTypes<
   T['shape']
-> &
-  Partial<InputTypeOrExpression<T['inputType']>>)[];
+> & {
+  [P in keyof T['inputType']]?: T['inputType'][P] | Expression;
+})[];
+
+// Valid key tuples for updateManyBy / updateManyByOptional
+type UpdateManyByKeys<T extends UpdateManyBySelf> =
+  | [T['internal']['uniqueColumnNames']]
+  | T['internal']['uniqueColumnTuples'];
+
+// Extract key column names from a Keys tuple
+type UpdateManyByKeyColumns<Keys> = Keys extends unknown[]
+  ? Keys[number] & string
+  : never;
 
 // Data type for updateManyBy / updateManyByOptional (custom keys)
-type UpdateManyByData<T extends UpdateSelf, K extends string> = (Required<
-  Pick<T['inputType'], K & keyof T['inputType']>
-> &
-  Partial<
-    Omit<InputTypeOrExpression<T['inputType']>, K & keyof T['inputType']>
-  >)[];
+// Inlined to minimize mapped type instantiations
+type UpdateManyByData<T extends UpdateSelf, K extends string> = ({
+  [P in K & keyof T['inputType']]-?: T['inputType'][P];
+} & {
+  [P in keyof T['inputType'] as P extends K ? never : P]?:
+    | T['inputType'][P]
+    | Expression;
+})[];
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult
 type UpdateManyResult<T extends UpdateSelf> = T['__hasSelect'] extends true
@@ -977,10 +985,8 @@ export class QueryUpdate {
    */
   updateManyBy<
     T extends UpdateManyBySelf,
-    Keys extends
-      | readonly [T['internal']['uniqueColumnNames']]
-      | T['internal']['uniqueColumnTuples'],
-    K extends string = Keys extends readonly (infer E)[] ? E & string : never,
+    Keys extends UpdateManyByKeys<T>,
+    K extends string = UpdateManyByKeyColumns<Keys>,
   >(
     this: T,
     keys: Keys,
@@ -1006,10 +1012,8 @@ export class QueryUpdate {
    */
   updateManyByOptional<
     T extends UpdateManyBySelf,
-    Keys extends
-      | readonly [T['internal']['uniqueColumnNames']]
-      | T['internal']['uniqueColumnTuples'],
-    K extends string = Keys extends readonly (infer E)[] ? E & string : never,
+    Keys extends UpdateManyByKeys<T>,
+    K extends string = UpdateManyByKeyColumns<Keys>,
   >(
     this: T,
     keys: Keys,
