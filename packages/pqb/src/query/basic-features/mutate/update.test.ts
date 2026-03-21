@@ -1611,9 +1611,7 @@ describe('updateMany', () => {
 
     it('should support expression values inside VALUES', () => {
       expectSql(
-        User.updateManyOptional([
-          { id: 1, name: sql`'expr'` as never },
-        ]).toSQL(),
+        User.updateManyOptional([{ id: 1, name: sql`'expr'` }]).toSQL(),
         `
           UPDATE "schema"."user"
           SET "name" = "v"."name"::text, "updated_at" = now()

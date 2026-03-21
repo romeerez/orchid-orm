@@ -41,7 +41,7 @@ import {
 } from '../../pick-query-types';
 import { EmptyObject, RecordUnknown } from '../../../utils';
 import { RelationConfigBase } from '../../relations';
-import { isExpression } from '../../expressions/expression';
+import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
 import { resolveSubQueryCallback } from '../../sub-query/sub-query';
@@ -157,6 +157,11 @@ type ShapePrimaryKeyQueryTypes<Shape extends Column.QueryColumns> = {
   [K in keyof Shape as Shape[K] extends { data: { primaryKey: string } }
     ? K
     : never]: Shape[K]['queryType'];
+};
+
+// Allow Expression as an alternative value for each column in updateMany data
+type InputTypeOrExpression<InputType> = {
+  [K in keyof InputType]: InputType[K] | Expression;
 };
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult
@@ -895,7 +900,8 @@ export class QueryUpdate {
    */
   updateMany<T extends UpdateManySelf>(
     this: T,
-    data: (ShapePrimaryKeyQueryTypes<T['shape']> & Partial<T['inputType']>)[],
+    data: (ShapePrimaryKeyQueryTypes<T['shape']> &
+      Partial<InputTypeOrExpression<T['inputType']>>)[],
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
     const pk = q.internal.singlePrimaryKey as string;
@@ -920,7 +926,8 @@ export class QueryUpdate {
    */
   updateManyOptional<T extends UpdateManySelf>(
     this: T,
-    data: (ShapePrimaryKeyQueryTypes<T['shape']> & Partial<T['inputType']>)[],
+    data: (ShapePrimaryKeyQueryTypes<T['shape']> &
+      Partial<InputTypeOrExpression<T['inputType']>>)[],
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
     const pk = q.internal.singlePrimaryKey as string;
@@ -963,7 +970,9 @@ export class QueryUpdate {
     this: T,
     keys: Keys,
     data: (Required<Pick<T['inputType'], K & keyof T['inputType']>> &
-      Partial<Omit<T['inputType'], K & keyof T['inputType']>>)[],
+      Partial<
+        Omit<InputTypeOrExpression<T['inputType']>, K & keyof T['inputType']>
+      >)[],
   ): UpdateManyResult<T> & QueryHasWhere {
     return _queryUpdateMany(
       _clone(this) as never,
@@ -995,7 +1004,9 @@ export class QueryUpdate {
     this: T,
     keys: Keys,
     data: (Required<Pick<T['inputType'], K & keyof T['inputType']>> &
-      Partial<Omit<T['inputType'], K & keyof T['inputType']>>)[],
+      Partial<
+        Omit<InputTypeOrExpression<T['inputType']>, K & keyof T['inputType']>
+      >)[],
   ): UpdateManyResult<T> & QueryHasWhere {
     return _queryUpdateMany(
       _clone(this) as never,
