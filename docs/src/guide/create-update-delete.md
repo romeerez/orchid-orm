@@ -137,7 +137,7 @@ To perform custom actions before or after creating records, see `beforeCreate`, 
 
 `create*` and `insert*` methods require columns that are not nullable and don't have a default.
 
-Place `select`, or `get` before or after `create` or `insert` to specify returning columns:
+Use `select`, `selectAll`, `get`, or `pluck` alongside `create` or `insert` to specify returning columns:
 
 ```ts
 // to return only `id`, use get('id')
@@ -743,7 +743,7 @@ db.table
 
 By default, `update` will return a count of updated records.
 
-Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
+Use `select`, `selectAll`, `get`, or `pluck` alongside `update` to specify returning columns.
 
 You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
 To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
@@ -922,6 +922,97 @@ db.books
   )
   .updateFrom('a', (q) => q.on('a.id', 'books.authorId'))
   .set({ authorName: (q) => q.ref('author.name') });
+```
+
+### updateMany
+
+[//]: # 'has JSDoc'
+
+Updates multiple records with different per-row data in a single query.
+
+Each row must include the primary key and the columns to update.
+All rows must have the same set of non-key columns.
+
+Returns a count of updated records by default.
+Use `select`, `selectAll`, `get`, or `pluck` alongside `updateMany` to return updated records.
+
+Throws [NotFoundError](/guide/error-handling) if any record is not found.
+Use `updateManyOptional` to skip missing records without throwing.
+
+```ts
+// returns count of updated records
+const count = await db.table.updateMany([
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+]);
+
+// returns array of updated records
+const records = await db.table.select('id', 'name').updateMany([
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' },
+]);
+```
+
+`.set()` applies shared values to all rows.
+`.set()` values take precedence over per-row values for the same column.
+
+```ts
+await db.table
+  .updateMany([
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' },
+  ])
+  .set({ updatedBy: currentUser.id });
+```
+
+### updateManyOptional
+
+[//]: # 'has JSDoc'
+
+Same as `updateMany`, but skips missing records rather than throwing.
+
+```ts
+// updates what it can, doesn't throw for missing id: 999
+const count = await db.table.updateManyOptional([
+  { id: 1, name: 'Alice' },
+  { id: 999, name: 'Ghost' },
+]);
+```
+
+### updateManyBy
+
+[//]: # 'has JSDoc'
+
+Like `updateMany`, but matches rows by a unique column or a compound unique constraint instead of the primary key.
+
+Throws [NotFoundError](/guide/error-handling) if any record is not found.
+Use `updateManyByOptional` to skip records with no matching key without throwing.
+
+```ts
+// single unique column
+await db.table.updateManyBy('email', [
+  { email: 'alice@test.com', name: 'Alice' },
+  { email: 'bob@test.com', name: 'Bob' },
+]);
+
+// compound unique constraint
+await db.table.updateManyBy(
+  ['firstName', 'lastName'],
+  [{ firstName: 'John', lastName: 'Doe', bio: 'updated' }],
+);
+```
+
+### updateManyByOptional
+
+[//]: # 'has JSDoc'
+
+Same as `updateManyBy`, but skips records with no matching key rather than throwing.
+
+```ts
+await db.table.updateManyByOptional('email', [
+  { email: 'alice@test.com', name: 'Alice' },
+  { email: 'unknown@test.com', name: 'Ghost' },
+]);
 ```
 
 ## upsert

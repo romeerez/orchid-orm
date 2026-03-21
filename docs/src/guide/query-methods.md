@@ -105,7 +105,7 @@ const result: TableType | undefined = await db.table.find(123);
 [//]: # 'has JSDoc'
 
 Finds a single unique record, throws [NotFoundError](/guide/error-handling) if not found.
-It accepts values of primary keys or unique indexes defined on the table.
+It accepts values of primary keys, unique columns, or compound unique constraints defined on the table.
 `findBy`'s argument type is a union of all possible sets of unique conditions.
 
 You can use `where(...).take()` for non-unique conditions.
@@ -119,7 +119,7 @@ await db.table.findBy({ key: 'value' });
 [//]: # 'has JSDoc'
 
 Finds a single unique record, returns `undefined` if not found.
-It accepts values of primary keys or unique indexes defined on the table.
+It accepts values of primary keys, unique columns, or compound unique constraints defined on the table.
 `findBy`'s argument type is a union of all possible sets of unique conditions.
 
 You can use `where(...).takeOptional()` for non-unique conditions.

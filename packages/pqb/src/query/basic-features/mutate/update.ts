@@ -2,8 +2,11 @@ import {
   isQuery,
   Query,
   QueryOrExpression,
+  SetQueryReturnsAllResult,
+  SetQueryReturnsPluckColumnResult,
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
+  SetQueryResult,
 } from '../../query';
 import { throwIfNoWhere } from '../../query.utils';
 import { QueryHasWhere } from '../where/where';
@@ -32,13 +35,16 @@ import {
   PickQueryReturnType,
   PickQuerySelectable,
   PickQueryShape,
+  PickQueryResultReturnTypeUniqueColumns,
+  PickQueryUniqueProperties,
   PickQueryWithData,
 } from '../../pick-query-types';
 import { EmptyObject, RecordUnknown } from '../../../utils';
 import { RelationConfigBase } from '../../relations';
-import { isExpression } from '../../expressions/expression';
+import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
+import { requirePrimaryKeys } from '../../query-columns/primary-keys';
 import { resolveSubQueryCallback } from '../../sub-query/sub-query';
 import { pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
@@ -51,7 +57,6 @@ export interface UpdateSelf
     PickQueryReturnType,
     PickQueryShape,
     PickQueryInputType,
-    PickQueryShape,
     PickQueryAs,
     PickQueryHasSelect,
     PickQueryHasWhere {}
@@ -144,6 +149,198 @@ const throwOnReadOnly = (q: unknown, column: Column.Pick.Data, key: string) => {
       { column: key },
     );
   }
+};
+
+// Helper: require PK columns with their query types (for WHERE matching)
+type ShapePrimaryKeyQueryTypes<Shape extends Column.QueryColumns> = {
+  [K in keyof Shape as Shape[K] extends { data: { primaryKey: string } }
+    ? K
+    : never]: Shape[K]['queryType'];
+};
+
+// `type` instead of `interface`: PickQueryResultReturnTypeUniqueColumns and
+// PickQueryUniqueProperties both declare `internal` with different shapes,
+// which `interface extends` cannot merge.
+type UpdateManyBySelf = UpdateSelf &
+  PickQueryResultReturnTypeUniqueColumns &
+  PickQueryUniqueProperties;
+
+// Data type for updateMany / updateManyOptional (PK-based)
+type UpdateManyData<T extends UpdateSelf> = (ShapePrimaryKeyQueryTypes<
+  T['shape']
+> & {
+  [P in keyof T['inputType']]?: T['inputType'][P] | Expression;
+})[];
+
+// Valid keys for updateManyBy: a single unique column name or a compound tuple
+type UpdateManyByKeys<T extends UpdateManyBySelf> =
+  | T['internal']['uniqueColumnNames']
+  | T['internal']['uniqueColumnTuples'];
+
+// Extract key column names from a string or tuple
+type UpdateManyByKeyColumns<Keys> = Keys extends string
+  ? Keys
+  : Keys extends unknown[]
+  ? Keys[number] & string
+  : never;
+
+// Data type for updateManyBy / updateManyByOptional (custom keys)
+// Inlined to minimize mapped type instantiations
+type UpdateManyByData<T extends UpdateSelf, K extends string> = ({
+  [P in K & keyof T['inputType']]-?: T['inputType'][P];
+} & {
+  [P in keyof T['inputType'] as P extends K ? never : P]?:
+    | T['inputType'][P]
+    | Expression;
+})[];
+
+// Return type for updateMany/updateManyBy — mirrors InsertManyResult
+type UpdateManyResult<T extends UpdateSelf> = T['__hasSelect'] extends true
+  ? T['returnType'] extends 'one' | 'oneOrThrow'
+    ? SetQueryReturnsAllResult<T, T['result']>
+    : T['returnType'] extends 'value' | 'valueOrThrow'
+    ? SetQueryReturnsPluckColumnResult<T, T['result']>
+    : SetQueryResult<T, T['result']>
+  : SetQueryReturnsRowCountMany<T>;
+
+const _queryUpdateMany = <T extends UpdateSelf>(
+  self: T,
+  keys: string[],
+  data: RecordUnknown[],
+  strict: boolean,
+): T => {
+  const query = self as unknown as Query;
+  const { q } = query;
+
+  // Keys validation
+  if (!keys.length) {
+    throw new OrchidOrmInternalError(
+      query,
+      'updateMany requires at least one key column',
+    );
+  }
+  const { shape } = q;
+  for (const key of keys) {
+    if (!shape[key]) {
+      throw new OrchidOrmInternalError(query, `Unknown key column: ${key}`, {
+        column: key,
+      });
+    }
+  }
+
+  // Normalize return type
+  q.type = 'update';
+  const returnCount = !q.select;
+  if (returnCount) {
+    if (q.returnType !== 'void') {
+      q.returningMany = true;
+      q.returnType = 'valueOrThrow';
+      q.returning = true;
+    }
+  } else {
+    // When select is present, ensure many-return semantics
+    const rt = q.returnType;
+    if (rt === 'one' || rt === 'oneOrThrow') {
+      q.returningMany = true;
+      q.returnType = 'all';
+    } else if (rt === 'value' || rt === 'valueOrThrow') {
+      q.returningMany = true;
+      q.returnType = 'pluck';
+    } else {
+      q.returningMany = !rt || rt === 'all';
+    }
+  }
+
+  if (!data.length) {
+    return _queryNone(query) as never;
+  }
+
+  // Validate keys, check for duplicates, determine setColumns, validate consistency
+  const seenKeys = new Set<string>();
+  const keysSet = new Set(keys);
+  const setColumns: string[] = [];
+  let setColumnsSet = new Set<string>();
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    // Key validation + dedup
+    const keyParts: unknown[] = [];
+    for (const key of keys) {
+      const val = row[key];
+      if (isExpression(val)) {
+        throw new OrchidOrmInternalError(
+          query,
+          `Key column "${key}" must be a concrete value, not an expression, in row ${i}`,
+        );
+      }
+      keyParts.push(val);
+    }
+    const keyStr =
+      keyParts.length === 1 ? String(keyParts[0]) : JSON.stringify(keyParts);
+    if (seenKeys.has(keyStr)) {
+      throw new OrchidOrmInternalError(
+        query,
+        `Duplicate key in updateMany data at row ${i}`,
+      );
+    }
+    seenKeys.add(keyStr);
+
+    // Determine setColumns from first row, validate subsequent rows match
+    const rowCols: string[] = [];
+    for (const key in row) {
+      if (keysSet.has(key)) continue;
+      if (row[key] === undefined) continue;
+
+      const column = shape[key];
+      if (!column) continue;
+      if (column.data.virtual) continue;
+      throwOnReadOnly(query, column, key);
+
+      rowCols.push(key);
+    }
+
+    if (i === 0) {
+      setColumns.push(...rowCols);
+      setColumnsSet = new Set(setColumns);
+    } else if (
+      rowCols.length !== setColumns.length ||
+      rowCols.some((c) => !setColumnsSet.has(c))
+    ) {
+      throw new OrchidOrmInternalError(
+        query,
+        `Row ${i} has different columns than row 0. Expected: [${setColumns.join(
+          ', ',
+        )}], got: [${rowCols.join(', ')}]`,
+      );
+    }
+  }
+
+  const columns = [...keys, ...setColumns];
+
+  const values: unknown[][] = [];
+  for (const row of data) {
+    const encoded: unknown[] = [];
+    for (const col of columns) {
+      let value = row[col];
+      if (value !== null && value !== undefined && !isExpression(value)) {
+        const encode = shape[col]?.data.encode;
+        if (encode) value = encode(value);
+      }
+      encoded.push(value);
+    }
+    values.push(encoded);
+  }
+
+  q.updateMany = {
+    keys,
+    columns,
+    setColumns,
+    values,
+    count: data.length,
+    strict,
+  };
+
+  return query as never;
 };
 
 // apply `increment` or a `decrement`,
@@ -259,14 +456,16 @@ export const _queryUpdate = <T extends UpdateSelf>(
     }
   }
 
-  if (returnCount) {
+  // Skip returnType normalization when updateMany is set —
+  // _queryUpdateMany already configured these, and .set() must not override them.
+  if (returnCount && !q.updateMany) {
     q.returningMany = !q.returnType || q.returnType === 'all';
     q.returnType = 'valueOrThrow';
     q.returning = true;
   }
 
-  // assuming conditions are set by `updateFrom`
-  if (!q.updateFrom) {
+  // assuming conditions are set by `updateFrom` or `updateMany`
+  if (!q.updateFrom && !q.updateMany) {
     throwIfNoWhere(query, 'update');
   }
 
@@ -287,7 +486,8 @@ export class QueryUpdate {
    *
    * By default, `update` will return a count of updated records.
    *
-   * Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
+   * Use `select`, `selectAll`, `get`, or `pluck` alongside `update` to specify
+   * returning columns.
    *
    * You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
    * To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
@@ -688,5 +888,144 @@ export class QueryUpdate {
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
     return _queryChangeCounter(_clone(this), '-', data as never);
+  }
+
+  /**
+   * Updates multiple records with different per-row data in a single query.
+   *
+   * Each row must include the primary key and the columns to update.
+   * All rows must have the same set of non-key columns.
+   *
+   * Returns a count of updated records by default.
+   * Use `select`, `selectAll`, `get`, or `pluck` alongside `updateMany` to return
+   * updated records.
+   *
+   * Throws {@link NotFoundError} if any record is not found.
+   * Use {@link updateManyOptional} to skip missing records without throwing.
+   *
+   * ```ts
+   * // returns count of updated records
+   * const count = await db.table.updateMany([
+   *   { id: 1, name: 'Alice', age: 30 },
+   *   { id: 2, name: 'Bob', age: 25 },
+   * ]);
+   *
+   * // returns array of updated records
+   * const records = await db.table.select('id', 'name').updateMany([
+   *   { id: 1, name: 'Alice' },
+   *   { id: 2, name: 'Bob' },
+   * ]);
+   * ```
+   *
+   * `.set()` applies shared values to all rows.
+   * `.set()` values take precedence over per-row values for the same column.
+   *
+   * ```ts
+   * await db.table
+   *   .updateMany([
+   *     { id: 1, name: 'Alice' },
+   *     { id: 2, name: 'Bob' },
+   *   ])
+   *   .set({ updatedBy: currentUser.id });
+   * ```
+   */
+  updateMany<T extends UpdateSelf>(
+    this: T,
+    data: UpdateManyData<T>,
+  ): UpdateManyResult<T> & QueryHasWhere {
+    const q = _clone(this) as unknown as Query;
+    return _queryUpdateMany(
+      q as never,
+      requirePrimaryKeys(q, 'updateMany requires a primary key'),
+      data as RecordUnknown[],
+      true,
+    ) as never;
+  }
+
+  /**
+   * Same as {@link updateMany}, but skips missing records rather than throwing.
+   *
+   * ```ts
+   * // updates what it can, doesn't throw for missing id: 999
+   * const count = await db.table.updateManyOptional([
+   *   { id: 1, name: 'Alice' },
+   *   { id: 999, name: 'Ghost' },
+   * ]);
+   * ```
+   */
+  updateManyOptional<T extends UpdateSelf>(
+    this: T,
+    data: UpdateManyData<T>,
+  ): UpdateManyResult<T> & QueryHasWhere {
+    const q = _clone(this) as unknown as Query;
+    return _queryUpdateMany(
+      q as never,
+      requirePrimaryKeys(q, 'updateMany requires a primary key'),
+      data as RecordUnknown[],
+      false,
+    ) as never;
+  }
+
+  /**
+   * Like {@link updateMany}, but matches rows by a unique column or a compound unique constraint instead of the primary key.
+   *
+   * Throws {@link NotFoundError} if any record is not found.
+   * Use {@link updateManyByOptional} to skip records with no matching key without throwing.
+   *
+   * ```ts
+   * // single unique column
+   * await db.table.updateManyBy('email', [
+   *   { email: 'alice@test.com', name: 'Alice' },
+   *   { email: 'bob@test.com', name: 'Bob' },
+   * ]);
+   *
+   * // compound unique constraint
+   * await db.table.updateManyBy(['firstName', 'lastName'], [
+   *   { firstName: 'John', lastName: 'Doe', bio: 'updated' },
+   * ]);
+   * ```
+   */
+  updateManyBy<
+    T extends UpdateManyBySelf,
+    Keys extends UpdateManyByKeys<T>,
+    K extends string = UpdateManyByKeyColumns<Keys>,
+  >(
+    this: T,
+    keys: Keys,
+    data: UpdateManyByData<T, K>,
+  ): UpdateManyResult<T> & QueryHasWhere {
+    return _queryUpdateMany(
+      _clone(this) as never,
+      typeof keys === 'string' ? [keys] : (keys as unknown as string[]),
+      data as RecordUnknown[],
+      true,
+    ) as never;
+  }
+
+  /**
+   * Same as {@link updateManyBy}, but skips records with no matching key rather than throwing.
+   *
+   * ```ts
+   * await db.table.updateManyByOptional('email', [
+   *   { email: 'alice@test.com', name: 'Alice' },
+   *   { email: 'unknown@test.com', name: 'Ghost' },
+   * ]);
+   * ```
+   */
+  updateManyByOptional<
+    T extends UpdateManyBySelf,
+    Keys extends UpdateManyByKeys<T>,
+    K extends string = UpdateManyByKeyColumns<Keys>,
+  >(
+    this: T,
+    keys: Keys,
+    data: UpdateManyByData<T, K>,
+  ): UpdateManyResult<T> & QueryHasWhere {
+    return _queryUpdateMany(
+      _clone(this) as never,
+      typeof keys === 'string' ? [keys] : (keys as unknown as string[]),
+      data as RecordUnknown[],
+      false,
+    ) as never;
   }
 }

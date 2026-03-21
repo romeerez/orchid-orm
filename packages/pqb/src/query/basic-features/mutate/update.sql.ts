@@ -3,6 +3,7 @@ import { pushWhereStatementSql, whereToSql } from '../where/where.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import {
   QueryData,
+  UpdateManyQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from '../../query-data';
@@ -11,7 +12,7 @@ import { selectToSql } from '../select/select.sql';
 import { countSelect } from '../../expressions/raw-sql';
 import { Query } from '../../query';
 import { processJoinItem } from '../join/join.sql';
-import { moveMutativeQueryToCte } from '../cte/cte.sql';
+import { moveMutativeQueryToCte, setFreeTopCteAs } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
 import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
@@ -34,6 +35,10 @@ export const pushUpdateSql = (
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
+  if (q.updateMany) {
+    return pushUpdateManySql(ctx, query, q, q.updateMany, quotedAs, isSubSql);
+  }
+
   const quotedTable = `"${query.table || (q.from as string)}"`;
   const from = quoteTableWithSchema(query);
 
@@ -258,4 +263,172 @@ const processValue = (
   }
 
   return addValue(ctx.values, value);
+};
+
+const pushUpdateManySql = (
+  ctx: ToSQLCtx,
+  query: ToSQLQuery,
+  q: QueryData,
+  updateMany: UpdateManyQueryData,
+  quotedAs: string,
+  isSubSql?: boolean,
+): Sql => {
+  const { shape } = q;
+  const quotedTable = `"${query.table || (q.from as string)}"`;
+  const from = quoteTableWithSchema(query);
+
+  // Collect .set() keys so they take precedence over per-row data.
+  // Function items are delayed injectors (e.g. updatedAt timestamps),
+  // not explicit .set() overrides — skip them here.
+  const sharedKeys: Record<string, true> = {};
+  if (q.updateData) {
+    for (const item of q.updateData) {
+      if (typeof item !== 'function') {
+        for (const key in item) {
+          if (item[key] !== undefined) sharedKeys[key] = true;
+        }
+      }
+    }
+  }
+
+  // Build per-row SET + hookSet + perRowSkip
+  const set: string[] = [];
+  const hookSet: RecordUnknown = {};
+  const hookUpdateSet = q.hookUpdateSet;
+  const mergedHookSet: RecordUnknown = hookUpdateSet ? {} : emptyObject;
+  const perRowSkip: RecordUnknown = hookUpdateSet ? {} : emptyObject;
+
+  for (const col of updateMany.setColumns) {
+    // perRowSkip needs ALL setColumns unconditionally
+    if (hookUpdateSet) perRowSkip[col] = true;
+
+    if (col in sharedKeys) continue;
+
+    const column = shape[col];
+    const dbName = column.data.name || col;
+    set.push(`"${dbName}" = "v"."${dbName}"::${column.dataType}`);
+    hookSet[col] = true;
+  }
+
+  if (hookUpdateSet) {
+    for (const item of hookUpdateSet) {
+      Object.assign(hookSet, item);
+      Object.assign(mergedHookSet, item);
+    }
+  }
+
+  // Build shared SET from updateData (.set() values override per-row)
+  if (q.updateData) {
+    processData(ctx, query, set, q.updateData, hookSet, quotedAs);
+  }
+
+  // Build SET from hookUpdateSet, skipping per-row columns
+  if (hookUpdateSet) {
+    applySet(ctx, query, set, mergedHookSet, perRowSkip, quotedAs);
+  }
+
+  // Build FROM (VALUES ...) "v"("col1", "col2")
+  const valueRows: string[] = [];
+  const quotedColumnNames: string[] = [];
+  for (const row of updateMany.values) {
+    const cells: string[] = [];
+    const isFirstRow = valueRows.length === 0;
+    for (let i = 0; i < updateMany.columns.length; i++) {
+      const col = updateMany.columns[i];
+      const column = shape[col];
+      const value = row[i];
+      if (isExpression(value)) {
+        cells.push(value.toSQL(ctx, quotedAs));
+      } else {
+        cells.push(addValue(ctx.values, value));
+      }
+      // Cast the first VALUES row so Postgres can infer column types,
+      // and collect the alias column names once.
+      if (isFirstRow) {
+        if (column) cells[cells.length - 1] += `::${column.dataType}`;
+        quotedColumnNames.push(`"${column?.data.name || col}"`);
+      }
+    }
+    valueRows.push(`(${cells.join(', ')})`);
+  }
+
+  const valuesSql = `(VALUES ${valueRows.join(
+    ', ',
+  )}) "v"(${quotedColumnNames.join(', ')})`;
+
+  // Build WHERE: "table"."key" = "v"."key"::dataType + user conditions
+  let whereSql = updateMany.keys
+    .map((key) => {
+      const column = shape[key];
+      const dbName = column.data.name || key;
+      return `${quotedAs}."${dbName}" = "v"."${dbName}"::${column.dataType}`;
+    })
+    .join(' AND ');
+
+  const userWhere = whereToSql(ctx, query, q, quotedAs);
+  if (userWhere) {
+    whereSql += ' AND ' + userWhere;
+  }
+
+  const delayedRelationSelect: DelayedRelationSelect | undefined =
+    q.selectRelation ? newDelayedRelationSelect(query) : undefined;
+
+  // If nothing to set, make a SELECT query (like regular update does)
+  if (!set.length) {
+    if (!q.select) {
+      q.select = countSelect;
+    }
+
+    pushUpdateReturning(
+      ctx,
+      query,
+      q,
+      quotedAs,
+      'SELECT',
+      delayedRelationSelect,
+      isSubSql,
+    );
+
+    ctx.sql.push(`FROM ${from}, ${valuesSql}`);
+    ctx.sql.push('WHERE', whereSql);
+  } else {
+    // For strict variants, set up CTE infrastructure
+    if (updateMany.strict) {
+      const wrapAs = setFreeTopCteAs(ctx);
+      ctx.wrapAs = wrapAs;
+      const cteHooks = (ctx.topCtx.cteHooks ??= {
+        hasSelect: true,
+        tableHooks: {},
+      });
+      cteHooks.hasSelect = true;
+      (cteHooks.ensureCount ??= {})[wrapAs] = updateMany.count;
+    }
+
+    // Build the UPDATE statement
+    ctx.sql.push(`UPDATE ${from}`);
+    if (quotedTable !== quotedAs) {
+      ctx.sql.push(quotedAs);
+    }
+    ctx.sql.push('SET', set.join(', '));
+    ctx.sql.push('FROM', valuesSql);
+    ctx.sql.push('WHERE', whereSql);
+
+    const returning = makeReturningSql(
+      ctx,
+      query,
+      q,
+      quotedAs,
+      delayedRelationSelect,
+      'Update',
+      undefined,
+      isSubSql || !!ctx.topCtx.cteHooks,
+    );
+    if (returning) ctx.sql.push('RETURNING', returning);
+  }
+
+  if (delayedRelationSelect) {
+    ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
+  }
+
+  return makeSql(ctx, 'update', isSubSql);
 };

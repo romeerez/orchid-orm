@@ -376,6 +376,7 @@ const internalSelectAllSql = (
   ctx: ToSQLCtx,
   query: {
     updateFrom?: unknown;
+    updateMany?: unknown;
     join?: QueryData['join'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
@@ -405,6 +406,7 @@ const internalSelectAllSql = (
 export const selectAllSql = (
   q: {
     updateFrom?: unknown;
+    updateMany?: unknown;
     join?: QueryData['join'];
     selectAllColumns?: string[];
     selectAllShape?: RecordUnknown;
@@ -413,7 +415,7 @@ export const selectAllSql = (
   quotedAs?: string,
   columnsCount?: number,
 ): string[] => {
-  return q.join?.length || q.updateFrom
+  return q.join?.length || q.updateFrom || q.updateMany
     ? q.selectAllColumns?.map((item) => `${quotedAs}.${item}`) ||
         (isEmptySelect(q.shape, columnsCount) ? [] : [`${quotedAs}.*`])
     : q.selectAllColumns

@@ -5,11 +5,15 @@ import {
   SnakeRecord,
   snakeSelectAll,
   User,
+  UserSoftDelete,
+  Message,
   Profile,
   userData,
   UserInsert,
   Product,
+  UniqueTable,
   userColumnsSql,
+  userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
@@ -1280,6 +1284,486 @@ describe('update', () => {
         `,
         ['name'],
       );
+    });
+  });
+});
+
+describe('updateMany', () => {
+  useTestDatabase();
+
+  describe('SQL shape', () => {
+    it('should generate UPDATE ... FROM (VALUES ...) for updateManyOptional', () => {
+      expectSql(
+        User.updateManyOptional([
+          { id: 1, name: 'Alice' },
+          { id: 2, name: 'Bob' },
+        ]).toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text), ($3, $4)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 'Alice', 2, 'Bob'],
+      );
+    });
+
+    it('should support composite primary keys', () => {
+      expectSql(
+        UniqueTable.updateManyOptional([
+          { id: 1, one: 'a', thirdColumn: 'x' },
+          { id: 2, one: 'b', thirdColumn: 'y' },
+        ]).toSQL(),
+        `
+          UPDATE "schema"."uniqueTable"
+          SET "third_column" = "v"."third_column"::text
+          FROM (VALUES ($1::int4, $2::text, $3::text), ($4, $5, $6)) "v"("id", "one", "third_column")
+          WHERE "uniqueTable"."id" = "v"."id"::int4 AND "uniqueTable"."one" = "v"."one"::text
+        `,
+        [1, 'a', 'x', 2, 'b', 'y'],
+      );
+    });
+
+    it('should generate CTE for strict updateMany with select', () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const columns = User.q.selectAllColumns!;
+      expectSql(
+        User.selectAll()
+          .updateMany([{ id: 1, name: 'Alice' }])
+          .toSQL(),
+        `
+          WITH q AS (
+            UPDATE "schema"."user"
+            SET "name" = "v"."name"::text, "updated_at" = now()
+            FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+            WHERE "user"."id" = "v"."id"::int4
+            RETURNING ${userTableColumnsSql}
+          )
+          SELECT *, NULL FROM q
+          UNION ALL
+          SELECT ${columns.map(() => 'NULL').join(', ')},
+          json_build_object('#q',
+            CASE WHEN (SELECT count(*) FROM "q") < 1
+            THEN (SELECT 'not-found')::int END)
+        `,
+        [1, 'Alice'],
+      );
+    });
+
+    it('should generate updateManyBy with a string key', () => {
+      expectSql(
+        User.updateManyByOptional('name', [
+          { name: 'Alice', password: 'new-pass' },
+        ]).toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "password" = "v"."password"::text, "updated_at" = now()
+          FROM (VALUES ($1::text, $2::text)) "v"("name", "password")
+          WHERE "user"."name" = "v"."name"::text
+        `,
+        ['Alice', 'new-pass'],
+      );
+    });
+
+    it('should generate updateManyBy with a tuple key', () => {
+      expectSql(
+        UniqueTable.updateManyByOptional(
+          ['thirdColumn', 'fourthColumn'],
+          [{ thirdColumn: 'a', fourthColumn: 1, one: 'updated' }],
+        ).toSQL(),
+        `
+          UPDATE "schema"."uniqueTable"
+          SET "one" = "v"."one"::text
+          FROM (VALUES ($1::text, $2::int4, $3::text)) "v"("third_column", "fourth_column", "one")
+          WHERE "uniqueTable"."third_column" = "v"."third_column"::text
+            AND "uniqueTable"."fourth_column" = "v"."fourth_column"::int4
+        `,
+        ['a', 1, 'updated'],
+      );
+    });
+
+    it('should let .set() override per-row columns', () => {
+      expectSql(
+        User.updateManyOptional([{ id: 1, name: 'Alice' }])
+          .set({
+            name: 'Override',
+            password: 'shared-pass',
+          })
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = $1, "password" = $2, "updated_at" = now()
+          FROM (VALUES ($3::int4, $4::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        ['Override', 'shared-pass', 1, 'Alice'],
+      );
+    });
+
+    it('should not remove per-row column when .set() has undefined', () => {
+      expectSql(
+        User.updateManyOptional([{ id: 1, name: 'Alice' }])
+          .set({ name: undefined, password: 'shared-pass' })
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "password" = $1, "updated_at" = now()
+          FROM (VALUES ($2::int4, $3::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        ['shared-pass', 1, 'Alice'],
+      );
+    });
+
+    it('should support .where() conditions', () => {
+      expectSql(
+        User.where({ age: 18 })
+          .updateManyOptional([{ id: 1, name: 'Alice' }])
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4 AND "user"."age" = $3
+        `,
+        [1, 'Alice', 18],
+      );
+    });
+
+    it('should support whereExists', () => {
+      expectSql(
+        User.whereExists(Message, 'authorId', 'id')
+          .updateManyOptional([{ id: 1, name: 'Alice' }])
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+            AND EXISTS (
+              SELECT 1 FROM "schema"."message"
+              WHERE "message"."author_id" = "user"."id"
+            )
+        `,
+        [1, 'Alice'],
+      );
+    });
+
+    it('should apply softDelete filter', () => {
+      expectSql(
+        UserSoftDelete.updateManyOptional([{ id: 1, name: 'Alice' }]).toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::varchar
+          FROM (VALUES ($1::int4, $2::varchar)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4 AND ("user"."deleted_at" IS NULL)
+        `,
+        [1, 'Alice'],
+      );
+    });
+
+    it('should generate CTE with RETURNING NULL in strict rowCount mode', () => {
+      expectSql(
+        User.updateMany([{ id: 1, name: 'Alice' }]).toSQL(),
+        `
+          WITH q AS (
+            UPDATE "schema"."user"
+            SET "name" = "v"."name"::text, "updated_at" = now()
+            FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+            WHERE "user"."id" = "v"."id"::int4
+            RETURNING NULL
+          )
+          SELECT *, NULL FROM q
+          UNION ALL
+          SELECT NULL,
+          json_build_object('#q',
+            CASE WHEN (SELECT count(*) FROM "q") < 1
+            THEN (SELECT 'not-found')::int END)
+        `,
+        [1, 'Alice'],
+      );
+    });
+  });
+
+  describe('execution', () => {
+    it('should batch update records and return count', async () => {
+      const users = await User.select('id').createMany([
+        { ...userData, name: 'exec1' },
+        { ...userData, name: 'exec2' },
+      ]);
+
+      const count = await User.updateMany([
+        { id: users[0].id, name: 'updated1' },
+        { id: users[1].id, name: 'updated2' },
+      ]);
+
+      expect(count).toBe(2);
+
+      const updated = await User.where({ id: { in: users.map((u) => u.id) } })
+        .order('id')
+        .pluck('name');
+      expect(updated).toEqual(['updated1', 'updated2']);
+    });
+
+    it('should return void with exec', async () => {
+      const user = await User.select('id').create({
+        ...userData,
+        name: 'exec-void',
+      });
+
+      const result = await User.updateManyOptional([
+        { id: user.id, name: 'exec-void-updated' },
+      ]).exec();
+
+      expect(result).toBe(undefined);
+
+      const updated = await User.find(user.id).get('name');
+      expect(updated).toBe('exec-void-updated');
+    });
+
+    it('should return records when select is used', async () => {
+      const users = await User.select('id').createMany([
+        { ...userData, name: 'sel1' },
+        { ...userData, name: 'sel2' },
+      ]);
+
+      const result = await User.select('id', 'name')
+        .updateMany([
+          { id: users[0].id, name: 'sel-upd1' },
+          { id: users[1].id, name: 'sel-upd2' },
+        ])
+        .order('name');
+
+      expect(result.map((r) => r.name)).toEqual(['sel-upd1', 'sel-upd2']);
+    });
+
+    // RETURNING must qualify columns with the table name,
+    // otherwise "id" is ambiguous between "user"."id" and "v"."id".
+    it('should selectAll without ambiguous column reference', async () => {
+      const users = await User.select('id').createMany([
+        { ...userData, name: 'amb1' },
+        { ...userData, name: 'amb2' },
+      ]);
+
+      const result = await User.selectAll()
+        .updateMany([
+          { id: users[0].id, name: 'amb-upd1' },
+          { id: users[1].id, name: 'amb-upd2' },
+        ])
+        .order('name');
+
+      expect(result.map((r) => r.name)).toEqual(['amb-upd1', 'amb-upd2']);
+    });
+
+    it('should throw NotFoundError for strict variant when row is missing', async () => {
+      const user = await User.select('id').create({
+        ...userData,
+        name: 'strict-test',
+      });
+
+      await expect(
+        User.updateMany([
+          { id: user.id, name: 'ok' },
+          { id: 999999, name: 'missing' },
+        ]),
+      ).rejects.toThrow('Record is not found');
+    });
+
+    it('should NOT throw for optional variant when row is missing', async () => {
+      const user = await User.select('id').create({
+        ...userData,
+        name: 'optional-test',
+      });
+
+      const count = await User.updateManyOptional([
+        { id: user.id, name: 'ok-updated' },
+        { id: 999999, name: 'missing' },
+      ]);
+
+      expect(count).toBe(1);
+    });
+  });
+
+  describe('fallback to select', () => {
+    const User = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string(),
+      }),
+      undefined,
+      { schema: () => 'schema' },
+    );
+
+    it('should select count when nothing to update', () => {
+      expectSql(
+        User.updateMany([{ id: 1 }, { id: 2 }]).toSQL(),
+        `
+          SELECT count(*) FROM "schema"."user",
+          (VALUES ($1::int4), ($2)) "v"("id")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 2],
+      );
+    });
+
+    it('should select columns when nothing to update', () => {
+      expectSql(
+        User.select('id', 'name')
+          .updateMany([{ id: 1 }, { id: 2 }])
+          .toSQL(),
+        `
+          SELECT "user"."id", "user"."name"
+          FROM "schema"."user",
+          (VALUES ($1::int4), ($2)) "v"("id")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 2],
+      );
+    });
+  });
+
+  describe('validation', () => {
+    it('should throw on duplicate keys', () => {
+      expect(() =>
+        User.updateMany([
+          { id: 1, name: 'a' },
+          { id: 1, name: 'b' },
+        ]),
+      ).toThrow('Duplicate key');
+    });
+
+    it('should ignore undefined fields in all rows', () => {
+      expectSql(
+        User.updateMany([
+          { id: 1, name: 'Alice', password: undefined },
+          { id: 2, name: 'Bob', password: undefined },
+        ]).toSQL(),
+        `
+          WITH q AS (
+            UPDATE "schema"."user"
+            SET "name" = "v"."name"::text, "updated_at" = now()
+            FROM (VALUES ($1::int4, $2::text), ($3, $4)) "v"("id", "name")
+            WHERE "user"."id" = "v"."id"::int4
+            RETURNING NULL
+          )
+          SELECT *, NULL FROM q
+          UNION ALL
+          SELECT NULL,
+          json_build_object('#q',
+            CASE WHEN (SELECT count(*) FROM "q") < 2
+            THEN (SELECT 'not-found')::int END)
+        `,
+        [1, 'Alice', 2, 'Bob'],
+      );
+    });
+
+    it('should throw when undefined field is inconsistent across rows', () => {
+      expect(() =>
+        User.updateMany([
+          { id: 1, name: 'a', password: 'p' },
+          { id: 2, name: 'b', password: undefined },
+        ]),
+      ).toThrow('different columns');
+    });
+
+    it('should throw on rows with different columns', () => {
+      expect(() =>
+        User.updateMany([
+          { id: 1, name: 'a' },
+          { id: 2, name: 'b', password: 'p' },
+        ]),
+      ).toThrow('different columns');
+    });
+
+    it('should throw on inconsistent rows even with .set() covering the gap', () => {
+      expect(() =>
+        User.updateMany([
+          { id: 1, name: 'a', age: 18 },
+          { id: 2, name: 'b' },
+        ]).set({ age: 20 }),
+      ).toThrow('different columns');
+    });
+
+    it('should throw on readOnly column in updateMany data', () => {
+      expect(() =>
+        TableWithReadOnly.updateMany([
+          // @ts-expect-error value is readOnly
+          { id: 1, key: 'a', value: 42 },
+        ]),
+      ).toThrow('Trying to update a readonly column');
+    });
+
+    it('should return empty for empty data', async () => {
+      const count = await User.updateMany([]);
+      expect(count).toBe(0);
+
+      const result = await User.selectAll().updateMany([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should throw on expression as key value', () => {
+      expect(() =>
+        User.updateMany([{ id: sql`1` as never, name: 'a' }]),
+      ).toThrow('must be a concrete value, not an expression');
+    });
+
+    it('should support expression values inside VALUES', () => {
+      expectSql(
+        User.updateManyOptional([{ id: 1, name: sql`'expr'` }]).toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, 'expr'::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1],
+      );
+    });
+
+    it('should not add RETURNING with exec', () => {
+      expectSql(
+        User.updateManyOptional([{ id: 1, name: 'a' }])
+          .exec()
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 'a'],
+      );
+    });
+
+    it('should encode values with column.data.encode', () => {
+      expectSql(
+        Message.updateManyOptional([{ id: 1, meta: { foo: 1 } }]).toSQL(),
+        `
+          UPDATE "schema"."message"
+          SET "meta" = "v"."meta"::jsonb, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::jsonb)) "v"("id", "meta")
+          WHERE "message"."id" = "v"."id"::int4
+        `,
+        [1, '{"foo":1}'],
+      );
+    });
+  });
+
+  describe('types', () => {
+    it('should return number by default', () => {
+      const q = User.updateMany([{ id: 1, name: 'a' }]);
+      assertType<Awaited<typeof q>, number>();
+    });
+
+    it('should return array when select is used', () => {
+      const q = User.select('id', 'name').updateMany([{ id: 1, name: 'a' }]);
+      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+    });
+
+    it('should map one returnType to all', () => {
+      const q = User.selectAll().updateMany([{ id: 1, name: 'a' }]);
+      assertType<Awaited<typeof q>, (typeof User.outputType)[]>();
     });
   });
 });

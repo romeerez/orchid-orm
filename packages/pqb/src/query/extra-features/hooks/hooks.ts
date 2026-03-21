@@ -234,6 +234,15 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
         columns.push(...Object.keys(item));
       }
     }
+    if (q.q.updateMany) {
+      const columnsSet = new Set(columns);
+      for (const col of q.q.updateMany.setColumns) {
+        if (!columnsSet.has(col)) {
+          columns.push(col);
+          columnsSet.add(col);
+        }
+      }
+    }
 
     return cb(new QueryHookUtils(q, columns, 'hookUpdateSet'));
   });
