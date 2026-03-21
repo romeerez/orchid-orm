@@ -254,10 +254,15 @@ const _queryUpdateMany = <T extends UpdateSelf>(
     return _queryNone(query) as never;
   }
 
-  // Validate key values + check for duplicate keys
+  // Validate keys, check for duplicates, determine setColumns, validate consistency
   const seenKeys = new Set<string>();
+  const keysSet = new Set(keys);
+  const setColumns: string[] = [];
+  let setColumnsSet = new Set<string>();
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
+
+    // Key validation + dedup
     const keyParts: unknown[] = [];
     for (const key of keys) {
       const val = row[key];
@@ -278,14 +283,8 @@ const _queryUpdateMany = <T extends UpdateSelf>(
       );
     }
     seenKeys.add(keyStr);
-  }
 
-  // Determine setColumns from first row, validate subsequent rows match
-  const keysSet = new Set(keys);
-  const setColumns: string[] = [];
-  let setColumnsSet = new Set<string>();
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
+    // Determine setColumns from first row, validate subsequent rows match
     const rowCols: string[] = [];
     for (const key in row) {
       if (keysSet.has(key)) continue;

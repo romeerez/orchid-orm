@@ -274,6 +274,7 @@ const pushUpdateManySql = (
   isSubSql?: boolean,
 ): Sql => {
   const { shape } = q;
+  const quotedTable = `"${query.table || (q.from as string)}"`;
   const from = quoteTableWithSchema(query);
 
   // Collect .set() keys so they take precedence over per-row data.
@@ -290,42 +291,48 @@ const pushUpdateManySql = (
     }
   }
 
-  // 1. Build per-row SET, skipping columns overridden by .set()
+  // Build per-row SET + hookSet + perRowSkip
   const set: string[] = [];
+  const hookSet: RecordUnknown = {};
+  const hookUpdateSet = q.hookUpdateSet;
+  const mergedHookSet: RecordUnknown = hookUpdateSet ? {} : emptyObject;
+  const perRowSkip: RecordUnknown = hookUpdateSet ? {} : emptyObject;
+
   for (const col of updateMany.setColumns) {
+    // perRowSkip needs ALL setColumns unconditionally
+    if (hookUpdateSet) perRowSkip[col] = true;
+
     if (col in sharedKeys) continue;
+
     const column = shape[col];
     const dbName = column.data.name || col;
     set.push(`"${dbName}" = "v"."${dbName}"::${column.dataType}`);
+    hookSet[col] = true;
   }
 
-  // 2. Build hookSet for dedup; per-row columns only if not overridden
-  const hookSet: RecordUnknown = {};
-  for (const col of updateMany.setColumns) {
-    if (!(col in sharedKeys)) hookSet[col] = true;
-  }
-  if (q.hookUpdateSet) {
-    for (const item of q.hookUpdateSet) Object.assign(hookSet, item);
+  if (hookUpdateSet) {
+    for (const item of hookUpdateSet) {
+      Object.assign(hookSet, item);
+      Object.assign(mergedHookSet, item);
+    }
   }
 
-  // 3. Build shared SET from updateData (.set() values override per-row)
+  // Build shared SET from updateData (.set() values override per-row)
   if (q.updateData) {
     processData(ctx, query, set, q.updateData, hookSet, quotedAs);
   }
 
-  // 4. Build SET from hookUpdateSet, skipping per-row columns
-  if (q.hookUpdateSet) {
-    const perRowSkip: RecordUnknown = {};
-    for (const col of updateMany.setColumns) perRowSkip[col] = true;
-    const merged: RecordUnknown = {};
-    for (const item of q.hookUpdateSet) Object.assign(merged, item);
-    applySet(ctx, query, set, merged, perRowSkip, quotedAs);
+  // Build SET from hookUpdateSet, skipping per-row columns
+  if (hookUpdateSet) {
+    applySet(ctx, query, set, mergedHookSet, perRowSkip, quotedAs);
   }
 
-  // 5. Build FROM (VALUES ...) "v"("col1", "col2")
+  // Build FROM (VALUES ...) "v"("col1", "col2")
   const valueRows: string[] = [];
+  const quotedColumnNames: string[] = [];
   for (const row of updateMany.values) {
     const cells: string[] = [];
+    const isFirstRow = valueRows.length === 0;
     for (let i = 0; i < updateMany.columns.length; i++) {
       const col = updateMany.columns[i];
       const column = shape[col];
@@ -335,24 +342,21 @@ const pushUpdateManySql = (
       } else {
         cells.push(addValue(ctx.values, value));
       }
-      // Cast the first row's values so Postgres knows the types
-      if (valueRows.length === 0 && column) {
-        cells[cells.length - 1] += `::${column.dataType}`;
+      // Cast the first VALUES row so Postgres can infer column types,
+      // and collect the alias column names once.
+      if (isFirstRow) {
+        if (column) cells[cells.length - 1] += `::${column.dataType}`;
+        quotedColumnNames.push(`"${column?.data.name || col}"`);
       }
     }
     valueRows.push(`(${cells.join(', ')})`);
   }
 
-  const quotedColumnNames = updateMany.columns.map((col) => {
-    const column = shape[col];
-    return `"${column?.data.name || col}"`;
-  });
-
   const valuesSql = `(VALUES ${valueRows.join(
     ', ',
   )}) "v"(${quotedColumnNames.join(', ')})`;
 
-  // 6. Build WHERE: "table"."key" = "v"."key"::dataType + user conditions
+  // Build WHERE: "table"."key" = "v"."key"::dataType + user conditions
   let whereSql = updateMany.keys
     .map((key) => {
       const column = shape[key];
@@ -402,7 +406,7 @@ const pushUpdateManySql = (
 
     // Build the UPDATE statement
     ctx.sql.push(`UPDATE ${from}`);
-    if (`"${query.table || (q.from as string)}"` !== quotedAs) {
+    if (quotedTable !== quotedAs) {
       ctx.sql.push(quotedAs);
     }
     ctx.sql.push('SET', set.join(', '));
