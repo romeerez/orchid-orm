@@ -276,28 +276,44 @@ const pushUpdateManySql = (
   const { shape } = q;
   const from = quoteTableWithSchema(query);
 
-  // 1. Build per-row SET: "col" = "v"."col"::dataType
+  // Collect .set() keys so they take precedence over per-row data.
+  // Function items are delayed injectors (e.g. updatedAt timestamps),
+  // not explicit .set() overrides — skip them here.
+  const sharedKeys: Record<string, true> = {};
+  if (q.updateData) {
+    for (const item of q.updateData) {
+      if (typeof item !== 'function') {
+        for (const key in item) {
+          if (item[key] !== undefined) sharedKeys[key] = true;
+        }
+      }
+    }
+  }
+
+  // 1. Build per-row SET, skipping columns overridden by .set()
   const set: string[] = [];
   for (const col of updateMany.setColumns) {
+    if (col in sharedKeys) continue;
     const column = shape[col];
     const dbName = column.data.name || col;
     set.push(`"${dbName}" = "v"."${dbName}"::${column.dataType}`);
   }
 
-  // 2. Build hookSet that includes per-row setColumns + hookUpdateSet
-  //    This handles per-row-wins-over-shared AND updatedAt dedup
+  // 2. Build hookSet for dedup; per-row columns only if not overridden
   const hookSet: RecordUnknown = {};
-  for (const col of updateMany.setColumns) hookSet[col] = true;
+  for (const col of updateMany.setColumns) {
+    if (!(col in sharedKeys)) hookSet[col] = true;
+  }
   if (q.hookUpdateSet) {
     for (const item of q.hookUpdateSet) Object.assign(hookSet, item);
   }
 
-  // 3. Build shared SET from updateData (.set() + updatedAt injector)
+  // 3. Build shared SET from updateData (.set() values override per-row)
   if (q.updateData) {
     processData(ctx, query, set, q.updateData, hookSet, quotedAs);
   }
 
-  // 4. Build shared SET from hookUpdateSet, skipping per-row columns
+  // 4. Build SET from hookUpdateSet, skipping per-row columns
   if (q.hookUpdateSet) {
     const perRowSkip: RecordUnknown = {};
     for (const col of updateMany.setColumns) perRowSkip[col] = true;

@@ -1216,7 +1216,7 @@ describe('hooks', () => {
         expect(cols).toEqual(['name']);
 
         assert.updateHooksBeingCalled({
-          data: [{ name: 'dedup-updated' }],
+          data: [{ name: 'ignored-shared' }],
         });
       });
     });

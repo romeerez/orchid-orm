@@ -1382,13 +1382,28 @@ describe('updateMany', () => {
       );
     });
 
-    it('should support .set() chaining with per-row wins', () => {
+    it('should let .set() override per-row columns', () => {
       expectSql(
         User.updateManyOptional([{ id: 1, name: 'Alice' }])
           .set({
-            name: 'Ignored',
+            name: 'Override',
             password: 'shared-pass',
           })
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = $1, "password" = $2, "updated_at" = now()
+          FROM (VALUES ($3::int4, $4::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        ['Override', 'shared-pass', 1, 'Alice'],
+      );
+    });
+
+    it('should not remove per-row column when .set() has undefined', () => {
+      expectSql(
+        User.updateManyOptional([{ id: 1, name: 'Alice' }])
+          .set({ name: undefined, password: 'shared-pass' })
           .toSQL(),
         `
           UPDATE "schema"."user"

@@ -954,7 +954,7 @@ const records = await db.table.select('id', 'name').updateMany([
 ```
 
 `.set()` applies shared values to all rows.
-Per-row values take precedence over `.set()` values for the same column.
+`.set()` values take precedence over per-row values for the same column.
 
 ```ts
 await db.table
