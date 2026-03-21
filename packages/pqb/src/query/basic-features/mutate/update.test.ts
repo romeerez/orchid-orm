@@ -1438,6 +1438,22 @@ describe('updateMany', () => {
       expect(updated).toEqual(['updated1', 'updated2']);
     });
 
+    it('should return void with exec', async () => {
+      const user = await User.select('id').create({
+        ...userData,
+        name: 'exec-void',
+      });
+
+      const result = await User.updateManyOptional([
+        { id: user.id, name: 'exec-void-updated' },
+      ]).exec();
+
+      expect(result).toBe(undefined);
+
+      const updated = await User.find(user.id).get('name');
+      expect(updated).toBe('exec-void-updated');
+    });
+
     it('should return records when select is used', async () => {
       const users = await User.select('id').createMany([
         { ...userData, name: 'sel1' },
@@ -1619,6 +1635,21 @@ describe('updateMany', () => {
           WHERE "user"."id" = "v"."id"::int4
         `,
         [1],
+      );
+    });
+
+    it('should not add RETURNING with exec', () => {
+      expectSql(
+        User.updateManyOptional([{ id: 1, name: 'a' }])
+          .exec()
+          .toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "name" = "v"."name"::text, "updated_at" = now()
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"::int4
+        `,
+        [1, 'a'],
       );
     });
 

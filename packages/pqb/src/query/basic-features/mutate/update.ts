@@ -202,9 +202,11 @@ const _queryUpdateMany = <T extends UpdateSelf>(
   q.type = 'update';
   const returnCount = !q.select;
   if (returnCount) {
-    q.returningMany = true;
-    q.returnType = 'valueOrThrow';
-    q.returning = true;
+    if (q.returnType !== 'void') {
+      q.returningMany = true;
+      q.returnType = 'valueOrThrow';
+      q.returning = true;
+    }
   } else {
     // When select is present, ensure many-return semantics
     const rt = q.returnType;
