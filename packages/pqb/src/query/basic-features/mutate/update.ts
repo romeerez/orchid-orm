@@ -176,20 +176,6 @@ const _queryUpdateMany = <T extends UpdateSelf>(
   const query = self as unknown as Query;
   const { q } = query;
 
-  // Conflict guard: incompatible with updateFrom/join
-  if (q.updateFrom) {
-    throw new OrchidOrmInternalError(
-      query,
-      'updateMany cannot be combined with updateFrom',
-    );
-  }
-  if (q.join) {
-    throw new OrchidOrmInternalError(
-      query,
-      'updateMany cannot be combined with join',
-    );
-  }
-
   // Keys validation
   if (!keys.length) {
     throw new OrchidOrmInternalError(
@@ -238,12 +224,6 @@ const _queryUpdateMany = <T extends UpdateSelf>(
     const keyParts: unknown[] = [];
     for (const key of keys) {
       const val = row[key];
-      if (val === undefined || val === null) {
-        throw new OrchidOrmInternalError(
-          query,
-          `Key column "${key}" is undefined or null in row ${i}`,
-        );
-      }
       if (isExpression(val)) {
         throw new OrchidOrmInternalError(
           query,

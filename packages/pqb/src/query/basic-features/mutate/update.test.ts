@@ -1499,12 +1499,6 @@ describe('updateMany', () => {
       ).toThrow('Duplicate key');
     });
 
-    it('should throw on undefined key value', () => {
-      expect(() =>
-        User.updateMany([{ id: undefined as unknown as number, name: 'a' }]),
-      ).toThrow('undefined or null');
-    });
-
     it('should ignore undefined fields in all rows', () => {
       expectSql(
         User.updateMany([
@@ -1572,29 +1566,6 @@ describe('updateMany', () => {
 
       const result = await User.selectAll().updateMany([]);
       expect(result).toEqual([]);
-    });
-
-    it('should throw when combined with updateFrom', () => {
-      expect(() =>
-        User.updateFrom(
-          () => Profile,
-          (q) => q.on('userId', 'user.id'),
-        ).updateMany([{ id: 1, name: 'a' }]),
-      ).toThrow('updateMany cannot be combined with updateFrom');
-    });
-
-    it('should throw when combined with join', () => {
-      expect(() =>
-        User.join(Profile, (q) => q.on('userId', 'user.id')).updateMany([
-          { id: 1, name: 'a' },
-        ]),
-      ).toThrow('updateMany cannot be combined with join');
-    });
-
-    it('should throw on null key value', () => {
-      expect(() =>
-        User.updateMany([{ id: null as unknown as number, name: 'a' }]),
-      ).toThrow('undefined or null');
     });
 
     it('should throw on expression as key value', () => {

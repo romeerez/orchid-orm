@@ -278,20 +278,6 @@ const pushUpdateManySql = (
   const { shape } = q;
   const from = quoteTableWithSchema(query);
 
-  // Post-updateMany conflict guard (catches updateFrom/join chained AFTER updateMany)
-  if (q.updateFrom) {
-    throw new OrchidOrmInternalError(
-      query as unknown as Query,
-      'updateMany cannot be combined with updateFrom',
-    );
-  }
-  if (q.join) {
-    throw new OrchidOrmInternalError(
-      query as unknown as Query,
-      'updateMany cannot be combined with join',
-    );
-  }
-
   // For strict variants, set up CTE infrastructure BEFORE generating SQL
   if (updateMany.strict) {
     const wrapAs = setFreeTopCteAs(ctx);
