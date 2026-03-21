@@ -1527,16 +1527,32 @@ describe('updateMany', () => {
         { ...userData, name: 'sel2' },
       ]);
 
-      const result = await User.select('id', 'name').updateMany([
-        { id: users[0].id, name: 'sel-upd1' },
-        { id: users[1].id, name: 'sel-upd2' },
+      const result = await User.select('id', 'name')
+        .updateMany([
+          { id: users[0].id, name: 'sel-upd1' },
+          { id: users[1].id, name: 'sel-upd2' },
+        ])
+        .order('name');
+
+      expect(result.map((r) => r.name)).toEqual(['sel-upd1', 'sel-upd2']);
+    });
+
+    // RETURNING must qualify columns with the table name,
+    // otherwise "id" is ambiguous between "user"."id" and "v"."id".
+    it('should selectAll without ambiguous column reference', async () => {
+      const users = await User.select('id').createMany([
+        { ...userData, name: 'amb1' },
+        { ...userData, name: 'amb2' },
       ]);
 
-      expect(result).toHaveLength(2);
-      expect(result.map((r) => r.name).sort()).toEqual([
-        'sel-upd1',
-        'sel-upd2',
-      ]);
+      const result = await User.selectAll()
+        .updateMany([
+          { id: users[0].id, name: 'amb-upd1' },
+          { id: users[1].id, name: 'amb-upd2' },
+        ])
+        .order('name');
+
+      expect(result.map((r) => r.name)).toEqual(['amb-upd1', 'amb-upd2']);
     });
 
     it('should throw NotFoundError for strict variant when row is missing', async () => {
