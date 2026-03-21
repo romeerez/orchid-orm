@@ -34,7 +34,6 @@ import {
   PickQueryReturnType,
   PickQuerySelectable,
   PickQueryShape,
-  PickQuerySinglePrimaryKey,
   PickQueryResultReturnTypeUniqueColumns,
   PickQueryUniqueProperties,
   PickQueryWithData,
@@ -44,6 +43,7 @@ import { RelationConfigBase } from '../../relations';
 import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
+import { requirePrimaryKeys } from '../../query-columns/primary-keys';
 import { resolveSubQueryCallback } from '../../sub-query/sub-query';
 import { pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
@@ -157,8 +157,6 @@ type ShapePrimaryKeyQueryTypes<Shape extends Column.QueryColumns> = {
     : never]: Shape[K]['queryType'];
 };
 
-export interface UpdateManySelf extends UpdateSelf, PickQuerySinglePrimaryKey {}
-
 // `type` instead of `interface`: PickQueryResultReturnTypeUniqueColumns and
 // PickQueryUniqueProperties both declare `internal` with different shapes,
 // which `interface extends` cannot merge.
@@ -172,7 +170,7 @@ type InputTypeOrExpression<InputType> = {
 };
 
 // Data type for updateMany / updateManyOptional (PK-based)
-type UpdateManyData<T extends UpdateManySelf> = (ShapePrimaryKeyQueryTypes<
+type UpdateManyData<T extends UpdateSelf> = (ShapePrimaryKeyQueryTypes<
   T['shape']
 > &
   Partial<InputTypeOrExpression<T['inputType']>>)[];
@@ -921,15 +919,14 @@ export class QueryUpdate {
    *   .set({ updatedBy: currentUser.id });
    * ```
    */
-  updateMany<T extends UpdateManySelf>(
+  updateMany<T extends UpdateSelf>(
     this: T,
     data: UpdateManyData<T>,
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
-    const pk = q.internal.singlePrimaryKey as string;
     return _queryUpdateMany(
       q as never,
-      [pk],
+      requirePrimaryKeys(q, 'updateMany requires a primary key'),
       data as RecordUnknown[],
       true,
     ) as never;
@@ -946,15 +943,14 @@ export class QueryUpdate {
    * ]);
    * ```
    */
-  updateManyOptional<T extends UpdateManySelf>(
+  updateManyOptional<T extends UpdateSelf>(
     this: T,
     data: UpdateManyData<T>,
   ): UpdateManyResult<T> & QueryHasWhere {
     const q = _clone(this) as unknown as Query;
-    const pk = q.internal.singlePrimaryKey as string;
     return _queryUpdateMany(
       q as never,
-      [pk],
+      requirePrimaryKeys(q, 'updateMany requires a primary key'),
       data as RecordUnknown[],
       false,
     ) as never;

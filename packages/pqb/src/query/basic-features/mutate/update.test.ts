@@ -11,6 +11,7 @@ import {
   userData,
   UserInsert,
   Product,
+  UniqueTable,
   userColumnsSql,
   userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
@@ -1304,6 +1305,22 @@ describe('updateMany', () => {
           WHERE "user"."id" = "v"."id"::int4
         `,
         [1, 'Alice', 2, 'Bob'],
+      );
+    });
+
+    it('should support composite primary keys', () => {
+      expectSql(
+        UniqueTable.updateManyOptional([
+          { id: 1, one: 'a', thirdColumn: 'x' },
+          { id: 2, one: 'b', thirdColumn: 'y' },
+        ]).toSQL(),
+        `
+          UPDATE "schema"."uniqueTable"
+          SET "third_column" = "v"."third_column"::text
+          FROM (VALUES ($1::int4, $2::text, $3::text), ($4, $5, $6)) "v"("id", "one", "third_column")
+          WHERE "uniqueTable"."id" = "v"."id"::int4 AND "uniqueTable"."one" = "v"."one"::text
+        `,
+        [1, 'a', 'x', 2, 'b', 'y'],
       );
     });
 
