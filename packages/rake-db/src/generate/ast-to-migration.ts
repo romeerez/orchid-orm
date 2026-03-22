@@ -672,6 +672,84 @@ const astEncoders: {
       '});',
     ];
   },
+  defaultPrivilege(ast) {
+    const code: Code[] = [`await db.changeDefaultPrivileges({`];
+
+    const props: Code[] = [];
+
+    if (ast.grantor) {
+      props.push(`grantor: ${singleQuote(ast.grantor)},`);
+    }
+
+    props.push(`grantee: ${singleQuote(ast.grantee)},`);
+    props.push(`schema: ${singleQuote(ast.schema)},`);
+
+    const objectConfigToCode = (
+      config: RakeDbAst.DefaultPrivilege['grant'],
+    ): Code[] => {
+      const result: Code[] = [];
+      for (const key of [
+        'tables',
+        'sequences',
+        'functions',
+        'types',
+      ] as const) {
+        const value = config?.[key];
+        if (!value) continue;
+
+        const { privileges, grantablePrivileges } = value;
+        const hasPrivileges = privileges?.length;
+        const hasGrantable = grantablePrivileges?.length;
+
+        if (!hasPrivileges && !hasGrantable) continue;
+
+        // Opening brace as string (current level)
+        result.push(`${key}: {`);
+
+        // Content as array (+1 indentation level)
+        const lines: string[] = [];
+        if (hasPrivileges) {
+          lines.push(
+            `privileges: [${privileges.map(singleQuote).join(', ')}],`,
+          );
+        }
+        if (hasGrantable) {
+          lines.push(
+            `grantablePrivileges: [${grantablePrivileges
+              .map(singleQuote)
+              .join(', ')}],`,
+          );
+        }
+        result.push(lines);
+
+        // Closing brace as string (current level)
+        result.push(`},`);
+      }
+      return result;
+    };
+
+    if (ast.grant) {
+      const grantCode = objectConfigToCode(ast.grant);
+      if (grantCode.length) {
+        props.push('grant: {');
+        props.push(grantCode);
+        props.push('},');
+      }
+    }
+
+    if (ast.revoke) {
+      const revokeCode = objectConfigToCode(ast.revoke);
+      if (revokeCode.length) {
+        props.push('revoke: {');
+        props.push(revokeCode);
+        props.push('},');
+      }
+    }
+
+    code.push(props);
+    addCode(code, '});');
+    return code;
+  },
 };
 
 const roleParams = (

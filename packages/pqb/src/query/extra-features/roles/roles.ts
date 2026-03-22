@@ -1,6 +1,6 @@
-import { RecordOptionalString } from 'pqb';
+import { DefaultPrivileges, RecordOptionalString } from 'pqb';
 
-export type DbRole = {
+export interface DbRole {
   name: string;
   super?: boolean;
   inherit?: boolean;
@@ -12,4 +12,5 @@ export type DbRole = {
   validUntil?: Date;
   bypassRls?: boolean;
   config?: RecordOptionalString;
-};
+  defaultPrivileges?: DefaultPrivileges.SchemaConfig[];
+}

@@ -1450,4 +1450,92 @@ change(async (db) => {
       );
     });
   });
+
+  describe('defaultPrivilege', () => {
+    it('should generate default privilege with grant only', () => {
+      const result = act([
+        {
+          type: 'defaultPrivilege',
+          grantee: 'some_role',
+          schema: 'some_schema',
+          grant: {
+            tables: {
+              privileges: ['SELECT', 'INSERT'],
+            },
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeDefaultPrivileges({
+    grantee: 'some_role',
+    schema: 'some_schema',
+    grant: {
+      tables: {
+        privileges: ['SELECT', 'INSERT'],
+      },
+    },
+  });
+});
+`,
+      );
+    });
+
+    it('should generate default privilege with grantor, grant and revoke', () => {
+      const result = act([
+        {
+          type: 'defaultPrivilege',
+          grantor: 'some_user',
+          grantee: 'some_role',
+          schema: 'some_schema',
+          grant: {
+            tables: {
+              privileges: ['SELECT', 'INSERT'],
+              grantablePrivileges: ['UPDATE', 'DELETE'],
+            },
+            sequences: {
+              privileges: ['USAGE'],
+            },
+          },
+          revoke: {
+            functions: {
+              grantablePrivileges: ['EXECUTE'],
+            },
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changeDefaultPrivileges({
+    grantor: 'some_user',
+    grantee: 'some_role',
+    schema: 'some_schema',
+    grant: {
+      tables: {
+        privileges: ['SELECT', 'INSERT'],
+        grantablePrivileges: ['UPDATE', 'DELETE'],
+      },
+      sequences: {
+        privileges: ['USAGE'],
+      },
+    },
+    revoke: {
+      functions: {
+        grantablePrivileges: ['EXECUTE'],
+      },
+    },
+  });
+});
+`,
+      );
+    });
+  });
 });

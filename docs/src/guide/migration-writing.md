@@ -1106,6 +1106,93 @@ change(async (db) => {
 });
 ```
 
+## changeDefaultPrivileges
+
+Grant or revoke default privileges for a role on objects created in a schema.
+
+Default privileges automatically apply to tables, sequences, functions, and types created in the future.
+
+You can use `all: true` to grant ALL privileges on all object types, or `allGrantable: true` to grant ALL privileges with GRANT OPTION on all object types. When `allGrantable` is provided, `all` is ignored. Individual object type configurations are merged on top of the `all` or `allGrantable` base.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  // grant default privileges using all with specific overrides
+  await db.changeDefaultPrivileges({
+    grantee: 'app_user',
+    schema: 'public',
+    grant: {
+      all: true, // grants ALL privileges on sequences, functions, and types
+      tables: {
+        // can limit privileges for certain objects
+        privileges: ['SELECT', 'INSERT'],
+      },
+    },
+  });
+
+  // grant default privileges using allGrantable
+  await db.changeDefaultPrivileges({
+    grantee: 'admin',
+    schema: 'public',
+    grant: {
+      allGrantable: true, // grants ALL privileges with GRANT OPTION on all object types
+    },
+  });
+
+  // grant default privileges using individual object types
+  await db.changeDefaultPrivileges({
+    grantee: 'app_user',
+    schema: 'public',
+    grant: {
+      tables: {
+        privileges: ['SELECT', 'INSERT', 'UPDATE'],
+        grantablePrivileges: ['DELETE'],
+      },
+      sequences: {
+        privileges: ['USAGE'],
+      },
+    },
+  });
+
+  // revoke default privileges
+  await db.changeDefaultPrivileges({
+    grantee: 'app_user',
+    schema: 'public',
+    revoke: {
+      tables: {
+        privileges: ['DELETE'],
+      },
+    },
+  });
+});
+```
+
+Options:
+
+- `grantee`: The role name to grant/revoke privileges for
+- `schema`: The schema where objects will be created
+- `grant`: Privileges to grant (optional)
+- `revoke`: Privileges to revoke (optional)
+
+Each of `grant` and `revoke` can contain:
+
+- `tables`: With `privileges` and optional `grantablePrivileges`
+- `sequences`: With `privileges` and optional `grantablePrivileges`
+- `functions`: With `privileges` and optional `grantablePrivileges`
+- `types`: With `privileges` and optional `grantablePrivileges`
+
+**Supported privileges by object type:**
+
+| Object Type | Available Privileges                                                         |
+| ----------- | ---------------------------------------------------------------------------- |
+| Tables      | ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN |
+| Sequences   | ALL, USAGE, SELECT, UPDATE                                                   |
+| Functions   | ALL, EXECUTE                                                                 |
+| Types       | ALL, USAGE                                                                   |
+
+When `ALL` is specified, it grants all available privileges for that object type. In SQL, this is rendered as `ALL PRIVILEGES`.
+
 ## tableExists
 
 [//]: # 'has JSDoc'

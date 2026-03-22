@@ -1190,6 +1190,73 @@ describe('astToGenerateItem', () => {
     act();
 
     assertKeys([]);
-    assertDeps([]);
+    assertDeps(['role:name']);
+  });
+
+  it('should handle changeRole', () => {
+    arrange({
+      type: 'changeRole',
+      name: 'roleName',
+      from: {},
+      to: { createDb: true },
+    });
+
+    act();
+
+    assertChange({ add: [], drop: [] });
+    assertDeps(['role:roleName']);
+  });
+
+  it('should handle renameRole', () => {
+    arrange({
+      type: 'renameRole',
+      from: 'oldName',
+      to: 'newName',
+    });
+
+    act();
+
+    assertChange({
+      drop: ['oldName'],
+      add: ['newName'],
+    });
+    assertDeps(['role:oldName', 'role:newName']);
+  });
+
+  it('should handle defaultPrivilege', () => {
+    arrange({
+      type: 'defaultPrivilege',
+      grantor: 'grantorRole',
+      grantee: 'granteeRole',
+      schema: 'mySchema',
+      grant: {
+        tables: {
+          privileges: ['SELECT'],
+        },
+      },
+    });
+
+    act();
+
+    assertChange({ add: [], drop: [] });
+    assertDeps(['mySchema', 'role:grantorRole', 'role:granteeRole']);
+  });
+
+  it('should handle defaultPrivilege without grantor', () => {
+    arrange({
+      type: 'defaultPrivilege',
+      grantee: 'granteeRole',
+      schema: 'mySchema',
+      revoke: {
+        sequences: {
+          privileges: ['USAGE'],
+        },
+      },
+    });
+
+    act();
+
+    assertChange({ add: [], drop: [] });
+    assertDeps(['mySchema', 'role:granteeRole']);
   });
 });

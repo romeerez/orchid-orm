@@ -436,12 +436,78 @@ export const report = (
         );
         break;
       case 'renameRole':
-        code.push(
-          `${yellow('~ rename role')} ${a.from} ${yellow('=>')} ${a.to}`,
-        );
-        break;
       case 'changeRole': {
-        code.push(`${yellow('~ change role')} ${a.name}`);
+        if (a.type === 'renameRole') {
+          code.push(
+            `${yellow('~ rename role')} ${a.from} ${yellow('=>')} ${a.to}`,
+          );
+        } else {
+          code.push(`${yellow('~ change role')} ${a.name}`);
+        }
+        break;
+      }
+      case 'defaultPrivilege': {
+        // Map privilege names for display (e.g., 'ALL' -> 'ALL PRIVILEGES')
+        const mapPrivilege = (p: string) =>
+          p === 'ALL' ? 'ALL PRIVILEGES' : p;
+
+        // Report grant and revoke of default privileges
+        const parts: string[] = [];
+        if (a.grant) {
+          for (const [objType, config] of Object.entries(a.grant)) {
+            if (!config) continue;
+
+            // Report regular privileges separately
+            if (config.privileges?.length) {
+              parts.push(
+                `${green('+ grant default privileges')} ${config.privileges
+                  .map(mapPrivilege)
+                  .join(', ')} on ${objType} to ${a.grantee}`,
+              );
+            }
+
+            // Report grantable privileges separately with "with grant option"
+            if (config.grantablePrivileges?.length) {
+              parts.push(
+                `${green(
+                  '+ grant default privileges',
+                )} ${config.grantablePrivileges
+                  .map(mapPrivilege)
+                  .join(', ')} on ${objType} with grant option to ${a.grantee}`,
+              );
+            }
+          }
+        }
+        if (a.revoke) {
+          for (const [objType, config] of Object.entries(a.revoke)) {
+            if (!config) continue;
+
+            // Report regular privileges separately
+            if (config.privileges?.length) {
+              parts.push(
+                `${red('- revoke default privileges')} ${config.privileges
+                  .map(mapPrivilege)
+                  .join(', ')} on ${objType} from ${a.grantee}`,
+              );
+            }
+
+            // Report grantable privileges separately with "with grant option"
+            if (config.grantablePrivileges?.length) {
+              parts.push(
+                `${red(
+                  '- revoke default privileges',
+                )} ${config.grantablePrivileges
+                  .map(mapPrivilege)
+                  .join(', ')} on ${objType} with grant option from ${
+                  a.grantee
+                }`,
+              );
+            }
+          }
+        }
+        if (parts.length) {
+          code.push(parts.join('\n'));
+        }
         break;
       }
       default:

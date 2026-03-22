@@ -28,7 +28,8 @@ export type RakeDbAst =
   | RakeDbAst.View
   | RakeDbAst.Role
   | RakeDbAst.RenameRole
-  | RakeDbAst.ChangeRole;
+  | RakeDbAst.ChangeRole
+  | RakeDbAst.DefaultPrivilege;
 
 export namespace RakeDbAst {
   export interface Table extends TableData {
@@ -284,5 +285,26 @@ export namespace RakeDbAst {
     name: string;
     from: Partial<DbStructure.Role>;
     to: Partial<DbStructure.Role>;
+  }
+
+  interface DefaultPrivilegeSetting {
+    privileges?: string[];
+    grantablePrivileges?: string[];
+  }
+
+  export interface DefaultPrivilegeObjectConfig {
+    tables?: DefaultPrivilegeSetting;
+    sequences?: DefaultPrivilegeSetting;
+    functions?: DefaultPrivilegeSetting;
+    types?: DefaultPrivilegeSetting;
+  }
+
+  export interface DefaultPrivilege {
+    type: 'defaultPrivilege';
+    grantor?: string;
+    grantee: string;
+    schema: string;
+    grant?: DefaultPrivilegeObjectConfig;
+    revoke?: DefaultPrivilegeObjectConfig;
   }
 }

@@ -472,6 +472,83 @@ export const db = orchidORM(
 );
 ```
 
+### default privileges
+
+Default privileges automatically grant permissions to roles for database objects (tables, sequences, functions, types) created in the future within a specific schema.
+
+This is configured per-role in the `roles` array:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    roles: [
+      {
+        name: 'app_user',
+        defaultPrivileges: [
+          {
+            schema: 'public',
+            tables: {
+              allow: ['SELECT', 'INSERT', 'UPDATE'],
+              allowGrantable: ['DELETE'],
+            },
+            sequences: {
+              allow: ['USAGE'],
+            },
+          },
+          {
+            schema: 'analytics',
+            tables: {
+              allow: ['SELECT'],
+            },
+          },
+        ],
+      },
+      {
+        name: 'admin',
+        defaultPrivileges: [
+          {
+            schema: 'public',
+            functions: {
+              allow: ['EXECUTE'],
+            },
+            types: {
+              allow: ['USAGE'],
+            },
+          },
+        ],
+      },
+    ],
+  },
+  { ...tables },
+);
+```
+
+Each default privilege entry requires:
+
+- `schema`: The schema where objects will be created
+- Object type configurations (at least one of): `tables`, `sequences`, `functions`, `types`
+
+Each object type accepts:
+
+- `allow`: Privileges granted to the role
+- `allowGrantable`: Privileges granted WITH GRANT OPTION (role can grant these to others)
+
+**Supported privileges by object type:**
+
+| Object Type | Available Privileges                                                         |
+| ----------- | ---------------------------------------------------------------------------- |
+| Tables      | ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN |
+| Sequences   | ALL, USAGE, SELECT, UPDATE                                                   |
+| Functions   | ALL, EXECUTE                                                                 |
+| Types       | ALL, USAGE                                                                   |
+
+When `ALL` is specified, it grants all available privileges for that object type. In SQL, this is rendered as `ALL PRIVILEGES`.
+
+The migration generator will automatically create or update default privileges when you run `db g`.
+
+Use `changeDefaultPrivileges` in [migration writing](/guide/migration-writing#changedefaultprivileges) to grant or revoke default privileges manually.
+
 ### generatorIgnore
 
 `db g` command attempts to drop all the database entities that it cannot find in the code.
