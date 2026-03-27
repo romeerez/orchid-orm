@@ -1,11 +1,7 @@
 import { pushWhereStatementSql } from '../where/where.sql';
 import { SelectAsValue, SelectItem, selectToSql } from '../select/select.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
-import {
-  InsertQueryDataObjectValues,
-  pushQueryValueImmutable,
-  QueryData,
-} from '../../query-data';
+import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { Db } from '../../db';
 import { RawSql } from '../../expressions/raw-sql';
 import { MAX_BINDING_PARAMS } from '../../sql/sql-constants';
@@ -233,7 +229,7 @@ export const makeInsertSql = (
     let batch: SingleSqlItem[] | undefined;
     const { skipBatchCheck } = ctx;
 
-    for (let i = 0; i < (values as InsertQueryDataObjectValues).length; i++) {
+    for (let i = 0; i < values.length; i++) {
       const topCteSize = getTopCteSize(ctx);
 
       ctx.skipBatchCheck = true;
@@ -242,7 +238,7 @@ export const makeInsertSql = (
         ctx,
         ctxValues,
         QueryClass,
-        (values as InsertQueryDataObjectValues)[i],
+        values[i],
         runtimeDefaults,
         quotedAs,
         hookSetSql,
@@ -447,7 +443,7 @@ const applySqlState = (
 const processHookSet = (
   ctx: ToSQLCtx,
   q: ToSQLQuery,
-  values: InsertQueryDataObjectValues,
+  values: unknown[][],
   hookCreateSet: RecordUnknown[],
   columns: string[],
   QueryClass: Db,
@@ -457,7 +453,7 @@ const processHookSet = (
   columns: string[];
   insertFrom?: SubQueryForSql;
   queryColumnsCount?: number;
-  values: InsertQueryDataObjectValues;
+  values: unknown[][];
 } => {
   const hookSet: RecordUnknown = {};
   for (const item of hookCreateSet) {
@@ -577,7 +573,7 @@ const processHookSet = (
           quotedAs,
         ),
       };
-      for (const row of values as InsertQueryDataObjectValues) {
+      for (const row of values) {
         row[i] = fromHook;
       }
     }

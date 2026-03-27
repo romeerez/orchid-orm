@@ -3,6 +3,7 @@ import { pushWhereStatementSql, whereToSql } from '../where/where.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import {
   QueryData,
+  UpdateManyQueryData,
   UpdateQueryDataItem,
   UpdateQueryDataObject,
 } from '../../query-data';
@@ -10,8 +11,8 @@ import { Db } from '../../db';
 import { selectToSql } from '../select/select.sql';
 import { countSelect } from '../../expressions/raw-sql';
 import { Query } from '../../query';
-import { processJoinItem } from '../join/join.sql';
-import { moveMutativeQueryToCte } from '../cte/cte.sql';
+import { JoinItemArgs, processJoinItem } from '../join/join.sql';
+import { moveMutativeQueryToCte, setFreeTopCteAs } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
 import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
@@ -26,6 +27,8 @@ import {
   newDelayedRelationSelect,
 } from '../select/delayed-relational-select';
 import { isExpression } from '../../expressions/expression';
+import { throwOnReadOnlyUpdate } from '../../query.utils';
+import { OrchidOrmInternalError } from '../../errors';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -37,45 +40,63 @@ export const pushUpdateSql = (
   const quotedTable = `"${query.table || (q.from as string)}"`;
   const from = quoteTableWithSchema(query);
 
-  let hookSet: RecordUnknown;
-  if (q.hookUpdateSet) {
-    hookSet = {};
-    for (const item of q.hookUpdateSet) {
-      Object.assign(hookSet, item);
-    }
-  } else {
-    hookSet = emptyObject;
-  }
-
   const set: string[] = [];
-  processData(ctx, query, set, q.updateData, hookSet, quotedAs);
 
-  if (q.hookUpdateSet) {
-    applySet(ctx, query, set, hookSet, emptyObject, quotedAs);
-  }
+  const hookSet = q.hookUpdateSet
+    ? Object.fromEntries(
+        q.hookUpdateSet.flatMap((item) => Object.entries(item)),
+      )
+    : emptyObject;
 
   const delayedRelationSelect: DelayedRelationSelect | undefined =
     q.selectRelation ? newDelayedRelationSelect(query) : undefined;
 
-  // if no values to set, make a `SELECT` query
-  if (!set.length) {
-    if (!q.select) {
-      q.select = countSelect;
+  // User can use `set({ key: 'value' })` multiple times,
+  // `usedSetKeys` is here to track what keys were already added to SQL to not add them twice.
+  const usedSetKeys = new Set<string>();
+
+  // Applies `hookSet`: key-values that should be set by the update hooks.
+  // Adds SQL key-value pairs into `set` array.
+  // Must be applied before other `set` data: the earlier one takes precedence.
+  if (q.hookUpdateSet) {
+    applySet(ctx, query, set, hookSet, emptyObject, usedSetKeys, quotedAs);
+  }
+
+  // updateData is array of update sets that's coming from `set`, `updateMany`, also `timestamps` logic are adding to it,
+  // `processData` processes it into `set` array of SQL strings for key-value pairs.
+  if (q.updateData) {
+    processData(ctx, query, set, q.updateData, hookSet, usedSetKeys, quotedAs);
+  }
+
+  let updateManyValuesSql;
+  if (q.updateMany) {
+    for (const key of q.updateMany.primaryKeys) {
+      usedSetKeys.add(key);
     }
 
-    pushUpdateReturning(
+    updateManyValuesSql = makeUpdateManyValuesSql(
+      ctx,
+      query,
+      q,
+      q.updateMany,
+      set,
+      usedSetKeys,
+      quotedAs,
+    );
+  }
+
+  // If nothing to set, make a SELECT query
+  if (!set.length) {
+    pushSelectForEmptySet(
       ctx,
       query,
       q,
       quotedAs,
-      'SELECT',
-      delayedRelationSelect,
+      from,
       isSubSql,
+      updateManyValuesSql,
+      delayedRelationSelect,
     );
-
-    ctx.sql.push(`FROM ${from}`);
-    pushWhereStatementSql(ctx, query, q, quotedAs);
-    pushLimitSQL(ctx.sql, ctx.values, q);
   } else {
     ctx.sql.push(`UPDATE ${from}`);
 
@@ -83,60 +104,21 @@ export const pushUpdateSql = (
       ctx.sql.push(quotedAs);
     }
 
-    ctx.sql.push('SET');
-    ctx.sql.push(set.join(', '));
+    ctx.sql.push('SET', set.join(', '));
 
-    const { updateFrom } = q;
-    let fromWhereSql: string | undefined;
-    if (updateFrom) {
-      const { target, on } = processJoinItem(
-        ctx,
-        query,
-        q,
-        updateFrom,
-        quotedAs,
-      );
+    let fromWhereSql;
 
-      ctx.sql.push(`FROM ${target}`);
-
-      fromWhereSql = on;
-
-      if (q.join) {
-        const joinSet = q.join.length > 1 ? new Set<string>() : null;
-
-        for (const item of q.join) {
-          const { target, on } = processJoinItem(
-            ctx,
-            query,
-            q,
-            item.args,
-            quotedAs,
-          );
-
-          if (joinSet) {
-            const key = `${item.type}${target}${on}`;
-            if (joinSet.has(key)) continue;
-            joinSet.add(key);
-          }
-
-          ctx.sql.push(`${item.type} ${target} ON true`);
-
-          if (on) {
-            fromWhereSql = fromWhereSql ? fromWhereSql + ' AND ' + on : on;
-          }
-        }
+    if (updateManyValuesSql) {
+      if (q.updateMany?.strict) {
+        addUpdateManyCteForStrict(ctx, q.updateMany);
       }
+
+      ctx.sql.push('FROM', updateManyValuesSql);
+    } else if (q.updateFrom) {
+      fromWhereSql = pushUpdateFromSql(ctx, query, q, quotedAs, q.updateFrom);
     }
 
-    const mainWhereSql = whereToSql(ctx, query, q, quotedAs);
-    const whereSql = mainWhereSql
-      ? fromWhereSql
-        ? mainWhereSql + ' AND ' + fromWhereSql
-        : mainWhereSql
-      : fromWhereSql;
-    if (whereSql) {
-      ctx.sql.push('WHERE', whereSql);
-    }
+    pushUpdateWhereSql(ctx, query, q, quotedAs, fromWhereSql);
 
     pushUpdateReturning(
       ctx,
@@ -154,6 +136,116 @@ export const pushUpdateSql = (
   }
 
   return makeSql(ctx, 'update', isSubSql);
+};
+
+const pushSelectForEmptySet = (
+  ctx: ToSQLCtx,
+  query: ToSQLQuery,
+  q: QueryData,
+  quotedAs: string,
+  from: string,
+  isSubSql?: boolean,
+  updateManyValuesSql?: string,
+  delayedRelationSelect?: DelayedRelationSelect,
+) => {
+  if (!q.select) {
+    q.select = countSelect;
+  }
+
+  pushUpdateReturning(
+    ctx,
+    query,
+    q,
+    quotedAs,
+    'SELECT',
+    delayedRelationSelect,
+    isSubSql,
+  );
+
+  let fromSql = `FROM ${from}`;
+
+  if (updateManyValuesSql) {
+    fromSql += `, ${updateManyValuesSql}`;
+  }
+
+  ctx.sql.push(fromSql);
+  pushWhereStatementSql(ctx, query, q, quotedAs);
+  pushLimitSQL(ctx.sql, ctx.values, q);
+};
+
+// For strict variants, set up CTE infrastructure
+const addUpdateManyCteForStrict = (
+  ctx: ToSQLCtx,
+  updateMany: UpdateManyQueryData,
+) => {
+  const wrapAs = setFreeTopCteAs(ctx);
+  ctx.wrapAs = wrapAs;
+  const cteHooks = (ctx.topCtx.cteHooks ??= {
+    hasSelect: true,
+    tableHooks: {},
+  });
+  cteHooks.hasSelect = true;
+  (cteHooks.ensureCount ??= {})[wrapAs] = updateMany.data.length;
+};
+
+const pushUpdateFromSql = (
+  ctx: ToSQLCtx,
+  query: ToSQLQuery,
+  q: QueryData,
+  quotedAs: string,
+  updateFrom: JoinItemArgs,
+): string | undefined => {
+  const { target, on } = processJoinItem(ctx, query, q, updateFrom, quotedAs);
+
+  ctx.sql.push(`FROM ${target}`);
+
+  let fromWhereSql = on;
+
+  if (q.join) {
+    const joinSet = q.join.length > 1 ? new Set<string>() : null;
+
+    for (const item of q.join) {
+      const { target, on } = processJoinItem(
+        ctx,
+        query,
+        q,
+        item.args,
+        quotedAs,
+      );
+
+      if (joinSet) {
+        const key = `${item.type}${target}${on}`;
+        if (joinSet.has(key)) continue;
+        joinSet.add(key);
+      }
+
+      ctx.sql.push(`${item.type} ${target} ON true`);
+
+      if (on) {
+        fromWhereSql = fromWhereSql ? fromWhereSql + ' AND ' + on : on;
+      }
+    }
+  }
+
+  return fromWhereSql;
+};
+
+const pushUpdateWhereSql = (
+  ctx: ToSQLCtx,
+  query: ToSQLQuery,
+  q: QueryData,
+  quotedAs: string,
+  fromWhereSql?: string,
+): void => {
+  const mainWhereSql = whereToSql(ctx, query, q, quotedAs);
+  const whereSql = mainWhereSql
+    ? fromWhereSql
+      ? mainWhereSql + ' AND ' + fromWhereSql
+      : mainWhereSql
+    : fromWhereSql;
+  if (whereSql) {
+    ctx.sql.push('WHERE', whereSql);
+  }
 };
 
 const pushUpdateReturning = (
@@ -185,20 +277,24 @@ const processData = (
   set: string[],
   data: UpdateQueryDataItem[],
   hookSet: RecordUnknown,
+  usedSetKeys: Set<string>,
   quotedAs?: string,
 ) => {
   let append: UpdateQueryDataItem[] | undefined;
 
-  for (const item of data) {
+  for (let i = data.length - 1; i >= 0; i--) {
+    const item = data[i];
     if (typeof item === 'function') {
       const result = item(data);
       if (result) append = pushOrNewArray(append, result);
     } else {
-      applySet(ctx, query, set, item, hookSet, quotedAs);
+      applySet(ctx, query, set, item, hookSet, usedSetKeys, quotedAs);
     }
   }
 
-  if (append) processData(ctx, query, set, append, hookSet, quotedAs);
+  if (append) {
+    processData(ctx, query, set, append, hookSet, usedSetKeys, quotedAs);
+  }
 };
 
 const applySet = (
@@ -206,15 +302,22 @@ const applySet = (
   query: ToSQLQuery,
   set: string[],
   item: UpdateQueryDataObject,
-  hookSet: RecordUnknown,
+  skipColumns: RecordUnknown,
+  usedSetKeys: Set<string>,
   quotedAs?: string,
 ) => {
   const QueryClass = ctx.qb.constructor as unknown as Db;
   const shape = query.q.shape;
 
   for (const key in item) {
+    if (usedSetKeys.has(key)) {
+      continue;
+    }
+
+    usedSetKeys.add(key);
+
     const value = item[key];
-    if (value === undefined || key in hookSet) continue;
+    if (value === undefined || key in skipColumns) continue;
 
     set.push(
       `"${shape[key].data.name || key}" = ${processValue(
@@ -258,4 +361,91 @@ const processValue = (
   }
 
   return addValue(ctx.values, value);
+};
+
+// Build FROM (VALUES ...) "v"("col1", "col2")
+const makeUpdateManyValuesSql = (
+  ctx: ToSQLCtx,
+  query: ToSQLQuery,
+  q: QueryData,
+  updateMany: UpdateManyQueryData,
+  set: string[],
+  usedSetKeys: Set<string>,
+  quotedAs: string,
+) => {
+  const { shape } = q;
+
+  const keysSet = new Set<string>();
+  const valueRows: string[] = [];
+  const quotedColumnNames: string[] = [];
+  const { data } = updateMany;
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const cells: string[] = [];
+    let keysInRow = 0;
+
+    for (const key in row) {
+      let value = row[key];
+      if (value === undefined) {
+        continue;
+      }
+
+      const column = shape[key];
+      const columnName = column.data.name || key;
+
+      if (column.data.virtual) continue;
+      throwOnReadOnlyUpdate(query, column, key);
+
+      keysInRow++;
+
+      if (isExpression(value)) {
+        cells.push(value.toSQL(ctx, quotedAs));
+      } else {
+        if (column.data.encode && value !== null) {
+          value = column.data.encode(value);
+        }
+
+        cells.push(addValue(ctx.values, value));
+      }
+
+      // Cast the first VALUES row so Postgres can infer column types,
+      // and collect the alias column names once.
+      if (i === 0) {
+        keysSet.add(key);
+        cells[cells.length - 1] += `::${column.dataType}`;
+        quotedColumnNames.push(`"${columnName}"`);
+
+        if (!usedSetKeys.has(key)) {
+          set.push(`"${shape[key].data.name || key}" = "v"."${columnName}"`);
+        }
+      } else if (!keysSet.has(key)) {
+        throwOnDifferentColumns(query, keysSet, row, i);
+      }
+    }
+
+    if (keysInRow < keysSet.size) {
+      throwOnDifferentColumns(query, keysSet, row, i);
+    }
+
+    valueRows.push(`(${cells.join(', ')})`);
+  }
+
+  return `(VALUES ${valueRows.join(', ')}) "v"(${quotedColumnNames.join(
+    ', ',
+  )})`;
+};
+
+const throwOnDifferentColumns = (
+  query: ToSQLQuery,
+  keysSet: Set<string>,
+  row: RecordUnknown,
+  i: number,
+) => {
+  throw new OrchidOrmInternalError(
+    query,
+    `Row ${i} has different columns than row 0. Expected: [${[...keysSet].join(
+      ', ',
+    )}], got: [${Object.keys(row).join(', ')}]`,
+  );
 };

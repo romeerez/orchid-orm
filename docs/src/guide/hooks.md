@@ -68,6 +68,7 @@ they can be only set in the hooks.
 This works for all update and create methods, including
 [createOneFrom](/guide/create-update-delete.html#orcreate),
 [createMany](/guide/create-update-delete.html#createmany-insertmany),
+[updateMany](/guide/create-update-delete.html#updatemany),
 [orCreate](/guide/create-update-delete.html#orcreate),
 [upsert](/guide/create-update-delete.html#upsert).
 

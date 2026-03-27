@@ -20,7 +20,7 @@ import {
   SetQueryReturnsColumn,
   SetValueQueryReturnsPluckColumn,
 } from '../../query';
-import { InsertQueryDataObjectValues, QueryData } from '../../query-data';
+import { QueryData } from '../../query-data';
 import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
 import { MaybeArray, RecordUnknown } from '../../../utils';
 import { _clone } from '../clone/clone';
@@ -132,7 +132,7 @@ export const getFromSelectColumns = (
 ): {
   columns: string[];
   queryColumnsCount: number;
-  values: InsertQueryDataObjectValues;
+  values: unknown[][];
 } => {
   if (!many && !queryTypeWithLimitOne[from.q.returnType as string]) {
     throw new Error(
@@ -156,7 +156,7 @@ export const getFromSelectColumns = (
   const queryColumnsCount = queryColumns.size;
   const allValues: unknown[][] = [];
   if (obj?.columns) {
-    for (const objectValues of obj.values as InsertQueryDataObjectValues) {
+    for (const objectValues of obj.values) {
       const values: unknown[] = [];
       allValues.push(values);
 

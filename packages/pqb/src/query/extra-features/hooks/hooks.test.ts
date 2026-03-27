@@ -1103,6 +1103,124 @@ describe('hooks', () => {
       });
     });
 
+    describe('updateMany', () => {
+      it.each(['updateMany', 'updateManyOptional'] as const)(
+        'should fire update hooks for %s',
+        async (method) => {
+          tested[method] = true;
+
+          const ids = await Promise.all([
+            User.get('id').create({ ...userData, name: 'um1' }),
+            User.get('id').create({ ...userData, name: 'um2' }),
+          ]);
+          jest.clearAllMocks();
+
+          await User[method]([
+            { id: ids[0], name: 'new1' },
+            { id: ids[1], name: 'new2' },
+          ]);
+
+          assert.updateHooksBeingCalled({
+            data: [{ name: 'new1' }, { name: 'new2' }],
+          });
+        },
+      );
+
+      it.each(['updateManyBy', 'updateManyByOptional'] as const)(
+        'should fire update hooks for %s',
+        async (method) => {
+          tested[method] = true;
+
+          await Promise.all([
+            User.get('id').create({ ...userData, name: 'umby1' }),
+            User.get('id').create({ ...userData, name: 'umby2' }),
+          ]);
+          jest.clearAllMocks();
+
+          await User[method]('name', [
+            { name: 'umby1', password: 'pw1' },
+            { name: 'umby2', password: 'pw2' },
+          ]);
+
+          assert.updateHooksBeingCalled({
+            data: [{ name: 'umby1' }, { name: 'umby2' }],
+          });
+        },
+      );
+
+      it('should apply hookSet values from beforeUpdate', async () => {
+        const id = await User.get('id').create({
+          ...userData,
+          name: 'hook-test',
+        });
+        jest.clearAllMocks();
+
+        const result = await User.selectAll().updateMany([
+          { id, name: 'hook-updated' },
+        ]);
+
+        // hookSet.beforeUpdate sets active: false
+        // hookSet.beforeSave sets picture: 'picture from beforeSave'
+        expect(result[0]).toMatchObject(hookSetUpdateValues);
+      });
+
+      it('should expose per-row setColumns in beforeUpdate columns', async () => {
+        const id = await User.get('id').create({
+          ...userData,
+          name: 'cols-test',
+        });
+
+        let cols: string[] | undefined;
+
+        await User.beforeUpdate(({ columns }) => {
+          cols = columns;
+        }).updateMany([{ id, name: 'cols-updated' }]);
+
+        expect(cols).toEqual(['name']);
+      });
+
+      it('should merge per-row and .set() columns in beforeUpdate', async () => {
+        const id = await User.get('id').create({
+          ...userData,
+          name: 'merge-test',
+        });
+
+        let cols: string[] | undefined;
+
+        await User.beforeUpdate(({ columns }) => {
+          cols = columns;
+        })
+          .updateMany([{ id, name: 'merge-updated' }])
+          .set({ password: 'shared' });
+
+        // 'password' from .set(), 'name' from per-row setColumns
+        expect(cols).toEqual(['password', 'name']);
+      });
+
+      it('should not duplicate columns when .set() overlaps per-row', async () => {
+        const id = await User.get('id').create({
+          ...userData,
+          name: 'dedup-test',
+        });
+        jest.clearAllMocks();
+
+        let cols: string[] | undefined;
+
+        await User.beforeUpdate(({ columns }) => {
+          cols = columns;
+        })
+          .updateMany([{ id, name: 'dedup-updated' }])
+          .set({ name: 'ignored-shared' });
+
+        // 'name' appears in both .set() and per-row — must appear only once
+        expect(cols).toEqual(['name']);
+
+        assert.updateHooksBeingCalled({
+          data: [{ name: 'ignored-shared' }],
+        });
+      });
+    });
+
     describe('cte', () => {
       describe('update methods in cte', () => {
         it('update', async () => {

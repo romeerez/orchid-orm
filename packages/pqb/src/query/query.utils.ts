@@ -18,6 +18,7 @@ import { _checkIfAliased } from './basic-features/as/as';
 import { getValueKey } from './basic-features/get/get-value-key';
 
 import { getClonedQueryData } from './query-data';
+import { Column } from '../columns';
 
 /**
  * Push all elements of given array into the array in the query data,
@@ -80,6 +81,20 @@ export const throwIfJoinLateral = (q: PickQueryQ, method: string): void => {
     throw new OrchidOrmInternalError(
       q as Query,
       `Cannot join a complex query in ${method}`,
+    );
+  }
+};
+
+export const throwOnReadOnlyUpdate = (
+  query: unknown,
+  column: Column.Pick.Data,
+  key: string,
+) => {
+  if (column.data.appReadOnly || column.data.readOnly) {
+    throw new OrchidOrmInternalError(
+      query as Query,
+      'Trying to update a readonly column',
+      { column: key },
     );
   }
 };
