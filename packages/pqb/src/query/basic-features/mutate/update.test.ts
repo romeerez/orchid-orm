@@ -979,16 +979,17 @@ describe('update', () => {
         query.toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = $1,
-              "id" = "id" + $2,
-              "password" = $3,
-              "age" = "age" - $4,
-              "data" = jsonb_insert("user"."data", $5, $6),
+          SET
+              "data" = jsonb_insert("user"."data", $1, $2),
+              "age" = "age" - $3,
+              "password" = $4,
+              "id" = "id" + $5,
+              "name" = $6,
               "updated_at" = now()
           WHERE "user"."id" = $7
           RETURNING "user"."id"
         `,
-        ['name', 1, 'password', 1, '{0}', '"data"', 1],
+        ['{0}', '"data"', 1, 'password', 1, 'name', 1],
       );
     });
   });
@@ -1300,9 +1301,9 @@ describe('updateMany', () => {
         ]).toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "updated_at" = now()
+          SET "updated_at" = now(), "name" = "v"."name"
           FROM (VALUES ($1::int4, $2::text), ($3, $4)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
+          WHERE "user"."id" = "v"."id"
         `,
         [1, 'Alice', 2, 'Bob'],
       );
@@ -1316,9 +1317,9 @@ describe('updateMany', () => {
         ]).toSQL(),
         `
           UPDATE "schema"."uniqueTable"
-          SET "third_column" = "v"."third_column"::text
+          SET "third_column" = "v"."third_column"
           FROM (VALUES ($1::int4, $2::text, $3::text), ($4, $5, $6)) "v"("id", "one", "third_column")
-          WHERE "uniqueTable"."id" = "v"."id"::int4 AND "uniqueTable"."one" = "v"."one"::text
+          WHERE "uniqueTable"."id" = "v"."id" AND "uniqueTable"."one" = "v"."one"
         `,
         [1, 'a', 'x', 2, 'b', 'y'],
       );
@@ -1334,9 +1335,9 @@ describe('updateMany', () => {
         `
           WITH q AS (
             UPDATE "schema"."user"
-            SET "name" = "v"."name"::text, "updated_at" = now()
+            SET "updated_at" = now(), "name" = "v"."name"
             FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
-            WHERE "user"."id" = "v"."id"::int4
+            WHERE "user"."id" = "v"."id"
             RETURNING ${userTableColumnsSql}
           )
           SELECT *, NULL FROM q
@@ -1357,9 +1358,9 @@ describe('updateMany', () => {
         ]).toSQL(),
         `
           UPDATE "schema"."user"
-          SET "password" = "v"."password"::text, "updated_at" = now()
+          SET "updated_at" = now(), "password" = "v"."password"
           FROM (VALUES ($1::text, $2::text)) "v"("name", "password")
-          WHERE "user"."name" = "v"."name"::text
+          WHERE "user"."name" = "v"."name"
         `,
         ['Alice', 'new-pass'],
       );
@@ -1373,10 +1374,10 @@ describe('updateMany', () => {
         ).toSQL(),
         `
           UPDATE "schema"."uniqueTable"
-          SET "one" = "v"."one"::text
+          SET "one" = "v"."one"
           FROM (VALUES ($1::text, $2::int4, $3::text)) "v"("third_column", "fourth_column", "one")
-          WHERE "uniqueTable"."third_column" = "v"."third_column"::text
-            AND "uniqueTable"."fourth_column" = "v"."fourth_column"::int4
+          WHERE "uniqueTable"."third_column" = "v"."third_column"
+            AND "uniqueTable"."fourth_column" = "v"."fourth_column"
         `,
         ['a', 1, 'updated'],
       );
@@ -1394,24 +1395,28 @@ describe('updateMany', () => {
           UPDATE "schema"."user"
           SET "name" = $1, "password" = $2, "updated_at" = now()
           FROM (VALUES ($3::int4, $4::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
+          WHERE "user"."id" = "v"."id"
         `,
         ['Override', 'shared-pass', 1, 'Alice'],
       );
     });
 
-    it('should not remove per-row column when .set() has undefined', () => {
+    it('should let .set() override per-row columns when .set() is before updateManyOptional', () => {
       expectSql(
-        User.updateManyOptional([{ id: 1, name: 'Alice' }])
-          .set({ name: undefined, password: 'shared-pass' })
+        User.all()
+          .set({
+            name: 'Override',
+            password: 'shared-pass',
+          })
+          .updateManyOptional([{ id: 1, name: 'Alice' }])
           .toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "password" = $1, "updated_at" = now()
-          FROM (VALUES ($2::int4, $3::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
+          SET "name" = $1, "password" = $2, "updated_at" = now()
+            FROM (VALUES ($3::int4, $4::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"
         `,
-        ['shared-pass', 1, 'Alice'],
+        ['Override', 'shared-pass', 1, 'Alice'],
       );
     });
 
@@ -1422,9 +1427,9 @@ describe('updateMany', () => {
           .toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "updated_at" = now()
+          SET "updated_at" = now(), "name" = "v"."name"
           FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4 AND "user"."age" = $3
+          WHERE "user"."age" = $3 AND "user"."id" = "v"."id" 
         `,
         [1, 'Alice', 18],
       );
@@ -1437,13 +1442,14 @@ describe('updateMany', () => {
           .toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "updated_at" = now()
+          SET "updated_at" = now(), "name" = "v"."name"
           FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
-            AND EXISTS (
+          WHERE
+            EXISTS (
               SELECT 1 FROM "schema"."message"
               WHERE "message"."author_id" = "user"."id"
             )
+            AND "user"."id" = "v"."id"
         `,
         [1, 'Alice'],
       );
@@ -1454,9 +1460,10 @@ describe('updateMany', () => {
         UserSoftDelete.updateManyOptional([{ id: 1, name: 'Alice' }]).toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::varchar
+          SET "name" = "v"."name"
           FROM (VALUES ($1::int4, $2::varchar)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4 AND ("user"."deleted_at" IS NULL)
+          WHERE ("user"."id" = "v"."id")
+            AND ("user"."deleted_at" IS NULL)
         `,
         [1, 'Alice'],
       );
@@ -1468,9 +1475,9 @@ describe('updateMany', () => {
         `
           WITH q AS (
             UPDATE "schema"."user"
-            SET "name" = "v"."name"::text, "updated_at" = now()
+            SET "updated_at" = now(), "name" = "v"."name"
             FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
-            WHERE "user"."id" = "v"."id"::int4
+            WHERE "user"."id" = "v"."id"
             RETURNING NULL
           )
           SELECT *, NULL FROM q
@@ -1601,7 +1608,7 @@ describe('updateMany', () => {
         `
           SELECT count(*) FROM "schema"."user",
           (VALUES ($1::int4), ($2)) "v"("id")
-          WHERE "user"."id" = "v"."id"::int4
+          WHERE "user"."id" = "v"."id"
         `,
         [1, 2],
       );
@@ -1616,7 +1623,7 @@ describe('updateMany', () => {
           SELECT "user"."id", "user"."name"
           FROM "schema"."user",
           (VALUES ($1::int4), ($2)) "v"("id")
-          WHERE "user"."id" = "v"."id"::int4
+          WHERE "user"."id" = "v"."id"
         `,
         [1, 2],
       );
@@ -1624,15 +1631,6 @@ describe('updateMany', () => {
   });
 
   describe('validation', () => {
-    it('should throw on duplicate keys', () => {
-      expect(() =>
-        User.updateMany([
-          { id: 1, name: 'a' },
-          { id: 1, name: 'b' },
-        ]),
-      ).toThrow('Duplicate key');
-    });
-
     it('should ignore undefined fields in all rows', () => {
       expectSql(
         User.updateMany([
@@ -1642,9 +1640,9 @@ describe('updateMany', () => {
         `
           WITH q AS (
             UPDATE "schema"."user"
-            SET "name" = "v"."name"::text, "updated_at" = now()
+            SET "updated_at" = now(), "name" = "v"."name"
             FROM (VALUES ($1::int4, $2::text), ($3, $4)) "v"("id", "name")
-            WHERE "user"."id" = "v"."id"::int4
+            WHERE "user"."id" = "v"."id"
             RETURNING NULL
           )
           SELECT *, NULL FROM q
@@ -1663,7 +1661,7 @@ describe('updateMany', () => {
         User.updateMany([
           { id: 1, name: 'a', password: 'p' },
           { id: 2, name: 'b', password: undefined },
-        ]),
+        ]).toSQL(),
       ).toThrow('different columns');
     });
 
@@ -1672,7 +1670,7 @@ describe('updateMany', () => {
         User.updateMany([
           { id: 1, name: 'a' },
           { id: 2, name: 'b', password: 'p' },
-        ]),
+        ]).toSQL(),
       ).toThrow('different columns');
     });
 
@@ -1681,7 +1679,9 @@ describe('updateMany', () => {
         User.updateMany([
           { id: 1, name: 'a', age: 18 },
           { id: 2, name: 'b' },
-        ]).set({ age: 20 }),
+        ])
+          .set({ age: 20 })
+          .toSQL(),
       ).toThrow('different columns');
     });
 
@@ -1690,7 +1690,7 @@ describe('updateMany', () => {
         TableWithReadOnly.updateMany([
           // @ts-expect-error value is readOnly
           { id: 1, key: 'a', value: 42 },
-        ]),
+        ]).toSQL(),
       ).toThrow('Trying to update a readonly column');
     });
 
@@ -1702,10 +1702,17 @@ describe('updateMany', () => {
       expect(result).toEqual([]);
     });
 
-    it('should throw on expression as key value', () => {
-      expect(() =>
-        User.updateMany([{ id: sql`1` as never, name: 'a' }]),
-      ).toThrow('must be a concrete value, not an expression');
+    it('should work with an expression as key value', () => {
+      expectSql(
+        User.updateManyOptional([{ id: sql`1`, name: 'a' }]).toSQL(),
+        `
+          UPDATE "schema"."user"
+          SET "updated_at" = now(), "name" = "v"."name"
+          FROM (VALUES (1::int4, $1::text)) "v"("id", "name")
+          WHERE "user"."id" = "v"."id"
+        `,
+        ['a'],
+      );
     });
 
     it('should support expression values inside VALUES', () => {
@@ -1713,9 +1720,9 @@ describe('updateMany', () => {
         User.updateManyOptional([{ id: 1, name: sql`'expr'` }]).toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "updated_at" = now()
+          SET "updated_at" = now(), "name" = "v"."name"
           FROM (VALUES ($1::int4, 'expr'::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
+          WHERE "user"."id" = "v"."id"
         `,
         [1],
       );
@@ -1728,9 +1735,9 @@ describe('updateMany', () => {
           .toSQL(),
         `
           UPDATE "schema"."user"
-          SET "name" = "v"."name"::text, "updated_at" = now()
+          SET "updated_at" = now(), "name" = "v"."name"
           FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
-          WHERE "user"."id" = "v"."id"::int4
+          WHERE "user"."id" = "v"."id"
         `,
         [1, 'a'],
       );
@@ -1741,9 +1748,9 @@ describe('updateMany', () => {
         Message.updateManyOptional([{ id: 1, meta: { foo: 1 } }]).toSQL(),
         `
           UPDATE "schema"."message"
-          SET "meta" = "v"."meta"::jsonb, "updated_at" = now()
+          SET "updated_at" = now(), "meta" = "v"."meta"
           FROM (VALUES ($1::int4, $2::jsonb)) "v"("id", "meta")
-          WHERE "message"."id" = "v"."id"::int4
+          WHERE "message"."id" = "v"."id"
         `,
         [1, '{"foo":1}'],
       );

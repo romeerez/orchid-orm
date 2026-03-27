@@ -228,23 +228,25 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
   cb: QueryBeforeActionHook,
 ): T => {
   return before(q, 'Update', (q) => {
-    const columns: string[] = [];
-    for (const item of q.q.updateData) {
-      if (typeof item === 'object') {
-        columns.push(...Object.keys(item));
-      }
-    }
-    if (q.q.updateMany) {
-      const columnsSet = new Set(columns);
-      for (const col of q.q.updateMany.setColumns) {
-        if (!columnsSet.has(col)) {
-          columns.push(col);
-          columnsSet.add(col);
+    const columns = new Set<string>();
+
+    if (q.q.updateData) {
+      for (const item of q.q.updateData) {
+        if (typeof item === 'object') {
+          for (const key in item) {
+            columns.add(key);
+          }
         }
       }
     }
 
-    return cb(new QueryHookUtils(q, columns, 'hookUpdateSet'));
+    if (q.q.updateMany) {
+      for (const key of q.q.updateMany.setColumns) {
+        columns.add(key);
+      }
+    }
+
+    return cb(new QueryHookUtils(q, [...columns], 'hookUpdateSet'));
   });
 };
 

@@ -25,7 +25,7 @@ export class Clear {
         delete q.q.or;
       } else if (clear === 'counters') {
         if ('type' in q.q && q.q.type === 'update') {
-          q.q.updateData = q.q.updateData.filter((item) => {
+          q.q.updateData = q.q.updateData?.filter((item) => {
             if (!isExpression(item) && typeof item !== 'function') {
               let removed = false;
               for (const key in item) {

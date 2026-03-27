@@ -317,16 +317,14 @@ export interface QueryData
 
   /** update **/
 
-  updateData: UpdateQueryDataItem[];
+  updateData?: UpdateQueryDataItem[];
   updateMany?: UpdateManyQueryData;
 }
 
 export interface UpdateManyQueryData {
-  keys: string[];
-  columns: string[];
+  primaryKeys: string[];
   setColumns: string[];
-  values: unknown[][];
-  count: number;
+  data: RecordUnknown[];
   strict?: boolean;
 }
 

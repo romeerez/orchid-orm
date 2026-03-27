@@ -8,8 +8,8 @@ import {
   SetQueryReturnsRowCountMany,
   SetQueryResult,
 } from '../../query';
-import { throwIfNoWhere } from '../../query.utils';
-import { QueryHasWhere } from '../where/where';
+import { throwIfNoWhere, throwOnReadOnlyUpdate } from '../../query.utils';
+import { _queryWhere, QueryHasWhere } from '../where/where';
 import {
   anyShape,
   Column,
@@ -45,8 +45,9 @@ import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
 import { requirePrimaryKeys } from '../../query-columns/primary-keys';
 import { resolveSubQueryCallback } from '../../sub-query/sub-query';
-import { pushQueryValueImmutable } from '../../query-data';
+import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
+import { RefExpression } from '../../expressions/ref-expression';
 
 export interface UpdateSelf
   extends PickQuerySelectable,
@@ -136,27 +137,6 @@ export type ChangeCountArg<T extends UpdateSelf> =
         : number | string | bigint;
     };
 
-export interface UpdateCtxCollect {
-  data: RecordUnknown;
-}
-
-const throwOnReadOnly = (q: unknown, column: Column.Pick.Data, key: string) => {
-  if (column.data.appReadOnly || column.data.readOnly) {
-    throw new OrchidOrmInternalError(
-      q as Query,
-      'Trying to update a readonly column',
-      { column: key },
-    );
-  }
-};
-
-// Helper: require PK columns with their query types (for WHERE matching)
-type ShapePrimaryKeyQueryTypes<Shape extends Column.QueryColumns> = {
-  [K in keyof Shape as Shape[K] extends { data: { primaryKey: string } }
-    ? K
-    : never]: Shape[K]['queryType'];
-};
-
 // `type` instead of `interface`: PickQueryResultReturnTypeUniqueColumns and
 // PickQueryUniqueProperties both declare `internal` with different shapes,
 // which `interface extends` cannot merge.
@@ -165,9 +145,13 @@ type UpdateManyBySelf = UpdateSelf &
   PickQueryUniqueProperties;
 
 // Data type for updateMany / updateManyOptional (PK-based)
-type UpdateManyData<T extends UpdateSelf> = (ShapePrimaryKeyQueryTypes<
-  T['shape']
-> & {
+type UpdateManyData<T extends UpdateSelf> = ({
+  [K in keyof T['shape'] as T['shape'][K] extends {
+    data: { primaryKey: string };
+  }
+    ? K
+    : never]: T['shape'][K]['queryType'] | Expression;
+} & {
   [P in keyof T['inputType']]?: T['inputType'][P] | Expression;
 })[];
 
@@ -204,140 +188,44 @@ type UpdateManyResult<T extends UpdateSelf> = T['__hasSelect'] extends true
 
 const _queryUpdateMany = <T extends UpdateSelf>(
   self: T,
-  keys: string[],
+  primaryKeys: string[],
   data: RecordUnknown[],
   strict: boolean,
 ): T => {
   const query = self as unknown as Query;
   const { q } = query;
-
-  // Keys validation
-  if (!keys.length) {
-    throw new OrchidOrmInternalError(
-      query,
-      'updateMany requires at least one key column',
-    );
-  }
   const { shape } = q;
-  for (const key of keys) {
-    if (!shape[key]) {
-      throw new OrchidOrmInternalError(query, `Unknown key column: ${key}`, {
-        column: key,
-      });
-    }
-  }
 
-  // Normalize return type
   q.type = 'update';
-  const returnCount = !q.select;
-  if (returnCount) {
-    if (q.returnType !== 'void') {
-      q.returningMany = true;
-      q.returnType = 'valueOrThrow';
-      q.returning = true;
-    }
-  } else {
-    // When select is present, ensure many-return semantics
-    const rt = q.returnType;
-    if (rt === 'one' || rt === 'oneOrThrow') {
-      q.returningMany = true;
-      q.returnType = 'all';
-    } else if (rt === 'value' || rt === 'valueOrThrow') {
-      q.returningMany = true;
-      q.returnType = 'pluck';
-    } else {
-      q.returningMany = !rt || rt === 'all';
-    }
-  }
+  setUpdateReturning(q);
 
   if (!data.length) {
     return _queryNone(query) as never;
   }
 
-  // Validate keys, check for duplicates, determine setColumns, validate consistency
-  const seenKeys = new Set<string>();
-  const keysSet = new Set(keys);
-  const setColumns: string[] = [];
-  let setColumnsSet = new Set<string>();
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-
-    // Key validation + dedup
-    const keyParts: unknown[] = [];
-    for (const key of keys) {
-      const val = row[key];
-      if (isExpression(val)) {
-        throw new OrchidOrmInternalError(
-          query,
-          `Key column "${key}" must be a concrete value, not an expression, in row ${i}`,
-        );
-      }
-      keyParts.push(val);
-    }
-    const keyStr =
-      keyParts.length === 1 ? String(keyParts[0]) : JSON.stringify(keyParts);
-    if (seenKeys.has(keyStr)) {
-      throw new OrchidOrmInternalError(
-        query,
-        `Duplicate key in updateMany data at row ${i}`,
-      );
-    }
-    seenKeys.add(keyStr);
-
-    // Determine setColumns from first row, validate subsequent rows match
-    const rowCols: string[] = [];
-    for (const key in row) {
-      if (keysSet.has(key)) continue;
-      if (row[key] === undefined) continue;
-
-      const column = shape[key];
-      if (!column) continue;
-      if (column.data.virtual) continue;
-      throwOnReadOnly(query, column, key);
-
-      rowCols.push(key);
-    }
-
-    if (i === 0) {
-      setColumns.push(...rowCols);
-      setColumnsSet = new Set(setColumns);
-    } else if (
-      rowCols.length !== setColumns.length ||
-      rowCols.some((c) => !setColumnsSet.has(c))
-    ) {
-      throw new OrchidOrmInternalError(
-        query,
-        `Row ${i} has different columns than row 0. Expected: [${setColumns.join(
-          ', ',
-        )}], got: [${rowCols.join(', ')}]`,
-      );
-    }
-  }
-
-  const columns = [...keys, ...setColumns];
-
-  const values: unknown[][] = [];
-  for (const row of data) {
-    const encoded: unknown[] = [];
-    for (const col of columns) {
-      let value = row[col];
-      if (value !== null && value !== undefined && !isExpression(value)) {
-        const encode = shape[col]?.data.encode;
-        if (encode) value = encode(value);
-      }
-      encoded.push(value);
-    }
-    values.push(encoded);
-  }
+  const firstRow = data[0];
+  const setColumns = Object.keys(firstRow).filter(
+    (key) => !primaryKeys.includes(key) && firstRow[key] !== undefined,
+  );
 
   q.updateMany = {
-    keys,
-    columns,
+    primaryKeys,
     setColumns,
-    values,
-    count: data.length,
+    data,
     strict,
   };
+
+  _queryWhere(query, [
+    Object.fromEntries(
+      primaryKeys.map((key) => {
+        const column = shape[key];
+        return [
+          key,
+          new RefExpression(column, query, `v.${column.data.name || key}`),
+        ];
+      }),
+    ),
+  ]);
 
   return query as never;
 };
@@ -369,7 +257,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 
       const column = self.shape[key];
       if (column) {
-        throwOnReadOnly(self, column as unknown as Column.Pick.Data, key);
+        throwOnReadOnlyUpdate(self, column as unknown as Column.Pick.Data, key);
       }
     }
   } else {
@@ -377,7 +265,7 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
 
     const column = self.shape[data as string];
     if (column) {
-      throwOnReadOnly(
+      throwOnReadOnlyUpdate(
         self,
         column as unknown as Column.Pick.Data,
         data as string,
@@ -397,7 +285,6 @@ export const _queryUpdate = <T extends UpdateSelf>(
   const { q } = query;
 
   q.type = 'update';
-  const returnCount = !q.select;
 
   const set = { ...(arg as RecordUnknown) };
   pushQueryValueImmutable(query, 'updateData', set);
@@ -414,7 +301,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
       (item as VirtualColumn<ColumnSchemaConfig>).update?.(query, set);
       delete set[key];
     } else {
-      if (item) throwOnReadOnly(query, item, key);
+      if (item) throwOnReadOnlyUpdate(query, item, key);
 
       let value = set[key];
       if (typeof value === 'function') {
@@ -455,13 +342,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
     }
   }
 
-  // Skip returnType normalization when updateMany is set —
-  // _queryUpdateMany already configured these, and .set() must not override them.
-  if (returnCount && !q.updateMany) {
-    q.returningMany = !q.returnType || q.returnType === 'all';
-    q.returnType = 'valueOrThrow';
-    q.returning = true;
-  }
+  setUpdateReturning(q);
 
   // assuming conditions are set by `updateFrom` or `updateMany`
   if (!q.updateFrom && !q.updateMany) {
@@ -469,6 +350,17 @@ export const _queryUpdate = <T extends UpdateSelf>(
   }
 
   return query as never;
+};
+
+const setUpdateReturning = (q: QueryData) => {
+  const returnCount = !q.select;
+  // Skip returnType normalization when updateMany is set —
+  // _queryUpdateMany already configured these, and .set() must not override them.
+  if (returnCount && !q.updateMany) {
+    q.returningMany = !q.returnType || q.returnType === 'all';
+    q.returnType = 'valueOrThrow';
+    q.returning = true;
+  }
 };
 
 export const _queryUpdateOrThrow = <T extends UpdateSelf>(
