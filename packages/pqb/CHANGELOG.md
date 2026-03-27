@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.11
+
+### Patch Changes
+
+- 6106f6f: Add `updateMany`, `updateManyOptional`, `updateManyBy`, `updateManyByOptional` (#668)
+
 ## 0.61.10
 
 ### Patch Changes
