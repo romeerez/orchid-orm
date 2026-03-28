@@ -35,6 +35,10 @@ jest.mock(
   },
 );
 
+jest.mock('pqb/bun-sql', () => require('./packages/pqb/src/adapters/bun-sql'), {
+  virtual: true,
+});
+
 jest.mock('rake-db', () => require('./packages/rake-db/src'), {
   virtual: true,
 });
@@ -58,6 +62,14 @@ jest.mock(
 jest.mock('test-utils', () => require('./packages/test-utils/src'), {
   virtual: true,
 });
+
+jest.mock(
+  'test-utils/runtime',
+  () => require('./packages/test-utils/src/runtime'),
+  {
+    virtual: true,
+  },
+);
 
 jest.mock('./packages/pqb/src/utils', () => {
   const actual = jest.requireActual('./packages/pqb/src/utils');

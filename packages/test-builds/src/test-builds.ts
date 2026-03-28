@@ -1,12 +1,14 @@
 import { createBaseTable } from 'orchid-orm';
 import { orchidORM as orchidOrmPostgresJs } from 'orchid-orm/postgres-js';
 import { orchidORM as orchidOrmNodePostgres } from 'orchid-orm/node-postgres';
+import { orchidORM as orchidOrmBunSql } from 'orchid-orm/bun-sql';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { valibotSchemaConfig } from 'orchid-orm-valibot';
 import { z } from 'zod/v4';
 import { any } from 'valibot';
 import { rakeDb as rakeDbPostgresJs } from 'orchid-orm/migrations/postgres-js';
 import { rakeDb as rakeDbNodePostgres } from 'orchid-orm/migrations/node-postgres';
+import { rakeDb as rakeDbBunSql } from 'orchid-orm/migrations/bun-sql';
 import { ormFactory, tableFactory } from 'orchid-orm-test-factory';
 
 /** ORM **/
@@ -77,27 +79,39 @@ export const dbValibotNodePostgres = orchidOrmNodePostgres(
   },
 );
 
+export const dbValibotBunSql = orchidOrmBunSql(
+  {},
+  {
+    table: TableValibot,
+  },
+);
+
 /** rake-db **/
 
-export const changePostgresJs = rakeDbPostgresJs(
-  {},
-  {
-    baseTable: BaseTableZod,
-    dbPath: './db',
-    migrationsPath: './migrations',
-    import: (path) => import(path),
-  },
+const rakeDbConfig = {
+  baseTable: BaseTableZod,
+  dbPath: './db',
+  migrationsPath: './migrations',
+  import: (path: string) => import(path),
+};
+
+export const changePostgresJs: unknown = rakeDbPostgresJs(rakeDbConfig);
+
+export const changeNodePostgres: unknown = rakeDbNodePostgres(rakeDbConfig);
+
+export const changeBunSql: unknown = rakeDbBunSql(rakeDbConfig);
+
+export const runChangePostgresJs = rakeDbPostgresJs.run(
+  {} as never,
+  rakeDbConfig,
 );
 
-export const changeNodePostgres = rakeDbNodePostgres(
-  {},
-  {
-    baseTable: BaseTableZod,
-    dbPath: './db',
-    migrationsPath: './migrations',
-    import: (path) => import(path),
-  },
+export const runChangeNodePostgres = rakeDbNodePostgres.run(
+  {} as never,
+  rakeDbConfig,
 );
+
+export const runChangeBunSql = rakeDbBunSql.run({} as never, rakeDbConfig);
 
 /** test-factory **/
 
