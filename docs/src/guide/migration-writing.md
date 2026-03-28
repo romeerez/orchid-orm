@@ -1106,6 +1106,62 @@ change(async (db) => {
 });
 ```
 
+## changeDefaultPrivileges
+
+[//]: # 'has JSDoc'
+
+Grants or revokes default privileges for objects created in the future by a specific role.
+
+The `grantee` is required. `schema` is optional - when omitted, applies globally.
+
+Use `all: true` to grant ALL privileges on all object types, or `allGrantable: true` to grant ALL with GRANT OPTION. When `allGrantable` is provided, `all` is ignored.
+
+Supported privileges per object type:
+
+- Tables: ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN (MAINTAIN is supported starting with PostgreSQL 17)
+- Sequences: ALL, USAGE, SELECT, UPDATE
+- Functions: ALL, EXECUTE
+- Types: ALL, USAGE
+- Schemas: ALL, USAGE, CREATE
+- Large Objects: ALL, SELECT, UPDATE
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  // Grant SELECT and INSERT on future tables
+  await db.changeDefaultPrivileges({
+    grantee: 'app_user',
+    schema: 'public',
+    grant: {
+      tables: {
+        privileges: ['SELECT', 'INSERT'],
+      },
+    },
+  });
+
+  // Grant ALL on all object types with grant option
+  await db.changeDefaultPrivileges({
+    grantee: 'admin_role',
+    schema: 'app_schema',
+    grant: {
+      allGrantable: true,
+    },
+  });
+
+  // Revoke specific privileges
+  await db.changeDefaultPrivileges({
+    grantee: 'limited_user',
+    schema: 'public',
+    revoke: {
+      tables: {
+        privileges: ['DELETE', 'TRUNCATE'],
+      },
+    },
+  });
+});
+```
+
 ## tableExists
 
 [//]: # 'has JSDoc'

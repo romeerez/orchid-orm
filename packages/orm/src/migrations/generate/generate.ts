@@ -16,6 +16,7 @@ import {
 } from 'pqb';
 import {
   concatSchemaAndName,
+  getDbVersion,
   getSchemaAndTableFromName,
   introspectDbSchema,
   IntrospectedStructure,
@@ -100,6 +101,7 @@ export const generate = async (
     adapters,
     config,
     rolesDbStructureParam,
+    internal.roles ? { loadDefaultPrivileges: true } : undefined,
     afterPull,
   );
 
@@ -151,6 +153,7 @@ export const generate = async (
       migrationCode,
       generateMigrationParams,
       rolesDbStructureParam,
+      internal.roles ? { loadDefaultPrivileges: true } : undefined,
     );
 
     if (result !== undefined) {
@@ -232,13 +235,17 @@ const migrateAndPullStructures = async (
   adapters: AdapterBase[],
   config: RakeDbConfig,
   roles?: { whereSql?: string },
+  defaultPrivileges?: { loadDefaultPrivileges?: boolean },
   afterPull?: AfterPull,
 ): Promise<{
   dbStructure: IntrospectedStructure;
 }> => {
   if (afterPull) {
+    const version = await getDbVersion(adapters[0]);
+
     return {
       dbStructure: {
+        version,
         schemas: [],
         tables: [],
         views: [],
@@ -262,6 +269,7 @@ const migrateAndPullStructures = async (
     adapters.map((adapter) =>
       introspectDbSchema(adapter, {
         roles,
+        loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
       }),
     ),
   );
@@ -331,6 +339,8 @@ const getActualItems = async (
     tables: [],
     domains: [],
   };
+
+  codeItems.schemas.add(currentSchema);
 
   const domains = new Map<string, CodeDomain>();
 
@@ -428,6 +438,17 @@ const getActualItems = async (
   for (const domain of domains.values()) {
     codeItems.schemas.add(domain.schemaName);
     codeItems.domains.push(domain);
+  }
+
+  // Add schemas from role default privileges to prevent them from being dropped
+  if (internal.roles) {
+    for (const role of internal.roles) {
+      if (role.defaultPrivileges) {
+        for (const privilege of role.defaultPrivileges) {
+          if (privilege.schema) codeItems.schemas.add(privilege.schema);
+        }
+      }
+    }
   }
 
   return codeItems;

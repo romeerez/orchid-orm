@@ -25,6 +25,7 @@ jest.mock('../commands/new-migration', () => ({
 }));
 
 const structure = {
+  version: 17,
   schemas: [],
   tables: [],
   views: [],
@@ -82,7 +83,7 @@ describe('pull', () => {
 
     for (const key in structure) {
       const arr = structure[key as keyof typeof structure];
-      if (arr) arr.length = 0;
+      if (Array.isArray(arr)) arr.length = 0;
     }
 
     asMock(introspectDbSchema).mockResolvedValue(structure);

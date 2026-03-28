@@ -41,6 +41,10 @@ import {
 import { createView } from './create-view';
 import { RakeDbConfig } from '../config';
 import { changeRole, createOrDropRole, renameRole } from './role';
+import {
+  changeDefaultPrivileges,
+  ChangeDefaultPrivilegesArg,
+} from './default-privilege';
 import { DbStructure } from '../generate/db-structure';
 
 // Drop mode to use when dropping various database entities.
@@ -1444,6 +1448,10 @@ export class Migration<CT = unknown> {
       params.from || emptyObject,
       params.to,
     );
+  }
+
+  changeDefaultPrivileges(params: ChangeDefaultPrivilegesArg): Promise<void> {
+    return changeDefaultPrivileges(this, this.up, params);
   }
 }
 

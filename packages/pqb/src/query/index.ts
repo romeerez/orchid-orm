@@ -45,6 +45,7 @@ export * from './extra-features/merge/merge';
 export * from './extra-features/roles/roles';
 export * from './extra-features/scope/scope';
 export * from './extra-features/search/search.sql';
+export * from './extra-features/default-privileges/default-privileges';
 export * from './query-columns/query-columns';
 export * from './query-columns/primary-keys';
 export * from './sql/check-if-a-simple-query';

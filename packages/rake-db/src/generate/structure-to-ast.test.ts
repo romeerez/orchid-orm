@@ -43,6 +43,7 @@ const ctx: StructureToAstCtx = {
 };
 
 const structure = {
+  version: 17,
   schemas: [],
   tables: [],
   views: [],
@@ -68,7 +69,7 @@ describe('structureToAst', () => {
 
     for (const key in structure) {
       const arr = structure[key as keyof typeof structure];
-      if (arr) arr.length = 0;
+      if (Array.isArray(arr)) arr.length = 0;
     }
   });
 

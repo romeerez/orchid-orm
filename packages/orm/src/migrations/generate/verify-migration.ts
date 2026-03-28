@@ -16,6 +16,7 @@ export const verifyMigration = async (
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,
   roles?: { whereSql?: string },
+  defaultPrivileges?: { loadDefaultPrivileges?: boolean },
 ): Promise<string | false | undefined> => {
   const migrationFn = new Function('change', migrationCode);
 
@@ -41,6 +42,7 @@ export const verifyMigration = async (
 
       const dbStructure = await introspectDbSchema(trx, {
         roles,
+        loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
       });
       generateMigrationParams.verifying = true;
 

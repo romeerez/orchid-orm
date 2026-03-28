@@ -19,7 +19,7 @@ export {
   redo,
 } from './commands/migrate-or-rollback';
 export type { ChangeCallback } from './migration/change';
-export { introspectDbSchema } from './generate/db-structure';
+export { introspectDbSchema, getDbVersion } from './generate/db-structure';
 export type {
   DbStructure,
   IntrospectedStructure,

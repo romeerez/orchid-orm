@@ -206,9 +206,24 @@ export const astToGenerateItem = (
       deps.push(tableSchema, `${tableSchema}.${tableName}`);
       break;
     }
-    case 'role':
-    case 'changeRole':
+    case 'role': {
+      deps.push(`role:${ast.name}`);
+      break;
+    }
+    case 'changeRole': {
+      deps.push(`role:${ast.name}`);
+      break;
+    }
     case 'renameRole': {
+      drop.push(ast.from);
+      add.push(ast.to);
+      deps.push(`role:${ast.from}`, `role:${ast.to}`);
+      break;
+    }
+    case 'defaultPrivilege': {
+      if (ast.schema) deps.push(ast.schema);
+      if (ast.owner) deps.push(`role:${ast.owner}`);
+      deps.push(`role:${ast.grantee}`);
       break;
     }
     default:
