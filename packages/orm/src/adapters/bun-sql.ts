@@ -1,32 +1,32 @@
 import {
-  TableClasses,
   OrchidORM,
   OrchidOrmParam,
   orchidORMWithAdapter,
+  TableClasses,
 } from 'orchid-orm';
 import {
-  PostgresJsAdapter,
-  PostgresJsAdapterOptions,
+  BunSqlAdapter,
+  BunSqlAdapterOptions,
   createDb as cdb,
-} from 'pqb/postgres-js';
+} from 'pqb/bun-sql';
 import { DbSharedOptions } from 'pqb';
 
-export interface PostgresJsOrchidORMOptions
-  extends PostgresJsAdapterOptions,
+export interface BunSqlOrchidORMOptions
+  extends BunSqlAdapterOptions,
     DbSharedOptions {}
 
-export const Adapter = PostgresJsAdapter;
+export const Adapter = BunSqlAdapter;
 
 export const createDb = cdb;
 
 export const orchidORM = <T extends TableClasses>(
-  { log, ...options }: OrchidOrmParam<PostgresJsOrchidORMOptions>,
+  { log, ...options }: OrchidOrmParam<BunSqlOrchidORMOptions>,
   tables: T,
 ): OrchidORM<T> => {
   return orchidORMWithAdapter(
     {
       ...options,
-      adapter: new PostgresJsAdapter(options),
+      adapter: new BunSqlAdapter(options),
       log,
     },
     tables,
