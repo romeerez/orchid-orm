@@ -41,6 +41,10 @@ import {
 import { createView } from './create-view';
 import { RakeDbConfig } from '../config';
 import { changeRole, createOrDropRole, renameRole } from './role';
+import {
+  changeDefaultPrivileges,
+  ChangeDefaultPrivilegesArg,
+} from './default-privilege';
 import { DbStructure } from '../generate/db-structure';
 
 // Drop mode to use when dropping various database entities.
@@ -123,14 +127,18 @@ export const createMigrationInterface = (
   const log = logParamToLogObject(config.logger || console, config.log);
 
   adapter.query = ((text, values) => {
-    return wrapWithLog(log, text, values, () =>
-      query.call(adapter, text, values),
+    return wrapWithEnhancingError(
+      text,
+      values,
+      wrapWithLog(log, text, values, () => query.call(adapter, text, values)),
     );
   }) as typeof adapter.query;
 
   adapter.arrays = ((text, values) => {
-    return wrapWithLog(log, text, values, () =>
-      arrays.call(adapter, text, values),
+    return wrapWithEnhancingError(
+      text,
+      values,
+      wrapWithLog(log, text, values, () => arrays.call(adapter, text, values)),
     );
   }) as typeof adapter.arrays;
 
@@ -1445,7 +1453,35 @@ export class Migration<CT = unknown> {
       params.to,
     );
   }
+
+  changeDefaultPrivileges(params: ChangeDefaultPrivilegesArg): Promise<void> {
+    return changeDefaultPrivileges(this, this.up, params);
+  }
 }
+
+const wrapWithEnhancingError = async <Result>(
+  text: string,
+  values: unknown[] | undefined,
+  promise: Promise<Result>,
+): Promise<Result> => {
+  try {
+    return await promise;
+  } catch (err) {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      typeof err.message === 'string' &&
+      err.constructor.name === 'PostgresError'
+    ) {
+      err.message += `\nSQL: ${text}${
+        values ? `\nVariables: ${JSON.stringify(values)}` : ''
+      }`;
+      throw new (err.constructor as { new (err: unknown): unknown })(err);
+    }
+    throw err;
+  }
+};
 
 /**
  * If `log` object is specified, it will perform the query with logging.

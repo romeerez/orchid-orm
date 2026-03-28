@@ -441,9 +441,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
 
       _prependWith(self, asFn, upsertQuery);
     } else if (params.delete) {
-      _hookSelectColumns(self, foreignKeys, (a) => {
-        console.log(a);
-      });
+      _hookSelectColumns(self, foreignKeys, noop);
 
       disconnect(update, foreignKeys);
 

@@ -685,7 +685,7 @@ const makeGeneratorForColumn = (
       for (const sectionKey in faker) {
         for (const key in faker[sectionKey as keyof typeof faker]) {
           if (key === strippedKey) {
-            // @eslint-disable-next-line typescript-eslint/no-exlicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const fn = (faker as any)[sectionKey][key];
             gen = () => String(fn());
 

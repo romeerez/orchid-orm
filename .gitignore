@@ -11,6 +11,8 @@ coverage-summary.json
 .pnpm-debug.log
 trace/
 packages/benchmarks
+notes/
+!notes/ # LLM can read this
 
 # created in CI
 .pnpm-store/

@@ -3,6 +3,17 @@ import { ComposeMigrationParams } from '../composeMigration';
 import { deepCompare } from 'pqb';
 import { promptCreateOrRename } from './generators.utils';
 
+const defaults = {
+  super: false,
+  inherit: false,
+  createRole: false,
+  createDb: false,
+  canLogin: false,
+  replication: false,
+  connLimit: -1,
+  bypassRls: false,
+};
+
 export const processRoles = async (
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
@@ -10,35 +21,37 @@ export const processRoles = async (
 ) => {
   if (!dbStructure.roles || !roles) return;
 
-  const codeRoles = roles.map(
-    (role): DbStructure.Role => ({
-      super: false,
-      inherit: false,
-      createRole: false,
-      createDb: false,
-      canLogin: false,
-      replication: false,
-      connLimit: -1,
-      bypassRls: false,
-      ...role,
-    }),
-  );
+  const codeRoles = roles.map((role): DbStructure.Role => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { defaultPrivileges: _, ...roleWithoutPrivileges } = role;
+    return {
+      ...defaults,
+      ...roleWithoutPrivileges,
+    };
+  });
 
   const found = new Set<string>();
   const dropRoles: DbStructure.Role[] = [];
 
   for (const dbRole of dbStructure.roles) {
+    // Strip defaultPrivileges from dbRole for comparison
+    const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      defaultPrivileges: _,
+      ...dbRoleWithoutPrivileges
+    } = dbRole as DbStructure.Role & { defaultPrivileges?: unknown };
+
     const codeRole = codeRoles.find(
       (codeRole) => dbRole.name === codeRole.name,
     );
     if (codeRole) {
       found.add(dbRole.name);
 
-      if (!deepCompare(dbRole, codeRole)) {
+      if (!deepCompare(dbRoleWithoutPrivileges, codeRole)) {
         ast.push({
           type: 'changeRole',
           name: dbRole.name,
-          from: dbRole,
+          from: dbRoleWithoutPrivileges,
           to: codeRole,
         });
       }

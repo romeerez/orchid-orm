@@ -4,6 +4,7 @@ import {
   RecordOptionalString,
   RecordUnknown,
   SearchWeight,
+  DefaultPrivileges,
 } from 'pqb';
 import { RakeDbAst } from '../ast';
 
@@ -182,6 +183,40 @@ export namespace DbStructure {
     validUntil?: Date;
     bypassRls: boolean;
     config?: RecordOptionalString;
+  }
+
+  export interface DefaultPrivilegeConfig {
+    privilege: string;
+    isGrantable: boolean;
+  }
+
+  export interface DefaultPrivilegeObjectConfig {
+    object: DefaultPrivileges.ObjectType;
+    privilegeConfigs: DefaultPrivilegeConfig[];
+  }
+
+  export interface DefaultPrivilege {
+    owner?: string;
+    grantee: string;
+    schema?: string;
+    objectConfigs: DefaultPrivilegeObjectConfig[];
+  }
+}
+
+namespace RawDbStructure {
+  export interface DefaultPrivilege {
+    grantor: string;
+    grantee: string;
+    schema?: string;
+    object:
+      | 'relation'
+      | 'sequence'
+      | 'function'
+      | 'type'
+      | 'schema'
+      | 'large_object';
+    privileges: string[];
+    isGrantables: boolean[];
   }
 }
 
@@ -603,6 +638,26 @@ const roleSql = (params: {
   params.whereSql ?? `rolname != 'postgres' AND rolname !~ '^pg_'`
 }`;
 
+const defaultPrivilegesSql = `SELECT COALESCE(json_agg(t.*), '[]') FROM (
+  SELECT
+    (ae.grantor)::regrole "grantor",
+    (ae.grantee)::regrole "grantee",
+    (SELECT nspname FROM pg_namespace n WHERE n.oid = d.defaclnamespace) "schema",
+    CASE d.defaclobjtype
+      WHEN 'r' THEN 'relation'
+      WHEN 'S' THEN 'sequence'
+      WHEN 'f' THEN 'function'
+      WHEN 'T' THEN 'type'
+      WHEN 'n' THEN 'schema'
+      WHEN 'L' THEN 'large_object'
+      END "object",
+    array_agg(ae.privilege_type) "privileges",
+    array_agg(ae.is_grantable) "isGrantables"
+  FROM pg_default_acl d
+  JOIN LATERAL aclexplode(d.defaclacl) ae ON true
+  GROUP BY "grantor", "grantee", "schema", "object"
+) t`;
+
 // procedures
 // `SELECT
 //   n.nspname AS "schemaName",
@@ -645,9 +700,14 @@ const sql = (version: number, params?: IntrospectDbStructureParams) =>
   )}, ${jsonAgg(domainsSql, 'domains')}, ${jsonAgg(
     collationsSql(version),
     'collations',
-  )}${params?.roles ? `, (${roleSql(params.roles)}) AS "roles"` : ''}`;
+  )}${params?.roles ? `, (${roleSql(params.roles)}) AS "roles"` : ''}${
+    params?.loadDefaultPrivileges
+      ? `, (${defaultPrivilegesSql}) AS "defaultPrivileges"`
+      : ''
+  }`;
 
 export interface IntrospectedStructure {
+  version: number;
   schemas: string[];
   tables: DbStructure.Table[];
   views: DbStructure.View[];
@@ -660,6 +720,24 @@ export interface IntrospectedStructure {
   domains: DbStructure.Domain[];
   collations: DbStructure.Collation[];
   roles?: DbStructure.Role[];
+  defaultPrivileges?: DbStructure.DefaultPrivilege[];
+  managedRolesSql?: string;
+}
+
+interface RawIntrospectedStructure {
+  schemas: string[];
+  tables: DbStructure.Table[];
+  views: DbStructure.View[];
+  indexes: DbStructure.Index[];
+  excludes: DbStructure.Exclude[];
+  constraints: DbStructure.Constraint[];
+  triggers: DbStructure.Trigger[];
+  extensions: DbStructure.Extension[];
+  enums: DbStructure.Enum[];
+  domains: DbStructure.Domain[];
+  collations: DbStructure.Collation[];
+  roles?: DbStructure.Role[];
+  defaultPrivileges?: RawDbStructure.DefaultPrivilege[];
   managedRolesSql?: string;
 }
 
@@ -667,27 +745,32 @@ interface IntrospectDbStructureParams {
   roles?: {
     whereSql?: string;
   };
+  loadDefaultPrivileges?: boolean;
+}
+
+export async function getDbVersion(db: AdapterBase): Promise<number> {
+  const {
+    rows: [{ version: versionString }],
+  } = await db.query<{ version: string }>('SELECT version()');
+
+  return +(versionString.match(/\d+/) as string[])[0];
 }
 
 export async function introspectDbSchema(
   db: AdapterBase,
   params?: IntrospectDbStructureParams,
 ): Promise<IntrospectedStructure> {
-  const {
-    rows: [{ version: versionString }],
-  } = await db.query<{ version: string }>('SELECT version()');
+  const version = await getDbVersion(db);
 
-  const version = +(versionString.match(/\d+/) as string[])[0];
+  const data = await db.query<RawIntrospectedStructure>(sql(version, params));
+  const raw = data.rows[0];
 
-  const data = await db.query<IntrospectedStructure>(sql(version, params));
-  const result = data.rows[0];
-
-  for (const domain of result.domains) {
+  for (const domain of raw.domains) {
     domain.checks = domain.checks?.filter((check) => check);
     nullsToUndefined(domain);
   }
 
-  for (const table of result.tables) {
+  for (const table of raw.tables) {
     for (const column of table.columns) {
       nullsToUndefined(column);
       if (column.identity) nullsToUndefined(column.identity);
@@ -701,7 +784,7 @@ export async function introspectDbSchema(
   const indexes: DbStructure.Index[] = [];
   const excludes: DbStructure.Exclude[] = [];
 
-  for (const index of result.indexes) {
+  for (const index of raw.indexes) {
     nullsToUndefined(index);
     for (const column of index.columns) {
       if (!('expression' in column)) continue;
@@ -782,11 +865,11 @@ export async function introspectDbSchema(
     ((index as DbStructure.Exclude).exclude ? excludes : indexes).push(index);
   }
 
-  result.indexes = indexes;
-  result.excludes = excludes;
+  raw.indexes = indexes;
+  raw.excludes = excludes;
 
-  if (result.roles) {
-    for (const role of result.roles) {
+  if (raw.roles) {
+    for (const role of raw.roles) {
       nullsToUndefined(role);
 
       if (role.validUntil) {
@@ -815,7 +898,62 @@ export async function introspectDbSchema(
     }
   }
 
-  return result;
+  return {
+    version,
+    ...raw,
+    defaultPrivileges: raw.defaultPrivileges && [
+      ...raw.defaultPrivileges
+        .reduce((acc, privilege) => {
+          nullsToUndefined(privilege);
+
+          const key = `${privilege.grantor}.${privilege.grantee}.${privilege.schema}`;
+          const existing = acc.get(key);
+
+          const objectType =
+            privilege.object === 'relation'
+              ? 'TABLES'
+              : privilege.object === 'sequence'
+              ? 'SEQUENCES'
+              : privilege.object === 'function'
+              ? 'FUNCTIONS'
+              : privilege.object === 'type'
+              ? 'TYPES'
+              : privilege.object === 'schema'
+              ? 'SCHEMAS'
+              : privilege.object === 'large_object'
+              ? 'LARGE_OBJECTS'
+              : null;
+
+          if (!objectType) {
+            throw new Error(
+              `Unknown default privilege object type: ${privilege.object}`,
+            );
+          }
+
+          const objectConfig: DbStructure.DefaultPrivilegeObjectConfig = {
+            object: objectType,
+            privilegeConfigs: privilege.privileges.map((priv, i) => ({
+              privilege: priv,
+              isGrantable: privilege.isGrantables[i],
+            })),
+          };
+
+          if (existing) {
+            existing.objectConfigs.push(objectConfig);
+          } else {
+            acc.set(key, {
+              owner: privilege.grantor,
+              grantee: privilege.grantee,
+              schema: privilege.schema,
+              objectConfigs: [objectConfig],
+            });
+          }
+
+          return acc;
+        }, new Map<string, DbStructure.DefaultPrivilege>())
+        .values(),
+    ],
+  };
 }
 
 const nullsToUndefined = (obj: EmptyObject) => {

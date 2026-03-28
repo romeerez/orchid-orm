@@ -472,6 +472,66 @@ export const db = orchidORM(
 );
 ```
 
+### defaultPrivileges
+
+Define default privileges for roles to automatically grant permissions on objects created in the future.
+
+This is configured per role, and can be set for specific schemas or globally.
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    roles: [
+      {
+        name: 'app_user',
+        // grant SELECT and INSERT on future tables in public schema
+        defaultPrivileges: {
+          schema: 'public',
+          tables: {
+            privileges: ['SELECT', 'INSERT'],
+          },
+        },
+      },
+      {
+        name: 'admin',
+        // grant ALL on all object types with grant option
+        defaultPrivileges: {
+          schema: 'app_schema',
+          allGrantable: true,
+        },
+      },
+      {
+        name: 'global_role',
+        // global default privileges (no schema specified)
+        defaultPrivileges: {
+          tables: {
+            privileges: ['SELECT'],
+          },
+          schemas: {
+            privileges: ['USAGE'],
+          },
+        },
+      },
+    ],
+  },
+  { ...tables },
+);
+```
+
+Supported object types and their privileges:
+
+| Object Type   | Privileges                                                                     |
+| ------------- | ------------------------------------------------------------------------------ |
+| Tables        | ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN\* |
+| Sequences     | ALL, USAGE, SELECT, UPDATE                                                     |
+| Functions     | ALL, EXECUTE                                                                   |
+| Types         | ALL, USAGE                                                                     |
+| Schemas       | ALL, USAGE, CREATE                                                             |
+| Large Objects | ALL, SELECT, UPDATE                                                            |
+
+\* MAINTAIN privilege is supported starting with PostgreSQL 17.
+
 ### generatorIgnore
 
 `db g` command attempts to drop all the database entities that it cannot find in the code.

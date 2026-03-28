@@ -6,13 +6,32 @@ import {
   toLine,
 } from '../rake-db.test-utils';
 import { raw, singleQuote } from 'pqb';
-import { asMock, sql } from 'test-utils';
+import { asMock, sql, testAdapter } from 'test-utils';
+import { createMigrationInterface } from './migration';
 
 const db = getDb();
 
 describe('migration', () => {
   beforeEach(() => {
     asMock(db.adapter.getSchema)?.mockRestore?.();
+  });
+
+  describe('querying db', () => {
+    afterAll(async () => {
+      await testAdapter.close();
+    });
+
+    it('should add SQL to the Postgres error class', async () => {
+      const db = createMigrationInterface(testAdapter, true, {
+        columnTypes: undefined,
+      });
+
+      const err = await db.query`invalid`.catch((err) => err);
+
+      expect(err).toMatchObject({
+        message: `syntax error at or near "invalid"\nSQL: invalid\nVariables: []`,
+      });
+    });
   });
 
   describe('renameTable', () => {
