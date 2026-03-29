@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.12
+
+### Patch Changes
+
+- a3623ee: Add support for default privileges (#611)
+
 ## 0.61.11
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.30.8
+
+### Patch Changes
+
+- a3623ee: Add support for default privileges (#611)
+- Updated dependencies [a3623ee]
+  - pqb@0.61.12
+
 ## 2.30.7
 
 ### Patch Changes

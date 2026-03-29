@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.64.9
+
+### Patch Changes
+
+- a3623ee: Add support for default privileges (#611)
+- Updated dependencies [a3623ee]
+  - rake-db@2.30.8
+  - pqb@0.61.12
+
 ## 1.64.8
 
 ### Patch Changes
