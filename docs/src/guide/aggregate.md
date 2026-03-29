@@ -1,3 +1,7 @@
+---
+description: Aggregate functions for queries including count, min, max, sum, avg, jsonAgg, stringAgg, and custom aggregates.
+---
+
 # Aggregate functions
 
 Various aggregate functions are supported (count, min, max, string_agg, etc.) and it's possible to call a custom aggregate function.
@@ -291,6 +295,10 @@ db.table
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `jsonObjectAgg` for `json_object_agg` and `jsonbObjectAgg` for `jsonb_object_agg` SQL aggregate functions.
+</llm-include>
+
 It does the construction of JSON objects, keys are provided strings and values can be table columns or raw SQL expressions, and returns `object` or `null` if no records.
 
 `jsonObjectAgg` is different from `jsonbObjectAgg` by internal representation in the database, `jsonObjectAgg` is a bit faster as it constructs a simple string.
@@ -322,6 +330,10 @@ db.table.select('id', {
 ## stringAgg
 
 [//]: # 'has JSDoc'
+
+<llm-include>
+Use `stringAgg` for the `string_agg` SQL aggregate function.
+</llm-include>
 
 Select joined strings, it returns a string or `null` if no records.
 

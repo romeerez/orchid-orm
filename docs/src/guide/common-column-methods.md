@@ -1,3 +1,7 @@
+---
+description: Common column methods including primaryKey, default, nullable, identity, readOnly, setOnCreate, setOnUpdate, and select configuration.
+---
+
 # Common column methods
 
 All the following methods are available in any kind of column.
@@ -137,7 +141,7 @@ type IdentityOptions = {
 
 [//]: # 'has JSDoc'
 
-Forbid the column to be used in [create](/guide/create-update-delete.html#create-insert) and [update](/guide/create-update-delete.html#update) methods.
+Forbid the column to be used in [create](/guide/create.html#create) and [update](/guide/update.html#update) methods.
 
 `readOnly` column is still can be set from a [hook](/guide/hooks.html#set-values-before-create-or-update),
 or in [setOnCreate](#setoncreate), [setOnUpdate](#setonupdate), [setOnSave](#setonsave).
@@ -599,4 +603,4 @@ export class SomeTable extends BaseTable {
 
 Column methods such as [foreignKey](/guide/migration-column-methods#foreignkey), [index](/guide/migration-column-methods#index), [exclude](/guide/migration-column-methods#exclude), [unique](/guide/migration-column-methods#unique), [comment](/guide/migration-column-methods#comment) and others have effects only when used in migrations, read more about it in [migration column methods](/guide/migration-column-methods) document.
 
-Though `unique` is used for deriving types for [findBy](/guide/query-methods#findBy) and [onConflict](/guide/create-update-delete#onconflict).
+Though `unique` is used for deriving types for [findBy](/guide/query-methods#findBy) and [onConflict](/guide/create#onconflict).

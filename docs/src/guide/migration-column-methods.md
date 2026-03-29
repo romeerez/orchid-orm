@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Migration column methods for default, nullable, enum, generated columns, primaryKey, indexes, foreign keys, and constraints.
 ---
 
 # migration column methods
@@ -191,7 +192,7 @@ change(async (db) => {
 
 Defines a reference between different tables to enforce data integrity.
 
-In [snakeCase](/guide/orm-and-query-builder#snakecase-option) mode, columns of both tables are translated to a snake_case.
+In [snakeCase](/guide/orm-setup#snakecase-option) mode, columns of both tables are translated to a snake_case.
 
 ```ts
 import { change } from '../db-script';
@@ -367,13 +368,13 @@ change(async (db) => {
 
 Accepts the same parameters as [index](#index).
 
-Columns marked with `unique` becomes available for filtering with [findBy](/guide/query-methods#findby), and in [onConflict(['column'])](/guide/create-update-delete#onconflict).
+Columns marked with `unique` becomes available for filtering with [findBy](/guide/query-methods#findby), and in [onConflict(['column'])](/guide/create#onconflict).
 
 ### composite unique index
 
 For unique indexes on multiple columns, accepts the same parameters as [composite index](#composite-index).
 
-As well as [unique](#unique) defined for a single column, it is recognized by [findBy](/guide/query-methods#findby) and [onConflict(['column'])](/guide/create-update-delete#onconflict).
+As well as [unique](#unique) defined for a single column, it is recognized by [findBy](/guide/query-methods#findby) and [onConflict(['column'])](/guide/create#onconflict).
 
 ```ts
 import { change } from '../db-script';

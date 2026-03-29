@@ -1,3 +1,7 @@
+---
+description: JSON operations including jsonPathQueryFirst, jsonSet, jsonReplace, jsonInsert, and jsonRemove functions.
+---
+
 # JSON functions
 
 Note that json methods that operates on a single json value, such as [jsonSet](#jsonSet), [jsonInsert](#jsonInsert), and others,
@@ -26,6 +30,10 @@ const json = await db.table.select('id', 'name').json();
 ## jsonPathQueryFirst
 
 [//]: # 'has JSDoc'
+
+<llm-include>
+Use `jsonPathQueryFirst` for the `jsonb_path_query_first` Postgres function to extract a value from JSON using a JSON path.
+</llm-include>
 
 Selects a value from JSON data using a JSON path.
 
@@ -82,6 +90,10 @@ await db.table.where((q) =>
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `jsonSet` for the `jsonb_set` Postgres function to set a value at a JSON path.
+</llm-include>
+
 Returns a JSON value/object/array where a given value is set at the given path.
 The path is a key or an array of keys to access the value.
 
@@ -116,6 +128,10 @@ await db.table.find(id).update({
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `jsonInsert` for the `jsonb_insert` Postgres function to insert a value into a JSON array.
+</llm-include>
+
 Inserts a value into a given position of JSON array and returns the whole array.
 The path is a key or an array of keys to access the value.
 
@@ -144,6 +160,10 @@ await db.table.find(id).update({
 ## jsonRemove
 
 [//]: # 'has JSDoc'
+
+<llm-include>
+Use `jsonRemove` for the `#-` Postgres operator to delete a value at a JSON path.
+</llm-include>
 
 Remove a value from a JSON object or array at a given path.
 The path is a key or an array of keys to access the value.

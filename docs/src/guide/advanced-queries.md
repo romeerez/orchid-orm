@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Advanced query methods including CTEs (with, withRecursive, withSql), union operations, getColumnInfo, and copyTableData.
 ---
 
 # Advanced query methods
@@ -75,7 +76,7 @@ db.$qb
   .from('b');
 ```
 
-Defined `WITH` expression can be used in `.from` or `.join` with all the type safeness:
+Defined `WITH` expression can be used in `.from` or `.join` with all the type safety:
 
 ```ts
 db.table.with('alias', db.table).from('alias').select('alias.id');
@@ -90,7 +91,13 @@ db.firstTable
 
 [//]: # 'has JSDoc'
 
+<llm-exclude>
+Use `withRecursive` for `WITH RECURSIVE`
+</llm-exclude>
+
+<llm-exclude>
 It is priceless for fetching tree-like structures, or any other recursive cases.
+</llm-exclude>
 
 For example, it is useful for loading a tree of categories, where one category can include many other categories.
 
@@ -234,7 +241,7 @@ db.table
 
 Specifies the schema to be used as a prefix of a table name - only for a single query.
 
-Normally, specify the schema in `orchidORM` config, or in the table class, see [table schema](/guide/orm-and-query-builder.html#table-schemas).
+Normally, specify the schema in `orchidORM` config, or in the table class, see [table schema](/guide/orm-setup.html#table-schemas).
 
 ```ts
 db.table.withSchema('customSchema').select('id');
@@ -246,7 +253,7 @@ Resulting SQL:
 SELECT "user"."id" FROM "customSchema"."user"
 ```
 
-You can set a **default** schema for all tables in a callback by using [$withOptions](/guide/orm-and-query-builder.html#withoptions).
+You can set a **default** schema for all tables in a callback by using [$withOptions](/guide/orm-setup.html#withoptions).
 
 ## union, unionAll, intersect, intersectAll, except, exceptAll
 
@@ -331,6 +338,10 @@ const singleColumnInfo = await getColumnInfo(db.table, 'name');
 ## copyTableData
 
 [//]: # 'has JSDoc'
+
+<llm-include>
+Use `copyTableData` for the `COPY` SQL statement.
+</llm-include>
 
 `copyTableData` is a function to invoke a `COPY` SQL statement, it can copy from or to a file or a program.
 

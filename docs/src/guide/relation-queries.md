@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Relation queries with queryRelated, chain, and nested create, update, delete operations.
 ---
 
 # Relation queries

@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Writing migrations with the change function, creating and dropping tables, columns, enums, and schemas.
 ---
 
 # Writing a migration
@@ -863,7 +864,7 @@ change(async (db) => {
 
 Domain is a custom database type that is based on other type and can include `NOT NULL` and a `CHECK` (see [postgres tutorial](https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-user-defined-data-types/)).
 
-When using ORM's migration generator, follow [this](/guide/orm-and-query-builder.html#postgres-domains) instead.
+When using ORM's migration generator, follow [this](/guide/orm-setup.html#postgres-domains) instead.
 
 Construct a column type in the function as the second argument.
 
@@ -1108,59 +1109,92 @@ change(async (db) => {
 
 ## changeDefaultPrivileges
 
-[//]: # 'has JSDoc'
+Grant or revoke default privileges for a role on objects created in a schema or globally.
 
-Grants or revokes default privileges for objects created in the future by a specific role.
+Default privileges automatically apply to tables, sequences, functions, types, schemas (global only), and large objects (global only) created in the future by the specified `owner`.
 
-The `grantee` is required. `schema` is optional - when omitted, applies globally.
-
-Use `all: true` to grant ALL privileges on all object types, or `allGrantable: true` to grant ALL with GRANT OPTION. When `allGrantable` is provided, `all` is ignored.
-
-Supported privileges per object type:
-
-- Tables: ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN (MAINTAIN is supported starting with PostgreSQL 17)
-- Sequences: ALL, USAGE, SELECT, UPDATE
-- Functions: ALL, EXECUTE
-- Types: ALL, USAGE
-- Schemas: ALL, USAGE, CREATE
-- Large Objects: ALL, SELECT, UPDATE
+You can use `all: true` to grant ALL privileges on all object types, or `allGrantable: true` to grant ALL privileges with GRANT OPTION on all object types. When `allGrantable` is provided, `all` is ignored. Individual object type configurations are merged on top of the `all` or `allGrantable` base.
 
 ```ts
 import { change } from '../db-script';
 
 change(async (db) => {
-  // Grant SELECT and INSERT on future tables
+  // grant default privileges using all with specific overrides
   await db.changeDefaultPrivileges({
+    owner: 'admin',
     grantee: 'app_user',
     schema: 'public',
     grant: {
+      all: true, // grants ALL privileges on sequences, functions, and types
       tables: {
+        // can limit privileges for certain objects
         privileges: ['SELECT', 'INSERT'],
       },
     },
   });
 
-  // Grant ALL on all object types with grant option
+  // grant default privileges using allGrantable
   await db.changeDefaultPrivileges({
-    grantee: 'admin_role',
-    schema: 'app_schema',
+    grantee: 'admin',
+    schema: 'public',
     grant: {
-      allGrantable: true,
+      allGrantable: true, // grants ALL privileges with GRANT OPTION on all object types
     },
   });
 
-  // Revoke specific privileges
+  // grant default privileges using individual object types
   await db.changeDefaultPrivileges({
-    grantee: 'limited_user',
+    grantee: 'app_user',
+    schema: 'public',
+    grant: {
+      tables: {
+        privileges: ['SELECT', 'INSERT', 'UPDATE'],
+        grantablePrivileges: ['DELETE'],
+      },
+      sequences: {
+        privileges: ['USAGE'],
+      },
+    },
+  });
+
+  // revoke default privileges
+  await db.changeDefaultPrivileges({
+    grantee: 'app_user',
     schema: 'public',
     revoke: {
       tables: {
-        privileges: ['DELETE', 'TRUNCATE'],
+        privileges: ['DELETE'],
       },
     },
   });
 });
 ```
+
+Options:
+
+- `owner`: Corresponds to PostgreSQL `FOR ROLE target_role`. Objects created by this role will have the default privileges applied. Optional, defaults to the current user.
+- `grantee`: The role name to grant/revoke privileges for
+- `schema`: The schema where objects will be created
+- `grant`: Privileges to grant (optional)
+- `revoke`: Privileges to revoke (optional)
+
+Each of `grant` and `revoke` can contain:
+
+- `tables`: With `privileges` and optional `grantablePrivileges`
+- `sequences`: With `privileges` and optional `grantablePrivileges`
+- `functions`: With `privileges` and optional `grantablePrivileges`
+- `types`: With `privileges` and optional `grantablePrivileges`
+
+**Supported privileges by object type:**
+
+| Object Type | Available Privileges                                                         |
+| ----------- | ---------------------------------------------------------------------------- |
+| Tables      | ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN |
+| Sequences   | ALL, USAGE, SELECT, UPDATE                                                   |
+| Functions   | ALL, EXECUTE                                                                 |
+| Types       | ALL, USAGE                                                                   |
+
+When `ALL` is specified, it grants all available privileges for that object type. In SQL, this is rendered as `ALL PRIVILEGES`.
 
 ## tableExists
 

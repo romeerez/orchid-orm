@@ -1,3 +1,7 @@
+---
+description: Migration CLI commands for creating and dropping databases, pulling schema, and managing migration files.
+---
+
 # Migration commands
 
 Once migrations are [configured](/guide/migration-setup-and-overview#setup), you can use it from a command line.

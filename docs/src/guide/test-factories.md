@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Test factories for generating mock data using faker.js for testing with Orchid ORM tables.
 ---
 
 # Test factories
@@ -59,7 +60,9 @@ const factory = ormFactory(db, {
 
 ## example
 
+<llm-exclude>
 This example is extracted from [building a sample app](https://github.com/romeerez/orchid-orm-sample-blog-api-guide), you can find more test examples in that doc.
+</llm-exclude>
 
 Here we are using `build` to build parameters for a test request, and `create` to create records for testing how unique violations are handled.
 

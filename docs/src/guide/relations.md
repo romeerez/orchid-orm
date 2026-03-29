@@ -1,3 +1,7 @@
+---
+description: Defining table relations including belongsTo, hasOne, hasMany, hasAndBelongsToMany with and without through.
+---
+
 # Relations
 
 Available relations are:

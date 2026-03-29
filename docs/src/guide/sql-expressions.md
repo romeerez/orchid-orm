@@ -1,3 +1,7 @@
+---
+description: SQL expressions with sql tagged template, sql.ref, column references, and arbitrary function calls with fn.
+---
+
 # SQL expressions
 
 ## sql
@@ -28,7 +32,7 @@ const result: { timestamp: Date }[] = await db.table.select({
 });
 ```
 
-In some cases such as when using [from](/guide/orm-and-query-builder#from), setting column type via callback allows for special `where` operations:
+In some cases such as when using [from](/guide/orm-methods#from), setting column type via callback allows for special `where` operations:
 
 ```ts
 const subQuery = db.someTable.select({

@@ -1,3 +1,7 @@
+---
+description: Column schema overview, custom column types, overriding parsing and encoding, and validation configuration.
+---
+
 # Columns schema overview
 
 Columns schema stores information about table columns to make querying type-safe, and to add additional features for querying.

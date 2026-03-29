@@ -1,7 +1,13 @@
+---
+description: Repository pattern for decomposing complex queries into reusable, chainable custom query methods.
+---
+
 # Repository
 
+<llm-exclude>
 Repositories in `Orchid ORM` is a nice feature that allows decomposing complex queries into smaller single-purpose ones,
 reuse query parts.
+</llm-exclude>
 
 Consider the following example, imagine we have a User table, it has a relation with `followers` to track if one user is following another.
 

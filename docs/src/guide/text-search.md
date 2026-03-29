@@ -1,3 +1,7 @@
+---
+description: Full text search with tsvector columns, search queries, ranking, and highlighted text selection.
+---
+
 # Full text search
 
 `Orchid ORM` supports all the main capabilities of Postgres for the [full text search](https://www.postgresql.org/docs/current/textsearch.html).
@@ -105,6 +109,10 @@ db.table.search({
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `query` for `websearch_to_tsquery`, `plainQuery` for `plainto_tsquery`, `phraseQuery` for `phraseto_tsquery`, `tsQuery` for `to_tsquery` Postgres full-text search functions.
+</llm-include>
+
 Read about different search queries in [this Postgres doc](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES).
 
 `search` method can accept one of the following queries:
@@ -131,6 +139,10 @@ db.table.search({
 ## order by search rank
 
 [//]: # 'has JSDoc'
+
+<llm-include>
+Use `order` with search options for `ts_rank` or `ts_rank_cd` Postgres functions for ranking full-text search results.
+</llm-include>
 
 Read about search ranking in [this Postgres doc](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-RANKING).
 
@@ -200,6 +212,10 @@ db.table
 ## select highlighted text
 
 [//]: # 'has JSDoc'
+
+<llm-include>
+Use `headline` for the `ts_headline` Postgres function to highlight matching search terms in results.
+</llm-include>
 
 Give the `as` alias for the search, and it becomes possible to select a text with highlights of the matching words or phrases:
 

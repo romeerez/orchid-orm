@@ -1,3 +1,7 @@
+---
+description: Column validation methods with Zod and Valibot integration, validation rules for numeric, text, and array columns.
+---
+
 # Validation methods of columns
 
 It's expected that validation happens at the moment when the application is receiving data from the client, in the controller layer (aka route handler).

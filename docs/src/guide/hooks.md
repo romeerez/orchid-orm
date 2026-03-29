@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Lifecycle hooks for create, update, delete operations with before/after hooks and after-commit functionality.
 ---
 
 # Lifecycle hooks
@@ -21,10 +22,10 @@ The argument passed to a function is a query object that is going to be executed
 
 `beforeQuery` runs after other `before*` hooks.
 
-[orCreate](/guide/create-update-delete.html#orcreate) executes two queries: the first to find a record, and the second to find and create if not found.
+[orCreate](/guide/create.html#orcreate) executes two queries: the first to find a record, and the second to find and create if not found.
 If the record is created by another process in between the two queries, `beforeCreate` hook will be triggerred, but no new data will be created.
 
-[upsert](/guide/create-update-delete.html#upsert) has the same behavior for `beforeCreate` as `orCreate`.
+[upsert](/guide/create.html#upsert) has the same behavior for `beforeCreate` as `orCreate`.
 `beforeUpdate` hook is always called once by this `upsert` command, even if the record for the update does not exist.
 
 ```ts
@@ -66,11 +67,11 @@ You can mark columns as [readOnly](/guide/common-column-methods.html#readonly) s
 they can be only set in the hooks.
 
 This works for all update and create methods, including
-[createOneFrom](/guide/create-update-delete.html#orcreate),
-[createMany](/guide/create-update-delete.html#createmany-insertmany),
-[updateMany](/guide/create-update-delete.html#updatemany),
-[orCreate](/guide/create-update-delete.html#orcreate),
-[upsert](/guide/create-update-delete.html#upsert).
+[createOneFrom](/guide/create.html#orcreate),
+[createMany](/guide/create.html#createmany-insertmany),
+[updateMany](/guide/update.html#updatemany),
+[orCreate](/guide/create.html#orcreate),
+[upsert](/guide/create.html#upsert).
 
 In a case of batch create or update, the same value is set for all records.
 

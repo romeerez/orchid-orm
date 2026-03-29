@@ -1,4 +1,12 @@
+---
+description: Window functions including rowNumber, rank, denseRank, percentRank, and cumeDist with partitioning and ordering.
+---
+
 # Window functions
+
+<llm-include>
+Use window functions like `rowNumber`, `rank`, `denseRank`, `percentRank`, `cumeDist` for SQL window functions `row_number()`, `rank()`, `dense_rank()`, `percent_rank()`, `cume_dist()`.
+</llm-include>
 
 Various window functions are supported, and it's possible to call a custom one.
 

@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Computed columns with SQL-based computation, JavaScript runtime computed values, and async batch computed columns.
 ---
 
 # Computed columns

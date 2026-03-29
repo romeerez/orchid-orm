@@ -1,3 +1,7 @@
+---
+description: Error handling with OrchidOrmError, NotFoundError, QueryError, catch method, and catchUniqueError helper.
+---
+
 # Error handling
 
 `Orchid ORM` and a query builder `pqb` can throw errors of two classes (that you can import from 'orchid-orm'):

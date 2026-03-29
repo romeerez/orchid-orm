@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Database transactions with $transaction, nested transactions, ensureTransaction, isInTransaction, and testTransaction.
 ---
 
 # Transactions

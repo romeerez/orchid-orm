@@ -1,3 +1,7 @@
+---
+description: Complete reference of Postgres column types including numeric, text, date/time, JSON, geometry, network addresses, arrays, and more.
+---
+
 # Column types
 
 ## numeric

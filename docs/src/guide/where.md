@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Where conditions, column operators, sub-queries, and complex filtering logic.
 ---
 
 # Where conditions
@@ -313,6 +314,10 @@ db.table.whereNotSql`sql expression`;
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+`whereIn` for the `IN` operator in SQL WHERE clauses.
+</llm-include>
+
 `whereIn` and related methods are for the `IN` operator to check for inclusion in a list of values.
 
 When used with a single column it works equivalent to the `in` column operator:
@@ -617,6 +622,10 @@ db.table.where({
 ```
 
 ### array operators
+
+<llm-include>
+Use array operators `has`, `hasEvery`, `containedIn`, `hasSome` for Postgres array operators `@>`, `<@`, and `&&`.
+</llm-include>
 
 - `has`: checks if a value is contained within a list;
 - `hasEvery`: checks if all values are contained within the list;

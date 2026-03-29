@@ -1,10 +1,16 @@
+---
+description: Quickstart guide for scaffolding Orchid ORM with project setup, package.json configuration, and tooling options.
+---
+
 # Quickstart
 
 Orchid ORM has a script to initialize the project with a command-line prompts.
 You can use it to start a new project from scratch, also you can run the same command to scaffold Orchid ORM inside the existing project, it won't remove any existing files.
 
+<llm-exclude>
 After familiarizing with this section, you can read the [Building A Sample App](https://github.com/romeerez/orchid-orm-sample-blog-api-guide) guide that demonstrates the process of building a real world app with Orchid ORM,
 it walks through setup process, migrations, creating tables, writing complex queries, abstracting queries into repositories, writing tests.
+</llm-exclude>
 
 ## Scaffold Orchid ORM
 
@@ -26,6 +32,7 @@ yarn create orchid-orm
 
 This script will ask a few questions to customize the setup:
 
+<llm-exclude>
 > Where to install Orchid ORM?
 
 Hit enter to choose the current directory, or enter a name for a new directory, or a relative or absolute path.
@@ -65,6 +72,7 @@ Hit `y` for [record factories](/guide/test-factories) (generating mock objects f
 > Add demo tables?
 
 Adds a post and a comment table files, migrations, seed file for example.
+</llm-exclude>
 
 After receiving the answers, the script will create all the necessary config files.
 
@@ -268,7 +276,7 @@ The setup is completely ready at this point. For the next steps, create your tab
 To create new database tables, you can:
 
 - if you have an existing database with tables, generate for the tables with [db pull](/guide/migration-commands#pull).
-- [define new tables](/guide/orm-and-query-builder#define-a-table-class) in the code and [generate migrations](/guide/orm-and-query-builder#generate-migrations) for them.
+- [define new tables](/guide/define-tables#define-a-table-class) in the code and [generate migrations](/guide/generate-migrations) for them.
 - you can also make a [new migration](/guide/migration-commands#new-blank-migration) file and write it manually.
 
 ## example usage

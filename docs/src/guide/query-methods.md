@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Query methods including take, find, findBy, select, and handling NotFoundError for record retrieval.
 ---
 
 # Query methods
@@ -44,7 +45,9 @@ Mutating methods started with `_` are used internally, however, their use is not
 When we search for a single record, and it is not found, it can either throw an error, or return `undefined`.
 
 Unlike other database libraries, `Orchid ORM` decided to throw errors by default when using methods `take`, `find`, `findBy`, `get` and the record is not found.
+<llm-exclude>
 It is a [good practice](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/errorhandling/centralizedhandling.md) to catch common errors in a centralized place (see [global error handling](/guide/error-handling#global-error-handling)), and this allows for a more concise code.
+</llm-exclude>
 
 If it's more suitable to get the `undefined` value instead of throwing, use `takeOptional`, `findOptional`, `findByOptional`, `getOptional` instead.
 
@@ -240,7 +243,7 @@ await db.table.findOptional(123).none(); // -> undefined
 await db.table.find(123).none(); // throws NotFoundError
 ```
 
-[insert](/guide/create-update-delete#create-insert), [update](/guide/create-update-delete#update), and [delete](/guide/create-update-delete#delete) are returning a count of affected records.
+[insert](/guide/create.html#create), [update](/guide/update.html#update), and [delete](/guide/delete.html#delete) are returning a count of affected records.
 
 When they are called with `none`, query does not execute and 0 is returned.
 
@@ -828,7 +831,7 @@ await db.table.all().log(); // no argument for true
 await db.table.all().log(false);
 ```
 
-Use [$withOptions](/guide/orm-and-query-builder.html#withoptions) to override `log` for a scope of a callback.
+Use [$withOptions](/guide/orm-setup.html#withoptions) to override `log` for a scope of a callback.
 
 ## clear
 

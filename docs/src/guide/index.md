@@ -1,3 +1,7 @@
+---
+description: Orchid ORM overview, features, philosophy, and comparison with other database tools for Node.js and TypeScript.
+---
+
 # Overview
 
 `Orchid ORM` is a library for node.js to help to work with a Postgres database,
@@ -9,7 +13,7 @@ The main focus is to keep it as powerful as possible, concise and intuitive, per
 To get maximum control over the db, it has a query builder `pqb` which is inspired by [knex](http://knexjs.org/) and has all the same functionalities,
 but `pqb` is written from scratch with TypeScript in mind.
 
-Type safeness is achieved by defining a schema of columns and using inferred types in all query methods.
+Type safety is achieved by defining a schema of columns and using inferred types in all query methods.
 
 Unlike other ORMs in OOP style that rely on Active Record pattern and may look similar to:
 
@@ -87,6 +91,7 @@ const posts = await db.customer
 
 <!-- prettier-ignore-end -->
 
+<llm-exclude>
 ## Comparison with other database tools
 
 Before building yet another ORM I researched existing ones and wrote an [article](https://romeerez.hashnode.dev/nodejs-orms-overview-and-comparison) about it.
@@ -135,7 +140,7 @@ export class UserTable extends BaseTable {
 }
 ```
 
-There is no additional language to use and recompile, no decorators, no TS compiler tweaks, and no type safeness compromises.
+There is no additional language to use and recompile, no decorators, no TS compiler tweaks, and no type safety compromises.
 
 Different ORMs enforce different problems when there is a need to customize a query.
 
@@ -162,6 +167,8 @@ const posts = await db.post
     commentsCount: (q) => q.comments.count(),
   });
 ```
+
+</llm-exclude>
 
 `Orchid ORM` allows you to define custom chainable methods (via [repository](/guide/repo)) to write clean abstract queries like:
 

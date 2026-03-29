@@ -1,3 +1,7 @@
+---
+description: Current project status, limitations, supported features, and known constraints.
+---
+
 # Current status and limitations
 
 Despite thousands tests written, may have bugs, please drop an issue if you encounter a one.

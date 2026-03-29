@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Migration setup, overview, and configuration for managing database schema evolution with TypeScript.
 ---
 
 # Migrations setup and overview
@@ -50,7 +51,9 @@ pnpm i -D rake-db
 ```
 
 ::: info
+<llm-exclude>
 `rake-db` is named after a command in Ruby on Rails because it was initially inspired by it.
+</llm-exclude>
 :::
 
 Since the configuration is done in TypeScript, it's highly customizable.
@@ -306,7 +309,7 @@ type Config = {
 };
 ```
 
-To configure logging, see [log option](/guide/orm-and-query-builder#log-option) in the query builder document.
+To configure logging, see [log option](/guide/orm-setup#log-option) in the query builder document.
 
 Note that `migrationsPath` can accept an absolute path, or a relative path to the current file.
 

@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Programmatic use of migrations including creating databases, schemas, tables, and running migrations programmatically.
 ---
 
 # Programmatic use of migrations
@@ -12,7 +13,7 @@ but you can use `rake-db` as a standalone tool and import the same functions fro
 
 Most of the functions accept a `db` argument, which can be one of:
 
-- instance returned by [orchidORM](/guide/orm-and-query-builder.html#instantiate-orchidorm).
+- instance returned by [orchidORM](/guide/orm-setup.html#instantiate-orchidorm).
 - adapter: a wrapper of node-postgres or postgres-js, which you can import from `orchid-orm/postgres-js` as `Adapter` class.
 
 All the exposed functions are designed to respect the currently opened transaction.

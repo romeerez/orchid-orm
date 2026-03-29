@@ -1,5 +1,6 @@
 ---
 outline: deep
+description: Joining tables and selecting relations with join, leftJoin, and relation selection methods.
 ---
 
 # Join
@@ -64,7 +65,6 @@ db.post.select('*', {
 [//]: # 'has JSDoc'
 
 `join` methods allows to join other tables, relations by name, [with](/guide/advanced-queries#with) statements, sub queries.
-
 All the `join` methods accept the same arguments, but returning type is different because with `join` it's guaranteed to load joined table, and with `leftJoin` the joined table columns may be `NULL` when no matching record was found.
 
 For the following examples, imagine you have a `User` table with `id` and `name`, and `Message` table with `id`, `text`, messages belongs to user via `userId` column:
@@ -449,6 +449,10 @@ JOIN LATERAL (
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `joinLateral` for `JOIN LATERAL` in SQL to join with a subquery that can reference columns from the main query.
+</llm-include>
+
 `joinLateral` allows joining a table with a sub-query that can reference the main table of current query and the other joined tables.
 
 First argument is the other table you want to join, or a name of relation, or a name of `with` defined table.
@@ -537,6 +541,10 @@ const ok: { name: string; text: string | null }[] = result;
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `leftJoinLateral` for `LEFT JOIN LATERAL` in SQL.
+</llm-include>
+
 The same as `joinLateral`, but when no records found for the join it will result in `null`:
 
 ```ts
@@ -594,6 +602,10 @@ const ok: { name: string | null; text: string | null }[] = result;
 
 [//]: # 'has JSDoc'
 
+<llm-include>
+Use `onJsonPathEquals` for joining records based on JSON field values using the `@?` or `@@` JSON path operators.
+</llm-include>
+
 Use `onJsonPathEquals` to join record based on a field of their JSON column:
 
 ```ts
@@ -606,7 +618,7 @@ db.table.join(db.otherTable, (q) =>
 ## joinData
 
 This method may be useful
-for combining with [createForEachFrom](/guide/create-update-delete.html#createForEachFrom-insertForEachFrom).
+for combining with [createForEachFrom](/guide/create.html#createForEachFrom-insertForEachFrom).
 
 `createForEachFrom` creates multiple record based on a selecting query:
 
