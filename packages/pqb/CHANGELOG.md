@@ -1,5 +1,11 @@
 # pqb
 
+## 0.61.13
+
+### Patch Changes
+
+- 8f8f192: Prevent scopes from being called on startup (#677)
+
 ## 0.61.12
 
 ### Patch Changes
