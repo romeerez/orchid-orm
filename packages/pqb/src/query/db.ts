@@ -453,11 +453,11 @@ export class Db<
 
     if (options.scopes) {
       for (const key in options.scopes) {
-        const q = (options.scopes[key](this) as Query).q;
+        const scopeFn = options.scopes[key];
 
-        (scopes as RecordUnknown)[key] = {
-          and: q.and,
-          or: q.or,
+        (scopes as RecordUnknown)[key] = (q: Query) => {
+          const result = scopeFn(q as never) as Query;
+          return { and: result.q.and, or: result.q.or };
         };
       }
 

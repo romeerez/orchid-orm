@@ -18,10 +18,37 @@ const User = testDb(
   },
 );
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const userColumnsSql = User.q.selectAllColumns!.join(', ');
 
 describe('ScopeMethods', () => {
   describe('scope', () => {
+    it('should not call user-defined scopes on startup', () => {
+      expect(() =>
+        testDb(
+          'table',
+          (t) => ({
+            id: t.identity().primaryKey(),
+            name: t.string(),
+            password: t.string(),
+            active: t.boolean().nullable(),
+            deletedAt: t.timestamp().nullable(),
+          }),
+          undefined,
+          {
+            scopes: {
+              default: (_q) => {
+                throw new Error('should not call default scope on startup');
+              },
+              someScope: (_q) => {
+                throw new Error('should not call someScope on startup');
+              },
+            },
+          },
+        ),
+      ).not.toThrow();
+    });
+
     it('should apply where, whereOr, and order', () => {
       const q = User.unscope('default').scope('someScope');
 

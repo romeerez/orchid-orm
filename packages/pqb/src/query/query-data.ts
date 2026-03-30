@@ -84,15 +84,16 @@ export type QueryAfterHook<Data = unknown> = (
   query: Query,
 ) => unknown | Promise<unknown>;
 
-export interface QueryDataScopes {
+export type QueryDataScopes = {
   [K: string]: QueryScopeData;
-}
+};
 
 // Query data stored for a specific scope to be applied to the query.
-export interface QueryScopeData {
+// The scope function is stored and called lazily when building SQL.
+export type QueryScopeData = (q: Query) => {
   and?: WhereItem[];
   or?: WhereItem[][];
-}
+};
 
 export type QueryDataFromItem = string | SubQueryForSql | Expression;
 

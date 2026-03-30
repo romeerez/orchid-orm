@@ -37,9 +37,7 @@ export function enableSoftDelete(
     );
   }
 
-  const scope = {
-    and: [{ [column]: null }],
-  };
+  const scope = () => ({ and: [{ [column]: null }] });
 
   (scopes as RecordUnknown).deleted = scope;
   const { q } = query as unknown as PickQueryQ;

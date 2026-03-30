@@ -117,8 +117,9 @@ export const whereToSql = (
     const data = Object.create(query);
     for (const key in query.scopes) {
       const scope = query.scopes[key];
-      data.and = scope.and;
-      data.or = scope.or;
+      const scopeResult = scope(table.baseQuery);
+      data.and = scopeResult.and;
+      data.or = scopeResult.or;
       const scopeSql = andOrToSql(ctx, table, data, quotedAs, true);
       if (scopeSql) sql = sql ? sql + ' AND ' + scopeSql : scopeSql;
     }
