@@ -10,8 +10,7 @@ jest.mock('fs/promises', () => ({
 
 const config = testConfig;
 
-const migrationPath = (name: string) =>
-  path.resolve(__dirname, '..', '..', 'migrations-path', name);
+const migrationPath = (name: string) => path.resolve('/migrations-path', name);
 
 const arrange = (arg: { files?: string[] }) => {
   if (arg.files) {
@@ -56,12 +55,12 @@ describe('migrationsSet', () => {
       const result = await getMigrations({}, { ...config, migrations }, true);
       expect(result.migrations).toEqual([
         {
-          path: path.resolve(__dirname, '..', `0001_a.ts`),
+          path: '0001_a.ts',
           version: '0001',
           load: fn1,
         },
         {
-          path: path.resolve(__dirname, '..', `0002_b.ts`),
+          path: '0002_b.ts',
           version: '0002',
           load: fn2,
         },
@@ -76,8 +75,8 @@ describe('migrationsSet', () => {
 
       const result = await getMigrations({}, { ...config, migrations }, false);
       expect(result.migrations.map((item) => item.path)).toEqual([
-        path.resolve(__dirname, '..', `0002_b.ts`),
-        path.resolve(__dirname, '..', `0001_a.ts`),
+        '0002_b.ts',
+        '0001_a.ts',
       ]);
     });
 

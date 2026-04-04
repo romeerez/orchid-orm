@@ -11,16 +11,16 @@ import {
   toArray,
 } from 'pqb/internal';
 import { join } from 'path';
-import { migrationConfigDefaults, RakeDbConfig } from './config';
+import { rakeDbConfigDefaults, RakeDbConfig } from './config';
 
 let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 
-export const testMigrationsPath = 'migrations-path';
+export const testMigrationsPath = '/migrations-path';
 
 export const testConfig: RakeDbConfig & {
   logger: QueryLogger;
 } = {
-  ...migrationConfigDefaults,
+  ...rakeDbConfigDefaults,
   __rakeDbConfig: true,
   transaction: 'single',
   basePath: __dirname,
@@ -40,13 +40,16 @@ export const testConfig: RakeDbConfig & {
 };
 
 export const makeDb = (config?: Partial<RakeDbConfig>) => {
+  const dbConfig = config ? { ...testConfig, ...config } : testConfig;
   const db = createMigrationInterface(
     {
       getSchema() {},
     } as unknown as AdapterBase,
     true,
-    config ? { ...testConfig, ...config } : testConfig,
-  ) as DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;
+    dbConfig,
+  ).getDb(dbConfig.columnTypes) as DbMigration<
+    DefaultColumnTypes<DefaultSchemaConfig>
+  >;
   db.adapter.query = queryMock;
   db.adapter.arrays = queryMock;
   return db;

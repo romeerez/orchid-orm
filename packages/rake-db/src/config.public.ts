@@ -11,7 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { getCliParam } from './common';
 import {
-  migrationConfigDefaults,
+  rakeDbConfigDefaults,
   RakeDbCliConfigInput,
   RakeDbCommand,
   RakeDbCommands,
@@ -33,6 +33,7 @@ import { newMigration } from './commands/new-migration';
 import { listMigrationsStatuses } from './commands/list-migrations-statuses';
 import { rebase } from './commands/rebase';
 import { changeIds } from './commands/change-ids';
+import { processMigrateConfig } from './commands/migrate-or-rollback';
 
 const close = (adapters: AdapterBase[]) =>
   Promise.all(adapters.map((adapter) => adapter.close()));
@@ -177,28 +178,6 @@ export const incrementIntermediateCaller = () => {
   intermediateCallers++;
 };
 
-const ensureMigrationsPath = <
-  T extends {
-    migrationsPath?: string;
-    basePath: string;
-  },
->(
-  config: T,
-): T & { migrationsPath: string } => {
-  if (!config.migrationsPath) {
-    config.migrationsPath = migrationConfigDefaults.migrationsPath;
-  }
-
-  if (!path.isAbsolute(config.migrationsPath)) {
-    config.migrationsPath = path.resolve(
-      config.basePath,
-      config.migrationsPath,
-    );
-  }
-
-  return config as never;
-};
-
 const ensureBasePathAndDbScript = <
   T extends {
     basePath?: string;
@@ -241,26 +220,19 @@ export const makeRakeDbConfig = <ColumnTypes>(
   intermediateCallers = 0;
 
   const result = {
-    ...migrationConfigDefaults,
+    ...rakeDbConfigDefaults,
     ...config,
     __rakeDbConfig: true,
   } as unknown as RakeDbConfig<ColumnTypes>;
 
-  if (!result.log) {
-    delete result.logger;
-  }
-
   ensureBasePathAndDbScript(result, ic);
-  ensureMigrationsPath(result);
+  Object.assign(result, processMigrateConfig(result));
 
-  if (!result.recurrentPath) {
-    result.recurrentPath = path.join(
-      result.migrationsPath as string,
-      'recurrent',
-    );
+  if (!result.recurrentPath && result.migrationsPath) {
+    result.recurrentPath = path.join(result.migrationsPath, 'recurrent');
   }
 
-  if ('recurrentPath' in result && !path.isAbsolute(result.recurrentPath)) {
+  if (result.recurrentPath && !path.isAbsolute(result.recurrentPath)) {
     result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
   }
 

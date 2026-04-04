@@ -108,9 +108,19 @@ export type DbMigration<CT> = DbResult<CT> &
     adapter: SilentQueries;
   };
 
+interface MigrationInterfaceResult {
+  adapter: SilentQueries;
+  getDb(
+    columnTypes: unknown,
+  ): DbMigration<DefaultColumnTypes<DefaultSchemaConfig>>;
+}
+
 /**
  * Creates a new `db` instance that is an instance of `pqb` with mixed in migration methods from the `Migration` class.
  * It overrides `query` and `array` db adapter methods to intercept SQL for the logging.
+ *
+ * A concrete `db` instance depends on column types, column types may vary between `change` calls,
+ * therefore it returns a function that accepts column types, caches db instance per given column types, and return the result.
  *
  * @param tx - database adapter that executes inside a transaction
  * @param up - migrate or rollback
@@ -119,9 +129,9 @@ export type DbMigration<CT> = DbResult<CT> &
 export const createMigrationInterface = (
   tx: AdapterBase,
   up: boolean,
-  config: Pick<RakeDbConfig, 'log' | 'logger' | 'columnTypes'>,
-): DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> => {
-  const adapter = Object.create(tx) as MigrationAdapter;
+  config: Pick<RakeDbConfig, 'log' | 'logger'>,
+): MigrationInterfaceResult => {
+  const adapter = Object.create(tx) as SilentQueries;
 
   const { query, arrays } = adapter;
   const log = logParamToLogObject(config.logger || console, config.log);
@@ -144,22 +154,35 @@ export const createMigrationInterface = (
 
   Object.assign(adapter, { silentQuery: query, silentArrays: arrays });
 
-  const db = createDbWithAdapter({
-    adapter,
-    columnTypes: config.columnTypes,
-  });
+  const dbPerColumnTypes = new Map<unknown, unknown>();
 
-  const { prototype: proto } = Migration;
-  for (const key of Object.getOwnPropertyNames(proto)) {
-    (db as unknown as RecordUnknown)[key] = proto[key as keyof typeof proto];
-  }
-
-  return Object.assign(db, {
+  return {
     adapter,
-    log,
-    up,
-    options: config,
-  }) as never;
+    getDb(columnTypes) {
+      let db = dbPerColumnTypes.get(columnTypes);
+      if (!db) {
+        db = createDbWithAdapter({
+          adapter,
+          columnTypes,
+        });
+
+        const { prototype: proto } = Migration;
+        for (const key of Object.getOwnPropertyNames(proto)) {
+          (db as unknown as RecordUnknown)[key] =
+            proto[key as keyof typeof proto];
+        }
+
+        return Object.assign(db as RecordUnknown, {
+          adapter,
+          log,
+          up,
+          options: config,
+        }) as never;
+      }
+
+      return db as never;
+    },
+  };
 };
 
 export type MigrationAdapter = AdapterBase;

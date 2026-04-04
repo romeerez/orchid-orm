@@ -22,9 +22,9 @@ describe('migration', () => {
     });
 
     it('should add SQL to the Postgres error class', async () => {
-      const db = createMigrationInterface(testAdapter, true, {
-        columnTypes: undefined,
-      });
+      const db = createMigrationInterface(testAdapter, true, {}).getDb(
+        undefined,
+      );
 
       const err = await db.query`invalid`.catch((err) => err);
 

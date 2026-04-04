@@ -32,7 +32,9 @@ export const verifyMigration = async (
       const { log } = config;
       config.log = false;
 
-      const db = createMigrationInterface(trx, true, config);
+      const db = createMigrationInterface(trx, true, config).getDb(
+        config.columnTypes,
+      );
 
       config.log = log;
 

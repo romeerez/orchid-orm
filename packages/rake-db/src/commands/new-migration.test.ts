@@ -4,12 +4,11 @@ import path from 'path';
 import { pathToLog } from 'pqb/internal';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
-import { migrationConfigDefaults } from '../config';
 import fs from 'fs/promises';
 
 jest.mock('fs/promises');
 
-const migrationsPath = migrationConfigDefaults.migrationsPath;
+const migrationsPath = '/migrations-path';
 const config = {
   ...testConfig,
   migrationsPath: migrationsPath,

@@ -1,5 +1,4 @@
 import {
-  QueryLogOptions,
   AdapterBase,
   ColumnSchemaConfig,
   DbResult,
@@ -8,10 +7,11 @@ import {
   defaultSchemaConfig,
   MaybePromise,
   NoPrimaryKeyOption,
+  QueryLogOptions,
   RecordString,
 } from 'pqb/internal';
-import path from 'path';
 import { MigrationItem } from './migration/migrations-set';
+import { migrateConfigDefaults } from './commands/migrate-or-rollback';
 
 export type SearchPath = (() => string) | string;
 
@@ -165,28 +165,9 @@ export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
   commands: RakeDbCommands;
 }
 
-/**
- * Configuration type for public migration functions (`migrate`, `rollback`, `redo`).
- * Extends `RakeDbConfig` with `QueryLogOptions` to allow passing `log?: boolean`
- * for programmatic migration control.
- *
- * When `log: true` is passed, `logger` will be set to `console`.
- * When `log: false` is passed, `logger` will be removed.
- * When `log` is undefined, the existing `logger` is preserved (useful for custom loggers).
- *
- * @example
- * ```ts
- * await migrate(db, { ...config, log: true });
- * ```
- */
-export type PublicRakeDbConfig<ColumnTypes = unknown> =
-  RakeDbConfig<ColumnTypes>;
-
-export const migrationConfigDefaults = {
+export const rakeDbConfigDefaults = {
+  ...migrateConfigDefaults,
   schemaConfig: defaultSchemaConfig,
-  migrationsPath: path.join('src', 'db', 'migrations'),
-  migrationId: { serial: 4 },
-  migrationsTable: 'schemaMigrations',
   snakeCase: false,
   commands: {},
   log: true,
@@ -274,31 +255,3 @@ export interface RakeDbRenameMigrationsInput {
   to: RakeDbMigrationId;
   map: RakeDbRenameMigrationsMap;
 }
-
-/**
- * Process a PublicRakeDbConfig into RakeDbConfig by handling the `log` option.
- * This is used by public migration functions (migrate, rollback, redo) to
- * process the `log` boolean into the appropriate `logger` setting.
- *
- * - `log: true` → sets `logger` to `console`
- * - `log: false` → removes `logger` (non-mutatively)
- * - `log: undefined` → preserves existing `logger`
- *
- * @param config - the public config with optional `log` setting
- * @returns a processed RakeDbConfig ready for internal use
- */
-export const processPublicRakeDbConfig = <ColumnTypes>(
-  config: PublicRakeDbConfig<ColumnTypes>,
-): RakeDbConfig<ColumnTypes> => {
-  if (config.log === false) {
-    // Non-mutatively remove logger when log is explicitly false
-    const { logger: _, ...rest } = config;
-    return rest as RakeDbConfig<ColumnTypes>;
-  } else if (config.log === true) {
-    // Non-mutatively set logger to console when log is true
-    return { ...config, logger: console } as RakeDbConfig<ColumnTypes>;
-  }
-  // If log is undefined, preserve existing logger (whether custom or undefined)
-  // Return a copy to avoid mutations
-  return { ...config } as RakeDbConfig<ColumnTypes>;
-};

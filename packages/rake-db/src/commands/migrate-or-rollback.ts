@@ -1,12 +1,14 @@
-import { createDbWithAdapter } from 'pqb/internal';
 import {
   AdapterBase,
   ColumnSchemaConfig,
+  createDbWithAdapter,
   DbResult,
   emptyArray,
   MaybeArray,
   MaybePromise,
   pathToLog,
+  QueryLogger,
+  QueryLogOptions,
   toArray,
 } from 'pqb/internal';
 import { queryLock, RakeDbCtx, transaction } from '../common';
@@ -29,11 +31,16 @@ import {
 } from '../migration/manage-migrated-versions';
 import { RakeDbError } from '../errors';
 import {
+  ChangeCallback,
+  ChangeCommitCallback,
+  MigrationCallback,
+  ModuleExportsRecord,
   RakeDbConfig,
-  PublicRakeDbConfig,
-  processPublicRakeDbConfig,
+  RakeDbMigrationId,
+  RakeDbRenameMigrationsInput,
+  SearchPath,
 } from '../config';
-import path from 'path';
+import path from 'node:path';
 import {
   getMigrations,
   MigrationItem,
@@ -49,18 +56,111 @@ export interface MigrateFnParams {
   force?: boolean;
 }
 
-export interface MigrateFn {
-  (
-    db: DbParam,
-    config: PublicRakeDbConfig,
-    params?: MigrateFnParams,
-  ): Promise<void>;
+export interface MigrateConfigBase extends QueryLogOptions {
+  migrationId?: RakeDbMigrationId;
+  renameMigrations?: RakeDbRenameMigrationsInput;
+  migrationsTable?: string;
+  transaction?: 'single' | 'per-migration';
+  transactionSearchPath?: SearchPath;
+  forceDefaultExports?: boolean;
+  beforeChange?: ChangeCallback;
+  afterChange?: ChangeCallback;
+  afterChangeCommit?: ChangeCommitCallback;
+  beforeMigrate?: MigrationCallback;
+  afterMigrate?: MigrationCallback;
+  beforeRollback?: MigrationCallback;
+  afterRollback?: MigrationCallback;
 }
+
+export interface MigrateConfigFileBased extends MigrateConfigBase {
+  basePath?: string;
+  migrationsPath: string;
+  import(path: string): Promise<unknown>;
+}
+
+export interface MigrateConfigMigrationsProvided extends MigrateConfigBase {
+  migrations: ModuleExportsRecord;
+}
+
+/**
+ * Minimal configuration required by public migration functions
+ * (`migrate`, `rollback`, `redo`) and the functions they invoke.
+ *
+ * Pass `log: true` to enable logging to console,
+ * `log: false` to disable it, or leave `log` undefined to preserve the existing `logger`.
+ *
+ * All properties of {@link RakeDbConfig} that are unrelated to running migrations
+ * (e.g. `commands`, `recurrentPath`, `schemaConfig`) are intentionally excluded.
+ */
+export type MigrateConfig =
+  | MigrateConfigFileBased
+  | MigrateConfigMigrationsProvided;
+
+export interface MigrateFn {
+  (db: DbParam, config: MigrateConfig, params?: MigrateFnParams): Promise<void>;
+}
+
+export interface MigrateConfigInternal extends MigrateConfigFileBased {
+  migrations?: ModuleExportsRecord;
+  migrationId: RakeDbMigrationId;
+  migrationsTable: string;
+  transaction: 'single' | 'per-migration';
+}
+
+export const migrateConfigDefaults = {
+  migrationId: { serial: 4 },
+  migrationsTable: 'schemaMigrations',
+  transaction: 'single',
+};
+
+export const handleConfigLogger = (
+  config: QueryLogOptions,
+): QueryLogger | undefined => {
+  return config.log === true
+    ? config.logger || console
+    : config.log === false
+    ? undefined
+    : config.logger;
+};
+
+/**
+ * Process a PublicRakeDbConfig into RakeDbConfig by handling the `log` option.
+ * This is used by public migration functions (migrate, rollback, redo) to
+ * process the `log` boolean into the appropriate `logger` setting.
+ *
+ * - `log: true` → sets `logger` to `console`
+ * - `log: false` → removes `logger` (non-mutatively)
+ * - `log: undefined` → preserves existing `logger`
+ *
+ * @param config - the public config with optional `log` setting
+ * @returns a processed RakeDbConfig ready for internal use
+ */
+export const processMigrateConfig = (
+  config: MigrateConfig,
+): MigrateConfigInternal => {
+  let migrationsPath;
+  if (!('migrations' in config)) {
+    migrationsPath = config.migrationsPath
+      ? config.migrationsPath
+      : path.join('src', 'db', 'migrations');
+
+    if (config.basePath && !path.isAbsolute(migrationsPath)) {
+      migrationsPath = path.resolve(config.basePath, migrationsPath);
+    }
+  }
+
+  return {
+    ...migrateConfigDefaults,
+    ...(config as MigrateConfigInternal),
+    migrationsPath: migrationsPath as string,
+    logger: handleConfigLogger(config),
+  };
+};
 
 // for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible locals
 const transactionIfSingle = (
   adapter: AdapterBase,
-  config: RakeDbConfig,
+  config: Pick<RakeDbConfig, 'transaction' | 'transactionSearchPath'>,
   fn: (trx: AdapterBase) => Promise<void>,
 ) => {
   return config.transaction === 'single'
@@ -73,7 +173,7 @@ function makeMigrateFn(
   defaultCount: number,
   fn: (
     trx: AdapterBase,
-    config: RakeDbConfig,
+    config: MigrateConfig,
     set: MigrationsSet,
     versions: RakeDbAppliedVersions,
     count: number,
@@ -81,7 +181,7 @@ function makeMigrateFn(
   ) => Promise<MigrationItem[]>,
 ): MigrateFn {
   return async (db, publicConfig, params): Promise<void> => {
-    const config = processPublicRakeDbConfig(publicConfig);
+    const config = processMigrateConfig(publicConfig) as MigrateConfigInternal;
     const ctx = params?.ctx || {};
     const set = await getMigrations(ctx, config, up);
     const count = params?.count ?? defaultCount;
@@ -144,7 +244,16 @@ export const migrate: MigrateFn = makeMigrateFn(
   true,
   Infinity,
   (trx, config, set, versions, count, force) =>
-    migrateOrRollback(trx, config, set, versions, count, true, false, force),
+    migrateOrRollback(
+      trx,
+      config as MigrateConfigInternal,
+      set,
+      versions,
+      count,
+      true,
+      false,
+      force,
+    ),
 );
 
 export const migrateAndClose: MigrateFn = async (db, config, params) => {
@@ -153,32 +262,37 @@ export const migrateAndClose: MigrateFn = async (db, config, params) => {
   await adapter.close();
 };
 
+interface RunMigrationConfig extends QueryLogOptions {
+  transactionSearchPath?: SearchPath;
+}
+
 export function runMigration(
   db: DbParam,
   migration: () => MaybePromise<unknown>,
 ): Promise<void>;
 export function runMigration(
   db: DbParam,
-  config: Pick<RakeDbConfig, 'transactionSearchPath'>,
+  config: RunMigrationConfig,
   migration: () => MaybePromise<unknown>,
 ): Promise<void>;
 export async function runMigration(
   db: DbParam,
   ...args:
     | [migration: () => MaybePromise<unknown>]
-    | [
-        config: Pick<RakeDbConfig, 'transactionSearchPath'>,
-        migration: () => MaybePromise<unknown>,
-      ]
+    | [config: RunMigrationConfig, migration: () => MaybePromise<unknown>]
 ): Promise<void> {
-  const [config, migration] =
+  const [rawConfig, migration] =
     args.length === 1 ? [{}, args[0]] : [args[0], args[1]];
+
+  const config = {
+    ...rawConfig,
+    logger: handleConfigLogger(rawConfig),
+  };
 
   const adapter = getMaybeTransactionAdapter(db);
   await transaction(adapter, config, async (trx) => {
     clearChanges();
     const changes = await getChanges({ load: migration });
-    const config = changes[0]?.config;
 
     await applyMigration(trx, true, changes, config);
   });
@@ -203,7 +317,16 @@ export const rollback: MigrateFn = makeMigrateFn(
   false,
   1,
   (trx, config, set, versions, count, force) =>
-    migrateOrRollback(trx, config, set, versions, count, false, false, force),
+    migrateOrRollback(
+      trx,
+      config as MigrateConfigInternal,
+      set,
+      versions,
+      count,
+      false,
+      false,
+      force,
+    ),
 );
 
 /**
@@ -226,13 +349,21 @@ export const redo: MigrateFn = makeMigrateFn(
   async (trx, config, set, versions, count, force) => {
     set.migrations.reverse();
 
-    await migrateOrRollback(trx, config, set, versions, count, false, true);
+    await migrateOrRollback(
+      trx,
+      config as MigrateConfigInternal,
+      set,
+      versions,
+      count,
+      false,
+      true,
+    );
 
     set.migrations.reverse();
 
     return migrateOrRollback(
       trx,
-      config,
+      config as MigrateConfigInternal,
       set,
       versions,
       count,
@@ -249,7 +380,7 @@ const getDb = (adapter: AdapterBase) =>
 
 export const migrateOrRollback = async (
   trx: AdapterBase,
-  config: RakeDbConfig,
+  config: MigrateConfigInternal,
   set: MigrationsSet,
   versions: RakeDbAppliedVersions,
   count: number,
@@ -464,12 +595,9 @@ export const applyMigration = async (
   trx: AdapterBase,
   up: boolean,
   changes: MigrationChange[],
-  config: Pick<
-    RakeDbConfig,
-    'log' | 'logger' | 'columnTypes' | 'transactionSearchPath'
-  >,
+  config: Pick<RakeDbConfig, 'log' | 'logger' | 'transactionSearchPath'>,
 ): Promise<SilentQueries> => {
-  const db = createMigrationInterface(trx, up, config);
+  const { adapter, getDb } = createMigrationInterface(trx, up, config);
 
   if (changes.length) {
     // when up: for (let i = 0; i !== changes.length - 1; i++)
@@ -478,11 +606,13 @@ export const applyMigration = async (
     const to = up ? changes.length : -1;
     const step = up ? 1 : -1;
     for (let i = from; i !== to; i += step) {
-      await changes[i].fn(db, up);
+      const change = changes[i];
+      const db = getDb(change.config.columnTypes);
+      await change.fn(db, up);
     }
   }
 
-  return db.adapter;
+  return adapter;
 };
 
 const changeMigratedVersion = async (

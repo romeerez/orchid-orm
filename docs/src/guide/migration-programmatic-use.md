@@ -17,7 +17,6 @@ Most of the functions accept a `db` argument, which can be one of:
 - adapter: a wrapper of node-postgres or postgres-js, which you can import from `orchid-orm/postgres-js` as `Adapter` class.
 
 All the exposed functions are designed to respect the currently opened transaction.
-[//]: # (TODO: add example)
 
 The exposed functions aren't closing connection automatically, remember to call `db.$close()` or `adapter.close()` in the end.
 
@@ -167,57 +166,131 @@ import { dropTable } from 'orchid-orm/migrations';
 const result: 'done' | 'already' = await dropTable(db, '"table"');
 ```
 
-## makeRakeDbConfig
+## createMigrationChangeFn
 
-Migration files depend on a `change` function that depends on `columnTypes` that can be defined in the config directly,
-or can be taken from the configured `baseTable`.
+Migration files rely on a `change` function.
 
-That's why migration functions require a `config` object. You can define and export this config in a separate file:
+Create this `change` function using `createMigrationChangeFn`:
 
 ```ts
-// src/db/db-config.ts
-import { rakeDb } from 'orchid-orm/migrations/postgres-js';
-import { makeRakeDbConfig } from 'orchid-orm/migrations';
+import { createMigrationChangeFn } from 'orchid-orm/migrations';
 
-export const config = makeRakeDbConfig({
-  baseTable: BaseTable,
-  migrationsPath: './migrations',
-  import: (path) => import(path),
+export const change = createMigrationChangeFn({
+  // optional, to support custom column types defined in your BaseTable in migrations:
+  columnTypes: BaseTable.columnTypes,
 });
-
-export const migrator = rakeDb(config);
-
-// migrations will import the `change` from this file
-export const { change } = migrator;
 ```
-
-Then you can import the `migrator` to run the migrations as a CLI script:
-
-```ts
-// src/db/db-script.ts
-import { migrator } from './db-config';
-
-migrator.run({ databaseURL: process.env.DATABASE_URL });
-```
-
-And you can reuse the same `config` when running migrations programmatically:
-
-```ts
-import { migrate } from 'orchid-orm/migrations';
-import { config } from './db-config';
-
-await migrate(db, config);
-```
-
-::: warning
-Keep the `change` function in a different file from `migrator.run`,
-because otherwise `migrator.run` will be triggerred when running migrations programmatically
-because the `change` function is imported by migrations.
-:::
 
 ## programmatic migrations
 
-For the following actions the `config` described above is needed.
+`migrate`, `rollback`, `redo` accept a config of `MigrateConfig` type.
+
+### MigrateConfig
+
+`MigrateConfig` is a union: you must provide **either** a path to a migrations directory, **or** an object listing all migrations explicitly.
+
+**File-based** — load migrations from a directory on disk:
+
+```ts
+await migrate(db, {
+  // relative to the current file, or an absolute path
+  migrationsPath: './migrations',
+  // required for tsx and other TS runners to import migration files
+  import: (path) => import(path),
+});
+```
+
+**Migrations provided** — list migrations explicitly as lazy imports (common with bundlers such as Vite):
+
+```ts
+await migrate(db, {
+  migrations: {
+    // keys are file names (without extension), values are lazy import functions
+    '0001_create-users': () => import('./migrations/0001_create-users'),
+    '0002_create-posts': () => import('./migrations/0002_create-posts'),
+  },
+});
+```
+
+Both forms accept the following shared options:
+
+```ts
+type MigrateConfig =
+  | {
+      // path to the migrations directory (relative to the current file or absolute)
+      migrationsPath: string;
+      // base directory used to resolve a relative migrationsPath;
+      // defaults to the directory of the calling file
+      basePath?: string;
+      // required for tsx and other TS runners to import TypeScript migration files
+      import(path: string): Promise<unknown>;
+
+      // + shared options below
+    }
+  | {
+      // explicitly list migrations as lazy import functions
+      migrations: {
+        [fileName: string]: () => Promise<unknown>;
+      };
+
+      // + shared options below
+    };
+
+// shared options (both variants accept these):
+{
+  // prefix migration files with serial numbers (0001, 0002, …) or timestamps
+  // default: serial with 4 digits
+  migrationId?: 'serial' | 'timestamp';
+
+  // table in the database used to track applied migrations
+  // may include a schema: 'my-schema.migrations'
+  // default: 'schemaMigrations'
+  migrationsTable?: string;
+
+  // 'single': wrap all pending migrations in one transaction (default, recommended)
+  // 'per-migration': run each migration file in its own transaction
+  transaction?: 'single' | 'per-migration';
+
+  // calls `SET LOCAL search_path = <value>` at the start of each migration transaction;
+  // pass a function for dynamic resolution, e.g. in multi-tenant apps
+  transactionSearchPath?: string | (() => string);
+
+  // throw when a migration file has no default export
+  // default: false
+  forceDefaultExports?: boolean;
+
+  // generated by the `change-ids` command when switching between serial and timestamp IDs;
+  // see: /guide/migration-commands#change-ids
+  renameMigrations?: { to: 'serial' | 'timestamp'; map: Record<string, string> };
+
+  // enable console logging with `log: true`, or silence it with `log: false`
+  log?: boolean | Partial<QueryLogObject>;
+  // custom logger object; standard console is used by default
+  logger?: { log(message: string): void; error(message: string): void };
+
+  // called once per db before / after migrating up a set of migrations (inside the transaction)
+  beforeMigrate?(arg: { db: Db; migrations: MigrationItem[] }): void | Promise<void>;
+  afterMigrate?(arg: { db: Db; migrations: MigrationItem[] }): void | Promise<void>;
+
+  // called once per db before / after rolling back a set of migrations (inside the transaction)
+  beforeRollback?(arg: { db: Db; migrations: MigrationItem[] }): void | Promise<void>;
+  afterRollback?(arg: { db: Db; migrations: MigrationItem[] }): void | Promise<void>;
+
+  // called once per db before / after migrate or rollback (inside the transaction)
+  // `up`: true when migrating up, false when rolling back
+  // `redo`: true during the rollback phase of a `redo` command
+  beforeChange?(arg: { db: Db; up: boolean; redo: boolean; migrations: MigrationItem[] }): void | Promise<void>;
+  afterChange?(arg: { db: Db; up: boolean; redo: boolean; migrations: MigrationItem[] }): void | Promise<void>;
+
+  // called after the migrations transaction is committed (outside the transaction)
+  // use for work that requires a committed db state, e.g. running pg_dump
+  afterChangeCommit?(arg: { adapter: Adapter; up: boolean; migrations: MigrationItem[] }): void | Promise<void>;
+}
+```
+
+All callbacks are called once per database. If 5 migrations are applied the callbacks fire once — before or after all 5 — not per migration. All callbacks except `afterChangeCommit` run inside the migrations transaction; if one throws, the transaction is rolled back and no migration changes are saved.
+
+For detailed callback examples see [before and after callbacks](/guide/migration-setup-and-overview.html#before-and-after-callbacks).
 
 ### migrate
 
@@ -228,17 +301,21 @@ Add `transaction: 'per-migration'` to the config to run every migration file in 
 
 `migrate` won't start new transactions if it is already wrapped in one.
 
-`migrate` creates a migration table if it doesn't exist, but it doesn't work when calling `migrate` in a transaction.
+`migrate` creates a migration table if it doesn't exist yet.
 
 Note that the `config` supports `transactionSearchPath` for dynamically switching a current db schema,
 this may be useful in multi-schema scenarios.
 
 ```ts
-import {
-  migrate,
-  makeRakeDbConfig,
-  createMigrationsSchemaAndTable,
-} from 'orchid-orm/migrations';
+import { migrate } from 'orchid-orm/migrations';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const config = {
+  basePath: dirname(fileURLToPath(import.meta.url)),
+  migrationsPath: './migrations',
+  import: (path) => import(path),
+};
 
 // apply all pending migrations
 await migrate(db, config);
@@ -249,13 +326,6 @@ await migrate(db, config, {
   count: Infinity,
   // for timestamp-based only: force migrate when having out-of-order migrations
   force: false,
-});
-
-// Ensure the migrations table is created first when calling `migrate` in a transaction
-await db.$transaction(async () => {
-  await createMigrationsSchemaAndTable(db, config);
-
-  await migrate(db, config);
 });
 
 // using `transactionSearchPath` for multi-tenancy, applies migrations for different schemas
@@ -308,7 +378,10 @@ await rollback(db, config, {
 Use `runMigration` when to execute a specific migration file or an inline `change` block without tracking the migration versions.
 It's primarily for testing purposes.
 
-The 2nd argument may be a config object supporting `transactionSearchPath` to run migrations withing a given `search_path` context.
+The 2nd argument may be a config object supporting `transactionSearchPath` to run migrations within a given `search_path` context, and logging options:
+
+- `log: true` to log using console
+- `logger` to provide a custom logger object
 
 ```ts
 import { runMigration } from 'orchid-orm/migrations';

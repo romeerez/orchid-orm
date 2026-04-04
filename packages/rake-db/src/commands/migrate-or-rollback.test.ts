@@ -1,6 +1,8 @@
 import {
   changeCache,
   migrate,
+  MigrateConfig,
+  migrateConfigDefaults,
   MigrateFnParams,
   redo,
   rollback,
@@ -25,16 +27,8 @@ import {
 } from '../migration/manage-migrated-versions';
 import { RakeDbConfig } from 'rake-db';
 import { mockChangeLogger } from './mock-migrations/mock-change';
-import { processPublicRakeDbConfig } from '../config';
 import { queryLock } from '../common';
-
-jest.mock('../config', () => {
-  const actual = jest.requireActual('../config');
-  return {
-    ...actual,
-    processPublicRakeDbConfig: jest.fn(actual.processPublicRakeDbConfig),
-  };
-});
+import path from 'node:path';
 
 jest.mock('../common', () => {
   const actual = jest.requireActual('../common');
@@ -64,16 +58,16 @@ jest.mock('../migration/manage-migrated-versions', () => {
 describe('migrate-or-rollback', () => {
   const adapter = testAdapter;
   const dbName = adapter.getDatabase();
-  const config = testConfig;
+  const config = { ...testConfig, log: true };
   let migrationFiles: { path: string; version: string; load(): void }[] = [];
   let migratedVersions: string[] = [];
-  let currentConfig = undefined as unknown as RakeDbConfig;
+  let currentConfig = undefined as unknown as MigrateConfig;
 
   const commonArrange = <
     T extends {
       files?: typeof migrationFiles;
       versions?: string[];
-      config?: RakeDbConfig;
+      config?: MigrateConfig;
     },
   >(
     config: T,
@@ -205,13 +199,15 @@ describe('migrate-or-rollback', () => {
     const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
 
     beforeAll(() => {
-      asMock(processPublicRakeDbConfig).mockImplementation((config) => config);
       asMock(queryLock).mockImplementation(noop);
       asMock(getMigrations).mockImplementation((_ctx, _config, up) => ({
         migrations: up ? migrationFiles : [...migrationFiles].reverse(),
       }));
       asMock(saveMigratedVersion).mockImplementation(noop);
-      asMock(getMigratedVersionsMap).mockImplementation(noop);
+      asMock(getMigratedVersionsMap).mockImplementation(() => ({
+        map: {},
+        sequence: [],
+      }));
       asMock(deleteMigratedVersion).mockImplementation(noop);
       asMock(createMigrationsSchemaAndTable).mockImplementation(noop);
     });
@@ -228,6 +224,31 @@ describe('migrate-or-rollback', () => {
     });
 
     describe('migrate', () => {
+      it('should accept processed RakeDbConfig', async () => {
+        await migrate(adapter, testConfig);
+      });
+
+      it('should process file migrations options', async () => {
+        const imp = (path: string) => import(path);
+
+        await migrate(adapter, {
+          basePath: __dirname,
+          migrationsPath: 'path/to/migrations',
+          import: imp,
+        });
+
+        expect(getMigrations).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            ...migrateConfigDefaults,
+            basePath: __dirname,
+            migrationsPath: path.join(__dirname, 'path/to/migrations'),
+            import: imp,
+          },
+          true,
+        );
+      });
+
       it('should use transactionSearchPath with a single transaction', async () => {
         let searchPath: string | undefined;
 
@@ -393,8 +414,8 @@ describe('migrate-or-rollback', () => {
       });
 
       it('should use the returned `default` from `load` fn for a changes if it exists', async () => {
-        const changes1 = { fn: jest.fn() };
-        const changes2 = { fn: jest.fn() };
+        const changes1 = { fn: jest.fn(), config: {} };
+        const changes2 = { fn: jest.fn(), config: {} };
 
         arrange({
           files: [
@@ -422,8 +443,8 @@ describe('migrate-or-rollback', () => {
       });
 
       it('should migrate array of changes returned in `default` from `load`', async () => {
-        const changes1 = { fn: jest.fn() };
-        const changes2 = { fn: jest.fn() };
+        const changes1 = { fn: jest.fn(), config: {} };
+        const changes2 = { fn: jest.fn(), config: {} };
 
         arrange({
           files: [
@@ -463,15 +484,22 @@ describe('migrate-or-rollback', () => {
         );
       });
 
-      it('should call processPublicRakeDbConfig to handle log option', async () => {
+      it('should call processMigrateConfig to handle log option', async () => {
         arrange({
           files: [],
-          config,
+          config: { migrations: {} },
         });
 
         await act(migrate);
 
-        expect(processPublicRakeDbConfig).toHaveBeenCalledWith(config);
+        expect(getMigrations).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            ...migrateConfigDefaults,
+            migrations: {},
+          },
+          true,
+        );
       });
 
       it('should throw if there is a not migrated migration of version lower than the last migrated', async () => {
@@ -627,15 +655,22 @@ describe('migrate-or-rollback', () => {
         expect(called).toEqual(['two', 'one']);
       });
 
-      it('should call processPublicRakeDbConfig to handle log option', async () => {
+      it('should call processMigrateConfig to handle log option', async () => {
         arrange({
           files: [],
-          config,
+          config: { migrations: {} },
         });
 
         await act(rollback);
 
-        expect(processPublicRakeDbConfig).toHaveBeenCalledWith(config);
+        expect(getMigrations).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            ...migrateConfigDefaults,
+            migrations: {},
+          },
+          false,
+        );
       });
     });
 
@@ -719,16 +754,23 @@ describe('migrate-or-rollback', () => {
         ]);
       });
 
-      it('should call processPublicRakeDbConfig to handle log option', async () => {
+      it('should call processMigrateConfig to handle log option', async () => {
         arrange({
           files: [],
           versions: [],
-          config,
+          config: { migrations: {} },
         });
 
         await act(redo);
 
-        expect(processPublicRakeDbConfig).toHaveBeenCalledWith(config);
+        expect(getMigrations).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            ...migrateConfigDefaults,
+            migrations: {},
+          },
+          true,
+        );
       });
 
       it('should migrate just one if number argument is not provided', async () => {
@@ -839,10 +881,18 @@ describe('migrate-or-rollback', () => {
       });
 
       it('should run provided migration files', async () => {
-        await runMigration(adapter, async () => {
-          await import('./mock-migrations/migrations/1001_migrate.test.file1');
-          await import('./mock-migrations/migrations/1002_migrate.test.file2');
-        });
+        await runMigration(
+          adapter,
+          { log: true, logger: mockChangeLogger },
+          async () => {
+            await import(
+              './mock-migrations/migrations/1001_migrate.test.file1'
+            );
+            await import(
+              './mock-migrations/migrations/1002_migrate.test.file2'
+            );
+          },
+        );
 
         expect(mockChangeLogger.log.mock.calls).toEqual([
           [expect.stringContaining(`SELECT 'test query 1'`)],

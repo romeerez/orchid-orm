@@ -13,7 +13,10 @@ import {
   makeRakeDbConfig,
 } from '../config.public';
 import { RakeDbCliConfigInput, RakeDbCommand, RakeDbConfig } from '../config';
-import { makeChange, RakeDbChangeFn } from '../migration/change';
+import {
+  createMigrationChangeFn,
+  MigrationChangeFn,
+} from '../migration/change';
 import { RakeDbError } from '../errors';
 
 const rakeDbAliases: RecordOptionalString = {
@@ -24,7 +27,7 @@ const rakeDbAliases: RecordOptionalString = {
 };
 
 export interface RakeDbCliResult<ColumnTypes, Options> {
-  change: RakeDbChangeFn<ColumnTypes>;
+  change: MigrationChangeFn<ColumnTypes>;
   run(options: Options, args?: string[]): Promise<void>;
 }
 
@@ -48,7 +51,7 @@ export interface RakeDbFn<Options> {
       | RakeDbCliConfigInput<SchemaConfig, ColumnTypes>
       | RakeDbConfig<ColumnTypes>,
     args?: string[],
-  ): RakeDbChangeFn<ColumnTypes>;
+  ): MigrationChangeFn<ColumnTypes>;
 }
 
 export const rakeDbCliWithAdapter = ((
@@ -64,7 +67,7 @@ export const rakeDbCliWithAdapter = ((
   }
 
   return {
-    change: makeChange(config),
+    change: createMigrationChangeFn(config),
     async run(adapter, runArgs) {
       const adapters = toArray(adapter);
 

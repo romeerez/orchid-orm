@@ -10,6 +10,7 @@ import { readdir } from 'fs/promises';
 import { RakeDbCtx } from '../common';
 import { fileNamesToChangeMigrationIdMap } from '../commands/change-ids';
 import fs from 'fs/promises';
+import { MigrateConfigInternal } from '../commands/migrate-or-rollback';
 
 export interface MigrationItemHasLoad {
   path?: string;
@@ -38,7 +39,10 @@ export interface MigrationsSet {
 // `up` value determines sorting of files: `true` for ascending, `false` for descending.
 export const getMigrations = async (
   ctx: RakeDbCtx,
-  config: RakeDbConfig,
+  config: Pick<
+    MigrateConfigInternal,
+    'migrations' | 'basePath' | 'migrationId' | 'migrationsPath' | 'import'
+  >,
   up: boolean,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
@@ -62,14 +66,14 @@ export const getMigrations = async (
 
 // Converts user-provided migrations object into array of migration items.
 function getMigrationsFromConfig(
-  config: RakeDbConfig,
+  config: Pick<RakeDbConfig, 'migrationId' | 'renameMigrations' | 'migrations'>,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
   const result: MigrationItem[] = [];
   const versions: RecordString = {};
 
-  const { migrations, basePath } = config;
+  const { migrations } = config;
   for (const key in migrations) {
     const version = getVersion(config, path.basename(key));
     if (versions[version] && !allowDuplicates) {
@@ -81,7 +85,7 @@ function getMigrationsFromConfig(
     versions[version] = key;
 
     result.push({
-      path: path.resolve(basePath, key),
+      path: key,
       version,
       load: migrations[key],
     });
@@ -104,7 +108,10 @@ export const sortMigrationsAsc = (
 
 // Scans files under `migrationsPath` to convert files into migration items.
 export async function getMigrationsFromFiles(
-  config: RakeDbConfig,
+  config: Pick<
+    MigrateConfigInternal,
+    'migrationsPath' | 'import' | 'migrationId' | 'logger'
+  >,
   allowDuplicates?: boolean,
   getVersion = getMigrationVersionOrThrow,
 ): Promise<MigrationsSet> {
@@ -157,7 +164,7 @@ export async function getMigrationsFromFiles(
 
         data.renameTo = {
           to: config.migrationId,
-          map: () => renameMigrationsMap(config, file.name),
+          map: () => renameMigrationsMap(migrationsPath, file.name),
         };
 
         return data;
@@ -211,10 +218,10 @@ export async function getMigrationsFromFiles(
 }
 
 const renameMigrationsMap = async (
-  config: Pick<RakeDbConfig, 'migrationsPath'>,
+  migrationsPath: string,
   fileName: string,
 ): Promise<RakeDbRenameMigrationsMap> => {
-  const filePath = path.join(config.migrationsPath, fileName);
+  const filePath = path.join(migrationsPath, fileName);
 
   const json = await fs.readFile(filePath, 'utf-8');
 

@@ -24,6 +24,7 @@ import {
 } from './migration.utils';
 import { createSchema, createTable } from '../commands/create-or-drop';
 import { DbParam, getMaybeTransactionAdapter } from '../utils';
+import { MigrateConfigInternal } from '../commands/migrate-or-rollback';
 
 export const saveMigratedVersion = async (
   db: SilentQueries,
@@ -100,7 +101,15 @@ export class NoMigrationsTableError extends Error {}
 export const getMigratedVersionsMap = async (
   ctx: RakeDbCtx,
   adapter: AdapterBase,
-  config: RakeDbConfig,
+  config: Pick<
+    MigrateConfigInternal,
+    | 'migrations'
+    | 'basePath'
+    | 'migrationId'
+    | 'migrationsPath'
+    | 'import'
+    | 'migrationsTable'
+  >,
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   const table = migrationsSchemaTableSql(adapter, config);

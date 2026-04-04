@@ -110,7 +110,9 @@ const arrange = async (arg: {
 
               adapters[0] = trx;
 
-              const db = createMigrationInterface(trx, true, config);
+              const db = createMigrationInterface(trx, true, config).getDb(
+                config.columnTypes,
+              );
 
               await prepareDb(db, true);
 

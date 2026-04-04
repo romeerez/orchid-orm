@@ -46,13 +46,10 @@ export {
   createTable,
   dropTable,
 } from './commands/create-or-drop';
-export { migrationConfigDefaults } from './config';
-export { makeRakeDbConfig, incrementIntermediateCaller } from './config.public';
-export type {
-  RakeDbCliConfigInput,
-  RakeDbConfig,
-  PublicRakeDbConfig,
-} from './config';
+export { rakeDbConfigDefaults } from './config';
+export { incrementIntermediateCaller } from './config.public';
+export type { RakeDbCliConfigInput, RakeDbConfig } from './config';
+export type { MigrateFn } from './commands/migrate-or-rollback';
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';
 export type { SilentQueries, DbMigration } from './migration/migration';
@@ -62,4 +59,9 @@ export {
 } from './migration/manage-migrated-versions';
 export { RakeDbError } from './errors';
 export { getMigrationsSchemaAndTable } from './migration/migration.utils';
-export type { RakeDbChangeFn } from './migration/change';
+export type {
+  MigrationChangeFn,
+  RakeDbChangeFnConfig,
+} from './migration/change';
+export { createMigrationChangeFn } from './migration/change';
+export type { MigrateConfig } from './commands/migrate-or-rollback';

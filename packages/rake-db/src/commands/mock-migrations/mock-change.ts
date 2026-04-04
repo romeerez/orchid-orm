@@ -1,5 +1,5 @@
-import { makeRakeDbConfig } from 'rake-db';
 import { testRakeDb } from 'test-utils';
+import { makeRakeDbConfig } from '../../config.public';
 
 export const mockChangeLogger = {
   log: jest.fn(),

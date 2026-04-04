@@ -1,4 +1,4 @@
-import { RakeDbConfig, migrationConfigDefaults } from 'rake-db';
+import { RakeDbConfig, rakeDbConfigDefaults } from 'rake-db';
 import {
   defaultSchemaConfig,
   makeColumnTypes,
@@ -19,7 +19,7 @@ const testMigrationsPath = 'migrations-path';
 export const testConfig: RakeDbConfig & {
   logger: QueryLogger;
 } = {
-  ...migrationConfigDefaults,
+  ...rakeDbConfigDefaults,
   __rakeDbConfig: true,
   transaction: 'single',
   basePath: path.join(__dirname),

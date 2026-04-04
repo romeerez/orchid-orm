@@ -1,5 +1,11 @@
 # Breaking changes
 
+## orchid-orm 1.65
+
+`makeRakeDbConfig` is removed. It was previously needed to construct a config object for the programmatic migrations API (`migrate`, `rollback`, `redo`), but these functions now process config parameters on their own, making `makeRakeDbConfig` unnecessary.
+
+Replace any usage of `makeRakeDbConfig` with a plain config object passed directly to `migrate`, `rollback`, or `redo`. Use `createMigrationChangeFn` to create the `change` function for migration files.
+
 ## orchid-orm 1.64
 
 `rake-db` config change:

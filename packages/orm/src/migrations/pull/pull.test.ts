@@ -69,7 +69,9 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
 
               adapters[0] = trx;
 
-              const db = createMigrationInterface(trx, true, testConfig);
+              const db = createMigrationInterface(trx, true, testConfig).getDb(
+                testConfig.columnTypes,
+              );
 
               await prepareDb(db, true);
 

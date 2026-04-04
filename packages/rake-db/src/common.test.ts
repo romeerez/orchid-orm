@@ -9,8 +9,9 @@ import { defaultSchemaConfig } from 'pqb/internal';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'pqb/internal';
-import { processPublicRakeDbConfig } from './config';
+import { RakeDbConfig } from './config';
 import { makeRakeDbConfig, rakeDbCommands } from './config.public';
+import { processMigrateConfig } from './commands/migrate-or-rollback';
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
@@ -137,7 +138,7 @@ describe('common', () => {
 
     it('should set logger to console when log is true', () => {
       const config = { ...baseConfig, log: true };
-      const result = processPublicRakeDbConfig(config);
+      const result = processMigrateConfig(config) as RakeDbConfig;
 
       expect(result.logger).toBe(console);
     });
@@ -153,7 +154,7 @@ describe('common', () => {
         log: false,
         logger: customLogger,
       };
-      const result = processPublicRakeDbConfig(config);
+      const result = processMigrateConfig(config);
 
       expect(result.logger).toBeUndefined();
     });
@@ -165,7 +166,7 @@ describe('common', () => {
         error: jest.fn(),
       };
       const config = { ...baseConfig, logger: customLogger };
-      const result = processPublicRakeDbConfig(config);
+      const result = processMigrateConfig(config);
 
       expect(result.logger).toBe(customLogger);
     });
@@ -181,7 +182,7 @@ describe('common', () => {
         log: false,
         logger: customLogger,
       };
-      const result = processPublicRakeDbConfig(config);
+      const result = processMigrateConfig(config);
 
       // Original should still have logger
       expect(config.logger).toBe(customLogger);
