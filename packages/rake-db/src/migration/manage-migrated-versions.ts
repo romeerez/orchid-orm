@@ -103,64 +103,76 @@ export const getMigratedVersionsMap = async (
   config: RakeDbConfig,
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
-  try {
-    const table = migrationsSchemaTableSql(adapter, config);
+  const table = migrationsSchemaTableSql(adapter, config);
+  const inTransaction =
+    'isInTransaction' in adapter && adapter.isInTransaction();
 
-    const result = await adapter.arrays<[string, string]>(
+  let result;
+  try {
+    if (inTransaction) {
+      await adapter.query(`SAVEPOINT check_migrations_table`);
+    }
+
+    result = await adapter.arrays<[string, string]>(
       `SELECT * FROM ${table} ORDER BY version`,
     );
 
-    if (!result.fields[1]) {
-      const { migrations } = await getMigrations(ctx, config, true);
-
-      const map: RecordString = {};
-      for (const item of migrations) {
-        const name = path.basename(item.path);
-        map[item.version] = name.slice(getDigitsPrefix(name).length + 1);
-      }
-
-      for (const row of result.rows) {
-        const [version] = row;
-        const name = map[version];
-        if (!name) {
-          throw new Error(
-            `Migration for version ${version} is stored in db but is not found among available migrations`,
-          );
-        }
-
-        row[1] = name;
-      }
-
-      await adapter.arrays(`ALTER TABLE ${table} ADD COLUMN name TEXT`);
-
-      await Promise.all(
-        result.rows.map(([version, name]) =>
-          adapter.arrays(`UPDATE ${table} SET name = $2 WHERE version = $1`, [
-            version,
-            name,
-          ]),
-        ),
-      );
-
-      await adapter.arrays(
-        `ALTER TABLE ${table} ALTER COLUMN name SET NOT NULL`,
-      );
+    if (inTransaction) {
+      await adapter.query(`RELEASE SAVEPOINT check_migrations_table`);
     }
-
-    let versions = Object.fromEntries(result.rows);
-
-    if (renameTo) {
-      versions = await renameMigrations(config, adapter, versions, renameTo);
-    }
-
-    return { map: versions, sequence: result.rows.map((row) => +row[0]) };
   } catch (err) {
     if ((err as RecordUnknown).code === '42P01') {
+      if (inTransaction) {
+        await adapter.query(`ROLLBACK TO SAVEPOINT check_migrations_table`);
+      }
       throw new NoMigrationsTableError();
     } else {
       throw err;
     }
   }
+
+  if (!result.fields[1]) {
+    const { migrations } = await getMigrations(ctx, config, true);
+
+    const map: RecordString = {};
+    for (const item of migrations) {
+      const name = path.basename(item.path);
+      map[item.version] = name.slice(getDigitsPrefix(name).length + 1);
+    }
+
+    for (const row of result.rows) {
+      const [version] = row;
+      const name = map[version];
+      if (!name) {
+        throw new Error(
+          `Migration for version ${version} is stored in db but is not found among available migrations`,
+        );
+      }
+
+      row[1] = name;
+    }
+
+    await adapter.arrays(`ALTER TABLE ${table} ADD COLUMN name TEXT`);
+
+    await Promise.all(
+      result.rows.map(([version, name]) =>
+        adapter.arrays(`UPDATE ${table} SET name = $2 WHERE version = $1`, [
+          version,
+          name,
+        ]),
+      ),
+    );
+
+    await adapter.arrays(`ALTER TABLE ${table} ALTER COLUMN name SET NOT NULL`);
+  }
+
+  let versions = Object.fromEntries(result.rows);
+
+  if (renameTo) {
+    versions = await renameMigrations(config, adapter, versions, renameTo);
+  }
+
+  return { map: versions, sequence: result.rows.map((row) => +row[0]) };
 };
 
 async function renameMigrations(
