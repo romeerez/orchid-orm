@@ -9,8 +9,8 @@ import { defaultSchemaConfig } from 'pqb/internal';
 import path from 'path';
 import { asMock } from 'test-utils';
 import { getCallerFilePath, getStackTrace } from 'pqb/internal';
-import { makeRakeDbConfig } from './config';
-import { rakeDbCommands } from './cli/rake-db.cli';
+import { processPublicRakeDbConfig } from './config';
+import { makeRakeDbConfig, rakeDbCommands } from './config.public';
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
@@ -117,6 +117,76 @@ describe('common', () => {
       expect(quoteWithSchema({ schema: 'schema', name: 'table' })).toBe(
         '"schema"."table"',
       );
+    });
+  });
+
+  describe('processPublicRakeDbConfig', () => {
+    const baseConfig = {
+      __rakeDbConfig: true as const,
+      migrationsTable: 'schemaMigrations',
+      columnTypes: {},
+      migrationId: { serial: 4 } as const,
+      basePath: '/test',
+      dbScript: 'test.ts',
+      import: async (_path: string) => ({}),
+      migrationsPath: '/test/migrations',
+      transaction: 'single' as const,
+      schemaConfig: defaultSchemaConfig,
+      commands: {},
+    };
+
+    it('should set logger to console when log is true', () => {
+      const config = { ...baseConfig, log: true };
+      const result = processPublicRakeDbConfig(config);
+
+      expect(result.logger).toBe(console);
+    });
+
+    it('should remove logger when log is false', () => {
+      const customLogger = {
+        log: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      };
+      const config = {
+        ...baseConfig,
+        log: false,
+        logger: customLogger,
+      };
+      const result = processPublicRakeDbConfig(config);
+
+      expect(result.logger).toBeUndefined();
+    });
+
+    it('should preserve custom logger when log is undefined', () => {
+      const customLogger = {
+        log: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      };
+      const config = { ...baseConfig, logger: customLogger };
+      const result = processPublicRakeDbConfig(config);
+
+      expect(result.logger).toBe(customLogger);
+    });
+
+    it('should not mutate the original config', () => {
+      const customLogger = {
+        log: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      };
+      const config = {
+        ...baseConfig,
+        log: false,
+        logger: customLogger,
+      };
+      const result = processPublicRakeDbConfig(config);
+
+      // Original should still have logger
+      expect(config.logger).toBe(customLogger);
+      // Result should not have logger
+      expect(result.logger).toBeUndefined();
     });
   });
 });

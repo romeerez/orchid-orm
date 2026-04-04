@@ -28,7 +28,11 @@ import {
   saveMigratedVersion,
 } from '../migration/manage-migrated-versions';
 import { RakeDbError } from '../errors';
-import { RakeDbConfig } from '../config';
+import {
+  RakeDbConfig,
+  PublicRakeDbConfig,
+  processPublicRakeDbConfig,
+} from '../config';
 import path from 'path';
 import {
   getMigrations,
@@ -46,7 +50,11 @@ export interface MigrateFnParams {
 }
 
 export interface MigrateFn {
-  (db: DbParam, config: RakeDbConfig, params?: MigrateFnParams): Promise<void>;
+  (
+    db: DbParam,
+    config: PublicRakeDbConfig,
+    params?: MigrateFnParams,
+  ): Promise<void>;
 }
 
 // for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible locals
@@ -72,7 +80,8 @@ function makeMigrateFn(
     force: boolean,
   ) => Promise<MigrationItem[]>,
 ): MigrateFn {
-  return async (db, config, params): Promise<void> => {
+  return async (db, publicConfig, params): Promise<void> => {
+    const config = processPublicRakeDbConfig(publicConfig);
     const ctx = params?.ctx || {};
     const set = await getMigrations(ctx, config, up);
     const count = params?.count ?? defaultCount;
@@ -122,9 +131,14 @@ function makeMigrateFn(
  * Will run all pending yet migrations, sequentially in order,
  * will apply `change` functions top-to-bottom.
  *
- * @param options - options to construct db adapter with
+ * Supports `log?: boolean` option in config for programmatic use:
+ * - `log: true` - enables logging to console
+ * - `log: false` - disables logging
+ * - `log: undefined` - preserves existing logger (for custom loggers)
+ *
+ * @param db - database adapter or transaction
  * @param config - specifies how to load migrations, callbacks, and logger
- * @param args - pass none or `all` to run all migrations, pass int for how many to migrate
+ * @param params - optional migration parameters (ctx, count, force)
  */
 export const migrate: MigrateFn = makeMigrateFn(
   true,
@@ -174,7 +188,16 @@ export async function runMigration(
  * Will roll back one latest applied migration,
  * will apply `change` functions bottom-to-top.
  *
+ * Supports `log?: boolean` option in config for programmatic use:
+ * - `log: true` - enables logging to console
+ * - `log: false` - disables logging
+ * - `log: undefined` - preserves existing logger (for custom loggers)
+ *
  * Takes the same options as {@link migrate}.
+ *
+ * @param db - database adapter or transaction
+ * @param config - specifies how to load migrations, callbacks, and logger
+ * @param params - optional rollback parameters (ctx, count, force)
  */
 export const rollback: MigrateFn = makeMigrateFn(
   false,
@@ -186,7 +209,16 @@ export const rollback: MigrateFn = makeMigrateFn(
 /**
  * Calls {@link rollback} and then {@link migrate}.
  *
+ * Supports `log?: boolean` option in config for programmatic use:
+ * - `log: true` - enables logging to console
+ * - `log: false` - disables logging
+ * - `log: undefined` - preserves existing logger (for custom loggers)
+ *
  * Takes the same options as {@link migrate}.
+ *
+ * @param db - database adapter or transaction
+ * @param config - specifies how to load migrations, callbacks, and logger
+ * @param params - optional redo parameters (ctx, count, force)
  */
 export const redo: MigrateFn = makeMigrateFn(
   true,

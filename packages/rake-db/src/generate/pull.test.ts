@@ -9,7 +9,8 @@ import {
   DefaultSchemaConfig,
 } from 'pqb/internal';
 import { asMock, TestAdapter } from 'test-utils';
-import { makeRakeDbConfig, RakeDbConfig } from '../config';
+import { makeRakeDbConfig } from '../config.public';
+import { RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 
 jest.mock('../migration/manage-migrated-versions', () => ({

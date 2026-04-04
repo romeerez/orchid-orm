@@ -1,9 +1,6 @@
 export type { RakeDbFn } from './cli/rake-db.cli';
-export {
-  rakeDbCliWithAdapter,
-  rakeDbCommands,
-  setRakeDbCliRunFn,
-} from './cli/rake-db.cli';
+export { rakeDbCliWithAdapter, setRakeDbCliRunFn } from './cli/rake-db.cli';
+export { rakeDbCommands } from './config.public';
 export {
   getExcludeName,
   getIndexName,
@@ -49,12 +46,13 @@ export {
   createTable,
   dropTable,
 } from './commands/create-or-drop';
-export {
-  migrationConfigDefaults,
-  makeRakeDbConfig,
-  incrementIntermediateCaller,
+export { migrationConfigDefaults } from './config';
+export { makeRakeDbConfig, incrementIntermediateCaller } from './config.public';
+export type {
+  RakeDbCliConfigInput,
+  RakeDbConfig,
+  PublicRakeDbConfig,
 } from './config';
-export type { RakeDbCliConfigInput, RakeDbConfig } from './config';
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';
 export type { SilentQueries, DbMigration } from './migration/migration';

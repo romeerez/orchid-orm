@@ -6,7 +6,7 @@ import {
   TableData,
 } from 'pqb/internal';
 import { RakeDbAst } from '../ast';
-import { makeRakeDbConfig } from '../config';
+import { makeRakeDbConfig } from '../config.public';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 
 const columnTypes = makeColumnTypes(defaultSchemaConfig);

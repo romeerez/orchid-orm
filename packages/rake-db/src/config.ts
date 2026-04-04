@@ -6,17 +6,12 @@ import {
   DefaultColumnTypes,
   DefaultSchemaConfig,
   defaultSchemaConfig,
-  getStackTrace,
-  makeColumnTypes as defaultColumnTypes,
   MaybePromise,
   NoPrimaryKeyOption,
   RecordString,
 } from 'pqb/internal';
 import path from 'path';
-import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrations-set';
-import { getCliParam } from './common';
-import { rakeDbCommands } from './cli/rake-db.cli';
 
 export type SearchPath = (() => string) | string;
 
@@ -170,6 +165,23 @@ export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
   commands: RakeDbCommands;
 }
 
+/**
+ * Configuration type for public migration functions (`migrate`, `rollback`, `redo`).
+ * Extends `RakeDbConfig` with `QueryLogOptions` to allow passing `log?: boolean`
+ * for programmatic migration control.
+ *
+ * When `log: true` is passed, `logger` will be set to `console`.
+ * When `log: false` is passed, `logger` will be removed.
+ * When `log` is undefined, the existing `logger` is preserved (useful for custom loggers).
+ *
+ * @example
+ * ```ts
+ * await migrate(db, { ...config, log: true });
+ * ```
+ */
+export type PublicRakeDbConfig<ColumnTypes = unknown> =
+  RakeDbConfig<ColumnTypes>;
+
 export const migrationConfigDefaults = {
   schemaConfig: defaultSchemaConfig,
   migrationsPath: path.join('src', 'db', 'migrations'),
@@ -263,141 +275,30 @@ export interface RakeDbRenameMigrationsInput {
   map: RakeDbRenameMigrationsMap;
 }
 
-export const ensureMigrationsPath = <
-  T extends {
-    migrationsPath?: string;
-    basePath: string;
-  },
->(
-  config: T,
-): T & { migrationsPath: string } => {
-  if (!config.migrationsPath) {
-    config.migrationsPath = migrationConfigDefaults.migrationsPath;
-  }
-
-  if (!path.isAbsolute(config.migrationsPath)) {
-    config.migrationsPath = path.resolve(
-      config.basePath,
-      config.migrationsPath,
-    );
-  }
-
-  return config as never;
-};
-
-export const ensureBasePathAndDbScript = <
-  T extends {
-    basePath?: string;
-    dbScript?: string;
-  },
->(
-  config: T,
-  intermediateCallers = 0,
-): T & { basePath: string; dbScript: string } => {
-  if (config.basePath && config.dbScript) return config as never;
-
-  // 0 is getStackTrace file, 1 is this function, 2 is a caller in rakeDb.ts, 3 is the user db script file.
-  // when called from processRakeDbConfig, 1 call is added.
-  // bundlers can bundle all files into a single file, or change file structure, so this must rely only on the caller index.
-  let filePath = getStackTrace()?.[3 + intermediateCallers]?.getFileName();
-  if (!filePath) {
-    throw new Error(
-      'Failed to determine path to db script. Please set basePath option of rakeDb',
-    );
-  }
-
-  if (filePath.startsWith('file://')) {
-    filePath = fileURLToPath(filePath);
-  }
-
-  const ext = path.extname(filePath);
-  if (ext !== '.ts' && ext !== '.js' && ext !== '.mjs') {
-    throw new Error(
-      `Add a .ts suffix to the "${path.basename(filePath)}" when calling it`,
-    );
-  }
-
-  config.basePath = path.dirname(filePath);
-  config.dbScript = path.basename(filePath);
-  return config as never;
-};
-
-let intermediateCallers = 0;
-export const incrementIntermediateCaller = () => {
-  intermediateCallers++;
-};
-
-export const makeRakeDbConfig = <ColumnTypes>(
-  config: RakeDbCliConfigInput<ColumnSchemaConfig, ColumnTypes>,
-  args?: string[],
+/**
+ * Process a PublicRakeDbConfig into RakeDbConfig by handling the `log` option.
+ * This is used by public migration functions (migrate, rollback, redo) to
+ * process the `log` boolean into the appropriate `logger` setting.
+ *
+ * - `log: true` → sets `logger` to `console`
+ * - `log: false` → removes `logger` (non-mutatively)
+ * - `log: undefined` → preserves existing `logger`
+ *
+ * @param config - the public config with optional `log` setting
+ * @returns a processed RakeDbConfig ready for internal use
+ */
+export const processPublicRakeDbConfig = <ColumnTypes>(
+  config: PublicRakeDbConfig<ColumnTypes>,
 ): RakeDbConfig<ColumnTypes> => {
-  const ic = intermediateCallers;
-  intermediateCallers = 0;
-
-  const result = {
-    ...migrationConfigDefaults,
-    ...config,
-    __rakeDbConfig: true,
-  } as unknown as RakeDbConfig<ColumnTypes>;
-
-  if (!result.log) {
-    delete result.logger;
+  if (config.log === false) {
+    // Non-mutatively remove logger when log is explicitly false
+    const { logger: _, ...rest } = config;
+    return rest as RakeDbConfig<ColumnTypes>;
+  } else if (config.log === true) {
+    // Non-mutatively set logger to console when log is true
+    return { ...config, logger: console } as RakeDbConfig<ColumnTypes>;
   }
-
-  ensureBasePathAndDbScript(result, ic);
-  ensureMigrationsPath(result);
-
-  if (!result.recurrentPath) {
-    result.recurrentPath = path.join(
-      result.migrationsPath as string,
-      'recurrent',
-    );
-  }
-
-  if ('recurrentPath' in result && !path.isAbsolute(result.recurrentPath)) {
-    result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
-  }
-
-  if ('baseTable' in config && config.baseTable) {
-    const { types, snakeCase, language } = config.baseTable.prototype;
-    result.columnTypes = types || defaultColumnTypes(defaultSchemaConfig);
-    if (snakeCase) result.snakeCase = true;
-    if (language) result.language = language;
-  } else {
-    const ct = 'columnTypes' in config && config.columnTypes;
-    result.columnTypes = ((typeof ct === 'function'
-      ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => unknown)(
-          defaultColumnTypes(defaultSchemaConfig),
-        )
-      : ct) || defaultColumnTypes(defaultSchemaConfig)) as ColumnTypes;
-  }
-
-  if (config.migrationId === 'serial') {
-    result.migrationId = { serial: 4 };
-  }
-
-  const transaction = getCliParam(args, 'transaction');
-  if (transaction) {
-    if (transaction !== 'single' && transaction !== 'per-migration') {
-      throw new Error(
-        `Unsupported transaction param ${transaction}, expected single or per-migration`,
-      );
-    }
-    result.transaction = transaction;
-  } else if (!result.transaction) {
-    result.transaction = 'single';
-  }
-
-  let c = rakeDbCommands;
-  if (config.commands) {
-    c = { ...c };
-    const commands = config.commands;
-    for (const key in commands) {
-      const command = commands[key];
-      c[key] = typeof command === 'function' ? { run: command } : command;
-    }
-  }
-  result.commands = c;
-
-  return result;
+  // If log is undefined, preserve existing logger (whether custom or undefined)
+  // Return a copy to avoid mutations
+  return { ...config } as RakeDbConfig<ColumnTypes>;
 };

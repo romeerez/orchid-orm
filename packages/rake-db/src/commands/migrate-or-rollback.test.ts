@@ -25,6 +25,12 @@ import {
 } from '../migration/manage-migrated-versions';
 import { RakeDbConfig } from 'rake-db';
 import { mockChangeLogger } from './mock-migrations/mock-change';
+import { processPublicRakeDbConfig } from '../config';
+
+jest.mock('../config', () => ({
+  ...jest.requireActual('../config'),
+  processPublicRakeDbConfig: jest.fn((config) => config),
+}));
 
 jest.mock('../common', () => ({
   ...jest.requireActual('../common'),
@@ -405,6 +411,17 @@ describe('migrateOrRollback', () => {
       );
     });
 
+    it('should call processPublicRakeDbConfig to handle log option', async () => {
+      arrange({
+        files: [],
+        config,
+      });
+
+      await act(migrate);
+
+      expect(processPublicRakeDbConfig).toHaveBeenCalledWith(config);
+    });
+
     it('should throw if there is a not migrated migration of version lower than the last migrated', async () => {
       arrange({
         files: [makeFile(1), makeFile(2), makeFile(3)],
@@ -557,6 +574,17 @@ describe('migrateOrRollback', () => {
 
       expect(called).toEqual(['two', 'one']);
     });
+
+    it('should call processPublicRakeDbConfig to handle log option', async () => {
+      arrange({
+        files: [],
+        config,
+      });
+
+      await act(rollback);
+
+      expect(processPublicRakeDbConfig).toHaveBeenCalledWith(config);
+    });
   });
 
   describe('redo', () => {
@@ -637,6 +665,18 @@ describe('migrateOrRollback', () => {
         { migrated: files[1] },
         { migrated: files[2] },
       ]);
+    });
+
+    it('should call processPublicRakeDbConfig to handle log option', async () => {
+      arrange({
+        files: [],
+        versions: [],
+        config,
+      });
+
+      await act(redo);
+
+      expect(processPublicRakeDbConfig).toHaveBeenCalledWith(config);
     });
 
     it('should migrate just one if number argument is not provided', async () => {
