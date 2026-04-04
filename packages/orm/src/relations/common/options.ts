@@ -1,4 +1,4 @@
-import { TableData, ColumnsShape, Column } from 'pqb';
+import { TableData, ColumnsShape, Column } from 'pqb/internal';
 
 export interface RelationRefsOptions<
   Column extends PropertyKey = string,

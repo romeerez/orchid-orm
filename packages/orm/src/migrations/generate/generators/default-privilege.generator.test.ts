@@ -1,4 +1,4 @@
-import { colors, DefaultPrivileges } from 'pqb';
+import { colors, DefaultPrivileges } from 'pqb/internal';
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { getDbVersion as _getDbVersion } from 'rake-db';
 import { testAdapter } from 'test-utils';

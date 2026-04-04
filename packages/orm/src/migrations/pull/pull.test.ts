@@ -6,7 +6,7 @@ import {
   AdapterConfigBase,
   noop,
   getCallerFilePath,
-} from 'pqb';
+} from 'pqb/internal';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
 import fs from 'fs/promises';

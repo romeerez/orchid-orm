@@ -1,4 +1,5 @@
-import { Column, toArray, toSnakeCase } from 'pqb';
+import { Column } from 'pqb/internal';
+import { toArray, toSnakeCase } from 'pqb/internal';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
 import { RakeDbConfig } from 'rake-db';

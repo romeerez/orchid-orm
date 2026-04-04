@@ -9,7 +9,7 @@ import {
   noop,
   QueryLogger,
   toArray,
-} from 'pqb';
+} from 'pqb/internal';
 import { join } from 'path';
 import { migrationConfigDefaults, RakeDbConfig } from './config';
 

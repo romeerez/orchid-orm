@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './new-migration';
 import { getMigrations } from '../migration/migrations-set';
-import { AdapterBase } from 'pqb';
+import { AdapterBase } from 'pqb/internal';
 
 import { migrationsSchemaTableSql } from '../migration/migration.utils';
 

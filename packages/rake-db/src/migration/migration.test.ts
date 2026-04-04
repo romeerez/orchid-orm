@@ -5,7 +5,7 @@ import {
   queryMock,
   toLine,
 } from '../rake-db.test-utils';
-import { raw, singleQuote } from 'pqb';
+import { raw, singleQuote } from 'pqb/internal';
 import { asMock, sql, testAdapter } from 'test-utils';
 import { createMigrationInterface } from './migration';
 

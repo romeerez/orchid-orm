@@ -9,7 +9,7 @@ import {
   isExpression,
   RelationJoinQuery,
   Column,
-} from 'pqb';
+} from 'pqb/internal';
 
 export const joinQueryChainHOF =
   (

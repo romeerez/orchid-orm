@@ -2,7 +2,7 @@ import { runRecurrentMigrations } from './recurrent';
 import { readdir, readFile, stat } from 'fs/promises';
 import { asMock, TestAdapter } from 'test-utils';
 import { join } from 'path';
-import { noop } from 'pqb';
+import { noop } from 'pqb/internal';
 
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),

@@ -2,8 +2,8 @@ import {
   createBaseTable,
   DefaultSelect,
   orchidORMWithAdapter,
-  PickQueryQ,
 } from 'orchid-orm';
+import { PickQueryQ } from 'pqb/internal';
 import { now, testAdapter, testColumnTypes } from './test-utils';
 
 export const BaseTable = createBaseTable({

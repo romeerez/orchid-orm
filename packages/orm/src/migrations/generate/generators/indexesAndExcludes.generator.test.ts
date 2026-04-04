@@ -1,5 +1,5 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { TableData, colors } from 'pqb';
+import { TableData, colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),

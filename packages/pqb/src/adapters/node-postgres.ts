@@ -6,7 +6,6 @@ import {
   emptyObject,
   noop,
   QueryArraysResult,
-  QueryError,
   QueryResult,
   QueryResultRow,
   RecordUnknown,
@@ -17,12 +16,12 @@ import {
   DefaultSchemaConfig,
   DbOptions,
   DbResult,
-  createDbWithAdapter,
   TransactionAdapterBase,
   QuerySchema,
   TransactionArgs,
   RecordStringOrNumber,
-} from 'pqb';
+} from 'pqb/internal';
+import { QueryError, createDbWithAdapter } from 'pqb';
 import {
   getResetLocalsSql,
   getSetLocalsSql,

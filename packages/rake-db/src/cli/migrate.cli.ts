@@ -1,4 +1,4 @@
-import { AdapterBase } from 'pqb';
+import { AdapterBase } from 'pqb/internal';
 import {
   MigrateFn,
   migrate,

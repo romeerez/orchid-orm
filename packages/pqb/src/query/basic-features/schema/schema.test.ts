@@ -1,5 +1,5 @@
 import { db, expectSql, UserData } from 'test-utils';
-import { getSqlText } from 'pqb';
+import { getSqlText } from '../../sql/sql';
 
 describe('withSchema', () => {
   it('prefixes a table with schema', () => {

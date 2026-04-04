@@ -1,13 +1,13 @@
+import { Column } from 'pqb/internal';
 import {
+  ArrayColumn,
   ColumnsShape,
-  Column,
-  GeneratorIgnore,
-  VirtualColumn,
   DbStructureDomainsMap,
   AdapterBase,
   EnumColumn,
-  ArrayColumn,
-} from 'pqb';
+  GeneratorIgnore,
+  VirtualColumn,
+} from 'pqb/internal';
 import {
   DbStructure,
   IntrospectedStructure,

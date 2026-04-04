@@ -2,7 +2,7 @@ import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
 import { expectSql, testDb, TestTransactionAdapter } from 'test-utils';
 import { RecordUnknown } from '../utils';
-import { quoteTableWithSchema } from 'pqb';
+import { quoteTableWithSchema } from '../query/sql/sql';
 
 export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;

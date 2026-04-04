@@ -1,5 +1,5 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
-import { colors, NonUniqDataItem } from 'pqb';
+import { colors, NonUniqDataItem } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),

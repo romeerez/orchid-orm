@@ -1,14 +1,14 @@
+import { createDbWithAdapter } from 'pqb/internal';
 import {
   AdapterBase,
   ColumnSchemaConfig,
-  createDbWithAdapter,
   DbResult,
   emptyArray,
   MaybeArray,
   MaybePromise,
   pathToLog,
   toArray,
-} from 'pqb';
+} from 'pqb/internal';
 import { queryLock, RakeDbCtx, transaction } from '../common';
 import {
   clearChanges,

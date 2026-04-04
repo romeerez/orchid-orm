@@ -5,14 +5,14 @@ import {
   DomainColumn,
   escapeForMigration,
   isRawSQL,
-  QuerySchema,
   RawSqlBase,
-  SingleSql,
   TableData,
   toArray,
   toCamelCase,
   toSnakeCase,
-} from 'pqb';
+  type QuerySchema,
+  type SingleSql,
+} from 'pqb/internal';
 import { ColumnComment } from './migration';
 import {
   getSchemaAndTableFromName,

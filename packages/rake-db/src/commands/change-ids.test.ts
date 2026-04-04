@@ -6,7 +6,7 @@ import { asMock, TestAdapter } from 'test-utils';
 import fs from 'fs/promises';
 import path from 'path';
 import { generateTimeStamp } from './new-migration';
-import { QueryLogger } from 'pqb';
+import { QueryLogger } from 'pqb/internal';
 
 jest.mock('../migration/migrations-set');
 jest.mock('fs/promises');

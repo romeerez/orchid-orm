@@ -1,4 +1,4 @@
-import { colors } from 'pqb';
+import { colors } from 'pqb/internal';
 import { useGeneratorsTestUtils } from './generators.test-utils';
 
 jest.mock('rake-db', () => ({

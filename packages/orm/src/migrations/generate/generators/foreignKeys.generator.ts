@@ -6,7 +6,8 @@ import {
   getConstraintName,
   RakeDbConfig,
 } from 'rake-db';
-import { Column, TableData, deepCompare, toSnakeCase } from 'pqb';
+import { Column } from 'pqb/internal';
+import { TableData, deepCompare, toSnakeCase } from 'pqb/internal';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
 

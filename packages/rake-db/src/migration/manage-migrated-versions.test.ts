@@ -8,7 +8,7 @@ import {
 import { SilentQueries } from './migration';
 import { testConfig } from '../rake-db.test-utils';
 import { RakeDbCtx } from '../common';
-import { AdapterBase } from 'pqb';
+import { AdapterBase } from 'pqb/internal';
 import { TestAdapter } from 'test-utils';
 import { createSchema, createTable } from '../commands/create-or-drop';
 

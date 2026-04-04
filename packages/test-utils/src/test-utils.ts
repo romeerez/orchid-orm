@@ -1,16 +1,14 @@
+import { testTransaction, createDbWithAdapter, Column } from 'pqb';
 import {
   makeColumnTypes,
-  testTransaction,
   defaultSchemaConfig,
   QueryData,
-  createDbWithAdapter,
   MaybeArray,
   SingleSqlItem,
   Sql,
   toArray,
-  Column,
   noop,
-} from 'pqb';
+} from 'pqb/internal';
 import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
   createDb as nodePostgresCreateDb,

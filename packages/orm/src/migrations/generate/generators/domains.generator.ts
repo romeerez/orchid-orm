@@ -1,13 +1,12 @@
+import { Column, RawSql } from 'pqb/internal';
 import {
   ArrayColumn,
-  Column,
   DbStructureDomainsMap,
-  RawSql,
   AdapterBase,
   deepCompare,
   emptyArray,
   TemplateLiteralArgs,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   RakeDbAst,
   getSchemaAndTableFromName,

@@ -1,4 +1,4 @@
-import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb';
+import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb/internal';
 import { AssertEqual, assertType } from 'test-utils';
 import { ValibotSchemaConfig, valibotSchemaConfig } from './valibot';
 import {

@@ -1,4 +1,4 @@
-import { noop } from 'pqb';
+import { noop } from 'pqb/internal';
 import {
   db,
   line,

@@ -1,5 +1,6 @@
 import { db, TestAdapter, TestTransactionAdapter } from 'test-utils';
-import { ColumnsShape, Query, testTransaction } from 'pqb';
+import { testTransaction } from 'pqb';
+import { ColumnsShape, Query } from 'pqb/internal';
 
 const tableJsonBuildObject = (table: Query) => {
   const cache: { [key: string]: string } = {};

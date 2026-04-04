@@ -1,5 +1,11 @@
 import { Migration } from './migration';
-import { singleQuote, raw, SingleSql, RawSqlBase, QuerySchema } from 'pqb';
+import {
+  singleQuote,
+  raw,
+  SingleSql,
+  RawSqlBase,
+  QuerySchema,
+} from 'pqb/internal';
 import { RakeDbAst } from '../ast';
 import { interpolateSqlValues } from './migration.utils';
 import { getSchemaAndTableFromName } from '../common';

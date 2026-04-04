@@ -14,8 +14,8 @@ import {
   QueryArraysResult,
   RecordUnknown,
   snakeCaseKey,
-  QuerySchema,
-} from 'pqb';
+  type QuerySchema,
+} from 'pqb/internal';
 import {
   ColumnComment,
   ColumnsShapeCallback,

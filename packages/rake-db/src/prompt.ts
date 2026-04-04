@@ -1,4 +1,4 @@
-import { colors } from 'pqb';
+import { colors } from 'pqb/internal';
 
 const ESC = '\x1B';
 const CSI = `${ESC}[`;

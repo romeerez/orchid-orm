@@ -1,4 +1,4 @@
-import { EnumColumn, defaultSchemaConfig } from 'pqb';
+import { EnumColumn, defaultSchemaConfig } from 'pqb/internal';
 
 export const tableMethods = {
   enum(name: string) {

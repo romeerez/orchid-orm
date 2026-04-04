@@ -3,7 +3,7 @@ import { PickQueryShape } from '../../pick-query-types';
 import { QueryThenShallowSimplify } from '../../then/then';
 import { makeColumnInfoSql } from './get-column-info.sql';
 import { ToSQLQuery } from '../../sql/to-sql';
-import { _clone, Query } from 'pqb';
+import { _clone, Query } from 'pqb/internal';
 
 /**
  * Result type for `columnInfo` method.

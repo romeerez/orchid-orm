@@ -4,7 +4,7 @@ import {
   RakeDbRenameMigrations,
   RakeDbRenameMigrationsMap,
 } from '../config';
-import { MaybePromise, RecordString } from 'pqb';
+import { MaybePromise, RecordString } from 'pqb/internal';
 import { pathToFileURL } from 'node:url';
 import { readdir } from 'fs/promises';
 import { RakeDbCtx } from '../common';

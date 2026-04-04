@@ -19,7 +19,7 @@ import {
   RawSql,
   isRawSQL,
   TemplateLiteralArgs,
-} from 'pqb';
+} from 'pqb/internal';
 import { structureToAst, StructureToAstCtx } from './structure-to-ast';
 import { RakeDbAst } from '../ast';
 import { getIndexName, getExcludeName } from '../migration/migration.utils';

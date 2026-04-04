@@ -1,10 +1,10 @@
 import {
+  QuerySchema,
   AdapterBase,
   ColumnSchemaConfig,
   EnumColumn,
-  QuerySchema,
   singleQuote,
-} from 'pqb';
+} from 'pqb/internal';
 import { TableQuery } from './migration/create-table';
 import { MigrationsSet } from './migration/migrations-set';
 import { RakeDbConfig } from './config';

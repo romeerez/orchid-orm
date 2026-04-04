@@ -1,6 +1,6 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { ComposeMigrationParams } from '../composeMigration';
-import { getSupportedDefaultPrivileges, DefaultPrivileges } from 'pqb';
+import { getSupportedDefaultPrivileges, DefaultPrivileges } from 'pqb/internal';
 
 const ALL_OBJECT_TYPES: DbStructure.DefaultPrivilegeObjectConfig['object'][] = [
   'TABLES',

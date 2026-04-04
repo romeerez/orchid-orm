@@ -10,7 +10,12 @@ import {
   VariableStatement,
 } from 'typescript';
 import { AppCodeGenTables } from './tables.appCodeGenerator';
-import { DbExtension, getImportPath, quoteObjectKey, singleQuote } from 'pqb';
+import {
+  DbExtension,
+  getImportPath,
+  quoteObjectKey,
+  singleQuote,
+} from 'pqb/internal';
 import { RakeDbAst } from 'rake-db';
 
 // importing directly won't work after compiling

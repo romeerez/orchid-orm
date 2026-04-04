@@ -14,7 +14,7 @@ import {
   ColumnTypeSchemaArg,
   toArray,
   exhaustive,
-} from 'pqb';
+} from 'pqb/internal';
 import { getSchemaAndTableFromName } from '../common';
 import { RakeDbConfig } from '../config';
 

@@ -16,7 +16,7 @@ import {
   RecordUnknown,
   RelationConfigBase,
   PickQuerySelectableRelations,
-} from 'pqb';
+} from 'pqb/internal';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 import { BaseTableClass, ORMTableInput } from '../../baseTable';

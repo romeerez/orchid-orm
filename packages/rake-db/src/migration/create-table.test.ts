@@ -4,7 +4,7 @@ import {
   makeColumnTypes,
   Db,
   defaultSchemaConfig,
-} from 'pqb';
+} from 'pqb/internal';
 import { asMock, sql } from 'test-utils';
 
 const db = getDb();

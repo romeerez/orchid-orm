@@ -5,8 +5,8 @@ import {
   getExcludeName,
   RakeDbConfig,
 } from 'rake-db';
+import { Column } from 'pqb/internal';
 import {
-  Column,
   TableData,
   deepCompare,
   MaybeArray,
@@ -14,7 +14,7 @@ import {
   toArray,
   toSnakeCase,
   SearchWeight,
-} from 'pqb';
+} from 'pqb/internal';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';
 import { CodeTable } from '../generate';

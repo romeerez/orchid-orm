@@ -1,4 +1,4 @@
-import { QueryInternal, AdapterBase } from 'pqb';
+import { QueryInternal, AdapterBase } from 'pqb/internal';
 import {
   RakeDbAst,
   IntrospectedStructure,

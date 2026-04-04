@@ -6,7 +6,7 @@ import {
   RecordOptionalString,
   RecordString,
   RecordUnknown,
-} from 'pqb';
+} from 'pqb/internal';
 import { RakeDbConfig, RakeDbRenameMigrations } from '../config';
 import path from 'path';
 import {

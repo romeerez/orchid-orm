@@ -7,8 +7,8 @@ import { RakeDbAst } from '../ast';
 import {
   ArrayColumn,
   assignDbDataToColumn,
-  ColumnFromDbParams,
-  ColumnsByType,
+  type ColumnFromDbParams,
+  type ColumnsByType,
   ColumnsShape,
   Column,
   CustomTypeColumn,
@@ -23,10 +23,10 @@ import {
   AdapterBase,
   ColumnSchemaConfig,
   singleQuote,
-  TemplateLiteralArgs,
+  type TemplateLiteralArgs,
   toCamelCase,
   toSnakeCase,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   getConstraintName,
   getExcludeName,

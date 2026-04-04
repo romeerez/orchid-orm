@@ -20,7 +20,7 @@ import {
   VirtualColumn,
 } from '../columns';
 import { RecordUnknown } from '../utils';
-import { QueryLogger } from 'pqb';
+import { QueryLogger } from './basic-features/log/log';
 import { orchidORMWithAdapter } from 'orchid-orm';
 
 describe('db connection', () => {

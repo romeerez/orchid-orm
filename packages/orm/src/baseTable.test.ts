@@ -15,7 +15,9 @@ import {
   TextColumn,
   getCallerFilePath,
   QueryHookUtils,
-} from 'pqb';
+  DefaultSchemaConfig,
+  defaultSchemaConfig,
+} from 'pqb/internal';
 import { useTestORM } from './test-utils/orm.test-utils';
 import {
   BaseTable,
@@ -28,7 +30,6 @@ import {
   testColumnTypes,
   UserData,
 } from 'test-utils';
-import { DefaultSchemaConfig, defaultSchemaConfig } from 'pqb';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 

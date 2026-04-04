@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrations-set';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { RakeDbCtx } from '../common';
-import { AdapterBase, RecordOptionalString, colors } from 'pqb';
+import { AdapterBase, RecordOptionalString, colors } from 'pqb/internal';
 import { redo } from './migrate-or-rollback';
 import { promptSelect } from '../prompt';
 

@@ -1,11 +1,11 @@
 import {
   AdapterBase,
   EmptyObject,
-  RecordOptionalString,
   RecordUnknown,
-  SearchWeight,
   DefaultPrivileges,
-} from 'pqb';
+  type RecordOptionalString,
+  type SearchWeight,
+} from 'pqb/internal';
 import { RakeDbAst } from '../ast';
 
 export namespace DbStructure {

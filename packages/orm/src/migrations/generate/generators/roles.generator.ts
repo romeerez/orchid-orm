@@ -1,6 +1,6 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { ComposeMigrationParams } from '../composeMigration';
-import { deepCompare } from 'pqb';
+import { deepCompare } from 'pqb/internal';
 import { promptCreateOrRename } from './generators.utils';
 
 const defaults = {

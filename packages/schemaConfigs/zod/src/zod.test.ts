@@ -1,5 +1,5 @@
 import { ZodSchemaConfig, zodSchemaConfig } from './zod';
-import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb';
+import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb/internal';
 import {
   z,
   ZodArray,

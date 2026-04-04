@@ -1,10 +1,5 @@
-import {
-  getFreeSetAlias,
-  TemplateLiteralArgs,
-  Column,
-  RawSql,
-  TableData,
-} from 'pqb';
+import { Column, RawSql } from 'pqb/internal';
+import { getFreeSetAlias, TemplateLiteralArgs, TableData } from 'pqb/internal';
 import { DbStructure, RakeDbAst } from 'rake-db';
 import { ChangeTableData } from './tables.generator';
 import { checkForColumnAddOrDrop, CompareExpression } from './generators.utils';

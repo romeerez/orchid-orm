@@ -1,6 +1,6 @@
 import { RakeDbAst } from '../ast';
 import { astToGenerateItem, GenerateItem } from './ast-to-generate-items';
-import { defaultSchemaConfig, makeColumnTypes } from 'pqb';
+import { defaultSchemaConfig, makeColumnTypes } from 'pqb/internal';
 import { testConfig } from '../rake-db.test-utils';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 

@@ -1,4 +1,4 @@
-import { DbExtension, AdapterBase, pathToLog } from 'pqb';
+import { DbExtension, AdapterBase, pathToLog } from 'pqb/internal';
 import {
   makeFileVersion,
   makeStructureToAstCtx,

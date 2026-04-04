@@ -5,7 +5,7 @@ import {
   defaultSchemaConfig,
   UnknownColumn,
   colors,
-} from 'pqb';
+} from 'pqb/internal';
 import { DbMigration } from 'rake-db';
 
 jest.mock('rake-db', () => ({

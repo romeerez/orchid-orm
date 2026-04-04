@@ -9,7 +9,7 @@ import {
   singleQuote,
   toCamelCase,
   toPascalCase,
-} from 'pqb';
+} from 'pqb/internal';
 import { RakeDbAst, RakeDbConfig } from 'rake-db';
 import path from 'node:path';
 

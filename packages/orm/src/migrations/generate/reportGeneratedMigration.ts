@@ -9,7 +9,7 @@ import {
   toArray,
   toCamelCase,
   colors,
-} from 'pqb';
+} from 'pqb/internal';
 import { getColumnDbType } from './generators/columns.generator';
 import { fnOrTableToString } from './generators/foreignKeys.generator';
 

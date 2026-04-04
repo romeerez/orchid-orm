@@ -1,4 +1,5 @@
 import {
+  QueryLogOptions,
   AdapterBase,
   ColumnSchemaConfig,
   DbResult,
@@ -9,9 +10,8 @@ import {
   makeColumnTypes as defaultColumnTypes,
   MaybePromise,
   NoPrimaryKeyOption,
-  QueryLogOptions,
   RecordString,
-} from 'pqb';
+} from 'pqb/internal';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import { MigrationItem } from './migration/migrations-set';

@@ -16,7 +16,7 @@ import {
   RelationsBase,
   Column,
   QuerySchema,
-} from 'pqb';
+} from 'pqb/internal';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {
   HasAndBelongsToMany,

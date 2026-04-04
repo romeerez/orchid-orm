@@ -5,7 +5,7 @@ import {
   QueryReturnType,
   RecordUnknown,
   QueryHasWhere,
-} from 'pqb';
+} from 'pqb/internal';
 
 type QueryMethods<T extends Query> = Record<
   string,

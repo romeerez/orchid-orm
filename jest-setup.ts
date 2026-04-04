@@ -19,6 +19,10 @@ jest.mock('pqb', () => require('./packages/pqb/src'), {
   virtual: true,
 });
 
+jest.mock('pqb/internal', () => require('./packages/pqb/src/internal'), {
+  virtual: true,
+});
+
 jest.mock(
   'pqb/node-postgres',
   () => require('./packages/pqb/src/adapters/node-postgres'),

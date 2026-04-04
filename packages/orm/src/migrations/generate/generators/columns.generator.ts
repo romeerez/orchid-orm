@@ -12,9 +12,9 @@ import {
   promptSelect,
   RakeDbConfig,
 } from 'rake-db';
+import { Column } from 'pqb/internal';
 import {
   ArrayColumn,
-  Column,
   DbStructureDomainsMap,
   EnumColumn,
   getColumnBaseType,
@@ -23,7 +23,7 @@ import {
   toSnakeCase,
   AdapterBase,
   colors,
-} from 'pqb';
+} from 'pqb/internal';
 import { promptCreateOrRename } from './generators.utils';
 import { ChangeTableData, CompareSql } from './tables.generator';
 import { AbortSignal } from '../generate';

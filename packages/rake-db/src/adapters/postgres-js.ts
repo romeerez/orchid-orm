@@ -1,5 +1,5 @@
 import { PostgresJsAdapter, PostgresJsAdapterOptions } from 'pqb/postgres-js';
-import { MaybeArray, toArray } from 'pqb';
+import { MaybeArray, toArray } from 'pqb/internal';
 import {
   rakeDbCliWithAdapter,
   RakeDbFn,

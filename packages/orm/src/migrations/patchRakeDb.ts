@@ -1,7 +1,7 @@
 import { rakeDbCommands } from 'rake-db';
 import { generate } from './generate/generate';
 import { pull } from './pull/pull';
-import { ColumnSchemaConfig } from 'pqb';
+import { ColumnSchemaConfig } from 'pqb/internal';
 
 rakeDbCommands.g = rakeDbCommands.generate = {
   run: generate,

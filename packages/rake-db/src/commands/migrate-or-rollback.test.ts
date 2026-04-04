@@ -6,7 +6,12 @@ import {
   rollback,
   runMigration,
 } from './migrate-or-rollback';
-import { noop, pathToLog, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb';
+import {
+  noop,
+  pathToLog,
+  DefaultColumnTypes,
+  DefaultSchemaConfig,
+} from 'pqb/internal';
 import { ChangeCallback, pushChange } from '../migration/change';
 import { asMock, testAdapter, TestAdapter } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';

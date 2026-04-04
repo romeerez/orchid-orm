@@ -8,7 +8,7 @@ import {
   RakeDbAppliedVersions,
 } from '../migration/manage-migrated-versions';
 import { getMigrationVersionOrThrow } from '../migration/migrations-set';
-import { AdapterBase, RecordString } from 'pqb';
+import { AdapterBase, RecordString } from 'pqb/internal';
 import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
 import { RakeDbConfig } from 'rake-db';

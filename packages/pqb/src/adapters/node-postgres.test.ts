@@ -4,7 +4,7 @@ import pg from 'pg';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
 import { RecordUnknown } from '../utils';
-import { AdapterBase } from 'pqb';
+import { AdapterBase } from './adapter';
 
 const testAdapter = new NodePostgresAdapter(testDbOptions);
 

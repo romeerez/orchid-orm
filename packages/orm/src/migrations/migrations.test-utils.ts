@@ -1,5 +1,10 @@
 import { RakeDbConfig, migrationConfigDefaults } from 'rake-db';
-import { defaultSchemaConfig, makeColumnTypes, noop, QueryLogger } from 'pqb';
+import {
+  defaultSchemaConfig,
+  makeColumnTypes,
+  noop,
+  QueryLogger,
+} from 'pqb/internal';
 import path from 'node:path';
 import { join } from 'path';
 import { createBaseTable } from '../baseTable';

@@ -1,4 +1,4 @@
-import { RecordUnknown } from 'pqb';
+import { RecordUnknown } from 'pqb/internal';
 import {
   DbParam,
   getMaybeTransactionAdapter,

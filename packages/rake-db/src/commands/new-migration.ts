@@ -6,7 +6,7 @@ import {
 } from '../common';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { getImportPath, pathToLog } from 'pqb';
+import { getImportPath, pathToLog } from 'pqb/internal';
 import { getMigrations } from '../migration/migrations-set';
 import { RakeDbConfig } from '../config';
 

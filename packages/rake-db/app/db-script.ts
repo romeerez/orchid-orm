@@ -1,5 +1,5 @@
 import os from 'os';
-import { AdapterConfigBase } from 'pqb';
+import { AdapterConfigBase } from 'pqb/internal';
 import { testRakeDb } from 'test-utils';
 import { config } from 'dotenv';
 import path from 'path';

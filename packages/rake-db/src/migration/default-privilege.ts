@@ -1,6 +1,6 @@
 import { Migration } from './migration';
 import { RakeDbAst } from '../ast';
-import { DefaultPrivileges } from 'pqb';
+import { DefaultPrivileges } from 'pqb/internal';
 
 type ObjectType =
   | 'tables'

@@ -1,4 +1,4 @@
-import { Db, Query, omit, RecordUnknown } from 'pqb';
+import { Db, Query, omit, RecordUnknown } from 'pqb/internal';
 import {
   chatSelectAll,
   useRelationCallback,

@@ -2,7 +2,11 @@ import { FactoryConfig, ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable, Profile } from './test-utils';
 import { z, ZodObject, ZodRawShape } from 'zod/v4';
 import { Column, orchidORMWithAdapter } from 'orchid-orm';
-import { ColumnsShape, makeColumnTypes, DefaultColumnTypes } from 'pqb';
+import {
+  ColumnsShape,
+  makeColumnTypes,
+  DefaultColumnTypes,
+} from 'pqb/internal';
 import {
   assertType,
   testAdapter,

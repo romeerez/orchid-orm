@@ -1,4 +1,4 @@
-import { Db, Query, NotFoundError, omit } from 'pqb';
+import { Db, Query, NotFoundError, omit } from 'pqb/internal';
 import {
   messageSelectAll,
   useQueryCounter,

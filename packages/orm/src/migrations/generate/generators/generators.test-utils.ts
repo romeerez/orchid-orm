@@ -10,7 +10,7 @@ import {
   noop,
   Column,
   QuerySchema,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   ChangeCallback,
   promptSelect,

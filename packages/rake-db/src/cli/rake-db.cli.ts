@@ -7,7 +7,7 @@ import {
   RecordOptionalString,
   RecordString,
   toArray,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   createDatabaseCommand,
   dropDatabaseCommand,

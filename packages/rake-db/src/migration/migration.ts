@@ -1,7 +1,7 @@
+import { createDbWithAdapter } from 'pqb/internal';
 import {
   ColumnsShape,
   Column,
-  createDbWithAdapter,
   DbDomainArg,
   DbResult,
   EnumColumn,
@@ -23,7 +23,7 @@ import {
   toSnakeCase,
   DefaultColumnTypes,
   DefaultSchemaConfig,
-} from 'pqb';
+} from 'pqb/internal';
 import { createTable, CreateTableResult } from './create-table';
 import { changeTable, TableChangeData, TableChanger } from './change-table';
 import {

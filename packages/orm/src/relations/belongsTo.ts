@@ -46,7 +46,7 @@ import {
   noop,
   _queryInsertMany,
   _hookSelectColumns,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   RelationConfigSelf,
   RelationData,

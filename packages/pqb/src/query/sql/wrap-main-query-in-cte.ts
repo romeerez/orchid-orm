@@ -1,6 +1,6 @@
 import { QueryData, QueryType } from '../query-data';
 import { ToSQLCtx } from './to-sql';
-import { addTopCte, addTopCteSql } from 'pqb';
+import { addTopCte, addTopCteSql } from 'pqb/internal';
 
 export const getShouldWrapMainQueryInCte = (
   ctx: ToSQLCtx,

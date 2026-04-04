@@ -4,7 +4,7 @@ import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { pathToFileURL } from 'node:url';
 import { RakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrations-set';
-import { AdapterBase, colors } from 'pqb';
+import { AdapterBase, colors } from 'pqb/internal';
 
 export const listMigrationsStatuses = async (
   adapters: AdapterBase[],

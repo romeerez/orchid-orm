@@ -1,5 +1,10 @@
 import { astToMigration } from './ast-to-migration';
-import { makeColumnTypes, raw, defaultSchemaConfig, TableData } from 'pqb';
+import {
+  makeColumnTypes,
+  raw,
+  defaultSchemaConfig,
+  TableData,
+} from 'pqb/internal';
 import { RakeDbAst } from '../ast';
 import { makeRakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';

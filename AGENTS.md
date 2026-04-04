@@ -11,25 +11,27 @@ Packages are libraries for working with Postgres.
 
 Packages are located in `packages/`:
 
-| Package | Description | Dependencies |
-|---------|-------------|--------------|
-| `docs` | docs are in docs/src/guide, powered by VitePress (https://vitepress.dev/llms.txt) | None |
-| `pqb` (Core) | Query Builder and Column Abstractions | None |
-| `orm` | User-facing ORM with Relations and Migration Generation | pqb, rake-db |
-| `rake-db` | Migrations management and generation | pqb |
-| `create-orm` | Bootstrapping tool for new projects | None |
-| `schema-configs` | Zod and Valibot integration packages for validation | pqb |
-| `test-factory` | Data factories for testing | pqb, orm |
-| `test-utils` | Internal testing utilities | None |
+| Package          | Description                                                                       | Dependencies |
+| ---------------- | --------------------------------------------------------------------------------- | ------------ |
+| `docs`           | docs are in docs/src/guide, powered by VitePress (https://vitepress.dev/llms.txt) | None         |
+| `pqb` (Core)     | Query Builder and Column Abstractions                                             | None         |
+| `orm`            | User-facing ORM with Relations and Migration Generation                           | pqb, rake-db |
+| `rake-db`        | Migrations management and generation                                              | pqb          |
+| `create-orm`     | Bootstrapping tool for new projects                                               | None         |
+| `schema-configs` | Zod and Valibot integration packages for validation                               | pqb          |
+| `test-factory`   | Data factories for testing                                                        | pqb, orm     |
+| `test-utils`     | Internal testing utilities                                                        | None         |
 
 ## Project Intent
 
 ### All Packages
+
 - **Type safety**: Public APIs must be fully type-safe
 - **Type System Performance**: Types optimized to minimize TypeScript instantiation count
 - **Testing**: Focus on public API and behavior, not internal implementation
 
 ### pqb (Query Builder)
+
 - Supports **only Postgres**
 - **Flexibility**: Composable, feature-rich, covers extensive Postgres features
 - **Explicitness**: Intuitive API design
@@ -37,6 +39,7 @@ Packages are located in `packages/`:
 - **Column abstractions**: Customize per-table data behavior
 
 ### orm
+
 - Provides functionality to define and configure tables and their relations
 - Enhances pqb with seamless relation capabilities for unified query builder
 - Generates migrations to resolve database/user code deltas
@@ -45,6 +48,7 @@ Packages are located in `packages/`:
 - Exposed constructors allow configuring all pqb table features (soft-delete, scopes, etc.)
 
 ### rake-db
+
 - CLI and programmatic interfaces
 - Database management capabilities
 - **Migrations**:
@@ -56,9 +60,11 @@ Packages are located in `packages/`:
   - Generates migration code from AST
 
 ### schema-configs
+
 - Optional packages for Zod/Valibot validations from ORM tables
 
 ### test-factory
+
 - Optional package for generating mock data in tests
 
 ## Tests
@@ -78,21 +84,31 @@ Packages are located in `packages/`:
 
 ## Code Guidelines
 
+### Imports
+
+Only public functionality is exported in `src/index.ts`.
+Public functionality is such that is explicitly documented.
+Whenever orm or rake-db needs some internal functionality of pqb, it's exported via `pqb/internal`, exports are in packages/pqb/src/internal.ts.
+
 ### Code clarify
-- no IIFE 
+
+- no IIFE
 - nested ternaries should not be inlined in other expressions - save result to a const
 - prefer short `if (!x)` over `if (x === null)` or `if (x === undefined)` when no other falsey values are possible
 - leave comments for edge-cases
 
 ### Function Params
+
 - Prefer grouping parameters into an object for user-facing functions
 - Prefer not grouping parameters of local functions
 
 ### Type Casting (`as`)
+
 - Use `as` when generic functions require minimal user-provided types that need internal expansion
 - Otherwise, avoid `as` — consider if it indicates a design problem; **stop** and ask for help if unsure
 
 ### After Generating Code
+
 - Refactor for simplicity, clarity, conciseness
 - Extract similar chunks into reusable functions
 - Split long-ass functions into manageable pieces by responsibility

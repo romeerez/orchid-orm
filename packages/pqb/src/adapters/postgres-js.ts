@@ -5,7 +5,6 @@ import {
   emptyObject,
   MaybeArray,
   QueryArraysResult,
-  QueryError,
   QueryResult,
   QueryResultRow,
   returnArg,
@@ -14,14 +13,14 @@ import {
   DbOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
-  createDbWithAdapter,
   DbResult,
   ColumnSchemaConfig,
   TransactionAdapterBase,
   QuerySchema,
   TransactionArgs,
   RecordStringOrNumber,
-} from 'pqb';
+} from 'pqb/internal';
+import { QueryError, createDbWithAdapter } from 'pqb';
 import {
   getResetLocalsSql,
   getSetLocalsSql,

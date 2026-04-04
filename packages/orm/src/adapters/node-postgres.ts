@@ -9,7 +9,7 @@ import {
   NodePostgresAdapterOptions,
   createDb as cdb,
 } from 'pqb/node-postgres';
-import { DbSharedOptions } from 'pqb';
+import { DbSharedOptions } from 'pqb/internal';
 
 export const Adapter = NodePostgresAdapter;
 

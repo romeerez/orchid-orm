@@ -3,7 +3,7 @@ import {
   TransactionAdapterBase,
   TransactionArgs,
 } from './adapter';
-import { RecordStringOrNumber } from 'pqb';
+import { RecordStringOrNumber } from 'pqb/internal';
 
 interface SolvedTransactionArgs {
   options: AdapterTransactionOptions | undefined;

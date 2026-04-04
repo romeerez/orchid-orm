@@ -40,7 +40,7 @@ import {
   _clone,
   _appendQuery,
   _queryUpsert,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   addAutoForeignKey,
   getSourceRelation,

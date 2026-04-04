@@ -46,7 +46,7 @@ import {
   Column,
   QueryHasWhere,
   QuerySchema,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   addAutoForeignKey,
   hasRelationHandleCreate,

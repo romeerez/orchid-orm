@@ -22,7 +22,7 @@ import {
   toArray,
   exhaustive,
   rawSqlToCode,
-} from 'pqb';
+} from 'pqb/internal';
 import { quoteSchemaTable } from '../common';
 import { astToGenerateItems } from './ast-to-generate-items';
 import { RakeDbConfig } from '../config';

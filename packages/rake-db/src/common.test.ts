@@ -5,10 +5,10 @@ import {
   joinWords,
   quoteWithSchema,
 } from './common';
-import { defaultSchemaConfig } from 'pqb';
+import { defaultSchemaConfig } from 'pqb/internal';
 import path from 'path';
 import { asMock } from 'test-utils';
-import { getCallerFilePath, getStackTrace } from 'pqb';
+import { getCallerFilePath, getStackTrace } from 'pqb/internal';
 import { makeRakeDbConfig } from './config';
 import { rakeDbCommands } from './cli/rake-db.cli';
 

@@ -1,4 +1,4 @@
-import { AdapterBase } from 'pqb';
+import { AdapterBase } from 'pqb/internal';
 import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
 import { saveMigratedVersion } from '../migration/manage-migrated-versions';
 import { astToMigration } from './ast-to-migration';

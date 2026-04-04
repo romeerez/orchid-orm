@@ -2,7 +2,7 @@ import {
   NodePostgresAdapter,
   NodePostgresAdapterOptions,
 } from 'pqb/node-postgres';
-import { MaybeArray, toArray } from 'pqb';
+import { MaybeArray, toArray } from 'pqb/internal';
 import {
   rakeDbCliWithAdapter,
   RakeDbFn,

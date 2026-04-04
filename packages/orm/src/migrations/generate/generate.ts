@@ -13,7 +13,7 @@ import {
   UnknownColumn,
   getQuerySchema,
   emptyObject,
-} from 'pqb';
+} from 'pqb/internal';
 import {
   concatSchemaAndName,
   getDbVersion,

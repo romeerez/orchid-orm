@@ -7,7 +7,7 @@ import {
   testAdapter,
   testDbOptions,
 } from 'test-utils';
-import { QueryReturnType } from 'pqb';
+import { QueryReturnType } from 'pqb/internal';
 
 class SomeTable extends BaseTable {
   readonly table = 'someTable';

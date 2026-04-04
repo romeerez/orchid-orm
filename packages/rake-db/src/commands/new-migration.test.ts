@@ -1,7 +1,7 @@
 import { newMigration } from './new-migration';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { pathToLog } from 'pqb';
+import { pathToLog } from 'pqb/internal';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
 import { migrationConfigDefaults } from '../config';

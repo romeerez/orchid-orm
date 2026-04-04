@@ -7,7 +7,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { createDbWithAdapter } from '../../db';
-import { logColors } from 'pqb';
+import { logColors } from './log';
 
 const hrtime = jest.spyOn(process, 'hrtime');
 hrtime.mockReturnValue([0, 0]);

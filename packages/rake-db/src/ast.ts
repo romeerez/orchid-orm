@@ -1,12 +1,12 @@
 import {
   ColumnsShape,
-  Column as QbColumn,
-  NoPrimaryKeyOption,
-  TableData,
   MaybeArray,
+  NoPrimaryKeyOption,
   RecordString,
   RawSqlBase,
-} from 'pqb';
+  TableData,
+  type Column as QbColumn,
+} from 'pqb/internal';
 import { DropMode } from './migration/migration';
 import { DbStructure } from './generate/db-structure';
 

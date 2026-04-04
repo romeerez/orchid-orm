@@ -17,6 +17,11 @@
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.ts"
     },
+    "./internal": {
+      "require": "./dist/internal.js",
+      "import": "./dist/internal.mjs",
+      "types": "./dist/internal.d.ts"
+    },
     "./node-postgres": {
       "require": "./dist/node-postgres.js",
       "import": "./dist/node-postgres.mjs",

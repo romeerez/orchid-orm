@@ -1,42 +1,41 @@
+import { Column, Query, RawSql } from 'pqb/internal';
 import {
+  _appendQuery,
+  _clone,
+  _hookSelectColumns,
   _queryDefaults,
   _queryDelete,
+  _queryInsert,
+  _queryInsertMany,
   _queryUpdate,
   _queryUpdateOrThrow,
+  _queryUpsert,
   _queryWhere,
+  _queryWhereIn,
+  ColumnSchemaConfig,
   CreateCtx,
   CreateData,
-  CreateMethodsNames,
-  isQueryReturnsAll,
-  PickQueryQ,
-  Query,
-  SelectableFromShape,
-  UpdateData,
-  VirtualColumn,
-  WhereArg,
-  defaultSchemaConfig,
   CreateManyMethodsNames,
-  ColumnSchemaConfig,
+  CreateMethodsNames,
+  defaultSchemaConfig,
   EmptyObject,
   getPrimaryKeys,
+  isQueryReturnsAll,
+  noop,
+  PickQueryQ,
+  prepareSubQueryForSql,
+  QueryHasWhere,
+  QueryManyTake,
+  QueryManyTakeOptional,
   RecordString,
   RecordUnknown,
   RelationConfigBase,
   RelationJoinQuery,
-  Column,
-  QueryHasWhere,
-  QueryManyTake,
-  QueryManyTakeOptional,
-  RawSql,
-  _appendQuery,
-  _clone,
-  _queryUpsert,
-  _queryWhereIn,
-  _queryInsert,
-  noop,
-  _queryInsertMany,
-  _hookSelectColumns,
-} from 'pqb';
+  SelectableFromShape,
+  UpdateData,
+  VirtualColumn,
+  WhereArg,
+} from 'pqb/internal';
 import { ORMTableInput } from '../baseTable';
 import {
   RelationData,
@@ -63,7 +62,6 @@ import {
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { joinQueryChainHOF } from './common/joinQueryChain';
-import { prepareSubQueryForSql } from 'pqb';
 
 export interface HasOne extends RelationThunkBase {
   type: 'hasOne';

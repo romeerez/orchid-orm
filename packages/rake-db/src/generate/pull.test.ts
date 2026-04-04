@@ -7,7 +7,7 @@ import {
   DefaultColumnTypes,
   defaultSchemaConfig,
   DefaultSchemaConfig,
-} from 'pqb';
+} from 'pqb/internal';
 import { asMock, TestAdapter } from 'test-utils';
 import { makeRakeDbConfig, RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';

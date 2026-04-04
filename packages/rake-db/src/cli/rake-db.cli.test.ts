@@ -11,7 +11,7 @@ import { pullDbStructure } from '../generate/pull';
 import { listMigrationsStatuses } from '../commands/list-migrations-statuses';
 import { rebase } from '../commands/rebase';
 import { changeIds } from '../commands/change-ids';
-import { DefaultSchemaConfig, IntegerColumn, noop } from 'pqb';
+import { DefaultSchemaConfig, IntegerColumn, noop } from 'pqb/internal';
 import { RakeDbError } from 'rake-db';
 import { clearChanges, getCurrentChanges } from '../migration/change';
 import { newMigration } from '../commands/new-migration';
