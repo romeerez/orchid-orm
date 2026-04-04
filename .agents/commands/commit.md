@@ -4,7 +4,7 @@ description: Commit an archived OpenSpec change
 
 Commit an archived OpenSpec change securely and intelligently.
 
-**Input**: Optionally specify an archived change name (e.g., `/commit migrate-public-config`). If omitted, infer from context or prompt the user.
+**Input**: Optionally specify an archived change name (e.g., `/commit 2026-04-04-migrate-public-config`). If omitted, infer from context or prompt the user.
 
 **Steps**
 
@@ -28,7 +28,7 @@ Commit an archived OpenSpec change securely and intelligently.
 3. **Read Artifacts for Context**
 
    Once the specific archive is chosen (`<name>`), read `openspec/changes/archive/<name>/specs/tasks.md` to efficiently extract all the relevant file paths modified for this feature.
-   Check `openspec/changes/archive/<name>/proposal.md` to understand the scope and look for GitHub issue numbers.
+   Also check `openspec/changes/archive/<name>/proposal.md` to understand the scope and look for GitHub issue numbers.
 
 4. **Analyze and Confirm Unstashed Changes**
 
