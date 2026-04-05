@@ -1,5 +1,24 @@
 # rake-db
 
+## 2.31.0
+
+### Minor Changes
+
+- 4e89c1e: Migrations programmatic usage refactoring (#671)
+
+  - `makeRakeDbConfig` is dropped — `migrate`, `rollback`, and `redo` now process config parameters on their own.
+  - `migrate()` now creates the migrations schema/table when called inside a transaction, so the `createMigrationsSchemaAndTable` pre-creation workaround is no longer needed.
+  - `createMigrationChangeFn` is added to create the `change` function used by migration files, optionally accepting `columnTypes` from a `BaseTable` to support custom column types in migrations.
+  - `runMigration` now accepts `log` and `logger` options to control console output.
+
+### Patch Changes
+
+- bc0028a: Handle migrations table creation in rake-db in transaction (#671)
+- Updated dependencies [2bea15d]
+- Updated dependencies [4251a1d]
+- Updated dependencies [3f2a3f2]
+  - pqb@0.62.0
+
 ## 2.30.9
 
 ### Patch Changes

@@ -1,5 +1,41 @@
 # orchid-orm
 
+## 1.65.0
+
+### Minor Changes
+
+- 3f2a3f2: Support selecting relations in delete queries (#679)
+
+  You can now load related data when deleting records:
+
+  ```ts
+  const deleted = await db.order
+    .find(orderId)
+    .delete()
+    .select('*', {
+      items: (q) => q.orderItems,
+    });
+  ```
+
+  Unlike `create` and `update` which load relations in a follow-up query wrapped in a transaction, `delete` uses a CTE to capture relation data **before** the deletion, since the source rows will be gone afterward.
+
+- 4e89c1e: Migrations programmatic usage refactoring (#671)
+
+  - `makeRakeDbConfig` is dropped — `migrate`, `rollback`, and `redo` now process config parameters on their own.
+  - `migrate()` now creates the migrations schema/table when called inside a transaction, so the `createMigrationsSchemaAndTable` pre-creation workaround is no longer needed.
+  - `createMigrationChangeFn` is added to create the `change` function used by migration files, optionally accepting `columnTypes` from a `BaseTable` to support custom column types in migrations.
+  - `runMigration` now accepts `log` and `logger` options to control console output.
+
+### Patch Changes
+
+- Updated dependencies [2bea15d]
+- Updated dependencies [4251a1d]
+- Updated dependencies [3f2a3f2]
+- Updated dependencies [4e89c1e]
+- Updated dependencies [bc0028a]
+  - pqb@0.62.0
+  - rake-db@2.31.0
+
 ## 1.64.10
 
 ### Patch Changes
