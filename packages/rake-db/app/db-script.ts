@@ -17,7 +17,7 @@ if (!databaseURL) {
 options.push({ databaseURL, connectRetry: true });
 
 const command = process.argv[2];
-if (['create', 'drop'].includes(command)) {
+if (['create', 'drop', 'reset'].includes(command)) {
   const databaseURLGenerate = process.env.PG_GENERATE_URL;
   if (databaseURLGenerate) {
     const jestWorkersCount = os.cpus().length;
@@ -28,6 +28,11 @@ if (['create', 'drop'].includes(command)) {
         connectRetry: true as const,
       })),
     );
+  }
+
+  const databaseUrlRepro = process.env.PG_REPRO_URL;
+  if (databaseUrlRepro) {
+    options.push({ databaseURL: databaseUrlRepro, connectRetry: true });
   }
 }
 

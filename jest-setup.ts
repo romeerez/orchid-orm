@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { QueryData, RecordUnknown } from 'pqb';
+import { QueryData, RecordUnknown } from './packages/pqb/src/internal';
 import { skipQueryKeysForSubQuery } from './packages/pqb/src/query/sql/get-is-join-sub-query';
 import { setPrepareSubQueryForSql } from './packages/pqb/src/columns/operators';
 import { setRawSqlPrepareSubQueryForSql } from './packages/pqb/src/query/expressions/raw-sql';
@@ -14,6 +14,22 @@ jest.mock('timers/promises', () => ({
 jest.mock('orchid-orm', () => require('./packages/orm/src'), {
   virtual: true,
 });
+
+jest.mock(
+  'orchid-orm/postgres-js',
+  () => require('./packages/orm/src/adapters/postgres-js'),
+  {
+    virtual: true,
+  },
+);
+
+jest.mock(
+  'orchid-orm/node-postgres',
+  () => require('./packages/orm/src/adapters/node-postgres'),
+  {
+    virtual: true,
+  },
+);
 
 jest.mock('pqb', () => require('./packages/pqb/src'), {
   virtual: true,

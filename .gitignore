@@ -14,7 +14,10 @@ notes/
 !notes/ # LLM can read this
 
 # for measuring and improving performance
-packages/benchmarks
+packages/benchmarks/
+
+packages/repro/src/
+!packages/repro/src/*.example.test.ts
 
 # created in CI
 .pnpm-store/
