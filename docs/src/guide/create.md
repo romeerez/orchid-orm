@@ -92,10 +92,13 @@ db.book.update({
 
 ## selecting relations
 
-Selecting relations is supported in [create](#create) and [update](/guide/update) methods, but not yet in [delete](/guide/delete), [upsert](#upsert), [orCreate](#orcreate).
+You can load related data in `create`, `update`, and `delete` methods by chaining `.select()` with relation queries.
 
-`OrchidORM` wraps such queries in a transaction, so that the relations are selected within the same transaction.
-This way, selected result remains consistent with what the `create` and `update` operation did.
+This is not yet supported for `upsert` and `orCreate`.
+
+For **create** and **update**, the ORM loads relation data in a follow-up query after the main mutation. Both queries are wrapped in a transaction to keep the operation atomic and ensure consistent results.
+
+For **delete**, the approach is different: relation data is loaded in a CTE (Common Table Expression) **before** the table record(s) are deleted. This allows returning relation data even after the source row is gone.
 
 ```ts
 // example: creating multiple orders with their order items,

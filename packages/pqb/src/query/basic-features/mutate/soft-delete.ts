@@ -1,4 +1,4 @@
-import { IsQuery, Query } from '../../query';
+import { IsQuery } from '../../query';
 import { RawSql } from '../../expressions/raw-sql';
 import { Column } from '../../../columns/column';
 import { RecordUnknown, setObjectValueImmutable } from '../../../utils';
@@ -15,6 +15,7 @@ import { _clone } from '../clone/clone';
 import { _queryUpdate } from './update';
 import { _queryDelete, DeleteArgs, DeleteResult } from './delete';
 import { QueryDataScopes } from '../../query-data';
+import { _unscope } from '../../extra-features/scope/scope';
 
 export type SoftDeleteOption<Shape extends Column.QueryColumns> =
   | true
@@ -115,7 +116,7 @@ export class SoftDeleteMethods {
    * ```
    */
   includeDeleted<T extends QueryWithSoftDelete>(this: T): T {
-    return (this as unknown as Query).unscope('nonDeleted' as never) as never;
+    return _unscope(_clone(this), 'nonDeleted') as never;
   }
 
   /**
@@ -130,6 +131,6 @@ export class SoftDeleteMethods {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ..._args: DeleteArgs<T>
   ): DeleteResult<T> {
-    return _queryDelete(_clone(this).unscope('nonDeleted' as never)) as never;
+    return _queryDelete(_unscope(_clone(this), 'nonDeleted')) as never;
   }
 }

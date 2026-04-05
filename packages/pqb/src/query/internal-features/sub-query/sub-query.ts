@@ -1,9 +1,9 @@
-import type { Query } from '../query';
-import { _clone } from '../basic-features/clone/clone';
-import { _chain } from '../extra-features/chain/chain';
-import { _setSubQueryAliases } from '../basic-features/as/as';
-import { ToSQLQuery } from '../sql/to-sql';
-import { getClonedQueryData } from '../query-data';
+import type { Query } from '../../query';
+import { _clone } from '../../basic-features/clone/clone';
+import { _chain } from '../../extra-features/chain/chain';
+import { _setSubQueryAliases } from '../../basic-features/as/as';
+import { ToSQLQuery } from '../../sql/to-sql';
+import { getClonedQueryData } from '../../query-data';
 
 /**
  * In `select`, `update`, `create` it's possible to pass a callback with a sub-query.

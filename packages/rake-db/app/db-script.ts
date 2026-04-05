@@ -17,7 +17,7 @@ if (!databaseURL) {
 options.push({ databaseURL, connectRetry: true });
 
 const command = process.argv[2];
-if (['create', 'drop', 'reset'].includes(command)) {
+if (['create', 'drop'].includes(command)) {
   const databaseURLGenerate = process.env.PG_GENERATE_URL;
   if (databaseURLGenerate) {
     const jestWorkersCount = os.cpus().length;

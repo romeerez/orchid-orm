@@ -1,7 +1,7 @@
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { QueryData, QueryDataFromItem } from '../../query-data';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { isExpression } from '../../expressions/expression';
 import { getQueryAs } from '../as/as';
 import { searchSourcesToSql } from '../../extra-features/search/search.sql';

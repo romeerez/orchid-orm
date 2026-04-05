@@ -32,6 +32,9 @@ node_modules/
 .codex
 .kilo
 .agent
+.github/
+!.github/workflows
+!.github/FUNDING.yml
 
 # OS X temporary files
 .DS_Store

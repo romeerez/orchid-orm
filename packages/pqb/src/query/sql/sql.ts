@@ -2,7 +2,6 @@ import {
   HasCteHooks,
   HasTableHook,
 } from '../basic-features/select/hook-select';
-import { DelayedRelationSelect } from '../basic-features/select/delayed-relational-select';
 import { QueryResult } from '../../adapters/adapter';
 import { PickQueryColumTypes } from '../pick-query-types';
 import { DynamicSQLArg, StaticSQLArgs } from '../expressions/expression';
@@ -14,10 +13,12 @@ import { wrapMainQueryInCte } from './wrap-main-query-in-cte';
 import { OrchidOrmInternalError } from '../errors';
 import { QuerySchema } from '../basic-features/schema/schema';
 import { getQuerySchema } from '../basic-features/storage/storage';
+import { MutativeQueriesSelectRelationsSqlProp } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
-export interface SqlCommonOptions extends HasTableHook, HasCteHooks {
-  delayedRelationSelect?: DelayedRelationSelect;
-}
+export interface SqlCommonOptions
+  extends HasTableHook,
+    HasCteHooks,
+    MutativeQueriesSelectRelationsSqlProp {}
 
 export interface SingleSqlItem {
   // SQL string

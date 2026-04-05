@@ -45,7 +45,7 @@ import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
 import { requirePrimaryKeys } from '../../query-columns/primary-keys';
-import { resolveSubQueryCallback } from '../../sub-query/sub-query';
+import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { RefExpression } from '../../expressions/ref-expression';

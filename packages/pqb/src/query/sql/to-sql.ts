@@ -1,4 +1,4 @@
-import { Query } from '../query';
+import { IsQuery, Query } from '../query';
 import { QueryData, QueryType } from '../query-data';
 import { QueryBuilder } from '../db';
 import {
@@ -7,7 +7,7 @@ import {
   setFreeTopCteAs,
   TopCTE,
 } from '../basic-features/cte/cte.sql';
-import { SubQueryForSql } from '../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../internal-features/sub-query/sub-query-for-sql';
 import { makeInsertSql } from '../basic-features/mutate/insert.sql';
 import { pushUpdateSql } from '../basic-features/mutate/update.sql';
 import { pushDeleteSql } from '../basic-features/mutate/delete.sql';
@@ -20,6 +20,7 @@ import {
   MoreThanOneRowError,
   QueryInternal,
   RawSql,
+  setMutativeQueriesSelectRelationsStateOnSql,
   Sql,
 } from '../index';
 import { moveMutativeQueryToCteBase } from '../basic-features/cte/move-mutative-query-to-cte-base.sql';
@@ -36,11 +37,12 @@ import { pushLimitOffsetSql } from '../basic-features/limit-offset/limit-offset.
 import { addTableHook } from '../extra-features/hooks/hooks.sql';
 import { RunAfterQuery } from './sql';
 import { HasCteHooks, TableHook } from '../basic-features/select/hook-select';
-import { DelayedRelationSelect } from '../basic-features/select/delayed-relational-select';
 import { isExpression } from '../expressions/expression';
 import { pushUnionSql } from '../basic-features/union/union.sql';
 import { pushForSql } from '../basic-features/for/for.sql';
 import { setCurrentDefaultSchema } from '../basic-features/storage/storage';
+import { emptyArray } from 'pqb/internal';
+import { MutativeQueriesSelectRelationsSqlState } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -63,7 +65,7 @@ export interface TopToSqlCtx
   topCtx: TopToSqlCtx;
   topCTE?: TopCTE;
   tableHook?: TableHook;
-  delayedRelationSelect?: DelayedRelationSelect;
+  mutativeQueriesSelectRelationsSqlState?: MutativeQueriesSelectRelationsSqlState;
   cteHookTopNullSelectAppended?: boolean;
 }
 
@@ -77,7 +79,7 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSqlValues {
   wrapAs?: string;
 }
 
-export interface ToSQLQuery {
+export interface ToSQLQuery extends IsQuery {
   __isQuery: Query['__isQuery'];
   q: Query['q'];
   qb: Query['qb'];
@@ -100,6 +102,7 @@ export interface ToSql {
     isSubSql?: boolean,
     cteName?: string,
     calledByThen?: boolean,
+    dontAddTableHook?: boolean,
   ): Sql;
 }
 
@@ -125,6 +128,7 @@ export const toSql: ToSql = (
   isSubSql,
   cteName,
   calledByThen,
+  dontAddTableHook,
 ) => {
   const query = table.q;
   const sql: string[] = [];
@@ -350,7 +354,14 @@ export const toSql: ToSql = (
 
     pushForSql(ctx, query, type, quotedAs);
 
-    addTableHook(ctx, table, query, query.hookSelect);
+    addTableHook(
+      ctx,
+      table,
+      query,
+      query.hookSelect,
+      undefined,
+      dontAddTableHook,
+    );
 
     // compose select in the last moment because NULL for CTE selects
     // can be added by sub queries added in where or in other places
@@ -369,7 +380,7 @@ export const toSql: ToSql = (
   if (!ctx.cteName) {
     result.tableHook = ctx.topCtx.tableHook;
     if (!topCtx) {
-      result.delayedRelationSelect = ctx.topCtx.delayedRelationSelect;
+      setMutativeQueriesSelectRelationsStateOnSql(ctx, result);
     }
   }
 
@@ -382,24 +393,31 @@ export const toSql: ToSql = (
           result.text += ')';
         }
 
-        const keyValues = Object.entries(ctx.topCtx.cteHooks.tableHooks).map(
-          ([cteName, data]) =>
-            `'${cteName}', (SELECT json_agg(${makeRowToJson(
-              cteName,
-              data.shape,
-              false,
-              true,
-            )}) FROM "${cteName}")`,
-        );
+        const { tableHooks, ensureCount } = ctx.topCtx.cteHooks;
 
-        if (ctx.topCtx.cteHooks.ensureCount) {
-          keyValues.push(
-            ...Object.entries(ctx.topCtx.cteHooks.ensureCount).map(
-              ([cteName, count]) =>
-                `'#${cteName}', CASE WHEN (SELECT count(*) FROM "${cteName}") < ${count} THEN (SELECT 'not-found')::int END`,
-            ),
-          );
-        }
+        const keyValues = [
+          ...(tableHooks
+            ? Object.entries(tableHooks).map(
+                ([cteName, data]) =>
+                  `'${cteName}', (SELECT json_agg(${makeRowToJson(
+                    cteName,
+                    data.shape,
+                    false,
+                    true,
+                  )}) FROM "${cteName}")`,
+              )
+            : emptyArray),
+          ...(ensureCount
+            ? Object.entries(ensureCount).map(
+                ([cteName, item]) =>
+                  `'#${cteName}', CASE WHEN ${
+                    'count' in item
+                      ? `(SELECT count(*) FROM "${cteName}") < ${item.count}`
+                      : `(SELECT "${cteName}"."${item.jsonNotNull}" FROM "${cteName}") IS NULL`
+                  } THEN (SELECT 'not-found')::int END`,
+              )
+            : emptyArray),
+        ];
 
         result.text += ` UNION ALL SELECT ${'NULL, '.repeat(
           ctx.selectedCount || 0,

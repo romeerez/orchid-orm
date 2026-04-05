@@ -3,7 +3,7 @@ import { NodePostgresAdapter } from './node-postgres';
 import pg from 'pg';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
-import { RecordUnknown } from '../utils';
+import { noop, RecordUnknown } from '../utils';
 import { AdapterBase } from './adapter';
 
 const testAdapter = new NodePostgresAdapter(testDbOptions);
@@ -185,6 +185,73 @@ describe('adapter', () => {
           before: '1',
           nested: '2',
           after: '1',
+        });
+      });
+    });
+
+    describe('savepoint', () => {
+      it('should support `startingSavepoint`', async () => {
+        await testAdapter.transaction(async (trx) => {
+          await trx.query(
+            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
+            undefined,
+            'savepoint',
+          );
+
+          const { rows } = await trx.query(`SELECT * FROM "schema"."user"`);
+          expect(rows.length).toEqual(1);
+
+          await trx.query(`ROLLBACK TO SAVEPOINT "savepoint"`);
+
+          const { rows: rows2 } = await trx.query(
+            `SELECT * FROM "schema"."user"`,
+          );
+          expect(rows2.length).toEqual(0);
+        });
+      });
+
+      it('should rollback to `releasingSavepoint` if query fails', async () => {
+        await testAdapter.transaction(async (trx) => {
+          await trx.query(
+            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
+            undefined,
+            'savepoint',
+          );
+
+          const { rows } = await trx.query(`SELECT * FROM "schema"."user"`);
+          expect(rows.length).toEqual(1);
+
+          await trx
+            .query(
+              `SELECT * FROM "non-existing"`,
+              undefined,
+              undefined,
+              'savepoint',
+            )
+            .catch(noop);
+
+          const { rows: rows2 } = await trx.query(
+            `SELECT * FROM "schema"."user"`,
+          );
+          expect(rows2.length).toEqual(0);
+        });
+      });
+
+      it('should set and release a savepoint when both `startingSavepoint` and `releasingSavepoint` are provided', async () => {
+        await testAdapter.transaction(async (trx) => {
+          await trx.query(
+            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
+            undefined,
+            'savepoint',
+            'savepoint',
+          );
+
+          const { rows } = await trx.query(`SELECT * FROM "schema"."user"`);
+          expect(rows.length).toEqual(1);
+
+          await expect(
+            trx.query(`ROLLBACK TO SAVEPOINT "savepoint"`),
+          ).rejects.toThrow('savepoint "savepoint" does not exist');
         });
       });
     });

@@ -100,29 +100,33 @@ jest.mock('./packages/pqb/src/utils', () => {
       };
 });
 
-jest.mock('./packages/pqb/src/query/sub-query/sub-query-for-sql', () => {
-  const actual = jest.requireActual(
-    './packages/pqb/src/query/sub-query/sub-query-for-sql',
-  );
+jest.mock(
+  './packages/pqb/src/query/internal-features/sub-query/sub-query-for-sql',
+  () => {
+    const actual = jest.requireActual(
+      './packages/pqb/src/query/internal-features/sub-query/sub-query-for-sql',
+    );
 
-  if (process.env.RUNNING_BENCHMARKS) {
-    return actual;
-  }
+    if (process.env.RUNNING_BENCHMARKS) {
+      return actual;
+    }
 
-  const result = {
-    ...actual,
-    prepareSubQueryForSql(...args: unknown[]) {
-      const subQuery = args[1] as RecordUnknown;
-      (subQuery.q as RecordUnknown).__subQueryBeforeHooksWhereCollected = true;
-      return actual.prepareSubQueryForSql(...args);
-    },
-  };
+    const result = {
+      ...actual,
+      prepareSubQueryForSql(...args: unknown[]) {
+        const subQuery = args[1] as RecordUnknown;
+        (subQuery.q as RecordUnknown).__subQueryBeforeHooksWhereCollected =
+          true;
+        return actual.prepareSubQueryForSql(...args);
+      },
+    };
 
-  setPrepareSubQueryForSql(result.prepareSubQueryForSql);
-  setRawSqlPrepareSubQueryForSql(result.prepareSubQueryForSql);
+    setPrepareSubQueryForSql(result.prepareSubQueryForSql);
+    setRawSqlPrepareSubQueryForSql(result.prepareSubQueryForSql);
 
-  return result;
-});
+    return result;
+  },
+);
 
 jest.mock('./packages/pqb/src/query/basic-features/wrap/wrap', () => {
   const actual = jest.requireActual(

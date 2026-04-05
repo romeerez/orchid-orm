@@ -7,7 +7,7 @@ import {
 } from '../../columns/operators';
 import { QueryOrExpressionBooleanOrNullResult } from '../query';
 import { moveMutativeQueryToCte } from '../basic-features/cte/cte.sql';
-import { SubQueryForSql } from '../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../internal-features/sub-query/sub-query-for-sql';
 import { ToSQLCtx } from '../sql/to-sql';
 
 export interface OrExpression

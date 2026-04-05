@@ -1,5 +1,5 @@
 import { Query } from '../../query';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { PickQueryQ, PickQueryResult } from '../../pick-query-types';
 import { Expression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';

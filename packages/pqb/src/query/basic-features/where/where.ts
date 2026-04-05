@@ -20,7 +20,7 @@ import {
 import { sqlQueryArgsToExpression } from '../../expressions/raw-sql';
 import { preprocessJoinArg, processJoinArgs } from '../join/process-join-args';
 import { _queryNone } from '../../extra-features/none/none';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { prepareOpArg } from '../../../columns/operators';
 import {
   PickQuerySelectableShapeRelationsWithDataAs,
@@ -39,7 +39,7 @@ import { Expression, isExpression } from '../../expressions/expression';
 import { _setSubQueryAliases } from '../as/as';
 import { _clone } from '../clone/clone';
 import { QueryExpressions } from '../../expressions/query-expressions';
-import { resolveSubQueryCallback } from '../../sub-query/sub-query';
+import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
 import { OrchidOrmInternalError } from '../../errors';
 import { SQLQueryArgs } from '../../db-sql-query';
 import { getClonedQueryData, pushQueryValueImmutable } from '../../query-data';

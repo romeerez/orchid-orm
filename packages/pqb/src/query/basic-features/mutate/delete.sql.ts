@@ -6,8 +6,12 @@ import { QueryData } from '../../query-data';
 import { Query } from '../../query';
 import { isRelationQuery } from '../../relations';
 import { OrchidOrmInternalError } from '../../errors';
-import { newDelayedRelationSelect } from '../select/delayed-relational-select';
 import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
+import {
+  handleDeleteSelectRelationsSqlState,
+  newMutativeQueriesSelectRelationsSqlState,
+} from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import { anyShape } from '../../../columns';
 
 export const pushDeleteSql = (
   ctx: ToSQLCtx,
@@ -23,14 +27,50 @@ export const pushDeleteSql = (
     ctx.sql.push(quotedAs);
   }
 
+  const relationSelectState = newMutativeQueriesSelectRelationsSqlState(query);
+
+  let returning = makeReturningSql(
+    ctx,
+    query,
+    q,
+    quotedAs,
+    relationSelectState,
+    'Delete',
+    undefined,
+    isSubSql,
+  );
+
+  const selectRelations = handleDeleteSelectRelationsSqlState(
+    ctx,
+    query,
+    relationSelectState,
+    returning,
+  );
+
+  let join = q.join;
+  if (selectRelations) {
+    returning =
+      (returning ? returning + ', ' : '') + selectRelations.addReturning;
+
+    join = join ? [...join, selectRelations.join] : [selectRelations.join];
+
+    q = {
+      ...q,
+      joinedShapes: {
+        ...q.joinedShapes,
+        [selectRelations.joinedShape]: anyShape,
+      },
+    };
+  }
+
   let conditions: string | undefined;
-  if (q.join?.length) {
+  if (join?.length) {
     const targets: string[] = [];
     const ons: string[] = [];
 
-    const joinSet = q.join.length > 1 ? new Set<string>() : null;
+    const joinSet = join.length > 1 ? new Set<string>() : null;
 
-    for (const item of q.join) {
+    for (const item of join) {
       const lateral = 'l' in item.args && item.args.l;
       if (lateral) {
         if (isRelationQuery(lateral)) {
@@ -61,34 +101,23 @@ export const pushDeleteSql = (
     conditions = ons.join(' AND ');
   }
 
-  pushWhereStatementSql(ctx, query, q, quotedAs);
+  if (!selectRelations?.movedWhereToCte) {
+    pushWhereStatementSql(ctx, query, q, quotedAs);
+  }
 
   if (conditions) {
-    if (q.and?.length || q.or?.length || q.scopes) {
+    if (
+      !selectRelations?.movedWhereToCte &&
+      (q.and?.length || q.or?.length || q.scopes)
+    ) {
       ctx.sql.push('AND', conditions);
     } else {
       ctx.sql.push('WHERE', conditions);
     }
   }
 
-  const delayedRelationSelect = q.selectRelation
-    ? newDelayedRelationSelect(query)
-    : undefined;
-
-  const returning = makeReturningSql(
-    ctx,
-    query,
-    q,
-    quotedAs,
-    delayedRelationSelect,
-    'Delete',
-    undefined,
-    isSubSql,
-  );
-  if (returning) ctx.sql.push('RETURNING', returning);
-
-  if (delayedRelationSelect) {
-    ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
+  if (returning) {
+    ctx.sql.push('RETURNING', returning);
   }
 
   return makeSql(ctx, 'delete', isSubSql);

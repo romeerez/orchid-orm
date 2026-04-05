@@ -6,7 +6,7 @@ import { CteItem } from './basic-features/cte/cte.sql';
 import {
   HasBeforeAndBeforeSet,
   SubQueryForSql,
-} from './sub-query/sub-query-for-sql';
+} from './internal-features/sub-query/sub-query-for-sql';
 import {
   BatchParsers,
   ColumnsParsers,
@@ -51,6 +51,7 @@ import {
 } from './basic-features/mutate/insert.sql';
 import { QueryLogger, QueryLogObject } from './basic-features/log/log';
 import { QuerySchema } from './basic-features/schema/schema';
+import { MutativeQueriesSelectRelationsQueryData } from './internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: Column.Shape.QueryInit;
@@ -132,7 +133,8 @@ export interface AsFn {
 export interface QueryData
   extends QueryDataAliases,
     PickQueryDataParsers,
-    HasHookSelect {
+    HasHookSelect,
+    MutativeQueriesSelectRelationsQueryData {
   type: QueryType;
   adapter: AdapterBase;
   shape: ColumnsShape;
@@ -162,7 +164,6 @@ export interface QueryData
   valuesJoinedAs?: RecordString;
   schema?: QuerySchema;
   select?: SelectItem[];
-  selectRelation?: boolean;
   selectCache?: { sql: string; aliases: string[] };
   selectAllColumns?: string[];
   /**

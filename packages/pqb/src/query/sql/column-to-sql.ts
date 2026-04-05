@@ -72,10 +72,6 @@ export const columnToSql = (
     );
   }
 
-  if (!select && data.joinedShapes?.[column]) {
-    return `"${column}"."${column}"`;
-  }
-
   return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
 };
 

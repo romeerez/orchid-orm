@@ -4,7 +4,7 @@ import { anyShape, Column, ColumnsShape } from '../../../columns';
 import {
   prepareSubQueryForSql,
   SubQueryForSql,
-} from '../../sub-query/sub-query-for-sql';
+} from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   PickQueryAs,
   PickQueryHasSelect,

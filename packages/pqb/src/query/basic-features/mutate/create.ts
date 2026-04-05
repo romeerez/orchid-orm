@@ -26,7 +26,7 @@ import {
   getFromSelectColumns,
 } from './create-from';
 import { _querySelectAll } from '../select/select';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   PickQueryDefaults,
   PickQueryHasSelect,
@@ -46,7 +46,7 @@ import { _getQueryFreeAlias, _setQueryAlias } from '../as/as';
 import { _clone } from '../clone/clone';
 
 import { joinSubQuery } from '../join/join';
-import { resolveSubQueryCallback } from '../../sub-query/sub-query';
+import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
 import { OrchidOrmInternalError } from '../../errors';
 import { OnConflictMerge } from './insert.sql';
 import { ToSQLQuery } from '../../sql/to-sql';

@@ -23,7 +23,9 @@ export const wrapMainQueryInCte = (
     as = addTopCteSql(ctx, ctx.wrapAs, ctx.sql.join(' '));
   }
 
-  q.appendQueries?.forEach((query) => addTopCte('after', ctx, query));
+  q.appendQueries?.forEach((query) =>
+    addTopCte('after', ctx, query, query.q.type),
+  );
 
   if (!isSubSql && !ctx.cteName) {
     const addNull = ctx.topCtx.cteHooks?.hasSelect;

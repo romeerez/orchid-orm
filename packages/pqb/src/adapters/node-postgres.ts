@@ -310,7 +310,7 @@ const performQuery = async (
   text: string,
   values?: unknown[],
   rowMode?: 'array',
-  catchingSavepoint?: string,
+  startingSavepoint?: string,
 ) => {
   const client = await adapter.connect();
   try {
@@ -320,7 +320,7 @@ const performQuery = async (
       text,
       values,
       rowMode,
-      catchingSavepoint,
+      startingSavepoint,
     );
   } finally {
     client.release();
@@ -332,7 +332,8 @@ const performQueryOnClient = async (
   text: string,
   values?: unknown[],
   rowMode?: 'array',
-  catchingSavepoint?: string,
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any = {
@@ -355,17 +356,29 @@ const performQueryOnClient = async (
     });
 
     return __lock.then(() => {
-      const promise = catchingSavepoint
-        ? performQueryOnClientWithSavepoint(client, catchingSavepoint, params)
-        : client.query(params);
+      const promise =
+        startingSavepoint || releasingSavepoint
+          ? performQueryOnClientWithSavepoint(
+              client,
+              params,
+              startingSavepoint,
+              releasingSavepoint,
+            )
+          : client.query(params);
       promise.then(resolve, resolve);
       return promise;
     });
   }
 
-  const promise = catchingSavepoint
-    ? performQueryOnClientWithSavepoint(client, catchingSavepoint, params)
-    : client.query(params);
+  const promise =
+    startingSavepoint || releasingSavepoint
+      ? performQueryOnClientWithSavepoint(
+          client,
+          params,
+          startingSavepoint,
+          releasingSavepoint,
+        )
+      : client.query(params);
 
   (client as unknown as { __lock?: Promise<unknown> }).__lock =
     promise.catch(noop);
@@ -375,20 +388,30 @@ const performQueryOnClient = async (
 
 const performQueryOnClientWithSavepoint = (
   client: PoolClient,
-  catchingSavepoint: string,
   params: unknown,
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
 ) => {
-  return client.query(`SAVEPOINT "${catchingSavepoint}"`).then(async () => {
-    let result;
-    try {
-      result = await client.query(params as never);
-    } catch (err) {
-      await client.query(`ROLLBACK TO SAVEPOINT "${catchingSavepoint}"`);
-      throw err;
-    }
-    await client.query(`RELEASE SAVEPOINT "${catchingSavepoint}"`);
-    return result;
-  });
+  let promise = startingSavepoint
+    ? client
+        .query(`SAVEPOINT "${startingSavepoint}"`)
+        .then(() => client.query(params as never))
+    : client.query(params as never);
+
+  if (releasingSavepoint) {
+    promise = promise.then(
+      async (res) => {
+        await client.query(`RELEASE SAVEPOINT "${releasingSavepoint}"`);
+        return res;
+      },
+      async (err) => {
+        await client.query(`ROLLBACK TO SAVEPOINT "${releasingSavepoint}"`);
+        throw err;
+      },
+    );
+  }
+
+  return promise;
 };
 
 export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
@@ -452,14 +475,16 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   async query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
   ): Promise<QueryResult<T>> {
     return await performQueryOnClient(
       this.client,
       text,
       values,
       undefined,
-      catchingSavepoint,
+      startingSavepoint,
+      releasingSavepoint,
     );
   }
 
@@ -467,14 +492,16 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
   async arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
     return await performQueryOnClient(
       this.client,
       text,
       values,
       'array',
-      catchingSavepoint,
+      startingSavepoint,
+      releasingSavepoint,
     );
   }
 

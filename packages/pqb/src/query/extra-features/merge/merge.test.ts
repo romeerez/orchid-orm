@@ -12,7 +12,7 @@ import {
 import { emptyObject, noop } from '../../../utils';
 import { ComputedColumn } from '../computed/computed';
 import { Expression } from '../../expressions/expression';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { getValueKey } from '../../basic-features/get/get-value-key';
 
 describe('merge queries', () => {

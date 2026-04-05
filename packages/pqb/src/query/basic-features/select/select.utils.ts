@@ -22,7 +22,7 @@ import {
 import { processComputedBatches } from '../../extra-features/computed/computed';
 import { isQueryNone } from '../../extra-features/none/none';
 import { cloneQueryBaseUnscoped } from '../wrap/wrap';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { RawSql } from '../../expressions/raw-sql';
 import { SelectArg, SelectAsArg, SelectSelf } from './select';
 import { _joinLateral } from '../join/join';
@@ -41,13 +41,15 @@ import { IsQuery, Query } from '../../query';
 import { NotFoundError } from '../../errors';
 import { finalizeNestedHookSelect } from '../../extra-features/hooks/hooks';
 import { applyBatchTransforms } from '../../extra-features/data-transform/transform';
-import { resolveSubQueryCallback } from '../../sub-query/sub-query';
+import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
 import { isRelationQuery } from '../../relations';
 import { _copyQueryAliasToQuery } from '../as/as';
 import { _addToHookSelect, _addToHookSelectWithTable } from './hook-select';
 import { SelectAsValue, SelectItem } from './select.sql';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
+
+import { setSelectRelation } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.qb';
 
 // add a parser for a raw expression column
 // is used by .select and .get methods
@@ -414,7 +416,8 @@ export const processSelectArg = <T extends SelectSelf>(
           // for example `q => q.get('name')`.
           (value as unknown as Query).q.subQuery !== 1
         ) {
-          query.q.selectRelation = joinQuery = true;
+          joinQuery = true;
+          setSelectRelation(query.q);
 
           value = value.joinQuery(value, q as unknown as IsQuery);
 
@@ -534,6 +537,7 @@ export const setParserForSelectedString = (
           q.batchParsers = [...(q.batchParsers || [])];
           cloned = true;
         }
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         q.batchParsers!.push(bp);
       }
     }

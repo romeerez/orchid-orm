@@ -16,12 +16,8 @@ import {
   addTableHook,
   HookPurpose,
 } from '../../extra-features/hooks/hooks.sql';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { moveQueryToCte } from '../cte/move-mutative-query-to-cte-base.sql';
-import {
-  DelayedRelationSelect,
-  newDelayedRelationSelect,
-} from '../select/delayed-relational-select';
 import { isRelationQuery } from '../../relations';
 import { quoteTableWithSchema, SingleSqlItem, Sql } from '../../sql/sql';
 import {
@@ -41,6 +37,11 @@ import {
   getShouldWrapMainQueryInCte,
   wrapMainQueryInCte,
 } from '../../sql/wrap-main-query-in-cte';
+import {
+  MutativeQueriesSelectRelationsSqlState,
+  newMutativeQueriesSelectRelationsSqlState,
+  handleInsertAndUpdateSelectRelationsSqlState,
+} from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
 export type OnConflictTarget =
   | string
@@ -58,7 +59,7 @@ interface InsertSqlState {
   query: QueryData;
   quotedAs: string;
   isSubSql?: boolean;
-  delayedRelationSelect?: DelayedRelationSelect;
+  relationSelectState?: MutativeQueriesSelectRelationsSqlState;
   returningPos: number;
   insertSql: string;
   selectFromSql?: string;
@@ -162,9 +163,7 @@ export const makeInsertSql = (
     pushWhereStatementSql(ctx, q, query, quotedAs);
   }
 
-  sqlState.delayedRelationSelect = q.q.selectRelation
-    ? newDelayedRelationSelect(q)
-    : undefined;
+  sqlState.relationSelectState = newMutativeQueriesSelectRelationsSqlState(q);
 
   sqlState.returningPos = ctx.sql.length;
 
@@ -192,7 +191,11 @@ export const makeInsertSql = (
 
       ctx.sql[1] = moveMutativeQueryToCte(ctx, q);
     } else {
-      const { as, makeSelectList } = moveQueryToCte(ctx, insertFrom);
+      const { as, makeSelectList } = moveQueryToCte(
+        ctx,
+        insertFrom,
+        insertFrom.q.type,
+      );
 
       const selectList = makeSelectList(true);
 
@@ -289,9 +292,10 @@ export const makeInsertSql = (
 
       batch.push(composeCteSingleSql(ctx));
 
-      if (sqlState.delayedRelationSelect) {
-        ctx.topCtx.delayedRelationSelect = sqlState.delayedRelationSelect;
-      }
+      handleInsertAndUpdateSelectRelationsSqlState(
+        ctx,
+        sqlState.relationSelectState,
+      );
 
       return {
         batch,
@@ -301,9 +305,10 @@ export const makeInsertSql = (
 
   applySqlState(sqlState);
 
-  if (sqlState.delayedRelationSelect) {
-    ctx.topCtx.delayedRelationSelect = sqlState.delayedRelationSelect;
-  }
+  handleInsertAndUpdateSelectRelationsSqlState(
+    ctx,
+    sqlState.relationSelectState,
+  );
 
   return {
     text: ctx.sql.join(' '),
@@ -423,7 +428,7 @@ const applySqlState = (
     sqlState.q,
     sqlState.query,
     sqlState.quotedAs,
-    sqlState.delayedRelationSelect,
+    sqlState.relationSelectState,
     'Create',
     undefined,
     sqlState.isSubSql || !!ctx.topCtx.cteHooks,
@@ -685,7 +690,7 @@ export const makeReturningSql = (
   q: ToSQLQuery,
   data: QueryData,
   quotedAs: string,
-  delayedRelationSelect: DelayedRelationSelect | undefined,
+  relationSelectState: MutativeQueriesSelectRelationsSqlState | undefined,
   hookPurpose?: HookPurpose,
   addHookPurpose?: HookPurpose,
   isSubSql?: boolean,
@@ -730,7 +735,8 @@ export const makeReturningSql = (
       }
     }
 
-    if (q.q.selectRelation) {
+    // delete loads relations in a CTE
+    if (q.q.selectRelation && hookPurpose !== 'Delete') {
       for (const column of getPrimaryKeys(q as Query)) {
         if (!tempSelect.has(column)) {
           tempSelect.set(column, { select: column });
@@ -750,7 +756,7 @@ export const makeReturningSql = (
       isSubSql,
       undefined,
       undefined,
-      delayedRelationSelect,
+      relationSelectState,
     );
   }
 

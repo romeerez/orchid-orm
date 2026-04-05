@@ -6,7 +6,7 @@ import { MoveMutativeQueryToCte } from '../query/basic-features/cte/cte.sql';
 import {
   ArgWithBeforeAndBeforeSet,
   PrepareSubQueryForSql,
-} from '../query/sub-query/sub-query-for-sql';
+} from '../query/internal-features/sub-query/sub-query-for-sql';
 import { Db } from '../query/db';
 import {
   PickQueryColumTypes,

@@ -6,7 +6,7 @@
   "author": "Roman K",
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "ai-sync": "tsx scripts/ai-sync.ts",
+    "ai-sync": "ts-node scripts/ai-sync.ts",
     "prepare": "lefthook install",
     "check": "turbo run check",
     "types": "turbo run types",
@@ -48,8 +48,8 @@
     "rollup": "^4.24.0",
     "rollup-plugin-dts": "^6.1.1",
     "rollup-plugin-esbuild": "^6.1.1",
+    "ts-node": "^10.9.2",
     "tslib": "^2.5.0",
-    "tsx": "^4.21.0",
     "turbo": "^1.8.8",
     "typescript": "^5.4.5"
   }

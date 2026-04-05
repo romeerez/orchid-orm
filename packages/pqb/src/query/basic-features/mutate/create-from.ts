@@ -21,7 +21,7 @@ import {
   SetValueQueryReturnsPluckColumn,
 } from '../../query';
 import { QueryData } from '../../query-data';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { MaybeArray, RecordUnknown } from '../../../utils';
 import { _clone } from '../clone/clone';
 

@@ -339,7 +339,8 @@ const query = <T extends QueryResultRow = QueryResultRow>(
   sql: postgres.Sql,
   text: string,
   values?: unknown[],
-  catchingSavepoint?: string,
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
   arrays?: boolean,
 ): Promise<QueryResult<T>> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -347,23 +348,31 @@ const query = <T extends QueryResultRow = QueryResultRow>(
 
   if (arrays) query = query.values();
 
-  if (catchingSavepoint) {
-    return Promise.all([
-      sql.unsafe(`SAVEPOINT "${catchingSavepoint}"`),
-      query,
-      sql.unsafe(`RELEASE SAVEPOINT "${catchingSavepoint}"`),
-    ]).then(
-      (results: RawResult[]) => {
-        return wrapResult(results[1]);
-      },
-      (err) =>
-        sql.unsafe(`ROLLBACK TO SAVEPOINT "${catchingSavepoint}"`).then(() => {
-          throw err;
-        }),
-    );
-  } else {
+  if (!startingSavepoint && !releasingSavepoint) {
     return query.then(wrapResult);
   }
+
+  return Promise.all([
+    startingSavepoint && sql.unsafe(`SAVEPOINT "${startingSavepoint}"`),
+    query,
+    releasingSavepoint &&
+      sql.unsafe(`RELEASE SAVEPOINT "${releasingSavepoint}"`),
+  ]).then(
+    (results: RawResult[]) => {
+      return wrapResult(results[1]);
+    },
+    (err) => {
+      if (!releasingSavepoint) {
+        throw err;
+      }
+
+      return sql
+        .unsafe(`ROLLBACK TO SAVEPOINT "${releasingSavepoint}"`)
+        .then(() => {
+          throw err;
+        });
+    },
+  );
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -371,9 +380,10 @@ const arrays = <R extends any[] = any[]>(
   sql: postgres.Sql,
   text: string,
   values?: unknown[],
-  catchingSavepoint?: string,
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
 ): Promise<QueryArraysResult<R>> => {
-  return query(sql, text, values, catchingSavepoint, true);
+  return query(sql, text, values, startingSavepoint, releasingSavepoint, true);
 };
 
 export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
@@ -426,18 +436,26 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
   ): Promise<QueryResult<T>> {
-    return query(this.sql, text, values, catchingSavepoint);
+    return query(this.sql, text, values, startingSavepoint, releasingSavepoint);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
-    catchingSavepoint?: string,
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
   ): Promise<QueryArraysResult<R>> {
-    return arrays(this.sql, text, values, catchingSavepoint);
+    return arrays(
+      this.sql,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+    );
   }
 
   async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {

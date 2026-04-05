@@ -1,7 +1,7 @@
 import { EmptyObject, RecordUnknown } from '../../utils';
 import { Column } from '../../columns/column';
 import { OperatorToSQL } from '../../columns/operators';
-import { HasBeforeAndBeforeSet } from '../sub-query/sub-query-for-sql';
+import { HasBeforeAndBeforeSet } from '../internal-features/sub-query/sub-query-for-sql';
 import { PickQuerySelectable } from '../pick-query-types';
 import { QueryBeforeHook } from '../query-data';
 import { ToSqlValues } from '../sql/to-sql';

@@ -39,7 +39,7 @@ import { _clone } from '../clone/clone';
 import {
   prepareSubQueryForSql,
   SubQueryForSql,
-} from '../../sub-query/sub-query-for-sql';
+} from '../../internal-features/sub-query/sub-query-for-sql';
 import { _queryNone, isQueryNone } from '../../extra-features/none/none';
 import {
   BatchParsers,
@@ -58,7 +58,7 @@ import {
 } from '../../relations';
 import { ComputedColumns } from '../../extra-features/computed/computed';
 import { throwIfJoinLateral } from '../../query.utils';
-import { resolveSubQueryCallback } from '../../sub-query/sub-query';
+import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
 import { SelectAs, SelectAsValue, SelectItem } from '../select/select.sql';
 import { JoinItemArgs } from './join.sql';
 import { getSqlText } from '../../sql/sql';

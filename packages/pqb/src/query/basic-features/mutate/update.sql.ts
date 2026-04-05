@@ -13,7 +13,7 @@ import { countSelect } from '../../expressions/raw-sql';
 import { Query } from '../../query';
 import { JoinItemArgs, processJoinItem } from '../join/join.sql';
 import { moveMutativeQueryToCte, setFreeTopCteAs } from '../cte/cte.sql';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
 import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
 import {
@@ -22,13 +22,15 @@ import {
   pushOrNewArray,
   RecordUnknown,
 } from '../../../utils';
-import {
-  DelayedRelationSelect,
-  newDelayedRelationSelect,
-} from '../select/delayed-relational-select';
 import { isExpression } from '../../expressions/expression';
 import { throwOnReadOnlyUpdate } from '../../query.utils';
 import { OrchidOrmInternalError } from '../../errors';
+import { ensureCTECount } from '../../extra-features/hooks/hooks.sql';
+import {
+  MutativeQueriesSelectRelationsSqlState,
+  newMutativeQueriesSelectRelationsSqlState,
+  handleInsertAndUpdateSelectRelationsSqlState,
+} from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -48,8 +50,7 @@ export const pushUpdateSql = (
       )
     : emptyObject;
 
-  const delayedRelationSelect: DelayedRelationSelect | undefined =
-    q.selectRelation ? newDelayedRelationSelect(query) : undefined;
+  const relationSelectState = newMutativeQueriesSelectRelationsSqlState(query);
 
   // User can use `set({ key: 'value' })` multiple times,
   // `usedSetKeys` is here to track what keys were already added to SQL to not add them twice.
@@ -95,7 +96,7 @@ export const pushUpdateSql = (
       from,
       isSubSql,
       updateManyValuesSql,
-      delayedRelationSelect,
+      relationSelectState,
     );
   } else {
     ctx.sql.push(`UPDATE ${from}`);
@@ -126,14 +127,12 @@ export const pushUpdateSql = (
       q,
       quotedAs,
       'RETURNING',
-      delayedRelationSelect,
+      relationSelectState,
       isSubSql,
     );
   }
 
-  if (delayedRelationSelect) {
-    ctx.topCtx.delayedRelationSelect = delayedRelationSelect;
-  }
+  handleInsertAndUpdateSelectRelationsSqlState(ctx, relationSelectState);
 
   return makeSql(ctx, 'update', isSubSql);
 };
@@ -146,7 +145,7 @@ const pushSelectForEmptySet = (
   from: string,
   isSubSql?: boolean,
   updateManyValuesSql?: string,
-  delayedRelationSelect?: DelayedRelationSelect,
+  relationSelectState?: MutativeQueriesSelectRelationsSqlState,
 ) => {
   if (!q.select) {
     q.select = countSelect;
@@ -158,7 +157,7 @@ const pushSelectForEmptySet = (
     q,
     quotedAs,
     'SELECT',
-    delayedRelationSelect,
+    relationSelectState,
     isSubSql,
   );
 
@@ -180,12 +179,7 @@ const addUpdateManyCteForStrict = (
 ) => {
   const wrapAs = setFreeTopCteAs(ctx);
   ctx.wrapAs = wrapAs;
-  const cteHooks = (ctx.topCtx.cteHooks ??= {
-    hasSelect: true,
-    tableHooks: {},
-  });
-  cteHooks.hasSelect = true;
-  (cteHooks.ensureCount ??= {})[wrapAs] = updateMany.data.length;
+  ensureCTECount(ctx, wrapAs, { count: updateMany.data.length });
 };
 
 const pushUpdateFromSql = (
@@ -254,7 +248,7 @@ const pushUpdateReturning = (
   q: QueryData,
   quotedAs: string,
   keyword: string,
-  delayedRelationSelect: DelayedRelationSelect | undefined,
+  relationSelectState: MutativeQueriesSelectRelationsSqlState | undefined,
   isSubSql?: boolean,
 ) => {
   const returning = makeReturningSql(
@@ -262,7 +256,7 @@ const pushUpdateReturning = (
     query,
     q,
     quotedAs,
-    delayedRelationSelect,
+    relationSelectState,
     'Update',
     undefined,
     isSubSql,

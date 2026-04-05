@@ -15,7 +15,7 @@ import { Column } from '../../../columns/column';
 import { selectToSql } from '../select/select.sql';
 import { OperatorToSQL } from '../../../columns/operators';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { _getQueryOuterAliases, getQueryAs, QueryDataAliases } from '../as/as';
 import { ColumnsParsers } from '../../query-columns/query-column-parsers';
 import { Expression, isExpression } from '../../expressions/expression';

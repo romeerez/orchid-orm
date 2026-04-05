@@ -17,7 +17,6 @@ import {
 import {
   callWithThis,
   emptyArray,
-  getFreeAlias,
   MaybePromise,
   RecordString,
   RecordUnknown,
@@ -28,19 +27,21 @@ import {
   ColumnsParsers,
   getQueryParsers,
 } from '../query-columns/query-column-parsers';
-import { DelayedRelationSelect } from '../basic-features/select/delayed-relational-select';
 import { _clone } from '../basic-features/clone/clone';
 import { NotFoundError, QueryError } from '../errors';
 import { SingleSql, SingleSqlItem, Sql } from '../sql/sql';
-import { requirePrimaryKeys } from '../query-columns/primary-keys';
 import { applyTransforms } from '../extra-features/data-transform/transform';
 import { HandleResult, QueryAfterHook, QueryBeforeHook } from '../query-data';
-import { SelectAsValue, SelectItem } from '../basic-features/select/select.sql';
 import { PickQueryReturnType } from '../pick-query-types';
 import {
   AsyncState,
   setCurrentDefaultSchema,
 } from '../basic-features/storage/storage';
+import {
+  checkIfNeedResultAllForMutativeQueriesSelectRelations,
+  checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations,
+  loadMutativeQueriesSelectRelations,
+} from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.result-handler';
 
 // This is a standard Promise['then'] method
 // copied from TS standard library because the original `then` is not decoupled from the Promise
@@ -180,10 +181,11 @@ Object.defineProperty(Then.prototype, 'then', {
   },
 });
 
-function maybeWrappedThen(
+export function maybeWrappedThen(
   this: Query,
   resolve?: Resolve,
   reject?: Reject,
+  parentSavepoint?: string,
 ): Promise<unknown> {
   const { q } = this;
 
@@ -254,6 +256,7 @@ function maybeWrappedThen(
             resolve,
             reject,
             shouldCatch,
+            parentSavepoint,
           );
         }),
     ).then(resolve, reject);
@@ -270,6 +273,7 @@ function maybeWrappedThen(
       resolve,
       reject,
       shouldCatch,
+      parentSavepoint,
     );
   }
 }
@@ -300,6 +304,7 @@ const then = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reject?: (error: any) => any,
   shouldCatch?: boolean,
+  parentSavepoint?: string,
 ): Promise<unknown> => {
   const { q: query } = q;
 
@@ -333,19 +338,29 @@ const then = async (
       if (promises) await Promise.all(promises);
     }
 
-    const { tableHook, cteHooks, delayedRelationSelect } = sql;
+    const { tableHook, cteHooks } = sql;
     const { returnType = 'all' } = query;
     const tempReturnType =
       tableHook?.select ||
       cteHooks?.hasSelect ||
       (returnType === 'rows' && q.q.batchParsers) ||
-      delayedRelationSelect?.value
+      checkIfNeedResultAllForMutativeQueriesSelectRelations(sql)
         ? 'all'
         : returnType;
 
     let result: unknown;
     let queryResult: QueryResult;
     let cteData: Record<string, unknown[]> | undefined;
+
+    const startingSavepoint = setCatchingSavepoint(
+      !parentSavepoint && shouldCatch && state,
+    );
+
+    const releasingSavepoint =
+      checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations(sql) ||
+      parentSavepoint
+        ? undefined
+        : startingSavepoint;
 
     if ('text' in sql) {
       if (query.autoPreparedStatements) {
@@ -359,7 +374,13 @@ const then = async (
       }
 
       const method = queryMethodByReturnType[tempReturnType];
-      queryResult = await execQuery(adapter, method, sql, shouldCatch && state);
+      queryResult = await execQuery(
+        adapter,
+        method,
+        sql,
+        startingSavepoint,
+        releasingSavepoint,
+      );
       const { runAfterQuery } = sql;
 
       if (log) {
@@ -404,8 +425,9 @@ const then = async (
       const queryMethod = queryMethodByReturnType[tempReturnType] as 'query';
 
       const queryBatch = async (batch: SingleSql[]) => {
-        for (const item of batch) {
-          sql = item;
+        const last = batch.length - 1;
+        for (let i = 0; i <= last; i++) {
+          sql = batch[i];
 
           if (log) {
             logData = log.beforeQuery(sql);
@@ -415,7 +437,8 @@ const then = async (
             adapter,
             queryMethod,
             sql,
-            shouldCatch && state,
+            i === 0 ? startingSavepoint : undefined,
+            i === last ? releasingSavepoint : undefined,
           );
 
           if (queryResult) {
@@ -460,9 +483,12 @@ const then = async (
     let tempColumns: Set<string> | undefined;
     let renames: RecordString | undefined;
     if (tableHook?.select) {
-      for (const column of tableHook.select.keys()) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const { as, temp } = tableHook.select.get(column)!;
+      for (const [
+        column,
+        { as, temp, notLoaded },
+      ] of tableHook.select.entries()) {
+        if (notLoaded) continue;
+
         if (as) {
           (renames ??= {})[column] = as;
         }
@@ -690,72 +716,25 @@ const then = async (
       }
     }
 
-    if (delayedRelationSelect?.value) {
-      const q = delayedRelationSelect.query as Query;
+    const promise =
+      loadMutativeQueriesSelectRelations(
+        localSql,
+        result,
+        adapter,
+        startingSavepoint,
+        renames,
+      ) ||
+      /**
+       * In case when we have MutativeQueriesSelectRelations, the first query does insert/update/delete,
+       * it must not run batchParsers because it doesn't have the data yet.
+       * The second query loads data and performs batchParsers.
+       */
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      parseBatch(q, queryResult!);
 
-      const primaryKeys = requirePrimaryKeys(
-        q,
-        'Cannot select a relation of a table that has no primary keys',
-      );
-      const selectQuery = q.clone();
-      selectQuery.q.type = selectQuery.q.returnType = undefined;
-
-      const matchSourceTableIds: RecordUnknown = {};
-      for (const pkey of primaryKeys) {
-        matchSourceTableIds[pkey] = {
-          in: (result as RecordUnknown[]).map((row) => row[pkey]),
-        };
-      }
-      (selectQuery.q.and ??= []).push(matchSourceTableIds);
-
-      const relationsSelect = delayedRelationSelect.value as Record<
-        string,
-        Query
-      >;
-
-      const selectAs: SelectAsValue = { ...relationsSelect };
-
-      const select: SelectItem[] = [{ selectAs }];
-
-      const relationKeyAliases = primaryKeys.map((key) => {
-        if (key in selectAs) {
-          const as = getFreeAlias(selectAs, key);
-          selectAs[as] = key;
-          return as;
-        } else {
-          select.push(key);
-          return key;
-        }
-      });
-
-      selectQuery.q.select = select;
-
-      const relationsResult = (await selectQuery) as RecordUnknown[];
-      for (const row of result as RecordUnknown[]) {
-        const relationRow = relationsResult.find((relationRow) => {
-          return !primaryKeys.some(
-            (key, i) => relationRow[relationKeyAliases[i]] !== row[key],
-          );
-        });
-        if (relationRow) {
-          Object.assign(row, relationRow);
-        }
-      }
-
-      // when relation is loaded under the same key as a transient primary key:
-      // no need to rename it because the relation was already loaded under the key name.
-      if (renames) {
-        for (const key in relationsSelect) {
-          if (key in renames) {
-            delete renames[key];
-          }
-        }
-      }
+    if (promise) {
+      await promise;
     }
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const promise = parseBatch(q, queryResult!, delayedRelationSelect);
-    if (promise) await promise;
 
     // can be set by hooks or by computed columns
     if (tableHook?.select || tempReturnType !== returnType) {
@@ -842,6 +821,14 @@ const then = async (
   }
 };
 
+const setCatchingSavepoint = (
+  catchTrx: AsyncState | false | undefined,
+): string | undefined => {
+  return catchTrx
+    ? `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`
+    : undefined;
+};
+
 /**
  * Executes a query and in the case there are rows, but nothing was selected,
  * it populates the response with empty objects,
@@ -851,17 +838,15 @@ const execQuery = (
   adapter: AdapterBase,
   method: 'query' | 'arrays',
   sql: SingleSql,
-  catchTrx: AsyncState | false | undefined,
+  startingSavepoint: string | undefined,
+  releasingSavepoint?: string | undefined,
 ) => {
-  const catchingSavepoint = catchTrx
-    ? `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`
-    : undefined;
-
   return (
     adapter[method as 'query'](
       sql.text,
       sql.values,
-      catchingSavepoint,
+      startingSavepoint,
+      releasingSavepoint,
     ) as Promise<QueryResult>
   ).then((result) => {
     if (result.rowCount && !result.rows.length) {
@@ -955,19 +940,10 @@ export const handleResult: HandleResult = (
   }
 };
 
-const parseBatch = (
-  q: Query,
-  queryResult: QueryResult,
-  delayedRelationSelect?: DelayedRelationSelect,
-): MaybePromise<void> => {
+const parseBatch = (q: Query, queryResult: QueryResult): MaybePromise<void> => {
   let promises: Promise<void>[] | undefined;
 
-  /**
-   * In case of delayedRelationSelect, the first query does insert/update/delete,
-   * it must not run batchParsers because it doesn't have the data yet.
-   * The second query loads data and performs batchParsers.
-   */
-  if (q.q.batchParsers && !delayedRelationSelect?.value) {
+  if (q.q.batchParsers) {
     for (const parser of q.q.batchParsers) {
       const res = parser.fn(parser.path, queryResult);
       if (res) (promises ??= []).push(res);

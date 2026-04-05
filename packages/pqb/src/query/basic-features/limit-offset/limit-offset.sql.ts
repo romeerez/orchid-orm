@@ -1,7 +1,7 @@
 import { QueryData } from '../../query-data';
 import { queryTypeWithLimitOne } from '../../index';
 import { addValue } from '../../../utils';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { ToSQLCtx } from '../../sql/to-sql';
 
 export function pushLimitOffsetSql(

@@ -1,16 +1,18 @@
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { ToSql, ToSQLCtx } from '../../sql/to-sql';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { addTopCte } from './cte.sql';
 import { _clone } from '../clone/clone';
 import { getShapeFromSelect } from '../select/select.utils';
 import { getQueryAs } from '../as/as';
 import { getSqlText } from '../../sql/sql';
+import { QueryType } from '../../query-data';
 
 export const moveQueryToCte = (
   ctx: ToSQLCtx,
   query: SubQueryForSql,
-  type = query.q.type,
+  type: QueryType,
+  dontAddTableHook?: boolean,
 ): {
   as: string;
   makeSelectList(isSubSql?: boolean): string[];
@@ -39,7 +41,7 @@ export const moveQueryToCte = (
     }
   }
 
-  const as = addTopCte('before', ctx, query, undefined, type);
+  const as = addTopCte('before', ctx, query, type, undefined, dontAddTableHook);
 
   const makeSelectList = (isSubSql?: boolean) => {
     const list: string[] = [];

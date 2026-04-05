@@ -3,7 +3,7 @@ import { Expression } from '../../expressions/expression';
 import { toSql, ToSQLCtx } from '../../sql/to-sql';
 import { QueryData, WithItems } from '../../query-data';
 import { Column } from '../../../columns';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { moveMutativeQueryToCteBase } from './move-mutative-query-to-cte-base.sql';
 import { setMoveMutativeQueryToCte } from '../../../columns/operators';
 import { getSqlText, SingleSql, SingleSqlItem } from '../../sql/sql';
@@ -69,9 +69,9 @@ export const ctesToSql = (ctx: ToSQLCtx, ctes?: WithItems): void => {
   for (const item of ctes) {
     const place = item.p ? 'before' : 'after';
     if (ctx !== ctx.topCtx && item.q?.q.type) {
-      addTopCte(place, ctx, item.q, item.n);
+      addTopCte(place, ctx, item.q, item.q.q.type, item.n);
     } else {
-      addTopCteInternal(place, ctx, item);
+      addTopCteInternal(place, ctx, item, item.q?.q.type);
     }
   }
 };
@@ -79,7 +79,8 @@ export const ctesToSql = (ctx: ToSQLCtx, ctes?: WithItems): void => {
 export const cteToSqlGiveAs = (
   ctx: ToSQLCtx,
   item: CteItem,
-  type?: QueryData['type'],
+  type: QueryData['type'],
+  dontAddTableHook?: boolean,
 ): { as: string; sql: string } => {
   let inner: string;
 
@@ -99,13 +100,7 @@ export const cteToSqlGiveAs = (
 
   if (item.q) {
     inner = getSqlText(
-      toSql(
-        item.q,
-        type === undefined ? item.q.q.type : type,
-        ctx.topCtx,
-        true,
-        as,
-      ),
+      toSql(item.q, type, ctx.topCtx, true, as, undefined, dontAddTableHook),
     );
   } else {
     inner = (item.s as Expression).toSQL(ctx.topCtx, `"${as}"`);
@@ -129,8 +124,9 @@ export const cteToSqlGiveAs = (
 export const cteToSql = (
   ctx: ToSQLCtx,
   item: CteItem,
-  type?: QueryData['type'],
-): string => cteToSqlGiveAs(ctx, item, type).sql;
+  type: QueryData['type'],
+  dontAddTableHook?: boolean,
+): string => cteToSqlGiveAs(ctx, item, type, dontAddTableHook).sql;
 
 export const setFreeTopCteAs = (ctx: ToSQLCtx) => {
   const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
@@ -161,8 +157,9 @@ export const addTopCte = (
   place: 'before' | 'after',
   ctx: ToSQLCtx,
   q: SubQueryForSql,
+  type: QueryData['type'],
   as?: string | ((as: string) => void),
-  type?: QueryData['type'],
+  dontAddTableHook?: boolean,
 ): string => {
   const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
 
@@ -176,7 +173,7 @@ export const addTopCte = (
     as = name;
   }
 
-  addTopCteInternal(place, ctx, { n: as, q }, type);
+  addTopCteInternal(place, ctx, { n: as, q }, type, dontAddTableHook);
 
   return as;
 };
@@ -185,7 +182,8 @@ const addTopCteInternal = (
   place: 'before' | 'after',
   ctx: ToSQLCtx,
   item: CteItem,
-  type?: QueryData['type'],
+  type: QueryData['type'],
+  dontAddTableHook?: boolean,
 ) => {
   const topCTE = (ctx.topCtx.topCTE ??= newTopCte(ctx));
 
@@ -196,7 +194,7 @@ const addTopCteInternal = (
   const prepend: string[] = [];
   topCTE.stack.push(prepend);
 
-  const sql = cteToSql(ctx, item, type); // more ctes can be appended here
+  const sql = cteToSql(ctx, item, type, dontAddTableHook); // more ctes can be appended here
 
   target.push(...prepend, sql);
 

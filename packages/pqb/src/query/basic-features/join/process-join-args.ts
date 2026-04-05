@@ -4,7 +4,7 @@ import { pushQueryArrayImmutable } from '../../query.utils';
 import { ColumnsShape } from '../../../columns/columns-shape';
 import { Column } from '../../../columns/column';
 import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { returnArg } from '../../../utils';
 import { RelationJoinQuery } from '../../relations';
 import {

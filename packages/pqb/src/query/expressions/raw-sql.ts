@@ -16,7 +16,7 @@ import { ColumnSchemaConfig } from '../../columns/column-schema';
 import { DefaultColumnTypes } from '../../columns/column-types';
 import { ToSQLCtx, ToSqlValues } from '../sql/to-sql';
 import { emptyObject, RecordUnknown } from '../../utils';
-import { PrepareSubQueryForSql } from '../sub-query/sub-query-for-sql';
+import { PrepareSubQueryForSql } from '../internal-features/sub-query/sub-query-for-sql';
 import { SQLQueryArgs } from '../db-sql-query';
 
 let prepareSubQueryForSql: PrepareSubQueryForSql;

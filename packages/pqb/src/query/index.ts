@@ -19,7 +19,6 @@ export * from './basic-features/order/order.sql';
 // requested in https://github.com/romeerez/orchid-orm/issues/643
 export type { OrderArg } from './basic-features/order/order';
 export * from './basic-features/schema/schema';
-export * from './basic-features/select/delayed-relational-select';
 export * from './basic-features/select/hook-select';
 export * from './basic-features/select/select';
 export * from './basic-features/select/select.utils';
@@ -50,8 +49,8 @@ export * from './query-columns/query-columns';
 export * from './query-columns/primary-keys';
 export * from './sql/check-if-a-simple-query';
 export * from './sql/sql';
-export * from './sub-query/sub-query';
-export * from './sub-query/sub-query-for-sql';
+export * from './internal-features/sub-query/sub-query';
+export * from './internal-features/sub-query/sub-query-for-sql';
 export * from './then/then';
 export * from './db';
 export type * from './db-sql-query';
@@ -67,3 +66,5 @@ export type {
   AsyncState,
   StorageOptions,
 } from './basic-features/storage/storage';
+export * from './internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+export { setSelectRelation } from './internal-features/mutative-queries-select-relation/mutative-queries-select-relations.qb';

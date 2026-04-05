@@ -3,7 +3,7 @@ import { setQueryObjectValueImmutable } from '../../query.utils';
 import { _queryUnion } from '../union/union';
 import { CteItem, CteOptions } from './cte.sql';
 import { Column } from '../../../columns';
-import { prepareSubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   PickQueryResult,
   PickQueryWithDataColumnTypes,

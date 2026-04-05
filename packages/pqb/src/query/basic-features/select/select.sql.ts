@@ -25,11 +25,7 @@ import {
   RecordUnknown,
 } from '../../../utils';
 import { ColumnsParsers } from '../../query-columns/query-column-parsers';
-import {
-  DelayedRelationSelect,
-  setDelayedRelation,
-} from './delayed-relational-select';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   Expression,
   isExpression,
@@ -39,6 +35,10 @@ import { isRelationQuery } from '../../relations';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../../errors';
 import { Query } from '../../query';
 import { makeRowToJson } from '../../sql/sql';
+import {
+  MutativeQueriesSelectRelationsSqlState,
+  setMutativeQueriesSelectRelationsSqlState,
+} from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
 export type SelectItem = string | SelectAs | Expression | undefined;
 
@@ -104,7 +104,7 @@ export const selectToSqlList = (
   isSubSql?: boolean,
   aliases?: string[],
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
-  delayedRelationSelect?: DelayedRelationSelect,
+  delayedRelationSelect?: MutativeQueriesSelectRelationsSqlState,
 ): string[] => {
   let selected: RecordUnknown | undefined;
   let selectedAs: RecordString | undefined;
@@ -194,7 +194,11 @@ export const selectToSqlList = (
                 }
                 aliases?.push(as);
               } else if (delayedRelationSelect && isRelationQuery(value)) {
-                setDelayedRelation(delayedRelationSelect, as, value);
+                setMutativeQueriesSelectRelationsSqlState(
+                  delayedRelationSelect,
+                  as,
+                  value,
+                );
               } else {
                 pushSubQuerySql(ctx, query, value, as, list, quotedAs, aliases);
                 if (jsonList) {
@@ -355,7 +359,7 @@ export const selectToSql = (
   isSubSql?: boolean,
   aliases?: string[],
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
-  delayedRelationSelect?: DelayedRelationSelect,
+  delayedRelationSelect?: MutativeQueriesSelectRelationsSqlState,
 ): string => {
   const list = selectToSqlList(
     ctx,

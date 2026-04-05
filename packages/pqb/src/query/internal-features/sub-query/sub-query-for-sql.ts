@@ -1,16 +1,15 @@
-import { IsQuery } from '../query';
-import { pushQueryArrayImmutable } from '../query.utils';
+import { pushQueryArrayImmutable } from '../../query.utils';
 import {
   pushQueryValueImmutable,
   QueryBeforeHook,
   QueryData,
-} from '../query-data';
-import { ToSQLQuery } from '../sql/to-sql';
-import { setPrepareSubQueryForSql } from '../../columns/operators';
-import { setRawSqlPrepareSubQueryForSql } from '../expressions/raw-sql';
-import { PickQueryQ } from '../pick-query-types';
+} from '../../query-data';
+import { ToSQLQuery } from '../../sql/to-sql';
+import { setPrepareSubQueryForSql } from '../../../columns/operators';
+import { setRawSqlPrepareSubQueryForSql } from '../../expressions/raw-sql';
+import { PickQueryQ } from '../../pick-query-types';
 
-export interface SubQueryForSql extends IsQuery, ToSQLQuery {
+export interface SubQueryForSql extends ToSQLQuery {
   __forSql: true;
 }
 

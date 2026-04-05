@@ -14,7 +14,7 @@ import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { Expression, isExpression } from '../../expressions/expression';
 import { _getQueryAliasOrName, getQueryAs } from '../as/as';
 import { addValue, RecordUnknown } from '../../../utils';
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   quoteFromWithSchema,
   quoteTableWithSchema,

@@ -3,6 +3,7 @@ import { Column } from '../../../columns/column';
 import {
   CteHooks,
   CteTableHook,
+  EnsureCountItem,
   HookSelect,
   TableHook,
 } from '../../basic-features/select/hook-select';
@@ -16,10 +17,11 @@ export const addTableHook = (
   data: QueryData,
   select?: HookSelect,
   hookPurpose?: HookPurpose,
+  dontAddTableHook?: boolean,
 ): void => {
   if (data.ensureCount !== undefined && ctx.cteName) {
     const cteHooks = setCteHooks(ctx, true);
-    (cteHooks.ensureCount ??= {})[ctx.cteName] = data.ensureCount;
+    (cteHooks.ensureCount ??= {})[ctx.cteName] = { count: data.ensureCount };
   }
 
   const afterCreate = data.afterCreate;
@@ -62,7 +64,7 @@ export const addTableHook = (
     afterDeleteCommit,
   };
 
-  if (ctx.cteName) {
+  if (ctx.cteName && !dontAddTableHook) {
     if (tableHook && (hasAfterHook || throwOnNotFound)) {
       const shape: Column.Shape.Data = {};
       if (tableHook.select) {
@@ -72,6 +74,7 @@ export const addTableHook = (
       }
 
       const item: CteTableHook = {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         table: q.table!,
         shape,
         tableHook: tableHook,
@@ -80,14 +83,14 @@ export const addTableHook = (
 
       const hasSelect = throwOnNotFound || !!tableHook.select;
       const cteHooks = setCteHooks(ctx, hasSelect);
-      cteHooks.tableHooks[ctx.cteName] ??= item;
+      (cteHooks.tableHooks ??= {})[ctx.cteName] ??= item;
     }
   } else {
     ctx.topCtx.tableHook = tableHook;
   }
 };
 
-const setCteHooks = (ctx: ToSQLCtx, hasSelect: boolean): CteHooks => {
+export const setCteHooks = (ctx: ToSQLCtx, hasSelect: boolean): CteHooks => {
   if (
     hasSelect &&
     ctx.topCtx.selectList &&
@@ -104,7 +107,14 @@ const setCteHooks = (ctx: ToSQLCtx, hasSelect: boolean): CteHooks => {
   } else {
     return (ctx.topCtx.cteHooks = {
       hasSelect,
-      tableHooks: {},
     });
   }
+};
+
+export const ensureCTECount = (
+  ctx: ToSQLCtx,
+  cteName: string,
+  countItem: EnsureCountItem,
+) => {
+  (setCteHooks(ctx, true).ensureCount ??= {})[cteName] = countItem;
 };

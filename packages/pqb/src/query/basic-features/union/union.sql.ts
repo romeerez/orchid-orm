@@ -1,4 +1,4 @@
-import { SubQueryForSql } from '../../sub-query/sub-query-for-sql';
+import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { Expression, isExpression } from '../../expressions/expression';
 import { Query } from '../../query';
 import { ToSQLCtx } from '../../sql/to-sql';

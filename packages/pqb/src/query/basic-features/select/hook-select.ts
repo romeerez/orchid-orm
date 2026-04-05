@@ -8,12 +8,22 @@ export interface HasCteHooks {
 }
 
 export interface CteHooks {
-  hasSelect: boolean;
-  tableHooks: CteTableHooks;
-  ensureCount?: {
-    [cteName: string]: number;
-  };
+  hasSelect?: boolean;
+  tableHooks?: CteTableHooks;
+  ensureCount?: EnsureCount;
 }
+
+export interface EnsureCount {
+  [cteName: string]: EnsureCountItem;
+}
+
+export type EnsureCountItem =
+  | {
+      count: number;
+    }
+  | {
+      jsonNotNull: string;
+    };
 
 export interface CteTableHooks {
   [K: string]: CteTableHook;
@@ -46,6 +56,7 @@ export interface HookSelectValue {
   as?: string;
   temp?: string;
   onAs?: ((as: string) => void)[];
+  notLoaded?: boolean;
 }
 
 export interface HasTableHook {
@@ -57,11 +68,16 @@ export interface HasHookSelect {
   hookSelect?: HookSelect;
 }
 
-export const _addToHookSelect = (query: IsQuery, selects: string[]) => {
+export const _addToHookSelect = (
+  query: IsQuery,
+  selects: string[],
+  notLoaded?: boolean,
+) => {
   const { q } = query as Query;
   const map: HookSelect = (q.hookSelect = new Map(q.hookSelect));
   for (const key of selects) {
-    map.set(key, { select: key });
+    const item = map.get(key) || { select: key };
+    map.set(key, notLoaded ? { ...item, notLoaded } : item);
   }
 };
 

@@ -1,5 +1,5 @@
 import { QueryHasWhere, Where } from '../../basic-features/where/where';
-import { SelectableFromShape } from '../../query';
+import { Query, SelectableFromShape } from '../../query';
 import { Column } from '../../../columns/column';
 import {
   PickQueryScopes,
@@ -24,6 +24,19 @@ export interface ScopeArgumentQuery<
   shape: Shape;
   __selectable: SelectableFromShape<Shape, Table>;
 }
+
+export const _unscope = (q: Query, scope: PropertyKey): Query => {
+  if (q.q.scopes) {
+    q.q.scopes = { ...q.q.scopes };
+    delete q.q.scopes[scope as string];
+    for (const _ in q.q.scopes) {
+      return q as never;
+    }
+    delete q.q.scopes;
+  }
+
+  return q as never;
+};
 
 /**
  * This feature allows defining a set of query modifiers to use it later.
@@ -101,17 +114,6 @@ export class QueryScope {
    * @param scope - name of the scope to remove from the query
    */
   unscope<T extends PickQueryScopes>(this: T, scope: keyof T['__scopes']): T {
-    const q = _clone(this);
-
-    if (q.q.scopes) {
-      q.q.scopes = { ...q.q.scopes };
-      delete q.q.scopes[scope as string];
-      for (const _ in q.q.scopes) {
-        return q as never;
-      }
-      delete q.q.scopes;
-    }
-
-    return q as never;
+    return _unscope(_clone(this), scope) as never;
   }
 }
