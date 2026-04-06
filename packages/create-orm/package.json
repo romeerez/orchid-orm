@@ -33,10 +33,10 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "prompts": "^2.4.2"
+    "prompts": "2.4.2"
   },
   "devDependencies": {
-    "@types/prompts": "^2.4.2",
-    "rollup-plugin-executable": "^1.6.3"
+    "@types/prompts": "2.4.2",
+    "rollup-plugin-executable": "1.6.3"
   }
 }

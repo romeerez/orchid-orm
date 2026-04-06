@@ -39,7 +39,7 @@
   "license": "ISC",
   "dependencies": {
     "pqb": "workspace:*",
-    "valibot": "^0.29.0"
+    "valibot": "0.29.0"
   },
   "devDependencies": {
     "test-utils": "workspace:*"

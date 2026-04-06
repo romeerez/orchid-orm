@@ -73,10 +73,10 @@
     "pqb": "workspace:*",
     "rake-db": "workspace:*",
     "inflection": "*",
-    "prompts": "^2.4.2"
+    "prompts": "2.4.2"
   },
   "devDependencies": {
-    "@types/prompts": "^2.4.2",
+    "@types/prompts": "2.4.2",
     "orchid-orm-schema-to-zod": "workspace:*",
     "test-utils": "workspace:*",
     "zod": "^4.3.6"

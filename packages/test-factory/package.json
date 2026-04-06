@@ -38,7 +38,7 @@
   "license": "ISC",
   "dependencies": {
     "pqb": "workspace:*",
-    "randexp": "^0.5.3"
+    "randexp": "0.5.3"
   },
   "devDependencies": {
     "orchid-orm": "workspace:*",
