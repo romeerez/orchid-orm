@@ -39,7 +39,7 @@
   "license": "ISC",
   "dependencies": {
     "pqb": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "4.*"
   },
   "devDependencies": {
     "test-utils": "workspace:*"

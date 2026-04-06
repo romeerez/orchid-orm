@@ -95,7 +95,7 @@ describe('createFrom functions', () => {
 
       const query = Message.createOneFrom(chat, {
         authorId: 1,
-        text: () => sql`'text'`,
+        text: () => sql<string>`'text'`,
       });
 
       assertType<Awaited<typeof query>, MessageRecord>();
@@ -216,7 +216,7 @@ describe('createFrom functions', () => {
 
       const query = Message.createOneFrom(chat, {
         authorId: () => User.create(userData).get('id'),
-        text: () => sql`'text'`,
+        text: () => sql<string>`'text'`,
       });
 
       assertType<Awaited<typeof query>, MessageRecord>();
@@ -358,11 +358,11 @@ describe('createFrom functions', () => {
       const query = Message.select('text').createManyFrom(chat, [
         {
           authorId: 1,
-          text: () => sql`'text 1'`,
+          text: () => sql<string>`'text 1'`,
         },
         {
           authorId: 2,
-          text: () => sql`'text 2'`,
+          text: () => sql<string>`'text 2'`,
         },
       ]);
 
@@ -563,11 +563,11 @@ describe('createFrom functions', () => {
       const query = Message.select('text').createManyFrom(chat, [
         {
           authorId: () => User.create(userData).get('id'),
-          text: () => sql`'text 1'`,
+          text: () => sql<string>`'text 1'`,
         },
         {
           authorId: () => User.create(userData).get('id'),
-          text: () => sql`'text 2'`,
+          text: () => sql<string>`'text 2'`,
         },
       ]);
 

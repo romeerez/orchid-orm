@@ -4,34 +4,34 @@
   },
   "exclude": ["node_modules", "gitignored"],
   "compilerOptions": {
-    "baseUrl": ".",
+    "rootDir": "./packages",
     "paths": {
-      "orchid-orm": ["packages/orm/src/index.ts"],
+      "orchid-orm": ["./packages/orm/src/index.ts"],
       "orchid-orm/node-postgres": [
-        "packages/orm/src/adapters/node-postgres.ts"
+        "./packages/orm/src/adapters/node-postgres.ts"
       ],
-      "orchid-orm/postgres-js": ["packages/orm/src/adapters/postgres-js.ts"],
+      "orchid-orm/postgres-js": ["./packages/orm/src/adapters/postgres-js.ts"],
       "orchid-orm/migrations/node-postgres": [
-        "packages/orm/src/migrations/adapters/node-postgres.ts"
+        "./packages/orm/src/migrations/adapters/node-postgres.ts"
       ],
       "orchid-orm/migrations/postgres-js": [
-        "packages/orm/src/migrations/adapters/postgres-js.ts"
+        "./packages/orm/src/migrations/adapters/postgres-js.ts"
       ],
-      "pqb": ["packages/pqb/src/index.ts"],
-      "pqb/internal": ["packages/pqb/src/internal.ts"],
-      "pqb/node-postgres": ["packages/pqb/src/adapters/node-postgres.ts"],
-      "pqb/postgres-js": ["packages/pqb/src/adapters/postgres-js.ts"],
-      "rake-db": ["packages/rake-db/src/index.ts"],
+      "pqb": ["./packages/pqb/src/index.ts"],
+      "pqb/internal": ["./packages/pqb/src/internal.ts"],
+      "pqb/node-postgres": ["./packages/pqb/src/adapters/node-postgres.ts"],
+      "pqb/postgres-js": ["./packages/pqb/src/adapters/postgres-js.ts"],
+      "rake-db": ["./packages/rake-db/src/index.ts"],
       "rake-db/node-postgres": [
-        "packages/rake-db/src/adapters/node-postgres.ts"
+        "./packages/rake-db/src/adapters/node-postgres.ts"
       ],
-      "rake-db/postgres-js": ["packages/rake-db/src/adapters/postgres-js.ts"],
-      "orchid-orm-schema-to-zod": ["packages/schemaConfigs/zod/src/index.ts"],
-      "test-utils": ["packages/test-utils/src/index.ts"]
+      "rake-db/postgres-js": ["./packages/rake-db/src/adapters/postgres-js.ts"],
+      "orchid-orm-schema-to-zod": ["./packages/schemaConfigs/zod/src/index.ts"],
+      "test-utils": ["./packages/test-utils/src/index.ts"]
     },
 
     "target": "ES2020",
-    "module": "commonjs",
+    "module": "NodeNext",
     "lib": ["esnext"],
     "importHelpers": true,
     // output .d.ts declaration files for consumers
@@ -49,7 +49,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     // use Node's module resolution algorithm, instead of the legacy TS one
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     // transpile JSX to React.createElement
     "jsx": "react",
     // interop between ESM and CJS modules. Recommended by TS
@@ -59,6 +59,7 @@
     // error out if import and file system have a casing mismatch. Recommended by TS
     "forceConsistentCasingInFileNames": true,
     // only type check files, rollup will handle compilation
-    "noEmit": true
+    "noEmit": true,
+    "types": ["jest"]
   }
 }

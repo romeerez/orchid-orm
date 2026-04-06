@@ -53,7 +53,6 @@ import {
   core,
 } from 'zod/v4';
 import { $ZodErrorMap, $ZodType } from 'zod/v4/core';
-import { ToEnum } from 'zod/v4/core/util';
 
 interface ZodShape {
   [K: string]: $ZodType;
@@ -685,7 +684,7 @@ export interface ZodSchemaConfig {
   enum<T extends readonly string[]>(
     dataType: string,
     type: T,
-  ): EnumColumn<ZodSchemaConfig, ZodEnum<ToEnum<T[number]>>, T>;
+  ): EnumColumn<ZodSchemaConfig, ZodEnum<{ [K in T[number]]: K }>, T>;
 
   array<Item extends ArrayColumnValue>(item: Item): ZodArrayColumn<Item>;
 

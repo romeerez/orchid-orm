@@ -886,10 +886,10 @@ describe('migrate-or-rollback', () => {
           { log: true, logger: mockChangeLogger },
           async () => {
             await import(
-              './mock-migrations/migrations/1001_migrate.test.file1'
+              './mock-migrations/migrations/1001_migrate.test.file1' as never
             );
             await import(
-              './mock-migrations/migrations/1002_migrate.test.file2'
+              './mock-migrations/migrations/1002_migrate.test.file2' as never
             );
           },
         );

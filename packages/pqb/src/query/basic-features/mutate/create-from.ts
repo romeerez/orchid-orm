@@ -297,9 +297,9 @@ export class QueryCreateFrom {
   createOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data?: Omit<CreateData<T>, keyof Q['result']>,
+    data?: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>,
   ): CreateRawOrFromResult<T> {
-    return _queryCreateOneFrom(_clone(this) as never, query, data);
+    return _queryCreateOneFrom(_clone(this) as never, query, data as never);
   }
 
   /**
@@ -311,9 +311,9 @@ export class QueryCreateFrom {
   insertOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data?: Omit<CreateData<T>, keyof Q['result']>,
+    data?: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>,
   ): InsertRawOrFromResult<T> {
-    return _queryInsertOneFrom(_clone(this) as never, query, data);
+    return _queryInsertOneFrom(_clone(this) as never, query, data as never);
   }
 
   /**
@@ -378,9 +378,9 @@ export class QueryCreateFrom {
   createManyFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data: Omit<CreateData<T>, keyof Q['result']>[],
+    data: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>[],
   ): CreateManyFromResult<T> {
-    return _queryCreateManyFrom(_clone(this) as never, query, data);
+    return _queryCreateManyFrom(_clone(this) as never, query, data as never);
   }
 
   /**
@@ -392,9 +392,9 @@ export class QueryCreateFrom {
   insertManyFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data: Omit<CreateData<T>, keyof Q['result']>[],
+    data: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>[],
   ): InsertManyFromResult<T> {
-    return _queryInsertManyFrom(_clone(this) as never, query, data);
+    return _queryInsertManyFrom(_clone(this) as never, query, data as never);
   }
 
   /**
