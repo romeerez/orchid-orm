@@ -1,5 +1,11 @@
 # pqb
 
+## 0.62.1
+
+### Patch Changes
+
+- 554f232f: Update pqb exports
+
 ## 0.62.0
 
 ### Minor Changes
@@ -12,7 +18,7 @@
   const deleted = await db.order
     .find(orderId)
     .delete()
-    .select('*', {
+    .select("*", {
       items: (q) => q.orderItems,
     });
   ```
@@ -1469,7 +1475,7 @@
 
   ```ts
   db.user.where({
-    firstName: (q) => q.ref('lastName'),
+    firstName: (q) => q.ref("lastName"),
   });
   ```
 
@@ -1484,7 +1490,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from 'orchid-orm';
+  import { createBaseTable } from "orchid-orm";
 
   export const BaseTable = createBaseTable();
 
@@ -1505,7 +1511,7 @@
     .select({ commentsCount: (q) => q.comments.count() })
     // using `commentsCount` in the `where` wasn't supported previously:
     .where({ commentsCount: { gt: 5 } })
-    .order({ commentsCount: 'DESC' });
+    .order({ commentsCount: "DESC" });
   ```
 
 - 6ee467f: Add `narrowType` query helper
@@ -1527,12 +1533,12 @@
     // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
     // returns a boolean
     one: (q) =>
-      q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column(
-        'name',
-      )} = ${'name'}`,
+      q.sql<boolean>`${q.column("id")} = ${1} OR ${q.column(
+        "name"
+      )} = ${"name"}`,
 
     // selects the same as above, but by building a query
-    two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
+    two: (q) => q.column("id").equals(1).or(q.column("name").equals("name")),
   });
   ```
 
@@ -1561,9 +1567,9 @@
   // a tree has a `forestId: number | null`
 
   const tree = db.tree.create({
-    name: 'Willow',
+    name: "Willow",
     forest: {
-      name: 'Eerie forest',
+      name: "Eerie forest",
     },
   });
 
@@ -1589,6 +1595,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

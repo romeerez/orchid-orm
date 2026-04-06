@@ -1,5 +1,11 @@
 # test-builds
 
+## 0.0.2
+
+### Patch Changes
+
+- 554f232f: Update pqb exports
+
 ## 0.0.1
 
 ### Patch Changes

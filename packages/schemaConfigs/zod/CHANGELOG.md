@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.71
+
+### Patch Changes
+
+- 554f232f: Update pqb exports
+- Updated dependencies [554f232f]
+  - pqb@0.62.1
+
 ## 1.0.70
 
 ### Patch Changes
@@ -1610,6 +1618,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 
