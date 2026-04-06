@@ -2,12 +2,23 @@
   "name": "orchid-orm-valibot",
   "version": "0.3.122",
   "description": "OrchidORM valibot integration",
+  "keywords": [
+    "orchid-orm",
+    "query-builder",
+    "schema",
+    "valibot"
+  ],
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
+  "license": "ISC",
+  "author": "Roman Kushyn",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm.git",
     "directory": "packages/schemaConfigs/valibot"
   },
+  "files": [
+    "dist"
+  ],
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
@@ -18,25 +29,18 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c ../../../rollup.config.mjs",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "prepublishOnly": "pnpm build"
   },
-  "keywords": [
-    "orchid-orm",
-    "query-builder",
-    "schema",
-    "valibot"
-  ],
-  "author": "Roman Kushyn",
-  "license": "ISC",
   "dependencies": {
     "pqb": "workspace:*",
     "valibot": "0.29.0"

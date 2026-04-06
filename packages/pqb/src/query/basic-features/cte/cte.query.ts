@@ -34,8 +34,9 @@ export interface CteRecursiveOptions extends CteArgsOptions {
     | 'EXCEPT ALL';
 }
 
-export interface CteQueryBuilder<T extends PickQueryWithDataColumnTypes>
-  extends Query {
+export interface CteQueryBuilder<
+  T extends PickQueryWithDataColumnTypes,
+> extends Query {
   sql: QuerySql<T['columnTypes']>['sql'];
   relations: EmptyObject;
   withData: T['withData'];
@@ -55,8 +56,8 @@ export type CteResult<
               shape: Q['result'];
             }
           : K extends keyof T['withData']
-          ? T['withData'][K]
-          : never;
+            ? T['withData'][K]
+            : never;
       }
     : T[K];
 };
@@ -74,8 +75,8 @@ export type CteSqlResult<
               shape: Shape;
             }
           : K extends keyof T['withData']
-          ? T['withData'][K]
-          : never;
+            ? T['withData'][K]
+            : never;
       }
     : T[K];
 };

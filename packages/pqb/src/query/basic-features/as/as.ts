@@ -27,8 +27,8 @@ export type SetQueryTableAlias<
         };
       }
     : K extends '__as'
-    ? As
-    : T[K];
+      ? As
+      : T[K];
 };
 
 export type AsQueryArg = PickQuerySelectableShapeAs;

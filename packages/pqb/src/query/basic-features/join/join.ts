@@ -98,13 +98,14 @@ export type JoinArgs<
   T extends PickQuerySelectableShapeRelationsWithDataAs,
   Arg extends JoinFirstArg<T>,
 > = Arg extends PickQueryResultAs
-  ? // Available arguments when joining a query object. Can be:
-    // - an object where keys are columns of the joined table and values are columns of the main table or a raw SQL.
-    // - raw SQL expression
-    // - `true` to join without conditions
-    // - pair of columns, first is of the joined table, second is of main table
-    // - string tuple of a column of a joined table, operator string such as '=' or '!=', and a column of the main table
-    | [
+  ?
+      // Available arguments when joining a query object. Can be:
+      // - an object where keys are columns of the joined table and values are columns of the main table or a raw SQL.
+      // - raw SQL expression
+      // - `true` to join without conditions
+      // - pair of columns, first is of the joined table, second is of main table
+      // - string tuple of a column of a joined table, operator string such as '=' or '!=', and a column of the main table
+      | [
           conditions:
             | {
                 [K in JoinSelectable<Arg>]:
@@ -123,8 +124,8 @@ export type JoinArgs<
           rightColumn: keyof T['__selectable'] | Expression,
         ]
   : Arg extends keyof T['withData']
-  ? JoinWithArgs<T, T['withData'][Arg]>
-  : EmptyTuple;
+    ? JoinWithArgs<T, T['withData'][Arg]>
+    : EmptyTuple;
 
 /**
  * Column names of the joined table that can be used to join.
@@ -186,14 +187,14 @@ export type JoinResult<
       [K in keyof T]: K extends '__selectable'
         ? T['__selectable'] & Joined['__selectable']
         : K extends 'relations'
-        ? {
-            [K in
-              | keyof T['relations']
-              | keyof Joined['relations']]: K extends keyof Joined['relations']
-              ? Joined['relations'][K]
-              : T['relations'][K];
-          }
-        : T[K];
+          ? {
+              [K in
+                | keyof T['relations']
+                | keyof Joined['relations']]: K extends keyof Joined['relations']
+                ? Joined['relations'][K]
+                : T['relations'][K];
+            }
+          : T[K];
     }
   : {
       [K in keyof T]: K extends '__selectable'
@@ -206,31 +207,31 @@ export type JoinResult<
             };
           } & Joined['__selectable'] // & is optimal
         : K extends 'result'
-        ? // nullable result: inlined for optimization
-          {
-            [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
-              T['result'][K]
-            >;
-          }
-        : K extends 'then'
-        ? QueryThenByQuery<
-            T,
-            // nullable result: inlined for optimization
+          ? // nullable result: inlined for optimization
             {
               [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
                 T['result'][K]
               >;
             }
-          >
-        : K extends 'relations'
-        ? {
-            [K in
-              | keyof T['relations']
-              | keyof Joined['relations']]: K extends keyof Joined['relations']
-              ? Joined['relations'][K]
-              : T['relations'][K];
-          }
-        : T[K];
+          : K extends 'then'
+            ? QueryThenByQuery<
+                T,
+                // nullable result: inlined for optimization
+                {
+                  [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
+                    T['result'][K]
+                  >;
+                }
+              >
+            : K extends 'relations'
+              ? {
+                  [K in
+                    | keyof T['relations']
+                    | keyof Joined['relations']]: K extends keyof Joined['relations']
+                    ? Joined['relations'][K]
+                    : T['relations'][K];
+                }
+              : T[K];
     };
 
 /**
@@ -254,45 +255,45 @@ export type JoinResultFromArgs<
         RequireJoined
       >
     : // .join(db.table, ...)
-    Arg extends PickQueryHasSelectResultShapeAsRelations
-    ? JoinResultSelectable<
-        Arg['__hasSelect'] extends true
-          ? // If joined query has select, computed values won't be available, use `result` as is
-            Arg['result']
-          : // If no select, allow using computed values by setting result to shape
-            Arg['shape'],
-        Arg['__as'],
-        Arg['relations'],
-        RequireJoined
-      >
-    : // .join('rel-name')
-    Arg extends keyof T['relations']
-    ? JoinResultSelectable<
-        T['relations'][Arg]['query']['shape'],
-        T['relations'][Arg]['query']['__as'],
-        T['relations'][Arg]['query']['relations'],
-        RequireJoined
-      >
-    : // .join((q) => q.relation)
-    // .join(() => db.table)
-    Arg extends FirstArgCallback
-    ? JoinResultSelectable<
-        ReturnType<Arg>['shape'],
-        ReturnType<Arg>['__as'],
-        ReturnType<Arg>['relations'],
-        RequireJoined
-      >
-    : // .join('cte-name')
-    Arg extends keyof T['withData']
-    ? T['withData'][Arg] extends WithDataItem
+      Arg extends PickQueryHasSelectResultShapeAsRelations
       ? JoinResultSelectable<
-          T['withData'][Arg]['shape'],
-          T['withData'][Arg]['table'],
-          EmptyObject,
+          Arg['__hasSelect'] extends true
+            ? // If joined query has select, computed values won't be available, use `result` as is
+              Arg['result']
+            : // If no select, allow using computed values by setting result to shape
+              Arg['shape'],
+          Arg['__as'],
+          Arg['relations'],
           RequireJoined
         >
-      : never
-    : never,
+      : // .join('rel-name')
+        Arg extends keyof T['relations']
+        ? JoinResultSelectable<
+            T['relations'][Arg]['query']['shape'],
+            T['relations'][Arg]['query']['__as'],
+            T['relations'][Arg]['query']['relations'],
+            RequireJoined
+          >
+        : // .join((q) => q.relation)
+          // .join(() => db.table)
+          Arg extends FirstArgCallback
+          ? JoinResultSelectable<
+              ReturnType<Arg>['shape'],
+              ReturnType<Arg>['__as'],
+              ReturnType<Arg>['relations'],
+              RequireJoined
+            >
+          : // .join('cte-name')
+            Arg extends keyof T['withData']
+            ? T['withData'][Arg] extends WithDataItem
+              ? JoinResultSelectable<
+                  T['withData'][Arg]['shape'],
+                  T['withData'][Arg]['table'],
+                  EmptyObject,
+                  RequireJoined
+                >
+              : never
+            : never,
   RequireMain
 >;
 
@@ -408,27 +409,27 @@ export type JoinArgToQuery<
         [K in 'result' | '__as' | keyof T]: K extends '__as'
           ? T['withData'][Arg]['table']
           : K extends '__selectable'
-          ? {
-              [K in keyof T['withData'][Arg]['shape'] &
-                string as `${T['withData'][Arg]['table']}.${K}`]: {
-                as: K;
-                column: T['withData'][Arg]['shape'][K];
-              };
-            }
-          : K extends 'result'
-          ? T['withData'][Arg]['shape']
-          : K extends keyof T
-          ? T[K]
-          : never;
+            ? {
+                [K in keyof T['withData'][Arg]['shape'] &
+                  string as `${T['withData'][Arg]['table']}.${K}`]: {
+                  as: K;
+                  column: T['withData'][Arg]['shape'][K];
+                };
+              }
+            : K extends 'result'
+              ? T['withData'][Arg]['shape']
+              : K extends keyof T
+                ? T[K]
+                : never;
       }
     : never
   : Arg extends PickQuerySelectableResultAs
-  ? Arg
-  : Arg extends keyof T['relations']
-  ? T['relations'][Arg]['query']
-  : Arg extends JoinArgToQueryCallback
-  ? ReturnType<Arg>
-  : never;
+    ? Arg
+    : Arg extends keyof T['relations']
+      ? T['relations'][Arg]['query']
+      : Arg extends JoinArgToQueryCallback
+        ? ReturnType<Arg>
+        : never;
 
 interface JoinArgToQueryCallback {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -612,10 +613,10 @@ export const _joinReturningArgs = <
   } else if (joinKey && 's' in joinArgs && joinArgs.s) {
     const j = (
       'j' in joinArgs
-        ? joinArgs.r ?? joinArgs.j
+        ? (joinArgs.r ?? joinArgs.j)
         : 'r' in joinArgs
-        ? joinArgs.r
-        : joinArgs.q
+          ? joinArgs.r
+          : joinArgs.q
     ) as Query;
 
     const jq = j.q;
@@ -903,7 +904,7 @@ export const _joinLateral = (
       existingValue.q.q.select = [
         {
           selectAs: {
-            ...((existingValue.q.q.select?.[0] as SelectAs)
+            ...((existingValue.q.q.select![0] as SelectAs)
               .selectAs as SelectAsValue),
             [joinAs]: joinValueSelect as never,
           },
@@ -1856,10 +1857,10 @@ export type JoinQueryBuilder<
     ? SelectableFromShape<J['result'], J['__as']> &
         Omit<T['__selectable'], keyof T['shape']>
     : K extends keyof OnMethods
-    ? OnMethods[K]
-    : K extends keyof J
-    ? J[K]
-    : never;
+      ? OnMethods[K]
+      : K extends keyof J
+        ? J[K]
+        : never;
 };
 
 export class OnMethods {

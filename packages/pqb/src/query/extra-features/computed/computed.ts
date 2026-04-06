@@ -39,10 +39,10 @@ export type ComputedColumnsFromOptions<
       [K in keyof R]: R[K] extends QueryOrExpression<unknown>
         ? R[K]['result']['value']
         : R[K] extends () => {
-            result: { value: infer Value extends Column.Pick.QueryColumn };
-          }
-        ? Value
-        : never;
+              result: { value: infer Value extends Column.Pick.QueryColumn };
+            }
+          ? Value
+          : never;
     }
   : EmptyObject;
 
@@ -64,8 +64,10 @@ export interface RuntimeComputedQueryColumn<OutputType>
   operators: { cannotQueryRuntimeComputed: never };
 }
 
-export interface ComputedMethods<ColumnTypes, Shape extends Column.QueryColumns>
-  extends QueryComputedArg<ColumnTypes, Shape> {
+export interface ComputedMethods<
+  ColumnTypes,
+  Shape extends Column.QueryColumns,
+> extends QueryComputedArg<ColumnTypes, Shape> {
   computeAtRuntime<Deps extends keyof Shape, OutputType>(
     dependsOn: Deps[],
     fn: (record: {
@@ -103,8 +105,8 @@ const computeBatchAtRuntime = (deps: string[], fn: () => void) =>
 export interface QueryComputedArg<
   ColumnTypes,
   Shape extends Column.QueryColumns,
-> extends QueryExpressions,
-    QuerySql<ColumnTypes> {
+>
+  extends QueryExpressions, QuerySql<ColumnTypes> {
   shape: Shape;
   columnTypes: ColumnTypes;
   windows: EmptyObject;

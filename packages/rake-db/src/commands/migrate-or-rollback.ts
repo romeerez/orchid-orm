@@ -119,8 +119,8 @@ export const handleConfigLogger = (
   return config.log === true
     ? config.logger || console
     : config.log === false
-    ? undefined
-    : config.logger;
+      ? undefined
+      : config.logger;
 };
 
 /**

@@ -16,9 +16,9 @@ import { QueryInternal } from './query-internal';
 export type SQLQueryArgs = TemplateLiteralArgs | [RawSqlBase];
 
 export interface DbSqlQuery {
-  <T extends QueryResultRow = QueryResultRow>(...args: SQLQueryArgs): Promise<
-    QueryResult<T>
-  >;
+  <T extends QueryResultRow = QueryResultRow>(
+    ...args: SQLQueryArgs
+  ): Promise<QueryResult<T>>;
 
   /**
    * Returns an array of records:

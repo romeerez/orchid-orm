@@ -615,8 +615,8 @@ const mergeColumnsSql = (
     typeof target === 'string'
       ? [target]
       : Array.isArray(target)
-      ? [...target]
-      : [];
+        ? [...target]
+        : [];
 
   if (except) {
     if (typeof except === 'string') {

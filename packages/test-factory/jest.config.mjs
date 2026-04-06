@@ -1,1 +1,1 @@
-export { default } from '../../jest.config.mjs'
+export { default } from '../../jest.config.mjs';

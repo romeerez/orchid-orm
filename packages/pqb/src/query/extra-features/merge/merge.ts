@@ -17,7 +17,8 @@ import { UnionSet } from '../../basic-features/union/union.sql';
 import { QueryThenByQuery } from '../../then/then';
 
 export interface MergeQueryArg
-  extends PickQueryTable,
+  extends
+    PickQueryTable,
     PickQuerySelectable,
     PickQueryResult,
     PickQueryReturnType,
@@ -31,26 +32,26 @@ export type MergeQuery<T extends MergeQueryArg, Q extends MergeQueryArg> = {
   [K in keyof T]: K extends '__hasWhere' | '__hasSelect'
     ? T[K] & Q[K] // true if any of them is true
     : K extends '__selectable' | 'windows' | 'withData'
-    ? Q[K] & Omit<T[K], keyof Q[K]>
-    : K extends 'result'
-    ? MergeQueryResult<T, Q>
-    : K extends 'returnType'
-    ? Q['returnType'] extends undefined
-      ? T['returnType']
-      : Q['returnType']
-    : K extends 'then'
-    ? // Q may be an update query that returns count by default,
-      // and whether it returns count or not depends on if the T query had selected anything.
-      Q['returnType'] extends undefined
-      ? QueryThenByQuery<T, MergeQueryResult<T, Q>>
-      : Q['returnType'] extends 'all' | 'one' | 'oneOrThrow' | 'rows'
-      ? QueryThenByQuery<Q, MergeQueryResult<T, Q>>
-      : Q['__hasSelect'] extends true
-      ? Q['then']
-      : T['__hasSelect'] extends true
-      ? T['then']
-      : Q['then']
-    : T[K];
+      ? Q[K] & Omit<T[K], keyof Q[K]>
+      : K extends 'result'
+        ? MergeQueryResult<T, Q>
+        : K extends 'returnType'
+          ? Q['returnType'] extends undefined
+            ? T['returnType']
+            : Q['returnType']
+          : K extends 'then'
+            ? // Q may be an update query that returns count by default,
+              // and whether it returns count or not depends on if the T query had selected anything.
+              Q['returnType'] extends undefined
+              ? QueryThenByQuery<T, MergeQueryResult<T, Q>>
+              : Q['returnType'] extends 'all' | 'one' | 'oneOrThrow' | 'rows'
+                ? QueryThenByQuery<Q, MergeQueryResult<T, Q>>
+                : Q['__hasSelect'] extends true
+                  ? Q['then']
+                  : T['__hasSelect'] extends true
+                    ? T['then']
+                    : Q['then']
+            : T[K];
 };
 
 type MergeQueryResult<

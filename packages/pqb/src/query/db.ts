@@ -101,18 +101,17 @@ export type ShapeUniqueColumns<Shape extends Column.QueryColumnsInit> = {
     : never;
 }[keyof Shape];
 
-export type UniqueConstraints<Shape extends Column.QueryColumnsInit> =
-  | {
-      [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
-        ? string extends Shape[K]['data']['primaryKey']
-          ? never
-          : Shape[K]['data']['primaryKey']
-        : Shape[K]['data']['unique'] extends string
-        ? string extends Shape[K]['data']['unique']
-          ? never
-          : Shape[K]['data']['unique']
-        : never;
-    }[keyof Shape];
+export type UniqueConstraints<Shape extends Column.QueryColumnsInit> = {
+  [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
+    ? string extends Shape[K]['data']['primaryKey']
+      ? never
+      : Shape[K]['data']['primaryKey']
+    : Shape[K]['data']['unique'] extends string
+      ? string extends Shape[K]['data']['unique']
+        ? never
+        : Shape[K]['data']['unique']
+      : never;
+}[keyof Shape];
 
 export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 
@@ -138,8 +137,10 @@ export interface DbSharedOptions extends QueryLogOptions {
   managedRolesSql?: string;
 }
 
-export interface DbOptions<SchemaConfig extends ColumnSchemaConfig, ColumnTypes>
-  extends DbSharedOptions {
+export interface DbOptions<
+  SchemaConfig extends ColumnSchemaConfig,
+  ColumnTypes,
+> extends DbSharedOptions {
   schemaConfig?: SchemaConfig;
   // concrete column types or a callback for overriding standard column types
   // this types will be used in tables to define their columns
@@ -213,17 +214,17 @@ export interface QueryBuilder extends Query {
 }
 
 export class Db<
-    Table extends string | undefined = undefined,
-    Shape extends Column.QueryColumnsInit = Column.QueryColumnsInit,
-    PrimaryKeys = never,
-    UniqueColumns = never,
-    UniqueColumnTuples = never,
-    UniqueConstraints = never,
-    ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
-    ShapeWithComputed extends Column.QueryColumnsInit = Shape,
-    Scopes extends RecordUnknown | undefined = EmptyObject,
-    DefaultSelect extends keyof Shape = keyof Shape,
-  >
+  Table extends string | undefined = undefined,
+  Shape extends Column.QueryColumnsInit = Column.QueryColumnsInit,
+  PrimaryKeys = never,
+  UniqueColumns = never,
+  UniqueColumnTuples = never,
+  UniqueConstraints = never,
+  ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
+  ShapeWithComputed extends Column.QueryColumnsInit = Shape,
+  Scopes extends RecordUnknown | undefined = EmptyObject,
+  DefaultSelect extends keyof Shape = keyof Shape,
+>
   extends QueryMethods<ColumnTypes>
   implements Query
 {
@@ -661,10 +662,9 @@ export interface DbTableConstructor<ColumnTypes> {
 }
 
 export interface DbSqlMethod<ColumnTypes> {
-  <T>(...args: StaticSQLArgs): RawSql<
-    Column.Pick.QueryColumnOfType<T>,
-    ColumnTypes
-  >;
+  <T>(
+    ...args: StaticSQLArgs
+  ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   <T>(
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
   ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
@@ -677,11 +677,12 @@ export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
     ? T['scopes'] & NonDeletedScope
     : T['scopes']
   : T extends { softDelete: true | PropertyKey }
-  ? { nonDeleted: unknown }
-  : EmptyObject;
+    ? { nonDeleted: unknown }
+    : EmptyObject;
 
 export interface DbResult<ColumnTypes>
-  extends Db<string, never, never, never, never, never, ColumnTypes>,
+  extends
+    Db<string, never, never, never, never, never, ColumnTypes>,
     DbTableConstructor<ColumnTypes> {
   adapter: AdapterBase;
   close: AdapterBase['close'];

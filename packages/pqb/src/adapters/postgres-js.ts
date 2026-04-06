@@ -31,8 +31,8 @@ import {
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
-> extends PostgresJsAdapterOptions,
-    DbOptions<SchemaConfig, ColumnTypes> {}
+>
+  extends PostgresJsAdapterOptions, DbOptions<SchemaConfig, ColumnTypes> {}
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -48,8 +48,7 @@ export const createDb = <
 
 export interface PostgresJsAdapterOptions
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  extends postgres.Options<any>,
-    AdapterConfigBase {
+  extends postgres.Options<any>, AdapterConfigBase {
   databaseURL?: string;
   searchPath?: string;
   schema?: QuerySchema;

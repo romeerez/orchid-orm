@@ -58,8 +58,8 @@ class RowToJsonExpression extends Expression {
     return this.one
       ? rowToJson
       : this.coalesce !== false
-      ? `COALESCE(json_agg(${rowToJson}), '[]')`
-      : `json_agg(${rowToJson})`;
+        ? `COALESCE(json_agg(${rowToJson}), '[]')`
+        : `json_agg(${rowToJson})`;
   }
 }
 

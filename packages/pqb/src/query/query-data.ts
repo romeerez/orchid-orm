@@ -131,7 +131,8 @@ export interface AsFn {
 }
 
 export interface QueryData
-  extends QueryDataAliases,
+  extends
+    QueryDataAliases,
     PickQueryDataParsers,
     HasHookSelect,
     MutativeQueriesSelectRelationsQueryData {
@@ -347,8 +348,7 @@ export interface PickQueryDataShapeAndJoinedShapes {
 }
 
 export interface PickQueryDataShapeAndJoinedShapesAndAliases
-  extends PickQueryDataShapeAndJoinedShapes,
-    QueryDataAliases {}
+  extends PickQueryDataShapeAndJoinedShapes, QueryDataAliases {}
 
 /**
  * Push a new element into an array in the query data - immutable version

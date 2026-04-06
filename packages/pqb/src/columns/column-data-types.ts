@@ -109,5 +109,4 @@ export interface ArrayMethodsData {
 }
 
 export interface ArrayMethodsDataForBaseColumn
-  extends Column.Data,
-    ArrayMethodsData {}
+  extends Column.Data, ArrayMethodsData {}

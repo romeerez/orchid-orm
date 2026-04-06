@@ -783,10 +783,10 @@ describe('astToGenerateItem', () => {
             type === 'table'
               ? 'some'
               : type === 'table with schema'
-              ? 'schema.some'
-              : type === 'fn'
-              ? () => SomeTable
-              : () => SomeTableWithSchema;
+                ? 'schema.some'
+                : type === 'fn'
+                  ? () => SomeTable
+                  : () => SomeTableWithSchema;
 
           it('should have a column fkey dep', () => {
             arrangeChangeTable({

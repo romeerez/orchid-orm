@@ -140,7 +140,8 @@ const arrayMethods: ArrayMethods<Date> = {
 };
 
 interface ZodArrayColumn<Item extends ArrayColumnValue>
-  extends ArrayColumn<
+  extends
+    ArrayColumn<
       ZodSchemaConfig,
       Item,
       ZodArray<Item['inputSchema']>,
@@ -253,15 +254,13 @@ const numberMethods: NumberMethods = {
 };
 
 interface SmallIntColumnZod
-  extends SmallIntColumn<ZodSchemaConfig>,
-    NumberMethods {}
+  extends SmallIntColumn<ZodSchemaConfig>, NumberMethods {}
 
 class SmallIntColumnZod extends SmallIntColumn<ZodSchemaConfig> {}
 Object.assign(SmallIntColumnZod.prototype, numberMethods);
 
 interface IntegerColumnZod
-  extends IntegerColumn<ZodSchemaConfig>,
-    NumberMethods {}
+  extends IntegerColumn<ZodSchemaConfig>, NumberMethods {}
 
 class IntegerColumnZod extends IntegerColumn<ZodSchemaConfig> {}
 Object.assign(IntegerColumnZod.prototype, numberMethods);
@@ -272,15 +271,13 @@ class RealColumnZod extends RealColumn<ZodSchemaConfig> {}
 Object.assign(RealColumnZod.prototype, numberMethods);
 
 interface SmallSerialColumnZod
-  extends SmallSerialColumn<ZodSchemaConfig>,
-    NumberMethods {}
+  extends SmallSerialColumn<ZodSchemaConfig>, NumberMethods {}
 
 class SmallSerialColumnZod extends SmallSerialColumn<ZodSchemaConfig> {}
 Object.assign(SmallSerialColumnZod.prototype, numberMethods);
 
 interface SerialColumnZod
-  extends SerialColumn<ZodSchemaConfig>,
-    NumberMethods {}
+  extends SerialColumn<ZodSchemaConfig>, NumberMethods {}
 
 class SerialColumnZod extends SerialColumn<ZodSchemaConfig> {}
 Object.assign(SerialColumnZod.prototype, numberMethods);
@@ -427,29 +424,25 @@ const stringMethods: StringMethods = {
 };
 
 interface BigIntColumnZod
-  extends BigIntColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends BigIntColumn<ZodSchemaConfig>, StringMethods {}
 
 class BigIntColumnZod extends BigIntColumn<ZodSchemaConfig> {}
 Object.assign(BigIntColumnZod.prototype, stringMethods);
 
 interface DecimalColumnZod
-  extends DecimalColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends DecimalColumn<ZodSchemaConfig>, StringMethods {}
 
 class DecimalColumnZod extends DecimalColumn<ZodSchemaConfig> {}
 Object.assign(DecimalColumnZod.prototype, stringMethods);
 
 interface DoublePrecisionColumnZod
-  extends DoublePrecisionColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends DoublePrecisionColumn<ZodSchemaConfig>, StringMethods {}
 
 class DoublePrecisionColumnZod extends DoublePrecisionColumn<ZodSchemaConfig> {}
 Object.assign(DoublePrecisionColumnZod.prototype, stringMethods);
 
 interface BigSerialColumnZod
-  extends BigSerialColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends BigSerialColumn<ZodSchemaConfig>, StringMethods {}
 
 class BigSerialColumnZod extends BigSerialColumn<ZodSchemaConfig> {}
 Object.assign(BigSerialColumnZod.prototype, stringMethods);
@@ -460,8 +453,7 @@ class MoneyColumnZod extends MoneyColumn<ZodSchemaConfig> {}
 Object.assign(MoneyColumnZod.prototype, numberMethods);
 
 interface VarCharColumnZod
-  extends VarCharColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends VarCharColumn<ZodSchemaConfig>, StringMethods {}
 
 class VarCharColumnZod extends VarCharColumn<ZodSchemaConfig> {}
 Object.assign(VarCharColumnZod.prototype, stringMethods);
@@ -472,15 +464,13 @@ class TextColumnZod extends TextColumn<ZodSchemaConfig> {}
 Object.assign(TextColumnZod.prototype, stringMethods);
 
 interface StringColumnZod
-  extends StringColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends StringColumn<ZodSchemaConfig>, StringMethods {}
 
 class StringColumnZod extends StringColumn<ZodSchemaConfig> {}
 Object.assign(StringColumnZod.prototype, stringMethods);
 
 interface CitextColumnZod
-  extends CitextColumn<ZodSchemaConfig>,
-    StringMethods {}
+  extends CitextColumn<ZodSchemaConfig>, StringMethods {}
 
 class CitextColumnZod extends CitextColumn<ZodSchemaConfig> {}
 Object.assign(CitextColumnZod.prototype, stringMethods);
@@ -508,15 +498,13 @@ class DateColumnZod extends DateColumn<ZodSchemaConfig> {}
 Object.assign(DateColumnZod.prototype, dateMethods);
 
 interface TimestampNoTzColumnZod
-  extends TimestampColumn<ZodSchemaConfig>,
-    DateMethods {}
+  extends TimestampColumn<ZodSchemaConfig>, DateMethods {}
 
 class TimestampNoTzColumnZod extends TimestampColumn<ZodSchemaConfig> {}
 Object.assign(TimestampNoTzColumnZod.prototype, dateMethods);
 
 interface TimestampColumnZod
-  extends TimestampTZColumn<ZodSchemaConfig>,
-    DateMethods {}
+  extends TimestampTZColumn<ZodSchemaConfig>, DateMethods {}
 
 class TimestampColumnZod extends TimestampTZColumn<ZodSchemaConfig> {}
 Object.assign(TimestampColumnZod.prototype, dateMethods);
@@ -583,30 +571,30 @@ export interface ZodSchemaConfig {
     [K in keyof T]: K extends 'type'
       ? Type
       : K extends 'inputType'
-      ? Types['input'] extends ZodTypeAny
-        ? Types['input']['_output']
-        : Type
-      : K extends 'inputSchema'
-      ? Types['input'] extends ZodTypeAny
-        ? Types['input']
-        : TypeSchema
-      : K extends 'outputType'
-      ? Types['output'] extends ZodTypeAny
-        ? Types['output']['_output']
-        : Type
-      : K extends 'outputSchema'
-      ? Types['output'] extends ZodTypeAny
-        ? Types['output']
-        : TypeSchema
-      : K extends 'queryType'
-      ? Types['query'] extends ZodTypeAny
-        ? Types['query']['_output']
-        : Type
-      : K extends 'querySchema'
-      ? Types['query'] extends ZodTypeAny
-        ? Types['query']
-        : TypeSchema
-      : T[K];
+        ? Types['input'] extends ZodTypeAny
+          ? Types['input']['_output']
+          : Type
+        : K extends 'inputSchema'
+          ? Types['input'] extends ZodTypeAny
+            ? Types['input']
+            : TypeSchema
+          : K extends 'outputType'
+            ? Types['output'] extends ZodTypeAny
+              ? Types['output']['_output']
+              : Type
+            : K extends 'outputSchema'
+              ? Types['output'] extends ZodTypeAny
+                ? Types['output']
+                : TypeSchema
+              : K extends 'queryType'
+                ? Types['query'] extends ZodTypeAny
+                  ? Types['query']['_output']
+                  : Type
+                : K extends 'querySchema'
+                  ? Types['query'] extends ZodTypeAny
+                    ? Types['query']
+                    : TypeSchema
+                  : T[K];
   };
 
   narrowType<
@@ -625,14 +613,14 @@ export interface ZodSchemaConfig {
         ? never
         : Type['_output']
       : K extends 'outputType' | 'queryType'
-      ? Type['_output']
-      : K extends 'inputSchema'
-      ? T['inputType'] extends never
-        ? ZodNever
-        : Type
-      : K extends 'outputSchema' | 'querySchema'
-      ? Type
-      : T[K];
+        ? Type['_output']
+        : K extends 'inputSchema'
+          ? T['inputType'] extends never
+            ? ZodNever
+            : Type
+          : K extends 'outputSchema' | 'querySchema'
+            ? Type
+            : T[K];
   };
 
   narrowAllTypes<
@@ -651,26 +639,26 @@ export interface ZodSchemaConfig {
         ? Types['input']['_output']
         : T['inputType']
       : K extends 'inputSchema'
-      ? Types['input'] extends BareZodType
-        ? Types['input']
-        : T['inputSchema']
-      : K extends 'outputType'
-      ? Types['output'] extends BareZodType
-        ? Types['output']['_output']
-        : T['outputType']
-      : K extends 'outputSchema'
-      ? Types['output'] extends BareZodType
-        ? Types['output']
-        : T['outputSchema']
-      : K extends 'queryType'
-      ? Types['query'] extends BareZodType
-        ? Types['query']['_output']
-        : T['queryType']
-      : K extends 'querySchema'
-      ? Types['query'] extends BareZodType
-        ? Types['query']
-        : T['querySchema']
-      : T[K];
+        ? Types['input'] extends BareZodType
+          ? Types['input']
+          : T['inputSchema']
+        : K extends 'outputType'
+          ? Types['output'] extends BareZodType
+            ? Types['output']['_output']
+            : T['outputType']
+          : K extends 'outputSchema'
+            ? Types['output'] extends BareZodType
+              ? Types['output']
+              : T['outputSchema']
+            : K extends 'queryType'
+              ? Types['query'] extends BareZodType
+                ? Types['query']['_output']
+                : T['queryType']
+              : K extends 'querySchema'
+                ? Types['query'] extends BareZodType
+                  ? Types['query']
+                  : T['querySchema']
+                : T[K];
   };
 
   dateAsNumber<T extends Column<ZodSchemaConfig>>(
@@ -1078,8 +1066,8 @@ type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
       : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
       ? ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
       : undefined extends ColumnSchemaGetterColumns<T>[K]['data']['default']
-      ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
-      : ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+        ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
+        : ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
   },
   core.$strict
 >;

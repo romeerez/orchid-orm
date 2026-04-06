@@ -37,7 +37,7 @@ export const _queryUnion = <T extends PickQueryResult>(
         ),
         k,
         m,
-      } as UnionItem),
+      }) as UnionItem,
   );
 
   const { q } = query;

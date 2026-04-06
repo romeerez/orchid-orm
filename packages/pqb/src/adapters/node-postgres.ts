@@ -68,8 +68,7 @@ for (const key in types.builtins) {
 });
 
 export interface AdapterConfig
-  extends AdapterConfigBase,
-    Omit<PoolConfig, 'types' | 'connectionString'> {
+  extends AdapterConfigBase, Omit<PoolConfig, 'types' | 'connectionString'> {
   searchPath?: string;
   databaseURL?: string;
 }

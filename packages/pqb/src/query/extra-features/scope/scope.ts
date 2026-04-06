@@ -17,8 +17,8 @@ export type QueryScopes<Keys extends string> = {
 export interface ScopeArgumentQuery<
   Table extends string | undefined,
   Shape extends Column.QueryColumns,
-> extends Where,
-    PickQuerySelectableShapeRelationsWithData {
+>
+  extends Where, PickQuerySelectableShapeRelationsWithData {
   __isQuery: true;
   table: Table;
   shape: Shape;

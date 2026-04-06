@@ -124,8 +124,8 @@ describe('migrate-or-rollback', () => {
           startMessage === 'migrating'
             ? `Migrating database ${dbName}\n`
             : startMessage === 'rolling back'
-            ? `Rolling back database ${dbName}\n`
-            : `Reapplying migrations for database ${dbName}\n`,
+              ? `Rolling back database ${dbName}\n`
+              : `Reapplying migrations for database ${dbName}\n`,
         ]);
       }
 

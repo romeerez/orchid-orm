@@ -555,14 +555,14 @@ describe('aggregate', () => {
         method === 'count'
           ? IntegerColumn
           : ['avg', 'min', 'max', 'sum', 'bitAnd', 'bitOr'].includes(method)
-          ? RealColumn
-          : ['boolAnd', 'boolOr', 'every'].includes(method)
-          ? BooleanColumn
-          : ['jsonAgg', 'jsonbAgg'].includes(method)
-          ? JSONTextColumn
-          : method === 'xmlAgg'
-          ? XMLColumn
-          : undefined;
+            ? RealColumn
+            : ['boolAnd', 'boolOr', 'every'].includes(method)
+              ? BooleanColumn
+              : ['jsonAgg', 'jsonbAgg'].includes(method)
+                ? JSONTextColumn
+                : method === 'xmlAgg'
+                  ? XMLColumn
+                  : undefined;
       if (!columnType) {
         throw new Error(`Unhandled type for ${method}`);
       }

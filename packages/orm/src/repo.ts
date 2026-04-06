@@ -48,20 +48,20 @@ export type MapMethods<T extends Query, Methods extends MethodsBase<T>> = {
     | keyof Methods['methods']]: K extends keyof Methods['methods']
     ? Methods['methods'][K]
     : K extends keyof Methods['queryOneWithWhereMethods']
-    ? MapQueryMethods<
-        QueryOne<Query & QueryHasWhere>,
-        Methods['queryOneWithWhereMethods'][K]
-      >
-    : K extends keyof Methods['queryWithWhereMethods']
-    ? MapQueryMethods<
-        Query & QueryHasWhere,
-        Methods['queryWithWhereMethods'][K]
-      >
-    : K extends keyof Methods['queryOneMethods']
-    ? MapQueryMethods<QueryOne<Query>, Methods['queryOneMethods'][K]>
-    : K extends keyof Methods['queryMethods']
-    ? MapQueryMethods<Query, Methods['queryMethods'][K]>
-    : never;
+      ? MapQueryMethods<
+          QueryOne<Query & QueryHasWhere>,
+          Methods['queryOneWithWhereMethods'][K]
+        >
+      : K extends keyof Methods['queryWithWhereMethods']
+        ? MapQueryMethods<
+            Query & QueryHasWhere,
+            Methods['queryWithWhereMethods'][K]
+          >
+        : K extends keyof Methods['queryOneMethods']
+          ? MapQueryMethods<QueryOne<Query>, Methods['queryOneMethods'][K]>
+          : K extends keyof Methods['queryMethods']
+            ? MapQueryMethods<Query, Methods['queryMethods'][K]>
+            : never;
 };
 
 export type Repo<T extends Query, Methods extends MethodsBase<T>> = T &

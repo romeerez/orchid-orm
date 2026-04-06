@@ -401,9 +401,9 @@ const getActualItems = async (
           column.dataType === 'enum'
             ? column
             : column instanceof ArrayColumn &&
-              column.data.item.dataType === 'enum'
-            ? column.data.item
-            : undefined;
+                column.data.item.dataType === 'enum'
+              ? column.data.item
+              : undefined;
 
         if (en) {
           processEnumColumn(en, currentSchema, codeItems);

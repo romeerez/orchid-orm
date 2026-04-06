@@ -401,8 +401,8 @@ const collectCodeComparableItemsType = (
         codeItem.options.include === undefined
           ? undefined
           : config.snakeCase
-          ? toArray(codeItem.options.include).map(toSnakeCase)
-          : toArray(codeItem.options.include),
+            ? toArray(codeItem.options.include).map(toSnakeCase)
+            : toArray(codeItem.options.include),
       columns: codeItem.columns,
       name: codeItem.options.name,
       columnKeys: codeItem.columnKeys,

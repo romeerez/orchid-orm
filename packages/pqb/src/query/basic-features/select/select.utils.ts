@@ -103,7 +103,7 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
   joinQuery?: boolean,
 ): string | Expression | Query | undefined => {
   if (typeof arg === 'object') {
-    const { q: q } = arg as Query;
+    const { q } = arg as Query;
 
     if (q.batchParsers) {
       pushQueryArrayImmutable(
@@ -353,7 +353,7 @@ const collectNestedSelectBatches = (
         parent: row,
         i: 0,
         key: path[0],
-      } as never),
+      }) as never,
   );
 
   while (stack.length > 0) {

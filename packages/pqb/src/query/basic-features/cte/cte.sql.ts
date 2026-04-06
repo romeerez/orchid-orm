@@ -115,8 +115,8 @@ export const cteToSqlGiveAs = (
       o.materialized
         ? 'MATERIALIZED '
         : o.notMaterialized
-        ? 'NOT MATERIALIZED '
-        : ''
+          ? 'NOT MATERIALIZED '
+          : ''
     }(${inner})`,
   };
 };

@@ -317,29 +317,53 @@ describe('zod schema config', () => {
           );
         }
 
-        testTypeMethod(type, 'lt', 10, 'Too big: expected number to be <5', [
-          5,
-        ]);
+        testTypeMethod(
+          type,
+          'lt',
+          10,
+          'Too big: expected number to be <5',
+          [5],
+        );
 
-        testTypeMethod(type, 'lte', 10, 'Too big: expected number to be <=5', [
-          5,
-        ]);
+        testTypeMethod(
+          type,
+          'lte',
+          10,
+          'Too big: expected number to be <=5',
+          [5],
+        );
 
-        testTypeMethod(type, 'max', 10, 'Too big: expected number to be <=5', [
-          5,
-        ]);
+        testTypeMethod(
+          type,
+          'max',
+          10,
+          'Too big: expected number to be <=5',
+          [5],
+        );
 
-        testTypeMethod(type, 'gt', 0, 'Too small: expected number to be >5', [
-          5,
-        ]);
+        testTypeMethod(
+          type,
+          'gt',
+          0,
+          'Too small: expected number to be >5',
+          [5],
+        );
 
-        testTypeMethod(type, 'gte', 0, 'Too small: expected number to be >=5', [
-          5,
-        ]);
+        testTypeMethod(
+          type,
+          'gte',
+          0,
+          'Too small: expected number to be >=5',
+          [5],
+        );
 
-        testTypeMethod(type, 'min', 0, 'Too small: expected number to be >=5', [
-          5,
-        ]);
+        testTypeMethod(
+          type,
+          'min',
+          0,
+          'Too small: expected number to be >=5',
+          [5],
+        );
 
         testTypeMethod(
           type,

@@ -18,18 +18,19 @@ import { OrExpression, OrExpressionArg } from './or-expression';
 
 import { QueryThen } from '../then/then';
 
-interface QueryReturnsFnAdd<T extends PickQueryColumTypes>
-  extends PickQueryHasSelect {
+interface QueryReturnsFnAdd<
+  T extends PickQueryColumTypes,
+> extends PickQueryHasSelect {
   type<C extends Column.Pick.QueryColumn>(
     fn: (types: T['columnTypes']) => C,
   ): {
     [K in keyof T]: K extends 'result'
       ? { value: C }
       : K extends 'returnType'
-      ? 'valueOrThrow'
-      : K extends 'then'
-      ? QueryThen<C['outputType']>
-      : T[K];
+        ? 'valueOrThrow'
+        : K extends 'then'
+          ? QueryThen<C['outputType']>
+          : T[K];
   } & C['operators'];
 }
 
@@ -40,10 +41,10 @@ type SetQueryReturnsFn<
   [K in keyof T]: K extends 'result'
     ? { value: C }
     : K extends 'returnType'
-    ? 'valueOrThrow'
-    : K extends 'then'
-    ? QueryThen<C['outputType']>
-    : T[K];
+      ? 'valueOrThrow'
+      : K extends 'then'
+        ? QueryThen<C['outputType']>
+        : T[K];
 } & QueryReturnsFnAdd<T>;
 
 export class QueryExpressions {

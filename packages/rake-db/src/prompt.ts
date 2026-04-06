@@ -148,16 +148,16 @@ export const promptSelect = ({
         s === '\u001b[H' // home
           ? 0
           : s === '\u001b[F' // end
-          ? options.length - 1
-          : s === '\u001b[A' || s === 'k' // up
-          ? ctx.value === 0
             ? options.length - 1
-            : ctx.value - 1
-          : s === '\u001b[B' || s === 'j' || s === '\t' // down
-          ? ctx.value === options.length - 1
-            ? 0
-            : ctx.value + 1
-          : ctx.value;
+            : s === '\u001b[A' || s === 'k' // up
+              ? ctx.value === 0
+                ? options.length - 1
+                : ctx.value - 1
+              : s === '\u001b[B' || s === 'j' || s === '\t' // down
+                ? ctx.value === options.length - 1
+                  ? 0
+                  : ctx.value + 1
+                : ctx.value;
 
       ctx.render();
     },
@@ -215,8 +215,8 @@ export const promptText = ({
         ctx.submitted
           ? renderValue(ctx)
           : showDefault
-          ? colors.pale(def) + '\b'.repeat(def.length)
-          : ctx.value
+            ? colors.pale(def) + '\b'.repeat(def.length)
+            : ctx.value
       }`;
 
       if (ctx.submitted) text += '\n';

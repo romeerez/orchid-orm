@@ -85,7 +85,6 @@ export const noop = () => {};
 
 export const returnArg = <T>(a: T) => a;
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export type EmptyObject = {};
 // Shared empty object to avoid unnecessary allocations
 export const emptyObject = {};
@@ -377,7 +376,7 @@ export const getCallerFilePath = (
       } else {
         try {
           file = new URL(file).pathname;
-        } catch (_) {}
+        } catch {}
       }
 
       return file;
@@ -467,7 +466,6 @@ export const getFreeSetAlias = (
   return as;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const exhaustive = (_: never) => {
   throw new Error('Condition was not exhaustive');
 };

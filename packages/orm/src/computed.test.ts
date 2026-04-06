@@ -162,15 +162,14 @@ describe('computed', () => {
       assertType<
         typeof res,
         {
-          records:
-            | {
-                Id: string;
-                sqlComputed: string;
-                sqlComputedDecimal: number;
-                depSql: string;
-                runtimeComputed: string;
-                batchComputed: string;
-              }[];
+          records: {
+            Id: string;
+            sqlComputed: string;
+            sqlComputedDecimal: number;
+            depSql: string;
+            runtimeComputed: string;
+            batchComputed: string;
+          }[];
         }[]
       >();
 

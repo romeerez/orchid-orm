@@ -62,42 +62,41 @@ export type WhereArg<T extends PickQuerySelectableRelations> =
       [K in keyof T['__selectable'] | 'NOT' | 'OR' | 'IN']?: K extends 'NOT'
         ? WhereArg<T> | WhereArgs<T>
         : K extends 'OR'
-        ? (WhereArg<T> | WhereArgs<T>)[]
-        : K extends 'IN'
-        ? MaybeArray<{
-            columns: (keyof T['__selectable'])[];
-            values: unknown[][] | IsQuery | Expression;
-          }>
-        :
-            | T['__selectable'][K]['column']['queryType']
-            | null
-            // inlined `ColumnOperators` helper
-            | {
-                [O in keyof T['__selectable'][K]['column']['operators']]?:
-                  | T['__selectable'][K]['column']['operators'][O]['_opType'];
-              }
-            // inlined QueryOrExpression
-            | {
-                result: {
-                  value: {
-                    // simplified Column.Pick.QueryColumn
-                    queryType:
-                      | T['__selectable'][K]['column']['queryType']
-                      | null;
-                  };
-                };
-              }
-            // returns inlined QueryOrExpression
-            | ((q: T) => {
-                result: {
-                  value: {
-                    // simplified Column.Pick.QueryColumn
-                    queryType:
-                      | T['__selectable'][K]['column']['queryType']
-                      | null;
-                  };
-                };
-              });
+          ? (WhereArg<T> | WhereArgs<T>)[]
+          : K extends 'IN'
+            ? MaybeArray<{
+                columns: (keyof T['__selectable'])[];
+                values: unknown[][] | IsQuery | Expression;
+              }>
+            :
+                | T['__selectable'][K]['column']['queryType']
+                | null
+                // inlined `ColumnOperators` helper
+                | {
+                    [O in keyof T['__selectable'][K]['column']['operators']]?: T['__selectable'][K]['column']['operators'][O]['_opType'];
+                  }
+                // inlined QueryOrExpression
+                | {
+                    result: {
+                      value: {
+                        // simplified Column.Pick.QueryColumn
+                        queryType:
+                          | T['__selectable'][K]['column']['queryType']
+                          | null;
+                      };
+                    };
+                  }
+                // returns inlined QueryOrExpression
+                | ((q: T) => {
+                    result: {
+                      value: {
+                        // simplified Column.Pick.QueryColumn
+                        queryType:
+                          | T['__selectable'][K]['column']['queryType']
+                          | null;
+                      };
+                    };
+                  });
     }
   | ((
       q: WhereQueryBuilder<T>,
@@ -137,25 +136,25 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
         [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
           ? T['relations'][K]['query']
           : K extends keyof T &
-              (
-                | keyof Where
-                | keyof QueryExpressions
-                | 'table' // is needed for `useHelper`
-                | 'get'
-                | 'columnTypes'
-                | '__selectable'
-                | 'relations'
-                | 'useHelper'
-                | 'modify'
-                // rest are required by `useHelper`
-                | 'result'
-                | 'returnType'
-                | 'withData'
-                | 'windows'
-                | 'then'
-              )
-          ? T[K]
-          : never;
+                (
+                  | keyof Where
+                  | keyof QueryExpressions
+                  | 'table' // is needed for `useHelper`
+                  | 'get'
+                  | 'columnTypes'
+                  | '__selectable'
+                  | 'relations'
+                  | 'useHelper'
+                  | 'modify'
+                  // rest are required by `useHelper`
+                  | 'result'
+                  | 'returnType'
+                  | 'withData'
+                  | 'windows'
+                  | 'then'
+                )
+            ? T[K]
+            : never;
       };
 
 // One or more of {@link WhereArg} or a string template for raw SQL.
@@ -1204,8 +1203,8 @@ export class Where {
   ): Arg extends QueryFnReturningSelect
     ? { error: 'Cannot select in whereExists' }
     : Cb[0] extends QueryFnReturningSelect
-    ? { error: 'Cannot select in whereExists' }
-    : T & QueryHasWhere {
+      ? { error: 'Cannot select in whereExists' }
+      : T & QueryHasWhere {
     return _queryWhereExists(
       _clone(this) as unknown as T,
       arg,

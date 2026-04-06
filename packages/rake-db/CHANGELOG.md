@@ -5,7 +5,6 @@
 ### Minor Changes
 
 - 4e89c1e: Migrations programmatic usage refactoring (#671)
-
   - `makeRakeDbConfig` is dropped — `migrate`, `rollback`, and `redo` now process config parameters on their own.
   - `migrate()` now creates the migrations schema/table when called inside a transaction, so the `createMigrationsSchemaAndTable` pre-creation workaround is no longer needed.
   - `createMigrationChangeFn` is added to create the `change` function used by migration files, optionally accepting `columnTypes` from a `BaseTable` to support custom column types in migrations.
@@ -1785,7 +1784,6 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
-
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 
@@ -1867,7 +1865,6 @@
 ### Patch Changes
 
 - 2c19eb70: Add migration methods for enums:
-
   - `addEnumValues`
   - `dropEnumValues`
   - `renameEnumValues`

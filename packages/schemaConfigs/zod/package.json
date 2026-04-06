@@ -2,12 +2,23 @@
   "name": "orchid-orm-schema-to-zod",
   "version": "1.0.70",
   "description": "Orchid-ORM columns schema to Zod converter",
+  "keywords": [
+    "orchid-orm",
+    "query-builder",
+    "schema",
+    "zod"
+  ],
   "homepage": "https://orchid-orm.netlify.app/guide/columns-validation-methods.html",
+  "license": "ISC",
+  "author": "Roman Kushyn",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm.git",
     "directory": "packages/schemaConfigs/zod"
   },
+  "files": [
+    "dist"
+  ],
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
@@ -18,25 +29,18 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf dist && rollup -c ../../../rollup.config.mjs",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "prepublishOnly": "pnpm build"
   },
-  "keywords": [
-    "orchid-orm",
-    "query-builder",
-    "schema",
-    "zod"
-  ],
-  "author": "Roman Kushyn",
-  "license": "ISC",
   "dependencies": {
     "pqb": "workspace:*",
     "zod": "4.*"

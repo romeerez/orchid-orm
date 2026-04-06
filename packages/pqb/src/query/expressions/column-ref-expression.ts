@@ -10,7 +10,10 @@ export class ColumnRefExpression<
   result: { value: T };
   q: ExpressionData;
 
-  constructor(value: T, public name: string) {
+  constructor(
+    value: T,
+    public name: string,
+  ) {
     super();
     this.result = { value };
     this.q = { expr: this };

@@ -38,8 +38,8 @@ export type GetResult<
 > = Arg extends string
   ? SetQueryReturnsValueOrThrow<T, Arg>
   : Arg extends Expression
-  ? SetQueryReturnsColumnOrThrow<T, Arg['result']['value']>
-  : never;
+    ? SetQueryReturnsColumnOrThrow<T, Arg['result']['value']>
+    : never;
 
 export type GetResultOptional<
   T extends QueryGetSelf,
@@ -47,8 +47,8 @@ export type GetResultOptional<
 > = Arg extends string
   ? SetQueryReturnsValueOptional<T, Arg>
   : Arg extends Expression
-  ? SetQueryReturnsColumnOptional<T, Arg['result']['value']>
-  : never;
+    ? SetQueryReturnsColumnOptional<T, Arg['result']['value']>
+    : never;
 
 export const _getSelectableColumn = (
   q: IsQuery,

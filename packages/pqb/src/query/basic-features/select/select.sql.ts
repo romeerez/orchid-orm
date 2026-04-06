@@ -395,7 +395,7 @@ const internalSelectAllSql = (
 
   let columnsCount: number | undefined;
   if (query.shape !== anyShape) {
-    let columnsCount = 0;
+    columnsCount = 0;
     for (const key in query.shape) {
       if (!(query.shape[key] as Column).data.explicitSelect) {
         columnsCount++;
@@ -423,10 +423,10 @@ export const selectAllSql = (
     ? q.selectAllColumns?.map((item) => `${quotedAs}.${item}`) ||
         (isEmptySelect(q.shape, columnsCount) ? [] : [`${quotedAs}.*`])
     : q.selectAllColumns
-    ? [...q.selectAllColumns]
-    : isEmptySelect(q.shape, columnsCount)
-    ? []
-    : ['*'];
+      ? [...q.selectAllColumns]
+      : isEmptySelect(q.shape, columnsCount)
+        ? []
+        : ['*'];
 };
 
 const isEmptySelect = (shape: Column.QueryColumns, columnsCount?: number) =>

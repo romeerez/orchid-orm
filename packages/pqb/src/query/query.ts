@@ -101,7 +101,8 @@ export interface QuerySelectable {
 }
 
 export interface Query
-  extends IsQuery,
+  extends
+    IsQuery,
     PickQueryTable,
     PickQueryShape,
     PickQuerySelectable,
@@ -173,8 +174,8 @@ export type SetQueryReturnsAll<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'all'
     : K extends 'then'
-    ? QueryThenShallowSimplifyArr<ColumnsShape.Output<T['result']>>
-    : T[K];
+      ? QueryThenShallowSimplifyArr<ColumnsShape.Output<T['result']>>
+      : T[K];
 } & QueryHasWhere;
 
 export type SetQueryReturnsAllResult<
@@ -184,72 +185,76 @@ export type SetQueryReturnsAllResult<
   [K in keyof T]: K extends 'returnType'
     ? 'all'
     : K extends 'result'
-    ? Result
-    : K extends 'then'
-    ? QueryThenShallowSimplifyArr<T['result']>
-    : T[K];
+      ? Result
+      : K extends 'then'
+        ? QueryThenShallowSimplifyArr<T['result']>
+        : T[K];
 } & QueryHasWhere;
 
 export type QueryTakeOptional<T extends PickQueryResultReturnType> =
   T['returnType'] extends 'value' | 'pluck' | 'void'
     ? T
     : T['returnType'] extends 'valueOrThrow'
-    ? {
-        [K in keyof T]: K extends 'returnType'
-          ? 'value'
-          : K extends 'then'
-          ? QueryThen<T['result']['value']['outputType'] | undefined>
-          : T[K];
-      }
-    : {
-        [K in keyof T]: K extends 'returnType'
-          ? 'one'
-          : K extends 'then'
-          ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<T['result']>>
-          : T[K];
-      };
+      ? {
+          [K in keyof T]: K extends 'returnType'
+            ? 'value'
+            : K extends 'then'
+              ? QueryThen<T['result']['value']['outputType'] | undefined>
+              : T[K];
+        }
+      : {
+          [K in keyof T]: K extends 'returnType'
+            ? 'one'
+            : K extends 'then'
+              ? QueryThenShallowSimplifyOptional<
+                  ColumnsShape.Output<T['result']>
+                >
+              : T[K];
+        };
 
 export type QueryManyTakeOptional<T extends PickQueryResultReturnType> = {
   [K in keyof T]: K extends 'returnType'
     ? 'one'
     : K extends 'then'
-    ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<T['result']>>
-    : T[K];
+      ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<T['result']>>
+      : T[K];
 };
 
 export type QueryTake<T extends PickQueryResultReturnType> =
   T['returnType'] extends 'valueOrThrow' | 'pluck' | 'void'
     ? T
     : T['returnType'] extends 'value'
-    ? {
-        [K in keyof T]: K extends 'returnType'
-          ? 'valueOrThrow'
-          : K extends 'then'
-          ? QueryThen<Exclude<T['result']['value']['outputType'], undefined>>
-          : T[K];
-      }
-    : {
-        [K in keyof T]: K extends 'returnType'
-          ? 'oneOrThrow'
-          : K extends 'then'
-          ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
-          : T[K];
-      };
+      ? {
+          [K in keyof T]: K extends 'returnType'
+            ? 'valueOrThrow'
+            : K extends 'then'
+              ? QueryThen<
+                  Exclude<T['result']['value']['outputType'], undefined>
+                >
+              : T[K];
+        }
+      : {
+          [K in keyof T]: K extends 'returnType'
+            ? 'oneOrThrow'
+            : K extends 'then'
+              ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
+              : T[K];
+        };
 
 export type QueryManyTake<T extends PickQueryResultReturnType> = {
   [K in keyof T]: K extends 'returnType'
     ? 'oneOrThrow'
     : K extends 'then'
-    ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
-    : T[K];
+      ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
+      : T[K];
 };
 
 export type SetQueryReturnsOne<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'oneOrThrow'
     : K extends 'then'
-    ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
-    : T[K];
+      ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
+      : T[K];
 };
 
 export type SetQueryReturnsOneResult<
@@ -259,18 +264,18 @@ export type SetQueryReturnsOneResult<
   [K in keyof T]: K extends 'returnType'
     ? 'oneOrThrow'
     : K extends 'result'
-    ? Result
-    : K extends 'then'
-    ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
-    : T[K];
+      ? Result
+      : K extends 'then'
+        ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
+        : T[K];
 };
 
 export type SetQueryReturnsRows<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'rows'
     : K extends 'then'
-    ? QueryThen<ColumnsShape.Output<T['result']>[keyof T['result']][][]>
-    : T[K];
+      ? QueryThen<ColumnsShape.Output<T['result']>[keyof T['result']][][]>
+      : T[K];
 };
 
 export type SetQueryReturnsPluck<
@@ -281,41 +286,41 @@ export type SetQueryReturnsPluck<
       [K in keyof T]: K extends '__hasSelect'
         ? true
         : K extends 'result'
-        ? {
-            pluck: T['__selectable'][S]['column'];
-          }
-        : K extends 'returnType'
-        ? 'pluck'
-        : K extends 'then'
-        ? QueryThen<T['__selectable'][S]['column']['outputType'][]>
-        : T[K];
+          ? {
+              pluck: T['__selectable'][S]['column'];
+            }
+          : K extends 'returnType'
+            ? 'pluck'
+            : K extends 'then'
+              ? QueryThen<T['__selectable'][S]['column']['outputType'][]>
+              : T[K];
     }
   : {
       [K in keyof T]: K extends '__hasSelect'
         ? true
         : K extends 'result'
-        ? {
-            pluck: S extends Expression ? S['result']['value'] : never;
-          }
-        : K extends 'returnType'
-        ? 'pluck'
-        : K extends 'then'
-        ? QueryThen<
-            (S extends Expression
-              ? S['result']['value']['outputType']
-              : never)[]
-          >
-        : T[K];
+          ? {
+              pluck: S extends Expression ? S['result']['value'] : never;
+            }
+          : K extends 'returnType'
+            ? 'pluck'
+            : K extends 'then'
+              ? QueryThen<
+                  (S extends Expression
+                    ? S['result']['value']['outputType']
+                    : never)[]
+                >
+              : T[K];
     };
 
 export type SetValueQueryReturnsPluckColumn<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'result'
     ? { pluck: T['result']['value'] }
     : K extends 'returnType'
-    ? 'pluck'
-    : K extends 'then'
-    ? QueryThen<T['result']['value']['outputType'][]>
-    : T[K];
+      ? 'pluck'
+      : K extends 'then'
+        ? QueryThen<T['result']['value']['outputType'][]>
+        : T[K];
 } & QueryHasSelect;
 
 export type SetQueryReturnsPluckColumnResult<
@@ -325,12 +330,12 @@ export type SetQueryReturnsPluckColumnResult<
   [K in keyof T]: K extends 'result'
     ? { pluck: T['result']['value'] }
     : K extends 'returnType'
-    ? 'pluck'
-    : K extends 'result'
-    ? Result
-    : K extends 'then'
-    ? QueryThen<T['result']['value']['outputType'][]>
-    : T[K];
+      ? 'pluck'
+      : K extends 'result'
+        ? Result
+        : K extends 'then'
+          ? QueryThen<T['result']['value']['outputType'][]>
+          : T[K];
 } & QueryHasSelect;
 
 export type SetQueryReturnsValueOrThrow<
@@ -343,8 +348,8 @@ export type SetValueQueryReturnsValueOrThrow<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'valueOrThrow'
     : K extends 'then'
-    ? QueryThen<T['result']['value']['outputType']>
-    : T[K];
+      ? QueryThen<T['result']['value']['outputType']>
+      : T[K];
 };
 
 export type SetQueryReturnsValueOptional<
@@ -368,10 +373,10 @@ export type SetQueryReturnsColumnOrThrow<
   [K in keyof T]: K extends 'result'
     ? { value: Column }
     : K extends 'returnType'
-    ? 'valueOrThrow'
-    : K extends 'then'
-    ? QueryThen<Column['outputType']>
-    : T[K];
+      ? 'valueOrThrow'
+      : K extends 'then'
+        ? QueryThen<Column['outputType']>
+        : T[K];
 } & QueryHasSelect;
 
 export type SetQueryReturnsColumnOptional<
@@ -381,20 +386,20 @@ export type SetQueryReturnsColumnOptional<
   [K in keyof T]: K extends 'result'
     ? { value: Column }
     : K extends 'returnType'
-    ? 'value'
-    : K extends 'then'
-    ? QueryThen<Column['outputType'] | undefined>
-    : T[K];
+      ? 'value'
+      : K extends 'then'
+        ? QueryThen<Column['outputType'] | undefined>
+        : T[K];
 } & QueryHasSelect;
 
 export type SetQueryReturnsColumn<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'result'
     ? { value: T['result']['pluck'] }
     : K extends 'returnType'
-    ? 'valueOrThrow'
-    : K extends 'then'
-    ? QueryThen<T['result']['pluck']['outputType']>
-    : T[K];
+      ? 'valueOrThrow'
+      : K extends 'then'
+        ? QueryThen<T['result']['pluck']['outputType']>
+        : T[K];
 } & QueryHasSelect;
 
 export type SetQueryReturnsColumnResult<
@@ -404,40 +409,40 @@ export type SetQueryReturnsColumnResult<
   [K in keyof T]: K extends 'result'
     ? { value: T['result']['pluck'] }
     : K extends 'returnType'
-    ? 'valueOrThrow'
-    : K extends 'result'
-    ? Result
-    : K extends 'then'
-    ? QueryThen<Result['pluck']['outputType']>
-    : T[K];
+      ? 'valueOrThrow'
+      : K extends 'result'
+        ? Result
+        : K extends 'then'
+          ? QueryThen<Result['pluck']['outputType']>
+          : T[K];
 } & QueryHasSelect;
 
 export type SetQueryReturnsRowCount<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'valueOrThrow'
     : K extends 'result'
-    ? { value: Column.Pick.QueryColumnOfType<number> }
-    : K extends 'then'
-    ? QueryThen<number>
-    : T[K];
+      ? { value: Column.Pick.QueryColumnOfType<number> }
+      : K extends 'then'
+        ? QueryThen<number>
+        : T[K];
 };
 
 export type SetQueryReturnsRowCountMany<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'pluck'
     : K extends 'result'
-    ? { pluck: Column.Pick.QueryColumnOfType<number> }
-    : K extends 'then'
-    ? QueryThen<number>
-    : T[K];
+      ? { pluck: Column.Pick.QueryColumnOfType<number> }
+      : K extends 'then'
+        ? QueryThen<number>
+        : T[K];
 };
 
 export type SetQueryReturnsVoid<T> = {
   [K in keyof T]: K extends 'returnType'
     ? 'void'
     : K extends 'then'
-    ? QueryThen<void>
-    : T[K];
+      ? QueryThen<void>
+      : T[K];
 };
 
 export type SetQueryResult<
@@ -447,8 +452,8 @@ export type SetQueryResult<
   [K in keyof T]: K extends 'result'
     ? Result
     : K extends 'then'
-    ? QueryThenByQuery<T, Result>
-    : T[K];
+      ? QueryThenByQuery<T, Result>
+      : T[K];
 };
 
 export interface ReturnsQueryOrExpression<T> {

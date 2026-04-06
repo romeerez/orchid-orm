@@ -96,7 +96,8 @@ export interface Table extends Query, TableInfo {}
 // processes relations to a type that's understandable by `pqb`
 // add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
 export interface TableToDb<T extends ORMTableInput>
-  extends TableInfo,
+  extends
+    TableInfo,
     Db<
       T['table'],
       T['columns']['shape'],
@@ -131,30 +132,30 @@ export interface TableToDb<T extends ORMTableInput>
               BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
             >
           : T['relations'][K] extends HasOne
-          ? HasOneInfo<
-              T,
-              K,
-              T['relations'][K],
-              HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
-            >
-          : T['relations'][K] extends HasMany
-          ? HasManyInfo<
-              T,
-              K,
-              T['relations'][K],
-              HasManyQuery<T, K, RelationTableToQuery<T['relations'][K]>>
-            >
-          : T['relations'][K] extends HasAndBelongsToMany
-          ? HasAndBelongsToManyInfo<
-              T,
-              K,
-              T['relations'][K]['options']['columns'][number] & string,
-              HasAndBelongsToManyQuery<
+            ? HasOneInfo<
+                T,
                 K,
-                RelationTableToQuery<T['relations'][K]>
+                T['relations'][K],
+                HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
               >
-            >
-          : never;
+            : T['relations'][K] extends HasMany
+              ? HasManyInfo<
+                  T,
+                  K,
+                  T['relations'][K],
+                  HasManyQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+                >
+              : T['relations'][K] extends HasAndBelongsToMany
+                ? HasAndBelongsToManyInfo<
+                    T,
+                    K,
+                    T['relations'][K]['options']['columns'][number] & string,
+                    HasAndBelongsToManyQuery<
+                      K,
+                      RelationTableToQuery<T['relations'][K]>
+                    >
+                  >
+                : never;
       }
     : EmptyObject;
 }
@@ -211,10 +212,10 @@ export type Selectable<T extends ORMTableInput> = T['computed'] extends ((
         [K in keyof R]: R[K] extends QueryOrExpression<unknown>
           ? R[K]['result']['value']['outputType']
           : R[K] extends () => {
-              result: { value: infer Value extends Column.Pick.QueryColumn };
-            }
-          ? Value['outputType']
-          : never;
+                result: { value: infer Value extends Column.Pick.QueryColumn };
+              }
+            ? Value['outputType']
+            : never;
       }
     >
   : ShallowSimplify<ColumnsShape.Output<T['columns']['shape']>>;

@@ -65,7 +65,8 @@ const _softDelete = (column: PropertyKey, customNowSQL?: string) => {
 };
 
 export interface QueryWithSoftDelete
-  extends PickQueryResult,
+  extends
+    PickQueryResult,
     PickQueryReturnType,
     PickQueryHasSelect,
     PickQueryHasWhere {

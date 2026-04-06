@@ -16,9 +16,7 @@ import { getQuerySchema } from '../basic-features/storage/storage';
 import { MutativeQueriesSelectRelationsSqlProp } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 
 export interface SqlCommonOptions
-  extends HasTableHook,
-    HasCteHooks,
-    MutativeQueriesSelectRelationsSqlProp {}
+  extends HasTableHook, HasCteHooks, MutativeQueriesSelectRelationsSqlProp {}
 
 export interface SingleSqlItem {
   // SQL string

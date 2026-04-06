@@ -26,7 +26,7 @@ const testTimestampInput = (column: Column.Pick.Data) => {
   expect(column.data.encode?.(string) as Date).toBe(string);
 
   const number = date.getTime();
-  expect((column.data.encode?.(number) as Date).getTime()).toBe(number);
+  expect((column.data.encode?.(number) as Date)?.getTime()).toBe(number);
 
   expect(column.data.encode?.(date) as Date).toBe(date);
 };

@@ -61,21 +61,24 @@ export interface OperatorToSQL {
 // for a case when operator gives a different column type.
 export interface Operator<
   Value,
-  Column extends Column.Pick.OutputTypeAndOperators = Column.Pick.OutputTypeAndOperators,
+  Column extends Column.Pick.OutputTypeAndOperators =
+    Column.Pick.OutputTypeAndOperators,
 > {
-  <T extends PickQueryResult>(this: T, arg: Value):
-    | {
-        [K in Exclude<
-          keyof T,
-          keyof T['result']['value']['operators']
-        >]: K extends 'result'
-          ? { value: Column }
-          : K extends 'returnType'
-          ? 'valueOrThrow'
-          : K extends 'then'
+  <T extends PickQueryResult>(
+    this: T,
+    arg: Value,
+  ): {
+    [K in Exclude<
+      keyof T,
+      keyof T['result']['value']['operators']
+    >]: K extends 'result'
+      ? { value: Column }
+      : K extends 'returnType'
+        ? 'valueOrThrow'
+        : K extends 'then'
           ? QueryThen<Column['outputType']>
           : T[K];
-      } & Column['operators'];
+  } & Column['operators'];
   // argument type of the function
   _opType: Value;
 }
@@ -600,8 +603,8 @@ const jsonPathQueryOp = (
           options.silent ? ', true' : ''
         }`
       : options?.silent
-      ? ', NULL, true'
-      : ''
+        ? ', NULL, true'
+        : ''
   })`;
 
 const quoteJsonValue = (

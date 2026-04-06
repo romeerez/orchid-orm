@@ -49,8 +49,9 @@ export const getColumnTypes = <
   return fn(types);
 };
 
-export interface DefaultColumnTypes<SchemaConfig extends ColumnSchemaConfig>
-  extends TimestampHelpers {
+export interface DefaultColumnTypes<
+  SchemaConfig extends ColumnSchemaConfig,
+> extends TimestampHelpers {
   schema: SchemaConfig;
   enum: SchemaConfig['enum'];
   array: SchemaConfig['array'];

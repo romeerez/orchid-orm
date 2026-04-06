@@ -1579,7 +1579,6 @@
 ### Minor Changes
 
 - 1aa1fb3: `onConflict` changes:
-
   - `onConflictIgnore` is renamed to `onConflictDoNothing` (was closer to Knex, becomes closer to SQL).
   - `onConflict(...).merge` no longer accepts a set for update, only columns for merging.
   - New `onConflict(...).set`: use `set` for setting specific values instead of `merge` as it was previously.
@@ -1590,7 +1589,6 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
-
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

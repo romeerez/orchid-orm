@@ -108,8 +108,7 @@ export namespace TableData {
     export type Options = TsVectorArg;
 
     export interface UniqueColumnArg<Name extends string = string>
-      extends ColumnOptions,
-        UniqueOptionsArg<Name> {
+      extends ColumnOptions, UniqueOptionsArg<Name> {
       expression?: string;
     }
 
@@ -135,14 +134,16 @@ export namespace TableData {
     }
 
     // for a table index that has a column in the list
-    export interface ColumnOptionsForColumn<Column extends PropertyKey>
-      extends ColumnOptions {
+    export interface ColumnOptionsForColumn<
+      Column extends PropertyKey,
+    > extends ColumnOptions {
       column: Column;
     }
 
     // for a table index, it can have either a column or an expression in its list
     export type ColumnOrExpressionOptions<Column extends PropertyKey = string> =
-      ColumnOptionsForColumn<Column> | ExpressionOptions;
+      | ColumnOptionsForColumn<Column>
+      | ExpressionOptions;
   }
 
   export namespace Exclude {
@@ -168,8 +169,9 @@ export namespace TableData {
       with: string;
     }
 
-    interface ColumnOptions<Column extends PropertyKey>
-      extends ColumnBaseOptions {
+    interface ColumnOptions<
+      Column extends PropertyKey,
+    > extends ColumnBaseOptions {
       column: Column;
     }
 
@@ -178,7 +180,8 @@ export namespace TableData {
     }
 
     export type ColumnOrExpressionOptions<Column extends PropertyKey = string> =
-      ColumnOptions<Column> | ExpressionOptions;
+      | ColumnOptions<Column>
+      | ExpressionOptions;
   }
 
   export namespace References {
@@ -383,17 +386,18 @@ export interface TableDataMethods<Key extends PropertyKey> {
 export type TableDataItemsUniqueColumns<
   Shape extends Column.QueryColumns,
   T extends MaybeArray<TableDataItem>,
-> = MaybeArray<TableDataItem> extends T
-  ? never
-  : T extends UniqueTableDataItem<Shape>
-  ? ItemUniqueColumns<Shape, T>
-  : T extends unknown[]
-  ? {
-      [Item in T[number] as PropertyKey]: Item extends UniqueTableDataItem<Shape>
-        ? ItemUniqueColumns<Shape, Item>
+> =
+  MaybeArray<TableDataItem> extends T
+    ? never
+    : T extends UniqueTableDataItem<Shape>
+      ? ItemUniqueColumns<Shape, T>
+      : T extends unknown[]
+        ? {
+            [Item in T[number] as PropertyKey]: Item extends UniqueTableDataItem<Shape>
+              ? ItemUniqueColumns<Shape, Item>
+              : never;
+          }[PropertyKey]
         : never;
-    }[PropertyKey]
-  : never;
 
 type ItemUniqueColumns<
   Shape extends Column.QueryColumns,
@@ -407,13 +411,14 @@ type ItemUniqueColumns<
 export type TableDataItemsUniqueColumnTuples<
   Shape extends Column.QueryColumns,
   T extends MaybeArray<TableDataItem>,
-> = MaybeArray<TableDataItem> extends T
-  ? never
-  : T extends UniqueTableDataItem<Shape>
-  ? T['columns']
-  : T extends TableDataItem[]
-  ? Exclude<T[number]['columns'], []>
-  : never;
+> =
+  MaybeArray<TableDataItem> extends T
+    ? never
+    : T extends UniqueTableDataItem<Shape>
+      ? T['columns']
+      : T extends TableDataItem[]
+        ? Exclude<T[number]['columns'], []>
+        : never;
 
 export type UniqueQueryTypeOrExpression<T> =
   | T
@@ -421,14 +426,15 @@ export type UniqueQueryTypeOrExpression<T> =
 
 export type TableDataItemsUniqueConstraints<
   T extends MaybeArray<TableDataItem>,
-> = MaybeArray<TableDataItem> extends T
-  ? never
-  : T extends UniqueTableDataItem
-  ? T['name']
-  : // TODO: there may be non-unique items
-  T extends UniqueTableDataItem[]
-  ? T[number]['name']
-  : never;
+> =
+  MaybeArray<TableDataItem> extends T
+    ? never
+    : T extends UniqueTableDataItem
+      ? T['name']
+      : // TODO: there may be non-unique items
+        T extends UniqueTableDataItem[]
+        ? T[number]['name']
+        : never;
 
 export type TableDataFn<Shape, Data extends MaybeArray<TableDataItem>> = (
   t: TableDataMethods<keyof Shape>,
@@ -516,6 +522,7 @@ export const tableDataMethods: TableDataMethods<string> = {
 };
 
 export const parseTableData = (
+  // oxlint-disable-next-line typescript/no-explicit-any
   dataFn?: TableDataFn<unknown, any>,
 ): TableData => {
   const tableData: TableData = {};

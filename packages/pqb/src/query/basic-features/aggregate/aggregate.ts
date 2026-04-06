@@ -138,16 +138,16 @@ type NumericReturn<
     > &
       OperatorsNumber
   : Arg extends Expression
-  ? SetQueryReturnsColumnOrThrow<
-      T,
-      Column.Pick.QueryColumnOfTypeAndOps<
-        Arg['result']['value']['dataType'],
-        Arg['result']['value']['type'] | null,
+    ? SetQueryReturnsColumnOrThrow<
+        T,
+        Column.Pick.QueryColumnOfTypeAndOps<
+          Arg['result']['value']['dataType'],
+          Arg['result']['value']['type'] | null,
+          OperatorsNumber
+        >
+      > &
         OperatorsNumber
-      >
-    > &
-      OperatorsNumber
-  : never;
+    : never;
 
 type NullableNumberReturn<T, DataType> = SetQueryReturnsColumnOrThrow<
   T,
@@ -236,7 +236,7 @@ type NullableStringReturn<T> = SetQueryReturnsColumnOrThrow<T, StringNullable> &
 
 export interface AggregateArgTypes {
   minMax: // bpchar, timetz not supported by ORM
-  | 'citext'
+    | 'citext'
     | 'date'
     | 'float4'
     | 'float8'
@@ -261,7 +261,7 @@ export interface AggregateArgTypes {
     | 'money'
     | 'numeric';
   avg: // unlike sum, avg has no money
-  'float4' | 'float8' | 'int2' | 'int4' | 'int8' | 'interval' | 'numeric';
+    'float4' | 'float8' | 'int2' | 'int4' | 'int8' | 'interval' | 'numeric';
   bit: 'bit' | 'int2' | 'int4' | 'int8';
   bool: 'bool';
   stringAgg: 'bytea' | 'text';

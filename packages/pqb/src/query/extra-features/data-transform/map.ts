@@ -51,16 +51,19 @@ export class QueryMap {
   map<T extends PickQueryReturnType, Result>(
     this: T,
     fn: // `| null` is the case of aggregations such as `sum`.
-    T extends { returnType: 'valueOrThrow'; then: QueryThen<infer Data | null> }
+    T extends {
+      returnType: 'valueOrThrow';
+      then: QueryThen<(infer Data) | null>;
+    }
       ? (input: Data, index: number, value: Data) => Result
       : T['returnType'] extends QueryReturnTypeAll | 'pluck'
-      ? T extends { then: QueryThen<(infer Data)[]> }
-        ? (input: Data, index: number, arr: Data[]) => Result
-        : never
-      : // `| undefined` is needed to remove undefined type from map's arg
-      T extends { then: QueryThen<infer Data | undefined> }
-      ? (input: Data, index: number, value: Data) => Result
-      : never,
+        ? T extends { then: QueryThen<(infer Data)[]> }
+          ? (input: Data, index: number, arr: Data[]) => Result
+          : never
+        : // `| undefined` is needed to remove undefined type from map's arg
+          T extends { then: QueryThen<(infer Data) | undefined> }
+          ? (input: Data, index: number, value: Data) => Result
+          : never,
     thisArg?: unknown,
   ): // When the map returns object, a query result is a map of key-value columns.
   // It's used to correctly infer type in case of a nested sub-query select with the map inside.
@@ -69,14 +72,14 @@ export class QueryMap {
         [K in keyof T]: K extends 'result'
           ? { [K in keyof Result]: Column.Pick.QueryColumnOfType<Result[K]> }
           : K extends 'then'
-          ? QueryThen<
-              T['returnType'] extends QueryReturnTypeAll | 'pluck'
-                ? Result[]
-                : T['returnType'] extends QueryReturnTypeOptional
-                ? Result | undefined
-                : Result
-            >
-          : T[K];
+            ? QueryThen<
+                T['returnType'] extends QueryReturnTypeAll | 'pluck'
+                  ? Result[]
+                  : T['returnType'] extends QueryReturnTypeOptional
+                    ? Result | undefined
+                    : Result
+              >
+            : T[K];
       }
     : // When the map returns a scalar value, a query type should adjust to a single value
       {
@@ -84,37 +87,37 @@ export class QueryMap {
           ? T['returnType'] extends QueryReturnTypeAll | 'pluck'
             ? 'pluck'
             : T['returnType'] extends 'one'
-            ? 'value'
-            : 'valueOrThrow'
+              ? 'value'
+              : 'valueOrThrow'
           : K extends 'result'
-          ? T['returnType'] extends QueryReturnTypeAll | 'pluck'
-            ? { pluck: Column.Pick.QueryColumnOfType<Result> }
-            : T['returnType'] extends QueryReturnTypeOptional
-            ? { value: Column.Pick.QueryColumnOfType<Result | undefined> }
-            : {
-                value: Column.Pick.QueryColumnOfType<
-                  T extends {
-                    returnType: 'valueOrThrow';
-                    then: QueryThen<unknown | null>;
+            ? T['returnType'] extends QueryReturnTypeAll | 'pluck'
+              ? { pluck: Column.Pick.QueryColumnOfType<Result> }
+              : T['returnType'] extends QueryReturnTypeOptional
+                ? { value: Column.Pick.QueryColumnOfType<Result | undefined> }
+                : {
+                    value: Column.Pick.QueryColumnOfType<
+                      T extends {
+                        returnType: 'valueOrThrow';
+                        then: QueryThen<unknown | null>;
+                      }
+                        ? Result | null // aggregation such as `sum`
+                        : Result
+                    >;
                   }
-                    ? Result | null // aggregation such as `sum`
-                    : Result
-                >;
-              }
-          : K extends 'then'
-          ? QueryThen<
-              T['returnType'] extends QueryReturnTypeAll | 'pluck'
-                ? Result[]
-                : T['returnType'] extends QueryReturnTypeOptional
-                ? Result | undefined
-                : T extends {
-                    returnType: 'valueOrThrow';
-                    then: QueryThen<unknown | null>;
-                  }
-                ? Result | null
-                : Result
-            >
-          : T[K];
+            : K extends 'then'
+              ? QueryThen<
+                  T['returnType'] extends QueryReturnTypeAll | 'pluck'
+                    ? Result[]
+                    : T['returnType'] extends QueryReturnTypeOptional
+                      ? Result | undefined
+                      : T extends {
+                            returnType: 'valueOrThrow';
+                            then: QueryThen<unknown | null>;
+                          }
+                        ? Result | null
+                        : Result
+                >
+              : T[K];
       } {
     return pushQueryValueImmutable(_clone(this), 'transform', {
       map: fn,

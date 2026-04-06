@@ -2,12 +2,25 @@
   "name": "orchid-orm",
   "version": "1.65.0",
   "description": "Postgres ORM",
+  "keywords": [
+    "orm",
+    "pg",
+    "postgres",
+    "ts",
+    "typescript"
+  ],
   "homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
+  "license": "ISC",
+  "author": "Roman Kushyn",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm.git",
     "directory": "packages/orm"
   },
+  "files": [
+    "dist",
+    "codegen"
+  ],
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
@@ -48,32 +61,23 @@
       "types": "./dist/migrations/postgres-js.d.ts"
     }
   },
-  "files": [
-    "dist",
-    "codegen"
-  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ ./codegen/ && rollup -c ./rollup.config.mjs",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "prepublishOnly": "pnpm build"
   },
-  "keywords": [
-    "pg",
-    "postgres",
-    "orm",
-    "ts",
-    "typescript"
-  ],
-  "author": "Roman Kushyn",
-  "license": "ISC",
   "dependencies": {
-    "pqb": "workspace:*",
-    "rake-db": "workspace:*",
     "inflection": "*",
-    "prompts": "2.4.2"
+    "pqb": "workspace:*",
+    "prompts": "2.4.2",
+    "rake-db": "workspace:*"
   },
   "devDependencies": {
     "@types/prompts": "2.4.2",

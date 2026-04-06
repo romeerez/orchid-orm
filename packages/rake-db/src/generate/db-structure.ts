@@ -913,16 +913,16 @@ export async function introspectDbSchema(
             privilege.object === 'relation'
               ? 'TABLES'
               : privilege.object === 'sequence'
-              ? 'SEQUENCES'
-              : privilege.object === 'function'
-              ? 'FUNCTIONS'
-              : privilege.object === 'type'
-              ? 'TYPES'
-              : privilege.object === 'schema'
-              ? 'SCHEMAS'
-              : privilege.object === 'large_object'
-              ? 'LARGE_OBJECTS'
-              : null;
+                ? 'SEQUENCES'
+                : privilege.object === 'function'
+                  ? 'FUNCTIONS'
+                  : privilege.object === 'type'
+                    ? 'TYPES'
+                    : privilege.object === 'schema'
+                      ? 'SCHEMAS'
+                      : privilege.object === 'large_object'
+                        ? 'LARGE_OBJECTS'
+                        : null;
 
           if (!objectType) {
             throw new Error(

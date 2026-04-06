@@ -59,9 +59,7 @@ export interface ToSqlValues {
 }
 
 export interface TopToSqlCtx
-  extends ToSqlOptionsInternal,
-    HasCteHooks,
-    ToSqlValues {
+  extends ToSqlOptionsInternal, HasCteHooks, ToSqlValues {
   topCtx: TopToSqlCtx;
   topCTE?: TopCTE;
   tableHook?: TableHook;

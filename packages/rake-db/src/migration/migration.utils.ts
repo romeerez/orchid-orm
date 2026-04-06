@@ -146,8 +146,8 @@ export const encodeColumnDefault = (
               ).join(',') +
               '}'
           : column?.data.encode
-          ? column.data.encode(def)
-          : def,
+            ? column.data.encode(def)
+            : def,
       );
     }
   }
@@ -447,8 +447,8 @@ export const indexesToQuery = (
       options.tsVector && options.languageColumn
         ? `"${options.languageColumn}"`
         : options.language
-        ? `'${options.language}'`
-        : `'${language || 'english'}'`;
+          ? `'${options.language}'`
+          : `'${language || 'english'}'`;
 
     let hasWeight =
       options.tsVector && columns.some((column) => !!column.weight);

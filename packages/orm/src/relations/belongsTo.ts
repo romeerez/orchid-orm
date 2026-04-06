@@ -88,10 +88,10 @@ export type BelongsToQuery<T extends Query, Name extends string> = {
   [P in keyof T]: P extends '__selectable'
     ? SelectableFromShape<T['shape'], Name>
     : P extends '__as'
-    ? Name
-    : P extends CreateMethodsNames | DeleteMethodsNames
-    ? never
-    : T[P];
+      ? Name
+      : P extends CreateMethodsNames | DeleteMethodsNames
+        ? never
+        : T[P];
 } & QueryHasWhere &
   HasRelJoin;
 
@@ -200,8 +200,8 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       const kind = value.create
         ? 'create'
         : value.connect
-        ? 'connect'
-        : 'connectOrCreate';
+          ? 'connect'
+          : 'connectOrCreate';
 
       if (kind) {
         const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {

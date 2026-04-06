@@ -81,8 +81,9 @@ type FactoryExtend<T extends PickQueryShape> = {
   [K in keyof T['shape']]?: (sequence: number) => T['shape'][K]['outputType'];
 };
 
-export interface TableFactoryConfig<T extends PickQueryShape>
-  extends FactoryConfig {
+export interface TableFactoryConfig<
+  T extends PickQueryShape,
+> extends FactoryConfig {
   extend?: FactoryExtend<T>;
 }
 
@@ -636,7 +637,7 @@ const makeGeneratorForColumn = (
     const strippedKey = lowerKey.replace(/_|-/g, '');
 
     let gen: ((sequence: number) => string) | undefined;
-    const min = data.length ?? data.min ?? data.nonEmpty ? 1 : 0;
+    const min = (data.length ?? data.min ?? data.nonEmpty) ? 1 : 0;
     const max = Math.min(
       data.length ?? data.max ?? Infinity,
       config.maxTextLength ?? 1000,
@@ -747,8 +748,8 @@ const makeGeneratorForColumn = (
       return toLowerCase
         ? s.toLocaleLowerCase()
         : toUpperCase
-        ? s.toLocaleUpperCase()
-        : s;
+          ? s.toLocaleUpperCase()
+          : s;
     };
   } else if (c instanceof ByteaColumn) {
     fn = () => Buffer.from(arr(1, 10, () => int(0, 255)) as number[]);

@@ -123,8 +123,8 @@ export const getSearchLang = (
     'languageColumn' in source
       ? columnToSql(ctx, data, data.shape, source.languageColumn, quotedAs)
       : isRawSQL(source.language)
-      ? source.language.toSQL(ctx)
-      : addValue(ctx.values, source.language || data.language || 'english'));
+        ? source.language.toSQL(ctx)
+        : addValue(ctx.values, source.language || data.language || 'english'));
 };
 
 export const getSearchText = (

@@ -232,8 +232,8 @@ export const processJoinItem = (
                   value === null || value === undefined
                     ? null
                     : column.data.encode
-                    ? column.data.encode(value)
-                    : value,
+                      ? column.data.encode(value)
+                      : value,
                 ) +
                 '::' +
                 (column as Column).dataType

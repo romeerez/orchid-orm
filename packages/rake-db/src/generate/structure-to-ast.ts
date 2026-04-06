@@ -322,10 +322,10 @@ const instantiateColumnByDbType = (
       !isSerial
         ? type
         : type === 'int2'
-        ? 'smallserial'
-        : type === 'int4'
-        ? 'serial'
-        : 'bigserial'
+          ? 'smallserial'
+          : type === 'int4'
+            ? 'serial'
+            : 'bigserial'
     ];
 
   if (

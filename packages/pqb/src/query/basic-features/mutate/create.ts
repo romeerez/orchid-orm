@@ -53,7 +53,8 @@ import { ToSQLQuery } from '../../sql/to-sql';
 import { QueryData } from '../../query-data';
 
 export interface CreateSelf
-  extends IsQuery,
+  extends
+    IsQuery,
     PickQueryHasSelect,
     PickQueryDefaults,
     PickQueryResult,
@@ -105,10 +106,9 @@ type CreateDataWithDefaultsForRelations<
 };
 
 // Type of available variants to provide for a specific column when creating
-export type CreateColumn<
-  T extends CreateSelf,
-  K extends keyof T['inputType'],
-> = T['inputType'][K] | ((q: T) => QueryOrExpression<T['inputType'][K]>);
+export type CreateColumn<T extends CreateSelf, K extends keyof T['inputType']> =
+  | T['inputType'][K]
+  | ((q: T) => QueryOrExpression<T['inputType'][K]>);
 
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf> =
@@ -166,8 +166,7 @@ export type CreateRelationsDataOmittingFKeys<
                 | Union['nested'],
         ) => void
       : never
-  ) extends // must be handled as a function argument, belongsTo.test relies on this
-  (u: infer Obj) => void
+  ) extends (u: infer Obj) => void // must be handled as a function argument, belongsTo.test relies on this
     ? Obj
     : never;
 
@@ -178,10 +177,10 @@ export type CreateRelationsDataOmittingFKeys<
 export type CreateResult<T extends CreateSelf> = T extends { isCount: true }
   ? T
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsOneResult<T, NarrowCreateResult<T>>
-  : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T>>
-  : SetQueryResult<T, NarrowCreateResult<T>>;
+    ? SetQueryReturnsOneResult<T, NarrowCreateResult<T>>
+    : T['returnType'] extends 'pluck'
+      ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T>>
+      : SetQueryResult<T, NarrowCreateResult<T>>;
 
 // `insert` method output type
 // - query returns inserted row count by default.
@@ -192,8 +191,8 @@ type InsertResult<T extends CreateSelf> = T['__hasSelect'] extends true
   ? T['returnType'] extends undefined | 'all'
     ? SetQueryReturnsOneResult<T, NarrowCreateResult<T>>
     : T['returnType'] extends 'pluck'
-    ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T>>
-    : SetQueryResult<T, NarrowCreateResult<T>>
+      ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T>>
+      : SetQueryResult<T, NarrowCreateResult<T>>
   : SetQueryReturnsRowCount<T>;
 
 // `createMany` method output type
@@ -203,10 +202,10 @@ type InsertResult<T extends CreateSelf> = T['__hasSelect'] extends true
 type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
   ? SetQueryResult<T, NarrowCreateResult<T>>
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
-  : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
-  : SetQueryResult<T, NarrowCreateResult<T>>;
+    ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
+    : T['returnType'] extends 'value' | 'valueOrThrow'
+      ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
+      : SetQueryResult<T, NarrowCreateResult<T>>;
 
 // `insertMany` method output type
 // - query returns inserted row count by default.
@@ -216,8 +215,8 @@ type InsertManyResult<T extends CreateSelf> = T['__hasSelect'] extends true
   ? T['returnType'] extends 'one' | 'oneOrThrow'
     ? SetQueryReturnsAllResult<T, NarrowCreateResult<T>>
     : T['returnType'] extends 'value' | 'valueOrThrow'
-    ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
-    : SetQueryResult<T, NarrowCreateResult<T>>
+      ? SetQueryReturnsPluckColumnResult<T, NarrowCreateResult<T>>
+      : SetQueryResult<T, NarrowCreateResult<T>>
   : SetQueryReturnsRowCountMany<T>;
 
 /**
@@ -245,8 +244,8 @@ type NarrowCreateResult<T extends CreateSelf> =
 type IgnoreResult<T extends CreateSelf> = T['returnType'] extends 'oneOrThrow'
   ? QueryTakeOptional<T>
   : T['returnType'] extends 'valueOrThrow'
-  ? SetQueryReturnsColumnOptional<T, T['result']['value']>
-  : T;
+    ? SetQueryReturnsColumnOptional<T, T['result']['value']>
+    : T;
 
 // Argument of `onConflict`, can be:
 // - a unique column name
@@ -988,7 +987,10 @@ export class OnConflictQueryBuilder<
   T extends CreateSelf,
   Arg extends OnConflictArg<T> | undefined,
 > {
-  constructor(private query: T, private onConflict: Arg) {}
+  constructor(
+    private query: T,
+    private onConflict: Arg,
+  ) {}
 
   /**
    * Available only after `onConflict`.

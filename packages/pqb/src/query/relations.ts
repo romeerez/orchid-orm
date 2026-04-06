@@ -15,7 +15,8 @@ export interface RelationJoinQuery {
 }
 
 export interface RelationConfigQuery
-  extends PickQueryResult,
+  extends
+    PickQueryResult,
     PickQuerySelectable,
     PickQueryShape,
     PickQueryTable,

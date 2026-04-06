@@ -201,9 +201,9 @@ const astEncoders: {
     const hasOptions = Boolean(ast.comment || ast.noPrimaryKey === 'ignore');
     const hasTableData = Boolean(
       ast.primaryKey ||
-        ast.indexes?.length ||
-        ast.excludes?.length ||
-        ast.constraints?.length,
+      ast.indexes?.length ||
+      ast.excludes?.length ||
+      ast.constraints?.length,
     );
     const isShifted = hasOptions || hasTableData;
 
@@ -788,10 +788,10 @@ const roleParams = (
       value instanceof Date
         ? `'${value.toISOString()}'`
         : key === 'config'
-        ? JSON.stringify(value)
-        : typeof value === 'string'
-        ? singleQuote(value)
-        : value;
+          ? JSON.stringify(value)
+          : typeof value === 'string'
+            ? singleQuote(value)
+            : value;
 
     if (compare) {
       const a = value === -1 || value === false ? undefined : value;
@@ -819,11 +819,11 @@ const isTimestamp = (
   const { default: def } = column.data;
   return Boolean(
     column instanceof type &&
-      !column.data.isNullable &&
-      def &&
-      typeof def === 'object' &&
-      isRawSQL(def) &&
-      (typeof def._sql === 'object' ? def._sql[0][0] : def._sql) === 'now()',
+    !column.data.isNullable &&
+    def &&
+    typeof def === 'object' &&
+    isRawSQL(def) &&
+    (typeof def._sql === 'object' ? def._sql[0][0] : def._sql) === 'now()',
   );
 };
 

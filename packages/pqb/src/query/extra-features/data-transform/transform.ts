@@ -127,10 +127,10 @@ export class QueryTransform {
     [K in keyof T]: K extends 'returnType'
       ? 'valueOrThrow'
       : K extends 'result'
-      ? { value: Column.Pick.QueryColumnOfType<Result> }
-      : K extends 'then'
-      ? QueryThen<Result>
-      : T[K];
+        ? { value: Column.Pick.QueryColumnOfType<Result> }
+        : K extends 'then'
+          ? QueryThen<Result>
+          : T[K];
   } {
     return pushQueryValueImmutable(_clone(this), 'transform', fn) as never;
   }

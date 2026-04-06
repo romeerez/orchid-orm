@@ -35,7 +35,11 @@ export class OrchidOrmInternalError extends Error {
   // Exposing it with `get query()` still leaves the issue in Vitest.
   readonly #query: Query;
 
-  constructor(query: IsQuery, message?: string, public data?: RecordUnknown) {
+  constructor(
+    query: IsQuery,
+    message?: string,
+    public data?: RecordUnknown,
+  ) {
     super(message);
     this.#query = query as Query;
   }

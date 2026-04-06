@@ -42,8 +42,7 @@ export interface TransactionOptions extends StorageOptions {
   deferrable?: boolean;
 }
 
-export interface AfterCommitErrorFulfilledResult
-  extends PromiseFulfilledResult<unknown> {
+export interface AfterCommitErrorFulfilledResult extends PromiseFulfilledResult<unknown> {
   name?: string;
 }
 

@@ -132,10 +132,10 @@ const combineOrdering = (result: Query, joined: Query) => {
       typeof o === 'string'
         ? `${as}.${o}`
         : isExpression(o)
-        ? o
-        : Object.fromEntries(
-            Object.entries(o).map(([key, value]) => [`${as}.${key}`, value]),
-          ),
+          ? o
+          : Object.fromEntries(
+              Object.entries(o).map(([key, value]) => [`${as}.${key}`, value]),
+            ),
     );
 
     const arr = result.q.order;

@@ -69,9 +69,8 @@ describe('default privileges', () => {
 
   beforeAll(async () => {
     postgresVersion = await _getDbVersion(testAdapter);
-    allDefaultPrivilegesOptions = await getAllDefaultPrivilegesOptions(
-      postgresVersion,
-    );
+    allDefaultPrivilegesOptions =
+      await getAllDefaultPrivilegesOptions(postgresVersion);
   });
 
   afterAll(() => testAdapter.close());

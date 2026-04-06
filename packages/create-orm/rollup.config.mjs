@@ -1,6 +1,6 @@
 import esbuild from 'rollup-plugin-esbuild';
-import { rollupExportFile } from "../../rollup.utils.mjs";
-import executable from "rollup-plugin-executable"
+import { rollupExportFile } from '../../rollup.utils.mjs';
+import executable from 'rollup-plugin-executable';
 
 export default [
   ...rollupExportFile('src/lib', 'dist/lib'),

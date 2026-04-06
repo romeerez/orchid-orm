@@ -80,10 +80,10 @@ export type HasManyQuery<
               | T['relations'][Name]['options']['references'][number]]: true;
           }
         : K extends '__selectable'
-        ? SelectableFromShape<TableQuery['shape'], Name>
-        : K extends '__as'
-        ? Name
-        : TableQuery[K];
+          ? SelectableFromShape<TableQuery['shape'], Name>
+          : K extends '__as'
+            ? Name
+            : TableQuery[K];
     } & QueryHasWhere &
       HasRelJoin
   : HasOneQueryThrough<Name, TableQuery>;
@@ -226,8 +226,8 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
           const kind = value.connect?.length
             ? 'connect'
             : value.connectOrCreate?.length
-            ? 'connectOrCreate'
-            : undefined;
+              ? 'connectOrCreate'
+              : undefined;
 
           if (kind) {
             const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {

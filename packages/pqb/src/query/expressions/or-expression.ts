@@ -11,8 +11,7 @@ import { SubQueryForSql } from '../internal-features/sub-query/sub-query-for-sql
 import { ToSQLCtx } from '../sql/to-sql';
 
 export interface OrExpression
-  extends Expression<BooleanQueryColumn>,
-    OperatorsBoolean {}
+  extends Expression<BooleanQueryColumn>, OperatorsBoolean {}
 
 export type OrExpressionArg = QueryOrExpressionBooleanOrNullResult | undefined;
 

@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript"],
+  "rules": {
+    "typescript/no-unsafe-declaration-merging": "off",
+    "unicorn/no-thenable": "off",
+    "no-unused-expressions": "off",
+    "no-async-promise-executor": "off",
+    "typescript/no-explicit-any": "error"
+  }
+}

@@ -8,6 +8,7 @@ In an object like `table` the `allow` array is required.
 You can also use `all: true` to grant ALL privileges on all object types, or `allGrantable: true` to grant ALL privileges with GRANT OPTION on all object types. When `allGrantable` is provided, `all` is ignored. When `all` or `allGrantable` is used, individual object type configurations (tables, sequences, etc.) are merged on top of the base `all` configuration.
 
 Supported privileges per object type:
+
 - Tables: ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN (MAINTAIN is supported starting with PostgreSQL 17)
 - Sequences: ALL, USAGE, SELECT, UPDATE
 - Functions: ALL, EXECUTE
@@ -24,7 +25,7 @@ change(async (db) => {
     grantee: 'some_role',
     schema: 'some_schema',
     grant: {
-      all: true,  // grant ALL privileges on all object types
+      all: true, // grant ALL privileges on all object types
     },
   });
 
@@ -33,7 +34,7 @@ change(async (db) => {
     grantee: 'manager',
     schema: 'app_schema',
     grant: {
-      allGrantable: true,  // grant ALL privileges with GRANT OPTION on all object types
+      allGrantable: true, // grant ALL privileges with GRANT OPTION on all object types
     },
   });
 });
@@ -107,6 +108,7 @@ Privileges are grouped by the combination of `owner` + `grantee` + `schema` into
 ### Output Structure
 
 Each group produces a `DefaultPrivilege` with:
+
 - `owner`: from raw data
 - `grantee`: from raw data
 - `schema`: from raw data
@@ -117,6 +119,7 @@ Each group produces a `DefaultPrivilege` with:
 ## Generating migration code
 
 `ast-to-generate-items.ts` logic for `defaultPrivilege` should:
+
 - add `schema` (if present) to `deps`: privilege uses a schema
 - add `owner` (if available) and `grantee` to `deps`
 - to differentiate roles from other db objects in `deps`, prefix roles in `deps` with `role:`

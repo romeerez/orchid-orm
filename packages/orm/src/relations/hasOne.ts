@@ -92,8 +92,8 @@ export type HasOneParams<
       [Name in Options['columns'][number]]: T['columns']['shape'][Name]['type'];
     }
   : Options extends RelationThroughOptions
-  ? RelationConfigParams<T, T['relations'][Options['through']]>
-  : never;
+    ? RelationConfigParams<T, T['relations'][Options['through']]>
+    : never;
 
 export type HasOneQueryThrough<
   Name extends string,
@@ -102,10 +102,10 @@ export type HasOneQueryThrough<
   [K in keyof TableQuery]: K extends '__selectable'
     ? SelectableFromShape<TableQuery['shape'], Name>
     : K extends '__as'
-    ? Name
-    : K extends CreateMethodsNames
-    ? never
-    : TableQuery[K];
+      ? Name
+      : K extends CreateMethodsNames
+        ? never
+        : TableQuery[K];
 } & QueryHasWhere &
   HasRelJoin;
 
@@ -122,12 +122,12 @@ export type HasOneQuery<
               | T['relations'][Name]['options']['references'][number]]: true;
           }
         : K extends '__selectable'
-        ? SelectableFromShape<TableQuery['shape'], Name>
-        : K extends '__as'
-        ? Name
-        : K extends CreateManyMethodsNames
-        ? never
-        : TableQuery[K];
+          ? SelectableFromShape<TableQuery['shape'], Name>
+          : K extends '__as'
+            ? Name
+            : K extends CreateManyMethodsNames
+              ? never
+              : TableQuery[K];
     } & QueryHasWhere &
       HasRelJoin
   : HasOneQueryThrough<Name, TableQuery>;
@@ -247,8 +247,8 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         const kind = value.create
           ? 'create'
           : value.connect
-          ? 'connect'
-          : 'connectOrCreate';
+            ? 'connect'
+            : 'connectOrCreate';
 
         if (kind) {
           const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {
@@ -421,18 +421,18 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       const nullifyOrDeleteQuery = params.update
         ? _queryUpdate(existingRelQuery, params.update)
         : params.upsert
-        ? _queryUpsert(existingRelQuery, {
-            update: params.upsert.update,
-            create: {
-              ...(typeof params.upsert.create === 'function'
-                ? params.upsert.create()
-                : params.upsert.create),
-              ...setIds,
-            },
-          })
-        : params.delete
-        ? _queryDelete(existingRelQuery)
-        : _queryUpdate(existingRelQuery, this.setNulls);
+          ? _queryUpsert(existingRelQuery, {
+              update: params.upsert.update,
+              create: {
+                ...(typeof params.upsert.create === 'function'
+                  ? params.upsert.create()
+                  : params.upsert.create),
+                ...setIds,
+              },
+            })
+          : params.delete
+            ? _queryDelete(existingRelQuery)
+            : _queryUpdate(existingRelQuery, this.setNulls);
 
       nullifyOrDeleteQuery.q.returnType = 'void';
 

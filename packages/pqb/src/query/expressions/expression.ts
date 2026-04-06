@@ -22,8 +22,8 @@ export type ExpressionOutput<
 > = Expr extends keyof T['__selectable']
   ? T['__selectable'][Expr]['column']
   : Expr extends Expression
-  ? Expr['result']['value']
-  : never;
+    ? Expr['result']['value']
+    : never;
 
 // The chain array is used to store a sequence of operators and their arguments, one be one.
 // For example, expression of numeric type may be chained to `lt`, `gt` and similar functions.
@@ -53,7 +53,7 @@ export abstract class Expression<
   toSQL(ctx: ToSqlValues, quotedAs?: string): string {
     let sql = this.makeSQL(ctx, quotedAs);
     if (this.q.chain) {
-      const { chain: chain } = this.q;
+      const { chain } = this.q;
       for (let i = 0, len = chain.length; i < len; i += 2) {
         sql = (chain[i] as OperatorToSQL)(
           sql,

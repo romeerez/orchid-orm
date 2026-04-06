@@ -13,8 +13,8 @@ export async function setupBaseTable(config: InitConfig): Promise<void> {
     config.validation === 'zod'
       ? `\nimport { zodSchemaConfig } from 'orchid-orm-schema-to-zod';`
       : config.validation === 'valibot'
-      ? `\nimport { valibotSchemaConfig } from 'orchid-orm-valibot';`
-      : ''
+        ? `\nimport { valibotSchemaConfig } from 'orchid-orm-valibot';`
+        : ''
   }
 
 export const BaseTable = createBaseTable({

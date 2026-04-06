@@ -1,12 +1,11 @@
 pre-commit:
   parallel: true
   commands:
-    eslint:
+    lint:
       glob: "*.{js,mjs,ts,json}"
-      run: npx eslint --fix {staged_files} --max-warnings 0
+      run: oxlint --fix --deny-warnings {staged_files}
       stage_fixed: true
-    docs-prettier:
-      root: docs/src/
-      glob: "*.{md}"
-      run: npx prettier --write {staged_files}
+    fmt:
+      glob: "*.{js,mjs,ts,json,md}"
+      run: oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true

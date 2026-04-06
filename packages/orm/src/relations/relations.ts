@@ -109,13 +109,13 @@ export type RelationConfigParams<
 > = Relation extends BelongsTo
   ? BelongsToParams<T, Relation['options']['columns'][number] & string>
   : Relation extends HasOne | HasMany
-  ? HasOneParams<T, Relation['options']>
-  : Relation extends HasAndBelongsToMany
-  ? HasAndBelongsToManyParams<
-      T,
-      Relation['options']['columns'][number] & string
-    >
-  : never;
+    ? HasOneParams<T, Relation['options']>
+    : Relation extends HasAndBelongsToMany
+      ? HasAndBelongsToManyParams<
+          T,
+          Relation['options']['columns'][number] & string
+        >
+      : never;
 
 interface ApplyRelationData {
   relationName: string;

@@ -500,7 +500,10 @@ export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column<
   dataType = 'tsvector' as const;
   operators = Operators.ordinalText;
 
-  constructor(schema: Schema, public defaultLanguage = getDefaultLanguage()) {
+  constructor(
+    schema: Schema,
+    public defaultLanguage = getDefaultLanguage(),
+  ) {
     super(schema, schema.stringSchema() as never);
   }
 

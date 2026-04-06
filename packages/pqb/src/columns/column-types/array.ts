@@ -30,8 +30,7 @@ export interface ArrayColumnValue {
 }
 
 export interface ArrayData<Item extends ArrayColumnValue>
-  extends Column.Data,
-    ArrayMethodsData {
+  extends Column.Data, ArrayMethodsData {
   item: Item;
   arrayDims: number;
 }
@@ -163,8 +162,8 @@ const parsePostgresArray = (
           recorded === 'NULL'
             ? null
             : transform
-            ? transform(recorded)
-            : recorded,
+              ? transform(recorded)
+              : recorded,
         );
       }
 
@@ -195,8 +194,8 @@ const parsePostgresArray = (
           recorded === 'NULL'
             ? null
             : transform
-            ? transform(recorded)
-            : recorded,
+              ? transform(recorded)
+              : recorded,
         );
 
         recorded = '';

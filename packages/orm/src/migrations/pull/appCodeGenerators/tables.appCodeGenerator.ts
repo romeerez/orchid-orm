@@ -115,9 +115,9 @@ export const appCodeGenTable = (
 
   const hasTableData = Boolean(
     ast.primaryKey ||
-      ast.indexes?.length ||
-      ast.excludes?.length ||
-      ast.constraints?.length,
+    ast.indexes?.length ||
+    ast.excludes?.length ||
+    ast.constraints?.length,
   );
 
   const shapeCode = columnsShapeToCode(

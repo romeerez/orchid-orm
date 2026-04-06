@@ -109,8 +109,8 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+            columnsOf,
+          )})
         `,
       );
     });
@@ -226,8 +226,8 @@ export const testWhere = (
         `
           ${startSql}
           NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+            columnsOf,
+          )})
         `,
       );
     });
@@ -558,8 +558,8 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+            columnsOf,
+          )})
         `,
       );
 
@@ -583,11 +583,11 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+            columnsOf,
+          )})
             AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
         `,
       );
     });
@@ -687,8 +687,8 @@ export const testWhere = (
             ${startSql}
             (${pkeySql}, ${textSql})
                IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
-            columnsOf,
-          )})
+                 columnsOf,
+               )})
           `,
         );
       });
@@ -846,8 +846,8 @@ export const testWhere = (
           ${startSql}
           (${pkeySql} = $1
              OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )}))
+               columnsOf,
+             )}))
         `,
         [1],
       );
@@ -860,8 +860,8 @@ export const testWhere = (
           ${startSql}
           ${pkeySql} = $1
              OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+               columnsOf,
+             )})
         `,
         [1],
       );
@@ -884,11 +884,11 @@ export const testWhere = (
           ${startSql}
           (${pkeySql} = $1
              OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+               columnsOf,
+             )})
             AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )}))
+              columnsOf,
+            )}))
         `,
         [1],
       );
@@ -904,11 +904,11 @@ export const testWhere = (
           ${startSql}
           ${pkeySql} = $1
              OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+               columnsOf,
+             )})
             AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
         `,
         [1],
       );
@@ -1018,8 +1018,8 @@ export const testWhere = (
             (${pkeySql} = $1
                OR (${pkeySql}, ${textSql})
                IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
-            columnsOf,
-          )}))
+                 columnsOf,
+               )}))
           `,
           [1],
         );
@@ -1035,8 +1035,8 @@ export const testWhere = (
             ${pkeySql} = $1
                OR (${pkeySql}, ${textSql})
                IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
-            columnsOf,
-          )})
+                 columnsOf,
+               )})
           `,
           [1],
         );
@@ -1154,8 +1154,8 @@ export const testWhere = (
         `
           ${startSql}
           NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+            columnsOf,
+          )})
         `,
       );
 
@@ -1182,11 +1182,11 @@ export const testWhere = (
           ${startSql}
           NOT (
             ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
             AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
           )
         `,
       );
@@ -1272,8 +1272,8 @@ export const testWhere = (
             ${startSql}
             NOT (${pkeySql}, ${textSql})
                IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
-            columnsOf,
-          )})
+                 columnsOf,
+               )})
           `,
         );
       });
@@ -1456,8 +1456,8 @@ export const testWhere = (
           ${startSql}
           (${pkeySql} = $1
              OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )}))
+               columnsOf,
+             )}))
         `,
         [1],
       );
@@ -1472,8 +1472,8 @@ export const testWhere = (
           ${startSql}
           ${pkeySql} = $1
              OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+               columnsOf,
+             )})
         `,
         [1],
       );
@@ -1498,11 +1498,11 @@ export const testWhere = (
           ${startSql}
           (${pkeySql} = $1 OR NOT (
             ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
             AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )}))
+              columnsOf,
+            )}))
           )
         `,
         [1],
@@ -1519,11 +1519,11 @@ export const testWhere = (
           ${startSql}
           ${pkeySql} = $1 OR NOT (
             ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
             AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
-          columnsOf,
-        )})
+              columnsOf,
+            )})
           )
         `,
         [1],
@@ -1640,8 +1640,8 @@ export const testWhere = (
               (${pkeySql} = $1
                  OR NOT (${pkeySql}, ${textSql})
                    IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
-            columnsOf,
-          )}))
+                     columnsOf,
+                   )}))
             `,
           [1],
         );
@@ -1657,8 +1657,8 @@ export const testWhere = (
             ${pkeySql} = $1
                OR NOT (${pkeySql}, ${textSql})
                  IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
-            columnsOf,
-          )})
+                   columnsOf,
+                 )})
           `,
           [1],
         );

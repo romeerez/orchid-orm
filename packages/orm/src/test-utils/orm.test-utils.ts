@@ -21,11 +21,10 @@ const tableRowToJSON = (table: Query) => {
   const cache: { [key: string]: string } = {};
   const jsonBuildObject = tableJsonBuildObject(table);
   return (t: string) =>
-    (cache[
-      t
-    ] ??= `CASE WHEN to_jsonb("${t}") IS NULL THEN NULL ELSE ${jsonBuildObject(
-      `"${t}"`,
-    )} END`);
+    (cache[t] ??=
+      `CASE WHEN to_jsonb("${t}") IS NULL THEN NULL ELSE ${jsonBuildObject(
+        `"${t}"`,
+      )} END`);
 };
 
 export const userRowToJSON = tableRowToJSON(db.user);

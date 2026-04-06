@@ -150,7 +150,10 @@ export interface AdapterBase {
     releasingSavepoint?: string,
   ): Promise<QueryResult<T>>;
   // make a query to get rows as array of column values
-  arrays<R extends any[] = any[]>( // eslint-disable-line @typescript-eslint/no-explicit-any
+  arrays<
+    // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+    R extends any[] = any[],
+  >(
     text: string,
     values?: unknown[],
     // only has effect in a transaction

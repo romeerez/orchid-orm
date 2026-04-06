@@ -1,16 +1,17 @@
 {
   "name": "repro",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "description": "Reproducing issues",
+  "license": "ISC",
+  "author": "Roman Kushyn",
   "scripts": {
     "test": "jest --watch --verbose false",
     "test-utils": "workspace:*",
     "check": "jest",
-    "types": "tsc"
+    "types": "tsc",
+    "fmt": "oxfmt"
   },
-  "author": "Roman Kushyn",
-  "license": "ISC",
   "devDependencies": {
     "test-utils": "workspace:*",
     "zod": "^4.3.6"

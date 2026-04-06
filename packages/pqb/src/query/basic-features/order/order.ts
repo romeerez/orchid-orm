@@ -13,9 +13,7 @@ import { SortDir } from './order.sql';
 import { pushQueryValueImmutable } from '../../query-data';
 
 export interface OrderArgSelf
-  extends PickQuerySelectable,
-    PickQueryResult,
-    PickQueryTsQuery {}
+  extends PickQuerySelectable, PickQueryResult, PickQueryTsQuery {}
 
 export type OrderArg<T extends OrderArgSelf> =
   | OrderArgKey<T>

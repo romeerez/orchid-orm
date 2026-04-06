@@ -420,18 +420,18 @@ const makeAst = (
             item.type === 'add'
               ? { ...item, type: 'drop' }
               : item.type === 'drop'
-              ? { ...item, type: 'add' }
-              : item.type === 'change'
-              ? {
-                  ...item,
-                  from: item.to,
-                  to: item.from,
-                  using: item.using && {
-                    usingUp: item.using.usingDown,
-                    usingDown: item.using.usingUp,
-                  },
-                }
-              : item;
+                ? { ...item, type: 'add' }
+                : item.type === 'change'
+                  ? {
+                      ...item,
+                      from: item.to,
+                      to: item.from,
+                      using: item.using && {
+                        usingUp: item.using.usingDown,
+                        usingDown: item.using.usingUp,
+                      },
+                    }
+                  : item;
         }
       }
     }
@@ -465,8 +465,8 @@ const makeAst = (
           ? comment[1]
           : comment
         : Array.isArray(comment)
-        ? comment[0]
-        : null
+          ? comment[0]
+          : null
       : undefined,
     shape,
     ...(up
@@ -752,8 +752,8 @@ const handlePrerequisitesForTableItem = (
         item.from.column
           ? getColumnName(item.from.column, key, snakeCase)
           : snakeCase
-          ? toSnakeCase(key)
-          : key,
+            ? toSnakeCase(key)
+            : key,
       );
       dropPrimaryKeys.change = true;
     }
@@ -763,8 +763,8 @@ const handlePrerequisitesForTableItem = (
         item.to.column
           ? getColumnName(item.to.column, key, snakeCase)
           : snakeCase
-          ? toSnakeCase(key)
-          : key,
+            ? toSnakeCase(key)
+            : key,
       );
       addPrimaryKeys.change = true;
     }
@@ -835,10 +835,10 @@ const handleTableItemChange = (
       const using = item.using?.usingUp
         ? ` USING ${item.using.usingUp.toSQL({ values })}`
         : to.column instanceof EnumColumn
-        ? ` USING "${name}"::text::${type}`
-        : to.column instanceof ArrayColumn
-        ? ` USING "${name}"::text[]::${type}`
-        : '';
+          ? ` USING "${name}"::text::${type}`
+          : to.column instanceof ArrayColumn
+            ? ` USING "${name}"::text[]::${type}`
+            : '';
 
       alterTable.push(
         `ALTER COLUMN "${name}" TYPE ${type}${
@@ -1040,8 +1040,8 @@ const getChangeColumnName = (
       ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         getColumnName(change[what].column!, key, snakeCase)
       : snakeCase
-      ? toSnakeCase(key)
-      : key)
+        ? toSnakeCase(key)
+        : key)
   );
 };
 

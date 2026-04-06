@@ -85,6 +85,9 @@ jobs:
       - name: Run tests
         run: pnpm test:ci
 
+      - name: Lint & Format
+        run: ./node_modules/.bin/turbo run lint:check fmt:check
+
       - name: Run and type-check build
         run: pnpm build
 

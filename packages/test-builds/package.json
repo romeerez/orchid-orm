@@ -1,21 +1,25 @@
 {
   "name": "test-builds",
-  "private": true,
   "version": "0.0.1",
+  "private": true,
   "description": "For testing types after building packages",
-  "scripts": {
-    "types": "tsc"
-  },
-  "author": "Roman Kushyn",
   "license": "ISC",
+  "author": "Roman Kushyn",
+  "scripts": {
+    "types": "tsc",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
+  },
   "devDependencies": {
     "orchid-orm": "workspace:*",
-    "pqb": "workspace:*",
-    "rake-db": "workspace:*",
-    "orchid-orm-valibot": "workspace:*",
     "orchid-orm-schema-to-zod": "workspace:*",
     "orchid-orm-test-factory": "workspace:*",
-    "zod": "4.3.6",
-    "valibot": "0.29.0"
+    "orchid-orm-valibot": "workspace:*",
+    "pqb": "workspace:*",
+    "rake-db": "workspace:*",
+    "valibot": "0.29.0",
+    "zod": "4.3.6"
   }
 }

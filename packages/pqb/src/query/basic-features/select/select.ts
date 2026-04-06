@@ -23,7 +23,8 @@ import { SelectItem } from './select.sql';
 import { QueryThenByReturnType } from '../../then/then';
 
 export interface SelectSelf
-  extends PickQuerySelectable,
+  extends
+    PickQuerySelectable,
     PickQueryHasSelect,
     PickQueryDefaultSelect,
     PickQueryShape,
@@ -51,8 +52,8 @@ export type SelectAsFnArg<T extends PickQueryRelationsWithData> =
         [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
           ? T['relations'][K]['maybeSingle'] & SubQueryAddition<T>
           : K extends keyof T
-          ? T[K]
-          : never;
+            ? T[K]
+            : never;
       };
 
 // .select method object argument.
@@ -80,42 +81,42 @@ type SelectReturnType<T extends PickQueryReturnType> =
   T['returnType'] extends 'valueOrThrow'
     ? 'oneOrThrow'
     : T extends 'value'
-    ? 'one'
-    : T['returnType'] extends 'pluck'
-    ? 'all'
-    : T['returnType'];
+      ? 'one'
+      : T['returnType'] extends 'pluck'
+        ? 'all'
+        : T['returnType'];
 
 // Result type of select without the ending object argument.
 type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
   [K in keyof T]: K extends '__hasSelect'
     ? true
     : K extends 'result'
-    ? {
-        [K in '*' extends Columns[number]
-          ? Exclude<Columns[number], '*'> | T['__defaultSelect']
-          : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
-      } & (T['__hasSelect'] extends (
-        T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-      )
-        ? Omit<T['result'], Columns[number]> // Omit is optimal
-        : unknown)
-    : K extends 'returnType'
-    ? SelectReturnType<T>
-    : K extends 'then'
-    ? QueryThenByReturnType<
-        SelectReturnType<T>,
-        // the result is copy-pasted to save on TS instantiations
-        {
+      ? {
           [K in '*' extends Columns[number]
             ? Exclude<Columns[number], '*'> | T['__defaultSelect']
             : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
         } & (T['__hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
         )
-          ? Omit<T['result'], Columns[number]>
+          ? Omit<T['result'], Columns[number]> // Omit is optimal
           : unknown)
-      >
-    : T[K];
+      : K extends 'returnType'
+        ? SelectReturnType<T>
+        : K extends 'then'
+          ? QueryThenByReturnType<
+              SelectReturnType<T>,
+              // the result is copy-pasted to save on TS instantiations
+              {
+                [K in '*' extends Columns[number]
+                  ? Exclude<Columns[number], '*'> | T['__defaultSelect']
+                  : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
+              } & (T['__hasSelect'] extends (
+                T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+              )
+                ? Omit<T['result'], Columns[number]>
+                : unknown)
+            >
+          : T[K];
 };
 
 type SelectResultObj<
@@ -126,40 +127,44 @@ type SelectResultObj<
       [K in keyof T]: K extends '__hasSelect'
         ? true
         : K extends '__selectable'
-        ? T['__selectable'] & SelectAsSelectable<Obj>
-        : K extends 'result'
-        ? // Combine previously selected items, all columns if * was provided,
-          // and the selected by string and object arguments.
-          {
-            [K in T['__hasSelect'] extends (
-              T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-            )
-              ? keyof Obj | keyof T['result']
-              : keyof Obj]: K extends keyof Obj
-              ? SelectAsValueResult<T, Obj[K]>
-              : K extends keyof T['result']
-              ? T['result'][K]
-              : never;
-          }
-        : K extends 'returnType'
-        ? SelectReturnType<T>
-        : K extends 'then'
-        ? QueryThenByReturnType<
-            SelectReturnType<T>,
-            // result is copy-pasted to save on TS instantiations
-            {
-              [K in T['__hasSelect'] extends (
-                T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-              )
-                ? keyof Obj | keyof T['result']
-                : keyof Obj]: K extends keyof Obj
-                ? SelectAsValueResult<T, Obj[K]>
-                : K extends keyof T['result']
-                ? T['result'][K]
-                : never;
-            }
-          >
-        : T[K];
+          ? T['__selectable'] & SelectAsSelectable<Obj>
+          : K extends 'result'
+            ? // Combine previously selected items, all columns if * was provided,
+              // and the selected by string and object arguments.
+              {
+                [K in T['__hasSelect'] extends (
+                  T['returnType'] extends 'value' | 'valueOrThrow'
+                    ? never
+                    : true
+                )
+                  ? keyof Obj | keyof T['result']
+                  : keyof Obj]: K extends keyof Obj
+                  ? SelectAsValueResult<T, Obj[K]>
+                  : K extends keyof T['result']
+                    ? T['result'][K]
+                    : never;
+              }
+            : K extends 'returnType'
+              ? SelectReturnType<T>
+              : K extends 'then'
+                ? QueryThenByReturnType<
+                    SelectReturnType<T>,
+                    // result is copy-pasted to save on TS instantiations
+                    {
+                      [K in T['__hasSelect'] extends (
+                        T['returnType'] extends 'value' | 'valueOrThrow'
+                          ? never
+                          : true
+                      )
+                        ? keyof Obj | keyof T['result']
+                        : keyof Obj]: K extends keyof Obj
+                        ? SelectAsValueResult<T, Obj[K]>
+                        : K extends keyof T['result']
+                          ? T['result'][K]
+                          : never;
+                    }
+                  >
+                : T[K];
     }
   : `Invalid return type of ${{
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,48 +185,50 @@ type SelectResultColumnsAndObj<
   [K in keyof T]: K extends '__hasSelect'
     ? true
     : K extends '__selectable'
-    ? T['__selectable'] & SelectAsSelectable<Obj>
-    : K extends 'result'
-    ? // Combine previously selected items, all columns if * was provided,
-      // and the selected by string and object arguments.
-      {
-        [K in
-          | ('*' extends Columns[number]
-              ? Exclude<Columns[number], '*'> | T['__defaultSelect']
-              : Columns[number])
-          | keyof Obj as K extends Columns[number]
-          ? T['__selectable'][K]['as']
-          : K]: K extends keyof Obj
-          ? SelectAsValueResult<T, Obj[K]>
-          : T['__selectable'][K]['column'];
-      } & (T['__hasSelect'] extends (
-        T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-      )
-        ? Omit<T['result'], Columns[number]>
-        : unknown)
-    : K extends 'returnType'
-    ? SelectReturnType<T>
-    : K extends 'then'
-    ? QueryThenByReturnType<
-        SelectReturnType<T>,
-        // result is copy-pasted to save on TS instantiations
-        {
-          [K in
-            | ('*' extends Columns[number]
-                ? Exclude<Columns[number], '*'> | T['__defaultSelect']
-                : Columns[number])
-            | keyof Obj as K extends Columns[number]
-            ? T['__selectable'][K]['as']
-            : K]: K extends keyof Obj
-            ? SelectAsValueResult<T, Obj[K]>
-            : T['__selectable'][K]['column'];
-        } & (T['__hasSelect'] extends (
-          T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
-        )
-          ? Omit<T['result'], Columns[number]>
-          : unknown)
-      >
-    : T[K];
+      ? T['__selectable'] & SelectAsSelectable<Obj>
+      : K extends 'result'
+        ? // Combine previously selected items, all columns if * was provided,
+          // and the selected by string and object arguments.
+          {
+            [K in
+              | ('*' extends Columns[number]
+                  ? Exclude<Columns[number], '*'> | T['__defaultSelect']
+                  : Columns[number])
+              | keyof Obj as K extends Columns[number]
+              ? T['__selectable'][K]['as']
+              : K]: K extends keyof Obj
+              ? SelectAsValueResult<T, Obj[K]>
+              : T['__selectable'][K]['column'];
+          } & (T['__hasSelect'] extends (
+            T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
+          )
+            ? Omit<T['result'], Columns[number]>
+            : unknown)
+        : K extends 'returnType'
+          ? SelectReturnType<T>
+          : K extends 'then'
+            ? QueryThenByReturnType<
+                SelectReturnType<T>,
+                // result is copy-pasted to save on TS instantiations
+                {
+                  [K in
+                    | ('*' extends Columns[number]
+                        ? Exclude<Columns[number], '*'> | T['__defaultSelect']
+                        : Columns[number])
+                    | keyof Obj as K extends Columns[number]
+                    ? T['__selectable'][K]['as']
+                    : K]: K extends keyof Obj
+                    ? SelectAsValueResult<T, Obj[K]>
+                    : T['__selectable'][K]['column'];
+                } & (T['__hasSelect'] extends (
+                  T['returnType'] extends 'value' | 'valueOrThrow'
+                    ? never
+                    : true
+                )
+                  ? Omit<T['result'], Columns[number]>
+                  : unknown)
+              >
+            : T[K];
 };
 
 // To allow where-ing on a relation that returns a single value.
@@ -265,16 +272,16 @@ type SelectAsValueResult<
 > = Arg extends keyof T['__selectable']
   ? T['__selectable'][Arg]['column']
   : Arg extends Expression
-  ? Arg['result']['value']
-  : Arg extends (q: never) => IsQuery
-  ? SelectSubQueryResult<ReturnType<Arg>>
-  : Arg extends (q: never) => Expression
-  ? ReturnType<Arg>['result']['value']
-  : Arg extends (q: never) => IsQuery | Expression
-  ?
-      | SelectSubQueryResult<Exclude<ReturnType<Arg>, Expression>>
-      | Exclude<ReturnType<Arg>, IsQuery>['result']['value']
-  : never;
+    ? Arg['result']['value']
+    : Arg extends (q: never) => IsQuery
+      ? SelectSubQueryResult<ReturnType<Arg>>
+      : Arg extends (q: never) => Expression
+        ? ReturnType<Arg>['result']['value']
+        : Arg extends (q: never) => IsQuery | Expression
+          ?
+              | SelectSubQueryResult<Exclude<ReturnType<Arg>, Expression>>
+              | Exclude<ReturnType<Arg>, IsQuery>['result']['value']
+          : never;
 
 // map a sub query result into a column
 // query that returns many becomes an array column
@@ -285,12 +292,12 @@ export type SelectSubQueryResult<Arg extends SelectSelf> =
   Arg['returnType'] extends undefined | 'all'
     ? ColumnsShape.MapToObjectArrayColumn<Arg['result']>
     : Arg['returnType'] extends 'value' | 'valueOrThrow'
-    ? Arg['result']['value']
-    : Arg['returnType'] extends 'pluck'
-    ? ColumnsShape.MapToPluckColumn<Arg['result']>
-    : Arg['returnType'] extends 'one'
-    ? ColumnsShape.MapToNullableObjectColumn<Arg['result']>
-    : ColumnsShape.MapToObjectColumn<Arg['result']>;
+      ? Arg['result']['value']
+      : Arg['returnType'] extends 'pluck'
+        ? ColumnsShape.MapToPluckColumn<Arg['result']>
+        : Arg['returnType'] extends 'one'
+          ? ColumnsShape.MapToNullableObjectColumn<Arg['result']>
+          : ColumnsShape.MapToObjectColumn<Arg['result']>;
 
 export function _querySelect<
   T extends SelectSelf,

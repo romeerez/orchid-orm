@@ -172,10 +172,10 @@ const columnMethodToCode = <T extends Column.Data, K extends keyof T>(
       param === true
         ? ''
         : typeof param === 'string'
-        ? singleQuote(param)
-        : param instanceof Date
-        ? `new Date('${param.toISOString()}')`
-        : param;
+          ? singleQuote(param)
+          : param instanceof Date
+            ? `new Date('${param.toISOString()}')`
+            : param;
 
     if (error) {
       if (param !== true) params += ', ';
@@ -355,8 +355,8 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
       index.options.tsVector
         ? 'searchIndex'
         : index.options.unique
-        ? 'unique'
-        : 'index'
+          ? 'unique'
+          : 'index'
     }(`,
   ];
 
@@ -447,8 +447,8 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
           Array.isArray(value)
             ? singleQuoteArray(value)
             : typeof value === 'string'
-            ? singleQuote(value)
-            : value
+              ? singleQuote(value)
+              : value
         },`,
       );
     }
@@ -529,8 +529,8 @@ export const excludeInnerToCode = (
           Array.isArray(value)
             ? singleQuoteArray(value)
             : typeof value === 'string'
-            ? singleQuote(value)
-            : value
+              ? singleQuote(value)
+              : value
         },`,
       );
     }
@@ -894,8 +894,8 @@ export const columnCode = (
         typeof validationDefault === 'function'
           ? validationDefault.toString()
           : typeof validationDefault === 'string'
-          ? singleQuote(validationDefault)
-          : JSON.stringify(validationDefault)
+            ? singleQuote(validationDefault)
+            : JSON.stringify(validationDefault)
       })`,
     );
   }

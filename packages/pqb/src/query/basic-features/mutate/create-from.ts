@@ -44,17 +44,17 @@ interface QueryReturningOne extends IsQuery {
 type CreateRawOrFromResult<T extends CreateSelf> = T extends { isCount: true }
   ? T
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsOne<T>
-  : T['returnType'] extends 'pluck'
-  ? SetQueryReturnsColumn<T>
-  : T;
+    ? SetQueryReturnsOne<T>
+    : T['returnType'] extends 'pluck'
+      ? SetQueryReturnsColumn<T>
+      : T;
 
 type InsertRawOrFromResult<T extends CreateSelf> = T['__hasSelect'] extends true
   ? T['returnType'] extends undefined | 'all'
     ? SetQueryReturnsOne<T>
     : T['returnType'] extends 'pluck'
-    ? SetQueryReturnsColumn<T>
-    : T
+      ? SetQueryReturnsColumn<T>
+      : T
   : SetQueryReturnsRowCount<T>;
 
 type CreateManyFromResult<T extends CreateSelf> = T extends {
@@ -62,17 +62,17 @@ type CreateManyFromResult<T extends CreateSelf> = T extends {
 }
   ? T
   : T['returnType'] extends 'one' | 'oneOrThrow'
-  ? SetQueryReturnsAll<T>
-  : T['returnType'] extends 'value' | 'valueOrThrow'
-  ? SetValueQueryReturnsPluckColumn<T>
-  : T;
+    ? SetQueryReturnsAll<T>
+    : T['returnType'] extends 'value' | 'valueOrThrow'
+      ? SetValueQueryReturnsPluckColumn<T>
+      : T;
 
 type InsertManyFromResult<T extends CreateSelf> = T['__hasSelect'] extends true
   ? T['returnType'] extends 'one' | 'oneOrThrow'
     ? SetQueryReturnsAll<T>
     : T['returnType'] extends 'value' | 'valueOrThrow'
-    ? SetValueQueryReturnsPluckColumn<T>
-    : T
+      ? SetValueQueryReturnsPluckColumn<T>
+      : T
   : SetQueryReturnsRowCountMany<T>;
 
 /**

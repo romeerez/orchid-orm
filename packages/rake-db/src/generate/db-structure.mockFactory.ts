@@ -307,7 +307,9 @@ export const dbStructureMockFactory = {
   ): DbStructure.Constraint => ({
     ...primaryKey,
     name:
-      data.name ?? data.tableName ? `${data.tableName}_pkey` : primaryKey.name,
+      (data.name ?? data.tableName)
+        ? `${data.tableName}_pkey`
+        : primaryKey.name,
     ...data,
   }),
   foreignKey: (

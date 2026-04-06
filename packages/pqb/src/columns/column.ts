@@ -41,28 +41,30 @@ export namespace Column {
       [K in keyof T]: K extends 'type'
         ? T['type'] | null
         : K extends 'inputType'
-        ? T['inputType'] | null
-        : K extends 'inputSchema'
-        ? InputSchema
-        : K extends 'outputType'
-        ?
-            | T['outputType']
-            | (unknown extends T['nullType'] ? null : T['nullType'])
-        : K extends 'outputSchema'
-        ? OutputSchema
-        : K extends 'queryType'
-        ? T['queryType'] | null
-        : K extends 'querySchema'
-        ? QuerySchema
-        : K extends 'data'
-        ? T['data'] & DataNullable
-        : K extends 'operators'
-        ? {
-            [K in keyof T['operators']]: K extends 'equals' | 'not'
-              ? Operator<T | null>
-              : T['operators'][K];
-          }
-        : T[K];
+          ? T['inputType'] | null
+          : K extends 'inputSchema'
+            ? InputSchema
+            : K extends 'outputType'
+              ?
+                  | T['outputType']
+                  | (unknown extends T['nullType'] ? null : T['nullType'])
+              : K extends 'outputSchema'
+                ? OutputSchema
+                : K extends 'queryType'
+                  ? T['queryType'] | null
+                  : K extends 'querySchema'
+                    ? QuerySchema
+                    : K extends 'data'
+                      ? T['data'] & DataNullable
+                      : K extends 'operators'
+                        ? {
+                            [K in keyof T['operators']]: K extends
+                              | 'equals'
+                              | 'not'
+                              ? Operator<T | null>
+                              : T['operators'][K];
+                          }
+                        : T[K];
     };
 
     export type QueryColumnToNullable<C> = {
@@ -89,8 +91,8 @@ export namespace Column {
       [K in keyof T]: K extends 'inputType'
         ? Input
         : K extends 'inputSchema'
-        ? InputSchema
-        : T[K];
+          ? InputSchema
+          : T[K];
     };
 
     // change the output type of the column
@@ -102,10 +104,10 @@ export namespace Column {
               | (unknown extends T['nullType'] ? null : T['nullType'])
           : Output
         : K extends 'outputSchema'
-        ? null extends T['type']
-          ? OutputSchema | T['nullSchema']
-          : OutputSchema
-        : T[K];
+          ? null extends T['type']
+            ? OutputSchema | T['nullSchema']
+            : OutputSchema
+          : T[K];
     };
 
     // change the output type of null value
@@ -119,14 +121,14 @@ export namespace Column {
           ? Exclude<T['outputType'], null> | NullType
           : T['outputType']
         : K extends 'nullType'
-        ? NullType
-        : K extends 'outputSchema'
-        ? null extends T['type']
-          ? T['outputSchema'] | NullSchema
-          : T['outputSchema']
-        : K extends 'nullSchema'
-        ? NullSchema
-        : T[K];
+          ? NullType
+          : K extends 'outputSchema'
+            ? null extends T['type']
+              ? T['outputSchema'] | NullSchema
+              : T['outputSchema']
+            : K extends 'nullSchema'
+              ? NullSchema
+              : T[K];
     };
 
     type DefaultData<T extends Column.Data, Value> = {
@@ -135,8 +137,8 @@ export namespace Column {
           ? never
           : Value
         : K extends 'optional'
-        ? true
-        : T[K];
+          ? true
+          : T[K];
     };
 
     // adds default type to the column
@@ -175,8 +177,8 @@ export namespace Column {
             [K in keyof T['data']]: K extends 'default' ? true : T['data'][K];
           }
         : K extends 'inputType'
-        ? never
-        : T[K];
+          ? never
+          : T[K];
     };
   }
 
@@ -238,8 +240,9 @@ export namespace Column {
       operators: Ops;
     }
 
-    export interface QueryColumnOfDataType<T extends string>
-      extends QueryColumn {
+    export interface QueryColumnOfDataType<
+      T extends string,
+    > extends QueryColumn {
       dataType: T;
     }
 
@@ -265,11 +268,7 @@ export namespace Column {
     }
 
     export interface ForNullable
-      extends Data,
-        Type,
-        InputType,
-        OutputType,
-        TypeSchemas {
+      extends Data, Type, InputType, OutputType, TypeSchemas {
       nullType: unknown;
       queryType: unknown;
       operators: unknown;
@@ -343,8 +342,7 @@ export namespace Column {
     queryType: unknown;
   }
 
-  export interface InputOutputQueryTypesWithSchemas
-    extends InputOutputQueryTypes {
+  export interface InputOutputQueryTypesWithSchemas extends InputOutputQueryTypes {
     inputSchema: unknown;
     outputSchema: unknown;
     querySchema: unknown;

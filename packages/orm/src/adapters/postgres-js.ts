@@ -12,8 +12,7 @@ import {
 import { DbSharedOptions } from 'pqb/internal';
 
 export interface PostgresJsOrchidORMOptions
-  extends PostgresJsAdapterOptions,
-    DbSharedOptions {}
+  extends PostgresJsAdapterOptions, DbSharedOptions {}
 
 export const Adapter = PostgresJsAdapter;
 

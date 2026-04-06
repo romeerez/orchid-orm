@@ -51,7 +51,8 @@ import { ToSQLQuery } from '../../sql/to-sql';
 import { RefExpression } from '../../expressions/ref-expression';
 
 export interface UpdateSelf
-  extends PickQuerySelectable,
+  extends
+    PickQuerySelectable,
     PickQueryResult,
     PickQueryRelations,
     PickQueryWithData,
@@ -93,8 +94,8 @@ type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
       [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
         ? T['relations'][K]['query']
         : K extends keyof T
-        ? T[K]
-        : never;
+          ? T[K]
+          : never;
     }) => QueryOrExpression<T['inputType'][Key]>);
 
 // Add relation operations to the update argument.
@@ -116,8 +117,8 @@ export type UpdateArg<T extends UpdateSelf> = T['__hasWhere'] extends true
 type UpdateResult<T extends UpdateSelf> = T['__hasSelect'] extends true
   ? T
   : T['returnType'] extends undefined | 'all'
-  ? SetQueryReturnsRowCountMany<T>
-  : SetQueryReturnsRowCount<T>;
+    ? SetQueryReturnsRowCountMany<T>
+    : SetQueryReturnsRowCount<T>;
 
 export type NumericColumns<T extends UpdateSelf> = {
   [K in keyof T['inputType']]: Exclude<
@@ -165,8 +166,8 @@ type UpdateManyByKeys<T extends UpdateManyBySelf> =
 type UpdateManyByKeyColumns<Keys> = Keys extends string
   ? Keys
   : Keys extends unknown[]
-  ? Keys[number] & string
-  : never;
+    ? Keys[number] & string
+    : never;
 
 // Data type for updateManyBy / updateManyByOptional (custom keys)
 // Inlined to minimize mapped type instantiations
@@ -183,8 +184,8 @@ type UpdateManyResult<T extends UpdateSelf> = T['__hasSelect'] extends true
   ? T['returnType'] extends 'one' | 'oneOrThrow'
     ? SetQueryReturnsAllResult<T, T['result']>
     : T['returnType'] extends 'value' | 'valueOrThrow'
-    ? SetQueryReturnsPluckColumnResult<T, T['result']>
-    : SetQueryResult<T, T['result']>
+      ? SetQueryReturnsPluckColumnResult<T, T['result']>
+      : SetQueryResult<T, T['result']>
   : SetQueryReturnsRowCountMany<T>;
 
 const _queryUpdateMany = <T extends UpdateSelf>(

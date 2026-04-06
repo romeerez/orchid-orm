@@ -4,6 +4,10 @@
     "check": {},
     "types": {},
     "build": {},
+    "lint": {},
+    "lint:check": {},
+    "fmt": {},
+    "fmt:check": {},
     "test:ci": {
       "outputs": ["coverage/**"]
     }

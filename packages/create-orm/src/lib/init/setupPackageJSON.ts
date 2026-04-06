@@ -15,8 +15,8 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
     config.validation === 'zod'
       ? getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies')
       : config.validation === 'valibot'
-      ? getLatestPackageVersion('orchid-orm-valibot', 'dependencies')
-      : undefined,
+        ? getLatestPackageVersion('orchid-orm-valibot', 'dependencies')
+        : undefined,
     config.validation === 'valibot' &&
       getLatestPackageVersion('valibot', 'dependencies'),
     config.addTestFactory &&

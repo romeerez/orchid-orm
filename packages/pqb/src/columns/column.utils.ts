@@ -84,6 +84,6 @@ export const getColumnBaseType = (
   return column instanceof EnumColumn
     ? 'text'
     : column instanceof DomainColumn
-    ? domainsMap[column.dataType]?.dataType
-    : type;
+      ? domainsMap[column.dataType]?.dataType
+      : type;
 };

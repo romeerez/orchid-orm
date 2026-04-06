@@ -21,8 +21,8 @@ export type DeleteResult<T extends PickQueryHasSelectResultReturnType> =
   T['__hasSelect'] extends true
     ? T
     : T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsRowCountMany<T>
-    : SetQueryReturnsRowCount<T>;
+      ? SetQueryReturnsRowCountMany<T>
+      : SetQueryReturnsRowCount<T>;
 
 export const _queryDelete = <T extends PickQueryHasSelectResultReturnType>(
   query: T,

@@ -50,57 +50,61 @@ When `all` is set to `true`, it grants ALL privileges on all object types (table
 User will be able to define default privileges per a role when instantiating orm:
 
 ```ts
-const orm = createOrchidOrm({
-  roles: [
-    {
-      name: 'app_user',
-      defaultPrivileges: {
-        owner: 'admin',
-        schema: 'schema-name',
-        tables: {
-          privileges: ['SELECT', 'INSERT'],
-          grantablePrivileges: ['UPDATE', 'DELETE'],
-        },
-        sequences: {
-          privileges: ['USAGE'],
-        },
-        functions: {
-          privileges: ['EXECUTE'],
-        },
-        types: {
-          privileges: ['USAGE'],
+const orm = createOrchidOrm(
+  {
+    roles: [
+      {
+        name: 'app_user',
+        defaultPrivileges: {
+          owner: 'admin',
+          schema: 'schema-name',
+          tables: {
+            privileges: ['SELECT', 'INSERT'],
+            grantablePrivileges: ['UPDATE', 'DELETE'],
+          },
+          sequences: {
+            privileges: ['USAGE'],
+          },
+          functions: {
+            privileges: ['EXECUTE'],
+          },
+          types: {
+            privileges: ['USAGE'],
+          },
         },
       },
-    },
-  ],
-}, {
-  // ...tables
-});
+    ],
+  },
+  {
+    // ...tables
+  },
+);
 ```
 
 For granting ALL privileges on all object types, use `all` or `allGrantable`:
 
 ```ts
-const orm = createOrchidOrm({
-  roles: [
-    {
-      name: 'admin',
-      defaultPrivileges: {
-        schema: 'schema-name',
-        all: true,  // grants ALL privileges on all object types
+const orm = createOrchidOrm(
+  {
+    roles: [
+      {
+        name: 'admin',
+        defaultPrivileges: {
+          schema: 'schema-name',
+          all: true, // grants ALL privileges on all object types
+        },
       },
-    },
-    {
-      name: 'superadmin',
-      defaultPrivileges: {
-        schema: 'schema-name',
-        allGrantable: true,  // grants ALL privileges with GRANT OPTION on all object types
+      {
+        name: 'superadmin',
+        defaultPrivileges: {
+          schema: 'schema-name',
+          allGrantable: true, // grants ALL privileges with GRANT OPTION on all object types
+        },
       },
-    },
-  ],
-}, {
-  // ...tables
-});
+    ],
+  },
+  {
+    // ...tables
+  },
+);
 ```
-
-

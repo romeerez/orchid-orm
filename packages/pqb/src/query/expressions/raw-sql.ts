@@ -65,9 +65,8 @@ export interface RawSql<
   T extends Column.Pick.QueryColumn,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ColumnTypes,
-> extends Expression<T>,
-    RawSqlBase,
-    ExpressionTypeMethod {}
+>
+  extends Expression<T>, RawSqlBase, ExpressionTypeMethod {}
 
 export class RawSql<
   T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
@@ -191,8 +190,7 @@ export const rawSqlToCode = (rawSql: RawSqlBase, t: string): string => {
 
 // `DynamicRawSQL` extends both `Expression` and `ExpressionTypeMethod`, so it needs a separate interface.
 export interface DynamicRawSQL<T extends Column.Pick.QueryColumn>
-  extends Expression<T>,
-    ExpressionTypeMethod {}
+  extends Expression<T>, ExpressionTypeMethod {}
 
 // Calls the given function to get inner SQL each time when converting to SQL.
 export class DynamicRawSQL<
@@ -239,8 +237,8 @@ export function raw(...args: SQLArgs) {
   return isTemplateLiteralArgs(args)
     ? new RawSql(args)
     : typeof args[0] === 'function'
-    ? new DynamicRawSQL(args[0])
-    : new RawSql(args[0].raw, args[0].values);
+      ? new DynamicRawSQL(args[0])
+      : new RawSql(args[0].raw, args[0].values);
 }
 
 // Raw SQL count(*) to apply directly to `QueryData.select`.

@@ -186,7 +186,8 @@ const arrayMethods: ArrayMethods<number> = {
 };
 
 interface ValibotArrayColumn<Item extends ArrayColumnValue>
-  extends ArrayColumn<
+  extends
+    ArrayColumn<
       ValibotSchemaConfig,
       Item,
       ArraySchema<Item['inputSchema']>,
@@ -436,36 +437,31 @@ const numberMethods: NumberMethods = {
 };
 
 interface SmallIntColumnValibot
-  extends SmallIntColumn<ValibotSchemaConfig>,
-    NumberMethods {}
+  extends SmallIntColumn<ValibotSchemaConfig>, NumberMethods {}
 
 class SmallIntColumnValibot extends SmallIntColumn<ValibotSchemaConfig> {}
 Object.assign(SmallIntColumnValibot.prototype, numberMethods);
 
 interface IntegerColumnValibot
-  extends IntegerColumn<ValibotSchemaConfig>,
-    NumberMethods {}
+  extends IntegerColumn<ValibotSchemaConfig>, NumberMethods {}
 
 class IntegerColumnValibot extends IntegerColumn<ValibotSchemaConfig> {}
 Object.assign(IntegerColumnValibot.prototype, numberMethods);
 
 interface RealColumnValibot
-  extends RealColumn<ValibotSchemaConfig>,
-    NumberMethods {}
+  extends RealColumn<ValibotSchemaConfig>, NumberMethods {}
 
 class RealColumnValibot extends RealColumn<ValibotSchemaConfig> {}
 Object.assign(RealColumnValibot.prototype, numberMethods);
 
 interface SmallSerialColumnValibot
-  extends SmallSerialColumn<ValibotSchemaConfig>,
-    NumberMethods {}
+  extends SmallSerialColumn<ValibotSchemaConfig>, NumberMethods {}
 
 class SmallSerialColumnValibot extends SmallSerialColumn<ValibotSchemaConfig> {}
 Object.assign(SmallSerialColumnValibot.prototype, numberMethods);
 
 interface SerialColumnValibot
-  extends SerialColumn<ValibotSchemaConfig>,
-    NumberMethods {}
+  extends SerialColumn<ValibotSchemaConfig>, NumberMethods {}
 
 class SerialColumnValibot extends SerialColumn<ValibotSchemaConfig> {}
 Object.assign(SerialColumnValibot.prototype, numberMethods);
@@ -605,64 +601,55 @@ const stringMethods: StringMethods = {
 };
 
 interface BigIntColumnValibot
-  extends BigIntColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends BigIntColumn<ValibotSchemaConfig>, StringMethods {}
 
 class BigIntColumnValibot extends BigIntColumn<ValibotSchemaConfig> {}
 Object.assign(BigIntColumnValibot.prototype, stringMethods);
 
 interface DecimalColumnValibot
-  extends DecimalColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends DecimalColumn<ValibotSchemaConfig>, StringMethods {}
 
 class DecimalColumnValibot extends DecimalColumn<ValibotSchemaConfig> {}
 Object.assign(DecimalColumnValibot.prototype, stringMethods);
 
 interface DoublePrecisionColumnValibot
-  extends DoublePrecisionColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends DoublePrecisionColumn<ValibotSchemaConfig>, StringMethods {}
 
 class DoublePrecisionColumnValibot extends DoublePrecisionColumn<ValibotSchemaConfig> {}
 Object.assign(DoublePrecisionColumnValibot.prototype, stringMethods);
 
 interface BigSerialColumnValibot
-  extends BigSerialColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends BigSerialColumn<ValibotSchemaConfig>, StringMethods {}
 
 class BigSerialColumnValibot extends BigSerialColumn<ValibotSchemaConfig> {}
 Object.assign(BigSerialColumnValibot.prototype, stringMethods);
 
 interface MoneyColumnValibot
-  extends MoneyColumn<ValibotSchemaConfig>,
-    NumberMethods {}
+  extends MoneyColumn<ValibotSchemaConfig>, NumberMethods {}
 
 class MoneyColumnValibot extends MoneyColumn<ValibotSchemaConfig> {}
 Object.assign(MoneyColumnValibot.prototype, numberMethods);
 
 interface VarCharColumnValibot
-  extends VarCharColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends VarCharColumn<ValibotSchemaConfig>, StringMethods {}
 
 class VarCharColumnValibot extends VarCharColumn<ValibotSchemaConfig> {}
 Object.assign(VarCharColumnValibot.prototype, stringMethods);
 
 interface TextColumnValibot
-  extends TextColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends TextColumn<ValibotSchemaConfig>, StringMethods {}
 
 class TextColumnValibot extends TextColumn<ValibotSchemaConfig> {}
 Object.assign(TextColumnValibot.prototype, stringMethods);
 
 interface StringColumnValibot
-  extends StringColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends StringColumn<ValibotSchemaConfig>, StringMethods {}
 
 class StringColumnValibot extends StringColumn<ValibotSchemaConfig> {}
 Object.assign(StringColumnValibot.prototype, stringMethods);
 
 interface CitextColumnValibot
-  extends CitextColumn<ValibotSchemaConfig>,
-    StringMethods {}
+  extends CitextColumn<ValibotSchemaConfig>, StringMethods {}
 
 class CitextColumnValibot extends CitextColumn<ValibotSchemaConfig> {}
 Object.assign(CitextColumnValibot.prototype, stringMethods);
@@ -685,22 +672,19 @@ const dateMethods: DateMethods = {
 };
 
 interface DateColumnValibot
-  extends DateColumn<ValibotSchemaConfig>,
-    DateMethods {}
+  extends DateColumn<ValibotSchemaConfig>, DateMethods {}
 
 class DateColumnValibot extends DateColumn<ValibotSchemaConfig> {}
 Object.assign(DateColumnValibot.prototype, dateMethods);
 
 interface TimestampNoTzColumnValibot
-  extends TimestampColumn<ValibotSchemaConfig>,
-    DateMethods {}
+  extends TimestampColumn<ValibotSchemaConfig>, DateMethods {}
 
 class TimestampNoTzColumnValibot extends TimestampColumn<ValibotSchemaConfig> {}
 Object.assign(TimestampNoTzColumnValibot.prototype, dateMethods);
 
 interface TimestampColumnValibot
-  extends TimestampTZColumn<ValibotSchemaConfig>,
-    DateMethods {}
+  extends TimestampTZColumn<ValibotSchemaConfig>, DateMethods {}
 
 class TimestampColumnValibot extends TimestampTZColumn<ValibotSchemaConfig> {}
 Object.assign(TimestampColumnValibot.prototype, dateMethods);
@@ -763,30 +747,30 @@ export interface ValibotSchemaConfig {
     [K in keyof T]: K extends 'type'
       ? Type
       : K extends 'inputType'
-      ? Types['input'] extends BaseSchema
-        ? Output<Types['input']>
-        : Type
-      : K extends 'inputSchema'
-      ? Types['input'] extends BaseSchema
-        ? Types['input']
-        : TypeSchema
-      : K extends 'outputType'
-      ? Types['output'] extends BaseSchema
-        ? Output<Types['output']>
-        : Type
-      : K extends 'outputSchema'
-      ? Types['output'] extends BaseSchema
-        ? Types['output']
-        : TypeSchema
-      : K extends 'queryType'
-      ? Types['query'] extends BaseSchema
-        ? Output<Types['query']>
-        : Type
-      : K extends 'querySchema'
-      ? Types['query'] extends BaseSchema
-        ? Types['query']
-        : TypeSchema
-      : T[K];
+        ? Types['input'] extends BaseSchema
+          ? Output<Types['input']>
+          : Type
+        : K extends 'inputSchema'
+          ? Types['input'] extends BaseSchema
+            ? Types['input']
+            : TypeSchema
+          : K extends 'outputType'
+            ? Types['output'] extends BaseSchema
+              ? Output<Types['output']>
+              : Type
+            : K extends 'outputSchema'
+              ? Types['output'] extends BaseSchema
+                ? Types['output']
+                : TypeSchema
+              : K extends 'queryType'
+                ? Types['query'] extends BaseSchema
+                  ? Output<Types['query']>
+                  : Type
+                : K extends 'querySchema'
+                  ? Types['query'] extends BaseSchema
+                    ? Types['query']
+                    : TypeSchema
+                  : T[K];
   };
 
   narrowType<
@@ -807,14 +791,14 @@ export interface ValibotSchemaConfig {
         ? never
         : Output<Type>
       : K extends 'outputType' | 'queryType'
-      ? Output<Type>
-      : K extends 'inputSchema'
-      ? T['inputType'] extends never
-        ? NeverSchema
-        : Type
-      : K extends 'outputSchema' | 'querySchema'
-      ? Type
-      : T[K];
+        ? Output<Type>
+        : K extends 'inputSchema'
+          ? T['inputType'] extends never
+            ? NeverSchema
+            : Type
+          : K extends 'outputSchema' | 'querySchema'
+            ? Type
+            : T[K];
   };
 
   narrowAllTypes<
@@ -833,26 +817,26 @@ export interface ValibotSchemaConfig {
         ? Output<Types['input']>
         : T['inputType']
       : K extends 'inputSchema'
-      ? Types['input'] extends BaseSchema
-        ? Types['input']
-        : T['inputSchema']
-      : K extends 'outputType'
-      ? Types['output'] extends BaseSchema
-        ? Output<Types['output']>
-        : T['outputType']
-      : K extends 'outputSchema'
-      ? Types['output'] extends BaseSchema
-        ? Types['output']
-        : T['outputSchema']
-      : K extends 'queryType'
-      ? Types['query'] extends BaseSchema
-        ? Output<Types['query']>
-        : T['querySchema']
-      : K extends 'querySchema'
-      ? Types['query'] extends BaseSchema
-        ? Types['query']
-        : T['querySchema']
-      : T[K];
+        ? Types['input'] extends BaseSchema
+          ? Types['input']
+          : T['inputSchema']
+        : K extends 'outputType'
+          ? Types['output'] extends BaseSchema
+            ? Output<Types['output']>
+            : T['outputType']
+          : K extends 'outputSchema'
+            ? Types['output'] extends BaseSchema
+              ? Types['output']
+              : T['outputSchema']
+            : K extends 'queryType'
+              ? Types['query'] extends BaseSchema
+                ? Output<Types['query']>
+                : T['querySchema']
+              : K extends 'querySchema'
+                ? Types['query'] extends BaseSchema
+                  ? Types['query']
+                  : T['querySchema']
+                : T[K];
   };
 
   dateAsNumber<T extends Column<ValibotSchemaConfig>>(
@@ -1166,8 +1150,8 @@ type CreateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
     : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
     ? OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
     : undefined extends ColumnSchemaGetterColumns<T>[K]['data']['default']
-    ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
-    : OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+      ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
+      : OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
 }>;
 
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{

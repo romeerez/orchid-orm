@@ -96,8 +96,8 @@ export type HasAndBelongsToManyQuery<
   [K in keyof TableQuery]: K extends '__selectable'
     ? SelectableFromShape<TableQuery['shape'], Name>
     : K extends '__as'
-    ? Name
-    : TableQuery[K];
+      ? Name
+      : TableQuery[K];
 } & QueryHasWhere &
   HasRelJoin;
 

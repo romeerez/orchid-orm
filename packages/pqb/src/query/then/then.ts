@@ -48,7 +48,7 @@ import {
 export interface QueryThen<T> {
   <TResult1 = T, TResult2 = never>(
     onfulfilled?: (value: T) => TResult1 | PromiseLike<TResult1>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     onrejected?: (reason: any) => TResult2 | PromiseLike<TResult2>,
   ): Promise<TResult1 | TResult2>;
 } // This is a standard Promise['catch'] method
@@ -67,18 +67,18 @@ export type QueryThenByQuery<
 > = T['returnType'] extends undefined | 'all'
   ? QueryThenShallowSimplifyArr<ColumnsShape.Output<Result>>
   : T['returnType'] extends 'one'
-  ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<Result>>
-  : T['returnType'] extends 'oneOrThrow'
-  ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
-  : T['returnType'] extends 'value'
-  ? QueryThen<Result['value']['outputType'] | undefined>
-  : T['returnType'] extends 'valueOrThrow'
-  ? QueryThen<Result['value']['outputType']>
-  : T['returnType'] extends 'rows'
-  ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
-  : T['returnType'] extends 'pluck'
-  ? QueryThen<Result['pluck']['outputType'][]>
-  : QueryThen<void>;
+    ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<Result>>
+    : T['returnType'] extends 'oneOrThrow'
+      ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
+      : T['returnType'] extends 'value'
+        ? QueryThen<Result['value']['outputType'] | undefined>
+        : T['returnType'] extends 'valueOrThrow'
+          ? QueryThen<Result['value']['outputType']>
+          : T['returnType'] extends 'rows'
+            ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
+            : T['returnType'] extends 'pluck'
+              ? QueryThen<Result['pluck']['outputType'][]>
+              : QueryThen<void>;
 
 export type QueryThenByReturnType<
   T extends QueryReturnType,
@@ -86,25 +86,25 @@ export type QueryThenByReturnType<
 > = T extends undefined | 'all'
   ? QueryThenShallowSimplifyArr<ColumnsShape.Output<Result>>
   : T extends 'one'
-  ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<Result>>
-  : T extends 'oneOrThrow'
-  ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
-  : T extends 'value'
-  ? QueryThen<Result['value']['outputType'] | undefined>
-  : T extends 'valueOrThrow'
-  ? QueryThen<Result['value']['outputType']>
-  : T extends 'rows'
-  ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
-  : T extends 'pluck'
-  ? QueryThen<Result['pluck']['outputType'][]>
-  : QueryThen<void>;
+    ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<Result>>
+    : T extends 'oneOrThrow'
+      ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
+      : T extends 'value'
+        ? QueryThen<Result['value']['outputType'] | undefined>
+        : T extends 'valueOrThrow'
+          ? QueryThen<Result['value']['outputType']>
+          : T extends 'rows'
+            ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
+            : T extends 'pluck'
+              ? QueryThen<Result['pluck']['outputType'][]>
+              : QueryThen<void>;
 
 // copied from TS standard library because the original `catch` is not decoupled from the Promise
 export interface QueryCatch {
   <Q, TResult = never>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     this: { then: (onfulfilled?: (value: Q) => any) => any },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     onrejected?: (reason: any) => TResult | PromiseLike<TResult>,
   ): Promise<Q | TResult>;
 }
@@ -123,22 +123,25 @@ export const queryMethodByReturnType: {
   void: 'arrays',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Resolve = (result: any) => any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Reject = (error: any) => any;
+type Resolve = // oxlint-disable-next-line typescript/no-explicit-any
+  (result: any) => any;
+type Reject = // oxlint-disable-next-line typescript/no-explicit-any
+  (error: any) => any;
 
 export interface QueryCatchers {
   catchUniqueError<ThenResult, CatchResult>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     this: { then: (onfulfilled?: (value: ThenResult) => any) => any },
     fn: (reason: QueryError) => CatchResult,
   ): Promise<ThenResult | CatchResult>;
 }
 
 export class Then implements QueryCatchers {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  catch(this: Query, fn: (reason: any) => unknown) {
+  catch(
+    this: Query,
+    // oxlint-disable-next-line typescript/no-explicit-any
+    fn: (reason: any) => unknown,
+  ) {
     const q = _clone(this as unknown as Query);
     q.q.catch = true;
     return q.then(undefined, fn);
@@ -231,8 +234,8 @@ export function maybeWrappedThen(
     before && beforeActionHooks
       ? [...before, ...beforeActionHooks]
       : before
-      ? before
-      : beforeActionHooks;
+        ? before
+        : beforeActionHooks;
 
   const state = this.internal.asyncStorage.getStore();
   if (
@@ -299,10 +302,10 @@ const then = async (
   afterSaveHooks?: QueryAfterHook[],
   afterCommitHooks?: QueryAfterHook[],
   afterSaveCommitHooks?: QueryAfterHook[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  resolve?: (result: any) => any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  reject?: (error: any) => any,
+  resolve?: // oxlint-disable-next-line typescript/no-explicit-any
+  (result: any) => any,
+  reject?: // oxlint-disable-next-line typescript/no-explicit-any
+  (error: any) => any,
   shouldCatch?: boolean,
   parentSavepoint?: string,
 ): Promise<unknown> => {
@@ -475,7 +478,7 @@ const then = async (
       // runAfterQuery is not called because it's only for upsert,
       // while this batch branch is for batch insert
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       result = query.handleResult(q, tempReturnType, queryResult!, localSql);
     }
 
@@ -517,10 +520,10 @@ const then = async (
     let cteAfterHooks: (() => unknown)[] | undefined;
     let cteAfterCommitHooks: (() => unknown)[] | undefined;
     if (localSql.cteHooks) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // oxlint-disable-next-line typescript/no-explicit-any
       const addedAfterHooks = new Set<(data: unknown, query: any) => unknown>();
       const addedAfterCommitHooks = new Set<
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // oxlint-disable-next-line typescript/no-explicit-any
         (data: unknown, query: any) => unknown
       >();
 
@@ -604,7 +607,7 @@ const then = async (
           const afterCommitKey = `after${purpose}Commit` as const;
           const afterCommit = tableHook[afterCommitKey];
           if (afterCommit) {
-            const arr = (cteAfterHooks ??= []);
+            const arr = (cteAfterCommitHooks ??= []);
             for (const fn of afterCommit) {
               const hookData = addedAfterCommitHooks.has(fn);
               if (!hookData) {
@@ -627,7 +630,7 @@ const then = async (
       cteAfterHooks ||
       cteAfterCommitHooks;
     if (hasAfterHook) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       if (!queryResult!.rowCount) {
         afterHooks =
           afterSaveHooks =
@@ -729,7 +732,7 @@ const then = async (
        * it must not run batchParsers because it doesn't have the data yet.
        * The second query loads data and performs batchParsers.
        */
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       parseBatch(q, queryResult!);
 
     if (promise) {
@@ -764,7 +767,7 @@ const then = async (
       result = filterResult(
         q,
         returnType,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //
         queryResult!,
         result,
         tempColumns,
@@ -953,8 +956,10 @@ const parseBatch = (q: Query, queryResult: QueryResult): MaybePromise<void> => {
   return promises && (Promise.all(promises) as never);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const parseRecord = (parsers: ColumnsParsers, row: any): unknown => {
+export const parseRecord = (
+  parsers: ColumnsParsers, // oxlint-disable-next-line typescript/no-explicit-any
+  row: any,
+): unknown => {
   for (const key in parsers) {
     if (key in row) {
       row[key] = (parsers[key] as ColumnParser)(row[key]);
@@ -966,8 +971,8 @@ export const parseRecord = (parsers: ColumnsParsers, row: any): unknown => {
 const parseRows = (
   parsers: ColumnsParsers,
   fields: { name: string }[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rows: any[],
+  rows: // oxlint-disable-next-line typescript/no-explicit-any
+  any[],
 ): void => {
   for (let i = fields.length - 1; i >= 0; i--) {
     const parser = parsers[fields[i].name];

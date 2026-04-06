@@ -7,6 +7,7 @@ In `generate.ts` a schema of every default privilege of every role is added to `
 `roles.generator.ts` should omit `defaultPrivileges` from both `codeRoles` and db roles in order for them to not affect `deepCompare` logic.
 
 `default-privilege.generator.ts` should:
+
 - collect default privileges of all roles
 - map them to `RakeDbAst.DefaultPrivilege` objects using the role name as `grantee`
 - determine a propef diff between code objects and db objects

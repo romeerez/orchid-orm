@@ -12,7 +12,11 @@ export class RefExpression<
   q: ExpressionData;
   table?: string;
 
-  constructor(value: T, query: Query, public ref: string) {
+  constructor(
+    value: T,
+    query: Query,
+    public ref: string,
+  ) {
     super();
     this.result = { value };
     this.q = query.q as ExpressionData;

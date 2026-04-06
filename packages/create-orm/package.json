@@ -2,15 +2,18 @@
   "name": "create-orchid-orm",
   "version": "0.4.3",
   "description": "Initialize Orchid ORM",
+  "homepage": "https://orchid-orm.netlify.app/guide/quickstart.html",
   "license": "ISC",
   "author": "Roman Kushyn",
-  "homepage": "https://orchid-orm.netlify.app/guide/quickstart.html",
   "repository": {
     "type": "git",
     "url": "https://github.com/romeerez/orchid-orm.git",
     "directory": "packages/create-orm"
   },
   "bin": "dist/bin.js",
+  "files": [
+    "dist"
+  ],
   "main": "dist/lib.js",
   "module": "dist/lib.mjs",
   "typings": "dist/lib.d.ts",
@@ -21,15 +24,16 @@
       "types": "./dist/lib.d.ts"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
     "build": "rimraf ./dist/ && rollup -c ./rollup.config.mjs",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {

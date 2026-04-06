@@ -22,8 +22,10 @@ import {
 } from './generators.utils';
 import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
 
-interface ComparableDomainCompare
-  extends Omit<DbStructure.Domain, 'schemaName' | 'name'> {
+interface ComparableDomainCompare extends Omit<
+  DbStructure.Domain,
+  'schemaName' | 'name'
+> {
   hasDefault: boolean;
   hasChecks: boolean;
 }

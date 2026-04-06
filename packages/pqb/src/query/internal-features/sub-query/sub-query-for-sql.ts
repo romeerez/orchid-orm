@@ -47,16 +47,16 @@ export const prepareSubQueryForSql: PrepareSubQueryForSql = (
     ? subQuery.q.type === 'insert'
       ? subQuery.q.beforeCreate
       : subQuery.q.type === 'update'
-      ? subQuery.q.beforeUpdate
-      : subQuery.q.type === 'upsert'
-      ? subQuery.q.upsertUpdate && subQuery.q.updateData
-        ? subQuery.q.beforeUpdate && subQuery.q.beforeCreate
-          ? [...subQuery.q.beforeUpdate, ...subQuery.q.beforeCreate]
-          : subQuery.q.beforeUpdate || subQuery.q.beforeCreate
-        : subQuery.q.beforeCreate
-      : subQuery.q.type === 'delete'
-      ? subQuery.q.beforeDelete
-      : undefined
+        ? subQuery.q.beforeUpdate
+        : subQuery.q.type === 'upsert'
+          ? subQuery.q.upsertUpdate && subQuery.q.updateData
+            ? subQuery.q.beforeUpdate && subQuery.q.beforeCreate
+              ? [...subQuery.q.beforeUpdate, ...subQuery.q.beforeCreate]
+              : subQuery.q.beforeUpdate || subQuery.q.beforeCreate
+            : subQuery.q.beforeCreate
+          : subQuery.q.type === 'delete'
+            ? subQuery.q.beforeDelete
+            : undefined
     : undefined;
 
   const { beforeSet } = subQuery.q;
@@ -64,8 +64,8 @@ export const prepareSubQueryForSql: PrepareSubQueryForSql = (
     beforeAction && beforeSet
       ? [...beforeAction, ...beforeSet]
       : beforeSet
-      ? [...beforeSet]
-      : beforeAction;
+        ? [...beforeSet]
+        : beforeAction;
 
   if (beforeAction) {
     const newSet = new Set(mainQuery.q.beforeSet);

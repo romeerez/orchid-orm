@@ -85,8 +85,7 @@ describe('map', () => {
           names: data.map((user) => user.name),
           self: this,
         };
-      },
-      'self');
+      }, 'self');
 
       assertType<
         typeof res,

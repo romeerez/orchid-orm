@@ -31,7 +31,8 @@ import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
 import { QueryThenByQuery } from '../../then/then';
 
 export interface FromQuerySelf
-  extends PickQuerySelectable,
+  extends
+    PickQuerySelectable,
     PickQueryShape,
     PickQueryReturnType,
     PickQueryWithData,
@@ -51,59 +52,59 @@ export type FromResult<
         [K in keyof T]: K extends '__selectable'
           ? SelectableFromShape<T['withData'][Arg]['shape'], Arg>
           : K extends 'result'
-          ? T['withData'][Arg]['shape']
-          : K extends 'then'
-          ? QueryThenByQuery<T, T['withData'][Arg]['shape']>
-          : T[K];
+            ? T['withData'][Arg]['shape']
+            : K extends 'then'
+              ? QueryThenByQuery<T, T['withData'][Arg]['shape']>
+              : T[K];
       }
     : SetQueryTableAlias<T, Arg>
   : Arg extends PickQuerySelectableResultInputTypeAs
-  ? {
-      [K in keyof T]: K extends '__defaultSelect'
-        ? keyof Arg['result']
-        : K extends '__selectable'
-        ? SelectableFromShape<Arg['result'], Arg['__as']>
-        : K extends '__as'
-        ? Arg['__as']
-        : K extends 'result'
-        ? Arg['result']
-        : K extends 'shape'
-        ? Arg['result']
-        : K extends 'inputType'
-        ? Arg['inputType']
-        : K extends 'then'
-        ? QueryThenByQuery<T, Arg['result']>
-        : T[K];
-    }
-  : Arg extends (infer A)[]
-  ? {
-      [K in keyof T]: K extends '__selectable'
-        ? UnionToIntersection<
-            A extends string
-              ? T['withData'] extends WithDataItems
-                ? {
-                    [K in keyof T['withData'][A]['shape'] &
-                      string as `${A}.${K}`]: {
-                      as: K;
-                      column: T['withData'][A]['shape'][K];
-                    };
-                  }
-                : never
-              : A extends PickQueryResultAs
-              ? {
-                  [K in keyof A['result'] &
-                    string as `${A['__as']}.${K}`]: K extends string
+    ? {
+        [K in keyof T]: K extends '__defaultSelect'
+          ? keyof Arg['result']
+          : K extends '__selectable'
+            ? SelectableFromShape<Arg['result'], Arg['__as']>
+            : K extends '__as'
+              ? Arg['__as']
+              : K extends 'result'
+                ? Arg['result']
+                : K extends 'shape'
+                  ? Arg['result']
+                  : K extends 'inputType'
+                    ? Arg['inputType']
+                    : K extends 'then'
+                      ? QueryThenByQuery<T, Arg['result']>
+                      : T[K];
+      }
+    : Arg extends (infer A)[]
+      ? {
+          [K in keyof T]: K extends '__selectable'
+            ? UnionToIntersection<
+                A extends string
+                  ? T['withData'] extends WithDataItems
                     ? {
-                        as: K;
-                        column: A['result'][K];
+                        [K in keyof T['withData'][A]['shape'] &
+                          string as `${A}.${K}`]: {
+                          as: K;
+                          column: T['withData'][A]['shape'][K];
+                        };
                       }
-                    : never;
-                }
-              : never
-          >
-        : T[K];
-    }
-  : T;
+                    : never
+                  : A extends PickQueryResultAs
+                    ? {
+                        [K in keyof A['result'] &
+                          string as `${A['__as']}.${K}`]: K extends string
+                          ? {
+                              as: K;
+                              column: A['result'][K];
+                            }
+                          : never;
+                      }
+                    : never
+              >
+            : T[K];
+        }
+      : T;
 
 const addWithParsers = (w: WithConfig, parsers: ColumnsParsers) => {
   for (const key in w.shape) {
