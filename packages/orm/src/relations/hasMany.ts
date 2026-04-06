@@ -3,6 +3,7 @@ import {
   RelationThunkBase,
   RelationConfigSelf,
 } from './relations';
+import { OrchidOrmInternalError } from 'pqb';
 import {
   CreateData,
   Query,
@@ -25,7 +26,6 @@ import {
   getPrimaryKeys,
   MaybeArray,
   objectHasValues,
-  OrchidOrmInternalError,
   RecordString,
   RecordUnknown,
   RelationConfigBase,

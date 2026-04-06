@@ -1,4 +1,4 @@
-import { createDbWithAdapter } from 'pqb/internal';
+import { createDbWithAdapter } from 'pqb';
 import {
   ColumnsShape,
   Column,

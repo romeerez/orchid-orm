@@ -79,25 +79,19 @@ export const dbValibotNodePostgres = orchidOrmNodePostgres(
 
 /** rake-db **/
 
-export const changePostgresJs = rakeDbPostgresJs(
-  {},
-  {
-    baseTable: BaseTableZod,
-    dbPath: './db',
-    migrationsPath: './migrations',
-    import: (path) => import(path),
-  },
-);
+export const changePostgresJs = rakeDbPostgresJs({
+  baseTable: BaseTableZod,
+  dbPath: './db',
+  migrationsPath: './migrations',
+  import: (path: string) => import(path),
+});
 
-export const changeNodePostgres = rakeDbNodePostgres(
-  {},
-  {
-    baseTable: BaseTableZod,
-    dbPath: './db',
-    migrationsPath: './migrations',
-    import: (path) => import(path),
-  },
-);
+export const changeNodePostgres = rakeDbNodePostgres({
+  baseTable: BaseTableZod,
+  dbPath: './db',
+  migrationsPath: './migrations',
+  import: (path: string) => import(path),
+});
 
 /** test-factory **/
 

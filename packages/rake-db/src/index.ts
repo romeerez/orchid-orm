@@ -1,4 +1,4 @@
-export type { RakeDbFn } from './cli/rake-db.cli';
+export type { RakeDbFn, RakeDbCliResult } from './cli/rake-db.cli';
 export { rakeDbCliWithAdapter, setRakeDbCliRunFn } from './cli/rake-db.cli';
 export { rakeDbCommands } from './config.public';
 export {

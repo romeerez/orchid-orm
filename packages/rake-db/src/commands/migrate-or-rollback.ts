@@ -1,7 +1,7 @@
+import { createDbWithAdapter } from 'pqb';
 import {
   AdapterBase,
   ColumnSchemaConfig,
-  createDbWithAdapter,
   DbResult,
   emptyArray,
   MaybeArray,

@@ -41,8 +41,8 @@
     }
   },
   "scripts": {
-    "db": "ts-node -r tsconfig-paths/register app/db-script.ts",
-    "prompt": "ts-node src/prompt.ts",
+    "db": "tsx app/db-script.ts",
+    "prompt": "tsx src/prompt.ts",
     "test": "jest --watch --verbose false",
     "check": "jest",
     "types": "tsc",
@@ -60,7 +60,6 @@
   },
   "devDependencies": {
     "@types/prompts": "2.4.9",
-    "test-utils": "workspace:*",
-    "tsconfig-paths": "4.2.0"
+    "test-utils": "workspace:*"
   }
 }

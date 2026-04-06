@@ -1,7 +1,7 @@
 import { FactoryConfig, ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable, Profile } from './test-utils';
 import { z, ZodObject, ZodRawShape } from 'zod/v4';
-import { Column, orchidORMWithAdapter } from 'orchid-orm';
+import { orchidORMWithAdapter } from 'orchid-orm';
 import {
   ColumnsShape,
   makeColumnTypes,
@@ -99,7 +99,10 @@ describe('factory', () => {
             const result =
               'json keys: ' +
               Object.keys(
-                ((c as Column).inputSchema as ZodObject<ZodRawShape>).shape,
+                (
+                  (c as unknown as { inputSchema: unknown })
+                    .inputSchema as ZodObject<ZodRawShape>
+                ).shape,
               ).join(', ');
             return () => result;
           },

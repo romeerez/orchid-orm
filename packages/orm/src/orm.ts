@@ -35,7 +35,7 @@ import {
 } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-interface FromQuery extends Query {
+export interface FromQuery extends Query {
   returnType: 'all';
 }
 

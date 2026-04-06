@@ -126,7 +126,7 @@ const make = (
       // function to turn the operator expression into SQL
       _op,
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //
   ) as never;
 };
 
@@ -159,7 +159,7 @@ const makeVarArg = (
       // function to turn the operator expression into SQL
       _op,
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //
   ) as never;
 };
 
@@ -263,7 +263,7 @@ interface OperatorsBooleanSelf extends OperatorsBoolean {
 }
 
 // Numeric, date, and time can be compared with `lt`, `gt`, so it's generic.
-interface Ord<Value> extends Base<Value> {
+export interface Ord<Value> extends Base<Value> {
   lt: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   lte: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   gt: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;

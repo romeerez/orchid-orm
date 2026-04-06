@@ -2,5 +2,11 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "singleQuote": true,
   "printWidth": 80,
-  "ignore": ["docs/src/.vitepress/cache/**"]
+  "ignorePatterns": [
+    "docs/src/.vitepress/cache/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/.turbo/**",
+    "**/node_modules/**"
+  ]
 }

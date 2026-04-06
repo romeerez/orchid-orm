@@ -3,6 +3,7 @@ import {
   RelationData,
   RelationThunkBase,
 } from './relations';
+import { NotFoundError, OrchidOrmInternalError } from 'pqb';
 import { ORMTableInput } from '../baseTable';
 import {
   _queryCreateManyFrom,
@@ -32,9 +33,7 @@ import {
   ColumnsShape,
   getPrimaryKeys,
   MaybeArray,
-  NotFoundError,
   objectHasValues,
-  OrchidOrmInternalError,
   pick,
   RecordString,
   RecordUnknown,

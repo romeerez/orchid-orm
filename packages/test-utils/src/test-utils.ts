@@ -1,4 +1,5 @@
-import { testTransaction, createDbWithAdapter, Column } from 'pqb';
+import { testTransaction, createDbWithAdapter } from 'pqb';
+import { Column } from 'pqb/internal';
 import {
   makeColumnTypes,
   defaultSchemaConfig,
@@ -109,7 +110,7 @@ export const jsonBuildObjectAllSql = (
   as: string,
 ) =>
   `CASE WHEN to_jsonb("${as}") IS NULL THEN NULL ELSE json_build_object(` +
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  //
   Object.keys(table.q.selectAllShape)
     .map(
       (c) =>

@@ -1,7 +1,4 @@
 {
-  "ts-node": {
-    "swc": true
-  },
   "exclude": ["node_modules", "gitignored"],
   "compilerOptions": {
     "rootDir": "./packages",
@@ -17,7 +14,8 @@
       "orchid-orm/migrations/postgres-js": [
         "./packages/orm/src/migrations/adapters/postgres-js.ts"
       ],
-      "pqb": ["./packages/pqb/src/index.ts"],
+      "pqb": ["./packages/pqb/src/public.ts"],
+      "pqb/index": ["./packages/pqb/src/index.ts"],
       "pqb/internal": ["./packages/pqb/src/internal.ts"],
       "pqb/node-postgres": ["./packages/pqb/src/adapters/node-postgres.ts"],
       "pqb/postgres-js": ["./packages/pqb/src/adapters/postgres-js.ts"],
@@ -60,6 +58,6 @@
     "forceConsistentCasingInFileNames": true,
     // only type check files, rollup will handle compilation
     "noEmit": true,
-    "types": ["jest"]
+    "types": ["@types/node", "jest"]
   }
 }

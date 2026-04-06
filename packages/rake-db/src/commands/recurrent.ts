@@ -1,4 +1,4 @@
-import { createDbWithAdapter } from 'pqb/internal';
+import { createDbWithAdapter } from 'pqb';
 import { AdapterBase, DbResult, QueryLogger } from 'pqb/internal';
 import { join } from 'path';
 import { readdir, stat, readFile } from 'fs/promises';

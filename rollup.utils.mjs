@@ -1,10 +1,11 @@
 import dts from 'rollup-plugin-dts';
 import esbuild from 'rollup-plugin-esbuild';
 
-export const rollupExportFile = (from, to) => [
+export const rollupExportFile = (from, to, external) => [
   {
     input: `${from}.ts`,
     plugins: [esbuild()],
+    external,
     output: [
       {
         file: `${to}.js`,
@@ -16,6 +17,7 @@ export const rollupExportFile = (from, to) => [
   {
     input: `${from}.ts`,
     plugins: [esbuild()],
+    external,
     output: [
       {
         file: `${to}.mjs`,
@@ -27,6 +29,7 @@ export const rollupExportFile = (from, to) => [
   {
     input: `${from}.ts`,
     plugins: [dts()],
+    external,
     output: {
       file: `${to}.d.ts`,
       format: 'es',

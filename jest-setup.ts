@@ -31,7 +31,7 @@ jest.mock(
   },
 );
 
-jest.mock('pqb', () => require('./packages/pqb/src'), {
+jest.mock('pqb', () => require('./packages/pqb/src/public'), {
   virtual: true,
 });
 

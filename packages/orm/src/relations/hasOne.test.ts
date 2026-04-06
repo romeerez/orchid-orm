@@ -5,7 +5,8 @@ import {
   userRowToJSON,
   useQueryCounter,
 } from '../test-utils/orm.test-utils';
-import { Db, Query, NotFoundError, omit } from 'pqb/internal';
+import { Db, Query, omit } from 'pqb/internal';
+import { NotFoundError } from 'pqb';
 import { orchidORMWithAdapter } from '../orm';
 import {
   UserDefaultSelect,

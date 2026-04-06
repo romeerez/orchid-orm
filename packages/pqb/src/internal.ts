@@ -35,13 +35,22 @@ export {
   type RecordStringOrNumber,
   type RecordUnknown,
   type ShallowSimplify,
-} from './utils';
+  type PickQueryInputType,
+  type SqlFn,
+  type Timestamps,
+  type DecimalColumnData,
+  type NumberColumnData,
+  type ArrayData,
+  type DateColumnData,
+  type SerialColumnData,
+  type OperatorsArray,
+  type OperatorsJson,
+  type OperatorsOrdinalText,
+  type Ord,
+} from './index';
 
 // Snake case key symbol
-export { snakeCaseKey } from './columns/types';
-
-// Error types
-export { OrchidOrmInternalError, NotFoundError } from './query/errors';
+export { snakeCaseKey } from './index';
 
 // TableData - table configuration and metadata
 export {
@@ -58,7 +67,7 @@ export {
   type TableDataItemsUniqueConstraints,
   type TableDataMethods,
   type UniqueTableDataItem,
-} from './tableData';
+} from './index';
 
 // Column schema configuration
 export {
@@ -78,32 +87,25 @@ export {
   type ColumnTypeSchemaArg,
   type DefaultColumnTypes,
   type DefaultSchemaConfig,
-} from './columns';
+} from './index';
 
 // Operators
-export { Operators } from './columns/operators';
+export { Operators } from './index';
 
 // Column data types and utilities
-export {
-  type StringData,
-  type BaseNumberData,
-} from './columns/column-data-types';
+export { type StringData, type BaseNumberData } from './index';
 
 // Columns shape
-export { type ColumnsShape } from './columns/columns-shape';
+export { type ColumnsShape } from './index';
 
 // Hooks - AfterHook type and QueryHooks class
-export {
-  QueryHooks,
-  QueryHookUtils,
-  type AfterHook,
-} from './query/extra-features/hooks/hooks';
+export { QueryHooks, QueryHookUtils, type AfterHook } from './index';
 
 // Select utils
-export { getShapeFromSelect } from './query/basic-features/select/select.utils';
+export { getShapeFromSelect } from './index';
 
 // Hook select
-export { type HookSelectValue } from './query/basic-features/select/hook-select';
+export { type HookSelectValue } from './index';
 
 // Query internal types and utilities
 export {
@@ -151,7 +153,7 @@ export {
   type UniqueConstraints,
   type UpdateData,
   type WhereArg,
-} from './query';
+} from './index';
 
 // Internal query functions (prefixed with _)
 export {
@@ -186,7 +188,7 @@ export {
   cloneQueryBaseUnscoped,
   isQueryReturnsAll,
   prepareSubQueryForSql,
-} from './query';
+} from './index';
 
 // Column types (internal access)
 export {
@@ -236,10 +238,10 @@ export {
   VarCharColumn,
   XMLColumn,
   type ArrayColumnValue,
-} from './columns';
+} from './index';
 
 // Virtual column (internal)
-export { VirtualColumn } from './columns/column-types/virtual';
+export { VirtualColumn } from './index';
 
 // Raw SQL types
 export {
@@ -247,54 +249,40 @@ export {
   rawSqlToCode,
   DynamicRawSQL,
   type RawSqlBase,
-} from './query/expressions/raw-sql';
-export {
-  getSqlText,
-  quoteTableWithSchema,
-  type SingleSql,
-} from './query/sql/sql';
+} from './index';
+export { getSqlText, quoteTableWithSchema, type SingleSql } from './index';
 
 // RawSql for relations
-export { RawSql } from './query/expressions/raw-sql';
+export { RawSql } from './index';
 
 // Query utilities
-export { setQueryObjectValueImmutable } from './query/query.utils';
+export { setQueryObjectValueImmutable } from './index';
 
 // SearchWeight
-export { type SearchWeight } from './query/extra-features/search/search.sql';
+export { type SearchWeight } from './index';
 
 // Relations
 export {
   type RelationConfigBase,
   type RelationJoinQuery,
   type RelationsBase,
-} from './query/relations';
+} from './index';
 
 // Expression types
-export {
-  Expression,
-  isExpression,
-  type TemplateLiteralArgs,
-} from './query/expressions/expression';
+export { Expression, isExpression, type TemplateLiteralArgs } from './index';
 
 // Query basic features - AS
-export { getQueryAs } from './query/basic-features/as/as';
-export { raw } from './query/expressions/raw-sql';
-export { addTopCte, addTopCteSql } from './query/basic-features/cte/cte.sql';
-export {
-  type JoinQueryMethod,
-  pushQueryOnForOuter,
-} from './query/basic-features/join/join';
-export {
-  type FromArg,
-  type FromResult,
-} from './query/basic-features/from/from';
+export { getQueryAs } from './index';
+export { raw } from './index';
+export { addTopCte, addTopCteSql } from './index';
+export { type JoinQueryMethod, pushQueryOnForOuter } from './index';
+export { type FromArg, type FromResult } from './index';
 
 // Merge
-export { type MergeQuery } from './query/extra-features/merge/merge';
+export { type MergeQuery } from './index';
 
 // Colors
-export { colors } from './utils';
+export { colors } from './index';
 
 // QueryLogger
 export {
@@ -303,17 +291,17 @@ export {
   type QueryLogger,
   type QueryLogObject,
   type QueryLogOptions,
-} from './query/basic-features/log/log';
+} from './index';
 
 // Storage
-export { type StorageOptions } from './query/basic-features/storage/storage';
+export { type StorageOptions } from './index';
 
 // String escaping
-export { escapeString, escapeForMigration } from './quote';
-export { backtickQuote, quoteObjectKey } from './utils';
+export { escapeString, escapeForMigration } from './index';
+export { backtickQuote, quoteObjectKey } from './index';
 
 // Utility functions
-export { exhaustive } from './utils';
+export { exhaustive } from './index';
 
 // Adapter
 export {
@@ -327,52 +315,35 @@ export {
   type TransactionAdapterBase,
   type TransactionArgs,
   type AfterCommitStandaloneHook,
-} from './adapters/adapter';
+} from './index';
 
 // Default privileges
-export {
-  getSupportedDefaultPrivileges,
-  type DefaultPrivileges,
-} from './query/extra-features/default-privileges/default-privileges';
+export { getSupportedDefaultPrivileges, type DefaultPrivileges } from './index';
 
 // Computed columns
 export {
   type ComputedColumnsFromOptions,
   type ComputedOptionsConfig,
   type ComputedOptionsFactory,
-} from './query/extra-features/computed/computed';
+} from './index';
 
 // NoPrimaryKeyOption
-export { type NoPrimaryKeyOption } from './query/db';
+export { type NoPrimaryKeyOption } from './index';
 
 // _initQueryBuilder and DbResult
-export {
-  _initQueryBuilder,
-  createDbWithAdapter,
-  type DbResult,
-  type DbOptions,
-} from './query/db';
+export { _initQueryBuilder, type DbResult, type DbOptions } from './index';
 
 // AsyncState
-export { type AsyncState } from './query/basic-features/storage/storage';
+export { type AsyncState } from './index';
 
 // Column utilities
-export {
-  type DbStructureDomainsMap,
-  getColumnBaseType,
-} from './columns/column.utils';
+export { type DbStructureDomainsMap, getColumnBaseType } from './index';
 
 // Column from db utilities
-export {
-  assignDbDataToColumn,
-  type ColumnFromDbParams,
-} from './columns/column-from-db.utils';
+export { assignDbDataToColumn, type ColumnFromDbParams } from './index';
 
 // Columns by type
-export {
-  makeColumnsByType,
-  type ColumnsByType,
-} from './columns/columns-by-type';
+export { makeColumnsByType, type ColumnsByType } from './index';
 
 // Code generation utilities
 export {
@@ -388,33 +359,27 @@ export {
   type ColumnToCodeCtx,
   type Code,
   type Codes,
-} from './columns/code';
+} from './index';
 
 // Query data utilities
 export {
   pushQueryValueImmutable,
   getClonedQueryData,
   type JoinedShapes,
-} from './query/query-data';
+} from './index';
 
 // Upsert types
-export {
-  type UpsertData,
-  type UpsertThis,
-} from './query/basic-features/mutate/upsert';
+export { type UpsertData, type UpsertThis } from './index';
 
 // Column name management (for migrations)
 export {
   setCurrentColumnName,
   consumeColumnName,
   setDefaultLanguage,
-} from './columns/column';
+} from './index';
 
 // Unknown column (for raw SQL)
-export { UnknownColumn } from './columns/column-types/unknown';
+export { UnknownColumn } from './index';
 
 // Transaction
-export {
-  type IsolationLevel,
-  type TransactionOptions,
-} from './query/basic-features/transaction/transaction';
+export { type IsolationLevel, type TransactionOptions } from './index';
