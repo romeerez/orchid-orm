@@ -237,10 +237,8 @@ export const makeRakeDbConfig = <ColumnTypes>(
   }
 
   if ('baseTable' in config && config.baseTable) {
-    const { types, snakeCase, language } = config.baseTable.prototype;
+    const { types } = config.baseTable.prototype;
     result.columnTypes = types || defaultColumnTypes(defaultSchemaConfig);
-    if (snakeCase) result.snakeCase = true;
-    if (language) result.language = language;
   } else {
     const ct = 'columnTypes' in config && config.columnTypes;
     result.columnTypes = ((typeof ct === 'function'

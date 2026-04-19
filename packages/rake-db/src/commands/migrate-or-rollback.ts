@@ -6,6 +6,7 @@ import {
   emptyArray,
   MaybeArray,
   MaybePromise,
+  NoPrimaryKeyOption,
   pathToLog,
   QueryLogger,
   QueryLogOptions,
@@ -35,7 +36,7 @@ import {
   ChangeCommitCallback,
   MigrationCallback,
   ModuleExportsRecord,
-  RakeDbConfig,
+  RakeDbBaseTable,
   RakeDbMigrationId,
   RakeDbRenameMigrationsInput,
   SearchPath,
@@ -70,6 +71,10 @@ export interface MigrateConfigBase extends QueryLogOptions {
   afterMigrate?: MigrationCallback;
   beforeRollback?: MigrationCallback;
   afterRollback?: MigrationCallback;
+  snakeCase?: boolean;
+  language?: string;
+  noPrimaryKey?: NoPrimaryKeyOption;
+  baseTable?: RakeDbBaseTable<unknown>;
 }
 
 export interface MigrateConfigFileBased extends MigrateConfigBase {
@@ -149,18 +154,26 @@ export const processMigrateConfig = (
     }
   }
 
-  return {
+  const result: MigrateConfigInternal = {
     ...migrateConfigDefaults,
     ...(config as MigrateConfigInternal),
     migrationsPath: migrationsPath as string,
     logger: handleConfigLogger(config),
   };
+
+  if ('baseTable' in config && config.baseTable) {
+    const { snakeCase, language } = config.baseTable.prototype;
+    if (snakeCase) result.snakeCase = true;
+    if (language) result.language = language;
+  }
+
+  return result;
 };
 
 // for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible locals
 const transactionIfSingle = (
   adapter: AdapterBase,
-  config: Pick<RakeDbConfig, 'transaction' | 'transactionSearchPath'>,
+  config: Pick<MigrateConfigInternal, 'transaction' | 'transactionSearchPath'>,
   fn: (trx: AdapterBase) => Promise<void>,
 ) => {
   return config.transaction === 'single'
@@ -494,7 +507,7 @@ export const migrateOrRollback = async (
 };
 
 const checkMigrationOrder = (
-  config: Pick<RakeDbConfig, 'migrationId'>,
+  config: Pick<MigrateConfigInternal, 'migrationId'>,
   set: MigrationsSet,
   { sequence, map }: RakeDbAppliedVersions,
   force?: boolean,
@@ -548,7 +561,7 @@ export const changeCache: Record<string, MigrationChange[] | undefined> = {};
 
 export const getChanges = async (
   file: MigrationItemHasLoad,
-  config?: Pick<RakeDbConfig, 'forceDefaultExports'>,
+  config?: Pick<MigrateConfigInternal, 'forceDefaultExports'>,
 ): Promise<MigrationChange[]> => {
   clearChanges();
 
@@ -595,7 +608,10 @@ export const applyMigration = async (
   trx: AdapterBase,
   up: boolean,
   changes: MigrationChange[],
-  config: Pick<RakeDbConfig, 'log' | 'logger' | 'transactionSearchPath'>,
+  config: Pick<
+    MigrateConfigInternal,
+    'log' | 'logger' | 'transactionSearchPath'
+  >,
 ): Promise<SilentQueries> => {
   const { adapter, getDb } = createMigrationInterface(trx, up, config);
 
@@ -619,7 +635,7 @@ const changeMigratedVersion = async (
   adapter: SilentQueries,
   up: boolean,
   file: MigrationItem,
-  config: Pick<RakeDbConfig, 'migrationsTable'>,
+  config: Pick<MigrateConfigInternal, 'migrationsTable'>,
 ) => {
   await (up ? saveMigratedVersion : deleteMigratedVersion)(
     adapter,
