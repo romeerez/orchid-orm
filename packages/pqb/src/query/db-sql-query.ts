@@ -8,6 +8,7 @@ import {
 import { Sql } from './sql/sql';
 import { TemplateLiteralArgs } from './expressions/expression';
 import { AdapterBase, QueryResult, QueryResultRow } from '../adapters/adapter';
+import { sqlSessionContextGetStateFromAsyncState } from '../adapters/features/sql-session-context';
 import { RecordUnknown } from '../utils';
 import { TopToSqlCtx, ToSQLCtx } from './sql/to-sql';
 import { QueryInternal } from './query-internal';
@@ -135,9 +136,14 @@ export const performQuery = async <Result = QueryResult>(
   if (log) logData = log.beforeQuery(sql);
 
   try {
-    const result = await (trx?.transactionAdapter || q.adapterNotInTransaction)[
-      method as 'query'
-    ](sql.text, sql.values);
+    const adapter = trx?.transactionAdapter || q.adapterNotInTransaction;
+    const result = await adapter[method as 'query'](
+      sql.text,
+      sql.values,
+      undefined,
+      undefined,
+      sqlSessionContextGetStateFromAsyncState(trx),
+    );
 
     if (log) log.afterQuery(sql, logData);
 

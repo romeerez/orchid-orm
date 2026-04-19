@@ -115,6 +115,32 @@ await db.$transaction(async () => {
 
 If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
 
+## SQL session context in transactions
+
+When using `$withOptions` with `role` or `setConfig`, explicit transactions opened inside the callback inherit the same SQL session context.
+
+```ts
+await db.$withOptions(
+  {
+    role: 'app_user',
+    setConfig: { 'app.tenant_id': tenantId },
+  },
+  async () => {
+    // Query outside transaction uses the SQL session context
+    const project = await db.project.find(projectId);
+
+    await db.$transaction(async () => {
+      // Queries inside transaction inherit the same role and config
+      await db.project.find(projectId).update({ lastViewedAt: new Date() });
+    });
+  },
+);
+```
+
+This works consistently across both supported adapters (`node-postgres` and `postgres-js`) even though their internal connection handling differs.
+
+For more details on SQL session options, see [$withOptions](/guide/orm-methods.html#withoptions).
+
 ## ensureTransaction
 
 [//]: # 'has JSDoc'

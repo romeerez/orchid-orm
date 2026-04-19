@@ -25,7 +25,8 @@
     "test-factory": "pnpm --filter orchid-orm-test-factory",
     "test-utils": "pnpm --filter test-utils",
     "repro": "pnpm --filter repro",
-    "doc": "cd docs && npm start"
+    "doc": "cd docs && npm start",
+    "doc:build": "cd docs && pnpm build"
   },
   "devDependencies": {
     "@changesets/cli": "2.26.1",

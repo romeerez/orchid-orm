@@ -376,7 +376,10 @@ export {
 } from './query/db';
 
 // AsyncState
-export { type AsyncState } from './query/basic-features/storage/storage';
+export {
+  type AsyncState,
+  type SqlSessionState,
+} from './query/basic-features/storage/storage';
 
 // Column utilities
 export {

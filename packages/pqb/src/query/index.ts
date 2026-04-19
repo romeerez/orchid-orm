@@ -64,6 +64,7 @@ export * from './query-data';
 export * from './query-methods';
 export type {
   AsyncState,
+  SqlSessionState,
   StorageOptions,
 } from './basic-features/storage/storage';
 export * from './internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';

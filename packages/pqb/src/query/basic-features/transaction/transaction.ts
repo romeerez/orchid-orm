@@ -11,11 +11,8 @@ import { SingleSqlItem } from '../../sql/sql';
 import { OrchidOrmError } from '../../errors';
 import { PickQueryQAndInternal } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
-import {
-  AsyncState,
-  processStorageOptions,
-  StorageOptions,
-} from '../storage/storage';
+import { AsyncState, processStorageOptions } from '../storage/storage';
+import { QuerySchema } from '../schema/schema';
 
 export interface AsyncTransactionState extends AsyncState {
   transactionAdapter: TransactionAdapterBase;
@@ -36,7 +33,9 @@ export type IsolationLevel =
   | 'READ COMMITTED'
   | 'READ UNCOMMITTED';
 
-export interface TransactionOptions extends StorageOptions {
+export interface TransactionOptions {
+  log?: boolean;
+  schema?: QuerySchema;
   level?: IsolationLevel;
   readOnly?: boolean;
   deferrable?: boolean;
@@ -280,7 +279,7 @@ export class QueryTransaction {
       values: emptyArray,
     } as unknown as SingleSqlItem;
 
-    const opts = processStorageOptions(this, options);
+    const opts = processStorageOptions(this, undefined, options);
 
     const log = opts?.log || this.q.log;
 

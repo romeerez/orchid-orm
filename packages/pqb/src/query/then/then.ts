@@ -13,7 +13,9 @@ import {
   AdapterBase,
   AfterCommitHook,
   QueryResult,
+  SqlSessionState,
 } from '../../adapters/adapter';
+import { sqlSessionContextGetStateFromAsyncState } from '../../adapters/features/sql-session-context';
 import {
   callWithThis,
   emptyArray,
@@ -383,6 +385,7 @@ const then = async (
         sql,
         startingSavepoint,
         releasingSavepoint,
+        sqlSessionContextGetStateFromAsyncState(state),
       );
       const { runAfterQuery } = sql;
 
@@ -442,6 +445,7 @@ const then = async (
             sql,
             i === 0 ? startingSavepoint : undefined,
             i === last ? releasingSavepoint : undefined,
+            sqlSessionContextGetStateFromAsyncState(state),
           );
 
           if (queryResult) {
@@ -842,7 +846,8 @@ const execQuery = (
   method: 'query' | 'arrays',
   sql: SingleSql,
   startingSavepoint: string | undefined,
-  releasingSavepoint?: string | undefined,
+  releasingSavepoint: string | undefined,
+  sqlSessionState: SqlSessionState | undefined,
 ) => {
   return (
     adapter[method as 'query'](
@@ -850,6 +855,7 @@ const execQuery = (
       sql.values,
       startingSavepoint,
       releasingSavepoint,
+      sqlSessionState,
     ) as Promise<QueryResult>
   ).then((result) => {
     if (result.rowCount && !result.rows.length) {

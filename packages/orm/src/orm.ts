@@ -142,11 +142,45 @@ interface OrchidORMMethods {
   ): FromResult<FromQuery, Arg>;
 
   /**
-   * `$withOptions` supports overriding `log` and `schema`.
+   * `$withOptions` supports overriding `log`, `schema`, `role`, and `setConfig`.
    *
    * - `log`: boolean, enables or disables logging in the scope of the callback.
    * - `schema`: set a **default** schema, note that it does not override
    *   if you already have a schema set in the ORM config or for a specific table.
+   * - `role`: string, switches the Postgres role for the duration of the callback.
+   *   Used for row-level security policies.
+   * - `setConfig`: object with string, number, or boolean values, sets Postgres custom
+   *   settings for the duration of the callback. Use dotted names like `app.tenant_id`.
+   *   Values are normalized to strings internally.
+   *
+   * SQL session options (`role` and `setConfig`) cannot be nested.
+   * If an outer scope already has `role` or `setConfig`, attempting to set them again
+   * in a nested `$withOptions` call will throw an error.
+   * Nested scopes that only change `log` or `schema` will inherit the outer SQL session context.
+   *
+   * Explicit transactions inside the callback inherit the same SQL session context:
+   *
+   * ```ts
+   * await db.$withOptions(
+   *   {
+   *     role: 'app_user',
+   *     setConfig: {
+   *       'app.tenant_id': tenantId,
+   *       'app.user_id': userId,
+   *     },
+   *   },
+   *   async () => {
+   *     const project = await db.project.find(projectId);
+   *
+   *     await db.$transaction(async () => {
+   *       // This query runs in the transaction with the same role and config
+   *       await db.project.find(projectId).update({ lastViewedAt: new Date() });
+   *     });
+   *   },
+   * );
+   * ```
+   *
+   * Basic usage with `log` and `schema`:
    *
    * ```ts
    * await db.$withOptions({ log: true, schema: 'custom' }, async () => {

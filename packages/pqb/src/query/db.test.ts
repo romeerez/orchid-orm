@@ -339,7 +339,7 @@ describe('db', () => {
       const result = await testDb.query(raw({ raw: sql }));
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toBeCalledWith(sql, []);
+      expect(query).toBeCalledWith(sql, [], undefined, undefined, undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -352,7 +352,7 @@ describe('db', () => {
       const result = await testDb.query`SELECT 1 AS one`;
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toBeCalledWith(sql, []);
+      expect(query).toBeCalledWith(sql, [], undefined, undefined, undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -366,7 +366,7 @@ describe('db', () => {
       const result = await testDb.query(raw({ raw: sql }));
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toBeCalledWith(sql, []);
+      expect(query).toBeCalledWith(sql, [], undefined, undefined, undefined);
     });
 
     it('should query arrays', async () => {
@@ -377,7 +377,7 @@ describe('db', () => {
       const result = await testDb.queryArrays(raw({ raw: sql }));
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toBeCalledWith(sql, []);
+      expect(query).toBeCalledWith(sql, [], undefined, undefined, undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -390,7 +390,7 @@ describe('db', () => {
       const result = await testDb.queryArrays`SELECT 1 AS one`;
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toBeCalledWith(sql, []);
+      expect(query).toBeCalledWith(sql, [], undefined, undefined, undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -404,7 +404,7 @@ describe('db', () => {
       const result = await testDb.queryArrays(raw({ raw: sql }));
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toBeCalledWith(sql, []);
+      expect(query).toBeCalledWith(sql, [], undefined, undefined, undefined);
     });
 
     it('should support query modifiers', async () => {

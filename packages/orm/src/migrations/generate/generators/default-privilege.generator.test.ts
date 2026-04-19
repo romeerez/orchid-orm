@@ -109,13 +109,12 @@ describe('default privileges', () => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -135,7 +134,7 @@ describe('default privileges', () => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -149,7 +148,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} SELECT on tables to testRole in schema ${pale('testSchema')}`,
+      )} SELECT on tables to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -163,13 +162,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -187,7 +185,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -212,30 +210,30 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} SELECT, INSERT, UPDATE, DELETE on tables to testRole in schema ${pale(
+      )} SELECT, INSERT, UPDATE, DELETE on tables to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
       )} ${allDefaultPrivilegesOptions.tables?.grantablePrivileges?.join(
         ', ',
-      )} on tables with grant option to testRole in schema ${pale(
+      )} on tables with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} UPDATE on sequences to testRole in schema ${pale('testSchema')}`,
+      )} UPDATE on sequences to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} USAGE, SELECT on sequences with grant option to testRole in schema ${pale(
+      )} USAGE, SELECT on sequences with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} EXECUTE on functions to testRole in schema ${pale('testSchema')}`,
+      )} EXECUTE on functions to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} USAGE on types with grant option to testRole in schema ${pale(
+      )} USAGE on types with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -245,10 +243,9 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
         // Grant tables privileges using the options object
         await db.changeDefaultPrivileges({
-          grantee: 'testRole',
+          grantee: 'app-user',
           schema: 'testSchema',
           grant: allChangeDefaultPrivilegesOptions.grant,
         });
@@ -257,7 +254,7 @@ change(async (db) => {
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [],
           },
         ],
@@ -270,7 +267,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     revoke: {
       tables: {
@@ -294,30 +291,30 @@ change(async (db) => {
     assert.report(
       `${red(
         '- revoke default privileges',
-      )} EXECUTE on functions from testRole in schema ${pale('testSchema')}`,
+      )} EXECUTE on functions from app-user in schema ${pale('testSchema')}`,
       `${red(
         '- revoke default privileges',
-      )} SELECT, INSERT on tables from testRole in schema ${pale(
+      )} SELECT, INSERT on tables from app-user in schema ${pale(
         'testSchema',
       )}`,
       `${red(
         '- revoke default privileges',
-      )} UPDATE, DELETE on tables with grant option from testRole in schema ${pale(
+      )} UPDATE, DELETE on tables with grant option from app-user in schema ${pale(
         'testSchema',
       )}`,
       `${red(
         '- revoke default privileges',
-      )} SELECT, USAGE on sequences from testRole in schema ${pale(
+      )} SELECT, USAGE on sequences from app-user in schema ${pale(
         'testSchema',
       )}`,
       `${red(
         '- revoke default privileges',
-      )} UPDATE on sequences with grant option from testRole in schema ${pale(
+      )} UPDATE on sequences with grant option from app-user in schema ${pale(
         'testSchema',
       )}`,
       `${red(
         '- revoke default privileges',
-      )} USAGE on types with grant option from testRole in schema ${pale(
+      )} USAGE on types with grant option from app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -327,9 +324,8 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
         await db.changeDefaultPrivileges({
-          grantee: 'testRole',
+          grantee: 'app-user',
           schema: 'testSchema',
           grant: {
             tables: {
@@ -342,7 +338,7 @@ change(async (db) => {
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -362,7 +358,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -376,7 +372,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} INSERT on tables to testRole in schema ${pale('testSchema')}`,
+      )} INSERT on tables to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -384,9 +380,8 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
         await db.changeDefaultPrivileges({
-          grantee: 'testRole',
+          grantee: 'app-user',
           schema: 'testSchema',
           grant: {
             tables: {
@@ -399,7 +394,7 @@ change(async (db) => {
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -419,7 +414,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -438,10 +433,10 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} DELETE on tables to testRole in schema ${pale('testSchema')}`,
+      )} DELETE on tables to app-user in schema ${pale('testSchema')}`,
       `${red(
         '- revoke default privileges',
-      )} INSERT, UPDATE on tables from testRole in schema ${pale(
+      )} INSERT, UPDATE on tables from app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -451,9 +446,8 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
         await db.changeDefaultPrivileges({
-          grantee: 'testRole',
+          grantee: 'app-user',
           schema: 'testSchema',
           grant: {
             tables: {
@@ -467,7 +461,7 @@ change(async (db) => {
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -498,6 +492,9 @@ change(async (db) => {
       schema: 'schema1',
       dbOptions: {
         roles: [
+          {
+            name: 'app-user',
+          },
           {
             name: 'role1',
             defaultPrivileges: [
@@ -584,13 +581,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -611,7 +607,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       sequences: {
@@ -626,12 +622,12 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} USAGE, SELECT on sequences to testRole in schema ${pale(
+      )} USAGE, SELECT on sequences to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} UPDATE on sequences with grant option to testRole in schema ${pale(
+      )} UPDATE on sequences with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -641,13 +637,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -667,7 +662,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       functions: {
@@ -681,7 +676,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} EXECUTE on functions to testRole in schema ${pale('testSchema')}`,
+      )} EXECUTE on functions to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -689,13 +684,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -715,7 +709,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       types: {
@@ -729,7 +723,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} USAGE on types to testRole in schema ${pale('testSchema')}`,
+      )} USAGE on types to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -738,14 +732,13 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
         // No default privileges in database
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -769,7 +762,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -786,10 +779,10 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on tables to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -801,10 +794,9 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
         // Pre-populate with individual privileges so introspection matches code config
         await db.changeDefaultPrivileges({
-          grantee: 'testRole',
+          grantee: 'app-user',
           schema: 'testSchema',
           grant: {
             tables: {
@@ -827,7 +819,7 @@ change(async (db) => {
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -857,13 +849,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -881,7 +872,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -904,20 +895,20 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on tables to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on types to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -925,13 +916,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -961,7 +951,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -984,22 +974,22 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on tables with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on types with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -1010,13 +1000,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -1035,7 +1024,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -1058,22 +1047,22 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on tables with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on types with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -1084,13 +1073,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -1115,7 +1103,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -1138,18 +1126,18 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} SELECT on tables to testRole in schema ${pale('testSchema')}`,
+      )} SELECT on tables to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} USAGE on sequences to testRole in schema ${pale('testSchema')}`,
+      )} USAGE on sequences to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on types to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -1157,13 +1145,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -1185,7 +1172,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -1208,22 +1195,22 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on tables with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on types to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -1231,13 +1218,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -1259,7 +1245,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -1282,20 +1268,20 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} SELECT on tables to testRole in schema ${pale('testSchema')}`,
+      )} SELECT on tables to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types with grant option to testRole in schema ${pale(
+      )} ALL PRIVILEGES on types with grant option to app-user in schema ${pale(
         'testSchema',
       )}`,
     );
@@ -1303,13 +1289,10 @@ change(async (db) => {
 
   it('should grant global default privileges', async () => {
     await arrange({
-      async prepareDb(db) {
-        await db.createRole('testRole');
-      },
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 tables: {
@@ -1328,7 +1311,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     grant: {
       tables: {
         privileges: ['SELECT'],
@@ -1341,19 +1324,16 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} SELECT on tables to testRole ${pale('in all schemas')}`,
+      )} SELECT on tables to app-user ${pale('in all schemas')}`,
     );
   });
 
   it('should grant default privileges on schemas and largeObjects', async () => {
     await arrange({
-      async prepareDb(db) {
-        await db.createRole('testRole');
-      },
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schemas: {
@@ -1375,7 +1355,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     grant: {
       schemas: {
         privileges: ['USAGE'],
@@ -1396,11 +1376,11 @@ change(async (db) => {
       ...[
         `${green(
           '+ grant default privileges',
-        )} USAGE on schemas to testRole ${pale('in all schemas')}`,
+        )} USAGE on schemas to app-user ${pale('in all schemas')}`,
         postgresVersion >= 18
           ? `${green(
               '+ grant default privileges',
-            )} SELECT on large objects to testRole ${pale('in all schemas')}`
+            )} SELECT on large objects to app-user ${pale('in all schemas')}`
           : undefined,
       ].filter((x): x is string => !!x),
     );
@@ -1412,13 +1392,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -1438,7 +1417,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -1452,7 +1431,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on tables to app-user in schema ${pale('testSchema')}`,
     );
   });
 
@@ -1463,13 +1442,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createSchema('testSchema');
-        await db.createRole('testRole');
       },
       schema: 'testSchema',
       dbOptions: {
         roles: [
           {
-            name: 'testRole',
+            name: 'app-user',
             defaultPrivileges: [
               {
                 schema: 'testSchema',
@@ -1492,7 +1470,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.changeDefaultPrivileges({
-    grantee: 'testRole',
+    grantee: 'app-user',
     schema: 'testSchema',
     grant: {
       tables: {
@@ -1515,20 +1493,20 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on tables to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on tables to app-user in schema ${pale('testSchema')}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on sequences to testRole in schema ${pale(
+      )} ALL PRIVILEGES on sequences to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on functions to testRole in schema ${pale(
+      )} ALL PRIVILEGES on functions to app-user in schema ${pale(
         'testSchema',
       )}`,
       `${green(
         '+ grant default privileges',
-      )} ALL PRIVILEGES on types to testRole in schema ${pale('testSchema')}`,
+      )} ALL PRIVILEGES on types to app-user in schema ${pale('testSchema')}`,
     );
   });
 });

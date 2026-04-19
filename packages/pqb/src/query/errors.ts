@@ -141,3 +141,17 @@ export class UnhandledTypeError extends OrchidOrmInternalError {
     super(query, `Unhandled type: ${JSON.stringify(value)} received`);
   }
 }
+
+/**
+ * Error thrown when attempting to nest SQL session scopes.
+ * Nested withOptions/$withOptions calls that supply role or setConfig while an outer
+ * scope already has SQL session state defined will throw this error.
+ */
+export class NestedSqlSessionError extends OrchidOrmInternalError {
+  constructor(query: IsQuery) {
+    super(
+      query,
+      'Cannot nest SQL session scopes. Outer scope already has role or setConfig defined.',
+    );
+  }
+}

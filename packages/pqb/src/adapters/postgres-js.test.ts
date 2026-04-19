@@ -13,10 +13,9 @@ testDb.adapter = testAdapter;
 
 describe('postgres-js', () => {
   afterEach(() => jest.clearAllMocks());
+  afterAll(() => testAdapter.close());
 
   describe('queries', () => {
-    afterAll(() => testAdapter.close());
-
     it('should run query and close connection by calling .close()', async () => {
       const res = await testAdapter.query('SELECT 1 as num');
 
@@ -436,6 +435,206 @@ describe('postgres-js', () => {
         schema: 'schema',
       });
       expect(adapter.getSchema()).toBe('schema');
+    });
+  });
+
+  describe('sql session state', () => {
+    describe('query with sqlSessionState', () => {
+      it('should set role via sqlSessionState and restore after query', async () => {
+        // Get the default role to verify restoration
+        const beforeRes = await testAdapter.query('SELECT current_user');
+        const defaultRole = beforeRes.rows[0].current_user;
+
+        // Query with the 'app-user' role - should capture, set, query, restore
+        const res = await testAdapter.query(
+          'SELECT current_user',
+          undefined,
+          undefined,
+          undefined,
+          { role: 'app-user' },
+        );
+
+        expect(res.rows[0].current_user).toBe('app-user');
+
+        // Verify role was restored to the default role
+        const afterRes = await testAdapter.query('SELECT current_user');
+        expect(afterRes.rows[0].current_user).toBe(defaultRole);
+      });
+
+      it('should set config via sqlSessionState and restore after query', async () => {
+        // Pre-set one config to test proper recovery
+        await testAdapter.query(
+          `SELECT set_config('app.preset_key', 'preset_value', false)`,
+        );
+
+        // Query with 2 config values - one pre-set, one new
+        const res = await testAdapter.query(
+          `SELECT
+            current_setting('app.preset_key', true) as preset,
+            current_setting('app.new_key', true) as new`,
+          undefined,
+          undefined,
+          undefined,
+          {
+            setConfig: {
+              'app.preset_key': 'new_preset_value',
+              'app.new_key': 'new_value',
+            },
+          },
+        );
+
+        expect(res.rows[0]).toEqual({
+          preset: 'new_preset_value',
+          new: 'new_value',
+        });
+
+        // Configs are restored after query - preset_key restored to original, new_key reset
+        const afterRes = await testAdapter.query(
+          `SELECT
+            current_setting('app.preset_key', true) as preset,
+            current_setting('app.new_key', true) as new`,
+        );
+
+        // Preset key should be restored to original value
+        expect(afterRes.rows[0].preset).toBe('preset_value');
+        // New key should be empty (reset) since it wasn't set before
+        expect(afterRes.rows[0].new).toBe('');
+      });
+
+      it('should handle multiple config keys in sqlSessionState', async () => {
+        // Pre-set one config to test proper recovery
+        await testAdapter.query(
+          `SELECT set_config('app.key1', 'original1', false)`,
+        );
+
+        const res = await testAdapter.query(
+          `SELECT
+            current_setting('app.key1', true) as k1,
+            current_setting('app.key2', true) as k2`,
+          undefined,
+          undefined,
+          undefined,
+          {
+            setConfig: {
+              'app.key1': 'value1',
+              'app.key2': 'value2',
+            },
+          },
+        );
+
+        expect(res.rows[0]).toEqual({
+          k1: 'value1',
+          k2: 'value2',
+        });
+
+        // Verify key1 is restored to original, key2 is reset
+        const afterRes = await testAdapter.query(
+          `SELECT
+            current_setting('app.key1', true) as k1,
+            current_setting('app.key2', true) as k2`,
+        );
+
+        expect(afterRes.rows[0].k1).toBe('original1');
+        expect(afterRes.rows[0].k2).toBe('');
+      });
+    });
+
+    describe('arrays with sqlSessionState', () => {
+      it('should execute arrays query with sqlSessionState', async () => {
+        // Pre-set one config to test proper recovery
+        await testAdapter.query(
+          `SELECT set_config('app.arr_preset', 'preset_val', false)`,
+        );
+
+        const res = await testAdapter.arrays(
+          `SELECT
+            current_setting('app.arr_preset', true),
+            current_setting('app.arr_new', true)`,
+          undefined,
+          undefined,
+          undefined,
+          {
+            setConfig: {
+              'app.arr_preset': 'new_preset',
+              'app.arr_new': 'new_val',
+            },
+          },
+        );
+
+        expect(res.rows[0][0]).toBe('new_preset');
+        expect(res.rows[0][1]).toBe('new_val');
+
+        // Verify preset is restored, new is reset
+        const afterRes = await testAdapter.arrays(
+          `SELECT
+            current_setting('app.arr_preset', true),
+            current_setting('app.arr_new', true)`,
+        );
+
+        expect(afterRes.rows[0][0]).toBe('preset_val');
+        expect(afterRes.rows[0][1]).toBe('');
+      });
+    });
+
+    describe('transaction with sqlSessionState', () => {
+      it('should handle sqlSessionState in transaction queries', async () => {
+        // Pre-set one config outside transaction
+        await testAdapter.query(
+          `SELECT set_config('app.trx_preset', 'original', false)`,
+        );
+
+        await testAdapter.transaction(async (trx) => {
+          // Query with sqlSessionState inside transaction
+          const res = await trx.query(
+            `SELECT
+              current_setting('app.trx_preset', true) as preset,
+              current_setting('app.trx_new', true) as new`,
+            undefined,
+            undefined,
+            undefined,
+            {
+              setConfig: {
+                'app.trx_preset': 'trx_preset_val',
+                'app.trx_new': 'trx_new_val',
+              },
+            },
+          );
+
+          expect(res.rows[0]).toEqual({
+            preset: 'trx_preset_val',
+            new: 'trx_new_val',
+          });
+        });
+
+        // Verify preset is restored after transaction, new is reset
+        const afterRes = await testAdapter.query(
+          `SELECT
+            current_setting('app.trx_preset', true) as preset,
+            current_setting('app.trx_new', true) as new`,
+        );
+
+        expect(afterRes.rows[0].preset).toBe('original');
+        expect(afterRes.rows[0].new).toBe('');
+      });
+
+      it('should set role in transaction and restore after', async () => {
+        await testAdapter.transaction(async (trx) => {
+          // Set role to 'app-user' and verify
+          const res = await trx.query(
+            'SELECT current_user',
+            undefined,
+            undefined,
+            undefined,
+            { role: 'app-user' },
+          );
+
+          expect(res.rows[0].current_user).toBe('app-user');
+        });
+
+        // After transaction, role should be restored
+        const afterRes = await testAdapter.query('SELECT current_user');
+        expect(afterRes.rows[0].current_user).not.toBe('app-user');
+      });
     });
   });
 });

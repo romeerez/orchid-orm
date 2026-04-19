@@ -74,6 +74,10 @@ const arrange = async (arg: {
           {
             noPrimaryKey: 'ignore',
             ...arg.dbOptions,
+            roles: arg.dbOptions?.roles
+              ? // mention the role that always exists to omit it from the migrations
+                [{ name: 'app-user' }, ...arg.dbOptions.roles]
+              : undefined,
             generatorIgnore: {
               ...arg.dbOptions?.generatorIgnore,
               extensions: [

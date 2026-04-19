@@ -28,6 +28,11 @@ import {
   getTransactionArgs,
   mergeLocals,
 } from './adapter.utils';
+import { SqlSessionState } from './adapter';
+import {
+  sqlSessionContextComputeSetup,
+  sqlSessionContextExecute,
+} from './features/sql-session-context';
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -208,16 +213,42 @@ export class NodePostgresAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
-    return performQuery(this, text, values, undefined) as never;
+    return queryWithSqlSession(
+      this,
+      undefined,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      false,
+      sqlSessionState,
+      true,
+    ) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>> {
-    return performQuery(this, text, values, 'array') as never;
+    return queryWithSqlSession(
+      this,
+      undefined,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      true,
+      sqlSessionState,
+      true,
+    ) as never;
   }
 
   async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
@@ -230,6 +261,23 @@ export class NodePostgresAdapter implements AdapterBase {
         client,
         options?.options ? 'BEGIN ' + options.options : 'BEGIN',
       );
+
+      // Apply transaction-scoped SQL session state (role and setConfig) once at transaction start
+      if (options?.sqlSessionState) {
+        const { role, setConfig } = options.sqlSessionState;
+        if (role) {
+          await performQueryOnClient(client, `SET ROLE ${role}`);
+        }
+        if (setConfig && Object.keys(setConfig).length > 0) {
+          const setColumns = Object.entries(setConfig)
+            .map(
+              ([key, value]) =>
+                `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value}', true)`,
+            )
+            .join(', ');
+          await performQueryOnClient(client, `SELECT ${setColumns}`);
+        }
+      }
 
       const localsSql = getSetLocalsSql(options);
       if (localsSql) {
@@ -304,26 +352,93 @@ const setSearchPath = (client: PoolClient, searchPath?: string) => {
   return;
 };
 
-const performQuery = async (
+// Execute query with SQL session state setup/cleanup
+// For non-transactional queries: checks out a PoolClient and releases it after (borrowConnection=true)
+// For transactional queries: uses the existing transaction connection (borrowConnection=false)
+const queryWithSqlSession = async <T extends QueryResultRow = QueryResultRow>(
   adapter: NodePostgresAdapter,
+  client: PoolClient | undefined,
   text: string,
-  values?: unknown[],
-  rowMode?: 'array',
-  startingSavepoint?: string,
-) => {
-  const client = await adapter.connect();
-  try {
-    await setSearchPath(client, adapter.searchPath);
-    return await performQueryOnClient(
-      client,
+  values: unknown[] | undefined,
+  startingSavepoint: string | undefined,
+  releasingSavepoint: string | undefined,
+  arraysMode: boolean,
+  sessionState: SqlSessionState | undefined,
+  borrowConnection = false,
+): Promise<QueryResult<T>> => {
+  const setup = sqlSessionContextComputeSetup(sessionState);
+
+  if (!setup) {
+    if (borrowConnection) {
+      const conn = await adapter.connect();
+      try {
+        await setSearchPath(conn, adapter.searchPath);
+        return await performQueryOnClient(
+          conn,
+          text,
+          values,
+          arraysMode ? 'array' : undefined,
+          startingSavepoint,
+          releasingSavepoint,
+        );
+      } finally {
+        conn.release();
+      }
+    }
+    return performQueryOnClient(
+      client!,
       text,
       values,
-      rowMode,
+      arraysMode ? 'array' : undefined,
       startingSavepoint,
+      releasingSavepoint,
     );
-  } finally {
-    client.release();
   }
+
+  const conn = borrowConnection ? await adapter.connect() : client!;
+
+  const queryFn = (sql: string, vals?: unknown[]) => {
+    return conn
+      .query({ text: sql, values: vals, rowMode: 'array' })
+      .then((res) => ({
+        rows: res.rows,
+        rowCount: res.rowCount ?? 0,
+        fields: res.fields.map((f) => ({ name: f.name })),
+      }));
+  };
+
+  const releaseFn = borrowConnection
+    ? async () => {
+        conn.release();
+      }
+    : undefined;
+
+  const mainQuery = () =>
+    performQueryOnClient(
+      conn,
+      text,
+      values,
+      arraysMode ? 'array' : undefined,
+      startingSavepoint,
+      releasingSavepoint,
+    );
+
+  if (borrowConnection) {
+    try {
+      await setSearchPath(conn, adapter.searchPath);
+      return await sqlSessionContextExecute<T>(
+        queryFn,
+        setup,
+        mainQuery,
+        releaseFn,
+      );
+    } catch (err) {
+      conn.release();
+      throw err;
+    }
+  }
+
+  return sqlSessionContextExecute<T>(queryFn, setup, mainQuery);
 };
 
 const performQueryOnClient = async (
@@ -476,15 +591,19 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
     values?: unknown[],
     startingSavepoint?: string,
     releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
-    return await performQueryOnClient(
+    return queryWithSqlSession(
+      this.adapter,
       this.client,
       text,
       values,
-      undefined,
       startingSavepoint,
       releasingSavepoint,
-    );
+      false,
+      sqlSessionState,
+      false,
+    ) as never;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -493,19 +612,51 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
     values?: unknown[],
     startingSavepoint?: string,
     releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>> {
-    return await performQueryOnClient(
+    return queryWithSqlSession(
+      this.adapter,
       this.client,
       text,
       values,
-      'array',
       startingSavepoint,
       releasingSavepoint,
-    );
+      true,
+      sqlSessionState,
+      false,
+    ) as never;
   }
 
   async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
     const { cb, options } = getTransactionArgs(args);
+
+    // For nested transactions with SQL session state, capture outer transaction-local values
+    let capturedRole: string | undefined;
+    const capturedConfigs: Record<string, string | null> = {};
+    const sqlSession = options?.sqlSessionState;
+
+    if (sqlSession) {
+      // Capture current role if we're going to override it
+      if (sqlSession.role) {
+        const roleResult = await this.query<{ role: string }>(
+          'SELECT current_role as role',
+        );
+        capturedRole = roleResult.rows[0].role;
+      }
+
+      // Capture current config values for keys we're going to override
+      if (
+        sqlSession.setConfig &&
+        Object.keys(sqlSession.setConfig).length > 0
+      ) {
+        for (const key of Object.keys(sqlSession.setConfig)) {
+          const configResult = await this.query<{ val: string | null }>(
+            `SELECT current_setting('${key.replace(/'/g, "''")}', true) as val`,
+          );
+          capturedConfigs[key] = configResult.rows[0].val;
+        }
+      }
+    }
 
     const localsSql = getSetLocalsSql(options);
     if (localsSql) {
@@ -514,18 +665,36 @@ export class NodePostgresTransactionAdapter implements TransactionAdapterBase {
 
     const locals = mergeLocals(this.locals, options);
 
-    const res = (await cb(
-      new NodePostgresTransactionAdapter(
-        this.adapter,
-        this.client,
-        this,
-        locals,
-      ),
-    )) as Result;
+    let res: Result;
+    try {
+      res = (await cb(
+        new NodePostgresTransactionAdapter(
+          this.adapter,
+          this.client,
+          this,
+          locals,
+        ),
+      )) as Result;
+    } finally {
+      // Restore outer transaction-local values after nested transaction completes
+      if (sqlSession) {
+        if (capturedRole !== undefined) {
+          await this.query(`SET ROLE ${capturedRole}`);
+        }
 
-    const resetLocalsSql = getResetLocalsSql(this.locals, options);
-    if (resetLocalsSql) {
-      await this.query(resetLocalsSql);
+        for (const [key, value] of Object.entries(capturedConfigs)) {
+          // Reset to empty string if previously unset (null), otherwise restore previous value
+          const restoreValue = value === null ? '' : value;
+          await this.query(
+            `SELECT set_config('${key.replace(/'/g, "''")}', '${restoreValue.replace(/'/g, "''")}', true)`,
+          );
+        }
+      }
+
+      const resetLocalsSql = getResetLocalsSql(this.locals, options);
+      if (resetLocalsSql) {
+        await this.query(resetLocalsSql);
+      }
     }
 
     return res;

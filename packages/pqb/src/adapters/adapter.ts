@@ -2,6 +2,9 @@ import { emptyObject } from '../utils';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
 import { Query, QuerySchema } from '../query';
+import type { SqlSessionState } from './features/sql-session-context';
+
+export type { SqlSessionState } from './features/sql-session-context';
 
 /**
  * Generic result returning from query methods.
@@ -104,6 +107,9 @@ export interface AdapterTransactionOptions {
   locals?: {
     [ConfigName: string]: string | number;
   };
+  // Transaction-scoped SQL session state (role and setConfig)
+  // Applied once when the transaction begins
+  sqlSessionState?: SqlSessionState;
 }
 
 export type TransactionArgs<Result> = [
@@ -148,6 +154,8 @@ export interface AdapterBase {
     // only has effect in a transaction
     startingSavepoint?: string,
     releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>>;
   // make a query to get rows as array of column values
   arrays<
@@ -159,6 +167,8 @@ export interface AdapterBase {
     // only has effect in a transaction
     startingSavepoint?: string,
     releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>>;
   /**
    * Run a transaction

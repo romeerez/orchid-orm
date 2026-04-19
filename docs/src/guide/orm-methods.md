@@ -126,7 +126,9 @@ row[0]; // our value
 
 [//]: # 'has JSDoc'
 
-`$withOptions` supports overriding `log` and `schema`.
+`$withOptions` supports overriding `log`, `schema`, `role`, and `setConfig` for the duration of the callback.
+
+### log and schema
 
 - `log`: boolean, enables or disables logging in the scope of the callback.
 - `schema`: set a **default** schema, note that it does not override
@@ -139,6 +141,115 @@ await db.$withOptions({ log: true, schema: 'custom' }, async () => {
   await db.table.find(123);
 });
 ```
+
+### role and setConfig (SQL session)
+
+- `role`: string, switches the Postgres role for the duration of the callback.
+  Used for row-level security (RLS) policies.
+- `setConfig`: object with string, number, or boolean values, sets Postgres custom
+  settings for the callback scope. Use dotted names like `app.tenant_id`.
+  Values are normalized to strings internally.
+
+```ts
+await db.$withOptions(
+  {
+    role: 'app_user',
+    setConfig: {
+      'app.tenant_id': tenantId,
+      'app.user_id': userId,
+    },
+  },
+  async () => {
+    // All queries in this callback run with the specified role and settings.
+    // RLS policies can reference these settings with current_setting('app.tenant_id', true).
+    const project = await db.project.find(projectId);
+    return project;
+  },
+);
+```
+
+SQL session options apply to all Orchid queries including:
+
+- Table queries (`db.table.find()`, `db.table.create()`, etc.)
+- Raw query helpers (`db.$query`, `db.$queryArrays`)
+- Relation follow-up queries
+- Hook-triggered queries
+- Batched executions
+
+::: warning
+**Nested SQL session scopes are not allowed.**
+
+If an outer scope already has `role` or `setConfig`, attempting to set them again in a nested `$withOptions` call will throw an error.
+If nested `role`/`setConfig` support would be useful for your case, please open an issue and describe your use case.
+
+```ts
+await db.$withOptions({ role: 'app_user' }, async () => {
+  // This will throw an error because role is already set
+  await db.$withOptions({ role: 'other_role' }, async () => {
+    await db.table.find(123);
+  });
+});
+```
+
+Nested scopes that only change `log` or `schema` will inherit the outer SQL session context:
+
+```ts
+await db.$withOptions({ role: 'app_user' }, async () => {
+  // This works: inherits role from outer scope
+  await db.$withOptions({ log: true }, async () => {
+    await db.table.find(123);
+  });
+});
+```
+
+:::
+
+#### Middleware example for per-request session context
+
+You can wrap every request in a middleware that sets SQL session config for the duration of request handling:
+
+```ts
+function setUserToDbSessionMiddleware(req, res, next) {
+  return db.$withOptions(
+    {
+      setConfig: {
+        'app.userId': req.userId,
+      },
+    },
+    next,
+  );
+}
+```
+
+::: tip
+**Explicit transactions inherit SQL session context.**
+
+When you open a transaction inside a `$withOptions` callback, all queries in the transaction inherit the same role and config settings:
+
+```ts
+await db.$withOptions(
+  {
+    role: 'app_user',
+    setConfig: { 'app.tenant_id': tenantId },
+  },
+  async () => {
+    const project = await db.project.find(projectId);
+
+    await db.$transaction(async () => {
+      // This query runs in the transaction with the same role and config
+      await db.project.find(projectId).update({ lastViewedAt: new Date() });
+    });
+  },
+);
+```
+
+:::
+
+::: warning
+**Manual raw SQL session changes are outside the feature contract.**
+
+Direct `SET ROLE`, `RESET ROLE`, or `set_config(...)` calls inside the callback may invalidate Orchid's internal view of session state. Use the `$withOptions` API for reliable SQL session management.
+:::
 
 ## $getAdapter
 

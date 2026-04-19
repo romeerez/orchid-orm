@@ -3,10 +3,17 @@ import {
   TransactionAdapterBase,
   TransactionAfterCommitHook,
 } from '../../../adapters/adapter';
+import {
+  sqlSessionContextMergeStorageState,
+  sqlSessionContextSetStorageOptions,
+} from '../../../adapters/features/sql-session-context';
+import type { SqlSessionState } from '../../../adapters/features/sql-session-context';
 import { PickQueryQ, PickQueryQAndInternal } from '../../pick-query-types';
 import { QuerySchema } from '../schema/schema';
 
-export interface AsyncState {
+export type { SqlSessionState } from '../../../adapters/features/sql-session-context';
+
+export interface AsyncState extends SqlSessionState {
   // Database adapter that is connected to a currently running transaction.
   transactionAdapter?: TransactionAdapterBase;
   // Number of transaction nesting.
@@ -25,26 +32,47 @@ export interface AsyncState {
   schema?: QuerySchema;
 }
 
-export interface StorageOptions {
+export interface StorageOptions extends SqlSessionState {
   log?: boolean;
   schema?: QuerySchema;
 }
 
+export interface ProcessedStorageOptions {
+  log?: QueryLogObject;
+  schema?: QuerySchema;
+  role?: SqlSessionState['role'];
+  setConfig?: SqlSessionState['setConfig'];
+}
+
 export const processStorageOptions = (
   query: PickQueryQ,
+  state: AsyncState | undefined,
   options: StorageOptions,
-): Pick<AsyncState, 'log' | 'schema'> | undefined => {
+): ProcessedStorageOptions | undefined => {
   let log;
   if (options.log !== undefined && !query.q.log) {
     log = logParamToLogObject(query.q.logger, options.log);
   }
 
-  return log || 'schema' in options
-    ? {
-        log,
-        schema: options.schema,
-      }
-    : undefined;
+  // Build the result object
+  const result: ProcessedStorageOptions = {};
+
+  if (log) result.log = log;
+  if ('schema' in options) result.schema = options.schema;
+
+  sqlSessionContextSetStorageOptions(query, state, options, result);
+
+  // Return undefined if no options were processed
+  if (
+    result.log === undefined &&
+    result.schema === undefined &&
+    result.role === undefined &&
+    result.setConfig === undefined
+  ) {
+    return undefined;
+  }
+
+  return result;
 };
 
 let currentDefaultSchema: string | undefined;
@@ -62,14 +90,24 @@ export class QueryStorage {
     cb: () => Promise<Result>,
   ): Promise<Result> {
     const state = this.internal.asyncStorage.getStore();
-    const opts = processStorageOptions(this, options);
+    const opts = processStorageOptions(this, state, options);
+    const sqlSessionState = sqlSessionContextMergeStorageState(state, opts);
 
-    return this.internal.asyncStorage.run(
-      {
-        ...state,
-        ...opts,
-      },
-      cb,
-    );
+    // Build new state if options were processed
+    const newState: AsyncState = opts
+      ? {
+          ...state,
+          log: opts.log ?? state?.log,
+          schema: opts.schema ?? state?.schema,
+          ...sqlSessionState,
+        }
+      : (undefined as unknown as AsyncState);
+
+    // If no options were processed, run with the existing state or directly if no state
+    return !opts
+      ? state
+        ? this.internal.asyncStorage.run(state, cb)
+        : cb()
+      : this.internal.asyncStorage.run(newState, cb);
   }
 }

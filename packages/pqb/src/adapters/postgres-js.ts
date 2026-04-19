@@ -27,6 +27,11 @@ import {
   getTransactionArgs,
   mergeLocals,
 } from './adapter.utils';
+import { SqlSessionState } from './adapter';
+import {
+  sqlSessionContextComputeSetup,
+  sqlSessionContextExecute,
+} from './features/sql-session-context';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -267,16 +272,40 @@ export class PostgresJsAdapter implements AdapterBase {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
-    return query(this.sql, text, values);
+    return queryWithSqlSession(
+      this.sql,
+      text,
+      values,
+      sqlSessionState,
+      startingSavepoint,
+      releasingSavepoint,
+      false,
+      true,
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
     values?: unknown[],
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>> {
-    return arrays(this.sql, text, values);
+    return queryWithSqlSession(
+      this.sql,
+      text,
+      values,
+      sqlSessionState,
+      startingSavepoint,
+      releasingSavepoint,
+      true,
+      true,
+    ) as Promise<QueryArraysResult<R>>;
   }
 
   async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
@@ -286,6 +315,23 @@ export class PostgresJsAdapter implements AdapterBase {
     const { cb, options } = getTransactionArgs(args);
 
     const fn = (sql: TransactionSql) => {
+      // Apply transaction-scoped SQL session state (role and setConfig) once at transaction start
+      if (options?.sqlSessionState) {
+        const { role, setConfig } = options.sqlSessionState;
+        if (role) {
+          sql.unsafe(`SET ROLE ${role}`).execute();
+        }
+        if (setConfig && Object.keys(setConfig).length > 0) {
+          const setExpressions = Object.entries(setConfig)
+            .map(
+              ([key, value]) =>
+                `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value}', true)`,
+            )
+            .join(', ');
+          sql.unsafe(`SELECT ${setExpressions}`).execute();
+        }
+      }
+
       const localsSql = getSetLocalsSql(options);
       if (localsSql) {
         sql.unsafe(localsSql).execute();
@@ -374,15 +420,60 @@ const query = <T extends QueryResultRow = QueryResultRow>(
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const arrays = <R extends any[] = any[]>(
+// Execute query with SQL session state setup/cleanup
+// For non-transactional queries: reserves a connection (borrowConnection=true)
+// For transactional queries: uses existing connection (borrowConnection=false)
+const queryWithSqlSession = async <T extends QueryResultRow = QueryResultRow>(
   sql: postgres.Sql,
   text: string,
-  values?: unknown[],
-  startingSavepoint?: string,
-  releasingSavepoint?: string,
-): Promise<QueryArraysResult<R>> => {
-  return query(sql, text, values, startingSavepoint, releasingSavepoint, true);
+  values: unknown[] | undefined,
+  sessionState: SqlSessionState | undefined,
+  startingSavepoint: string | undefined,
+  releasingSavepoint: string | undefined,
+  arraysMode: boolean,
+  borrowConnection = false,
+): Promise<QueryResult<T>> => {
+  const setup = sqlSessionContextComputeSetup(sessionState);
+
+  if (!setup) {
+    return query(
+      sql,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      arraysMode,
+    );
+  }
+
+  const connection = borrowConnection ? await sql.reserve() : sql;
+
+  const queryFn = async (sqlStr: string, vals?: unknown[]) => {
+    const result = await connection.unsafe(sqlStr, vals as never).values();
+    return {
+      rows: result,
+      rowCount: result.length,
+      fields: [],
+    } as QueryResult<QueryResultRow>;
+  };
+
+  const releaseFn = borrowConnection
+    ? async () => {
+        await (connection as postgres.ReservedSql).release();
+      }
+    : undefined;
+
+  const mainQuery = () =>
+    query<T>(
+      connection,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      arraysMode,
+    );
+
+  return sqlSessionContextExecute<T>(queryFn, setup, mainQuery, releaseFn);
 };
 
 export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
@@ -437,28 +528,71 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
     values?: unknown[],
     startingSavepoint?: string,
     releasingSavepoint?: string,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
-    return query(this.sql, text, values, startingSavepoint, releasingSavepoint);
+    return queryWithSqlSession(
+      this.sql,
+      text,
+      values,
+      sqlSessionState,
+      startingSavepoint,
+      releasingSavepoint,
+      false,
+      false,
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   arrays<R extends any[] = any[]>(
     text: string,
-    values?: unknown[],
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
+    values: unknown[] | undefined,
+    startingSavepoint?: string | undefined,
+    releasingSavepoint?: string | undefined,
+    sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>> {
-    return arrays(
+    return queryWithSqlSession(
       this.sql,
       text,
       values,
+      sqlSessionState,
       startingSavepoint,
       releasingSavepoint,
-    );
+      true,
+      false,
+    ) as Promise<QueryArraysResult<R>>;
   }
 
   async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
     const { cb, options } = getTransactionArgs(args);
+
+    // For nested transactions with SQL session state, capture outer transaction-local values
+    let capturedRole: string | undefined;
+    const capturedConfigs: Record<string, string | null> = {};
+    const sqlSession = options?.sqlSessionState;
+
+    if (sqlSession) {
+      // Capture current role if we're going to override it
+      if (sqlSession.role) {
+        const roleResult = await this.query<{ role: string }>(
+          'SELECT current_role as role',
+        );
+        capturedRole = roleResult.rows[0].role;
+      }
+
+      // Capture current config values for keys we're going to override
+      if (
+        sqlSession.setConfig &&
+        Object.keys(sqlSession.setConfig).length > 0
+      ) {
+        for (const key of Object.keys(sqlSession.setConfig)) {
+          const configResult = await this.query<{ val: string | null }>(
+            `SELECT current_setting('${key.replace(/'/g, "''")}', true) as val`,
+          );
+          capturedConfigs[key] = configResult.rows[0].val;
+        }
+      }
+    }
+
     const localsSql = getSetLocalsSql(options);
     if (localsSql) {
       this.sql.unsafe(localsSql).execute();
@@ -466,13 +600,31 @@ export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
 
     const locals = mergeLocals(this.locals, options);
 
-    const res = (await cb(
-      new PostgresJsTransactionAdapter(this.adapter, this.sql, this, locals),
-    )) as Result;
+    let res: Result;
+    try {
+      res = (await cb(
+        new PostgresJsTransactionAdapter(this.adapter, this.sql, this, locals),
+      )) as Result;
+    } finally {
+      // Restore outer transaction-local values after nested transaction completes
+      if (sqlSession) {
+        if (capturedRole !== undefined) {
+          await this.query(`SET ROLE ${capturedRole}`);
+        }
 
-    const resetLocalsSql = getResetLocalsSql(this.locals, options);
-    if (resetLocalsSql) {
-      await this.sql.unsafe(resetLocalsSql);
+        for (const [key, value] of Object.entries(capturedConfigs)) {
+          // Reset to empty string if previously unset (null), otherwise restore previous value
+          const restoreValue = value === null ? '' : value;
+          await this.query(
+            `SELECT set_config('${key.replace(/'/g, "''")}', '${restoreValue.replace(/'/g, "''")}', true)`,
+          );
+        }
+      }
+
+      const resetLocalsSql = getResetLocalsSql(this.locals, options);
+      if (resetLocalsSql) {
+        await this.sql.unsafe(resetLocalsSql);
+      }
     }
 
     return res;
