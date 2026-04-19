@@ -8,7 +8,6 @@ import {
   AdapterBase,
   AsyncState,
   defaultSchemaConfig,
-  Db,
   DbSharedOptions,
   DbTableOptionScopes,
   DbTableOptions,
@@ -34,6 +33,7 @@ import {
   afterCommit,
 } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { Db } from 'pqb';
 
 export interface FromQuery extends Query {
   returnType: 'all';

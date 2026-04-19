@@ -1,6 +1,5 @@
 import {
   ColumnsShape,
-  Db,
   EnumColumn,
   getColumnTypes,
   NoPrimaryKeyOption,
@@ -14,7 +13,6 @@ import {
   QueryArraysResult,
   RecordUnknown,
   snakeCaseKey,
-  type QuerySchema,
 } from 'pqb/internal';
 import {
   ColumnComment,
@@ -44,6 +42,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './table-methods';
 import { NoPrimaryKey } from '../errors';
+import { Db, QuerySchema } from 'pqb';
 
 export interface TableQuery {
   text: string;

@@ -9,7 +9,6 @@ import {
   MaybeArray,
   noop,
   Column,
-  QuerySchema,
 } from 'pqb/internal';
 import {
   ChangeCallback,
@@ -28,6 +27,7 @@ import { generate } from '../generate';
 import fs from 'fs/promises';
 import { testConfig } from '../../migrations.test-utils';
 import { createBaseTable } from '../../../baseTable';
+import { QuerySchema } from 'pqb';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,

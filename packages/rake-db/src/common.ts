@@ -1,5 +1,4 @@
 import {
-  QuerySchema,
   AdapterBase,
   ColumnSchemaConfig,
   EnumColumn,
@@ -8,6 +7,7 @@ import {
 import { TableQuery } from './migration/create-table';
 import { MigrationsSet } from './migration/migrations-set';
 import { RakeDbConfig } from './config';
+import { QuerySchema } from 'pqb';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 

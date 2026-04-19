@@ -15,7 +15,6 @@ import {
   RelationJoinQuery,
   RelationsBase,
   Column,
-  QuerySchema,
 } from 'pqb/internal';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {
@@ -24,6 +23,7 @@ import {
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
+import { QuerySchema } from 'pqb';
 
 // `belongsTo` and `hasOne` relation data available for create. It supports:
 // - `create` to create a related record

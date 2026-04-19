@@ -1,11 +1,11 @@
-import { Column, Query, QuerySchema } from 'pqb/internal';
 import {
+  Column,
+  Query,
   AfterHook,
   ComputedColumnsFromOptions,
   ComputedOptionsConfig,
   ComputedOptionsFactory,
   _createDbSqlMethod,
-  Db,
   DbSqlMethod,
   DbTableOptionScopes,
   DefaultColumnTypes,
@@ -45,8 +45,6 @@ import {
   snakeCaseKey,
   toSnakeCase,
   ColumnsShape,
-  _queryTake,
-  _queryTakeOptional,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -72,6 +70,7 @@ import {
   HasAndBelongsToManyQuery,
 } from './relations/hasAndBelongsToMany';
 import { HasMany, HasManyInfo, HasManyQuery } from './relations/hasMany';
+import { Db, QuerySchema } from 'pqb';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {

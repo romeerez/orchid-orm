@@ -129,10 +129,10 @@ export const sqlSessionContextComputeSetup = (
     result.captureConfigSql = `SELECT ${captureColumns}`;
 
     const setColumns = configKeys
-      .map(
-        (key) =>
-          `set_config('${key.replace(/'/g, "''")}', '${typeof setConfig[key] === 'string' ? setConfig[key].replace(/'/g, "''") : setConfig[key]}', false) as "${key}"`,
-      )
+      .map((key) => {
+        const value = setConfig[key];
+        return `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value}', false) as "${key}"`;
+      })
       .join(', ');
     result.configSetupSql = `SELECT ${setColumns}`;
   }

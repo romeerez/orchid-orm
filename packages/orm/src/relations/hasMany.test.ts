@@ -1,5 +1,5 @@
-import { Db, Query, omit } from 'pqb/internal';
-import { NotFoundError } from 'pqb';
+import { Query, omit } from 'pqb/internal';
+import { Db, NotFoundError } from 'pqb';
 import {
   useRelationCallback,
   chatSelectAll,

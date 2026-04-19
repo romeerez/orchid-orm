@@ -9,4 +9,7 @@ export {
   NotFoundError,
   QueryError,
   createDbWithAdapter,
+  Db,
+  QueryHelperResult,
+  type QuerySchema,
 } from './index';

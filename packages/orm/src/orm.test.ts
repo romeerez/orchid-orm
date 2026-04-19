@@ -11,7 +11,8 @@ import {
   testAdapter,
 } from 'test-utils';
 import { createBaseTable, Selectable } from './baseTable';
-import { Db, QuerySchema, raw } from 'pqb/internal';
+import { raw } from 'pqb/internal';
+import { Db, QuerySchema } from 'pqb';
 
 describe('orm', () => {
   useTestORM();

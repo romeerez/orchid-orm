@@ -16,11 +16,10 @@ import {
   DbResult,
   ColumnSchemaConfig,
   TransactionAdapterBase,
-  QuerySchema,
   TransactionArgs,
   RecordStringOrNumber,
 } from 'pqb/internal';
-import { QueryError, createDbWithAdapter } from 'pqb';
+import { QueryError, createDbWithAdapter, QuerySchema } from 'pqb';
 import {
   getResetLocalsSql,
   getSetLocalsSql,

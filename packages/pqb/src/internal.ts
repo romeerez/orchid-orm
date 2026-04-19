@@ -111,7 +111,6 @@ export { type HookSelectValue } from './index';
 export {
   getPrimaryKeys,
   getQuerySchema,
-  Db,
   type CreateCtx,
   type CreateData,
   type CreateMethodsNames,
@@ -143,7 +142,6 @@ export {
   type QueryManyTakeOptional,
   type QueryOrExpression,
   type QueryReturnType,
-  type QuerySchema,
   type QueryScopes,
   type SelectableFromShape,
   type ShapeColumnPrimaryKeys,

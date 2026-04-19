@@ -2,9 +2,9 @@ import { expectSql, getDb, resetDb, toLine } from '../rake-db.test-utils';
 import {
   setDefaultLanguage,
   makeColumnTypes,
-  Db,
   defaultSchemaConfig,
 } from 'pqb/internal';
+import { Db } from 'pqb';
 import { asMock, sql } from 'test-utils';
 
 const db = getDb();

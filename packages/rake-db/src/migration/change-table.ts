@@ -20,7 +20,6 @@ import {
   snakeCaseKey,
   toArray,
   toSnakeCase,
-  type QuerySchema,
 } from 'pqb/internal';
 import {
   ChangeTableCallback,
@@ -57,6 +56,7 @@ import {
 } from './migration.utils';
 import { tableMethods } from './table-methods';
 import { TableQuery } from './create-table';
+import { QuerySchema } from 'pqb';
 
 interface ChangeTableData {
   add: TableData;
@@ -1037,7 +1037,7 @@ const getChangeColumnName = (
   return (
     change.name ||
     (change[what].column
-      ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      ? //
         getColumnName(change[what].column!, key, snakeCase)
       : snakeCase
         ? toSnakeCase(key)

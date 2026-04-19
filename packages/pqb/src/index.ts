@@ -1,7 +1,11 @@
 // Public API exports for pqb package
 // These are the only exports that are considered part of the public API
 
-export { type PickQueryInputType, type SqlFn } from './query';
+export {
+  type PickQueryInputType,
+  type SqlFn,
+  type QueryHelperResult,
+} from './query';
 
 export {
   type OperatorsArray,

@@ -1,9 +1,9 @@
 import {
-  Db,
   IsolationLevel,
   TransactionOptions,
   AfterCommitStandaloneHook,
 } from 'pqb/internal';
+import { Db } from 'pqb';
 
 export function transaction<Result>(
   this: { $qb: Db },

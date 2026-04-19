@@ -11,7 +11,6 @@ import {
   Column,
   makeColumnTypes,
   Operators,
-  QuerySchema,
   TextColumn,
   getCallerFilePath,
   QueryHookUtils,
@@ -32,6 +31,7 @@ import {
 } from 'test-utils';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+import { QuerySchema } from 'pqb';
 
 describe('baseTable', () => {
   useTestORM();
