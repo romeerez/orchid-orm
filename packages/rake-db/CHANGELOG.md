@@ -1,5 +1,29 @@
 # rake-db
 
+## 2.32.0
+
+### Minor Changes
+
+- 92f420ff: Add explicit SQL session scope support via `$withOptions({ role, setConfig })` (#611).
+
+  This adds a new RLS-friendly capability:
+
+  - Set a Postgres role for a callback scope with `role`.
+  - Set request-scoped Postgres settings (such as `app.tenant_id`) with `setConfig`.
+  - Have those session values automatically applied to queries in that scope, including queries inside explicit transactions.
+  - Get automatic restoration of previous session values after the callback completes.
+
+  To keep behavior predictable, nested SQL session scopes are rejected: if an outer scope already defines `role` or `setConfig`, defining them again in an inner scope throws.
+
+### Patch Changes
+
+- 9ce55f77: Support baseTable, snakeCase, language, noPrimaryKey options in migrate functions (#683)
+- c02e1e1f: Export Db, QueryHelperResult, QuerySchema from pqb and orchid-orm (#682)
+- c9835a5b: Support `baseTable` in programmatic migrations to set `snakeCase`, `language`; support `noPrimaryKey` option in programmatic migrations (#684)
+- Updated dependencies [92f420ff]
+- Updated dependencies [c02e1e1f]
+  - pqb@0.63.0
+
 ## 2.31.1
 
 ### Patch Changes
@@ -1732,7 +1756,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from 'orchid-orm';
+  import { createBaseTable } from "orchid-orm";
 
   export const BaseTable = createBaseTable();
 
@@ -1792,6 +1816,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

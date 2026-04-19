@@ -1,5 +1,31 @@
 # orchid-orm
 
+## 1.66.0
+
+### Minor Changes
+
+- 92f420ff: Add explicit SQL session scope support via `$withOptions({ role, setConfig })` (#611).
+
+  This adds a new RLS-friendly capability:
+
+  - Set a Postgres role for a callback scope with `role`.
+  - Set request-scoped Postgres settings (such as `app.tenant_id`) with `setConfig`.
+  - Have those session values automatically applied to queries in that scope, including queries inside explicit transactions.
+  - Get automatic restoration of previous session values after the callback completes.
+
+  To keep behavior predictable, nested SQL session scopes are rejected: if an outer scope already defines `role` or `setConfig`, defining them again in an inner scope throws.
+
+### Patch Changes
+
+- c02e1e1f: Export Db, QueryHelperResult, QuerySchema from pqb and orchid-orm (#682)
+- c9835a5b: Support `baseTable` in programmatic migrations to set `snakeCase`, `language`; support `noPrimaryKey` option in programmatic migrations (#684)
+- Updated dependencies [9ce55f77]
+- Updated dependencies [92f420ff]
+- Updated dependencies [c02e1e1f]
+- Updated dependencies [c9835a5b]
+  - rake-db@2.32.0
+  - pqb@0.63.0
+
 ## 1.65.1
 
 ### Patch Changes
@@ -21,7 +47,7 @@
   const deleted = await db.order
     .find(orderId)
     .delete()
-    .select('*', {
+    .select("*", {
       items: (q) => q.orderItems,
     });
   ```
@@ -2271,7 +2297,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from 'orchid-orm';
+  import { createBaseTable } from "orchid-orm";
 
   export const BaseTable = createBaseTable();
 
@@ -2294,7 +2320,7 @@
     .select({ commentsCount: (q) => q.comments.count() })
     // using `commentsCount` in the `where` wasn't supported previously:
     .where({ commentsCount: { gt: 5 } })
-    .order({ commentsCount: 'DESC' });
+    .order({ commentsCount: "DESC" });
   ```
 
 - Updated dependencies [8ef6411]
@@ -2319,12 +2345,12 @@
     // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
     // returns a boolean
     one: (q) =>
-      q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column(
-        'name',
-      )} = ${'name'}`,
+      q.sql<boolean>`${q.column("id")} = ${1} OR ${q.column(
+        "name"
+      )} = ${"name"}`,
 
     // selects the same as above, but by building a query
-    two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
+    two: (q) => q.column("id").equals(1).or(q.column("name").equals("name")),
   });
   ```
 
@@ -2358,9 +2384,9 @@
   // a tree has a `forestId: number | null`
 
   const tree = db.tree.create({
-    name: 'Willow',
+    name: "Willow",
     forest: {
-      name: 'Eerie forest',
+      name: "Eerie forest",
     },
   });
 
@@ -2394,6 +2420,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

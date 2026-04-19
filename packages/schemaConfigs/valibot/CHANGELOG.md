@@ -1,5 +1,13 @@
 # orchid-orm-valibot
 
+## 0.3.124
+
+### Patch Changes
+
+- Updated dependencies [92f420ff]
+- Updated dependencies [c02e1e1f]
+  - pqb@0.63.0
+
 ## 0.3.123
 
 ### Patch Changes
@@ -1595,6 +1603,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 
