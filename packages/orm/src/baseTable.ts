@@ -746,6 +746,7 @@ export function createBaseTable<
 
   base.prototype.types = columnTypes as typeof base.prototype.types;
   base.prototype.snakeCase = snakeCase;
+  base.prototype.language = language;
   base.prototype.autoForeignKeys =
     autoForeignKeys === true ? {} : autoForeignKeys || undefined;
 

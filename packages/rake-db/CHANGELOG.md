@@ -1732,7 +1732,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from "orchid-orm";
+  import { createBaseTable } from 'orchid-orm';
 
   export const BaseTable = createBaseTable();
 
@@ -1792,7 +1792,6 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
-
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

@@ -14,7 +14,11 @@ import {
   DefaultColumnTypes,
   DefaultSchemaConfig,
 } from 'pqb/internal';
-import { ChangeCallback, pushChange } from '../migration/change';
+import {
+  ChangeCallback,
+  createMigrationChangeFn,
+  pushChange,
+} from '../migration/change';
 import { asMock, testAdapter, TestAdapter, useTestDatabase } from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
 import { getMigrations } from '../migration/migrations-set';
@@ -29,6 +33,7 @@ import { RakeDbConfig } from 'rake-db';
 import { mockChangeLogger } from './mock-migrations/mock-change';
 import { queryLock } from '../common';
 import path from 'node:path';
+import { createBaseTable } from 'orchid-orm';
 
 jest.mock('../common', () => {
   const actual = jest.requireActual('../common');
@@ -160,9 +165,71 @@ describe('migrate-or-rollback', () => {
 
       await act(migrate);
 
-      expect(
+      await expect(
         adapter.query(`SELECT * FROM "${migrationsTable}"`),
       ).resolves.not.toThrow();
+    });
+
+    it('should create migrations table in the transactionSearchPath schema', async () => {
+      const migrationsTable = 'non-existent';
+
+      arrange({
+        files: [],
+        versions: [],
+        config: {
+          migrations: {},
+          migrationsTable,
+          transactionSearchPath: 'schema',
+        },
+      });
+
+      await act(migrate);
+
+      await expect(
+        adapter.query(`SELECT * FROM "schema"."${migrationsTable}"`),
+      ).resolves.not.toThrow();
+    });
+
+    it('should use `snakeCase` and `language` from the `baseTable` option, should propagate `noPrimaryKey` option to migrations', async () => {
+      let options: unknown;
+
+      const change = createMigrationChangeFn(testConfig);
+
+      asMock(getMigratedVersionsMap).mockResolvedValueOnce({
+        map: {},
+        sequence: [],
+      });
+
+      asMock(getMigrations).mockResolvedValueOnce({
+        migrations: [
+          {
+            version: '001',
+            path: 'path',
+            async load() {
+              change(async (db) => {
+                options = db.options;
+              });
+            },
+          },
+        ],
+      });
+
+      const BaseTable = createBaseTable({
+        snakeCase: true,
+        language: 'lang',
+      });
+
+      await migrate(adapter, {
+        migrations: {},
+        baseTable: BaseTable,
+        noPrimaryKey: 'ignore',
+      });
+
+      expect(options).toMatchObject({
+        snakeCase: true,
+        language: 'lang',
+        noPrimaryKey: 'ignore',
+      });
     });
   });
 
