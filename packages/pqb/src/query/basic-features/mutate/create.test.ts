@@ -75,9 +75,9 @@ describe('create functions', () => {
   describe('create', () => {
     it('should not allow using appReadOnly columns', () => {
       expect(() =>
+        // @ts-expect-error value is readOnly
         TableWithReadOnly.create({
           key: 'key',
-          // @ts-expect-error value is readOnly
           value: 123,
         }),
       ).toThrow('Trying to insert a readonly column');
@@ -1509,7 +1509,7 @@ describe('create functions', () => {
       });
 
       it('should DO NOTHING if all columns are excluded', () => {
-        const q = User.insert({ name: 'name' } as never)
+        const q = User.insert({ name: 'name', password: undefined as never })
           .onConflict('name')
           .merge();
 

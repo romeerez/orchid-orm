@@ -853,6 +853,9 @@ describe('belongsTo', () => {
           Text: 'message 1',
         });
         await assert.chat({ ChatId: first.ChatId, Title: 'chat 1' });
+        if (!first.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.sender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
         await assert.message({
@@ -862,6 +865,9 @@ describe('belongsTo', () => {
           Text: 'message 2',
         });
         await assert.chat({ ChatId: second.ChatId, Title: 'chat 2' });
+        if (!second.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.sender({ AuthorId: second.AuthorId, Name: 'user 2' });
       });
 
@@ -887,6 +893,9 @@ describe('belongsTo', () => {
           Text: 'message 1',
         });
         await assert.activeChat({ ChatId: first.ChatId, Title: 'chat 1' });
+        if (!first.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.activeSender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
         await assert.message({
@@ -896,13 +905,16 @@ describe('belongsTo', () => {
           Text: 'message 2',
         });
         await assert.activeChat({ ChatId: second.ChatId, Title: 'chat 2' });
+        if (!second.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.activeSender({
           AuthorId: second.AuthorId,
           Name: 'user 2',
         });
       });
 
-      it('should support nested create with a value from `with`', () => {
+      it('should support nested create with a value from `with`', async () => {
         const q = db.$qb
           .with('user', db.user.create(UserData))
           .with('profile', (q) =>
@@ -950,6 +962,7 @@ describe('belongsTo', () => {
               UserKey: t.name('user_key').text(),
               Name: t.name('name').text(),
               Password: t.name('password').text(),
+              ...t.timestamps(),
             }));
           }
 
@@ -1158,6 +1171,9 @@ describe('belongsTo', () => {
           Text: 'message 1',
         });
         await assert.chat({ ChatId: first.ChatId, Title: 'chat 1' });
+        if (!first.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.sender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
         await assert.message({
@@ -1167,6 +1183,9 @@ describe('belongsTo', () => {
           Text: 'message 2',
         });
         await assert.chat({ ChatId: second.ChatId, Title: 'chat 2' });
+        if (!second.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.sender({ AuthorId: second.AuthorId, Name: 'user 2' });
       });
 
@@ -1298,6 +1317,9 @@ describe('belongsTo', () => {
           Text: 'message 1',
         });
         await assert.chat({ ChatId: first.ChatId, Title: 'chat 1' });
+        if (!first.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.sender({ AuthorId: first.AuthorId, Name: 'user 1' });
 
         await assert.message({
@@ -1307,6 +1329,9 @@ describe('belongsTo', () => {
           Text: 'message 2',
         });
         await assert.chat({ ChatId: second.ChatId, Title: 'chat 2' });
+        if (!second.AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.sender({ AuthorId: second.AuthorId, Name: 'user 2' });
       });
 
@@ -1343,6 +1368,9 @@ describe('belongsTo', () => {
 
         await assert.message({ messageId, ChatId, AuthorId, Text: 'message' });
         await assert.chat({ ChatId, Title: 'chat' });
+        if (!AuthorId) {
+          throw new Error('Missing AuthorId');
+        }
         await assert.activeSender({ AuthorId, Name: 'user' });
       });
 
@@ -1874,8 +1902,15 @@ describe('belongsTo', () => {
 
         expect(count).toBe(2);
 
+        const userIds = profiles
+          .map((profile) => profile.UserId)
+          .filter((id): id is number => id !== null);
+        if (userIds.length !== profiles.length) {
+          throw new Error('Missing UserId');
+        }
+
         const updatedNames = await db.user.pluck('Name').where({
-          Id: { in: profiles.map((profile) => profile.UserId) },
+          Id: { in: userIds },
         });
         expect(updatedNames).toEqual(['new name', 'new name']);
       });
@@ -1901,10 +1936,17 @@ describe('belongsTo', () => {
 
         expect(count).toBe(2);
 
+        const userIds = profiles
+          .map((profile) => profile.UserId)
+          .filter((id): id is number => id !== null);
+        if (userIds.length !== profiles.length) {
+          throw new Error('Missing UserId');
+        }
+
         const updatedNames = await db.user
           .pluck('Name')
           .where({
-            Id: { in: profiles.map((profile) => profile.UserId) },
+            Id: { in: userIds },
           })
           .order('Id');
 
@@ -2350,6 +2392,9 @@ describe('belongsTo', () => {
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
         UserId: t.name('user_id').integer().nullable(),
+        ProfileKey: t.name('profile_key').string().nullable(),
+        Bio: t.name('bio').text().nullable(),
+        ...t.timestamps(),
       }));
 
       relations = {

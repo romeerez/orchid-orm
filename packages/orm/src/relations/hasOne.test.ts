@@ -2555,6 +2555,8 @@ describe('hasOne', () => {
         Id: t.name('id').identity().primaryKey(),
         Name: t.name('name').text(),
         Password: t.name('password').text(),
+        UserKey: t.name('user_key').text().nullable(),
+        ...t.timestamps(),
       }));
 
       relations = {
@@ -3494,6 +3496,8 @@ describe('hasOne through', () => {
         ChatId: t.name('chat_id').integer(),
         AuthorId: t.name('author_id').integer().nullable(),
         Text: t.name('text').text(),
+        MessageKey: t.name('message_key').string().nullable(),
+        ...t.timestamps(),
       }));
 
       relations = {

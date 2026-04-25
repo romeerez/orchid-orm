@@ -369,9 +369,9 @@ describe('computed', () => {
     describe('create', () => {
       it('should not allow computed columns', () => {
         expect(() =>
+          // @ts-expect-error computed column should not be allowed
           User.insert({
             ...partialUserData,
-            // @ts-expect-error computed column should not be allowed
             nameAndKey: 'value',
           }),
         ).toThrow('Trying to insert a readonly column');
@@ -1112,9 +1112,9 @@ describe('computed', () => {
 
     describe('create', () => {
       it('should not accept computed columns, but support them in returning', async () => {
+        // @ts-expect-error computed column should not be allowed
         const q = User.select('id', 'runtimeComputed').insert({
           ...partialUserData,
-          // @ts-expect-error computed column should not be allowed
           runtimeComputed: 'value',
         });
 
