@@ -1,5 +1,12 @@
 # rake-db
 
+## 2.32.1
+
+### Patch Changes
+
+- Updated dependencies [0ab38b0b]
+  - pqb@0.64.0
+
 ## 2.32.0
 
 ### Minor Changes
@@ -7,6 +14,7 @@
 - 92f420ff: Add explicit SQL session scope support via `$withOptions({ role, setConfig })` (#611).
 
   This adds a new RLS-friendly capability:
+
   - Set a Postgres role for a callback scope with `role`.
   - Set request-scoped Postgres settings (such as `app.tenant_id`) with `setConfig`.
   - Have those session values automatically applied to queries in that scope, including queries inside explicit transactions.
@@ -1755,7 +1763,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from 'orchid-orm';
+  import { createBaseTable } from "orchid-orm";
 
   export const BaseTable = createBaseTable();
 
@@ -1815,6 +1823,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

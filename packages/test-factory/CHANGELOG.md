@@ -1,5 +1,12 @@
 # orchid-orm-test-factory
 
+## 1.0.115
+
+### Patch Changes
+
+- Updated dependencies [0ab38b0b]
+  - pqb@0.64.0
+
 ## 1.0.114
 
 ### Patch Changes
@@ -1695,6 +1702,7 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
+
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 
