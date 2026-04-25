@@ -3,13 +3,13 @@ import {
   DynamicRawSQL,
   getQueryAs,
   getShapeFromSelect,
-  Query,
   RawSql,
   HookSelectValue,
   isExpression,
   RelationJoinQuery,
   Column,
 } from 'pqb/internal';
+import { Query } from 'pqb';
 
 export const joinQueryChainHOF =
   (

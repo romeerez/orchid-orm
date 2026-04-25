@@ -3,10 +3,9 @@ import {
   RelationThunkBase,
   RelationConfigSelf,
 } from './relations';
-import { OrchidOrmInternalError } from 'pqb';
+import { OrchidOrmInternalError, Query } from 'pqb';
 import {
   CreateData,
-  Query,
   WhereArg,
   isQueryReturnsAll,
   VirtualColumn,

@@ -2,7 +2,6 @@ import {
   Column,
   FromArg,
   FromResult,
-  Query,
   QueryLogOptions,
   StorageOptions,
   AdapterBase,
@@ -33,7 +32,7 @@ import {
   afterCommit,
 } from './transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { Db } from 'pqb';
+import { Db, Query } from 'pqb';
 
 export interface FromQuery extends Query {
   returnType: 'all';

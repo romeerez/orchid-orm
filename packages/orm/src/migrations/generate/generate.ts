@@ -8,12 +8,12 @@ import {
   defaultSchemaConfig,
   DomainColumn,
   PickQueryInternal,
-  Query,
   QueryInternal,
   UnknownColumn,
   getQuerySchema,
   emptyObject,
 } from 'pqb/internal';
+import { Query } from 'pqb';
 import {
   concatSchemaAndName,
   getDbVersion,

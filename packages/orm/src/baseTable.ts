@@ -1,6 +1,5 @@
 import {
   Column,
-  Query,
   AfterHook,
   ComputedColumnsFromOptions,
   ComputedOptionsConfig,
@@ -70,7 +69,7 @@ import {
   HasAndBelongsToManyQuery,
 } from './relations/hasAndBelongsToMany';
 import { HasMany, HasManyInfo, HasManyQuery } from './relations/hasMany';
-import { Db, QuerySchema } from 'pqb';
+import { Db, Query, QuerySchema } from 'pqb';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {

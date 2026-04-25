@@ -12,43 +12,43 @@ import { OrderTsQueryConfig } from '../../extra-features/search/search.sql';
 import { SortDir } from './order.sql';
 import { pushQueryValueImmutable } from '../../query-data';
 
-export interface OrderArgSelf
-  extends PickQuerySelectable, PickQueryResult, PickQueryTsQuery {}
+export namespace Order {
+  export interface ArgThis
+    extends PickQuerySelectable, PickQueryResult, PickQueryTsQuery {}
 
-export type OrderArg<T extends OrderArgSelf> =
-  | OrderArgKey<T>
-  | OrderArgTsQuery<T>
-  | {
-      [K in OrderArgKey<T> | OrderArgTsQuery<T>]?: K extends OrderArgTsQuery<T>
-        ? OrderTsQueryConfig
-        : SortDir;
-    }
-  | Expression;
+  export type Arg<T extends ArgThis> =
+    | ArgKey<T>
+    | ArgTsQuery<T>
+    | {
+        [K in ArgKey<T> | ArgTsQuery<T>]?: K extends ArgTsQuery<T>
+          ? OrderTsQueryConfig
+          : SortDir;
+      }
+    | Expression;
 
-export type OrderArgs<T extends OrderArgSelf> = OrderArg<T>[];
+  export type Args<T extends ArgThis> = Arg<T>[];
 
-type OrderArgTsQuery<T extends OrderArgSelf> =
-  | string
-  | undefined extends T['__tsQuery']
-  ? never
-  : Exclude<T['__tsQuery'], undefined>;
+  type ArgTsQuery<T extends ArgThis> = string | undefined extends T['__tsQuery']
+    ? never
+    : Exclude<T['__tsQuery'], undefined>;
 
-type OrderArgKey<T extends OrderArgSelf> =
-  | {
-      // filter out runtime computed selectables
-      [K in keyof T['__selectable']]: T['__selectable'][K]['column']['queryType'] extends undefined
-        ? never
-        : K;
-    }[keyof T['__selectable']]
-  // separate mappings are better than a single combined
-  | {
-      [K in keyof T['result']]: T['result'][K]['dataType'] extends
-        | 'array'
-        | 'object'
-        | 'runtimeComputed'
-        ? never
-        : K;
-    }[keyof T['result']];
+  type ArgKey<T extends ArgThis> =
+    | {
+        // filter out runtime computed selectables
+        [K in keyof T['__selectable']]: T['__selectable'][K]['column']['queryType'] extends undefined
+          ? never
+          : K;
+      }[keyof T['__selectable']]
+    // separate mappings are better than a single combined
+    | {
+        [K in keyof T['result']]: T['result'][K]['dataType'] extends
+          | 'array'
+          | 'object'
+          | 'runtimeComputed'
+          ? never
+          : K;
+      }[keyof T['result']];
+}
 
 export class QueryOrder {
   /**
@@ -86,7 +86,7 @@ export class QueryOrder {
    *
    * @param args - column name(s) or an object with column names and sort directions.
    */
-  order<T extends OrderArgSelf>(this: T, ...args: OrderArgs<T>): T {
+  order<T extends Order.ArgThis>(this: T, ...args: Order.Args<T>): T {
     return pushQueryArrayImmutable(_clone(this), 'order', args) as never;
   }
 

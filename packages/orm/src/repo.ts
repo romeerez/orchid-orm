@@ -1,11 +1,11 @@
 import {
   getClonedQueryData,
   MergeQuery,
-  Query,
   QueryReturnType,
   RecordUnknown,
   QueryHasWhere,
 } from 'pqb/internal';
+import { Query } from 'pqb';
 
 type QueryMethods<T extends Query> = Record<
   string,

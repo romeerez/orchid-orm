@@ -6,7 +6,6 @@ import {
   getQueryAs,
   JoinQueryMethod,
   pushQueryOnForOuter,
-  Query,
   setQueryObjectValueImmutable,
   UpdateData,
   WhereArg,
@@ -17,6 +16,7 @@ import {
   RelationConfigBase,
   PickQuerySelectableRelations,
 } from 'pqb/internal';
+import { Query } from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 import { BaseTableClass, ORMTableInput } from '../../baseTable';

@@ -19,7 +19,7 @@ import {
 import { addValue, emptyObject, toArray } from '../../utils';
 import { getValueKey } from '../basic-features/get/get-value-key';
 import { WhereArg, WhereArgs } from '../basic-features/where/where';
-import { OrderArg, OrderArgs } from '../basic-features/order/order';
+import { Order } from '../basic-features/order/order';
 import { WindowArgDeclaration } from '../basic-features/window/window';
 import { ToSQLCtx } from '../sql/to-sql';
 import { QueryData } from '../query-data';
@@ -31,7 +31,7 @@ export interface AggregateOptions<
   // Add DISTINCT inside of function call.
   distinct?: boolean;
   // The same argument as in .order() to be set inside of function call.
-  order?: OrderArg<T> | OrderArgs<T>;
+  order?: Order.Arg<T> | Order.Args<T>;
   // The same argument as in .where() to be set inside of function call.
   filter?: WhereArg<T>;
   // The same argument as in .orWhere() to support OR logic of the filter clause.

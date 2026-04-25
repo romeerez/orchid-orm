@@ -131,7 +131,6 @@ export {
   type PickQueryRelations,
   type PickQuerySelectableRelations,
   type PickQueryShape,
-  type Query,
   type QueryAfterHook,
   type QueryBeforeActionHook,
   type QueryBeforeHook,

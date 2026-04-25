@@ -27,6 +27,7 @@ import {
   QueryThenShallowSimplifyArr,
   QueryThenShallowSimplifyOptional,
 } from './then/then';
+import { Order as OrderNamespace } from './basic-features/order/order';
 
 export interface DbExtension {
   name: string;
@@ -146,6 +147,13 @@ export interface Query
     length: number,
     name: QueryErrorName,
   ) => QueryError;
+}
+
+export namespace Query {
+  export namespace Order {
+    export type Arg<T extends Order.ArgThis> = OrderNamespace.Arg<T>;
+    export type Args<T extends Order.ArgThis> = OrderNamespace.Args<T>;
+  }
 }
 
 export type SelectableOfType<T extends PickQuerySelectable, Type> = {

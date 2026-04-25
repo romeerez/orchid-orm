@@ -1,4 +1,5 @@
-import { Column, Query } from 'pqb/internal';
+import { Query } from 'pqb';
+import { Column } from 'pqb/internal';
 import {
   ArrayColumn,
   BigIntColumn,
@@ -422,9 +423,8 @@ export class TestFactory<
       this.data,
       data,
     );
-    return (await (this.table as unknown as Query).create(
-      await getData(),
-    )) as never;
+    const table = this.table as unknown as { create(data: unknown): unknown };
+    return (await table.create(await getData())) as never;
   }
 
   async createList<T extends this, Data extends CreateArg<T>>(
@@ -439,9 +439,10 @@ export class TestFactory<
       data,
     );
     const arr = await Promise.all([...Array(qty)].map(() => getData()));
-    return (await (this.table as unknown as Query).createMany(
-      arr as CreateData<T['table']>[],
-    )) as never;
+    const table = this.table as unknown as {
+      createMany(data: unknown[]): unknown;
+    };
+    return (await table.createMany(arr as CreateData<T['table']>[])) as never;
   }
 
   async createMany<T extends this, Args extends CreateArg<T>[]>(
@@ -454,9 +455,10 @@ export class TestFactory<
       this.data,
     );
     const data = await Promise.all(arr.map(getData));
-    return (await (this.table as unknown as Query).createMany(
-      data as CreateData<T['table']>[],
-    )) as never;
+    const table = this.table as unknown as {
+      createMany(data: unknown[]): unknown;
+    };
+    return (await table.createMany(data as CreateData<T['table']>[])) as never;
   }
 
   extend<T extends this>(this: T): new () => TestFactory<Q, Type> {

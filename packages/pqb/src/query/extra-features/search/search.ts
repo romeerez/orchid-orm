@@ -25,7 +25,7 @@ import {
 } from './search.sql';
 import { ToSQLCtx } from '../../sql/to-sql';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
-import { OrderArgSelf } from '../../basic-features/order/order';
+import { Order } from '../../basic-features/order/order';
 
 // `headline` first argument is a name of the search.
 type HeadlineSearchArg<T extends PickQueryTsQuery> = Exclude<
@@ -114,7 +114,7 @@ declare module '../../basic-features/aggregate/aggregate' {
      * @param search - name of the search to use the query from
      * @param options - `text` for a text source, `options` for `ts_headline` options
      */
-    headline<T extends OrderArgSelf>(
+    headline<T extends Order.ArgThis>(
       this: T,
       search: HeadlineSearchArg<T>,
       options?: HeadlineParams<T>,

@@ -6,7 +6,6 @@ import {
   _queryTake,
   _queryTakeOptional,
   CreateData,
-  Query,
   VirtualColumn,
   WhereArg,
   ColumnSchemaConfig,
@@ -23,7 +22,7 @@ import {
   makeHasAndBelongsToManyMethod,
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
-import { QuerySchema } from 'pqb';
+import { Query, QuerySchema } from 'pqb';
 
 // `belongsTo` and `hasOne` relation data available for create. It supports:
 // - `create` to create a related record

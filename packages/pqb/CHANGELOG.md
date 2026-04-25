@@ -7,7 +7,6 @@
 - 92f420ff: Add explicit SQL session scope support via `$withOptions({ role, setConfig })` (#611).
 
   This adds a new RLS-friendly capability:
-
   - Set a Postgres role for a callback scope with `role`.
   - Set request-scoped Postgres settings (such as `app.tenant_id`) with `setConfig`.
   - Have those session values automatically applied to queries in that scope, including queries inside explicit transactions.
@@ -37,7 +36,7 @@
   const deleted = await db.order
     .find(orderId)
     .delete()
-    .select("*", {
+    .select('*', {
       items: (q) => q.orderItems,
     });
   ```
@@ -1494,7 +1493,7 @@
 
   ```ts
   db.user.where({
-    firstName: (q) => q.ref("lastName"),
+    firstName: (q) => q.ref('lastName'),
   });
   ```
 
@@ -1509,7 +1508,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from "orchid-orm";
+  import { createBaseTable } from 'orchid-orm';
 
   export const BaseTable = createBaseTable();
 
@@ -1530,7 +1529,7 @@
     .select({ commentsCount: (q) => q.comments.count() })
     // using `commentsCount` in the `where` wasn't supported previously:
     .where({ commentsCount: { gt: 5 } })
-    .order({ commentsCount: "DESC" });
+    .order({ commentsCount: 'DESC' });
   ```
 
 - 6ee467f: Add `narrowType` query helper
@@ -1552,12 +1551,12 @@
     // select `("table"."id" = 1 OR "table"."name" = 'name') AS "one"`,
     // returns a boolean
     one: (q) =>
-      q.sql<boolean>`${q.column("id")} = ${1} OR ${q.column(
-        "name"
-      )} = ${"name"}`,
+      q.sql<boolean>`${q.column('id')} = ${1} OR ${q.column(
+        'name',
+      )} = ${'name'}`,
 
     // selects the same as above, but by building a query
-    two: (q) => q.column("id").equals(1).or(q.column("name").equals("name")),
+    two: (q) => q.column('id').equals(1).or(q.column('name').equals('name')),
   });
   ```
 
@@ -1586,9 +1585,9 @@
   // a tree has a `forestId: number | null`
 
   const tree = db.tree.create({
-    name: "Willow",
+    name: 'Willow',
     forest: {
-      name: "Eerie forest",
+      name: 'Eerie forest',
     },
   });
 
@@ -1614,7 +1613,6 @@
 ### Minor Changes
 
 - e254c22: - Rework composite indexes, primary and foreign keys.
-
   - Change `findBy` to filter only by unique columns.
   - `onConflict` now will require columns for `merge`, and it can also accept a constraint name.
 

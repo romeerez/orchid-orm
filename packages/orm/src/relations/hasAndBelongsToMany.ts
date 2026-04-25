@@ -3,7 +3,7 @@ import {
   RelationData,
   RelationThunkBase,
 } from './relations';
-import { NotFoundError, OrchidOrmInternalError, QuerySchema } from 'pqb';
+import { NotFoundError, OrchidOrmInternalError, Query, QuerySchema } from 'pqb';
 import { ORMTableInput } from '../baseTable';
 import {
   _queryCreateManyFrom,
@@ -23,7 +23,6 @@ import {
   CreateData,
   getQueryAs,
   JoinedShapes,
-  Query,
   SelectableFromShape,
   TableData,
   UpdateData,

@@ -1,4 +1,5 @@
-import { Column, Query, RawSql } from 'pqb/internal';
+import { Query } from 'pqb';
+import { Column, RawSql } from 'pqb/internal';
 import {
   _appendQuery,
   _clone,

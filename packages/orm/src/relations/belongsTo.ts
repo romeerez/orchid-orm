@@ -1,4 +1,5 @@
 import { ORMTableInput } from '../baseTable';
+import { Query } from 'pqb';
 import {
   _queryCreate,
   _queryDefaults,
@@ -13,7 +14,6 @@ import {
   getQueryAs,
   isQueryReturnsAll,
   pushQueryOnForOuter,
-  Query,
   SelectableFromShape,
   setQueryObjectValueImmutable,
   UpdateData,
