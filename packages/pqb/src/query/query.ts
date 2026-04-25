@@ -151,8 +151,8 @@ export interface Query
 
 export namespace Query {
   export namespace Order {
-    export type Arg<T extends Order.ArgThis> = OrderNamespace.Arg<T>;
-    export type Args<T extends Order.ArgThis> = OrderNamespace.Args<T>;
+    export type Arg<T extends OrderNamespace.ArgThis> = OrderNamespace.Arg<T>;
+    export type Args<T extends OrderNamespace.ArgThis> = OrderNamespace.Args<T>;
   }
 }
 
