@@ -1,5 +1,11 @@
 # pqb
 
+## 0.64.1
+
+### Patch Changes
+
+- 86c7521b: Fix Query.Order.Arg type
+
 ## 0.64.0
 
 ### Minor Changes
