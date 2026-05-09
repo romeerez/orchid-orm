@@ -1,13 +1,6 @@
 import { Query } from '../../query';
-import {
-  Adapter,
-  AdapterTransactionOptions,
-  AfterCommitHook,
-  AfterCommitStandaloneHook,
-  TransactionAfterCommitHook,
-} from '../../../adapters/adapter';
-import { emptyArray, emptyObject } from '../../../utils';
-import { SingleSqlItem } from '../../sql/sql';
+import { Adapter, AfterCommitStandaloneHook } from '../../../adapters/adapter';
+import { emptyObject } from '../../../utils';
 import { OrchidOrmError } from '../../errors';
 import { PickQueryQAndInternal } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
@@ -18,14 +11,6 @@ export interface AsyncTransactionState extends AsyncState {
   transactionAdapter: Adapter;
   transactionId: number;
 }
-
-export const commitSql: SingleSqlItem = {
-  text: 'COMMIT',
-};
-
-export const rollbackSql: SingleSqlItem = {
-  text: 'ROLLBACK',
-};
 
 export type IsolationLevel =
   | 'SERIALIZABLE'
@@ -275,123 +260,9 @@ export class QueryTransaction {
       fn = cb as () => Promise<Result>;
     }
 
-    const sql = {
-      values: emptyArray,
-    } as unknown as SingleSqlItem;
+    let opts = processStorageOptions(this, undefined, options);
 
-    const opts = processStorageOptions(this, undefined, options);
-
-    const log = opts?.log || this.q.log;
-
-    let logData: unknown | undefined;
-
-    let state = this.internal.asyncStorage.getStore();
-    const transactionId =
-      state?.transactionId !== undefined ? state.transactionId + 1 : 0;
-
-    const callback = (transactionAdapter: Adapter) => {
-      if (log) log.afterQuery(sql, logData);
-      if (log) logData = log.beforeQuery(commitSql);
-
-      if (state) {
-        state.transactionId = transactionId;
-        return fn();
-      }
-
-      state = {
-        ...opts,
-        transactionAdapter,
-        transactionId,
-      };
-
-      if (options.log !== undefined) {
-        state.log = log;
-      }
-
-      return this.internal.asyncStorage.run(state, fn);
-    };
-
-    const transactionAdapter = state?.transactionAdapter;
-    if (!state || !transactionAdapter) {
-      let transactionOptions: AdapterTransactionOptions | undefined;
-
-      if (options.level) {
-        transactionOptions = {
-          options: `ISOLATION LEVEL ${options.level}`,
-        };
-      }
-
-      if (options.readOnly !== undefined) {
-        const add = `READ ${options.readOnly ? 'ONLY' : 'WRITE'}`;
-        const opts = (transactionOptions ??= {});
-        if (opts.options) opts.options += ' ' + add;
-        else opts.options = add;
-      }
-
-      if (options.deferrable !== undefined) {
-        const add = `${options.deferrable ? '' : 'NOT '}DEFERRABLE`;
-        const opts = (transactionOptions ??= {});
-        if (opts.options) opts.options += ' ' + add;
-        else opts.options = add;
-      }
-
-      if (log) {
-        sql.text = transactionOptions?.options
-          ? `BEGIN ${transactionOptions.options}`
-          : 'BEGIN';
-        logData = log.beforeQuery(sql);
-      }
-
-      const result = await this.q.adapter
-        .transaction(transactionOptions, callback)
-        .catch((err) => {
-          if (log) log.afterQuery(rollbackSql, logData);
-
-          throw err;
-        });
-
-      if (log) log.afterQuery(commitSql, logData);
-
-      // state was defined in the callback above;
-      runAfterCommit((state as AsyncState).afterCommit, result);
-
-      return result;
-    } else {
-      try {
-        sql.text = `SAVEPOINT "t${transactionId}"`;
-        if (log) logData = log.beforeQuery(sql);
-
-        await transactionAdapter.arrays(sql.text, sql.values);
-
-        let result;
-        try {
-          result = await callback(transactionAdapter);
-        } catch (err) {
-          sql.text = `ROLLBACK TO SAVEPOINT "t${transactionId}"`;
-          if (log) logData = log.beforeQuery(sql);
-          await transactionAdapter.arrays(sql.text, sql.values);
-          if (log) log.afterQuery(sql, logData);
-          throw err;
-        }
-
-        sql.text = `RELEASE SAVEPOINT "t${transactionId}"`;
-        if (log) logData = log.beforeQuery(sql);
-        await transactionAdapter.arrays(sql.text, sql.values);
-        if (log) log.afterQuery(sql, logData);
-
-        // transactionId is trx.testTransactionCount when only the test transactions are left,
-        // and it's time to execute after commit hooks, because they won't be executed for test transactions.
-        if (transactionId === state.testTransactionCount) {
-          const { afterCommit } = state;
-          state.afterCommit = undefined;
-          runAfterCommit(afterCommit, result);
-        }
-
-        return result;
-      } finally {
-        state.transactionId = transactionId - 1;
-      }
-    }
+    return this.q.adapter.transaction(this.internal.asyncStorage, opts, fn);
   }
 
   /**
@@ -519,67 +390,3 @@ export class QueryTransaction {
     return q as T;
   }
 }
-
-// `afterCommit` hooks are detached from the main flow, this function won't throw.
-const runAfterCommit = (
-  afterCommit: TransactionAfterCommitHook[] | undefined,
-  result: unknown,
-) => {
-  // to suppress throws of sync afterCommit hooks.
-  queueMicrotask(async () => {
-    if (afterCommit) {
-      const promises = [];
-
-      let catchAfterCommitErrors: AfterCommitErrorHandler[] | undefined;
-      for (let i = 0, len = afterCommit.length; i < len; ) {
-        const first = afterCommit[i];
-        if (typeof first === 'function') {
-          try {
-            promises.push(first());
-          } catch (err) {
-            promises.push(Promise.reject(err));
-          }
-          i++;
-        } else {
-          const q = afterCommit[i + 1] as Query;
-          if (q.q.catchAfterCommitErrors) {
-            (catchAfterCommitErrors ??= []).push(...q.q.catchAfterCommitErrors);
-          }
-
-          for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-            try {
-              promises.push(fn(first as unknown[], q));
-            } catch (err) {
-              promises.push(Promise.reject(err));
-            }
-          }
-          i += 3;
-        }
-      }
-
-      const getHookNames = () => {
-        const hookNames = [];
-        for (let i = 0, len = afterCommit.length; i < len; ) {
-          const first = afterCommit[i];
-          if (typeof first === 'function') {
-            hookNames.push(first.name);
-            i++;
-          } else {
-            for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
-              hookNames.push(fn.name);
-            }
-            i += 3;
-          }
-        }
-        return hookNames;
-      };
-
-      await _runAfterCommitHooks(
-        result,
-        promises,
-        getHookNames,
-        catchAfterCommitErrors,
-      );
-    }
-  });
-};

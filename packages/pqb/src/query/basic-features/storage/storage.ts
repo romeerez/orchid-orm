@@ -1,5 +1,9 @@
 import { logParamToLogObject, QueryLogObject } from '../log/log';
-import { Adapter, TransactionAfterCommitHook } from '../../../adapters/adapter';
+import {
+  Adapter,
+  AdapterTransactionOptions,
+  TransactionAfterCommitHook,
+} from '../../../adapters/adapter';
 import {
   sqlSessionContextMergeStorageState,
   sqlSessionContextSetStorageOptions,
@@ -44,15 +48,17 @@ export interface ProcessedStorageOptions {
 export const processStorageOptions = (
   query: PickQueryQ,
   state: AsyncState | undefined,
-  options: StorageOptions,
-): ProcessedStorageOptions | undefined => {
-  let log;
-  if (options.log !== undefined && !query.q.log) {
-    log = logParamToLogObject(query.q.logger, options.log);
-  }
+  { log: enableLog, ...options }: StorageOptions,
+): AdapterTransactionOptions | undefined => {
+  const log =
+    enableLog === undefined
+      ? query.q.log
+      : logParamToLogObject(query.q.logger, enableLog);
 
   // Build the result object
-  const result: ProcessedStorageOptions = {};
+  const result: ProcessedStorageOptions = {
+    ...options,
+  };
 
   if (log) result.log = log;
   if ('schema' in options) result.schema = options.schema;

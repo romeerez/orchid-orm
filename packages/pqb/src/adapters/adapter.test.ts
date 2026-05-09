@@ -1,7 +1,7 @@
 import { Adapter, AdapterClass, TransactionAdapterClass } from './adapter';
 import { QueryError } from '../query/errors';
 import { noop } from '../utils';
-import { allDriverAdapters, testDbOptions } from 'test-utils';
+import { allDriverAdapters, testDb, testDbOptions } from 'test-utils';
 
 describe('adapter runtime abstractions', () => {
   afterEach(() => jest.clearAllMocks());
@@ -74,26 +74,104 @@ describe('adapter runtime abstractions', () => {
 
       describe('transaction', () => {
         it('executes transaction callback with TransactionAdapterClass', async () => {
-          const result = await adapter.transaction(async (trx) => {
-            expect(trx).toBeInstanceOf(TransactionAdapterClass);
-            const res = await trx.query<{ one: number }>('SELECT 1 as one');
-            return res.rows[0].one;
-          });
+          const result = await adapter.transaction(
+            undefined,
+            undefined,
+            async (trx) => {
+              expect(trx).toBeInstanceOf(TransactionAdapterClass);
+              const res = await trx.query<{ one: number }>('SELECT 1 as one');
+              return res.rows[0].one;
+            },
+          );
 
           expect(result).toBe(1);
         });
 
         it('supports transaction options string', async () => {
-          const res = await adapter.transaction(
-            { options: 'read write' },
-            async (trx) => trx.query<{ one: number }>('SELECT 1 as one'),
+          const spy = jest.spyOn(adapter.driverAdapter, 'begin');
+
+          await Promise.all([
+            adapter.transaction(
+              undefined,
+              { level: 'REPEATABLE READ' },
+              async () => {},
+            ),
+            adapter.transaction(
+              undefined,
+              { level: 'READ COMMITTED', readOnly: false, deferrable: false },
+              async () => {},
+            ),
+            adapter.transaction(
+              undefined,
+              { level: 'READ UNCOMMITTED', readOnly: true, deferrable: true },
+              async () => {},
+            ),
+          ]);
+
+          // expect(res.rows[0].one).toBe(1);
+          expect(spy.mock.calls.map((call) => call[2])).toEqual([
+            'ISOLATION LEVEL REPEATABLE READ',
+            'ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE',
+            'ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
+          ]);
+        });
+
+        it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
+          const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
+          const querySpy = jest.spyOn(adapter.driverAdapter, 'queryClient');
+
+          const {
+            rows: [{ result }],
+          } = await adapter.transaction(
+            testDb.internal.asyncStorage,
+            undefined,
+            async () =>
+              await adapter.transaction(
+                testDb.internal.asyncStorage,
+                undefined,
+                async (client) => client.query('SELECT 123 as result'),
+              ),
           );
 
-          expect(res.rows[0].one).toBe(1);
+          expect(result).toBe(123);
+
+          expect(beginSpy).toBeCalledTimes(1);
+          expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
+            'SAVEPOINT "t1"',
+            'SELECT 123 as result',
+            'RELEASE SAVEPOINT "t1"',
+          ]);
+        });
+
+        it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
+          const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
+          const querySpy = jest.spyOn(adapter.driverAdapter, 'queryClient');
+
+          await expect(() =>
+            adapter.transaction(
+              testDb.internal.asyncStorage,
+              undefined,
+              async () =>
+                await adapter.transaction(
+                  testDb.internal.asyncStorage,
+                  undefined,
+                  async () => {
+                    throw new Error('error');
+                  },
+                ),
+            ),
+          ).rejects.toThrow('error');
+
+          expect(beginSpy).toBeCalledTimes(1);
+          expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
+            'SAVEPOINT "t1"',
+            'ROLLBACK TO SAVEPOINT "t1"',
+          ]);
         });
 
         it('sets search_path for transaction locals', async () => {
           const res = await adapter.transaction(
+            undefined,
             { locals: { search_path: 'schema' } },
             async (trx) =>
               trx.query<{ search_path: string }>('SHOW search_path'),
@@ -111,10 +189,12 @@ describe('adapter runtime abstractions', () => {
           };
 
           const res = await adapter.transaction(
+            undefined,
             { locals: { search_path: 'public' } },
             async (trx) => {
               const before = await getSearchPath(trx);
               const nested = await trx.transaction(
+                undefined,
                 { locals: { search_path: 'schema' } },
                 (nestedTrx) => getSearchPath(nestedTrx),
               );
@@ -139,10 +219,12 @@ describe('adapter runtime abstractions', () => {
           };
 
           const res = await adapter.transaction(
+            undefined,
             { locals: { 'app.user_id': 1 } },
             async (trx) => {
               const before = await getLocal(trx);
               const nested = await trx.transaction(
+                undefined,
                 { locals: { 'app.user_id': 2 } },
                 (nestedTrx) => getLocal(nestedTrx),
               );
@@ -161,7 +243,7 @@ describe('adapter runtime abstractions', () => {
 
       describe('savepoint', () => {
         it('supports startingSavepoint', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             const beforeInsert = await trx.query<{ count: number }>(
               `SELECT count(*)::int as count FROM "schema"."user"`,
             );
@@ -191,7 +273,7 @@ describe('adapter runtime abstractions', () => {
         });
 
         it('rolls back to releasingSavepoint if query fails', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             const beforeInsert = await trx.query<{ count: number }>(
               `SELECT count(*)::int as count FROM "schema"."user"`,
             );
@@ -219,7 +301,7 @@ describe('adapter runtime abstractions', () => {
         });
 
         it('releases savepoint when startingSavepoint and releasingSavepoint are the same', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             await trx.query(
               `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
               undefined,
@@ -270,7 +352,7 @@ describe('adapter runtime abstractions', () => {
         });
 
         it('applies setConfig in transaction query', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             const during = await trx.query<{ preset: string; fresh: string }>(
               `SELECT
                 current_setting('app.preset_key', true) as preset,
@@ -314,6 +396,7 @@ describe('adapter runtime abstractions', () => {
 
         it('applies sqlSessionState from transaction options', async () => {
           await adapter.transaction(
+            undefined,
             {
               sqlSessionState: {
                 setConfig: {
@@ -335,7 +418,7 @@ describe('adapter runtime abstractions', () => {
       it('assigns db error properties to QueryError', async () => {
         let duplicateId = 0;
         const dbErr = await adapter
-          .transaction(async (trx) => {
+          .transaction(undefined, undefined, async (trx) => {
             const inserted = await trx.query<{ id: number }>(
               `INSERT INTO "schema"."user"("name", "password")
                VALUES ('name', 'password')

@@ -1,5 +1,6 @@
 import url from 'node:url';
 import path from 'node:path';
+import { SingleSqlItem } from './query';
 
 export type UnionToIntersection<U> =
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -491,4 +492,12 @@ export const colors = {
   yellowBold: (s: string) => `\x1b[1m\x1b[33m${s}\x1b[0m`,
   greenBold: (s: string) => `\x1b[1m\x1b[32m${s}\x1b[0m`,
   pale: (s: string) => `\x1b[2m${s}\x1b[0m`,
+};
+
+export const commitSql: SingleSqlItem = {
+  text: 'COMMIT',
+};
+
+export const rollbackSql: SingleSqlItem = {
+  text: 'ROLLBACK',
 };

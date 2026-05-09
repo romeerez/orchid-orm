@@ -354,7 +354,6 @@ export {
   type QueryResult,
   type QueryArraysResult,
   type QueryResultRow,
-  type TransactionArgs,
   type AfterCommitStandaloneHook,
 } from './adapters/adapter';
 

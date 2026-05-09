@@ -1326,7 +1326,7 @@ describe('updateMany', () => {
     });
 
     it('should generate CTE for strict updateMany with select', () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       const columns = User.q.selectAllColumns!;
       expectSql(
         User.selectAll()

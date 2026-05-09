@@ -11,12 +11,14 @@ import {
 
 const adapter = testAdapter;
 const query = jest.spyOn(adapter, 'query').mockImplementation();
-asMock(jest.spyOn(adapter, 'transaction')).mockImplementation((fn) => {
-  const trx = Object.create(adapter);
-  trx.query = query;
-  trx.isInTransaction = () => true;
-  return fn(trx);
-});
+asMock(jest.spyOn(adapter, 'transaction')).mockImplementation(
+  (_asyncStorage, _options, fn) => {
+    const trx = Object.create(adapter);
+    trx.query = query;
+    trx.isInTransaction = () => true;
+    return fn(trx);
+  },
+);
 
 describe('create-or-drop', () => {
   beforeEach(jest.clearAllMocks);
@@ -119,7 +121,8 @@ describe('create-or-drop', () => {
       const keyword = fn.name.endsWith('Table') ? 'TABLE' : 'SCHEMA';
 
       const act = () => fn(adapter, sql);
-      const actInTransaction = () => adapter.transaction((trx) => fn(trx, sql));
+      const actInTransaction = () =>
+        adapter.transaction(undefined, undefined, (trx) => fn(trx, sql));
 
       it('should do the thing', async () => {
         const res = await act();

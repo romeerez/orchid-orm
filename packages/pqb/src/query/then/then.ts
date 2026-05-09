@@ -2,7 +2,6 @@ import { Query, QueryReturnType } from '../query';
 import {
   _runAfterCommitHooks,
   AsyncTransactionState,
-  commitSql,
   isInUserTransaction,
 } from '../basic-features/transaction/transaction';
 import { processComputedResult } from '../extra-features/computed/computed';
@@ -18,6 +17,7 @@ import {
 import { sqlSessionContextGetStateFromAsyncState } from '../../adapters/features/sql-session-context';
 import {
   callWithThis,
+  commitSql,
   emptyArray,
   MaybePromise,
   RecordString,
@@ -470,7 +470,7 @@ const then = async (
         const { batch } = sql;
 
         if (log) logData = log.beforeQuery(beginSql);
-        await adapter.transaction(async () => {
+        await adapter.transaction(undefined, undefined, async () => {
           if (log) log.afterQuery(beginSql, logData);
           const res = await queryBatch(batch);
           if (log) logData = log.beforeQuery(commitSql);

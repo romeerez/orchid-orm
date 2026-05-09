@@ -30,6 +30,7 @@ const afterCommitSampleError = {
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
+  afterAll(testDb.close);
 
   it('should start and commit transaction', async () => {
     const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
@@ -77,67 +78,26 @@ describe('transaction', () => {
   it('should accept isolation level and options', async () => {
     const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
 
-    await testDb.transaction('REPEATABLE READ', async () => {});
-    await testDb.transaction(
-      {
-        level: 'READ COMMITTED',
-        readOnly: false,
-        deferrable: false,
-      },
-      async () => {},
-    );
-    await testDb.transaction(
-      {
-        level: 'READ UNCOMMITTED',
-        readOnly: true,
-        deferrable: true,
-      },
-      async () => {},
-    );
+    const one = 'REPEATABLE READ' as const;
+    const two = {
+      level: 'READ COMMITTED' as const,
+      readOnly: false,
+      deferrable: false,
+    };
+    const three = {
+      level: 'READ UNCOMMITTED' as const,
+      readOnly: true,
+      deferrable: true,
+    };
 
-    expect(transactionSpy.mock.calls.map((call) => call[0])).toEqual([
-      { options: 'ISOLATION LEVEL REPEATABLE READ' },
-      { options: 'ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE' },
-      { options: 'ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE' },
-    ]);
-  });
+    await testDb.transaction(one, async () => {});
+    await testDb.transaction(two, async () => {});
+    await testDb.transaction(three, async () => {});
 
-  it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
-    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
-    const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
-
-    const result = await testDb.transaction(
-      async () =>
-        await testDb.transaction(async () => testDb.qb.get(testDb.sql`123`)),
-    );
-
-    expect(result).toBe(123);
-
-    expect(transactionSpy).toBeCalledTimes(1);
-    expect(arraysSpy.mock.calls.map((call) => call[0])).toEqual([
-      'SAVEPOINT "t1"',
-      'SELECT 123 LIMIT 1',
-      'RELEASE SAVEPOINT "t1"',
-    ]);
-  });
-
-  it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
-    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
-    const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
-
-    await expect(() =>
-      testDb.transaction(
-        async () =>
-          await testDb.transaction(async () => {
-            throw new Error('error');
-          }),
-      ),
-    ).rejects.toThrow('error');
-
-    expect(transactionSpy).toBeCalledTimes(1);
-    expect(arraysSpy.mock.calls.map((call) => call[0])).toEqual([
-      'SAVEPOINT "t1"',
-      'ROLLBACK TO SAVEPOINT "t1"',
+    expect(transactionSpy.mock.calls.map((call) => call[1])).toMatchObject([
+      { level: one },
+      two,
+      three,
     ]);
   });
 
