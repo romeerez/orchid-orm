@@ -1037,6 +1037,8 @@ change(async (db) => {
 
 Create and drop database roles.
 
+`createRole` uses `IF NOT EXISTS` logic by default (wrapped in a `DO $$ ... $$` block), so creating the same role again won't fail.
+
 `dropRole` accepts the same arguments as `createRole`, it will create the role back when rolling back the migration.
 
 ```ts

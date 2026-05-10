@@ -71,9 +71,18 @@ const astToQuery = (ast: RakeDbAst.Role): string => {
     }
   }
 
-  let sql = `${ast.action.toUpperCase()} ROLE "${ast.name}"${
+  const escapedRoleName = ast.name.replace(/'/g, "''");
+  const roleSql = `${ast.action.toUpperCase()} ROLE "${ast.name}"${
     w.length ? ` WITH ${w.join(' ')}` : ''
   }`;
+
+  let sql =
+    ast.action === 'create'
+      ? // Roles are cluster-level objects, not per-database objects.
+        // When a database is reset, role creation can fail because role may already exist.
+        // Wrap creation to make createRole idempotent by default.
+        `DO $$\nBEGIN\n  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${escapedRoleName}') THEN\n    ${roleSql};\n  END IF;\nEND\n$$`
+      : roleSql;
 
   if (ast.action !== 'drop' && ast.config) {
     for (const [key, value] of Object.entries(ast.config)) {

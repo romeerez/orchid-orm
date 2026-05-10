@@ -3,6 +3,7 @@ import {
   getDb,
   makeTestUpAndDown,
   queryMock,
+  trim,
   toLine,
 } from '../rake-db.test-utils';
 import { raw, singleQuote } from 'pqb/internal';
@@ -1174,7 +1175,13 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
           }),
         () =>
           expectSql(`
-            CREATE ROLE "name" WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION CONNECTION LIMIT 10 BYPASSRLS VALID UNTIL '${now.toISOString()}';
+            DO $$
+            BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'name') THEN
+                CREATE ROLE "name" WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION CONNECTION LIMIT 10 BYPASSRLS VALID UNTIL '${now.toISOString()}';
+              END IF;
+            END
+            $$;
             ALTER ROLE "name" SET statement_timeout = '30s';
             ALTER ROLE "name" SET work_mem = '64MB'
           `),
@@ -1183,6 +1190,22 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
             DROP ROLE "name"
           `),
       );
+    });
+
+    it("shouldn't fail when creating the same role twice", async () => {
+      const mockCreate = (input: unknown) => {
+        const text = trim(
+          typeof input === 'string' ? input : (input as { text: string }).text,
+        );
+        if (text.startsWith('CREATE ROLE "duplicate-role"')) {
+          throw new Error('role already exists');
+        }
+      };
+      queryMock.mockImplementationOnce(mockCreate);
+      queryMock.mockImplementationOnce(mockCreate);
+
+      await expect(db.createRole('duplicate-role')).resolves.toBeUndefined();
+      await expect(db.createRole('duplicate-role')).resolves.toBeUndefined();
     });
   });
 
