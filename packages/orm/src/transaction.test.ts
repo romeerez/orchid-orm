@@ -51,4 +51,30 @@ describe('transaction', () => {
 
     expect(spy).toHaveBeenCalledWith(noop);
   });
+
+  it('should accept and forward role and setConfig options', async () => {
+    const qbTransactionSpy = jest
+      .spyOn(db.$qb, 'transaction')
+      .mockResolvedValue(undefined);
+
+    await db.$transaction(
+      {
+        role: 'app_user',
+        setConfig: {
+          'app.tenant_id': 42,
+          'app.enabled': true,
+        },
+      },
+      async () => {},
+    );
+
+    expect(qbTransactionSpy).toHaveBeenCalledTimes(1);
+    expect(qbTransactionSpy.mock.calls[0][0]).toEqual({
+      role: 'app_user',
+      setConfig: {
+        'app.tenant_id': 42,
+        'app.enabled': true,
+      },
+    });
+  });
 });

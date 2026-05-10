@@ -11,7 +11,6 @@ import {
 import type { SqlSessionState } from '../../../adapters/features/sql-session-context';
 import { PickQueryQ, PickQueryQAndInternal } from '../../pick-query-types';
 import { QuerySchema } from '../schema/schema';
-import { RecordStringOrNumber } from '../../../utils';
 
 export type { SqlSessionState } from '../../../adapters/features/sql-session-context';
 
@@ -32,6 +31,10 @@ export interface AsyncState extends SqlSessionState {
   catchI?: number;
   // a db schema to use by default
   schema?: QuerySchema;
+  // Effective transaction role for transaction-scoped SQL session context.
+  transactionRole?: SqlSessionState['role'];
+  // Effective transaction set_config map for transaction-scoped SQL session context.
+  transactionSetConfig?: SqlSessionState['setConfig'];
 }
 
 export interface StorageOptions extends SqlSessionState {
@@ -39,11 +42,9 @@ export interface StorageOptions extends SqlSessionState {
   schema?: QuerySchema;
 }
 
-export interface ProcessedStorageOptions {
+export interface ProcessedStorageOptions extends SqlSessionState {
   log?: QueryLogObject;
   schema?: QuerySchema;
-  role?: SqlSessionState['role'];
-  setConfig?: RecordStringOrNumber;
 }
 
 export const processStorageOptions = (
@@ -56,22 +57,12 @@ export const processStorageOptions = (
       ? query.q.log
       : logParamToLogObject(query.q.logger, enableLog);
 
-  const result: ProcessedStorageOptions = {};
+  const result = options as ProcessedStorageOptions;
 
   if (log) result.log = log;
   if ('schema' in options) result.schema = options.schema;
 
   sqlSessionContextSetStorageOptions(query, state, options, result);
-
-  // Return undefined if no options were processed
-  if (
-    result.log === undefined &&
-    result.schema === undefined &&
-    result.role === undefined &&
-    result.setConfig === undefined
-  ) {
-    return undefined;
-  }
 
   return result;
 };

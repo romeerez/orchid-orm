@@ -180,7 +180,7 @@ SQL session options apply to all Orchid queries including:
 **Nested SQL session scopes are not allowed.**
 
 If an outer scope already has `role` or `setConfig`, attempting to set them again in a nested `$withOptions` call will throw an error.
-If nested `role`/`setConfig` support would be useful for your case, please open an issue and describe your use case.
+For transaction-bound work that needs nested overrides, pass `role` and `setConfig` to nested `$transaction` calls instead.
 
 ```ts
 await db.$withOptions({ role: 'app_user' }, async () => {
@@ -242,6 +242,9 @@ await db.$withOptions(
   },
 );
 ```
+
+When the request's DB work should run in one transaction, prefer passing `role` and `setConfig` directly to `$transaction`.
+See [SQL session context in transactions](/guide/transactions.html#sql-session-context-in-transactions).
 
 :::
 

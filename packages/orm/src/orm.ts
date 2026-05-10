@@ -155,6 +155,8 @@ interface OrchidORMMethods {
    * SQL session options (`role` and `setConfig`) cannot be nested.
    * If an outer scope already has `role` or `setConfig`, attempting to set them again
    * in a nested `$withOptions` call will throw an error.
+   * For transaction-bound work that needs nested overrides, pass `role` and
+   * `setConfig` to nested `$transaction` calls instead.
    * Nested scopes that only change `log` or `schema` will inherit the outer SQL session context.
    *
    * Explicit transactions inside the callback inherit the same SQL session context:
@@ -178,6 +180,9 @@ interface OrchidORMMethods {
    *   },
    * );
    * ```
+   *
+   * When the request's DB work should run in one transaction, prefer passing
+   * `role` and `setConfig` directly to `$transaction`.
    *
    * Basic usage with `log` and `schema`:
    *

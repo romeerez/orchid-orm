@@ -501,3 +501,7 @@ export const commitSql: SingleSqlItem = {
 export const rollbackSql: SingleSqlItem = {
   text: 'ROLLBACK',
 };
+
+export const quoteIdentifier = (role: string): string => {
+  return `"${role.replace(/"/g, '""')}"`;
+};

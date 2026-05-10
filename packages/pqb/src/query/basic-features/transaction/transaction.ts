@@ -1,5 +1,9 @@
 import { Query } from '../../query';
-import { Adapter, AfterCommitStandaloneHook } from '../../../adapters/adapter';
+import {
+  Adapter,
+  AfterCommitStandaloneHook,
+  SqlSessionState,
+} from '../../../adapters/adapter';
 import { emptyObject } from '../../../utils';
 import { OrchidOrmError } from '../../errors';
 import { PickQueryQAndInternal } from '../../pick-query-types';
@@ -18,12 +22,40 @@ export type IsolationLevel =
   | 'READ COMMITTED'
   | 'READ UNCOMMITTED';
 
-export interface TransactionOptions {
+export interface TransactionOptions extends SqlSessionState {
+  /**
+   * Enable or disable logging for all queries in the transaction.
+   */
   log?: boolean;
+  /**
+   * Default schema to use for queries in the transaction.
+   */
   schema?: QuerySchema;
+  /**
+   * Postgres isolation level for the top-level transaction.
+   */
   level?: IsolationLevel;
+  /**
+   * Whether the top-level transaction should be read-only.
+   */
   readOnly?: boolean;
+  /**
+   * Whether the top-level transaction should be deferrable.
+   */
   deferrable?: boolean;
+  /**
+   * Postgres role to apply for the transaction callback.
+   *
+   * Nested transactions can temporarily replace the parent transaction role.
+   */
+  role?: SqlSessionState['role'];
+  /**
+   * Postgres custom settings to apply for the transaction callback.
+   *
+   * Nested transaction settings are shallow-merged over the parent transaction
+   * settings while the nested callback runs.
+   */
+  setConfig?: SqlSessionState['setConfig'];
 }
 
 export interface AfterCommitErrorFulfilledResult extends PromiseFulfilledResult<unknown> {
@@ -234,6 +266,36 @@ export class QueryTransaction {
    * ```
    *
    * If the error in the inner transaction is not caught, all nested transactions are rolled back and aborted.
+   *
+   * ## SQL session context in transactions
+   *
+   * Pass `role` and `setConfig` in transaction options to apply Postgres SQL session context for the whole transaction:
+   *
+   * ```ts
+   * await db.$transaction(
+   *   {
+   *     role: 'app_user',
+   *     setConfig: {
+   *       'app.tenant_id': tenantId,
+   *       'app.user_id': userId,
+   *     },
+   *   },
+   *   async () => {
+   *     const project = await db.project.find(projectId);
+   *
+   *     await db.project.find(projectId).update({ lastViewedAt: new Date() });
+   *
+   *     return project;
+   *   },
+   * );
+   * ```
+   *
+   * This is different from `$withOptions({ role, setConfig }, cb)`.
+   * `$withOptions` is query-scoped and reconciles SQL session state around each query.
+   * Transaction options are applied once for the transaction and are useful for request-scoped RLS work that is already transaction-bound.
+   *
+   * Nested transactions can temporarily override the parent transaction role and config.
+   * When the nested transaction finishes, Orchid restores the parent transaction context before the outer callback continues.
    */
   transaction<Result>(
     this: PickQueryQAndInternal,

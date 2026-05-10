@@ -1,39 +1,77 @@
-import { AdapterTransactionOptions } from './adapter';
-import { RecordStringOrNumber } from '../utils';
+import { AdapterTransactionOptions, SqlSessionState } from './adapter';
+import { quoteIdentifier } from '../utils';
 
-export const mergeSetConfig = (
-  setConfig: RecordStringOrNumber,
+export const getSetRoleSql = (
+  parentRole?: string,
   options?: AdapterTransactionOptions,
-): RecordStringOrNumber =>
-  options?.setConfig ? { ...setConfig, ...options.setConfig } : setConfig;
+) => {
+  if (!options?.role) return;
 
-export const getSetConfigSql = (
-  options?: AdapterTransactionOptions,
-): string | undefined => {
-  if (!options?.setConfig) return;
-
-  return Object.entries(options.setConfig)
-    .map(([key, value]) => `SET LOCAL ${key}=${value}`)
-    .join('; ');
+  return parentRole !== options.role
+    ? `SET LOCAL ROLE ${quoteIdentifier(options.role)}`
+    : undefined;
 };
 
-export const getResetSetConfigSql = (
-  parentSetConfig: RecordStringOrNumber,
+export const getResetRoleSql = (
+  parentRole?: string,
+  options?: AdapterTransactionOptions,
+) => {
+  if (!options?.role) return;
+
+  return parentRole !== options.role
+    ? parentRole
+      ? `SET LOCAL ROLE ${quoteIdentifier(parentRole)}`
+      : `RESET ROLE`
+    : undefined;
+};
+
+export const getSetConfigSql = (
+  parentSetConfig?: SqlSessionState['setConfig'],
   options?: AdapterTransactionOptions,
 ): string | undefined => {
   if (!options?.setConfig) return;
 
-  return Object.entries(options.setConfig)
-    .reduce<string[]>((acc, [key, value]) => {
-      if (parentSetConfig[key] === value) return acc;
-
-      if (Object.prototype.hasOwnProperty.call(parentSetConfig, key)) {
-        acc.push(`SET LOCAL ${key}=${parentSetConfig[key]}`);
-      } else {
-        acc.push(`RESET ${key}`);
+  const expressions = Object.entries(options.setConfig).reduce<string[]>(
+    (acc, [key, value]) => {
+      if (!parentSetConfig || parentSetConfig[key] !== value) {
+        acc.push(setConfigSql(key, value));
       }
 
       return acc;
-    }, [])
-    .join('; ');
+    },
+    [],
+  );
+
+  return expressions.length ? `SELECT ${expressions.join(', ')}` : undefined;
+};
+
+export const getResetSetConfigSql = (
+  parentSetConfig?: SqlSessionState['setConfig'],
+  options?: AdapterTransactionOptions,
+): string | undefined => {
+  if (!options?.setConfig) return;
+
+  const expressions = Object.entries(options.setConfig).reduce<string[]>(
+    (acc, [key, value]) => {
+      if (parentSetConfig && key in parentSetConfig) {
+        if (parentSetConfig[key] !== value) {
+          acc.push(setConfigSql(key, parentSetConfig[key]));
+        }
+      } else {
+        acc.push(setConfigSql(key, undefined));
+      }
+
+      return acc;
+    },
+    [],
+  );
+
+  return expressions.length ? `SELECT ${expressions.join(', ')}` : undefined;
+};
+
+const setConfigSql = (
+  key: string,
+  value: string | number | boolean | undefined,
+) => {
+  return `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value === undefined ? '' : value}', true)`;
 };
