@@ -8,48 +8,50 @@
 
 ## 1. pqb
 
-- [ ] 1.1 Extend the transaction option contract
-  - 1.1.1 Add transaction-scoped `role` and `setConfig` options to the query transaction type surface by reusing the existing SQL session option interface, normalize `setConfig`, and pass the result into the adapter transaction flow.
-  - 1.1.2 Keep `$ensureTransaction`, the isolation-level overload, and existing `log`, `schema`, `level`, `readOnly`, and `deferrable` behavior unchanged.
-  - 1.1.3 verify if the implementation conforms to guidelines
-  - 1.1.4 make sure you didn't forget to cover the implementation with tests
-  - 1.1.5 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
-  - 1.1.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 1.2 Add standalone transaction session context handling
-  - 1.2.1 Add adapter feature logic for transaction-scoped role setup, nested transaction inheritance, and restoration without changing the query-scoped SQL session context logic.
-  - 1.2.2 Reuse the existing `SqlSessionState` interface for transaction option typing without adding fields to that interface.
-  - 1.2.3 Represent transaction `setConfig` through the adapter locals structure instead of a separate transaction-specific config hierarchy.
-  - 1.2.4 verify if the implementation conforms to guidelines
-  - 1.2.5 make sure you didn't forget to cover the implementation with tests
-  - 1.2.6 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
-  - 1.2.7 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 1.3 Unify transaction locals for search path and setConfig
-  - 1.3.1 Update the existing adapter locals flow so transaction `setConfig` entries and existing locals such as `search_path` share the same merge, `SET LOCAL`, nesting, and restore behavior.
-  - 1.3.2 Make nested locals restoration handle keys that were absent in the parent locals map without emitting invalid restore values.
-  - 1.3.3 verify if the implementation conforms to guidelines
-  - 1.3.4 make sure you didn't forget to cover the implementation with tests
-  - 1.3.5 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
-  - 1.3.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 1.4 Integrate transaction context into adapter transaction lifecycle
-  - 1.4.1 Apply transaction-scoped role and merged locals after `BEGIN` for top-level transactions and after savepoint creation for nested transactions.
-  - 1.4.2 Restore the previous transaction-scoped role and locals after successful nested transactions release their savepoint, and rely on rollback-to-savepoint behavior for failed nested transactions while still restoring transaction session context.
-  - 1.4.3 Ensure setup, callback execution, savepoint handling, restore, and failure paths run on the transaction connection for both supported adapters.
-  - 1.4.4 verify if the implementation conforms to guidelines
-  - 1.4.5 make sure you didn't forget to cover the implementation with tests
-  - 1.4.6 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
-  - 1.4.7 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+- [x] 1.1 Rename adapter `locals` to `setConfig`
+  - 1.1.1 Rename `AdapterConfigBase.locals`, `AdapterTransactionOptions.locals`, `AdapterClass` / `TransactionAdapterClass` fields and parameters, adapter helper names, adapter tests, and driver adapter references to `setConfig`.
+  - 1.1.2 Preserve existing `searchPath` behavior by deriving `setConfig.search_path` from config / URL `searchPath` and continuing to pass it to both node-postgres and postgres.js connection setup.
+  - 1.1.3 Treat adapter base `setConfig` and transaction option `setConfig` as the same normalized map of Postgres settings.
+  - 1.1.4 Update helper tests for merge, setup SQL, restore SQL, overridden keys, and keys absent from the parent config map.
+- [ ] 1.2 Add transaction session context to ALS
+  - 1.2.1 Add transaction-scoped context to `AsyncState` for the effective transaction `role` and effective transaction `setConfig`.
+  - 1.2.2 Keep this transaction context separate from query-scoped `AsyncState.role` / `AsyncState.setConfig`, so `$withOptions` query setup/cleanup behavior is not used for transaction-level context.
+  - 1.2.3 Initialize top-level transaction context from adapter base `setConfig`, transaction `role`, and transaction `setConfig`.
+  - 1.2.4 For nested transactions, derive a child context from the parent ALS context by overriding only provided `role` / `setConfig` values, and restore the parent ALS context after the nested transaction finishes.
+  - 1.2.5 Do not capture parent transaction role/config with `current_role` or `current_setting` for restore; use the values tracked in ALS.
+- [ ] 1.3 Apply top-level transaction role and config
+  - 1.3.1 Reuse the existing `SqlSessionState` option shape for `transaction({ role, setConfig }, cb)` typing without adding fields to that interface.
+  - 1.3.2 Pass normalized transaction `role` and `setConfig` through `QueryTransaction.transaction` to `adapter.transaction`.
+  - 1.3.3 After `BEGIN`, before the callback runs, apply transaction-scoped role with transaction-local role semantics and apply transaction `setConfig` through the adapter `SET LOCAL` config path.
+  - 1.3.4 Keep `$ensureTransaction`, the isolation-level overload, and existing `log`, `schema`, `level`, `readOnly`, and `deferrable` behavior unchanged.
+- [ ] 1.4 Apply nested transaction role/config and restore parent context
+  - 1.4.1 Create the nested savepoint before applying nested `role` or `setConfig`.
+  - 1.4.2 Apply only the nested transaction's provided role/config overrides after the savepoint, then run the callback under the child ALS transaction context.
+  - 1.4.3 On successful nested completion, restore the parent role and parent config values from ALS before releasing the savepoint. Reset config keys that exist only in the child context.
+  - 1.4.4 On nested callback failure or nested setup failure after savepoint creation, roll back to the savepoint, restore the parent ALS context, and rely on Postgres rollback-to-savepoint behavior to undo nested transaction-local role/config SQL.
+  - 1.4.5 Support deeper nesting recursively: each level restores to the effective parent role/config it observed before applying its own options.
+  - 1.4.6 Ensure setup, callback execution, savepoint handling, restore, and failure paths run on the transaction connection for both node-postgres and postgres.js.
+- [ ] 1.5 Cover pqb behavior with tests and verification
+  - 1.5.1 Add or update transaction tests for top-level `setConfig`, top-level `role`, nested `setConfig` override/restore, nested role override/restore, resetting child-only config keys, rollback-to-savepoint restore, and deeper nested restore.
+  - 1.5.2 Add or update tests showing transaction-level context does not change query-scoped `$withOptions` / `withOptions` nested-scope behavior.
+  - 1.5.3 Add or update type tests / compile coverage for `transaction({ role, setConfig }, cb)` and the unchanged isolation-level overload.
+  - 1.5.4 Verify the implementation conforms to `guidelines/code.md` and `packages/pqb/src/query/guidelines/code.md`.
+  - 1.5.5 Run `pnpm --filter pqb check --silent -o` for changed pqb tests when focused verification is enough, then run `pnpm pqb check` and `pnpm pqb types` before marking pqb work complete.
+  - 1.5.6 If implementation details diverge from `spec.md`, update `spec.md` before marking tasks complete.
 
 ## 2. orm
 
 - [ ] 2.1 Expose transaction session options through `$transaction`
   - 2.1.1 Update the ORM-facing `$transaction` type/JSDoc surface so it reflects the `pqb` transaction options for `role` and `setConfig`.
   - 2.1.2 Keep ORM delegation to `pqb` unchanged apart from accepting and forwarding the expanded option shape.
-  - 2.1.3 verify if the implementation conforms to guidelines
-  - 2.1.4 make sure you didn't forget to cover the implementation with tests
-  - 2.1.5 make sure the package test and typecheck commands are passing (`pnpm orm check` and `pnpm orm types`; `orm` is the folder name under `packages/`, not the `package.json` name)
-  - 2.1.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+  - 2.1.3 Add or update ORM type/runtime coverage if `$transaction` has its own transaction option surface.
+  - 2.1.4 Verify the implementation conforms to guidelines.
+  - 2.1.5 Run `pnpm --filter orm check --silent -o` for changed orm tests when focused verification is enough, then run `pnpm orm check` and `pnpm orm types` before marking orm work complete.
+  - 2.1.6 If implementation details diverge from `spec.md`, update `spec.md` before marking tasks complete.
 
 ## 3. docs
 
 - [ ] 3.1 Document transaction-level RLS context
   - 3.1.1 Update the transaction and RLS docs to show `$transaction({ role, setConfig }, cb)`, explain how it differs from per-query `$withOptions`, and call out nested transaction restore behavior.
+  - 3.1.2 Mention that nested transactions temporarily override the parent transaction role/config and restore the parent context when the nested transaction finishes.
+  - 3.1.3 Run the relevant docs checks if docs have tests or type examples for the changed pages.

@@ -1,33 +1,38 @@
 import { AdapterTransactionOptions } from './adapter';
 import { RecordStringOrNumber } from '../utils';
 
-export const mergeLocals = (
-  locals: RecordStringOrNumber,
+export const mergeSetConfig = (
+  setConfig: RecordStringOrNumber,
   options?: AdapterTransactionOptions,
 ): RecordStringOrNumber =>
-  options?.locals ? { ...locals, ...options.locals } : locals;
+  options?.setConfig ? { ...setConfig, ...options.setConfig } : setConfig;
 
-export const getSetLocalsSql = (
+export const getSetConfigSql = (
   options?: AdapterTransactionOptions,
 ): string | undefined => {
-  if (!options?.locals) return;
+  if (!options?.setConfig) return;
 
-  return Object.entries(options.locals)
+  return Object.entries(options.setConfig)
     .map(([key, value]) => `SET LOCAL ${key}=${value}`)
     .join('; ');
 };
 
-export const getResetLocalsSql = (
-  parentLocals: RecordStringOrNumber,
+export const getResetSetConfigSql = (
+  parentSetConfig: RecordStringOrNumber,
   options?: AdapterTransactionOptions,
 ): string | undefined => {
-  if (!options?.locals) return;
+  if (!options?.setConfig) return;
 
-  return Object.entries(options.locals)
+  return Object.entries(options.setConfig)
     .reduce<string[]>((acc, [key, value]) => {
-      if (parentLocals[key] !== value) {
-        acc.push(`SET LOCAL ${key}=${parentLocals[key]}`);
+      if (parentSetConfig[key] === value) return acc;
+
+      if (Object.prototype.hasOwnProperty.call(parentSetConfig, key)) {
+        acc.push(`SET LOCAL ${key}=${parentSetConfig[key]}`);
+      } else {
+        acc.push(`RESET ${key}`);
       }
+
       return acc;
     }, [])
     .join('; ');

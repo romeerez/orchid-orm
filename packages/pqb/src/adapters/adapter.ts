@@ -30,9 +30,9 @@ import {
   SqlSessionState,
 } from './features/sql-session-context';
 import {
-  getResetLocalsSql,
-  getSetLocalsSql,
-  mergeLocals,
+  getResetSetConfigSql,
+  getSetConfigSql,
+  mergeSetConfig,
 } from './adapter.utils';
 
 export type { SqlSessionState } from './features/sql-session-context';
@@ -69,7 +69,7 @@ export interface AdapterConfigBase {
   searchPath?: string;
   // oxlint-disable-next-line typescript/no-explicit-any - different drivers support different configs for this
   ssl?: any;
-  locals?: RecordStringOrNumber;
+  setConfig?: RecordStringOrNumber;
   schema?: QuerySchema;
   host?: string;
   /**
@@ -146,9 +146,7 @@ export interface AdapterTransactionOptions extends ProcessedStorageOptions {
   level?: IsolationLevel;
   readOnly?: boolean;
   deferrable?: boolean;
-  locals?: {
-    [ConfigName: string]: string | number;
-  };
+  setConfig?: RecordStringOrNumber;
   // Transaction-scoped SQL session state (role and setConfig)
   // Applied once when the transaction begins
   sqlSessionState?: SqlSessionState;
@@ -283,11 +281,11 @@ export class AdapterClass implements Adapter {
   private pool: Pool;
   private readonly config: AdapterConfigBase;
   private readonly connectionState: AdapterConnectionState;
-  private readonly locals: RecordStringOrNumber;
+  private readonly setConfig: RecordStringOrNumber;
 
   constructor(private readonly params: AdapterParams) {
     this.config = { ...params.config };
-    this.locals = this.config.locals || emptyObject;
+    this.setConfig = this.config.setConfig || emptyObject;
 
     if (this.config.connectRetry) {
       const connectRetryConfig = makeConnectRetryConfig(
@@ -399,7 +397,7 @@ export class AdapterClass implements Adapter {
       this,
       this.driverAdapter,
       this.pool,
-      this.locals,
+      this.setConfig,
       options,
       cb,
     );
@@ -432,7 +430,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
 
   constructor(
     private adapter: Adapter,
-    private locals: RecordStringOrNumber,
+    private setConfig: RecordStringOrNumber,
     private client: Client,
   ) {
     this.driverAdapter = adapter.driverAdapter;
@@ -526,7 +524,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
       this.adapter,
       this.driverAdapter,
       this.client,
-      this.locals,
+      this.setConfig,
       options,
       cb,
       this,
@@ -552,7 +550,7 @@ const transaction = <T>(
   adapter: Adapter,
   driverAdapter: DriverAdapter,
   poolOrClient: Pool | Client,
-  locals: RecordStringOrNumber,
+  setConfig: RecordStringOrNumber,
   options: AdapterTransactionOptions | undefined,
   cb: (adapter: TransactionAdapter) => Promise<T>,
   transactionAdapter?: Adapter,
@@ -601,7 +599,7 @@ const transaction = <T>(
       driverAdapter,
       transactionAdapter,
       poolOrClient,
-      locals,
+      setConfig,
       options,
       fn,
       ctx,
@@ -614,7 +612,7 @@ const transaction = <T>(
       adapter,
       driverAdapter,
       poolOrClient,
-      locals,
+      setConfig,
       options,
       fn,
       ctx,
@@ -628,7 +626,7 @@ const realTransaction = async <T>(
   adapter: Adapter,
   driverAdapter: DriverAdapter,
   pool: Pool,
-  locals: RecordStringOrNumber,
+  setConfig: RecordStringOrNumber,
   options: AdapterTransactionOptions | undefined,
   cb: (adapter: TransactionAdapter) => Promise<T>,
   ctx: TransactionCtx,
@@ -683,15 +681,17 @@ const realTransaction = async <T>(
           }
         }
 
-        const localsSql = getSetLocalsSql(options);
-        if (localsSql) {
-          (promises ??= []).push(driverAdapter.queryClient(client, localsSql));
+        const setConfigSql = getSetConfigSql(options);
+        if (setConfigSql) {
+          (promises ??= []).push(
+            driverAdapter.queryClient(client, setConfigSql),
+          );
         }
 
-        const newLocals = mergeLocals(locals, options);
+        const newSetConfig = mergeSetConfig(setConfig, options);
 
         const transaction = cb(
-          new TransactionAdapterClass(adapter, newLocals, client),
+          new TransactionAdapterClass(adapter, newSetConfig, client),
         );
 
         return promises
@@ -721,7 +721,7 @@ const nestedTransaction = async <T>(
   driverAdapter: DriverAdapter,
   transactionAdapter: Adapter,
   client: Client,
-  locals: RecordStringOrNumber,
+  setConfig: RecordStringOrNumber,
   options: AdapterTransactionOptions | undefined,
   cb: (adapter: TransactionAdapter) => Promise<T>,
   ctx: TransactionCtx,
@@ -766,17 +766,17 @@ const nestedTransaction = async <T>(
       }
     }
 
-    const localsSql = getSetLocalsSql(options);
-    if (localsSql) {
-      driverAdapter.queryClient(client, localsSql);
+    const setConfigSql = getSetConfigSql(options);
+    if (setConfigSql) {
+      driverAdapter.queryClient(client, setConfigSql);
     }
 
-    const newLocals = mergeLocals(locals, options);
+    const newSetConfig = mergeSetConfig(setConfig, options);
 
     let result;
     try {
       result = await cb(
-        new TransactionAdapterClass(adapter, newLocals, client),
+        new TransactionAdapterClass(adapter, newSetConfig, client),
       );
     } catch (err) {
       sql.text = `ROLLBACK TO SAVEPOINT "t${transactionId}"`;
@@ -801,9 +801,9 @@ const nestedTransaction = async <T>(
         }
       }
 
-      const resetLocalsSql = getResetLocalsSql(locals, options);
-      if (resetLocalsSql) {
-        await driverAdapter.queryClient(client, resetLocalsSql);
+      const resetSetConfigSql = getResetSetConfigSql(setConfig, options);
+      if (resetSetConfigSql) {
+        await driverAdapter.queryClient(client, resetSetConfigSql);
       }
     }
 
@@ -1117,18 +1117,18 @@ const createDriverAdapterConfig = (
   config: AdapterConfigBase,
   state: AdapterConnectionState,
 ): AdapterConfigBase => {
-  const locals: RecordStringOrNumber = config.locals
-    ? { ...config.locals }
+  const setConfig: RecordStringOrNumber = config.setConfig
+    ? { ...config.setConfig }
     : {};
-  delete locals.search_path;
+  delete setConfig.search_path;
   if (state.searchPath && state.searchPath !== 'public') {
-    locals.search_path = state.searchPath;
+    setConfig.search_path = state.searchPath;
   }
 
   const driverConfig: AdapterConfigBase = {
     ...config,
     searchPath: state.searchPath,
-    locals,
+    setConfig,
   };
 
   if (driverConfig.databaseURL) {

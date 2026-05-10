@@ -11,6 +11,7 @@ import {
 import type { SqlSessionState } from '../../../adapters/features/sql-session-context';
 import { PickQueryQ, PickQueryQAndInternal } from '../../pick-query-types';
 import { QuerySchema } from '../schema/schema';
+import { RecordStringOrNumber } from '../../../utils';
 
 export type { SqlSessionState } from '../../../adapters/features/sql-session-context';
 
@@ -42,7 +43,7 @@ export interface ProcessedStorageOptions {
   log?: QueryLogObject;
   schema?: QuerySchema;
   role?: SqlSessionState['role'];
-  setConfig?: SqlSessionState['setConfig'];
+  setConfig?: RecordStringOrNumber;
 }
 
 export const processStorageOptions = (
@@ -55,10 +56,7 @@ export const processStorageOptions = (
       ? query.q.log
       : logParamToLogObject(query.q.logger, enableLog);
 
-  // Build the result object
-  const result: ProcessedStorageOptions = {
-    ...options,
-  };
+  const result: ProcessedStorageOptions = {};
 
   if (log) result.log = log;
   if ('schema' in options) result.schema = options.schema;

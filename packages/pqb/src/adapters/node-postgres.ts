@@ -161,10 +161,10 @@ export const NodePostgresAdapter: DriverAdapter = {
       (config as PoolConfig).connectionString = config.databaseURL;
     }
 
-    if (config.locals?.search_path) {
+    if (config.setConfig?.search_path) {
       config = {
         ...config,
-        options: `${config.options ? `${config.options} ` : ''}-c search_path="${config.locals.search_path}"`,
+        options: `${config.options ? `${config.options} ` : ''}-c search_path="${config.setConfig.search_path}"`,
       };
     }
 

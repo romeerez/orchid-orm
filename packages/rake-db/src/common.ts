@@ -151,7 +151,7 @@ export const transaction = <T>(
     undefined,
     searchPath
       ? {
-          locals: {
+          setConfig: {
             search_path:
               typeof searchPath === 'function' ? searchPath() : searchPath,
           },

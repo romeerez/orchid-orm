@@ -169,10 +169,10 @@ describe('adapter runtime abstractions', () => {
           ]);
         });
 
-        it('sets search_path for transaction locals', async () => {
+        it('sets search_path for transaction setConfig', async () => {
           const res = await adapter.transaction(
             undefined,
-            { locals: { search_path: 'schema' } },
+            { setConfig: { search_path: 'schema' } },
             async (trx) =>
               trx.query<{ search_path: string }>('SHOW search_path'),
           );
@@ -180,7 +180,7 @@ describe('adapter runtime abstractions', () => {
           expect(res.rows[0].search_path).toBe('schema');
         });
 
-        it('temporarily overrides locals in nested transaction call', async () => {
+        it('temporarily overrides setConfig in nested transaction call', async () => {
           const getSearchPath = async (trx: Adapter) => {
             const res = await trx.query<{ search_path: string }>(
               'SHOW search_path',
@@ -190,12 +190,12 @@ describe('adapter runtime abstractions', () => {
 
           const res = await adapter.transaction(
             undefined,
-            { locals: { search_path: 'public' } },
+            { setConfig: { search_path: 'public' } },
             async (trx) => {
               const before = await getSearchPath(trx);
               const nested = await trx.transaction(
                 undefined,
-                { locals: { search_path: 'schema' } },
+                { setConfig: { search_path: 'schema' } },
                 (nestedTrx) => getSearchPath(nestedTrx),
               );
               const after = await getSearchPath(trx);
@@ -210,7 +210,7 @@ describe('adapter runtime abstractions', () => {
           });
         });
 
-        it('sets arbitrary locals and restores after nested transaction', async () => {
+        it('sets arbitrary setConfig and restores after nested transaction', async () => {
           const getLocal = async (trx: Adapter) => {
             const res = await trx.query<{ value: string }>(
               `SELECT current_setting('app.user_id', true) as value`,
@@ -220,12 +220,12 @@ describe('adapter runtime abstractions', () => {
 
           const res = await adapter.transaction(
             undefined,
-            { locals: { 'app.user_id': 1 } },
+            { setConfig: { 'app.user_id': 1 } },
             async (trx) => {
               const before = await getLocal(trx);
               const nested = await trx.transaction(
                 undefined,
-                { locals: { 'app.user_id': 2 } },
+                { setConfig: { 'app.user_id': 2 } },
                 (nestedTrx) => getLocal(nestedTrx),
               );
               const after = await getLocal(trx);
