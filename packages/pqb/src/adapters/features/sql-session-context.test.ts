@@ -286,33 +286,6 @@ describe('storage', () => {
       });
     });
 
-    it('should normalize setConfig values to strings', async () => {
-      let capturedState: unknown;
-
-      await db.$withOptions(
-        {
-          setConfig: {
-            'app.tenant_id': 'tenant123',
-            'app.count': 42,
-            'app.enabled': true,
-            'app.disabled': false,
-          },
-        },
-        async () => {
-          capturedState = db.user.internal.asyncStorage.getStore();
-        },
-      );
-
-      expect(capturedState).toMatchObject({
-        setConfig: {
-          'app.tenant_id': 'tenant123',
-          'app.count': '42',
-          'app.enabled': 'true',
-          'app.disabled': 'false',
-        },
-      });
-    });
-
     it('should store role and setConfig together', async () => {
       let capturedState: unknown;
 

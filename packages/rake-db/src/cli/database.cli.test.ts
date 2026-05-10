@@ -61,7 +61,9 @@ const makeAdapter = () => {
 
   const tx = Object.create(adapter) as unknown as TransactionAdapterClass;
 
-  asMock(jest.spyOn(adapter, 'transaction')).mockImplementation((fn) => fn(tx));
+  asMock(jest.spyOn(adapter, 'transaction')).mockImplementation(
+    (_asyncStorage, _options, fn) => fn(tx),
+  );
 
   jest.spyOn(adapter, 'close').mockImplementation(() => Promise.resolve());
 

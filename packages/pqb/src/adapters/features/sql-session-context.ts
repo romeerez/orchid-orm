@@ -2,11 +2,22 @@ import { type IsQuery } from '../../query';
 import { NestedSqlSessionError } from '../../query/errors';
 import { type PickQueryQ } from '../../query/pick-query-types';
 import { type QueryResult, type QueryResultRow } from '../adapter';
+import { quoteIdentifier } from '../../utils';
 
 export interface SqlSessionState {
-  // Query-scoped: Postgres role to set for this callback scope (from withOptions)
+  /**
+   * Postgres role for SQL session context.
+   *
+   * `$withOptions` applies it around query execution; transaction options apply
+   * it with transaction-local semantics.
+   */
   role?: string;
-  // Query-scoped: Postgres custom settings to set for this callback scope (from withOptions)
+  /**
+   * Postgres custom settings for SQL session context.
+   *
+   * `$withOptions` applies them around query execution; transaction options
+   * apply them with transaction-local semantics.
+   */
   setConfig?: Record<string, string | number | boolean>;
 }
 
@@ -27,10 +38,6 @@ interface CapturedSessionState {
   previousConfigs?: Record<string, string | null>;
 }
 
-const quoteRoleIdentifier = (role: string): string => {
-  return `"${role.replace(/"/g, '""')}"`;
-};
-
 const hasSqlSessionContextOptions = (options: SqlSessionState): boolean => {
   return options.role !== undefined || options.setConfig !== undefined;
 };
@@ -40,14 +47,6 @@ const hasActiveSqlSessionContext = (
 ): boolean => {
   if (!state) return false;
   return state.role !== undefined || state.setConfig !== undefined;
-};
-
-const sqlSessionContextNormalizeSetConfig = (
-  setConfig: Record<string, string | number | boolean>,
-): Record<string, string> => {
-  return Object.fromEntries(
-    Object.entries(setConfig).map(([key, value]) => [key, String(value)]),
-  );
 };
 
 const buildConfigRestoreExpression = (
@@ -79,7 +78,7 @@ export const sqlSessionContextSetStorageOptions = (
   }
 
   if (options.setConfig) {
-    result.setConfig = sqlSessionContextNormalizeSetConfig(options.setConfig);
+    result.setConfig = options.setConfig;
   }
 };
 
@@ -117,7 +116,7 @@ export const sqlSessionContextComputeSetup = (
   const result: SqlSessionContextSetupResult = {};
 
   if (hasRole) {
-    result.roleSetupSql = `SET ROLE ${quoteRoleIdentifier(role)}`;
+    result.roleSetupSql = `SET ROLE ${quoteIdentifier(role)}`;
     result.captureRoleSql = 'SELECT current_user';
   }
 
@@ -213,7 +212,7 @@ export const sqlSessionContextExecute = async <T extends QueryResultRow>(
 
     if (roleSetupSql && captured.previousRole !== undefined) {
       cleanupPromises.push(
-        query(`SET ROLE ${quoteRoleIdentifier(captured.previousRole)}`),
+        query(`SET ROLE ${quoteIdentifier(captured.previousRole)}`),
       );
     }
 

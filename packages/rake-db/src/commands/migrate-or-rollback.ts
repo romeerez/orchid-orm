@@ -170,7 +170,7 @@ export const processMigrateConfig = (
   return result;
 };
 
-// for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible locals
+// for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible setConfig values
 const transactionIfSingle = (
   adapter: Adapter,
   config: Pick<MigrateConfigInternal, 'transaction' | 'transactionSearchPath'>,

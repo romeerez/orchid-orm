@@ -1,12 +1,27 @@
 import {
+  commitSql,
+  emptyArray,
   emptyObject,
   RecordString,
-  RecordStringOrNumber,
   RecordUnknown,
+  rollbackSql,
 } from '../utils';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { setTimeout } from 'node:timers/promises';
 import { QueryError } from '../query/errors';
-import { Query, QuerySchema } from '../query';
+import {
+  _runAfterCommitHooks,
+  AfterCommitErrorHandler,
+  IsolationLevel,
+  Query,
+  QueryLogObject,
+  QuerySchema,
+  SingleSqlItem,
+} from '../query';
+import {
+  AsyncState,
+  ProcessedStorageOptions,
+} from '../query/basic-features/storage/storage';
 import {
   sqlSessionContextComputeSetup,
   sqlSessionContextExecute,
@@ -14,9 +29,10 @@ import {
   SqlSessionState,
 } from './features/sql-session-context';
 import {
-  getResetLocalsSql,
-  getSetLocalsSql,
-  mergeLocals,
+  getResetRoleSql,
+  getResetSetConfigSql,
+  getSetConfigSql,
+  getSetRoleSql,
 } from './adapter.utils';
 
 export type { SqlSessionState } from './features/sql-session-context';
@@ -53,7 +69,12 @@ export interface AdapterConfigBase {
   searchPath?: string;
   // oxlint-disable-next-line typescript/no-explicit-any - different drivers support different configs for this
   ssl?: any;
-  locals?: RecordStringOrNumber;
+  /**
+   * Postgres settings to apply when driver connections are configured.
+   *
+   * `searchPath` is normalized to `search_path` in this map.
+   */
+  setConfig?: RecordString;
   schema?: QuerySchema;
   host?: string;
   /**
@@ -126,51 +147,11 @@ interface AdapterConfigConnectRetryStrategy {
   (attempt: number, attempts: number): Promise<void> | void;
 }
 
-export interface AdapterTransactionOptions {
-  options?: string;
-  locals?: {
-    [ConfigName: string]: string | number;
-  };
-  // Transaction-scoped SQL session state (role and setConfig)
-  // Applied once when the transaction begins
-  sqlSessionState?: SqlSessionState;
+export interface AdapterTransactionOptions extends ProcessedStorageOptions {
+  level?: IsolationLevel;
+  readOnly?: boolean;
+  deferrable?: boolean;
 }
-
-export type TransactionArgs<Result> = [
-  cbOrOptions:
-    | undefined
-    | AdapterTransactionOptions
-    | ((adapter: TransactionAdapter) => Promise<Result>),
-  optionalCb?: (adapter: TransactionAdapter) => Promise<Result>,
-];
-
-interface SolvedTransactionArgs<AdapterType, Result> {
-  options: AdapterTransactionOptions | undefined;
-  cb: (adapter: AdapterType) => Promise<Result>;
-}
-
-const transactionArgs: SolvedTransactionArgs<unknown, unknown> = {
-  cb: undefined,
-  options: undefined,
-} as never;
-
-const getTransactionArgs = <AdapterType, T>(
-  cbOrOptions:
-    | AdapterTransactionOptions
-    | ((adapter: AdapterType) => Promise<T>)
-    | undefined,
-  optionalCb?: (adapter: AdapterType) => Promise<T>,
-) => {
-  // Solve overloaded transaction args
-  if (typeof cbOrOptions === 'function') {
-    transactionArgs.cb = cbOrOptions as never;
-    transactionArgs.options = undefined;
-  } else {
-    transactionArgs.options = cbOrOptions as AdapterTransactionOptions;
-    transactionArgs.cb = optionalCb as never;
-  }
-  return transactionArgs as SolvedTransactionArgs<AdapterType, T>;
-};
 
 // Interface of a database adapter to use for different databases.
 // This is the full interface exposed to users, including metadata methods and clone.
@@ -214,20 +195,13 @@ export interface Adapter {
   /**
    * Run a transaction
    *
-   * @param cb - callback will be called with a db client with a dedicated connection.
-   * @param options - optional transaction parameters
+   * `options` can be `undefined`.
    */
   transaction<T>(
+    asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T>;
-
-  /**
-   * Run a transaction
-   *
-   * @param cb - callback will be called with a db client with a dedicated connection.
-   */
-  transaction<T>(cb: (adapter: TransactionAdapter) => Promise<T>): Promise<T>;
 
   // close connection
   close(): Promise<void>;
@@ -308,11 +282,9 @@ export class AdapterClass implements Adapter {
   private pool: Pool;
   private readonly config: AdapterConfigBase;
   private readonly connectionState: AdapterConnectionState;
-  private readonly locals: RecordStringOrNumber;
 
   constructor(private readonly params: AdapterParams) {
     this.config = { ...params.config };
-    this.locals = this.config.locals || emptyObject;
 
     if (this.config.connectRetry) {
       const connectRetryConfig = makeConnectRetryConfig(
@@ -415,75 +387,25 @@ export class AdapterClass implements Adapter {
   }
 
   transaction<T>(
+    asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
-  ): Promise<T>;
-  transaction<T>(cb: (adapter: TransactionAdapter) => Promise<T>): Promise<T>;
-  transaction<T>(
-    cbOrOptions:
-      | AdapterTransactionOptions
-      | ((adapter: TransactionAdapter) => Promise<T>)
-      | undefined,
-    optionalCb?: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T> {
-    const { cb, options } = getTransactionArgs(cbOrOptions, optionalCb);
-
-    return this.driverAdapter.begin(
+    return transaction(
+      asyncStorage,
+      this,
+      this.driverAdapter,
       this.pool,
-      (client) => {
-        let promises: Promise<unknown>[] | undefined;
-
-        // Apply transaction-scoped SQL session state (role and setConfig) once at transaction start
-        if (options?.sqlSessionState) {
-          const { role, setConfig } = options.sqlSessionState;
-          if (role) {
-            (promises ??= []).push(
-              this.driverAdapter.queryClient(client, `SET ROLE ${role}`),
-            );
-          }
-          if (setConfig && Object.keys(setConfig).length > 0) {
-            const setExpressions = Object.entries(setConfig)
-              .map(
-                ([key, value]) =>
-                  `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value}', true)`,
-              )
-              .join(', ');
-
-            (promises ??= []).push(
-              this.driverAdapter.queryClient(
-                client,
-                `SELECT ${setExpressions}`,
-              ),
-            );
-          }
-        }
-
-        const localsSql = getSetLocalsSql(options);
-        if (localsSql) {
-          (promises ??= []).push(
-            this.driverAdapter.queryClient(client, localsSql),
-          );
-        }
-
-        const locals = mergeLocals(this.locals, options);
-
-        const transaction = cb(
-          new TransactionAdapterClass(this, locals, client),
-        );
-
-        return promises
-          ? Promise.all(promises).then(() => transaction)
-          : transaction;
-      },
-      options?.options,
-    ) as Promise<T>;
+      options,
+      cb,
+    );
   }
 
-  async close(): Promise<void> {
+  close = async (): Promise<void> => {
     const { pool } = this;
     this.pool = this.driverAdapter.configure(this.config);
     await this.driverAdapter.close(pool);
-  }
+  };
 
   assignError(to: QueryError, from: Error): void {
     const { errorFields } = this.driverAdapter;
@@ -506,7 +428,6 @@ export class TransactionAdapterClass implements TransactionAdapter {
 
   constructor(
     private adapter: Adapter,
-    private locals: RecordStringOrNumber,
     private client: Client,
   ) {
     this.driverAdapter = adapter.driverAdapter;
@@ -590,90 +511,20 @@ export class TransactionAdapterClass implements TransactionAdapter {
     return this.adapter.getSchema();
   }
 
-  transaction<T>(
+  async transaction<T>(
+    asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
-  ): Promise<T>;
-  transaction<T>(cb: (adapter: TransactionAdapter) => Promise<T>): Promise<T>;
-  async transaction<T>(
-    cbOrOptions:
-      | AdapterTransactionOptions
-      | ((adapter: TransactionAdapter) => Promise<T>)
-      | undefined,
-    optionalCb?: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T> {
-    const { cb, options } = getTransactionArgs<TransactionAdapter, T>(
-      cbOrOptions,
-      optionalCb,
+    return transaction(
+      asyncStorage,
+      this.adapter,
+      this.driverAdapter,
+      this.client,
+      options,
+      cb,
+      this,
     );
-
-    // For nested transactions with SQL session state, capture outer transaction-local values
-    let capturedRole: string | undefined;
-    const capturedConfigs: Record<string, string | null> = {};
-    const sqlSession = options?.sqlSessionState;
-
-    if (sqlSession) {
-      // Capture current role if we're going to override it
-      if (sqlSession.role) {
-        const roleResult = await this.driverAdapter.queryClient<{
-          role: string;
-        }>(this.client, 'SELECT current_role as role');
-        capturedRole = roleResult.rows[0].role;
-      }
-
-      // Capture current config values for keys we're going to override
-      if (
-        sqlSession.setConfig &&
-        Object.keys(sqlSession.setConfig).length > 0
-      ) {
-        for (const key of Object.keys(sqlSession.setConfig)) {
-          const configResult = await this.driverAdapter.queryClient<{
-            val: string | null;
-          }>(
-            this.client,
-            `SELECT current_setting('${key.replace(/'/g, "''")}', true) as val`,
-          );
-          capturedConfigs[key] = configResult.rows[0].val;
-        }
-      }
-    }
-
-    const localsSql = getSetLocalsSql(options);
-    if (localsSql) {
-      this.driverAdapter.queryClient(this.client, localsSql);
-    }
-
-    const locals = mergeLocals(this.locals, options);
-
-    try {
-      return await cb(
-        new TransactionAdapterClass(this.adapter, locals, this.client),
-      );
-    } finally {
-      // Restore outer transaction-local values after nested transaction completes
-      if (sqlSession) {
-        if (capturedRole !== undefined) {
-          await this.driverAdapter.queryClient(
-            this.client,
-            `SET ROLE ${capturedRole}`,
-          );
-        }
-
-        for (const [key, value] of Object.entries(capturedConfigs)) {
-          // Reset to empty string if previously unset (null), otherwise restore previous value
-          const restoreValue = value === null ? '' : value;
-          await this.driverAdapter.queryClient(
-            this.client,
-            `SELECT set_config('${key.replace(/'/g, "''")}', '${restoreValue.replace(/'/g, "''")}', true)`,
-          );
-        }
-      }
-
-      const resetLocalsSql = getResetLocalsSql(this.locals, options);
-      if (resetLocalsSql) {
-        await this.driverAdapter.queryClient(this.client, resetLocalsSql);
-      }
-    }
   }
 
   close(): Promise<void> {
@@ -684,6 +535,315 @@ export class TransactionAdapterClass implements TransactionAdapter {
     return this.adapter.assignError(to, from);
   }
 }
+
+interface TransactionCtx {
+  state?: AsyncState;
+  logData: unknown;
+}
+
+const transaction = <T>(
+  asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
+  adapter: Adapter,
+  driverAdapter: DriverAdapter,
+  poolOrClient: Pool | Client,
+  options: AdapterTransactionOptions | undefined,
+  cb: (adapter: TransactionAdapter) => Promise<T>,
+  transactionAdapter?: Adapter,
+) => {
+  const sql = {
+    values: emptyArray,
+  } as unknown as SingleSqlItem;
+
+  const log = options?.log;
+
+  const state = asyncStorage?.getStore();
+
+  const ctx = {
+    state,
+    logData: undefined as unknown,
+  };
+
+  const transactionId =
+    state?.transactionId !== undefined ? state.transactionId + 1 : 0;
+
+  const fn = (transactionAdapter: TransactionAdapter) => {
+    if (log) log.afterQuery(sql, ctx.logData);
+    if (log) ctx.logData = log.beforeQuery(commitSql);
+
+    if (state || !asyncStorage) {
+      const parentTransactionRole = state?.transactionRole;
+      const parentTransactionSetConfig = state?.transactionSetConfig;
+
+      if (state) {
+        state.transactionId = transactionId;
+        if (options) {
+          if (options.role) state.transactionRole = options.role;
+          if (options.setConfig)
+            state.transactionSetConfig = {
+              ...state.transactionSetConfig,
+              ...options.setConfig,
+            };
+        }
+      }
+
+      return Promise.resolve(cb(transactionAdapter)).finally(() => {
+        if (state) {
+          state.transactionId = transactionId - 1;
+          state.transactionRole = parentTransactionRole;
+          state.transactionSetConfig = parentTransactionSetConfig;
+        }
+      });
+    }
+
+    ctx.state = {
+      ...options,
+      role: undefined,
+      setConfig: undefined,
+      transactionAdapter,
+      transactionId,
+      transactionRole: options?.role,
+      transactionSetConfig: options?.setConfig,
+    };
+
+    return asyncStorage.run(ctx.state, () => cb(transactionAdapter));
+  };
+
+  transactionAdapter ??= state?.transactionAdapter;
+
+  if (transactionAdapter) {
+    return nestedTransaction(
+      adapter,
+      driverAdapter,
+      transactionAdapter,
+      poolOrClient,
+      options,
+      fn,
+      ctx,
+      transactionId,
+      sql,
+      log,
+    );
+  } else {
+    return realTransaction(
+      adapter,
+      driverAdapter,
+      poolOrClient,
+      options,
+      fn,
+      ctx,
+      sql,
+      log,
+    );
+  }
+};
+
+const realTransaction = async <T>(
+  adapter: Adapter,
+  driverAdapter: DriverAdapter,
+  pool: Pool,
+  options: AdapterTransactionOptions | undefined,
+  cb: (adapter: TransactionAdapter) => Promise<T>,
+  ctx: TransactionCtx,
+  sql: SingleSqlItem,
+  log?: QueryLogObject,
+) => {
+  let trxOpts: string | undefined;
+  if (options?.level) {
+    trxOpts = `ISOLATION LEVEL ${options.level}`;
+  }
+
+  if (options?.readOnly !== undefined) {
+    const add = `READ ${options.readOnly ? 'ONLY' : 'WRITE'}`;
+    trxOpts = trxOpts ? trxOpts + ' ' + add : add;
+  }
+
+  if (options?.deferrable !== undefined) {
+    const add = `${options.deferrable ? '' : 'NOT '}DEFERRABLE`;
+    trxOpts = trxOpts ? trxOpts + ' ' + add : add;
+  }
+
+  if (log) {
+    sql.text = trxOpts ? `BEGIN ${trxOpts}` : 'BEGIN';
+    ctx.logData = log.beforeQuery(sql);
+  }
+
+  const result = (await driverAdapter
+    .begin(
+      pool,
+      (client) => {
+        let promises: Promise<unknown>[] | undefined;
+
+        const setRoleSql = getSetRoleSql(undefined, options);
+        if (setRoleSql) {
+          (promises ??= []).push(driverAdapter.queryClient(client, setRoleSql));
+        }
+
+        const setConfigSql = getSetConfigSql(undefined, options);
+        if (setConfigSql) {
+          (promises ??= []).push(
+            driverAdapter.queryClient(client, setConfigSql),
+          );
+        }
+
+        const transaction = cb(new TransactionAdapterClass(adapter, client));
+
+        return promises
+          ? Promise.all(promises).then(() => transaction)
+          : transaction;
+      },
+      trxOpts,
+    )
+    .catch((err) => {
+      if (log) log.afterQuery(rollbackSql, ctx.logData);
+
+      throw err;
+    })) as Promise<T>;
+
+  if (log) log.afterQuery(commitSql, ctx.logData);
+
+  if (ctx.state) {
+    // state was defined in the callback above;
+    runAfterCommit(ctx.state.afterCommit, result);
+  }
+
+  return result;
+};
+
+const nestedTransaction = async <T>(
+  adapter: Adapter,
+  driverAdapter: DriverAdapter,
+  transactionAdapter: Adapter,
+  client: Client,
+  options: AdapterTransactionOptions | undefined,
+  cb: (adapter: TransactionAdapter) => Promise<T>,
+  ctx: TransactionCtx,
+  transactionId: number,
+  sql: SingleSqlItem,
+  log?: QueryLogObject,
+) => {
+  const state = ctx.state;
+  const parentRole = state?.transactionRole;
+  const parentSetConfig = state?.transactionSetConfig;
+
+  sql.text = `SAVEPOINT "t${transactionId}"`;
+  if (log) ctx.logData = log.beforeQuery(sql);
+
+  await transactionAdapter.arrays(sql.text, sql.values);
+
+  const setRoleSql = getSetRoleSql(parentRole, options);
+  if (setRoleSql) {
+    // awaited by await below
+    driverAdapter.queryClient(client, setRoleSql);
+  }
+
+  const setConfigSql = getSetConfigSql(parentSetConfig, options);
+  if (setConfigSql) {
+    // awaited by await below
+    driverAdapter.queryClient(client, setConfigSql);
+  }
+
+  let result;
+  try {
+    result = await cb(new TransactionAdapterClass(adapter, client));
+  } catch (err) {
+    // config is reverted by this rollback, role is not reverted and it is undone manually in the finally section
+    sql.text = `ROLLBACK TO SAVEPOINT "t${transactionId}"`;
+    if (log) ctx.logData = log.beforeQuery(sql);
+    await transactionAdapter.arrays(sql.text, sql.values);
+    if (log) log.afterQuery(sql, ctx.logData);
+    throw err;
+  } finally {
+    const resetRoleSql = getResetRoleSql(parentRole, options);
+    if (resetRoleSql) {
+      await driverAdapter.queryClient(client, resetRoleSql);
+    }
+  }
+
+  const resetSetConfigSql = getResetSetConfigSql(parentSetConfig, options);
+  if (resetSetConfigSql) {
+    // awaited by await release savepoint
+    driverAdapter.queryClient(client, resetSetConfigSql);
+  }
+
+  sql.text = `RELEASE SAVEPOINT "t${transactionId}"`;
+  if (log) ctx.logData = log.beforeQuery(sql);
+  await transactionAdapter.arrays(sql.text, sql.values);
+  if (log) log.afterQuery(sql, ctx.logData);
+
+  // transactionId is trx.testTransactionCount when only the test transactions are left,
+  // and it's time to execute after commit hooks, because they won't be executed for test transactions.
+  if (ctx.state && transactionId === ctx.state.testTransactionCount) {
+    const { afterCommit } = ctx.state;
+    ctx.state.afterCommit = undefined;
+    runAfterCommit(afterCommit, result);
+  }
+
+  return result;
+};
+
+// `afterCommit` hooks are detached from the main flow, this function won't throw.
+const runAfterCommit = (
+  afterCommit: TransactionAfterCommitHook[] | undefined,
+  result: unknown,
+) => {
+  // to suppress throws of sync afterCommit hooks.
+  queueMicrotask(async () => {
+    if (afterCommit) {
+      const promises = [];
+
+      let catchAfterCommitErrors: AfterCommitErrorHandler[] | undefined;
+      for (let i = 0, len = afterCommit.length; i < len; ) {
+        const first = afterCommit[i];
+        if (typeof first === 'function') {
+          try {
+            promises.push(first());
+          } catch (err) {
+            promises.push(Promise.reject(err));
+          }
+          i++;
+        } else {
+          const q = afterCommit[i + 1] as Query;
+          if (q.q.catchAfterCommitErrors) {
+            (catchAfterCommitErrors ??= []).push(...q.q.catchAfterCommitErrors);
+          }
+
+          for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
+            try {
+              promises.push(fn(first as unknown[], q));
+            } catch (err) {
+              promises.push(Promise.reject(err));
+            }
+          }
+          i += 3;
+        }
+      }
+
+      const getHookNames = () => {
+        const hookNames = [];
+        for (let i = 0, len = afterCommit.length; i < len; ) {
+          const first = afterCommit[i];
+          if (typeof first === 'function') {
+            hookNames.push(first.name);
+            i++;
+          } else {
+            for (const fn of afterCommit[i + 2] as AfterCommitHook[]) {
+              hookNames.push(fn.name);
+            }
+            i += 3;
+          }
+        }
+        return hookNames;
+      };
+
+      await _runAfterCommitHooks(
+        result,
+        promises,
+        getHookNames,
+        catchAfterCommitErrors,
+      );
+    }
+  });
+};
 
 const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
   pool: Pool,
@@ -910,18 +1070,18 @@ const createDriverAdapterConfig = (
   config: AdapterConfigBase,
   state: AdapterConnectionState,
 ): AdapterConfigBase => {
-  const locals: RecordStringOrNumber = config.locals
-    ? { ...config.locals }
+  const setConfig: RecordString = config.setConfig
+    ? { ...config.setConfig }
     : {};
-  delete locals.search_path;
+  delete setConfig.search_path;
   if (state.searchPath && state.searchPath !== 'public') {
-    locals.search_path = state.searchPath;
+    setConfig.search_path = state.searchPath;
   }
 
   const driverConfig: AdapterConfigBase = {
     ...config,
     searchPath: state.searchPath,
-    locals,
+    setConfig,
   };
 
   if (driverConfig.databaseURL) {

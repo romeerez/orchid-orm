@@ -69,6 +69,67 @@ export interface NodePostgresAdapterOptions extends Omit<AdapterConfig, 'log'> {
   schema?: QuerySchema;
 }
 
+const queryClient = <T extends QueryResultRow = QueryResultRow>(
+  client: PoolClient,
+  text: string,
+  values?: unknown[],
+  // only has effect in a transaction
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
+  // SQL session state (role and setConfig) from async storage
+  arraysMode?: boolean,
+): Promise<QueryResult<T>> => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: any = {
+    text,
+    values,
+    rowMode: arraysMode ? 'array' : undefined,
+    types: defaultTypesConfig,
+  };
+
+  // When using save points (it's in transaction), need to perform a single query at a time.
+  // stating 1 then 2 then releasing 1 would fail.
+  // Start 1, release 1, start 2, release 2, and so on.
+  const { __lock } = client as unknown as { __lock?: Promise<unknown> };
+  if (__lock) {
+    let resolve: () => void | undefined;
+    (client as unknown as RecordUnknown).__lock = new Promise<void>((res) => {
+      resolve = () => {
+        res();
+      };
+    });
+
+    return __lock.then(() => {
+      const promise =
+        startingSavepoint || releasingSavepoint
+          ? performQueryOnClientWithSavepoint(
+              client,
+              params,
+              startingSavepoint,
+              releasingSavepoint,
+            )
+          : client.query(params);
+      promise.then(resolve, resolve);
+      return promise;
+    });
+  }
+
+  const promise =
+    startingSavepoint || releasingSavepoint
+      ? performQueryOnClientWithSavepoint(
+          client,
+          params,
+          startingSavepoint,
+          releasingSavepoint,
+        )
+      : client.query(params);
+
+  (client as unknown as { __lock?: Promise<unknown> }).__lock =
+    promise.catch(noop);
+
+  return promise;
+};
+
 export const NodePostgresAdapter: DriverAdapter = {
   manualPool: true,
 
@@ -100,76 +161,17 @@ export const NodePostgresAdapter: DriverAdapter = {
       (config as PoolConfig).connectionString = config.databaseURL;
     }
 
-    if (config.locals?.search_path) {
+    if (config.setConfig?.search_path) {
       config = {
         ...config,
-        options: `${config.options ? `${config.options} ` : ''}-c search_path="${config.locals.search_path}"`,
+        options: `${config.options ? `${config.options} ` : ''}-c search_path="${config.setConfig.search_path}"`,
       };
     }
 
     return new pg.Pool(config);
   },
 
-  queryClient<T extends QueryResultRow = QueryResultRow>(
-    client: PoolClient,
-    text: string,
-    values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
-    // SQL session state (role and setConfig) from async storage
-    arraysMode?: boolean,
-  ): Promise<QueryResult<T>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const params: any = {
-      text,
-      values,
-      rowMode: arraysMode ? 'array' : undefined,
-      types: defaultTypesConfig,
-    };
-
-    // When using save points (it's in transaction), need to perform a single query at a time.
-    // stating 1 then 2 then releasing 1 would fail.
-    // Start 1, release 1, start 2, release 2, and so on.
-    const { __lock } = client as unknown as { __lock?: Promise<unknown> };
-    if (__lock) {
-      let resolve: () => void | undefined;
-      (client as unknown as RecordUnknown).__lock = new Promise<void>((res) => {
-        resolve = () => {
-          res();
-        };
-      });
-
-      return __lock.then(() => {
-        const promise =
-          startingSavepoint || releasingSavepoint
-            ? performQueryOnClientWithSavepoint(
-                client,
-                params,
-                startingSavepoint,
-                releasingSavepoint,
-              )
-            : client.query(params);
-        promise.then(resolve, resolve);
-        return promise;
-      });
-    }
-
-    const promise =
-      startingSavepoint || releasingSavepoint
-        ? performQueryOnClientWithSavepoint(
-            client,
-            params,
-            startingSavepoint,
-            releasingSavepoint,
-          )
-        : client.query(params);
-
-    (client as unknown as { __lock?: Promise<unknown> }).__lock =
-      promise.catch(noop);
-
-    return promise;
-  },
+  queryClient,
 
   borrow(pool: Pool): Promise<PoolClient> {
     return pool.connect();
@@ -187,16 +189,16 @@ export const NodePostgresAdapter: DriverAdapter = {
     const client = await pool.connect();
 
     try {
-      await this.queryClient(client, options ? 'BEGIN ' + options : 'BEGIN');
+      await queryClient(client, options ? 'BEGIN ' + options : 'BEGIN');
 
       let result;
       try {
         result = await cb(client as DriverClient);
       } catch (err) {
-        await this.queryClient(client, 'ROLLBACK');
+        await queryClient(client, 'ROLLBACK');
         throw err;
       }
-      await this.queryClient(client, 'COMMIT');
+      await queryClient(client, 'COMMIT');
       return result as Result;
     } finally {
       client.release();

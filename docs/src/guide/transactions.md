@@ -117,7 +117,67 @@ If the error in the inner transaction is not caught, all nested transactions are
 
 ## SQL session context in transactions
 
-When using `$withOptions` with `role` or `setConfig`, explicit transactions opened inside the callback inherit the same SQL session context.
+Pass `role` and `setConfig` to `$transaction` to apply Postgres SQL session context for the whole transaction.
+This is useful for row-level security when request DB work should run in one explicit transaction:
+
+```ts
+await db.$transaction(
+  {
+    role: 'app_user',
+    setConfig: {
+      'app.tenant_id': tenantId,
+      'app.user_id': userId,
+    },
+  },
+  async () => {
+    const project = await db.project.find(projectId);
+
+    await db.project.find(projectId).update({ lastViewedAt: new Date() });
+
+    return project;
+  },
+);
+```
+
+`role` is applied with transaction-local Postgres role semantics, and `setConfig` values are available to policies through `current_setting(...)`.
+The context lasts until the top-level transaction commits or rolls back.
+
+Nested transactions can temporarily override the parent transaction role and config:
+
+```ts
+await db.$transaction(
+  {
+    role: 'app_user',
+    setConfig: { 'app.tenant_id': tenantId },
+  },
+  async () => {
+    await db.project.find(projectId);
+
+    await db.$transaction(
+      {
+        role: 'project_admin',
+        setConfig: { 'app.audit_reason': 'manual-review' },
+      },
+      async () => {
+        await db.project.find(projectId).update({ reviewedAt: new Date() });
+      },
+    );
+
+    // Back to role app_user and the outer transaction config.
+    await db.project.find(projectId);
+  },
+);
+```
+
+A nested transaction replaces the parent role only while its callback runs, and shallow-merges its `setConfig` over the parent config.
+When the nested transaction finishes successfully, Orchid restores the parent transaction context before the outer callback continues.
+If the nested transaction rolls back to its savepoint, Postgres rolls back the nested transaction-local role/config changes and Orchid restores its tracked parent context.
+
+This is different from `$withOptions({ role, setConfig }, cb)`.
+`$withOptions` is query-scoped: it reconciles SQL session state around each query, so it is useful when the work is not intentionally wrapped in one transaction.
+Transaction options are applied once for a transaction and are lower overhead for request-scoped RLS work that is already transaction-bound.
+
+Explicit transactions opened inside a `$withOptions` callback still inherit the query-scoped SQL session context:
 
 ```ts
 await db.$withOptions(
@@ -126,11 +186,8 @@ await db.$withOptions(
     setConfig: { 'app.tenant_id': tenantId },
   },
   async () => {
-    // Query outside transaction uses the SQL session context
-    const project = await db.project.find(projectId);
-
     await db.$transaction(async () => {
-      // Queries inside transaction inherit the same role and config
+      // This query uses the $withOptions role and config.
       await db.project.find(projectId).update({ lastViewedAt: new Date() });
     });
   },
@@ -139,7 +196,7 @@ await db.$withOptions(
 
 This works consistently across both supported adapters (`node-postgres` and `postgres-js`) even though their internal connection handling differs.
 
-For more details on SQL session options, see [$withOptions](/guide/orm-methods.html#withoptions).
+For query-scoped SQL session options, see [$withOptions](/guide/orm-methods.html#withoptions).
 
 ## ensureTransaction
 

@@ -105,8 +105,8 @@ export const testTransaction = {
     if (!last) return;
 
     // if there's only one transaction left, restore the adapter methods.
-    if (data?.length === 1) {
-      Object.assign(db.baseQuery.q.adapter, data[0].adapter);
+    if (!data?.length) {
+      Object.assign(db.baseQuery.q.adapter, last.adapter);
     }
 
     last.reject?.(new Rollback());

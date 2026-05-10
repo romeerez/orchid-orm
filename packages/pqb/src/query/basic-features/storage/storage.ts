@@ -1,5 +1,9 @@
 import { logParamToLogObject, QueryLogObject } from '../log/log';
-import { Adapter, TransactionAfterCommitHook } from '../../../adapters/adapter';
+import {
+  Adapter,
+  AdapterTransactionOptions,
+  TransactionAfterCommitHook,
+} from '../../../adapters/adapter';
 import {
   sqlSessionContextMergeStorageState,
   sqlSessionContextSetStorageOptions,
@@ -27,6 +31,10 @@ export interface AsyncState extends SqlSessionState {
   catchI?: number;
   // a db schema to use by default
   schema?: QuerySchema;
+  // Effective transaction role for transaction-scoped SQL session context.
+  transactionRole?: SqlSessionState['role'];
+  // Effective transaction set_config map for transaction-scoped SQL session context.
+  transactionSetConfig?: SqlSessionState['setConfig'];
 }
 
 export interface StorageOptions extends SqlSessionState {
@@ -34,40 +42,27 @@ export interface StorageOptions extends SqlSessionState {
   schema?: QuerySchema;
 }
 
-export interface ProcessedStorageOptions {
+export interface ProcessedStorageOptions extends SqlSessionState {
   log?: QueryLogObject;
   schema?: QuerySchema;
-  role?: SqlSessionState['role'];
-  setConfig?: SqlSessionState['setConfig'];
 }
 
 export const processStorageOptions = (
   query: PickQueryQ,
   state: AsyncState | undefined,
-  options: StorageOptions,
-): ProcessedStorageOptions | undefined => {
-  let log;
-  if (options.log !== undefined && !query.q.log) {
-    log = logParamToLogObject(query.q.logger, options.log);
-  }
+  { log: enableLog, ...options }: StorageOptions,
+): AdapterTransactionOptions | undefined => {
+  const log =
+    enableLog === undefined
+      ? query.q.log
+      : logParamToLogObject(query.q.logger, enableLog);
 
-  // Build the result object
-  const result: ProcessedStorageOptions = {};
+  const result = options as ProcessedStorageOptions;
 
   if (log) result.log = log;
   if ('schema' in options) result.schema = options.schema;
 
   sqlSessionContextSetStorageOptions(query, state, options, result);
-
-  // Return undefined if no options were processed
-  if (
-    result.log === undefined &&
-    result.schema === undefined &&
-    result.role === undefined &&
-    result.setConfig === undefined
-  ) {
-    return undefined;
-  }
 
   return result;
 };

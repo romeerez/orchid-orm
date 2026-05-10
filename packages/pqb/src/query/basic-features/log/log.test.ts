@@ -1,4 +1,3 @@
-import { userData } from '../../../test-utils/pqb.test-utils';
 import { noop } from '../../../utils';
 import {
   createTestDb,
@@ -164,6 +163,14 @@ describe('query log', () => {
       [`(1s 1.0ms) SELECT something Error: column "something" does not exist`],
     ]);
   });
+});
+
+describe('outside test transaction', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(testAdapter.close);
 
   it('should log successful transaction', async () => {
     const db = createDbWithAdapter({
@@ -173,14 +180,12 @@ describe('query log', () => {
     });
 
     await db.transaction(async () => {
-      await db('user', undefined, undefined, { schema: () => 'schema' }).create(
-        userData,
-      );
+      await db.query`SELECT 1`;
     });
 
     expect(logger.log.mock.calls).toEqual([
       ['(1s 1.0ms) BEGIN'],
-      [expect.stringContaining('INSERT INTO "schema"."user"')],
+      ['(1s 1.0ms) SELECT 1'],
       ['(1s 1.0ms) COMMIT'],
     ]);
   });

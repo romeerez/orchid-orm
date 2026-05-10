@@ -56,7 +56,7 @@ export const createOrDropDatabase = async (
     if (!res) continue;
 
     if (action === 'create') {
-      await adapter.transaction(async (tx) => {
+      await adapter.transaction(undefined, undefined, async (tx) => {
         const schema = adapter.getSchema();
         if (schema) {
           const quoted = `"${

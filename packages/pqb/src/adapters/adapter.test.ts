@@ -1,7 +1,7 @@
 import { Adapter, AdapterClass, TransactionAdapterClass } from './adapter';
-import { QueryError } from '../query/errors';
+import { OrchidOrmInternalError, QueryError } from '../query/errors';
 import { noop } from '../utils';
-import { allDriverAdapters, testDbOptions } from 'test-utils';
+import { allDriverAdapters, testDb, testDbOptions } from 'test-utils';
 
 describe('adapter runtime abstractions', () => {
   afterEach(() => jest.clearAllMocks());
@@ -74,27 +74,105 @@ describe('adapter runtime abstractions', () => {
 
       describe('transaction', () => {
         it('executes transaction callback with TransactionAdapterClass', async () => {
-          const result = await adapter.transaction(async (trx) => {
-            expect(trx).toBeInstanceOf(TransactionAdapterClass);
-            const res = await trx.query<{ one: number }>('SELECT 1 as one');
-            return res.rows[0].one;
-          });
+          const result = await adapter.transaction(
+            undefined,
+            undefined,
+            async (trx) => {
+              expect(trx).toBeInstanceOf(TransactionAdapterClass);
+              const res = await trx.query<{ one: number }>('SELECT 1 as one');
+              return res.rows[0].one;
+            },
+          );
 
           expect(result).toBe(1);
         });
 
         it('supports transaction options string', async () => {
-          const res = await adapter.transaction(
-            { options: 'read write' },
-            async (trx) => trx.query<{ one: number }>('SELECT 1 as one'),
-          );
+          const spy = jest.spyOn(adapter.driverAdapter, 'begin');
 
-          expect(res.rows[0].one).toBe(1);
+          await Promise.all([
+            adapter.transaction(
+              undefined,
+              { level: 'REPEATABLE READ' },
+              async () => {},
+            ),
+            adapter.transaction(
+              undefined,
+              { level: 'READ COMMITTED', readOnly: false, deferrable: false },
+              async () => {},
+            ),
+            adapter.transaction(
+              undefined,
+              { level: 'READ UNCOMMITTED', readOnly: true, deferrable: true },
+              async () => {},
+            ),
+          ]);
+
+          // expect(res.rows[0].one).toBe(1);
+          expect(spy.mock.calls.map((call) => call[2])).toEqual([
+            'ISOLATION LEVEL REPEATABLE READ',
+            'ISOLATION LEVEL READ COMMITTED READ WRITE NOT DEFERRABLE',
+            'ISOLATION LEVEL READ UNCOMMITTED READ ONLY DEFERRABLE',
+          ]);
         });
 
-        it('sets search_path for transaction locals', async () => {
+        it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
+          const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
+          const querySpy = jest.spyOn(adapter.driverAdapter, 'queryClient');
+
+          const {
+            rows: [{ result }],
+          } = await adapter.transaction(
+            testDb.internal.asyncStorage,
+            undefined,
+            async () =>
+              await adapter.transaction(
+                testDb.internal.asyncStorage,
+                undefined,
+                async (client) => client.query('SELECT 123 as result'),
+              ),
+          );
+
+          expect(result).toBe(123);
+
+          expect(beginSpy).toBeCalledTimes(1);
+          expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
+            'SAVEPOINT "t1"',
+            'SELECT 123 as result',
+            'RELEASE SAVEPOINT "t1"',
+          ]);
+        });
+
+        it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
+          const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
+          const querySpy = jest.spyOn(adapter.driverAdapter, 'queryClient');
+
+          await expect(() =>
+            adapter.transaction(
+              testDb.internal.asyncStorage,
+              undefined,
+              async () =>
+                await adapter.transaction(
+                  testDb.internal.asyncStorage,
+                  undefined,
+                  async () => {
+                    throw new Error('error');
+                  },
+                ),
+            ),
+          ).rejects.toThrow('error');
+
+          expect(beginSpy).toBeCalledTimes(1);
+          expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
+            'SAVEPOINT "t1"',
+            'ROLLBACK TO SAVEPOINT "t1"',
+          ]);
+        });
+
+        it('sets search_path for transaction setConfig', async () => {
           const res = await adapter.transaction(
-            { locals: { search_path: 'schema' } },
+            undefined,
+            { setConfig: { search_path: 'schema' } },
             async (trx) =>
               trx.query<{ search_path: string }>('SHOW search_path'),
           );
@@ -102,7 +180,7 @@ describe('adapter runtime abstractions', () => {
           expect(res.rows[0].search_path).toBe('schema');
         });
 
-        it('temporarily overrides locals in nested transaction call', async () => {
+        it('temporarily overrides setConfig in nested transaction call', async () => {
           const getSearchPath = async (trx: Adapter) => {
             const res = await trx.query<{ search_path: string }>(
               'SHOW search_path',
@@ -111,11 +189,13 @@ describe('adapter runtime abstractions', () => {
           };
 
           const res = await adapter.transaction(
-            { locals: { search_path: 'public' } },
+            testDb.internal.asyncStorage,
+            { setConfig: { search_path: 'public' } },
             async (trx) => {
               const before = await getSearchPath(trx);
               const nested = await trx.transaction(
-                { locals: { search_path: 'schema' } },
+                testDb.internal.asyncStorage,
+                { setConfig: { search_path: 'schema' } },
                 (nestedTrx) => getSearchPath(nestedTrx),
               );
               const after = await getSearchPath(trx);
@@ -130,7 +210,7 @@ describe('adapter runtime abstractions', () => {
           });
         });
 
-        it('sets arbitrary locals and restores after nested transaction', async () => {
+        it('sets arbitrary setConfig and restores after nested transaction', async () => {
           const getLocal = async (trx: Adapter) => {
             const res = await trx.query<{ value: string }>(
               `SELECT current_setting('app.user_id', true) as value`,
@@ -139,11 +219,13 @@ describe('adapter runtime abstractions', () => {
           };
 
           const res = await adapter.transaction(
-            { locals: { 'app.user_id': 1 } },
+            testDb.internal.asyncStorage,
+            { setConfig: { 'app.user_id': '1' } },
             async (trx) => {
               const before = await getLocal(trx);
               const nested = await trx.transaction(
-                { locals: { 'app.user_id': 2 } },
+                testDb.internal.asyncStorage,
+                { setConfig: { 'app.user_id': '2' } },
                 (nestedTrx) => getLocal(nestedTrx),
               );
               const after = await getLocal(trx);
@@ -157,11 +239,384 @@ describe('adapter runtime abstractions', () => {
             after: '1',
           });
         });
+
+        it('stores transaction session context in async storage', async () => {
+          await adapter.transaction(
+            testDb.internal.asyncStorage,
+            {
+              role: 'app-user',
+              setConfig: {
+                'app.user_id': 1,
+              },
+            },
+            async () => {
+              const state = testDb.internal.asyncStorage.getStore();
+
+              expect(state?.role).toBeUndefined();
+              expect(state?.setConfig).toBeUndefined();
+              expect(state?.transactionRole).toBe('app-user');
+              expect(state?.transactionSetConfig).toMatchObject({
+                'app.user_id': 1,
+              });
+            },
+          );
+        });
+
+        it('restores top-level transaction session context when reusing existing async storage state', async () => {
+          await testDb.internal.asyncStorage.run(
+            {
+              transactionRole: 'outer-role',
+              transactionSetConfig: {
+                'app.outer': 'outer-value',
+              },
+            },
+            async () => {
+              const before = testDb.internal.asyncStorage.getStore();
+
+              expect(before?.transactionRole).toBe('outer-role');
+              expect(before?.transactionSetConfig).toEqual({
+                'app.outer': 'outer-value',
+              });
+
+              await adapter.transaction(
+                testDb.internal.asyncStorage,
+                {
+                  role: 'app-user',
+                  setConfig: {
+                    'app.user_id': '42',
+                  },
+                },
+                async () => {
+                  const during = testDb.internal.asyncStorage.getStore();
+
+                  expect(during?.transactionRole).toBe('app-user');
+                  expect(during?.transactionSetConfig).toEqual({
+                    'app.outer': 'outer-value',
+                    'app.user_id': '42',
+                  });
+                },
+              );
+
+              const after = testDb.internal.asyncStorage.getStore();
+              expect(after?.transactionRole).toBe('outer-role');
+              expect(after?.transactionSetConfig).toEqual({
+                'app.outer': 'outer-value',
+              });
+            },
+          );
+        });
+
+        it('overrides and restores transaction session context for nested transactions', async () => {
+          const currentRole = adapter.getUser();
+
+          await adapter.transaction(
+            testDb.internal.asyncStorage,
+            {
+              role: 'app-user',
+              setConfig: {
+                'app.user_id': '1',
+              },
+            },
+            async (trx) => {
+              const before = testDb.internal.asyncStorage.getStore();
+
+              expect(before?.transactionRole).toBe('app-user');
+              expect(before?.transactionSetConfig).toMatchObject({
+                'app.user_id': '1',
+              });
+
+              const [role, userId] = await Promise.all([
+                trx.query('SELECT current_role role'),
+                trx.query(`SELECT current_setting('app.user_id') "userId"`),
+              ]);
+
+              expect(role).toMatchObject({ rows: [{ role: 'app-user' }] });
+              expect(userId).toMatchObject({ rows: [{ userId: '1' }] });
+
+              await trx.transaction(
+                testDb.internal.asyncStorage,
+                {
+                  role: currentRole,
+                  setConfig: {
+                    'app.tenant_id': 'tenant-2',
+                  },
+                },
+                async () => {
+                  const nested = testDb.internal.asyncStorage.getStore();
+
+                  expect(nested?.transactionRole).toBe(currentRole);
+                  expect(nested?.transactionSetConfig).toMatchObject({
+                    'app.user_id': '1',
+                    'app.tenant_id': 'tenant-2',
+                  });
+
+                  const [role, userId, tenantId] = await Promise.all([
+                    trx.query('SELECT current_role role'),
+                    trx.query(`SELECT current_setting('app.user_id') "userId"`),
+                    trx.query(
+                      `SELECT current_setting('app.tenant_id') "tenantId"`,
+                    ),
+                  ]);
+
+                  expect(role).toMatchObject({ rows: [{ role: currentRole }] });
+                  expect(userId).toMatchObject({ rows: [{ userId: '1' }] });
+                  expect(tenantId).toMatchObject({
+                    rows: [{ tenantId: 'tenant-2' }],
+                  });
+                },
+              );
+
+              const after = testDb.internal.asyncStorage.getStore();
+
+              expect(after?.transactionRole).toBe('app-user');
+              expect(after?.transactionSetConfig).toEqual(
+                before?.transactionSetConfig,
+              );
+
+              const [afterRole, afterUserId, afterTenantId] = await Promise.all(
+                [
+                  trx.query('SELECT current_role role'),
+                  trx.query(`SELECT current_setting('app.user_id') "userId"`),
+                  trx.query(
+                    `SELECT current_setting('app.tenant_id') "tenantId"`,
+                  ),
+                ],
+              );
+
+              expect(afterRole).toMatchObject(role);
+              expect(afterUserId).toMatchObject(userId);
+              expect(afterTenantId).toMatchObject({
+                rows: [{ tenantId: '' }],
+              });
+            },
+          );
+
+          const [afterRole, afterUserId, afterTenantId] = await Promise.all([
+            adapter.query('SELECT current_role role'),
+            adapter.query(
+              `SELECT current_setting('app.user_id', true) "userId"`,
+            ),
+            adapter.query(
+              `SELECT current_setting('app.tenant_id', true) "tenantId"`,
+            ),
+          ]);
+
+          expect(afterRole).toMatchObject({ rows: [{ role: currentRole }] });
+          expect(afterUserId).toMatchObject({ rows: [{ userId: null }] });
+          expect(afterTenantId).toMatchObject({
+            rows: [{ tenantId: null }],
+          });
+        });
+
+        it('restores role and setConfig after nested transaction failure', async () => {
+          const currentRole = adapter.getUser();
+
+          await adapter.transaction(
+            testDb.internal.asyncStorage,
+            {
+              role: 'app-user',
+              setConfig: {
+                'app.user_id': '1',
+              },
+            },
+            async (trx) => {
+              const before = testDb.internal.asyncStorage.getStore();
+
+              expect(before?.transactionRole).toBe('app-user');
+              expect(before?.transactionSetConfig).toMatchObject({
+                'app.user_id': '1',
+              });
+
+              await expect(
+                trx.transaction(
+                  testDb.internal.asyncStorage,
+                  {
+                    role: currentRole,
+                    setConfig: {
+                      'app.tenant_id': 'tenant-2',
+                    },
+                  },
+                  async () => {
+                    const nested = testDb.internal.asyncStorage.getStore();
+
+                    expect(nested?.transactionRole).toBe(currentRole);
+                    expect(nested?.transactionSetConfig).toMatchObject({
+                      'app.user_id': '1',
+                      'app.tenant_id': 'tenant-2',
+                    });
+
+                    await trx.query(
+                      'SELECT * FROM "schema"."table_that_does_not_exist"',
+                    );
+                  },
+                ),
+              ).rejects.toThrow();
+
+              const after = testDb.internal.asyncStorage.getStore();
+
+              expect(after?.transactionRole).toBe('app-user');
+              expect(after?.transactionSetConfig).toEqual(
+                before?.transactionSetConfig,
+              );
+
+              const [role, userId, tenantId] = await Promise.all([
+                trx.query('SELECT current_role role'),
+                trx.query(`SELECT current_setting('app.user_id') "userId"`),
+                trx.query(
+                  `SELECT current_setting('app.tenant_id', true) "tenantId"`,
+                ),
+              ]);
+
+              expect(role).toMatchObject({ rows: [{ role: 'app-user' }] });
+              expect(userId).toMatchObject({ rows: [{ userId: '1' }] });
+              expect(tenantId).toMatchObject({ rows: [{ tenantId: '' }] });
+            },
+          );
+        });
+
+        it('restores effective parent context for deeper nested transactions', async () => {
+          const currentRole = adapter.getUser();
+
+          await adapter.transaction(
+            testDb.internal.asyncStorage,
+            {
+              role: 'app-user',
+              setConfig: {
+                'app.user_id': '1',
+              },
+            },
+            async (trx) => {
+              await trx.transaction(
+                testDb.internal.asyncStorage,
+                {
+                  role: currentRole,
+                  setConfig: {
+                    'app.tenant_id': 'tenant-2',
+                  },
+                },
+                async () => {
+                  await trx.transaction(
+                    testDb.internal.asyncStorage,
+                    {
+                      role: 'app-user',
+                      setConfig: {
+                        'app.user_id': '3',
+                        'app.project_id': 'project-3',
+                      },
+                    },
+                    async () => {
+                      const [role, userId, tenantId, projectId] =
+                        await Promise.all([
+                          trx.query('SELECT current_role role'),
+                          trx.query(
+                            `SELECT current_setting('app.user_id') "userId"`,
+                          ),
+                          trx.query(
+                            `SELECT current_setting('app.tenant_id') "tenantId"`,
+                          ),
+                          trx.query(
+                            `SELECT current_setting('app.project_id') "projectId"`,
+                          ),
+                        ]);
+
+                      expect(role).toMatchObject({
+                        rows: [{ role: 'app-user' }],
+                      });
+                      expect(userId).toMatchObject({ rows: [{ userId: '3' }] });
+                      expect(tenantId).toMatchObject({
+                        rows: [{ tenantId: 'tenant-2' }],
+                      });
+                      expect(projectId).toMatchObject({
+                        rows: [{ projectId: 'project-3' }],
+                      });
+                    },
+                  );
+
+                  const [role, userId, tenantId, projectId] = await Promise.all(
+                    [
+                      trx.query('SELECT current_role role'),
+                      trx.query(
+                        `SELECT current_setting('app.user_id') "userId"`,
+                      ),
+                      trx.query(
+                        `SELECT current_setting('app.tenant_id') "tenantId"`,
+                      ),
+                      trx.query(
+                        `SELECT current_setting('app.project_id', true) "projectId"`,
+                      ),
+                    ],
+                  );
+
+                  expect(role).toMatchObject({ rows: [{ role: currentRole }] });
+                  expect(userId).toMatchObject({ rows: [{ userId: '1' }] });
+                  expect(tenantId).toMatchObject({
+                    rows: [{ tenantId: 'tenant-2' }],
+                  });
+                  expect(projectId).toMatchObject({
+                    rows: [{ projectId: '' }],
+                  });
+                },
+              );
+
+              const [role, userId, tenantId, projectId] = await Promise.all([
+                trx.query('SELECT current_role role'),
+                trx.query(`SELECT current_setting('app.user_id') "userId"`),
+                trx.query(
+                  `SELECT current_setting('app.tenant_id', true) "tenantId"`,
+                ),
+                trx.query(
+                  `SELECT current_setting('app.project_id', true) "projectId"`,
+                ),
+              ]);
+
+              expect(role).toMatchObject({ rows: [{ role: 'app-user' }] });
+              expect(userId).toMatchObject({ rows: [{ userId: '1' }] });
+              expect(tenantId).toMatchObject({ rows: [{ tenantId: '' }] });
+              expect(projectId).toMatchObject({ rows: [{ projectId: '' }] });
+            },
+          );
+        });
+
+        it('keeps withOptions nested-scope behavior unchanged inside transaction context', async () => {
+          await adapter.transaction(
+            testDb.internal.asyncStorage,
+            {
+              role: 'app-user',
+              setConfig: {
+                'app.tx': 'value',
+              },
+            },
+            async () => {
+              await testDb.withOptions({ role: 'app_user' }, async () => {
+                const state = testDb.internal.asyncStorage.getStore();
+
+                expect(state?.transactionRole).toBe('app-user');
+                expect(state?.role).toBe('app_user');
+
+                await expect(
+                  testDb.withOptions({ role: 'other_role' }, async () => {}),
+                ).rejects.toThrow(OrchidOrmInternalError);
+              });
+
+              await testDb.withOptions(
+                { setConfig: { 'app.scope_a': 'a' } },
+                async () => {
+                  await expect(
+                    testDb.withOptions(
+                      { setConfig: { 'app.scope_b': 'b' } },
+                      async () => {},
+                    ),
+                  ).rejects.toThrow(OrchidOrmInternalError);
+                },
+              );
+            },
+          );
+        });
       });
 
       describe('savepoint', () => {
         it('supports startingSavepoint', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             const beforeInsert = await trx.query<{ count: number }>(
               `SELECT count(*)::int as count FROM "schema"."user"`,
             );
@@ -191,7 +646,7 @@ describe('adapter runtime abstractions', () => {
         });
 
         it('rolls back to releasingSavepoint if query fails', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             const beforeInsert = await trx.query<{ count: number }>(
               `SELECT count(*)::int as count FROM "schema"."user"`,
             );
@@ -219,7 +674,7 @@ describe('adapter runtime abstractions', () => {
         });
 
         it('releases savepoint when startingSavepoint and releasingSavepoint are the same', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             await trx.query(
               `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
               undefined,
@@ -270,7 +725,7 @@ describe('adapter runtime abstractions', () => {
         });
 
         it('applies setConfig in transaction query', async () => {
-          await adapter.transaction(async (trx) => {
+          await adapter.transaction(undefined, undefined, async (trx) => {
             const during = await trx.query<{ preset: string; fresh: string }>(
               `SELECT
                 current_setting('app.preset_key', true) as preset,
@@ -314,11 +769,10 @@ describe('adapter runtime abstractions', () => {
 
         it('applies sqlSessionState from transaction options', async () => {
           await adapter.transaction(
+            undefined,
             {
-              sqlSessionState: {
-                setConfig: {
-                  'app.trx_preset': 'inner_value',
-                },
+              setConfig: {
+                'app.trx_preset': 'inner_value',
               },
             },
             async (trx) => {
@@ -335,7 +789,7 @@ describe('adapter runtime abstractions', () => {
       it('assigns db error properties to QueryError', async () => {
         let duplicateId = 0;
         const dbErr = await adapter
-          .transaction(async (trx) => {
+          .transaction(undefined, undefined, async (trx) => {
             const inserted = await trx.query<{ id: number }>(
               `INSERT INTO "schema"."user"("name", "password")
                VALUES ('name', 'password')

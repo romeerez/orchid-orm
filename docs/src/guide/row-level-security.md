@@ -29,7 +29,74 @@ It can be excessive for simple single-tenant systems, or for apps where keeping 
    Policies can read such values with `current_setting(...)`.
    This must be isolated per request so one user cannot accidentally reuse another user's session context.
 
-Use [$withOptions role/setConfig](/guide/orm-methods.html#role-and-setconfig-sql-session) to apply session settings safely around query execution.
+Use transaction-scoped [`$transaction({ role, setConfig }, cb)`](/guide/transactions.html#sql-session-context-in-transactions) when request DB work should run in one transaction.
+Use query-scoped [`$withOptions({ role, setConfig }, cb)`](/guide/orm-methods.html#role-and-setconfig-sql-session) when the request should not be wrapped in one transaction.
+
+## Request-scoped RLS context
+
+When a request's database work should be atomic, wrap that work in `$transaction` and pass the RLS role and settings in the transaction options:
+
+```ts
+async function runRequestDbWork<T>(
+  tenantId: string,
+  userId: string,
+  cb: () => Promise<T>,
+) {
+  return db.$transaction(
+    {
+      role: 'app_user',
+      setConfig: {
+        'app.tenant_id': tenantId,
+        'app.user_id': userId,
+      },
+    },
+    cb,
+  );
+}
+
+await runRequestDbWork(tenantId, userId, async () => {
+  const projects = await db.project.all();
+  await db.project.create({ name: 'Private project' });
+  return projects;
+});
+```
+
+Orchid applies this role and config with transaction-local Postgres semantics, so RLS policies can read the values with `current_setting('app.tenant_id', true)` and `current_setting('app.user_id', true)` for the whole transaction.
+Keep the transaction around the database work only; avoid holding it open while waiting on remote services, user input, or streaming responses.
+
+Transaction-scoped `role` and `setConfig` are an alternative to query-scoped `$withOptions`.
+`$withOptions` applies and restores SQL session context around each query, and a transaction opened inside that callback inherits the same query-scoped context.
+`$transaction({ role, setConfig }, cb)` applies the context once for the transaction, which is lower overhead when the request is intentionally transaction-bound.
+
+Nested transactions may temporarily override the parent transaction role and config:
+
+```ts
+await db.$transaction(
+  {
+    role: 'app_user',
+    setConfig: { 'app.tenant_id': tenantId },
+  },
+  async () => {
+    await db.project.find(projectId);
+
+    await db.$transaction(
+      {
+        role: 'project_admin',
+        setConfig: { 'app.audit_reason': 'manual-review' },
+      },
+      async () => {
+        await db.project.find(projectId).update({ reviewedAt: new Date() });
+      },
+    );
+
+    // Back to app_user and the outer transaction config.
+    await db.project.find(projectId);
+  },
+);
+```
+
+The nested role replaces the parent role only for the nested callback, and nested `setConfig` is shallow-merged over the parent config.
+When the nested transaction finishes, Orchid restores the parent transaction context before the outer callback continues.
 
 ## RLS alternatives and trade-offs
 
@@ -66,5 +133,7 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 
 - Manage roles in migration generation: [roles](/guide/generate-migrations#roles)
 - Manage default privileges in migration generation: [default privileges](/guide/generate-migrations#default-privileges)
-- Automatically set SQL session `role` and/or `setConfig` per scope with `$withOptions`.
+- Automatically set SQL session `role` and/or `setConfig` for a transaction with `$transaction`.
+  See details and examples in [SQL session context in transactions](/guide/transactions.html#sql-session-context-in-transactions).
+- Automatically set SQL session `role` and/or `setConfig` per query scope with `$withOptions`.
   See details and examples in [$withOptions role and setConfig](/guide/orm-methods.html#role-and-setconfig-sql-session).

@@ -133,10 +133,10 @@ export const PostgresJsAdapter: DriverAdapter = {
   configure(params: PostgresJsAdapterOptions): postgres.Sql {
     const config: PostgresJsAdapterOptions = { ...params, types };
 
-    if (config.locals?.search_path) {
+    if (config.setConfig?.search_path) {
       config.connection = {
         ...config.connection,
-        search_path: config.locals.search_path,
+        search_path: config.setConfig.search_path,
       };
     }
 
