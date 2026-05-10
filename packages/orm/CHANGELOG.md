@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.68.3
+
+### Patch Changes
+
+- 7e9b715f: Support setting role and session config in transactions (#611)
+- Updated dependencies [e40de01e]
+- Updated dependencies [7e9b715f]
+  - rake-db@2.33.3
+  - pqb@0.65.3
+
 ## 1.68.2
 
 ### Patch Changes

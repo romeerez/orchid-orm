@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.33.3
+
+### Patch Changes
+
+- e40de01e: Add "if not exists" logic by default to createRole
+- 7e9b715f: Support setting role and session config in transactions (#611)
+- Updated dependencies [7e9b715f]
+  - pqb@0.65.3
+
 ## 2.33.2
 
 ### Patch Changes

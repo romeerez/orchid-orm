@@ -1,5 +1,11 @@
 # pqb
 
+## 0.65.3
+
+### Patch Changes
+
+- 7e9b715f: Support setting role and session config in transactions (#611)
+
 ## 0.65.2
 
 ### Patch Changes
