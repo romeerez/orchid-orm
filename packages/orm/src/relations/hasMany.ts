@@ -97,7 +97,7 @@ export interface HasManyInfo<
   query: Q;
   params: HasOneParams<T, Rel['options']>;
   maybeSingle: Q;
-  columnsForCreate: never;
+  omitForeignKeyInCreate: never;
   optionalDataForCreate: {
     [P in Name]?: T['relations'][Name]['options'] extends RelationThroughOptions
       ? EmptyObject

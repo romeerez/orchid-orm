@@ -109,7 +109,7 @@ export interface HasAndBelongsToManyInfo<
   query: Q;
   params: HasAndBelongsToManyParams<T, FK>;
   maybeSingle: Q;
-  columnsForCreate: never;
+  omitForeignKeyInCreate: never;
   optionalDataForCreate: {
     [P in Name]?: {
       // create related records

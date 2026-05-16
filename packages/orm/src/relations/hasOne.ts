@@ -145,7 +145,7 @@ export interface HasOneInfo<
   maybeSingle: T['relations'][Name]['options']['required'] extends true
     ? QueryManyTake<Q>
     : QueryManyTakeOptional<Q>;
-  columnsForCreate: never;
+  omitForeignKeyInCreate: never;
   optionalDataForCreate: T['relations'][Name]['options'] extends RelationThroughOptions
     ? EmptyObject
     : {

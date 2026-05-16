@@ -108,9 +108,16 @@ export interface BelongsToInfo<
   maybeSingle: Required extends true
     ? QueryManyTake<Q>
     : QueryManyTakeOptional<Q>;
-  columnsForCreate: FK;
+  omitForeignKeyInCreate: FK;
   dataForCreate: {
-    [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
+    columns: FK;
+    nested: Required extends true
+      ? {
+          [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
+        }
+      : {
+          [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
+        };
   };
   optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:

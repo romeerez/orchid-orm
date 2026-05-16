@@ -38,17 +38,22 @@ export interface RelationConfigBase extends IsQuery {
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.
-  // Other relation kinds have `columnsForCreate: never`.
-  columnsForCreate: PropertyKey;
+  // Other relation kinds have `omitForeignKeyInCreate: never`.
+  omitForeignKeyInCreate: PropertyKey;
   // Data for `create` method that may have required properties.
   // Only `belongsTo` has it for required foreign keys.
-  dataForCreate: RecordUnknown;
+  dataForCreate?: RelationConfigDataForCreate;
   // Data for `create` method with all optional properties.
   // Other than `belongsTo` relation kinds use it.
   optionalDataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
   primaryKeys: string[];
+}
+
+export interface RelationConfigDataForCreate {
+  columns: PropertyKey;
+  nested: RecordUnknown;
 }
 
 export interface RelationsBase {
