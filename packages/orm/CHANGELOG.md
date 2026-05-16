@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.68.4
+
+### Patch Changes
+
+- 212a97c3: Fix wrong type error when creating a record with a missing field and belongsTo key (#687)
+- Updated dependencies [212a97c3]
+  - pqb@0.65.4
+  - rake-db@2.33.4
+
 ## 1.68.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.65.4
+
+### Patch Changes
+
+- 212a97c3: Fix wrong type error when creating a record with a missing field and belongsTo key (#687)
+
 ## 0.65.3
 
 ### Patch Changes
