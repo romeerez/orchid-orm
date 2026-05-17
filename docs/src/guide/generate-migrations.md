@@ -52,6 +52,28 @@ tables, columns, schemas, enums, primary keys, foreign keys, indexes, database c
 
 Let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
 
+## row level security flags
+
+Migration generation supports table-level RLS flags declared in code (`enable` and `force`).
+Project-wide defaults are configured in `orchidORM`:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    rls: {
+      tableRlsDefaults: {
+        enable: true,
+        force: false,
+      },
+    },
+  },
+  { ...tables },
+);
+```
+
+See [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) for setup and behavior details, including how defaults are applied.
+
 ## roles
 
 By default, migrations generator doesn't track Postgres ORMs, you can manage them manually if needed.

@@ -45,7 +45,7 @@
 
 ## 4. docs
 
-- [ ] 4.1 Document table RLS flags and defaults
+- [x] 4.1 Document table RLS flags and defaults
   - 4.1.1 Update the RLS and setup docs to show `defineRls` with `enable` and `force`, explain `orchidORM` `rls.tableRlsDefaults`, and state that defaults apply only to tables with an explicit `rls` declaration.
   - 4.1.2 Explain that enabling RLS without applicable policies is Postgres default deny, and keep policy examples out until policy support is implemented.
 

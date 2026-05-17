@@ -7,6 +7,57 @@ description: Row Level Security status, setup fundamentals, and Orchid-supported
 RLS support in Orchid ORM is currently work in progress.
 You can already set up everything needed for RLS yourself with raw SQL in migrations, and Orchid provides some supporting features listed below.
 
+## Table RLS declaration and defaults
+
+For table-level RLS flags, declare `rls` on a table with `defineRls`:
+
+```ts
+import { createBaseTable, defineRls } from 'orchid-orm';
+
+export const BaseTable = createBaseTable();
+
+export class ProjectTable extends BaseTable {
+  readonly table = 'project';
+
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    tenantId: t.uuid(),
+  }));
+
+  rls = defineRls({
+    enable: true,
+    force: true,
+  });
+}
+```
+
+`defineRls` currently supports only:
+
+- `enable`: enable row level security on the table.
+- `force`: force row level security for the table owner as well.
+
+You can define project defaults with `orchidORM` `rls.tableRlsDefaults`:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    rls: {
+      tableRlsDefaults: {
+        enable: true,
+        force: false,
+      },
+    },
+  },
+  {
+    project: ProjectTable,
+  },
+);
+```
+
+Defaults are applied only to tables that have an explicit `rls = defineRls(...)` declaration.
+Tables without `rls` declaration are ignored by the RLS migration generator in this phase.
+
 ## RLS intro
 
 Row Level Security (RLS) is a PostgreSQL feature that filters which rows a role can read or modify.

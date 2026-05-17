@@ -1068,6 +1068,37 @@ change(async (db) => {
 });
 ```
 
+## enableRls, disableRls, forceRls, noForceRls
+
+Manage table-level Row Level Security flags in migrations.
+
+- `enableRls(tableName)`: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
+- `disableRls(tableName)`: `ALTER TABLE ... DISABLE ROW LEVEL SECURITY`
+- `forceRls(tableName)`: `ALTER TABLE ... FORCE ROW LEVEL SECURITY`
+- `noForceRls(tableName)`: `ALTER TABLE ... NO FORCE ROW LEVEL SECURITY`
+
+All methods are reversible on rollback:
+
+- `enableRls` rolls back with `disableRls`
+- `forceRls` rolls back with `noForceRls`
+
+Use `'schemaName.tableName'` for schema-qualified tables.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.enableRls('project');
+  await db.forceRls('project');
+});
+
+change(async (db) => {
+  await db.enableRls('tenant.project');
+});
+```
+
+For ORM-side declaration and migration generation of table RLS flags, see [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) and [Generate Migrations](/guide/generate-migrations#row-level-security-flags).
+
 ## renameRole
 
 Renames a database role.
