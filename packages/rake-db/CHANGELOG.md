@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.33.5
+
+### Patch Changes
+
+- aad1bd0e: Support `rls` setting in `orchidORM`, support `enable` and `force` of RLS (#611)
+- Updated dependencies [aad1bd0e]
+  - pqb@0.65.5
+
 ## 2.33.4
 
 ### Patch Changes

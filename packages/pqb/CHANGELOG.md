@@ -1,5 +1,11 @@
 # pqb
 
+## 0.65.5
+
+### Patch Changes
+
+- aad1bd0e: Support `rls` setting in `orchidORM`, support `enable` and `force` of RLS (#611)
+
 ## 0.65.4
 
 ### Patch Changes
