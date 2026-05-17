@@ -45,12 +45,13 @@ import {
   toSnakeCase,
   ColumnsShape,
   QuerySchema,
+  TableRlsConfig,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
   RelationTableToQuery,
 } from './relations/relations';
-import { OrchidORM, RlsTableConfig } from './orm';
+import { OrchidORM } from './orm';
 import {
   BelongsTo,
   BelongsToInfo,
@@ -190,7 +191,7 @@ export interface ORMTableInput {
   // database table comment
   comment?: string;
   // row-level security table flags
-  rls?: RlsTableConfig;
+  rls?: TableRlsConfig;
   // automatically create foreign keys for relations
   autoForeignKeys?: TableData.References.BaseOptions | boolean;
 }

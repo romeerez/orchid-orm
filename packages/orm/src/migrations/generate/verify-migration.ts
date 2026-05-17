@@ -43,6 +43,9 @@ export const verifyMigration = async (
       }
 
       const dbStructure = await introspectDbSchema(trx, {
+        rls: generateMigrationParams.codeItems.tables.some(
+          (table) => !!table.internal.tableRls,
+        ),
         roles,
         loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
       });

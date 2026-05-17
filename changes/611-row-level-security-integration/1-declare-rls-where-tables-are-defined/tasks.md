@@ -34,7 +34,7 @@
 
 ## 3. orm
 
-- [ ] 3.1 ORM migration generation for table RLS flags
+- [x] 3.1 ORM migration generation for table RLS flags
   - 3.1.1 Before introspection, scan all code tables for an `rls` declaration and pass `rls: true` to `introspectDbSchema` only when at least one declaration exists.
   - 3.1.2 Normalize declared table `enable` and `force` flags with `tableRlsDefaults`, compare them to introspected table flags, and generate only rake-db table-flag migration methods.
   - 3.1.3 Keep policy configuration and policy diffing out of this task.

@@ -2,6 +2,7 @@ import { introspectDbSchema } from 'rake-db';
 import { useGeneratorsTestUtils } from './generators/generators.test-utils';
 import { asMock } from 'test-utils';
 import { verifyMigration } from './verify-migration';
+import { defineRls } from '../../orm';
 
 jest.mock('rake-db', () => {
   const actual = jest.requireActual('../../../../rake-db/src');
@@ -83,5 +84,39 @@ describe('generate', () => {
     asMock(verifyMigration).mockImplementation(() => false);
 
     await expect(act()).rejects.toThrow('Failed to verify generated migration');
+  });
+
+  it('should introspect rls when at least one code table has rls declaration', async () => {
+    asMock(verifyMigration).mockResolvedValue(undefined);
+
+    await arrange({
+      tables: [
+        class One extends BaseTable {
+          table = 'one';
+          noPrimaryKey = true;
+          rls = defineRls({ enable: true });
+        },
+      ],
+    });
+
+    await act();
+
+    expect(asMock(introspectDbSchema).mock.calls[0][1]).toMatchObject({
+      rls: true,
+    });
+  });
+
+  it('should not introspect rls when no code table has rls declaration', async () => {
+    asMock(verifyMigration).mockResolvedValue(undefined);
+
+    await arrange({
+      tables: [table()],
+    });
+
+    await act();
+
+    expect(asMock(introspectDbSchema).mock.calls[0][1]).toMatchObject({
+      rls: false,
+    });
   });
 });

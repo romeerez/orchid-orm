@@ -8,7 +8,7 @@ import {
   GeneratorIgnore,
   Query,
 } from './query';
-import { DbRlsOptions } from './extra-features/rls/rls.db';
+import { DbRlsOptions, TableRlsConfig } from './extra-features/rls/rls.db';
 import { AsyncState } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
 
@@ -48,6 +48,7 @@ export interface QueryInternal<
   generatorIgnore?: GeneratorIgnore;
   roles?: DbRole[];
   rls?: DbRlsOptions;
+  tableRls?: TableRlsConfig;
   managedRolesSql?: string;
   // primary keys, indexes, checks and constraints of the table
   tableData: TableData;

@@ -100,6 +100,7 @@ export const generate = async (
   const { dbStructure } = await migrateAndPullStructures(
     adapters,
     config,
+    db,
     rolesDbStructureParam,
     internal.roles ? { loadDefaultPrivileges: true } : undefined,
     afterPull,
@@ -234,6 +235,7 @@ const getDbFromConfig = async (
 const migrateAndPullStructures = async (
   adapters: Adapter[],
   config: RakeDbConfig,
+  db: DbInstance,
   roles?: { whereSql?: string },
   defaultPrivileges?: { loadDefaultPrivileges?: boolean },
   afterPull?: AfterPull,
@@ -268,6 +270,7 @@ const migrateAndPullStructures = async (
   const dbStructures = await Promise.all(
     adapters.map((adapter) =>
       introspectDbSchema(adapter, {
+        rls: hasCodeTablesWithRls(db),
         roles,
         loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
       }),
@@ -280,6 +283,17 @@ const migrateAndPullStructures = async (
   }
 
   return { dbStructure };
+};
+
+const hasCodeTablesWithRls = (db: DbInstance): boolean => {
+  for (const key in db) {
+    if (key[0] === '$') continue;
+
+    const table = db[key as keyof typeof db] as Query;
+    if (table.internal.tableRls) return true;
+  }
+
+  return false;
 };
 
 const compareDbStructures = (

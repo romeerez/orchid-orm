@@ -1,6 +1,8 @@
+export interface TableRlsConfig {
+  enable?: boolean;
+  force?: boolean;
+}
+
 export interface DbRlsOptions {
-  tableRlsDefaults?: {
-    enable?: boolean;
-    force?: boolean;
-  };
+  tableRlsDefaults?: TableRlsConfig;
 }

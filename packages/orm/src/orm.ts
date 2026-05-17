@@ -17,6 +17,7 @@ import {
   QueryData,
   RecordUnknown,
   ColumnSchemaConfig,
+  TableRlsConfig,
 } from 'pqb/internal';
 import {
   ORMTableInput,
@@ -45,17 +46,9 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
 } & OrchidORMMethods;
 
 /**
- * Row-level security table flags.
- */
-export interface RlsTableConfig {
-  enable?: boolean;
-  force?: boolean;
-}
-
-/**
  * Identity helper for table row-level security configuration.
  */
-export const defineRls = <T extends RlsTableConfig>(rls: T): T => rls;
+export const defineRls = <T extends TableRlsConfig>(rls: T): T => rls;
 
 interface OrchidORMMethods {
   /**
@@ -333,6 +326,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     (dbTable as unknown as { db: unknown }).db = result;
     (dbTable as unknown as { filePath: string }).filePath = table.filePath;
     (dbTable as unknown as { name: string }).name = table.constructor.name;
+    dbTable.internal.tableRls = table.rls;
 
     (result as RecordUnknown)[key] = dbTable;
   }

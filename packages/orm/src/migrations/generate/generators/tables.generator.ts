@@ -33,6 +33,7 @@ import { processForeignKeys } from './foreignKeys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
 import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
+import { processTableRls } from './rls.generator';
 
 export interface CompareSql {
   values: unknown[];
@@ -137,6 +138,8 @@ export const processTables = async (
     applyCompareSql(compareSql, adapter),
     compareSqlExpressions(tableExpressions, adapter),
   ]);
+
+  processTableRls(ast, dbStructure, tables, currentSchema);
 
   for (const dbTable of dropTables) {
     ast.push(
