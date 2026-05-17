@@ -28,6 +28,7 @@ import {
   QueryThenShallowSimplifyOptional,
 } from './then/then';
 import { Order as OrderNamespace } from './basic-features/order/order';
+export type { DbRlsOptions } from './extra-features/rls/rls.db';
 
 export interface DbExtension {
   name: string;

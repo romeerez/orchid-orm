@@ -143,6 +143,7 @@ export {
   type CreateSelf,
   type DbDomainArg,
   type DbExtension,
+  type DbRlsOptions,
   type DbSharedOptions,
   type DbSqlMethod,
   type DbTableOptionScopes,

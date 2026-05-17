@@ -50,7 +50,7 @@ import {
   RelationConfigSelf,
   RelationTableToQuery,
 } from './relations/relations';
-import { OrchidORM } from './orm';
+import { OrchidORM, RlsTableConfig } from './orm';
 import {
   BelongsTo,
   BelongsToInfo,
@@ -189,6 +189,8 @@ export interface ORMTableInput {
   readonly softDelete?: true | string;
   // database table comment
   comment?: string;
+  // row-level security table flags
+  rls?: RlsTableConfig;
   // automatically create foreign keys for relations
   autoForeignKeys?: TableData.References.BaseOptions | boolean;
 }

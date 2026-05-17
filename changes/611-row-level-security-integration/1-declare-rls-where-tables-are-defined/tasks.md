@@ -7,7 +7,7 @@
 
 ## 1. orm
 
-- [ ] 1.1 Orchid ORM RLS table flag declaration baseline
+- [x] 1.1 Orchid ORM RLS table flag declaration baseline
   - 1.1.1 Add the `orchidORM` `rls.tableRlsDefaults` option and store the provided `rls` setting on the underlying `db.internal` structure for later migration-generator use; leave it `undefined` there when the user does not pass `rls`.
   - 1.1.2 Export a minimal `defineRls` identity helper and table `rls` metadata shape that support only `enable` and `force`; do not add policy arrays or policy migration behavior in this task.
   - 1.1.3 verify if the implementation conforms to guidelines

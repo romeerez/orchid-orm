@@ -84,6 +84,7 @@ import { QueryInternal } from './query-internal';
 import { QuerySchema } from './basic-features/schema/schema';
 import { AsyncState } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
+import { DbRlsOptions } from './extra-features/rls/rls.db';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -119,6 +120,7 @@ export type NoPrimaryKeyOption = 'error' | 'warning' | 'ignore';
 export interface DbSharedOptions extends QueryLogOptions {
   autoPreparedStatements?: boolean;
   noPrimaryKey?: NoPrimaryKeyOption;
+  rls?: DbRlsOptions;
   extensions?: (string | RecordString)[];
   domains?: {
     [K: string]: DbDomainArg<DefaultColumnTypes<DefaultSchemaConfig>>;

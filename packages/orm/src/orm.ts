@@ -44,6 +44,19 @@ export type OrchidORM<T extends TableClasses = TableClasses> = {
     : never;
 } & OrchidORMMethods;
 
+/**
+ * Row-level security table flags.
+ */
+export interface RlsTableConfig {
+  enable?: boolean;
+  force?: boolean;
+}
+
+/**
+ * Identity helper for table row-level security configuration.
+ */
+export const defineRls = <T extends RlsTableConfig>(rls: T): T => rls;
+
 interface OrchidORMMethods {
   /**
    * @see import('pqb').QueryTransaction.prototype.transaction
@@ -214,7 +227,9 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     noPrimaryKey = 'error',
     schema,
     ...options
-  }: OrchidOrmParam<({ db: Query } | { adapter: Adapter }) & DbSharedOptions>,
+  }: OrchidOrmParam<
+    ({ db: Query } | { adapter: Adapter }) & DbSharedOptions
+  >,
   tables: T,
 ): OrchidORM<T> => {
   const commonOptions: QueryLogOptions & {
@@ -247,6 +262,8 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
       options,
     );
   }
+
+  qb.internal.rls = options.rls;
 
   const result = {
     $transaction: transaction,
