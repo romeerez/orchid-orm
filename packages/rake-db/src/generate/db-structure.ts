@@ -14,10 +14,16 @@ export namespace DbStructure {
     tableName: string;
   }
 
+  export interface TableRls {
+    enable: boolean;
+    force: boolean;
+  }
+
   export interface Table {
     schemaName: string;
     name: string;
     comment?: string;
+    rls?: TableRls;
     columns: Column[];
   }
 
@@ -320,10 +326,22 @@ FROM pg_catalog.pg_namespace n
 WHERE ${filterSchema('nspname')}`;
 
 // `relkind` r = regular table, p = partitioned table.
-const tablesSql = `SELECT
+const tablesSql = (rls?: boolean) => `SELECT
   nspname AS "schemaName",
   relname AS "name",
   obj_description(c.oid) AS comment,
+  ${
+    rls
+      ? `(SELECT json_build_object(
+        'enable', rc.relrowsecurity,
+        'force', rc.relforcerowsecurity
+      )
+      FROM pg_class rc
+      JOIN pg_namespace nr ON nr.oid = rc.relnamespace
+      WHERE rc.relname = c.relname
+        AND nr.nspname = n.nspname) AS "rls",`
+      : ''
+  }
   (SELECT coalesce(json_agg(t), '[]') FROM (${columnsSql({
     schema: 'n',
     table: 'c',
@@ -686,7 +704,7 @@ const defaultPrivilegesSql = `SELECT COALESCE(json_agg(t.*), '[]') FROM (
 
 const sql = (version: number, params?: IntrospectDbStructureParams) =>
   `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
-    tablesSql,
+    tablesSql(params?.rls),
     'tables',
   )}, ${jsonAgg(viewsSql, 'views')}, ${jsonAgg(
     indexesSql,
@@ -742,6 +760,7 @@ interface RawIntrospectedStructure {
 }
 
 interface IntrospectDbStructureParams {
+  rls?: boolean;
   roles?: {
     whereSql?: string;
   };

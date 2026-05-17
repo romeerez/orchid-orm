@@ -17,7 +17,7 @@
 
 ## 2. rake-db
 
-- [ ] 2.1 DB structure introspection for table RLS flags
+- [x] 2.1 DB structure introspection for table RLS flags
   - 2.1.1 Add `rls?: boolean` to `introspectDbSchema` params and load table `enable` and `force` RLS flags only when that param is true.
   - 2.1.2 Keep policy introspection out of this task and preserve the existing introspected structure when `rls` is omitted or false.
   - 2.1.3 verify if the implementation conforms to guidelines

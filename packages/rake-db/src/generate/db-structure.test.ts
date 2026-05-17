@@ -417,4 +417,39 @@ describe('dbStructure', () => {
       expect(defaultPrivileges).toBeUndefined();
     });
   });
+
+  describe('rls', () => {
+    it('should load table rls flags when rls is true', async () => {
+      const table = dbStructureMockFactory.table({
+        rls: {
+          enable: true,
+          force: false,
+        },
+      });
+      mockQueryResult({
+        tables: [table],
+      });
+
+      const { tables } = await introspectDbSchema(adapter, { rls: true });
+
+      expect(tables).toEqual([table]);
+
+      const sql = asMock(adapter.query).mock.calls[1][0];
+      expect(sql.includes('relrowsecurity')).toBe(true);
+      expect(sql.includes('relforcerowsecurity')).toBe(true);
+      expect(sql.includes('nr.nspname = n.nspname')).toBe(true);
+    });
+
+    it('should not load table rls flags when rls is not set', async () => {
+      mockQueryResult({});
+
+      const { tables } = await introspectDbSchema(adapter);
+
+      expect(tables).toEqual([]);
+
+      const sql = asMock(adapter.query).mock.calls[1][0];
+      expect(sql.includes('relrowsecurity')).toBe(false);
+      expect(sql.includes('relforcerowsecurity')).toBe(false);
+    });
+  });
 });
