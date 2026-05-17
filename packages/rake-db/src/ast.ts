@@ -29,7 +29,8 @@ export type RakeDbAst =
   | RakeDbAst.Role
   | RakeDbAst.RenameRole
   | RakeDbAst.ChangeRole
-  | RakeDbAst.DefaultPrivilege;
+  | RakeDbAst.DefaultPrivilege
+  | RakeDbAst.TableRls;
 
 export namespace RakeDbAst {
   export interface Table extends TableData {
@@ -308,5 +309,12 @@ export namespace RakeDbAst {
     schema?: string;
     grant?: DefaultPrivilegeObjectConfig;
     revoke?: DefaultPrivilegeObjectConfig;
+  }
+
+  export interface TableRls {
+    type: 'tableRls';
+    action: 'enable' | 'disable' | 'force' | 'noForce';
+    schema?: string;
+    table: string;
   }
 }

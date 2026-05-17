@@ -1611,4 +1611,47 @@ change(async (db) => {
       );
     });
   });
+
+  describe('tableRls', () => {
+    it('should generate enableRls for current schema table', () => {
+      const result = act([
+        {
+          type: 'tableRls',
+          action: 'enable',
+          table: 'project',
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.enableRls('project');
+});
+`,
+      );
+    });
+
+    it('should generate forceRls for schema-qualified table', () => {
+      const result = act([
+        {
+          type: 'tableRls',
+          action: 'force',
+          schema: 'app',
+          table: 'project',
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.forceRls('app.project');
+});
+`,
+      );
+    });
+  });
 });

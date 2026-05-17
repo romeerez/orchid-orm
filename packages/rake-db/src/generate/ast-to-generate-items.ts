@@ -226,6 +226,11 @@ export const astToGenerateItem = (
       deps.push(`role:${ast.grantee}`);
       break;
     }
+    case 'tableRls': {
+      const { schema = currentSchema } = ast;
+      deps.push(schema, `${schema}.${ast.table}`);
+      break;
+    }
     default:
       exhaustive(ast);
   }

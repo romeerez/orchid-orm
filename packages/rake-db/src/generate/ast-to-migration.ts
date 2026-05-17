@@ -754,6 +754,23 @@ const astEncoders: {
     addCode(code, '});');
     return code;
   },
+  tableRls(ast, _config, currentSchema) {
+    const table = quoteSchemaTable(
+      { schema: ast.schema, name: ast.table },
+      currentSchema,
+    );
+
+    const method =
+      ast.action === 'enable'
+        ? 'enableRls'
+        : ast.action === 'disable'
+          ? 'disableRls'
+          : ast.action === 'force'
+            ? 'forceRls'
+            : 'noForceRls';
+
+    return `await db.${method}(${table});`;
+  },
 };
 
 const roleParams = (

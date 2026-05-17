@@ -1259,4 +1259,18 @@ describe('astToGenerateItem', () => {
     assertChange({ add: [], drop: [] });
     assertDeps(['mySchema', 'role:granteeRole']);
   });
+
+  it('should handle tableRls', () => {
+    arrange({
+      type: 'tableRls',
+      action: 'enable',
+      schema: 'mySchema',
+      table: 'myTable',
+    });
+
+    act();
+
+    assertKeys([]);
+    assertDeps(['mySchema', 'mySchema.myTable']);
+  });
 });

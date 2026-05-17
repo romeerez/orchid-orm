@@ -24,7 +24,7 @@
   - 2.1.4 make sure you didn't forget to cover the implementation with tests
   - 2.1.5 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
   - 2.1.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 2.2 RLS table flag support throughout rake-db
+- [x] 2.2 RLS table flag support throughout rake-db
   - 2.2.1 Add reversible `enableRls`, `disableRls`, `forceRls`, and `noForceRls` migration methods with schema-qualified table-name support.
   - 2.2.2 Represent table RLS flag changes in AST, dependency sorting, migration SQL execution, generated migration code, structure-to-AST conversion, and pull flows without adding policy support.
   - 2.2.3 verify if the implementation conforms to guidelines

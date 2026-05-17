@@ -520,6 +520,22 @@ export const report = (
         }
         break;
       }
+      case 'tableRls': {
+        const table = dbItemName(
+          { schema: a.schema, name: a.table },
+          currentSchema,
+        );
+        const message =
+          a.action === 'enable'
+            ? `${green('+ enable rls')} ${table}`
+            : a.action === 'disable'
+              ? `${red('- enable rls')} ${table}`
+              : a.action === 'force'
+                ? `${green('+ force rls')} ${table}`
+                : `${red('- force rls')} ${table}`;
+        code.push(message);
+        break;
+      }
       default:
         exhaustive(a);
     }

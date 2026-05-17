@@ -152,6 +152,47 @@ describe('structureToAst', () => {
       expect(ast).toEqual([]);
     });
 
+    it('should add table RLS ast items when table has RLS flags', async () => {
+      structure.tables = [
+        dbStructureMockFactory.table({
+          schemaName: 'app',
+          name: 'project',
+          rls: {
+            enable: true,
+            force: true,
+          },
+        }),
+      ];
+
+      const ast = await structureToAst(ctx, adapter, config);
+
+      expect(ast).toEqual([
+        {
+          type: 'table',
+          action: 'create',
+          schema: 'app',
+          name: 'project',
+          shape: {},
+          noPrimaryKey: 'ignore',
+          indexes: [],
+          excludes: [],
+          constraints: [],
+        },
+        {
+          type: 'tableRls',
+          action: 'enable',
+          schema: 'app',
+          table: 'project',
+        },
+        {
+          type: 'tableRls',
+          action: 'force',
+          schema: 'app',
+          table: 'project',
+        },
+      ]);
+    });
+
     it('should add columns', async () => {
       const [table] = (structure.tables = [
         dbStructureMockFactory.tableWithColumns(),

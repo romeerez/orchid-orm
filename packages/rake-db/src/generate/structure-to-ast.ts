@@ -113,6 +113,24 @@ export const structureToAst = async (
       continue;
 
     ast.push(tableToAst(ctx, data, table, 'create', domains));
+
+    if (table.rls?.enable) {
+      ast.push({
+        type: 'tableRls',
+        action: 'enable',
+        schema: table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
+        table: table.name,
+      });
+    }
+
+    if (table.rls?.force) {
+      ast.push({
+        type: 'tableRls',
+        action: 'force',
+        schema: table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
+        table: table.name,
+      });
+    }
   }
 
   for (const it of data.extensions) {
