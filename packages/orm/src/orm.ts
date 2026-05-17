@@ -220,9 +220,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     noPrimaryKey = 'error',
     schema,
     ...options
-  }: OrchidOrmParam<
-    ({ db: Query } | { adapter: Adapter }) & DbSharedOptions
-  >,
+  }: OrchidOrmParam<({ db: Query } | { adapter: Adapter }) & DbSharedOptions>,
   tables: T,
 ): OrchidORM<T> => {
   const commonOptions: QueryLogOptions & {

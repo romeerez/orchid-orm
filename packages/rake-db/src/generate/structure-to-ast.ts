@@ -118,7 +118,8 @@ export const structureToAst = async (
       ast.push({
         type: 'tableRls',
         action: 'enable',
-        schema: table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
+        schema:
+          table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
         table: table.name,
       });
     }
@@ -127,7 +128,8 @@ export const structureToAst = async (
       ast.push({
         type: 'tableRls',
         action: 'force',
-        schema: table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
+        schema:
+          table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
         table: table.name,
       });
     }

@@ -23,8 +23,7 @@ describe('RLS table methods', () => {
     await makeTestUpAndDown('enableRls', 'disableRls')(
       (action) => db[action]('auth.users'),
       () => expectSql(`ALTER TABLE "auth"."users" ENABLE ROW LEVEL SECURITY`),
-      () =>
-        expectSql(`ALTER TABLE "auth"."users" DISABLE ROW LEVEL SECURITY`),
+      () => expectSql(`ALTER TABLE "auth"."users" DISABLE ROW LEVEL SECURITY`),
     );
   });
 });
