@@ -10,7 +10,7 @@ const actionToSql = {
 
 type RlsAction = keyof typeof actionToSql;
 
-const setRls = (
+const setRls = async (
   migration: Migration,
   tableName: string,
   action: RlsAction,
@@ -20,9 +20,9 @@ const setRls = (
     tableName,
   );
 
-  return migration.adapter
-    .query(`ALTER TABLE ${quoteTable(schema, table)} ${actionToSql[action]}`)
-    .then(() => {});
+  await migration.adapter.arrays(
+    `ALTER TABLE ${quoteTable(schema, table)} ${actionToSql[action]}`,
+  );
 };
 
 export const enableOrDisableRls = (
