@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.68.6
+
+### Patch Changes
+
+- 22f06cfd: Re-export `QuerySchema` type from `pqb` and `orchid-orm`
+- Updated dependencies [22f06cfd]
+  - pqb@0.65.6
+  - rake-db@2.33.6
+
 ## 1.68.5
 
 ### Patch Changes

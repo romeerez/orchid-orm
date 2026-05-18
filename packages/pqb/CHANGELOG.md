@@ -1,5 +1,11 @@
 # pqb
 
+## 0.65.6
+
+### Patch Changes
+
+- 22f06cfd: Re-export `QuerySchema` type from `pqb` and `orchid-orm`
+
 ## 0.65.5
 
 ### Patch Changes
