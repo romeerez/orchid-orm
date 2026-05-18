@@ -3,9 +3,9 @@ pre-commit:
   commands:
     lint:
       glob: "*.{js,mjs,ts,json}"
-      run: oxlint --fix --deny-warnings {staged_files}
+      run: pnpm exec oxlint --fix --deny-warnings {staged_files}
       stage_fixed: true
     fmt:
       glob: "*.{js,mjs,ts,json,md}"
-      run: oxfmt --no-error-on-unmatched-pattern {staged_files}
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
