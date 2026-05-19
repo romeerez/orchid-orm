@@ -340,6 +340,8 @@ const compareColumns = async (
   dbColumn: Column,
   codeColumn: Column,
 ): Promise<'change' | 'recreate' | undefined> => {
+  const maybeArrayDbColumn = dbColumn;
+  const maybeArrayCodeColumn = codeColumn;
   if (dbColumn instanceof ArrayColumn && codeColumn instanceof ArrayColumn) {
     dbColumn = dbColumn.data.item;
     codeColumn = codeColumn.data.item;
@@ -436,6 +438,31 @@ const compareColumns = async (
     )
   ) {
     return 'change';
+  }
+
+  if (
+    !(
+      maybeArrayDbColumn instanceof ArrayColumn &&
+      maybeArrayCodeColumn instanceof ArrayColumn
+    ) &&
+    (dbData.default === undefined) !== (codeData.default === undefined)
+  ) {
+    const valuesBeforeLen = compareSql.values.length;
+    const dbDefault = encodeColumnDefault(
+      dbData.default,
+      compareSql.values,
+      dbColumn,
+    );
+    const codeDefault = encodeColumnDefault(
+      codeData.default,
+      compareSql.values,
+      codeColumn,
+    );
+
+    compareSql.values.length = valuesBeforeLen;
+    if (dbDefault !== codeDefault) {
+      return 'change';
+    }
   }
 
   if (dbData.default !== undefined && codeData.default !== undefined) {

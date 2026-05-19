@@ -127,6 +127,62 @@ change(async (db) => {
 ${green('+ create table')} table (2 columns, no primary key)`);
   });
 
+  it('should detect added default on enum column', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('ui_language', ['en', 'nl']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          language: t.enum('ui_language'),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          language: t.enum('ui_language', ['en', 'nl']).default('en'),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    language: t.change(t.enum('ui_language'), t.enum('ui_language').default('en')),
+  }));
+});
+`);
+  });
+
+  it('should detect removed default on enum column', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('ui_language', ['en', 'nl']);
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          language: t.enum('ui_language').default('en'),
+        }));
+      },
+      tables: [
+        table((t) => ({
+          language: t.enum('ui_language', ['en', 'nl']),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    language: t.change(t.enum('ui_language').default(t.sql\`'en'::ui_language\`), t.enum('ui_language')),
+  }));
+});
+`);
+  });
+
   it('should be able to change enum column to a text column without recreating it', async () => {
     await arrange({
       async prepareDb(db) {
