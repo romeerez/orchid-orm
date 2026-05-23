@@ -237,6 +237,31 @@ describe('migrate-or-rollback', () => {
         noPrimaryKey: 'ignore',
       });
     });
+
+    it('should not log "Migrated" when log option is false', async () => {
+      asMock(getMigratedVersionsMap).mockResolvedValueOnce({
+        map: {},
+        sequence: [],
+      });
+
+      asMock(getMigrations).mockResolvedValueOnce({
+        migrations: [
+          {
+            version: '001',
+            path: 'path',
+            async load() {},
+          },
+        ],
+      });
+
+      await migrate(adapter, {
+        migrations: {},
+        log: false,
+        logger: mockChangeLogger,
+      });
+
+      expect(mockChangeLogger.log.mock.calls).toEqual([]);
+    });
   });
 
   describe('with mocked dependencies', () => {
