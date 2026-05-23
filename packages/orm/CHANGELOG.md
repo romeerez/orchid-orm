@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.69.0
+
+### Minor Changes
+
+- 925d9000: Prohibit updating and deleting all records with empty `where` conditions, require `all()` for this (#690)
+
+### Patch Changes
+
+- 11f909de: Fix migration generator to change enum column default (#694)
+- Updated dependencies [925d9000]
+  - pqb@0.66.0
+  - rake-db@2.33.7
+
 ## 1.68.6
 
 ### Patch Changes

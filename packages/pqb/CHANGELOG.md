@@ -1,5 +1,11 @@
 # pqb
 
+## 0.66.0
+
+### Minor Changes
+
+- 925d9000: Prohibit updating and deleting all records with empty `where` conditions, require `all()` for this (#690)
+
 ## 0.65.6
 
 ### Patch Changes
