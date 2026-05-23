@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.69.1
+
+### Patch Changes
+
+- 716af61c: Add bundleOrchidORMTables and makeOrchidOrmDb to initialize ORM in 2 phases - only bundling the tables first, and configuring database settings second (#691)
+- Updated dependencies [b72b95a9]
+- Updated dependencies [716af61c]
+  - pqb@0.66.1
+  - rake-db@2.33.8
+
 ## 1.69.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # pqb
 
+## 0.66.1
+
+### Patch Changes
+
+- b72b95a9: Export `Expression`, `isExpression` as public API
+- 716af61c: Add bundleOrchidORMTables and makeOrchidOrmDb to initialize ORM in 2 phases - only bundling the tables first, and configuring database settings second (#691)
+
 ## 0.66.0
 
 ### Minor Changes
