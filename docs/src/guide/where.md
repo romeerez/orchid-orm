@@ -62,6 +62,19 @@ const loadRecords = async (params: Params) => {
 };
 ```
 
+For read queries, an empty object or a filter where every value is `undefined` is valid and adds no `WHERE` condition.
+For mutating queries, an empty effective filter cannot authorize `update` or `delete`; pass a real condition, or call `all()` when mutating all visible rows is intentional.
+
+```ts
+await db.table.where({ id: undefined }).selectAll(); // allowed read
+
+await db.table.where({ id: undefined }).update(data); // throws
+await db.table.where({}).delete(); // throws
+
+await db.table.all().where({ id: undefined }).update(data); // allowed
+await db.table.all().delete(); // allowed
+```
+
 It supports a sub-query that is selecting a single value to compare it with a column:
 
 ```ts

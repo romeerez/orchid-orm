@@ -1,5 +1,34 @@
 # Breaking changes
 
+## orchid-orm 1.69
+
+Prohibiting update and delete of all records, allowing doing so using `all()`.
+
+`update` and `delete` with empty `where` was allowed:
+
+```ts
+// params may happen to be empty
+const params = {};
+// or, they may happen to have undefined values
+params.id = undefined;
+
+// update all records
+db.table.where(params).update({ key: 'value' });
+// delete all records
+db.table.where(params).delete();
+```
+
+If you deliberately want to update or delete all:
+
+```ts
+// update all records
+db.table.all().where(params).update({ key: 'value' });
+// delete all records
+db.table.all().where(params).delete();
+```
+
+This logic respects soft-delete in the way that the implicit `where({ deletedAt: null })` still requires `all()` when you want to update/delete all records.
+
 ## orchid-orm 1.65
 
 `makeRakeDbConfig` is removed. It was previously needed to construct a config object for the programmatic migrations API (`migrate`, `rollback`, `redo`), but these functions now process config parameters on their own, making `makeRakeDbConfig` unnecessary.

@@ -101,8 +101,11 @@ export const pushDeleteSql = (
     conditions = ons.join(' AND ');
   }
 
+  let checkIfHasExplicitWhere: { value?: boolean } | undefined;
+
   if (!selectRelations?.movedWhereToCte) {
-    pushWhereStatementSql(ctx, query, q, quotedAs);
+    checkIfHasExplicitWhere = {};
+    pushWhereStatementSql(ctx, query, q, quotedAs, checkIfHasExplicitWhere);
   }
 
   if (conditions) {
@@ -114,6 +117,11 @@ export const pushDeleteSql = (
     } else {
       ctx.sql.push('WHERE', conditions);
     }
+  } else if (!q.all && !checkIfHasExplicitWhere?.value) {
+    throw new OrchidOrmInternalError(
+      query as Query,
+      `Dangerous delete without conditions`,
+    );
   }
 
   if (returning) {

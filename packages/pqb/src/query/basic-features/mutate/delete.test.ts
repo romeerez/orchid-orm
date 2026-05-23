@@ -23,6 +23,25 @@ describe('delete', () => {
     User.all().delete();
   });
 
+  it('should throw when deleting with an empty effective where filter', () => {
+    expect(() => User.where({}).delete().toSQL()).toThrow(
+      'Dangerous delete without conditions',
+    );
+
+    expect(() => User.where({ id: undefined }).delete().toSQL()).toThrow(
+      'Dangerous delete without conditions',
+    );
+  });
+
+  it('should allow deleting after explicit all with an empty effective where filter', () => {
+    expectSql(
+      User.all().where({ id: undefined }).delete().toSQL(),
+      `
+        DELETE FROM "schema"."user"
+      `,
+    );
+  });
+
   it('should delete records, returning value', async () => {
     const id = await User.get('id').create(userData);
     const q = User.all();

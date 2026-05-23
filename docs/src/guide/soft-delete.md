@@ -48,8 +48,20 @@ await db.someTable.find(1).delete();
 await db.someTable.find(1).update({ deletedAt: sql`now()` });
 ```
 
+Soft delete still follows the mutation condition safety rules. The default `deletedAt IS NULL` filter is implicit and does not authorize a mutation by itself, so an empty effective user filter throws:
+
+```ts
+await db.someTable.where({}).delete(); // throws
+await db.someTable.where({ id: undefined }).delete(); // throws
+await db.someTable.where({ id: 1 }).delete(); // allowed
+await db.someTable.all().delete(); // soft-deletes all non-deleted records
+```
+
 `hardDelete` deletes records bypassing the `softDelete` behavior:
 
 ```ts
 await db.someTable.find(1).hardDelete();
+await db.someTable.all().hardDelete();
 ```
+
+`hardDelete` also requires an effective condition or explicit `all()`.

@@ -6,15 +6,12 @@ import {
 import { createDbWithAdapter } from '../../db';
 
 describe('softDelete', () => {
-  it('should ignore empty where object', () => {
-    const q = UserSoftDelete.where({}).delete();
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."user" SET "deleted_at" = now()
-        WHERE ("user"."deleted_at" IS NULL)
-      `,
+  it('should throw on empty effective where filter for delete and hardDelete', () => {
+    expect(() => UserSoftDelete.where({}).delete().toSQL()).toThrow(
+      'Dangerous update without conditions',
+    );
+    expect(() => UserSoftDelete.where({}).hardDelete().toSQL()).toThrow(
+      'Dangerous delete without conditions',
     );
   });
 
@@ -87,6 +84,23 @@ describe('softDelete', () => {
     const q = UserSoftDelete.all().hardDelete();
     expectSql(
       q.toSQL(),
+      `
+        DELETE FROM "schema"."user"
+      `,
+    );
+  });
+
+  it('should allow all with an empty effective where filter', () => {
+    expectSql(
+      UserSoftDelete.all().where({ id: undefined }).delete().toSQL(),
+      `
+        UPDATE "schema"."user" SET "deleted_at" = now()
+        WHERE ("user"."deleted_at" IS NULL)
+      `,
+    );
+
+    expectSql(
+      UserSoftDelete.all().where({ id: undefined }).hardDelete().toSQL(),
       `
         DELETE FROM "schema"."user"
       `,

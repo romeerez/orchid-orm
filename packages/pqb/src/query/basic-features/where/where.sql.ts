@@ -83,8 +83,16 @@ export const pushWhereStatementSql = (
   table: ToSQLQuery,
   query: QueryDataForWhere,
   quotedAs?: string,
+  checkIfHasExplicitWhere?: { value?: boolean },
 ) => {
-  const res = whereToSql(ctx, table, query, quotedAs);
+  const res = whereToSql(
+    ctx,
+    table,
+    query,
+    quotedAs,
+    undefined,
+    checkIfHasExplicitWhere,
+  );
   if (res) {
     ctx.sql.push('WHERE', res);
   }
@@ -110,9 +118,16 @@ export const whereToSql = (
   query: QueryDataForWhere,
   quotedAs?: string,
   parens?: boolean,
+  checkIfHasExplicitWhere?: { value?: boolean },
 ): string | undefined => {
+  let sql: string | undefined;
+
   if (query.scopes) {
-    let sql = andOrToSql(ctx, table, query, quotedAs, true);
+    sql = andOrToSql(ctx, table, query, quotedAs, true);
+
+    if (checkIfHasExplicitWhere && sql) {
+      checkIfHasExplicitWhere.value = true;
+    }
 
     const data = Object.create(query);
     for (const key in query.scopes) {
@@ -121,13 +136,27 @@ export const whereToSql = (
       data.and = scopeResult.and;
       data.or = scopeResult.or;
       const scopeSql = andOrToSql(ctx, table, data, quotedAs, true);
-      if (scopeSql) sql = sql ? sql + ' AND ' + scopeSql : scopeSql;
-    }
+      if (scopeSql) {
+        sql = sql ? sql + ' AND ' + scopeSql : scopeSql;
 
-    return sql;
+        if (
+          checkIfHasExplicitWhere &&
+          key !== 'default' &&
+          key !== 'nonDeleted'
+        ) {
+          checkIfHasExplicitWhere.value = true;
+        }
+      }
+    }
+  } else {
+    sql = andOrToSql(ctx, table, query, quotedAs, parens);
+
+    if (checkIfHasExplicitWhere && sql) {
+      checkIfHasExplicitWhere.value = true;
+    }
   }
 
-  return andOrToSql(ctx, table, query, quotedAs, parens);
+  return sql;
 };
 
 const andOrToSql = (

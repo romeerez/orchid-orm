@@ -119,7 +119,14 @@ export const pushUpdateSql = (
       fromWhereSql = pushUpdateFromSql(ctx, query, q, quotedAs, q.updateFrom);
     }
 
-    pushUpdateWhereSql(ctx, query, q, quotedAs, fromWhereSql);
+    pushUpdateWhereSql(
+      ctx,
+      query,
+      q,
+      quotedAs,
+      updateManyValuesSql || q.updateFrom,
+      fromWhereSql,
+    );
 
     pushUpdateReturning(
       ctx,
@@ -229,9 +236,27 @@ const pushUpdateWhereSql = (
   query: ToSQLQuery,
   q: QueryData,
   quotedAs: string,
+  from?: unknown,
   fromWhereSql?: string,
 ): void => {
-  const mainWhereSql = whereToSql(ctx, query, q, quotedAs);
+  const checkIfHasExplicitWhere: { value?: true } | undefined =
+    q.all || from ? undefined : {};
+  const mainWhereSql = whereToSql(
+    ctx,
+    query,
+    q,
+    quotedAs,
+    undefined,
+    checkIfHasExplicitWhere,
+  );
+
+  if (checkIfHasExplicitWhere && !checkIfHasExplicitWhere.value) {
+    throw new OrchidOrmInternalError(
+      query as Query,
+      `Dangerous update without conditions`,
+    );
+  }
+
   const whereSql = mainWhereSql
     ? fromWhereSql
       ? mainWhereSql + ' AND ' + fromWhereSql

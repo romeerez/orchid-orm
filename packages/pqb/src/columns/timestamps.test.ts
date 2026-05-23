@@ -28,7 +28,7 @@ describe('timestamps methods', () => {
       }));
 
       it('should update updatedAt column when updating', () => {
-        const q = table.where().update({});
+        const q = table.all().update({});
 
         expectSql(
           q.toSQL(),
@@ -40,7 +40,7 @@ describe('timestamps methods', () => {
       });
 
       it('should not update updatedAt column when updating it via object', () => {
-        const q = table.where().update({ [updatedAtKey]: now });
+        const q = table.all().update({ [updatedAtKey]: now });
 
         expectSql(
           q.toSQL(),
@@ -87,7 +87,7 @@ describe('timestamps methods', () => {
       { snakeCase: true },
     );
 
-    const q = table.where().update({ updatedAt: now });
+    const q = table.all().update({ updatedAt: now });
 
     expectSql(
       q.toSQL(),

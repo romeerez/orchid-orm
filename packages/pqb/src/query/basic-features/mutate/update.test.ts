@@ -80,6 +80,41 @@ describe('update', () => {
     );
   });
 
+  it('should throw when updating with an empty effective where filter', () => {
+    expect(() => User.where({}).update(update).toSQL()).toThrow(
+      'Dangerous update without conditions',
+    );
+
+    expect(() =>
+      User.where({ name: undefined }).update(update).toSQL(),
+    ).toThrow('Dangerous update without conditions');
+  });
+
+  it('should throw when updateOrThrow has an empty effective where filter', () => {
+    expect(() => User.where({}).updateOrThrow(update).toSQL()).toThrow(
+      'Dangerous update without conditions',
+    );
+
+    expect(() =>
+      User.where({ name: undefined }).updateOrThrow(update).toSQL(),
+    ).toThrow('Dangerous update without conditions');
+  });
+
+  it('should allow updating after explicit all with an empty effective where filter', () => {
+    expectSql(
+      User.all()
+        .where({ name: undefined })
+        .update({ name: 'new name' })
+        .toSQL(),
+      `
+        UPDATE "schema"."user"
+        SET "name" = $1,
+            "updated_at" = now()
+      `,
+      ['new name'],
+    );
+  });
+
   it('should let update all records after using `all` method', async () => {
     const q = User.all().update({ name: 'new name' });
 
@@ -843,7 +878,7 @@ describe('update', () => {
     });
 
     it(`should ${action} column by 1`, () => {
-      const q = User[action]('age');
+      const q = User.all()[action]('age');
 
       expectSql(
         q.toSQL(),
@@ -857,7 +892,7 @@ describe('update', () => {
     });
 
     it(`should ${action} decimal column by 1`, () => {
-      const q = Product[action]('priceAmount');
+      const q = Product.all()[action]('priceAmount');
 
       expectSql(
         q.toSQL(),
@@ -870,7 +905,7 @@ describe('update', () => {
     });
 
     it(`should ${action} column by provided amount`, () => {
-      const q = User[action]({ age: 3 });
+      const q = User.all()[action]({ age: 3 });
 
       expectSql(
         q.toSQL(),
@@ -884,7 +919,7 @@ describe('update', () => {
     });
 
     it(`should ${action} decimal column by provided amount`, () => {
-      const q = Product[action]({ priceAmount: '1' });
+      const q = Product.all()[action]({ priceAmount: '1' });
 
       expectSql(
         q.toSQL(),
@@ -897,7 +932,7 @@ describe('update', () => {
     });
 
     it('should support returning', () => {
-      const q = User.select('id')[action]({ age: 3 });
+      const q = User.select('id').all()[action]({ age: 3 });
 
       expectSql(
         q.toSQL(),
@@ -914,7 +949,7 @@ describe('update', () => {
     });
 
     it('should support appending select', () => {
-      const q = User[action]({ age: 3 }).select('id');
+      const q = User.all()[action]({ age: 3 }).select('id');
 
       expectSql(
         q.toSQL(),
@@ -931,7 +966,7 @@ describe('update', () => {
     });
 
     it(`should ${action} named column`, () => {
-      const q = Snake.select('snakeId')[action]({ tailLength: 3 });
+      const q = Snake.select('snakeId').all()[action]({ tailLength: 3 });
 
       expectSql(
         q.toSQL(),
@@ -1033,7 +1068,7 @@ describe('update', () => {
     });
 
     it('should select one record for return type selecting one record', async () => {
-      const q = User.select('name').where().take().update({});
+      const q = User.select('name').all().take().update({});
 
       expectSql(
         q.toSQL(),
@@ -1048,7 +1083,7 @@ describe('update', () => {
     });
 
     it('should get a single value', async () => {
-      const q = User.where().take().get('name').update({});
+      const q = User.all().take().get('name').update({});
 
       expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user" LIMIT 1`);
 
