@@ -233,13 +233,15 @@ export const makeHasAndBelongsToManyMethod = (
   const { options } = relation;
   const { snakeCase } = table.internal;
   const primaryKeys = options.columns as string[];
-  const foreignKeys = options.references;
-  const originalForeignKeys = snakeCase ? [...foreignKeys] : foreignKeys;
+  const originalForeignKeys = options.references;
+  const foreignKeys = snakeCase
+    ? [...originalForeignKeys]
+    : originalForeignKeys;
   const joinTable = options.through.table;
-  const throughForeignKeys = options.through.columns;
-  const originalThroughForeignKeys = snakeCase
-    ? [...throughForeignKeys]
-    : throughForeignKeys;
+  const originalThroughForeignKeys = options.through.columns;
+  const throughForeignKeys = snakeCase
+    ? [...originalThroughForeignKeys]
+    : originalThroughForeignKeys;
   const throughPrimaryKeys = options.through.references as string[];
   const { on } = options;
 

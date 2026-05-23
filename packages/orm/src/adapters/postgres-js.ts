@@ -1,8 +1,10 @@
 import {
   TableClasses,
   OrchidORM,
+  OrchidORMTables,
   OrchidOrmParam,
-  orchidORMWithAdapter,
+  bundleOrchidORMTables,
+  makeOrchidOrmDbWithAdapter,
 } from 'orchid-orm';
 import {
   PostgresJsAdapter,
@@ -18,19 +20,24 @@ export const Adapter = PostgresJsAdapter;
 
 export const createDb = cdb;
 
-export const orchidORM = <T extends TableClasses>(
+export const makeOrchidOrmDb = <T extends TableClasses>(
+  orm: OrchidORMTables<T>,
   { log, ...options }: OrchidOrmParam<PostgresJsOrchidORMOptions>,
+): OrchidORM<T> => {
+  return makeOrchidOrmDbWithAdapter(orm, {
+    ...options,
+    log,
+    adapter: new AdapterClass({
+      driverAdapter: PostgresJsAdapter,
+      config: options,
+    }),
+  });
+};
+
+export const orchidORM = <T extends TableClasses>(
+  options: OrchidOrmParam<PostgresJsOrchidORMOptions>,
   tables: T,
 ): OrchidORM<T> => {
-  return orchidORMWithAdapter(
-    {
-      ...options,
-      log,
-      adapter: new AdapterClass({
-        driverAdapter: PostgresJsAdapter,
-        config: options,
-      }),
-    },
-    tables,
-  );
+  const orm = bundleOrchidORMTables(tables);
+  return makeOrchidOrmDb(orm, options);
 };

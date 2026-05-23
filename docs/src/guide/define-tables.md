@@ -112,6 +112,29 @@ All table files must be linked into `orchidORM` instance, as was shown above in 
 When trying OrchidORM on an existing project that already has a database with tables,
 you can run a command to generate code for tables and a migration for it by running [db pull](/guide/migration-commands#pull).
 
+## init
+
+A table can define an `init` method. It is called when a DB-aware ORM instance is created:
+by `orchidORM` in the regular one-step setup, or by `makeOrchidOrmDb` in the split setup.
+
+Use `init` when table setup needs the full ORM object, most commonly for configuring table [hooks](/guide/hooks).
+
+```ts
+class UserTable extends BaseTable {
+  readonly table = 'user';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    name: t.text(),
+  }));
+
+  init(orm: typeof db) {
+    this.beforeCreate(({ set }) => {
+      set({ name: 'new user' });
+    });
+  }
+}
+```
+
 ## table db schema
 
 The schema can be overridden in a table class:

@@ -1,4 +1,8 @@
-import { orchidORMWithAdapter } from './orm';
+import {
+  bundleOrchidORMTables,
+  makeOrchidOrmDbWithAdapter,
+  orchidORMWithAdapter,
+} from './orm';
 import { useTestORM } from './test-utils/orm.test-utils';
 import {
   BaseTable,
@@ -169,6 +173,149 @@ describe('orm', () => {
     );
 
     expect(local.user.q.autoPreparedStatements).toBe(true);
+  });
+
+  describe('bundleOrchidORMTables', () => {
+    class BundleUserTable extends BaseTable {
+      schema: QuerySchema = 'schema';
+      readonly table = 'user';
+      filePath = 'orm.test.ts';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+        deletedAt: t.timestamp().nullable(),
+      }));
+
+      readonly softDelete = true;
+
+      scopes = this.setScopes({
+        named: (q) => q.where({ name: 'name' }),
+      });
+
+      relations = {
+        profile: this.hasOne(() => BundleProfileTable, {
+          columns: ['id'],
+          references: ['userId'],
+        }),
+      };
+    }
+
+    class BundleProfileTable extends BaseTable {
+      schema: QuerySchema = 'schema';
+      readonly table = 'profile';
+      filePath = 'orm.test.ts';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        userId: t.integer().foreignKey(() => BundleUserTable, 'id'),
+        bio: t.text(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => BundleUserTable, {
+          columns: ['userId'],
+          references: ['id'],
+        }),
+      };
+    }
+
+    it('should return table keys only and keep internals non-enumerable', () => {
+      const orm = bundleOrchidORMTables({
+        user: BundleUserTable,
+        profile: BundleProfileTable,
+      });
+
+      expect(Object.keys(orm)).toEqual(['user', 'profile']);
+      expect('$query' in orm).toBe(false);
+      expect('$transaction' in orm).toBe(false);
+    });
+
+    it('should expose only makeHelper for bundled tables and keep helper usage', () => {
+      const orm = bundleOrchidORMTables({
+        user: BundleUserTable,
+        profile: BundleProfileTable,
+      });
+
+      const helper = orm.user.makeHelper((q) => q.select('id'));
+      const local = makeOrchidOrmDbWithAdapter(orm, { db: db.$qb });
+
+      expectSql(
+        helper(local.user).toSQL(),
+        `
+          SELECT "user"."id"
+          FROM "schema"."user"
+          WHERE ("user"."deleted_at" IS NULL)
+        `,
+      );
+    });
+  });
+
+  describe('makeOrchidOrmDbWithAdapter', () => {
+    it('should bind a bundled ORM to DB options and expose ORM methods', () => {
+      const orm = bundleOrchidORMTables({
+        user: UserTable,
+        profile: ProfileTable,
+      });
+
+      const local = makeOrchidOrmDbWithAdapter(orm, {
+        db: db.$qb,
+      });
+
+      expect('$query' in local).toBe(true);
+      expect('$transaction' in local).toBe(true);
+      expect(local.$close).toBeInstanceOf(Function);
+      expect(local.user.definedAs).toBe('user');
+    });
+
+    it('should keep bundle table-only and create a fresh ORM instance per bind', () => {
+      const orm = bundleOrchidORMTables({
+        user: UserTable,
+      });
+
+      const first = makeOrchidOrmDbWithAdapter(orm, {
+        adapter: testAdapter,
+      });
+      const second = makeOrchidOrmDbWithAdapter(orm, {
+        adapter: testAdapter,
+      });
+
+      expect('$query' in orm).toBe(false);
+      expect(first).not.toBe(second);
+      expect(first.$qb).not.toBe(second.$qb);
+      expect(first.user).not.toBe(second.user);
+      expect(first.user).not.toBe(orm.user);
+      expect(second.user).not.toBe(orm.user);
+    });
+
+    it('should run table init hook for every created DB-aware instance', () => {
+      const initSpy = jest.fn();
+
+      class InitTable extends BaseTable {
+        readonly table = 'user';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+          name: t.text(),
+        }));
+
+        init = (localOrm: unknown) => {
+          initSpy(localOrm);
+        };
+      }
+
+      const orm = bundleOrchidORMTables({
+        user: InitTable,
+      });
+
+      const first = makeOrchidOrmDbWithAdapter(orm, {
+        adapter: testAdapter,
+      });
+      const second = makeOrchidOrmDbWithAdapter(orm, {
+        adapter: testAdapter,
+      });
+
+      expect(initSpy).toHaveBeenCalledTimes(2);
+      expect(initSpy).toHaveBeenNthCalledWith(1, first);
+      expect(initSpy).toHaveBeenNthCalledWith(2, second);
+    });
   });
 
   describe('query methods', () => {

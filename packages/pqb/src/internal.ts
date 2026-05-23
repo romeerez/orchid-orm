@@ -385,3 +385,6 @@ export { UnknownColumn } from './index';
 
 // Transaction
 export { type IsolationLevel, type TransactionOptions } from './index';
+
+// Error types
+export { OrchidOrmError } from './query/errors';

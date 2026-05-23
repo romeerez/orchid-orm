@@ -15,7 +15,6 @@ import {
   MaybeArray,
   NoPrimaryKeyOption,
   QueryData,
-  RecordUnknown,
   ColumnSchemaConfig,
   TableRlsConfig,
 } from 'pqb/internal';
@@ -39,11 +38,38 @@ export interface FromQuery extends Query {
   returnType: 'all';
 }
 
-export type OrchidORM<T extends TableClasses = TableClasses> = {
+interface OrchidORMQueryHelper<
+  Q extends Query,
+  Args extends unknown[],
+  Result,
+> {
+  <T extends Q>(q: T, ...args: Args): Result;
+  isQueryHelper: true;
+  table: Q['table'];
+  args: Args;
+  result: Result;
+}
+
+export interface OrchidORMTableHelper<T extends Query> {
+  makeHelper<Args extends unknown[], Result>(
+    fn: (q: T, ...args: Args) => Result,
+  ): OrchidORMQueryHelper<T, Args, Result>;
+}
+
+export type OrchidORMTables<T extends TableClasses = TableClasses> = {
+  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
+    ? OrchidORMTableHelper<TableToDb<R>>
+    : never;
+};
+
+export type OrchidORMDbTables<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
     ? TableToDb<R>
     : never;
-} & OrchidORMMethods;
+};
+
+export type OrchidORM<T extends TableClasses = TableClasses> =
+  OrchidORMDbTables<T> & OrchidORMMethods;
 
 /**
  * Identity helper for table row-level security configuration.
@@ -212,7 +238,155 @@ export type OrchidOrmParam<Options> = true | null extends true
   ? 'Set strict: true to tsconfig'
   : Options;
 
-export const orchidORMWithAdapter = <T extends TableClasses>(
+interface OrchidORMBundleMetadata {
+  // Original table classes for later DB binding.
+  tables: TableClasses;
+  // Set db-aware instance so that the minimal preliminary query objects can access it.
+  setDbAwareInstance(orm: OrchidORMDbTables): void;
+}
+
+const orchidORMBundleMetadataKey = Symbol('orchidORMBundleMetadataKey');
+
+type CommonOrmOptions = QueryLogOptions & {
+  autoPreparedStatements?: boolean;
+  noPrimaryKey?: NoPrimaryKeyOption;
+};
+
+const assignTablesToOrm = <T extends TableClasses>(
+  tables: T,
+  result: OrchidORMDbTables<T>,
+  adapter: Adapter,
+  qb: Db,
+  asyncStorage: AsyncLocalStorage<AsyncState>,
+  commonOptions: CommonOrmOptions,
+  schema: DbSharedOptions['schema'],
+) => {
+  const tableInstances: Record<string, ORMTableInput> = {};
+
+  for (const key in tables) {
+    if (key[0] === '$') {
+      throw new Error(`Table class name must not start with $`);
+    }
+
+    const tableClass = tables[key];
+    const table = (
+      tableClass as unknown as { instance(): ORMTableInput }
+    ).instance();
+    tableInstances[key] = table;
+
+    const options: DbTableOptions<unknown, string, Column.Shape.QueryInit> = {
+      ...commonOptions,
+      schema: table.schema || schema,
+      language: table.language,
+      scopes: table.scopes as DbTableOptionScopes<
+        string,
+        Column.Shape.QueryInit
+      >,
+      softDelete: table.softDelete,
+      snakeCase: (table as { snakeCase?: boolean }).snakeCase,
+      comment: table.comment,
+      noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
+      computed: table.computed as never,
+      nowSQL: (
+        tableClass as unknown as BaseTableClass<ColumnSchemaConfig, unknown>
+      ).nowSQL,
+    };
+
+    const dbTable = new Db(
+      adapter,
+      qb,
+      table.table,
+      table.columns.shape,
+      table.types,
+      asyncStorage,
+      options,
+      table.constructor.prototype.columns?.data ?? {},
+    );
+
+    (dbTable as unknown as { definedAs: string }).definedAs = key;
+    (dbTable as unknown as { db: unknown }).db = result;
+    (dbTable as unknown as { filePath: string }).filePath = table.filePath;
+    (dbTable as unknown as { name: string }).name = table.constructor.name;
+    dbTable.internal.tableRls = table.rls;
+
+    result[key] = dbTable as OrchidORMDbTables<T>[Extract<keyof T, string>];
+  }
+
+  applyRelations(qb, tableInstances, result, schema);
+
+  return tableInstances;
+};
+
+export const bundleOrchidORMTables = <T extends TableClasses>(
+  tables: T,
+): OrchidORMTables<T> => {
+  const result = {} as OrchidORMTables<T>;
+
+  let dbAwareInstance: OrchidORMDbTables;
+
+  for (const key in tables) {
+    result[key] = {
+      makeHelper(arg: unknown) {
+        // oxlint-disable-next-line typescript/no-explicit-any
+        let fn: (...args: any[]) => unknown;
+        return (...args: unknown[]) => {
+          if (!fn) {
+            fn = dbAwareInstance[key].makeHelper(arg as never);
+          }
+          return fn(...args);
+        };
+      },
+    } as never;
+  }
+
+  const meta: OrchidORMBundleMetadata = {
+    tables,
+    setDbAwareInstance(orm) {
+      dbAwareInstance = orm;
+    },
+  };
+
+  Object.defineProperty(result, orchidORMBundleMetadataKey, {
+    enumerable: false,
+    value: meta,
+  });
+
+  return result;
+};
+
+const getOrchidORMBundleMetadata = <T extends TableClasses>(
+  orm: OrchidORMTables<T>,
+): OrchidORMBundleMetadata => {
+  const meta = (
+    orm as {
+      [orchidORMBundleMetadataKey]?: OrchidORMBundleMetadata;
+    }
+  )[orchidORMBundleMetadataKey];
+
+  if (!meta) {
+    throw new Error(
+      'Failed to bind Orchid ORM tables: pass a table bundle created by bundleOrchidORMTables.',
+    );
+  }
+
+  return meta;
+};
+
+export const makeOrchidOrmDbWithAdapter = <T extends TableClasses>(
+  orm: OrchidORMTables<T>,
+  options: OrchidOrmParam<
+    ({ db: Query } | { adapter: Adapter }) & DbSharedOptions
+  >,
+): OrchidORM<T> => {
+  const meta = getOrchidORMBundleMetadata(orm);
+  return privateOrchidORMWithAdapter<T>(
+    options,
+    meta.tables as T,
+    meta.setDbAwareInstance,
+  );
+};
+
+const privateOrchidORMWithAdapter = <T extends TableClasses>(
   {
     log,
     logger,
@@ -222,11 +396,9 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     ...options
   }: OrchidOrmParam<({ db: Query } | { adapter: Adapter }) & DbSharedOptions>,
   tables: T,
+  setDbAwareInstance?: OrchidORMBundleMetadata['setDbAwareInstance'],
 ): OrchidORM<T> => {
-  const commonOptions: QueryLogOptions & {
-    autoPreparedStatements?: boolean;
-    noPrimaryKey?: NoPrimaryKeyOption;
-  } = {
+  const commonOptions: CommonOrmOptions = {
     log,
     logger,
     autoPreparedStatements,
@@ -275,61 +447,19 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     $from: qb.from.bind(qb),
     $close: adapter.close.bind(adapter),
     $withOptions: qb.withOptions.bind(qb),
-  } as unknown as OrchidORM;
+  } as unknown as OrchidORM<T>;
 
-  const tableInstances: Record<string, ORMTableInput> = {};
+  const tableInstances = assignTablesToOrm(
+    tables,
+    result as OrchidORMDbTables<T>,
+    adapter,
+    qb,
+    asyncStorage,
+    commonOptions,
+    schema,
+  );
 
-  for (const key in tables) {
-    if (key[0] === '$') {
-      throw new Error(`Table class name must not start with $`);
-    }
-
-    const tableClass = tables[key];
-    const table = (
-      tableClass as unknown as { instance(): ORMTableInput }
-    ).instance();
-    tableInstances[key] = table;
-
-    const options: DbTableOptions<unknown, string, Column.Shape.QueryInit> = {
-      ...commonOptions,
-      schema: table.schema || schema,
-      language: table.language,
-      scopes: table.scopes as DbTableOptionScopes<
-        string,
-        Column.Shape.QueryInit
-      >,
-      softDelete: table.softDelete,
-      snakeCase: (table as { snakeCase?: boolean }).snakeCase,
-      comment: table.comment,
-      noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
-      computed: table.computed as never,
-      nowSQL: (
-        tableClass as unknown as BaseTableClass<ColumnSchemaConfig, unknown>
-      ).nowSQL,
-    };
-
-    const dbTable = new Db(
-      adapter as Adapter,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      qb as any,
-      table.table,
-      table.columns.shape,
-      table.types,
-      asyncStorage,
-      options,
-      table.constructor.prototype.columns?.data ?? {},
-    );
-
-    (dbTable as unknown as { definedAs: string }).definedAs = key;
-    (dbTable as unknown as { db: unknown }).db = result;
-    (dbTable as unknown as { filePath: string }).filePath = table.filePath;
-    (dbTable as unknown as { name: string }).name = table.constructor.name;
-    dbTable.internal.tableRls = table.rls;
-
-    (result as RecordUnknown)[key] = dbTable;
-  }
-
-  applyRelations(qb, tableInstances, result, schema);
+  setDbAwareInstance?.(result);
 
   for (const key in tables) {
     const table = tableInstances[key] as unknown as {
@@ -346,6 +476,13 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
 
   return result as unknown as OrchidORM<T>;
 };
+
+export const orchidORMWithAdapter = <T extends TableClasses>(
+  options: OrchidOrmParam<
+    ({ db: Query } | { adapter: Adapter }) & DbSharedOptions
+  >,
+  tables: T,
+): OrchidORM<T> => privateOrchidORMWithAdapter(options, tables);
 
 function $getAdapter(this: OrchidORM) {
   return this.$qb.$getAdapter();
