@@ -1,5 +1,11 @@
 # pqb
 
+## 0.66.3
+
+### Patch Changes
+
+- face9a1f: Fix batch inserts max binding values handling to allow infinite batch inserts (#699)
+
 ## 0.66.2
 
 ### Patch Changes
