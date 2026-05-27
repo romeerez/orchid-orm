@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.33.9
+
+### Patch Changes
+
+- e1a8ac51: Make table classes immutable so you can initiate them twice with no side-effects (#695)
+- Updated dependencies [e1a8ac51]
+  - pqb@0.66.2
+
 ## 2.33.8
 
 ### Patch Changes

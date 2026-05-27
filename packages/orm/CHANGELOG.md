@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.69.2
+
+### Patch Changes
+
+- e1a8ac51: Make table classes immutable so you can initiate them twice with no side-effects (#695)
+- Updated dependencies [e1a8ac51]
+  - rake-db@2.33.9
+  - pqb@0.66.2
+
 ## 1.69.1
 
 ### Patch Changes
