@@ -14,6 +14,7 @@ import {
   ArrayColumn,
   deepCompare,
   EmptyObject,
+  NonUniqDataItem,
   RecordKeyTrue,
   RecordUnknown,
   toArray,
@@ -93,6 +94,10 @@ function add(
   consumeColumnName();
   setName(this, item);
 
+  if (isNoForeignKeyChangeInput(item as ChangeInput)) {
+    throw new Error('t.noForeignKey() is only supported in t.change(...)');
+  }
+
   if (item instanceof Column) {
     const result = addOrDrop('add', item, options);
     if (result.type === 'change') return result;
@@ -127,6 +132,10 @@ function add(
 const drop = function (this: TableChangeMethods, item, options) {
   consumeColumnName();
   setName(this, item);
+
+  if (isNoForeignKeyChangeInput(item as ChangeInput)) {
+    throw new Error('t.noForeignKey() is only supported in t.change(...)');
+  }
 
   if (item instanceof Column) {
     const result = addOrDrop('drop', item, options);
@@ -207,6 +216,112 @@ interface OneWayChange {
   using?: RakeDbAst.ChangeTableItem.ChangeUsing;
 }
 
+interface ColumnForeignKeyChangeInput {
+  columnForeignKey: TableData.ColumnReferences;
+}
+
+interface NoForeignKeyChangeInput {
+  noForeignKey: true;
+}
+
+type ChangeInput =
+  | Column
+  | OneWayChange
+  | NonUniqDataItem
+  | ColumnForeignKeyChangeInput
+  | NoForeignKeyChangeInput;
+
+const isColumnForeignKeyChangeInput = (
+  item: ChangeInput,
+): item is ColumnForeignKeyChangeInput => {
+  return 'columnForeignKey' in item;
+};
+
+const isNoForeignKeyChangeInput = (
+  item: ChangeInput,
+): item is NoForeignKeyChangeInput => {
+  return 'noForeignKey' in item;
+};
+
+type TableDataForeignKeyArgs =
+  | [
+      columns: [string, ...string[]],
+      fnOrTable: () => new () => { columns: { shape: unknown } },
+      foreignColumns: [PropertyKey, ...PropertyKey[]],
+      options?: TableData.References.Options,
+    ]
+  | [
+      columns: [string, ...string[]],
+      fnOrTable: string,
+      foreignColumns: [string, ...string[]],
+      options?: TableData.References.Options,
+    ];
+
+type ColumnForeignKeyArgs = [
+  fnOrTable: string,
+  foreignColumn: string,
+  options?: TableData.References.Options,
+];
+
+interface CheckConstraintItem extends NonUniqDataItem {
+  constraint: {
+    check: RawSqlBase;
+    name?: string;
+  };
+}
+
+const isCheckConstraintItem = (
+  item: NonUniqDataItem,
+): item is CheckConstraintItem => {
+  const constraint = (item as unknown as RecordUnknown).constraint as
+    | CheckConstraintItem['constraint']
+    | undefined;
+
+  return !!constraint?.check;
+};
+
+const changeInputToColumnChange = (
+  item: ChangeInput,
+  opposite: ChangeInput,
+): RakeDbAst.ColumnChange => {
+  if (item instanceof Column || 'type' in item) {
+    return columnTypeToColumnChange(item);
+  }
+
+  if (isColumnForeignKeyChangeInput(item)) {
+    return {
+      foreignKeys: [item.columnForeignKey],
+    };
+  }
+
+  if (isNoForeignKeyChangeInput(item)) {
+    if (!isColumnForeignKeyChangeInput(opposite)) {
+      throw new Error(
+        't.noForeignKey() in t.change(...) must be paired with t.foreignKey(...)',
+      );
+    }
+
+    return {
+      foreignKeys: [],
+    };
+  }
+
+  if (isCheckConstraintItem(item)) {
+    return {
+      checks: [
+        {
+          sql: item.constraint.check,
+          name: item.constraint.name,
+        },
+      ],
+    };
+  }
+
+  throw new Error(
+    't.change(...) supports t.check(...) only for check constraints in this form',
+  );
+};
+
 const columnTypeToColumnChange = (
   item: Column | OneWayChange,
   name?: string,
@@ -259,16 +374,74 @@ interface TableChangeMethods extends TableMethods, TableDataMethods<string> {
   name(name: string): TableChangeMethods;
   add: Add;
   drop: Add;
-  change(
-    from: Column | OneWayChange,
-    to: Column | OneWayChange,
-    using?: ChangeOptions,
-  ): Change;
+  foreignKey<Shape>(
+    columns: [string, ...string[]],
+    fnOrTable: () => new () => { columns: { shape: Shape } },
+    foreignColumns: [keyof Shape, ...(keyof Shape)[]],
+    options?: TableData.References.Options,
+  ): NonUniqDataItem;
+  foreignKey(
+    columns: [string, ...string[]],
+    fnOrTable: string,
+    foreignColumns: [string, ...string[]],
+    options?: TableData.References.Options,
+  ): NonUniqDataItem;
+  foreignKey(
+    fnOrTable: string,
+    foreignColumn: string,
+    options?: TableData.References.Options,
+  ): ColumnForeignKeyChangeInput;
+  noForeignKey(): NoForeignKeyChangeInput;
+  change(from: ChangeInput, to: ChangeInput, using?: ChangeOptions): Change;
   default(value: unknown | RawSqlBase): OneWayChange;
   nullable(): OneWayChange;
   nonNullable(): OneWayChange;
   comment(comment: string | null): OneWayChange;
   rename(name: string): RakeDbAst.ChangeTableItem.Rename;
+}
+
+function foreignKey<Shape>(
+  columns: [string, ...string[]],
+  fnOrTable: () => new () => { columns: { shape: Shape } },
+  foreignColumns: [keyof Shape, ...(keyof Shape)[]],
+  options?: TableData.References.Options,
+): NonUniqDataItem;
+function foreignKey(
+  columns: [string, ...string[]],
+  fnOrTable: string,
+  foreignColumns: [string, ...string[]],
+  options?: TableData.References.Options,
+): NonUniqDataItem;
+function foreignKey(
+  fnOrTable: string,
+  foreignColumn: string,
+  options?: TableData.References.Options,
+): ColumnForeignKeyChangeInput;
+function foreignKey(
+  ...args: TableDataForeignKeyArgs | ColumnForeignKeyArgs
+): NonUniqDataItem | ColumnForeignKeyChangeInput {
+  if (Array.isArray(args[0])) {
+    const [columns, fnOrTable, foreignColumns, options] =
+      args as TableDataForeignKeyArgs;
+    return (
+      tableDataMethods.foreignKey as (
+        columns: [string, ...string[]],
+        fnOrTable: string | (() => new () => { columns: { shape: unknown } }),
+        foreignColumns: [PropertyKey, ...PropertyKey[]],
+        options?: TableData.References.Options,
+      ) => NonUniqDataItem
+    )(columns, fnOrTable, foreignColumns, options);
+  }
+
+  const [fnOrTable, foreignColumn, options] = args as ColumnForeignKeyArgs;
+
+  return {
+    columnForeignKey: {
+      fnOrTable,
+      foreignColumns: [foreignColumn],
+      options,
+    },
+  };
 }
 
 const tableChangeMethods: TableChangeMethods = {
@@ -282,10 +455,14 @@ const tableChangeMethods: TableChangeMethods = {
   },
   add,
   drop,
+  foreignKey,
+  noForeignKey() {
+    return { noForeignKey: true };
+  },
   change(from, to, using) {
     consumeColumnName();
-    const f = columnTypeToColumnChange(from);
-    const t = columnTypeToColumnChange(to);
+    const f = changeInputToColumnChange(from, to);
+    const t = changeInputToColumnChange(to, from);
     setName(this, f);
     setName(this, t);
 

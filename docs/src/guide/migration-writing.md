@@ -299,7 +299,7 @@ change(async (db) => {
 
 ### change
 
-Takes an array of two columns (or checks).
+Takes two columns or checks.
 When migrating, it will change the column to the second element,
 and when doing rollback will change the column to the first element.
 
@@ -310,6 +310,13 @@ Index options are listed [here](/guide/migration-column-methods#index).
 Exclude constraint options are listed [here](/guide/migration-column-methods#exclude).
 
 Foreign key options are listed [here](/guide/migration-column-methods#foreignkey).
+
+When only changing a column foreign key without changing the column type, use
+`t.foreignKey` directly inside `t.change`. Use no-argument `t.noForeignKey()`
+for the side of the change where the foreign key is absent.
+
+Composite foreign keys continue to use the table-level
+`t.foreignKey([...], ...)` syntax.
 
 ```ts
 import { change } from '../db-script';
@@ -368,26 +375,26 @@ change(async (db) => {
 
     // add foreign key
     column14: t.change(
-      t.integer(),
-      t.integer().foreignKey('otherTable', 'otherTableId'),
+      t.noForeignKey(),
+      t.foreignKey('otherTable', 'otherTableId'),
     ),
 
     // remove foreign key
     column15: t.change(
-      t.integer().foreignKey('otherTable', 'otherTableId'),
-      t.integer(),
+      t.foreignKey('otherTable', 'otherTableId'),
+      t.noForeignKey(),
     ),
 
     // change foreign key
     column16: t.change(
-      t.integer().foreignKey('oneTable', 'oneColumn', {
+      t.foreignKey('oneTable', 'oneColumn', {
         // foreign key options to be applied when migrating up
         name: 'oneForeignKeyName',
         match: 'PARTIAL',
         onUpdate: 'RESTRICT',
         onDelete: 'SET DEFAULT',
       }),
-      t.integer().foreignKey('otherTable', 'otherColumn', {
+      t.foreignKey('otherTable', 'otherColumn', {
         // foreign key options to be applied when migrating down
         name: 'otherForeignKeyName',
         match: 'FULL',

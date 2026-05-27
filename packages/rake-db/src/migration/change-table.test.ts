@@ -1565,6 +1565,58 @@ describe('changeTable', () => {
     });
 
     describe('check', () => {
+      it('should change column checks with check-only syntax', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.check(t.sql`length(col_umn) < 20`),
+                t.check(t.sql`length(col_umn) > 10`),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "table_col_umn_check",
+                ADD CONSTRAINT "table_col_umn_check"
+                  CHECK (length(col_umn) > 10)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "table_col_umn_check",
+                ADD CONSTRAINT "table_col_umn_check"
+                  CHECK (length(col_umn) < 20)
+            `),
+        );
+      });
+
+      it('should change named column checks with check-only syntax', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.check(t.sql`length(col_umn) < 20`, 'fromCheck'),
+                t.check(t.sql`length(col_umn) > 10`, 'toCheck'),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "fromCheck",
+                ADD CONSTRAINT "toCheck"
+                  CHECK (length(col_umn) > 10)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "toCheck",
+                ADD CONSTRAINT "fromCheck"
+                  CHECK (length(col_umn) < 20)
+            `),
+        );
+      });
+
       it('should change column checks', async () => {
         await testUpAndDown(
           () =>
@@ -2060,6 +2112,120 @@ describe('changeTable', () => {
               ALTER TABLE "table"
                 DROP CONSTRAINT "toFkeyName",
                 ADD CONSTRAINT "fromFkeyName" FOREIGN KEY ("change_foreign_key") REFERENCES "a"("a_id") MATCH PARTIAL ON DELETE SET DEFAULT ON UPDATE RESTRICT
+            `),
+        );
+      });
+
+      it('should change foreign key without repeating column type', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              changeForeignKey: t.change(
+                t.foreignKey('a', 'aId', {
+                  name: 'fromFkeyName',
+                  match: 'PARTIAL',
+                  onUpdate: 'RESTRICT',
+                  onDelete: 'SET DEFAULT',
+                }),
+                t.foreignKey('b', 'bId', {
+                  name: 'toFkeyName',
+                  match: 'FULL',
+                  onUpdate: 'NO ACTION',
+                  onDelete: 'CASCADE',
+                }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "fromFkeyName",
+                ADD CONSTRAINT "toFkeyName" FOREIGN KEY ("change_foreign_key") REFERENCES "b"("b_id") MATCH FULL ON DELETE CASCADE ON UPDATE NO ACTION
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "toFkeyName",
+                ADD CONSTRAINT "fromFkeyName" FOREIGN KEY ("change_foreign_key") REFERENCES "a"("a_id") MATCH PARTIAL ON DELETE SET DEFAULT ON UPDATE RESTRICT
+            `),
+        );
+      });
+
+      it('should add and drop foreign key with noForeignKey marker', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              addFkey: t.change(
+                t.noForeignKey(),
+                t.foreignKey('otherTable', 'foreignId', {
+                  name: 'customName',
+                  onDelete: 'CASCADE',
+                }),
+              ),
+              dropFkey: t.change(
+                t.foreignKey('oldTable', 'oldId', {
+                  name: 'oldName',
+                  onDelete: 'SET NULL',
+                }),
+                t.noForeignKey(),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "oldName",
+                ADD CONSTRAINT "customName" FOREIGN KEY ("add_fkey") REFERENCES "otherTable"("foreign_id") ON DELETE CASCADE
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "customName",
+                ADD CONSTRAINT "oldName" FOREIGN KEY ("drop_fkey") REFERENCES "oldTable"("old_id") ON DELETE SET NULL
+            `),
+        );
+      });
+
+      it('should require pairing noForeignKey with foreignKey in change', async () => {
+        await expect(
+          db.changeTable('table', (t) => ({
+            col: t.change(t.noForeignKey(), t.integer()),
+          })),
+        ).rejects.toThrow(
+          't.noForeignKey() in t.change(...) must be paired with t.foreignKey(...)',
+        );
+      });
+
+      it('should not allow noForeignKey in add/drop', async () => {
+        await expect(
+          db.changeTable('table', (t) => ({
+            // `noForeignKey` is change-only.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            col: t.add(t.noForeignKey() as any),
+          })),
+        ).rejects.toThrow(
+          't.noForeignKey() is only supported in t.change(...)',
+        );
+      });
+
+      it('should respect t.name for short foreign key changes', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              columnKey: t.name('customColumn').change(
+                t.noForeignKey(),
+                t.foreignKey('otherTable', 'otherId', {
+                  name: 'customColumnFkey',
+                }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD CONSTRAINT "customColumnFkey" FOREIGN KEY ("custom_column") REFERENCES "otherTable"("other_id")
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "customColumnFkey"
             `),
         );
       });
