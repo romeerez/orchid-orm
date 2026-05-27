@@ -26,13 +26,13 @@ import {
   promptCreateOrRename,
   TableExpression,
 } from './generators.utils';
-import { processPrimaryKey } from './primaryKey.generator';
-import { processIndexesAndExcludes } from './indexesAndExcludes.generator';
+import { processPrimaryKey } from './primary-key.generator';
+import { processIndexesAndExcludes } from './indexes-and-excludes.generator';
 import { processColumns, TypeCastsCache } from './columns.generator';
-import { processForeignKeys } from './foreignKeys.generator';
+import { processForeignKeys } from './foreign-keys.generator';
 import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
-import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
+import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
 import { processTableRls } from './rls.generator';
 
 export interface CompareSql {

@@ -20,7 +20,7 @@ import {
   compareSqlExpressions,
   TableExpression,
 } from './generators.utils';
-import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
+import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
 
 interface ComparableDomainCompare extends Omit<
   DbStructure.Domain,

@@ -4,7 +4,7 @@ import {
   RelationThunkBase,
 } from './relations';
 import { NotFoundError, OrchidOrmInternalError, Query } from 'pqb';
-import { ORMTableInput } from '../baseTable';
+import { ORMTableInput } from '../base-table';
 import {
   _queryCreateManyFrom,
   _queryCreateMany,

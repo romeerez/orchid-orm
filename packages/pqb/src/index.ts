@@ -58,9 +58,6 @@ export {
   type ShallowSimplify,
 } from './utils';
 
-// Snake case key symbol
-export { snakeCaseKey } from './columns/types';
-
 // TableData - table configuration and metadata
 export {
   parseTableData,

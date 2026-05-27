@@ -5,7 +5,7 @@ import {
   Queryable,
   Selectable,
   Updatable,
-} from './baseTable';
+} from './base-table';
 import { orchidORMWithAdapter } from './orm';
 import {
   Column,

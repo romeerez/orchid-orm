@@ -37,7 +37,7 @@ import {
   VirtualColumn,
   WhereArg,
 } from 'pqb/internal';
-import { ORMTableInput } from '../baseTable';
+import { ORMTableInput } from '../base-table';
 import {
   RelationData,
   RelationThunkBase,

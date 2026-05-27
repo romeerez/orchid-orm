@@ -136,7 +136,7 @@ export function queryFrom<
       data.schema = undefined;
     }
   } else if (Array.isArray(arg)) {
-    const { shape } = data;
+    const shape = { ...data.shape };
 
     const joinedParsers: JoinedParsers = {};
 

@@ -101,10 +101,10 @@ export class ArrayColumn<
     const code: Codes = [open];
 
     const { item } = this.data;
-    const { isNullable } = item.data;
-    delete item.data.isNullable;
-    addCode(code, item.toCode(ctx, key));
-    item.data.isNullable = isNullable;
+    const clonedItem = Object.create(item);
+    const { isNullable: _, ...dataWithoutNullable } = item.data;
+    clonedItem.data = dataWithoutNullable;
+    addCode(code, clonedItem.toCode(ctx, key));
 
     addCode(code, `${close}${arrayDataToCode(this.data, ctx.migration)}`);
     return columnCode(this, ctx, key, code);

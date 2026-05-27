@@ -1,5 +1,5 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams } from '../compose-migration';
 import { getSupportedDefaultPrivileges, DefaultPrivileges } from 'pqb/internal';
 
 const ALL_OBJECT_TYPES: DbStructure.DefaultPrivilegeObjectConfig['object'][] = [

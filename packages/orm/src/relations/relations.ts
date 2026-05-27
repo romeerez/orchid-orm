@@ -1,6 +1,6 @@
 import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
-import { ORMTableInput, TableClass, TableInfo, TableToDb } from '../baseTable';
+import { ORMTableInput, TableClass, TableInfo, TableToDb } from '../base-table';
 import { OrchidORMDbTables } from '../orm';
 import {
   _queryTake,

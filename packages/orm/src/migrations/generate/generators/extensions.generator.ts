@@ -3,7 +3,7 @@ import {
   IntrospectedStructure,
   getSchemaAndTableFromName,
 } from 'rake-db';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams } from '../compose-migration';
 
 interface Extension {
   schema?: string;

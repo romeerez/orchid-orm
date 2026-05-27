@@ -23,7 +23,7 @@ import {
   TableClasses,
   BaseTableClass,
   TableToDb,
-} from './baseTable';
+} from './base-table';
 import { applyRelations } from './relations/relations';
 import {
   transaction,
@@ -269,9 +269,15 @@ const assignTablesToOrm = <T extends TableClasses>(
     }
 
     const tableClass = tables[key];
-    const table = (
+    const tableImmutable = (
       tableClass as unknown as { instance(): ORMTableInput }
     ).instance();
+    const table = Object.create(tableImmutable);
+    table.q = { ...table.q };
+    table.columns = {
+      shape: { ...table.columns.shape },
+      data: { ...table.columns.data },
+    };
     tableInstances[key] = table;
 
     const options: DbTableOptions<unknown, string, Column.Shape.QueryInit> = {
@@ -300,7 +306,7 @@ const assignTablesToOrm = <T extends TableClasses>(
       table.types,
       asyncStorage,
       options,
-      table.constructor.prototype.columns?.data ?? {},
+      table.columns?.data ?? {},
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;

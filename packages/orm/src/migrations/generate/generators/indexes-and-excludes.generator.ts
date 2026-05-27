@@ -172,14 +172,14 @@ const processItems = (
 
   const dbItems = changeTableData.dbTableData[key];
 
-  for (const dbItem of dbItems) {
+  for (let dbItem of dbItems) {
     const hasAddedOrDroppedColumn = dbItem.columns.some(
       (column) =>
         'column' in column && checkForColumnAddOrDrop(shape, column.column),
     );
     if (hasAddedOrDroppedColumn) continue;
 
-    normalizeItem(dbItem);
+    dbItem = normalizeItem(dbItem);
 
     const { found, rename, foundAndHasSql } = findMatchingItem(
       dbItem,
@@ -392,19 +392,21 @@ const collectCodeComparableItemsType = (
   codeItems: CodeItems,
   key: 'indexes' | 'excludes',
 ): ComparableExclude[] => {
-  return codeItems[key].map((codeItem) => {
-    normalizeItem(codeItem.options as never);
+  return codeItems[key].map((codeItem, i) => {
+    const options = normalizeItem(codeItem.options as never);
+
+    codeItems[key][i] = { ...codeItem, options };
 
     return itemToComparable({
-      ...codeItem.options,
+      ...options,
       include:
-        codeItem.options.include === undefined
+        options.include === undefined
           ? undefined
           : config.snakeCase
-            ? toArray(codeItem.options.include).map(toSnakeCase)
-            : toArray(codeItem.options.include),
+            ? toArray(options.include).map(toSnakeCase)
+            : toArray(options.include),
       columns: codeItem.columns,
-      name: codeItem.options.name,
+      name: options.name,
       columnKeys: codeItem.columnKeys,
       includeKeys: codeItem.includeKeys,
     });
@@ -417,7 +419,8 @@ const normalizeItem = (item: {
   nullsNotDistinct?: boolean;
   columns: RecordUnknown[];
   exclude?: string[];
-}) => {
+}): DbStructure.Index | DbStructure.Exclude => {
+  item = { ...item };
   if (item.using) item.using = item.using.toLowerCase();
   if (item.using === 'btree') item.using = undefined;
   if (!item.unique) item.unique = undefined;
@@ -427,6 +430,7 @@ const normalizeItem = (item: {
       item.columns[i].with = item.exclude[i];
     }
   }
+  return item as DbStructure.Index | DbStructure.Exclude;
 };
 
 const itemToComparable = (

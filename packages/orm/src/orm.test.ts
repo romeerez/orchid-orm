@@ -14,8 +14,8 @@ import {
   UserData,
   testAdapter,
 } from 'test-utils';
-import { createBaseTable, Selectable } from './baseTable';
-import { raw, QuerySchema } from 'pqb/internal';
+import { createBaseTable, Selectable } from './base-table';
+import { raw, QuerySchema, RawSql } from 'pqb/internal';
 import { Db } from 'pqb';
 
 describe('orm', () => {
@@ -41,6 +41,54 @@ describe('orm', () => {
       id: t.identity().primaryKey(),
     }));
   }
+
+  it('should set snake case name for computed columns when initializing the same table twice', () => {
+    const BaseTable = createBaseTable({
+      snakeCase: true,
+    });
+    const { sql } = BaseTable;
+    let fullNameSql: RawSql | undefined;
+    const getColumnName = (column: unknown) =>
+      (column as { data: { name?: string } }).data.name;
+
+    class Table extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        firstName: t.text(),
+        lastName: t.text(),
+      }));
+
+      computed = this.setComputed((q) => ({
+        fullName: (fullNameSql ??= sql<string>`${q.column(
+          'firstName',
+        )} || ' ' || ${q.column('lastName')}`),
+      }));
+    }
+
+    const firstDb = orchidORMWithAdapter(
+      { adapter: testAdapter },
+      {
+        user: Table,
+      },
+    );
+    const firstName = getColumnName(firstDb.user.shape.fullName);
+
+    const secondDb = orchidORMWithAdapter(
+      { adapter: testAdapter },
+      {
+        user: Table,
+      },
+    );
+
+    expect({
+      firstName,
+      secondName: getColumnName(secondDb.user.shape.fullName),
+    }).toEqual({
+      firstName: undefined,
+      secondName: undefined,
+    });
+  });
 
   it('should use child schema override when parent instance was created first', () => {
     const BaseTable = createBaseTable();

@@ -9,7 +9,7 @@ import {
   Statement,
   VariableStatement,
 } from 'typescript';
-import { AppCodeGenTables } from './tables.appCodeGenerator';
+import { AppCodeGenTables } from './tables.app-code-generator';
 import {
   DbExtension,
   getImportPath,

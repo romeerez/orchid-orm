@@ -18,7 +18,7 @@ import {
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
-import { createBaseTable } from '../baseTable';
+import { createBaseTable } from '../base-table';
 
 const ormParams = {
   db: db.$qb,

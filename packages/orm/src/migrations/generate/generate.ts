@@ -30,9 +30,9 @@ import {
 } from 'rake-db';
 import { EnumItem } from './generators/enums.generator';
 import { CodeDomain } from './generators/domains.generator';
-import { composeMigration, ComposeMigrationParams } from './composeMigration';
+import { composeMigration, ComposeMigrationParams } from './compose-migration';
 import { verifyMigration } from './verify-migration';
-import { report } from './reportGeneratedMigration';
+import { report } from './report-generated-migration';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 

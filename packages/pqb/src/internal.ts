@@ -49,9 +49,6 @@ export {
   type Ord,
 } from './index';
 
-// Snake case key symbol
-export { snakeCaseKey } from './index';
-
 // TableData - table configuration and metadata
 export {
   parseTableData,

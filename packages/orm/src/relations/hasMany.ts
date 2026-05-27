@@ -58,7 +58,7 @@ import {
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { HasOneOptions, HasOneParams, HasOneQueryThrough } from './hasOne';
-import { ORMTableInput } from '../baseTable';
+import { ORMTableInput } from '../base-table';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasMany extends RelationThunkBase {

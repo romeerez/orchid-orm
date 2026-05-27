@@ -1,6 +1,6 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
-import { ComposeMigrationParams, PendingDbTypes } from '../composeMigration';
+import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
 
 export interface EnumItem {
   schema?: string;

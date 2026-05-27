@@ -457,9 +457,8 @@ const makeIndex = (
       index: { columns, options },
     };
   } else {
-    const options: OptionsArg = first ?? {};
     return {
-      index: { columns, options },
+      index: { columns, options: { ...first } },
     };
   }
 };

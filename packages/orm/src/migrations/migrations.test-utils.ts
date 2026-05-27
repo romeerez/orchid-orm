@@ -7,7 +7,7 @@ import {
 } from 'pqb/internal';
 import path from 'node:path';
 import { join } from 'node:path';
-import { createBaseTable } from '../baseTable';
+import { createBaseTable } from '../base-table';
 import { testColumnTypes } from 'test-utils';
 
 export const BaseTable = createBaseTable({

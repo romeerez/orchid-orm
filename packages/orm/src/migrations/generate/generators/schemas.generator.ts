@@ -1,6 +1,6 @@
 import { RakeDbAst, IntrospectedStructure } from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams } from '../compose-migration';
 
 export const processSchemas = async (
   ast: RakeDbAst[],

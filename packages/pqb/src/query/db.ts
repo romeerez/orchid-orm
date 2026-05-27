@@ -52,7 +52,6 @@ import {
   ComputedOptionsFactory,
 } from './extra-features/computed/computed';
 import { DbSqlQuery, performQuery, SQLQueryArgs } from './db-sql-query';
-import { snakeCaseKey } from '../columns/types';
 import { setDb } from '../columns/operators';
 import {
   applyMixins,
@@ -202,9 +201,6 @@ export interface DbTableOptions<
   nowSQL?: string;
 }
 
-/**
- * See {@link ScopeMethods}
- */
 export type DbTableOptionScopes<
   Table extends string | undefined,
   Shape extends Column.QueryColumns,
@@ -281,12 +277,13 @@ export class Db<
     UniqueConstraints
   >;
   declare catch: QueryCatch;
+  shape: ShapeWithComputed;
 
   constructor(
     public adapterNotInTransaction: Adapter,
     public qb: QueryBuilder,
     public table: Table = undefined as Table,
-    public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
+    shape: ShapeWithComputed,
     public columnTypes: ColumnTypes,
     asyncStorage: AsyncLocalStorage<AsyncState>,
     options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
@@ -316,8 +313,16 @@ export class Db<
     let runtimeDefaultColumns: string[] | undefined;
     let selectAllCount = 0;
     const { snakeCase } = options;
+
+    if (shape !== anyShape) {
+      shape = { ...shape };
+    }
+    this.shape = shape;
+
     for (const key in shape) {
-      const column = shape[key] as unknown as Column;
+      const column = Object.create(shape[key]) as unknown as Column;
+      shape[key] = column as never;
+      column.data = { ...column.data };
       column.data.key = key;
 
       if (column._parse) {
@@ -423,7 +428,9 @@ export class Db<
 
     this.columns = columns as (keyof Shape)[];
 
-    if (options.computed) applyComputedColumns(this, options.computed);
+    if (options.computed) {
+      applyComputedColumns(this, options.computed);
+    }
 
     if (prepareSelectAll) {
       const selectAllShape: RecordUnknown = (this.q.selectAllShape = {});
@@ -801,10 +808,6 @@ export const createDbWithAdapter = <
         )(makeColumnTypes(schemaConfig))
       : ctOrFn;
 
-  if (snakeCase) {
-    (ct as { [snakeCaseKey]?: boolean })[snakeCaseKey] = true;
-  }
-
   const asyncStorage = new AsyncLocalStorage<AsyncState>();
 
   const qb = _initQueryBuilder(
@@ -830,7 +833,7 @@ export const createDbWithAdapter = <
       table,
       typeof shape === 'function'
         ? getColumnTypes(ct, shape, nowSQL, options?.language)
-        : shape,
+        : shape || (anyShape as never),
       ct,
       asyncStorage,
       { ...commonOptions, ...options },

@@ -5,7 +5,7 @@ import {
   introspectDbSchema,
   RakeDbConfig,
 } from 'rake-db';
-import { composeMigration, ComposeMigrationParams } from './composeMigration';
+import { composeMigration, ComposeMigrationParams } from './compose-migration';
 import { AbortSignal } from './generate';
 
 const rollbackErr = new Error('Rollback');

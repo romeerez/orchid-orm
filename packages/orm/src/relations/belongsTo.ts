@@ -1,4 +1,4 @@
-import { ORMTableInput } from '../baseTable';
+import { ORMTableInput } from '../base-table';
 import { Query } from 'pqb';
 import {
   _queryCreate,

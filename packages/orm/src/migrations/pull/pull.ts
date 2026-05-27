@@ -15,8 +15,8 @@ import {
   appCodeGenTable,
   AppCodeGenTables,
   getTableInfosAndFKeys,
-} from './appCodeGenerators/tables.appCodeGenerator';
-import { appCodeGenUpdateDbFile } from './appCodeGenerators/dbFile.appCodeGenerator';
+} from './app-code-generators/tables.app-code-generator';
+import { appCodeGenUpdateDbFile } from './app-code-generators/db-file.app-code-generator';
 import { generate } from '../generate/generate';
 
 export const pull = async (adapters: Adapter[], config: RakeDbConfig) => {

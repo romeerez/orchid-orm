@@ -12,7 +12,6 @@ import {
   MaybeArray,
   QueryArraysResult,
   RecordUnknown,
-  snakeCaseKey,
   QuerySchema,
 } from 'pqb/internal';
 import {
@@ -94,7 +93,6 @@ export const createTable = async <
     Object.create(migration.columnTypes as object),
     tableMethods,
   );
-  types[snakeCaseKey] = snakeCase;
 
   let shape: Shape;
   let tableData;

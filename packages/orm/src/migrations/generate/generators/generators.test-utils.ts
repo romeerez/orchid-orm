@@ -28,7 +28,7 @@ import {
 import { generate } from '../generate';
 import fs from 'node:fs/promises';
 import { testConfig } from '../../migrations.test-utils';
-import { createBaseTable } from '../../../baseTable';
+import { createBaseTable } from '../../../base-table';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,

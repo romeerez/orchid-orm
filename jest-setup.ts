@@ -79,6 +79,66 @@ jest.mock('test-utils', () => require('./packages/test-utils/src'), {
   virtual: true,
 });
 
+// Deep freeze ORM tables: prevent columns, relations, table data (indexes, constraints, etc.) from being mutated.
+// Cannot freeze instances of classes because `const cloned = Object.create(orig); cloned.data = {...}`
+// doesn't work when `orig` is frozen and already has `data`.
+jest.mock('./packages/orm/src/base-table', () => {
+  const actual = jest.requireActual('./packages/orm/src/base-table');
+
+  const excludeKeys = new Set([
+    'prototype',
+    'inputSchema',
+    'outputSchema',
+    'querySchema',
+    'createSchema',
+    'updateSchema',
+    'pkeySchema',
+  ]);
+
+  const deepFreeze = <T>(arg: T, visited = new WeakSet<object>()): T => {
+    if (!arg || typeof arg !== 'object') {
+      return arg;
+    }
+
+    const target = arg as object;
+
+    if (visited.has(target)) {
+      return arg;
+    }
+    visited.add(target);
+
+    for (const key of Object.getOwnPropertyNames(target)) {
+      if (excludeKeys.has(key)) {
+        continue;
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(target, key);
+      if (!descriptor || !('value' in descriptor)) {
+        continue;
+      }
+
+      const value = descriptor.value;
+      if (value && typeof value === 'object') {
+        deepFreeze(value, visited);
+      }
+    }
+
+    return arg.constructor === Object ? Object.freeze(arg) : arg;
+  };
+
+  return {
+    ...actual,
+    createBaseTable(options: unknown) {
+      const baseTable = actual.createBaseTable(options);
+      const { instance } = baseTable;
+      baseTable.instance = function () {
+        return deepFreeze(instance.call(this));
+      };
+      return baseTable;
+    },
+  };
+});
+
 jest.mock('./packages/pqb/src/utils', () => {
   const actual = jest.requireActual('./packages/pqb/src/utils');
   return process.env.RUNNING_BENCHMARKS

@@ -16,7 +16,6 @@ import {
   EmptyObject,
   RecordKeyTrue,
   RecordUnknown,
-  snakeCaseKey,
   toArray,
   toSnakeCase,
   type QuerySchema,
@@ -371,8 +370,6 @@ export const changeTable = async <CT>(
     migration.columnTypes as object,
   ) as TableChanger<CT>;
   Object.assign(tableChanger, tableChangeMethods);
-
-  (tableChanger as { [snakeCaseKey]?: boolean })[snakeCaseKey] = snakeCase;
 
   addOrDropChanges.length = 0;
   const changeData = fn?.(tableChanger) || {};

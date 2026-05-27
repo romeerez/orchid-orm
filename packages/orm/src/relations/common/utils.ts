@@ -19,7 +19,7 @@ import {
 import { Query } from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
-import { BaseTableClass, ORMTableInput } from '../../baseTable';
+import { BaseTableClass, ORMTableInput } from '../../base-table';
 import { RelationRefsOptions } from './options';
 
 // INNER JOIN the current relation instead of the default OUTER behavior

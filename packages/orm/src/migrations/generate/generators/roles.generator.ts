@@ -1,5 +1,5 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
-import { ComposeMigrationParams } from '../composeMigration';
+import { ComposeMigrationParams } from '../compose-migration';
 import { deepCompare } from 'pqb/internal';
 import { promptCreateOrRename } from './generators.utils';
 
@@ -22,7 +22,7 @@ export const processRoles = async (
   if (!dbStructure.roles || !roles) return;
 
   const codeRoles = roles.map((role): DbStructure.Role => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    //
     const { defaultPrivileges: _, ...roleWithoutPrivileges } = role;
     return {
       ...defaults,
@@ -36,7 +36,7 @@ export const processRoles = async (
   for (const dbRole of dbStructure.roles) {
     // Strip defaultPrivileges from dbRole for comparison
     const {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      //
       defaultPrivileges: _,
       ...dbRoleWithoutPrivileges
     } = dbRole as DbStructure.Role & { defaultPrivileges?: unknown };

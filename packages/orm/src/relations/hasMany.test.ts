@@ -27,7 +27,7 @@ import {
   UserSelectAll,
   ProfileSelectAll,
 } from 'test-utils';
-import { createBaseTable } from '../baseTable';
+import { createBaseTable } from '../base-table';
 
 const ormParams = {
   db: db.$qb,

@@ -125,17 +125,21 @@ export const applyComputedColumns = (
     let item = computed[key];
     if (typeof item === 'function') item = item.call(computed);
 
+    item = Object.create(item);
+
     if (item instanceof ComputedColumn) {
       (q as unknown as PickQueryQ).q.runtimeComputeds = {
         ...(q as unknown as PickQueryQ).q.runtimeComputeds,
         [key]: item,
       };
     } else {
-      let col = item.result.value as Column | undefined;
+      let col = (item as QueryOrExpression<unknown>).result.value as
+        | Column
+        | undefined;
       if (!col) {
-        item.result.value = col = Object.create(
-          UnknownColumn.instance,
-        ) as Column;
+        (item as QueryOrExpression<unknown>).result = {
+          value: (col = Object.create(UnknownColumn.instance) as Column),
+        };
         col.data = { ...col.data };
       }
 
@@ -147,7 +151,7 @@ export const applyComputedColumns = (
       data.explicitSelect = true;
       data.readOnly = true;
 
-      const parse = (item.result.value as Column)._parse;
+      const parse = col._parse;
       if (parse) {
         ((q as unknown as PickQueryQ).q.defaultParsers ??= {})[key] = parse;
       }

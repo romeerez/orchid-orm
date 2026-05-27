@@ -11,7 +11,7 @@ import {
   colors,
 } from 'pqb/internal';
 import { getColumnDbType } from './generators/columns.generator';
-import { fnOrTableToString } from './generators/foreignKeys.generator';
+import { fnOrTableToString } from './generators/foreign-keys.generator';
 
 export const report = (
   ast: RakeDbAst[],

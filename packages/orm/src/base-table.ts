@@ -41,7 +41,6 @@ import {
   QueryOrExpression,
   RecordUnknown,
   ShallowSimplify,
-  snakeCaseKey,
   toSnakeCase,
   ColumnsShape,
   QuerySchema,
@@ -679,9 +678,6 @@ export function createBaseTable<
       fn: (t: ColumnTypes) => Shape,
       dataFn?: TableDataFn<Shape, Data>,
     ): SetColumnsResult<Shape, Data> {
-      (columnTypes as { [snakeCaseKey]?: boolean })[snakeCaseKey] =
-        this.snakeCase;
-
       const shape = getColumnTypes(columnTypes, fn, nowSQL, this.language);
       const tableData = parseTableData(dataFn);
 
