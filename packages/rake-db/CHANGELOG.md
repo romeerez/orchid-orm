@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.33.11
+
+### Patch Changes
+
+- 12bfa1a0: rake-db migrations: support t.check in t.change, support t.change solely on t.foreignKey, add t.noForeignKey for t.change for dropping the foreign key (#700)
+
 ## 2.33.10
 
 ### Patch Changes
