@@ -1,5 +1,11 @@
 # pqb
 
+## 0.66.6
+
+### Patch Changes
+
+- dffaed9b: Fix selecting relation (had a bug for required belongsTo relation) when deleting a record (#708)
+
 ## 0.66.5
 
 ### Patch Changes

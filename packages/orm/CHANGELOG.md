@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.70.1
+
+### Patch Changes
+
+- dffaed9b: Fix selecting relation (had a bug for required belongsTo relation) when deleting a record (#708)
+- 9b7064e0: Fix `makeHelper` of the unbound orm to have proper typing (#706)
+- Updated dependencies [dffaed9b]
+  - pqb@0.66.6
+  - rake-db@2.34.1
+
 ## 1.70.0
 
 ### Minor Changes
