@@ -1,5 +1,11 @@
 # pqb
 
+## 0.66.5
+
+### Patch Changes
+
+- 31a98562: Fix typing of QueryHelperResult to support unbound orm tables (#705)
+
 ## 0.66.4
 
 ### Patch Changes

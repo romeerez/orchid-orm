@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm",
-  "version": "1.69.5",
+  "version": "1.70.0",
   "description": "Postgres ORM",
   "keywords": [
     "orm",

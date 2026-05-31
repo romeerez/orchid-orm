@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.34.0
+
+### Minor Changes
+
+- 2da5fa37: Support standalone change helpers in migrations, so constraints and indexes can be added, dropped, or changed with concise forms like `t.add(t.foreignKey(...))` and `t.drop(t.index(...))`. The old `t.noForeignKey()` helper was removed. (#705)
+
+### Patch Changes
+
+- Updated dependencies [31a98562]
+  - pqb@0.66.5
+
 ## 2.33.12
 
 ### Patch Changes

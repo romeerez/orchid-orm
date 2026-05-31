@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.70.0
+
+### Minor Changes
+
+- 2da5fa37: Support standalone change helpers in migrations, so constraints and indexes can be added, dropped, or changed with concise forms like `t.add(t.foreignKey(...))` and `t.drop(t.index(...))`. The old `t.noForeignKey()` helper was removed. (#705)
+
+### Patch Changes
+
+- 31a98562: Fix typing of QueryHelperResult to support unbound orm tables (#705)
+- Updated dependencies [2da5fa37]
+- Updated dependencies [31a98562]
+  - rake-db@2.34.0
+  - pqb@0.66.5
+
 ## 1.69.5
 
 ### Patch Changes
