@@ -16,7 +16,7 @@ import {
 } from 'test-utils';
 import { createBaseTable, Selectable } from './base-table';
 import { raw, QuerySchema, RawSql } from 'pqb/internal';
-import { Db } from 'pqb';
+import { Db, QueryHelperResult } from 'pqb';
 
 describe('orm', () => {
   useTestORM();
@@ -284,6 +284,7 @@ describe('orm', () => {
       });
 
       const helper = orm.user.makeHelper((q) => q.select('id'));
+      assertType<Awaited<QueryHelperResult<typeof helper>>, { id: number }[]>();
       const local = makeOrchidOrmDbWithAdapter(orm, { db: db.$qb });
 
       expectSql(

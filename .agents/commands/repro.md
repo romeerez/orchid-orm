@@ -12,23 +12,19 @@ Automates the reproduction of reported issues by creating an isolated failing te
 
 1. **Understand Context**
    Use GitHub MCP to read the issue body and comments.
-
    - If the issue contains multiple distinct problems, you MUST create a separate test file for each problem, unless user requests otherwise via prompt.
 
 2. **Review Template**
    ALWAYS read `packages/repro/src/repro-orm.example.test.ts` to see how ORM issues are reproduced. For non-ORM querying issues, use `https://orchid-orm.netlify.app/llms.txt` and adapt by analogy.
-
    - You MUST NOT modify `packages/repro/src/repro-orm.example.test.ts`. Use it purely as a reference.
 
 3. **Create Test File(s)**
    Create a NEW, failing, self-contained test file in `packages/repro/src/`. You MUST NOT use or edit the example file.
-
-   - The file must be named `<descriptive-name>-<issue-number>.test.ts` (e.g. `nested-select-bug-123.test.ts`). Create multiple files if there are multiple problems.
+   - The file must be named `<issue-number>-<descriptive-name>.test.ts` (e.g. `123-nested-select-bug.test.ts`). Create multiple files if there are multiple problems.
    - You can import from any orm-related packages (`orchid-orm`, `pqb`, `rake-db`, etc.).
    - The test should act closely on what the issue is about, using its described assertions. The test MUST initially fail.
 
 4. **Verify Reproduction**
-
    - **For runtime issues:** Run `pnpm repro check packages/repro/src/<your-file>.test.ts`. It must fail at runtime.
    - **For TS typing issues:** Run `pnpm repro types`. It must fail at type checking (runtime failure is not required).
    - **For TS typing issues, use `assertType` from the `test-utils` package:**
@@ -57,6 +53,6 @@ Automates the reproduction of reported issues by creating an isolated failing te
 - Combining multiple problems into a single test file
 - Writing assertions for behaviors not explicitly mentioned in the issue
 - Saving the test outside `packages/repro/src/`
-- Using a generic name instead of `<descriptive-name>[-issue-number].test.ts`
+- Using a generic name instead of `<issue-number>-<descriptive-name>.test.ts`
 
 **Any red flag means: Delete the test. Start over.**

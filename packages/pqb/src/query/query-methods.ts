@@ -166,8 +166,9 @@ interface QueryHelper<
 
 // Get result of query helper, for https://github.com/romeerez/orchid-orm/issues/215
 export type QueryHelperResult<
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  T extends QueryHelper<PickQueryTableMetaShapeTableAs, any[], MergeQueryArg>,
+  // Keep this constraint broad so it supports both bound query helpers
+  // and unbound helpers created from bundled ORM tables.
+  T extends IsQueryHelper,
 > = T['result'];
 
 interface NarrowTypeSelf extends PickQueryResultReturnType {
