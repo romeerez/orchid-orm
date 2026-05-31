@@ -13,7 +13,7 @@ It is limited to node-postgres only, supporting other Postgres adapters is in th
 
 You can use OrchidORM for the app connected to multiple databases, but it cannot manage table relations spread across databases.
 
-Can select relations in create and update, but it is not yet supported in delete, upsert.
+Can select relations in create, update, and delete, but it is not yet supported in upsert.
 
 Supporting various useful extensions is in plans, but until implemented, you'll need to use raw SQL for this.
 OrchidORM is designed the way that you can combine its existing functionality, and add just pieces of custom SQL where it is needed.

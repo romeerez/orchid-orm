@@ -8,6 +8,9 @@ export default {
   extends: DefaultTheme,
   Layout,
   enhanceApp({ app }) {
-    app.component('CopyOrDownloadAsMarkdownButtons', CopyOrDownloadAsMarkdownButtons);
+    app.component(
+      'CopyOrDownloadAsMarkdownButtons',
+      CopyOrDownloadAsMarkdownButtons,
+    );
   },
 } satisfies Theme;

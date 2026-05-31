@@ -174,9 +174,8 @@ const firstName: string = await db.table.get('name');
 
 const rawResult: number = await db.table.get(sql((t) => t.integer())`1 + 1`);
 
-const firstNameOptional: string | undefined = await db.table.getOptional(
-  'name',
-);
+const firstNameOptional: string | undefined =
+  await db.table.getOptional('name');
 ```
 
 ## rows
