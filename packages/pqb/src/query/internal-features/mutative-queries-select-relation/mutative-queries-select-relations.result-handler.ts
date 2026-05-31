@@ -11,8 +11,7 @@ import {
   SelectAsValue,
   SelectItem,
 } from '../../basic-features/select/select.sql';
-import { maybeWrappedThen } from '../../then/then';
-import { Adapter } from '../../../adapters/adapter';
+import { maybeWrappedThen, ThenSavepointState } from '../../then/then';
 
 export const checkIfNeedResultAllForMutativeQueriesSelectRelations = (
   sql: MutativeQueriesSelectRelationsSqlProp,
@@ -29,16 +28,14 @@ export const checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations = (
 export const loadMutativeQueriesSelectRelations = (
   sql: MutativeQueriesSelectRelationsSqlProp,
   result: unknown,
-  adapter: Adapter,
-  startingSavepoint?: string,
+  savepointState?: ThenSavepointState,
   renames?: RecordString,
 ): Promise<void> | undefined =>
   sql.mutativeQueriesSelectRelationsState?.value
     ? loadRelations(
         sql.mutativeQueriesSelectRelationsState,
         result,
-        adapter,
-        startingSavepoint,
+        savepointState,
         renames,
       )
     : undefined;
@@ -46,8 +43,7 @@ export const loadMutativeQueriesSelectRelations = (
 export const loadRelations = async (
   state: MutativeQueriesSelectRelationsSqlState,
   result: unknown,
-  adapter: Adapter,
-  startingSavepoint?: string,
+  savepointState?: ThenSavepointState,
   renames?: RecordString,
 ): Promise<void> => {
   const q = state.query as Query;
@@ -90,10 +86,10 @@ export const loadRelations = async (
     selectQuery,
     undefined,
     async (err) => {
-      await adapter.arrays(`ROLLBACK TO SAVEPOINT "${startingSavepoint}"`);
+      await savepointState?.activeSavepoint?.rollback(err);
       throw err;
     },
-    startingSavepoint,
+    savepointState,
   )) as RecordUnknown[];
 
   for (const row of result as RecordUnknown[]) {

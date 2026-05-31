@@ -6,6 +6,7 @@ import {
   RecordOptionalString,
   RecordString,
   RecordUnknown,
+  TransactionAdapter,
 } from 'pqb/internal';
 import { RakeDbConfig, RakeDbRenameMigrations } from '../config';
 import path from 'node:path';
@@ -100,7 +101,7 @@ export class NoMigrationsTableError extends Error {}
 
 export const getMigratedVersionsMap = async (
   ctx: RakeDbCtx,
-  adapter: Adapter,
+  adapter: Adapter | TransactionAdapter,
   config: Pick<
     MigrateConfigInternal,
     | 'migrations'
@@ -113,27 +114,19 @@ export const getMigratedVersionsMap = async (
   renameTo?: RakeDbRenameMigrations,
 ): Promise<RakeDbAppliedVersions> => {
   const table = migrationsSchemaTableSql(adapter, config);
-  const inTransaction =
-    'isInTransaction' in adapter && adapter.isInTransaction();
+
+  const queryVersion = () =>
+    adapter.arrays<[string, string]>(`SELECT * FROM ${table} ORDER BY version`);
 
   let result;
   try {
-    if (inTransaction) {
-      await adapter.query(`SAVEPOINT check_migrations_table`);
-    }
-
-    result = await adapter.arrays<[string, string]>(
-      `SELECT * FROM ${table} ORDER BY version`,
-    );
-
-    if (inTransaction) {
-      await adapter.query(`RELEASE SAVEPOINT check_migrations_table`);
+    if (adapter.isInTransaction()) {
+      result = await adapter.savepoint('check_migrations_table', queryVersion);
+    } else {
+      result = await queryVersion();
     }
   } catch (err) {
     if ((err as RecordUnknown).code === '42P01') {
-      if (inTransaction) {
-        await adapter.query(`ROLLBACK TO SAVEPOINT check_migrations_table`);
-      }
       throw new NoMigrationsTableError();
     } else {
       throw err;

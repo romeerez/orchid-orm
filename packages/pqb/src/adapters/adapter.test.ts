@@ -1,6 +1,10 @@
-import { Adapter, AdapterClass, TransactionAdapterClass } from './adapter';
+import {
+  Adapter,
+  AdapterClass,
+  HackySavepointState,
+  TransactionAdapterClass,
+} from './adapter';
 import { OrchidOrmInternalError, QueryError } from '../query/errors';
-import { noop } from '../utils';
 import { allDriverAdapters, testDb, testDbOptions } from 'test-utils';
 
 describe('adapter runtime abstractions', () => {
@@ -8,9 +12,30 @@ describe('adapter runtime abstractions', () => {
 
   Object.entries(allDriverAdapters).forEach(([name, driverAdapter]) => {
     describe(name, () => {
+      const counterTable = `"adapter_test_counter"`;
+      const getCounterValueSql = `SELECT "value" FROM ${counterTable}`;
+      const incrementCounterSql = `UPDATE ${counterTable} SET "value" = "value" + 1`;
       let adapter: AdapterClass;
 
-      beforeEach(() => {
+      beforeAll(async () => {
+        adapter = new AdapterClass({
+          driverAdapter,
+          config: testDbOptions,
+        });
+
+        try {
+          await adapter.query(
+            `CREATE TABLE ${counterTable} ("value" integer NOT NULL)`,
+          );
+          await adapter.query(
+            `INSERT INTO ${counterTable}("value") VALUES (0)`,
+          );
+        } finally {
+          await adapter.close();
+        }
+      });
+
+      beforeEach(async () => {
         adapter = new AdapterClass({
           driverAdapter,
           config: testDbOptions,
@@ -19,6 +44,19 @@ describe('adapter runtime abstractions', () => {
 
       afterEach(async () => {
         await adapter.close();
+      });
+
+      afterAll(async () => {
+        adapter = new AdapterClass({
+          driverAdapter,
+          config: testDbOptions,
+        });
+
+        try {
+          await adapter.query(`DROP TABLE ${counterTable}`);
+        } finally {
+          await adapter.close();
+        }
       });
 
       it('runs query and can be reopened after close', async () => {
@@ -118,6 +156,10 @@ describe('adapter runtime abstractions', () => {
 
         it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
           const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
+          const savepointSpy = jest.spyOn(
+            TransactionAdapterClass.prototype,
+            'savepoint',
+          );
           const querySpy = jest.spyOn(adapter.driverAdapter, 'queryClient');
 
           const {
@@ -136,15 +178,18 @@ describe('adapter runtime abstractions', () => {
           expect(result).toBe(123);
 
           expect(beginSpy).toBeCalledTimes(1);
+          expect(savepointSpy).toBeCalledTimes(1);
           expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
-            'SAVEPOINT "t1"',
             'SELECT 123 as result',
-            'RELEASE SAVEPOINT "t1"',
           ]);
         });
 
         it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
           const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
+          const savepointSpy = jest.spyOn(
+            TransactionAdapterClass.prototype,
+            'savepoint',
+          );
           const querySpy = jest.spyOn(adapter.driverAdapter, 'queryClient');
 
           await expect(() =>
@@ -163,10 +208,8 @@ describe('adapter runtime abstractions', () => {
           ).rejects.toThrow('error');
 
           expect(beginSpy).toBeCalledTimes(1);
-          expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
-            'SAVEPOINT "t1"',
-            'ROLLBACK TO SAVEPOINT "t1"',
-          ]);
+          expect(savepointSpy).toBeCalledTimes(1);
+          expect(querySpy.mock.calls.map((call) => call[1])).toEqual([]);
         });
 
         it('sets search_path for transaction setConfig', async () => {
@@ -614,78 +657,93 @@ describe('adapter runtime abstractions', () => {
         });
       });
 
-      describe('savepoint', () => {
-        it('supports startingSavepoint', async () => {
-          await adapter.transaction(undefined, undefined, async (trx) => {
-            const beforeInsert = await trx.query<{ count: number }>(
-              `SELECT count(*)::int as count FROM "schema"."user"`,
-            );
+      describe('hackySavepoint', () => {
+        const getCounterValue = async (trx: Adapter) => {
+          const res = await trx.query<{ value: number }>(getCounterValueSql);
+          return res.rows[0].value;
+        };
 
-            await trx.query(
-              `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
-              undefined,
-              'savepoint',
-            );
-
-            const beforeRollback = await trx.query(
-              `SELECT count(*)::int as count FROM "schema"."user"`,
-            );
-            expect(beforeRollback.rows[0].count).toBe(
-              beforeInsert.rows[0].count + 1,
-            );
-
-            await trx.query(`ROLLBACK TO SAVEPOINT "savepoint"`);
-
-            const afterRollback = await trx.query(
-              `SELECT count(*)::int as count FROM "schema"."user"`,
-            );
-            expect(afterRollback.rows[0].count).toBe(
-              beforeInsert.rows[0].count,
-            );
-          });
+        beforeEach(async () => {
+          await adapter.query(`UPDATE ${counterTable} SET "value" = 0`);
         });
 
-        it('rolls back to releasingSavepoint if query fails', async () => {
+        it('persists savepoint changes after release', async () => {
+          const before = await getCounterValue(adapter);
+
           await adapter.transaction(undefined, undefined, async (trx) => {
-            const beforeInsert = await trx.query<{ count: number }>(
-              `SELECT count(*)::int as count FROM "schema"."user"`,
+            const state: HackySavepointState = { name: 'hacky_release' };
+
+            const res = await trx.hackySavepoint<{ value: number }>(
+              state,
+              `${incrementCounterSql} RETURNING "value"`,
             );
 
-            await trx.query(
-              `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
-              undefined,
-              'savepoint',
-            );
+            expect(res.rows[0].value).toBe(before + 1);
 
-            await trx
-              .query(
-                `SELECT * FROM "non-existing"`,
-                undefined,
-                undefined,
-                'savepoint',
-              )
-              .catch(noop);
+            await trx.query(incrementCounterSql);
 
-            const afterFailure = await trx.query(
-              `SELECT count(*)::int as count FROM "schema"."user"`,
-            );
-            expect(afterFailure.rows[0].count).toBe(beforeInsert.rows[0].count);
+            await state.activeSavepoint!.release();
           });
+
+          const after = await getCounterValue(adapter);
+          expect(after).toBe(before + 2);
         });
 
-        it('releases savepoint when startingSavepoint and releasingSavepoint are the same', async () => {
+        it('rolls back savepoint changes when rollback is called', async () => {
+          const before = await getCounterValue(adapter);
+          const err = new Error('rollback savepoint');
+
           await adapter.transaction(undefined, undefined, async (trx) => {
-            await trx.query(
-              `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
-              undefined,
-              'savepoint',
-              'savepoint',
-            );
+            const state: HackySavepointState = { name: 'hacky_rollback' };
+
+            await trx.hackySavepoint(state, incrementCounterSql);
+            await trx.query(incrementCounterSql);
+
+            await state.activeSavepoint!.rollback(err);
+          });
+
+          const after = await getCounterValue(adapter);
+          expect(after).toBe(before);
+        });
+
+        it('continues transaction after savepoint rollback', async () => {
+          const before = await getCounterValue(adapter);
+
+          await adapter.transaction(undefined, undefined, async (trx) => {
+            const state: HackySavepointState = { name: 'hacky_continue' };
+
+            await trx.hackySavepoint(state, incrementCounterSql);
+            await trx.query(incrementCounterSql);
+
+            await state.activeSavepoint!.rollback(new Error('rollback'));
+
+            await trx.query(incrementCounterSql);
+          });
+
+          const after = await getCounterValue(adapter);
+          expect(after).toBe(before + 1);
+        });
+
+        it('auto-rolls back on savepoint query failure and release fails afterwards', async () => {
+          const before = await getCounterValue(adapter);
+
+          await adapter.transaction(undefined, undefined, async (trx) => {
+            const state: HackySavepointState = { name: 'hacky_query_fail' };
 
             await expect(
-              trx.query(`ROLLBACK TO SAVEPOINT "savepoint"`),
-            ).rejects.toThrow('savepoint "savepoint" does not exist');
+              trx.hackySavepoint(
+                state,
+                'SELECT * FROM "table_that_does_not_exist"',
+              ),
+            ).rejects.toThrow();
+
+            await expect(state.activeSavepoint!.release()).rejects.toThrow();
+
+            await trx.query(incrementCounterSql);
           });
+
+          const after = await getCounterValue(adapter);
+          expect(after).toBe(before + 1);
         });
       });
 
@@ -693,8 +751,6 @@ describe('adapter runtime abstractions', () => {
         it('applies role in query', async () => {
           const withRole = await adapter.query<{ current_user: string }>(
             'SELECT current_user',
-            undefined,
-            undefined,
             undefined,
             { role: 'app-user' },
           );
@@ -707,8 +763,6 @@ describe('adapter runtime abstractions', () => {
             `SELECT
               current_setting('app.preset_key', true) as preset,
               current_setting('app.new_key', true) as fresh`,
-            undefined,
-            undefined,
             undefined,
             {
               setConfig: {
@@ -731,8 +785,6 @@ describe('adapter runtime abstractions', () => {
                 current_setting('app.preset_key', true) as preset,
                 current_setting('app.new_key', true) as fresh`,
               undefined,
-              undefined,
-              undefined,
               {
                 setConfig: {
                   'app.preset_key': 'new_preset_value',
@@ -753,8 +805,6 @@ describe('adapter runtime abstractions', () => {
             `SELECT
               current_setting('app.arr_preset', true),
               current_setting('app.arr_new', true)`,
-            undefined,
-            undefined,
             undefined,
             {
               setConfig: {

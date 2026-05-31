@@ -29,9 +29,9 @@ describe('migration', () => {
 
       const err = await db.query`invalid`.catch((err) => err);
 
-      expect(err).toMatchObject({
-        message: `syntax error at or near "invalid"\nSQL: invalid\nVariables: []`,
-      });
+      expect(err.toString()).toContain(
+        `syntax error at or near "invalid"\nSQL: invalid\nVariables: []`,
+      );
     });
   });
 

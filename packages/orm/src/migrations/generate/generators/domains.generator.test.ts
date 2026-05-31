@@ -17,6 +17,50 @@ const { green, red, yellow } = colors;
 describe('domains', () => {
   const { arrange, act, assert, table } = useGeneratorsTestUtils();
 
+  it('should add a domain type and SQL check that uses it in the same migration', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.text().check(t.sql`col_umn = 'old'`),
+        }));
+      },
+      dbOptions: {
+        domains: {
+          domain: (t) => t.text(),
+          // .check(t.sql`value = 'x'`),
+        },
+      },
+      tables: [
+        table((t) => ({
+          colUmn: t.text().check(t.sql`col_umn::"domain" = 'new'`),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createDomain('domain', (t) => t.text());
+
+  await db.changeTable('table', (t) => ({
+    ...t.drop(
+      t.check(t.sql\`(col_umn = 'old'::text)\`, 'table_col_umn_check')
+    ),
+    ...t.add(
+      t.check(t.sql\`col_umn::"domain" = 'new'\`, 'table_col_umn_check')
+    ),
+  }));
+});
+`);
+
+    assert.report(`${green('+ create domain')} domain
+${yellow('~ change table')} table:
+  ${red('- drop check')} (col_umn = 'old'::text)
+  ${green('+ add check')} col_umn::"domain" = 'new'`);
+  });
+
   it('should not be dropped when ignored', async () => {
     await arrange({
       async prepareDb(db) {

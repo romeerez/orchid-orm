@@ -11,8 +11,10 @@ import { getValueKey } from '../basic-features/get/get-value-key';
 import {
   Adapter,
   AfterCommitHook,
+  HackySavepointState,
   QueryResult,
   SqlSessionState,
+  TransactionAdapter,
 } from '../../adapters/adapter';
 import { sqlSessionContextGetStateFromAsyncState } from '../../adapters/features/sql-session-context';
 import {
@@ -190,7 +192,7 @@ export function maybeWrappedThen(
   this: Query,
   resolve?: Resolve,
   reject?: Reject,
-  parentSavepoint?: string,
+  parentSavepoint?: ThenSavepointState,
 ): Promise<unknown> {
   const { q } = this;
 
@@ -309,7 +311,7 @@ const then = async (
   reject?: // oxlint-disable-next-line typescript/no-explicit-any
   (error: any) => any,
   shouldCatch?: boolean,
-  parentSavepoint?: string,
+  parentSavepoint?: ThenSavepointState,
 ): Promise<unknown> => {
   const { q: query } = q;
 
@@ -365,7 +367,7 @@ const then = async (
       checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations(sql) ||
       parentSavepoint
         ? undefined
-        : startingSavepoint;
+        : parentSavepoint || startingSavepoint;
 
     if ('text' in sql) {
       if (query.autoPreparedStatements) {
@@ -727,7 +729,6 @@ const then = async (
       loadMutativeQueriesSelectRelations(
         localSql,
         result,
-        adapter,
         startingSavepoint,
         renames,
       ) ||
@@ -828,11 +829,18 @@ const then = async (
   }
 };
 
+export interface ThenSavepointState extends HackySavepointState {
+  transactionAdapter: TransactionAdapter;
+}
+
 const setCatchingSavepoint = (
   catchTrx: AsyncState | false | undefined,
-): string | undefined => {
-  return catchTrx
-    ? `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`
+): ThenSavepointState | undefined => {
+  return catchTrx && catchTrx.transactionAdapter
+    ? {
+        transactionAdapter: catchTrx.transactionAdapter,
+        name: `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`,
+      }
     : undefined;
 };
 
@@ -845,19 +853,43 @@ const execQuery = (
   adapter: Adapter,
   method: 'query' | 'arrays',
   sql: SingleSql,
-  startingSavepoint: string | undefined,
-  releasingSavepoint: string | undefined,
+  startingSavepoint: ThenSavepointState | undefined,
+  releasingSavepoint: ThenSavepointState | undefined,
   sqlSessionState: SqlSessionState | undefined,
 ) => {
-  return (
-    adapter[method as 'query'](
-      sql.text,
-      sql.values,
-      startingSavepoint,
-      releasingSavepoint,
-      sqlSessionState,
-    ) as Promise<QueryResult>
-  ).then((result) => {
+  let promise: Promise<QueryResult>;
+  if (startingSavepoint) {
+    if (releasingSavepoint) {
+      promise = startingSavepoint.transactionAdapter.savepoint(
+        startingSavepoint.name,
+        () => {
+          return (promise = adapter[method as 'query'](
+            sql.text,
+            sql.values,
+            sqlSessionState,
+          ));
+        },
+      );
+    } else {
+      promise = startingSavepoint.transactionAdapter.hackySavepoint(
+        startingSavepoint,
+        sql.text,
+        sql.values,
+        method === 'arrays',
+      );
+    }
+  } else {
+    promise = adapter[method as 'query'](sql.text, sql.values, sqlSessionState);
+  }
+
+  if (!startingSavepoint && releasingSavepoint) {
+    promise = promise.then(async (res) => {
+      await releasingSavepoint.activeSavepoint?.release();
+      return res;
+    });
+  }
+
+  return promise.then((result) => {
     if (result.rowCount && !result.rows.length) {
       result.rows.length = result.rowCount;
       result.rows.fill({});

@@ -1512,7 +1512,8 @@ const wrapWithEnhancingError = async <Result>(
       typeof err === 'object' &&
       'message' in err &&
       typeof err.message === 'string' &&
-      err.constructor.name === 'PostgresError'
+      (err.constructor.name === 'PostgresError' ||
+        err.constructor.name === 'DatabaseError')
     ) {
       err.message += `\nSQL: ${text}${
         values ? `\nVariables: ${JSON.stringify(values)}` : ''

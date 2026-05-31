@@ -140,8 +140,6 @@ export const performQuery = async <Result = QueryResult>(
     const result = await adapter[method as 'query'](
       sql.text,
       sql.values,
-      undefined,
-      undefined,
       sqlSessionContextGetStateFromAsyncState(trx),
     );
 

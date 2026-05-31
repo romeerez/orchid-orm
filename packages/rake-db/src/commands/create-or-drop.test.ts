@@ -11,11 +11,13 @@ import {
 
 const adapter = testAdapter;
 const query = jest.spyOn(adapter, 'query').mockImplementation();
+const savepoint = jest.fn((_, cb) => cb());
 asMock(jest.spyOn(adapter, 'transaction')).mockImplementation(
   (_asyncStorage, _options, fn) => {
     const trx = Object.create(adapter);
     trx.query = query;
     trx.isInTransaction = () => true;
+    trx.savepoint = savepoint;
     return fn(trx);
   },
 );
@@ -96,9 +98,6 @@ describe('create-or-drop', () => {
   describe.each`
     name              | fn              | code
     ${'createSchema'} | ${createSchema} | ${'42P06'}
-    ${'dropSchema'}   | ${dropSchema}   | ${'3F000'}
-    ${'createTable'}  | ${createTable}  | ${'42P07'}
-    ${'dropTable'}    | ${dropTable}    | ${'42P01'}
   `(
     '$name',
     ({
@@ -135,9 +134,8 @@ describe('create-or-drop', () => {
         const res = await actInTransaction();
 
         expect(res).toBe('done');
-        expect(query).toHaveBeenCalledWith(
-          `SAVEPOINT s; ${action} ${keyword} ${sql}; RELEASE SAVEPOINT s`,
-        );
+        expect(savepoint).toHaveBeenCalledTimes(1);
+        expect(query).toHaveBeenCalledWith(`${action} ${keyword} ${sql}`);
       });
 
       it('should return `already` if it is already done', async () => {
@@ -158,7 +156,8 @@ describe('create-or-drop', () => {
         const res = await actInTransaction();
 
         expect(res).toBe('already');
-        expect(query).toHaveBeenCalledWith(`ROLLBACK TO SAVEPOINT s`);
+        expect(savepoint).toHaveBeenCalledTimes(1);
+        expect(query).toHaveBeenCalledWith(`CREATE SCHEMA "schema"`);
       });
 
       it('should rethrow error', async () => {

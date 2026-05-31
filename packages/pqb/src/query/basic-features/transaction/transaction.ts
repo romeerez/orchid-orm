@@ -1,8 +1,8 @@
 import { Query } from '../../query';
 import {
-  Adapter,
   AfterCommitStandaloneHook,
   SqlSessionState,
+  TransactionAdapter,
 } from '../../../adapters/adapter';
 import { emptyObject } from '../../../utils';
 import { OrchidOrmError } from '../../errors';
@@ -12,7 +12,7 @@ import { AsyncState, processStorageOptions } from '../storage/storage';
 import { QuerySchema } from '../schema/schema';
 
 export interface AsyncTransactionState extends AsyncState {
-  transactionAdapter: Adapter;
+  transactionAdapter: TransactionAdapter;
   transactionId: number;
 }
 

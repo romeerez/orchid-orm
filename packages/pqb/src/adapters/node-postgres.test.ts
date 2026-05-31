@@ -1,6 +1,5 @@
 import { PoolClient } from 'pg';
 import { NodePostgresAdapter } from './node-postgres';
-import { testDbOptions } from 'test-utils';
 
 interface MockQueryResult<Row = unknown> {
   rowCount: number;
@@ -16,22 +15,6 @@ const makeQueryResult = <Row>(
   rows,
   fields: columns,
 });
-
-type QuerySpy = jest.SpyInstance<Promise<unknown>, [unknown, ...unknown[]]>;
-
-const spyOnQuery = (client: PoolClient): QuerySpy => {
-  return jest.spyOn(
-    client as unknown as {
-      query: (query: unknown, ...args: unknown[]) => Promise<unknown>;
-    },
-    'query',
-  ) as QuerySpy;
-};
-
-const issuedSql = (querySpy: QuerySpy): string[] =>
-  querySpy.mock.calls
-    .map((call) => call[0])
-    .filter((value): value is string => typeof value === 'string');
 
 describe('node-postgres', () => {
   afterEach(() => jest.clearAllMocks());
@@ -73,8 +56,6 @@ describe('node-postgres', () => {
         client as unknown as PoolClient,
         'SELECT 1 AS one',
         undefined,
-        undefined,
-        undefined,
         true,
       );
 
@@ -88,171 +69,6 @@ describe('node-postgres', () => {
       expect(result.rowCount).toBe(1);
       expect(result.rows[0]).toEqual([1]);
       expect(result.fields).toEqual([{ name: 'one' }]);
-    });
-
-    it('rolls back to releasingSavepoint on failure', async () => {
-      const error = new Error('query failed');
-      const rollbackResult = makeQueryResult([], []);
-
-      const client = {
-        query: jest.fn((query: unknown) => {
-          if (
-            typeof query === 'object' &&
-            query !== null &&
-            'text' in query &&
-            query.text === 'SELECT * FROM non_existing_table'
-          ) {
-            return Promise.reject(error);
-          }
-
-          if (query === 'ROLLBACK TO SAVEPOINT "sp"') {
-            return Promise.resolve(rollbackResult);
-          }
-
-          return Promise.resolve(makeQueryResult([], []));
-        }),
-      };
-
-      await expect(
-        NodePostgresAdapter.queryClient(
-          client as unknown as PoolClient,
-          'SELECT * FROM non_existing_table',
-          undefined,
-          undefined,
-          'sp',
-        ),
-      ).rejects.toBe(error);
-
-      expect(client.query).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT "sp"');
-    });
-  });
-
-  describe('queryClient integration', () => {
-    let pool: ReturnType<typeof NodePostgresAdapter.configure>;
-
-    beforeAll(() => {
-      pool = NodePostgresAdapter.configure(testDbOptions);
-    });
-
-    afterAll(async () => {
-      await NodePostgresAdapter.close(pool);
-    });
-
-    it('supports only startingSavepoint', async () => {
-      await NodePostgresAdapter.begin<PoolClient, void>(
-        pool,
-        async (client) => {
-          const querySpy = spyOnQuery(client);
-
-          const result = await NodePostgresAdapter.queryClient(
-            client,
-            'SELECT 1',
-            undefined,
-            'start_sp',
-          );
-
-          expect(result.rowCount).toBe(1);
-          expect(issuedSql(querySpy)).toEqual(
-            expect.arrayContaining(['SAVEPOINT "start_sp"']),
-          );
-        },
-      );
-    });
-
-    it('supports only releasingSavepoint after it was started earlier', async () => {
-      await NodePostgresAdapter.begin<PoolClient, void>(
-        pool,
-        async (client) => {
-          const querySpy = spyOnQuery(client);
-
-          await NodePostgresAdapter.queryClient(
-            client,
-            'SELECT 1',
-            undefined,
-            'release_sp',
-          );
-          const result = await NodePostgresAdapter.queryClient(
-            client,
-            'SELECT 1',
-            undefined,
-            undefined,
-            'release_sp',
-          );
-
-          expect(result.rowCount).toBe(1);
-          expect(issuedSql(querySpy)).toEqual(
-            expect.arrayContaining([
-              'SAVEPOINT "release_sp"',
-              'RELEASE SAVEPOINT "release_sp"',
-            ]),
-          );
-        },
-      );
-    });
-
-    it('supports both startingSavepoint and releasingSavepoint', async () => {
-      await NodePostgresAdapter.begin<PoolClient, void>(
-        pool,
-        async (client) => {
-          const querySpy = spyOnQuery(client);
-
-          const result = await NodePostgresAdapter.queryClient(
-            client,
-            'SELECT 1',
-            undefined,
-            'both_sp',
-            'both_sp',
-          );
-
-          expect(result.rowCount).toBe(1);
-          expect(issuedSql(querySpy)).toEqual(
-            expect.arrayContaining([
-              'SAVEPOINT "both_sp"',
-              'RELEASE SAVEPOINT "both_sp"',
-            ]),
-          );
-        },
-      );
-    });
-
-    it('rolls back to releasingSavepoint on failure and transaction remains queryable', async () => {
-      await NodePostgresAdapter.begin<PoolClient, void>(
-        pool,
-        async (client) => {
-          const querySpy = spyOnQuery(client);
-
-          await NodePostgresAdapter.queryClient(
-            client,
-            'SELECT 1',
-            undefined,
-            'failing_sp',
-          );
-
-          let error: unknown;
-          try {
-            await NodePostgresAdapter.queryClient(
-              client,
-              'SELECT * FROM non_existing_table',
-              undefined,
-              undefined,
-              'failing_sp',
-            );
-          } catch (err) {
-            error = err;
-          }
-
-          expect(error).toBeInstanceOf(Error);
-          expect(issuedSql(querySpy)).toEqual(
-            expect.arrayContaining(['ROLLBACK TO SAVEPOINT "failing_sp"']),
-          );
-
-          const result = await NodePostgresAdapter.queryClient(
-            client,
-            'SELECT 1',
-          );
-          expect(result.rowCount).toBe(1);
-        },
-      );
     });
   });
 });

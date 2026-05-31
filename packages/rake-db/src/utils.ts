@@ -16,17 +16,13 @@ export const runSqlInSavePoint = async (
 ): Promise<'done' | 'already'> => {
   const adapter = getMaybeTransactionAdapter(db);
   try {
-    await adapter.query(
-      adapter.isInTransaction()
-        ? `SAVEPOINT s; ${sql}; RELEASE SAVEPOINT s`
-        : sql,
-    );
+    const query = () => adapter.query(sql);
+
+    await (adapter.isInTransaction() ? adapter.savepoint('s', query) : query());
+
     return 'done';
   } catch (err) {
     if ((err as { code: string }).code === code) {
-      if (adapter.isInTransaction()) {
-        await adapter.query(`ROLLBACK TO SAVEPOINT s`);
-      }
       return 'already';
     }
     throw err;

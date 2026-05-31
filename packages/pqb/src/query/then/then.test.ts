@@ -309,29 +309,40 @@ describe('batch queries', () => {
       })),
     ).pluck('num');
 
-    const { queryArrays, result } = await Table.transaction(async () => {
-      const state = Table.internal.asyncStorage.getStore() as AsyncState;
-      const queryArrays =
-        state.transactionAdapter &&
-        jest.spyOn(state.transactionAdapter, 'arrays');
+    const { transactionAdapter, queryArrays, hackySavepoint, result } =
+      await Table.transaction(async () => {
+        const state = Table.internal.asyncStorage.getStore() as AsyncState;
+        const { transactionAdapter } = state;
+        const queryArrays =
+          transactionAdapter && jest.spyOn(transactionAdapter, 'arrays');
+        const hackySavepoint =
+          transactionAdapter &&
+          jest.spyOn(transactionAdapter, 'hackySavepoint');
 
-      const result = await q.recoverable();
+        const result = await q.recoverable();
 
-      return { queryArrays, result };
-    });
+        return { transactionAdapter, queryArrays, hackySavepoint, result };
+      });
 
-    expect(queryArrays?.mock.calls).toEqual([
+    expect(hackySavepoint?.mock.calls).toEqual([
       [
+        {
+          transactionAdapter,
+          name: 's1',
+          activeSavepoint: {
+            release: expect.any(Function),
+            rollback: expect.any(Function),
+          },
+        },
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
-        's1',
-        undefined,
+        true,
       ],
+    ]);
+    expect(queryArrays?.mock.calls).toEqual([
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
         [2],
-        undefined,
-        's1',
       ],
     ]);
 

@@ -8,6 +8,7 @@
         "./packages/orm/src/adapters/node-postgres.ts"
       ],
       "orchid-orm/postgres-js": ["./packages/orm/src/adapters/postgres-js.ts"],
+      "orchid-orm/migrations": ["./packages/orm/src/migrations/index.ts"],
       "orchid-orm/migrations/node-postgres": [
         "./packages/orm/src/migrations/adapters/node-postgres.ts"
       ],

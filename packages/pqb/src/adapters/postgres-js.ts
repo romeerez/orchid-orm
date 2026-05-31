@@ -1,8 +1,6 @@
 import postgres, { Row, RowList, TransactionSql } from 'postgres';
 import {
   AdapterConfigBase,
-  MaybeArray,
-  QueryArraysResult,
   QueryResult,
   QueryResultRow,
   returnArg,
@@ -14,8 +12,10 @@ import {
   AdapterClass,
   DriverAdapter,
   QuerySchema,
+  noop,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
+import { HackySavepointState } from './adapter';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -58,17 +58,6 @@ class PostgresJsResult<T extends QueryResultRow> implements QueryResult<T> {
     this.fields = result.statement.columns;
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const wrapResult = (result: MaybeArray<RawResult>): QueryArraysResult<any> => {
-  if (result.constructor === Array) {
-    return (result as RawResult[]).map(
-      (res) => new PostgresJsResult(res),
-    ) as never;
-  } else {
-    return new PostgresJsResult(result as RawResult);
-  }
-};
 
 const types: Record<string, Partial<postgres.PostgresType>> = {
   bytea: {
@@ -150,13 +139,10 @@ export const PostgresJsAdapter: DriverAdapter = {
     return sql;
   },
 
-  queryClient<T extends QueryResultRow = QueryResultRow>(
+  async queryClient<T extends QueryResultRow = QueryResultRow>(
     client: TransactionSql,
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     arraysMode?: boolean,
   ): Promise<QueryResult<T>> {
@@ -165,31 +151,14 @@ export const PostgresJsAdapter: DriverAdapter = {
 
     if (arraysMode) query = query.values();
 
-    if (!startingSavepoint && !releasingSavepoint) {
-      return query.then(wrapResult);
+    const result = await query;
+    if (result.constructor === Array) {
+      return (result as RawResult[]).map(
+        (res) => new PostgresJsResult(res),
+      ) as never;
+    } else {
+      return new PostgresJsResult(result as RawResult);
     }
-
-    return Promise.all([
-      startingSavepoint && client.unsafe(`SAVEPOINT "${startingSavepoint}"`),
-      query,
-      releasingSavepoint &&
-        client.unsafe(`RELEASE SAVEPOINT "${releasingSavepoint}"`),
-    ]).then(
-      (results: RawResult[]) => {
-        return wrapResult(results[1]);
-      },
-      (err) => {
-        if (!releasingSavepoint) {
-          throw err;
-        }
-
-        return client
-          .unsafe(`ROLLBACK TO SAVEPOINT "${releasingSavepoint}"`)
-          .then(() => {
-            throw err;
-          });
-      },
-    );
   },
 
   borrow(client: postgres.Sql): Promise<postgres.ReservedSql> {
@@ -221,6 +190,83 @@ export const PostgresJsAdapter: DriverAdapter = {
         throw err;
       },
     ) as never;
+  },
+
+  async savepoint<T>(
+    client: postgres.TransactionSql,
+    setClient: (client: postgres.TransactionSql) => void,
+    name: string,
+    cb: () => Promise<T>,
+  ): Promise<T> {
+    let result: T | undefined;
+    await client
+      .savepoint(name, async (savepointClient) => {
+        setClient(savepointClient);
+        result = await cb();
+      })
+      .finally(() => {
+        setClient(client);
+      });
+    return result as T;
+  },
+
+  async hackySavepoint<T extends QueryResultRow>(
+    client: postgres.TransactionSql,
+    setClient: (client: postgres.TransactionSql) => void,
+    state: HackySavepointState,
+    text: string,
+    values?: unknown[],
+    arraysMode?: boolean,
+  ): Promise<QueryResult<T>> {
+    let resolve: () => void;
+    let reject: (err: unknown) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+
+    let resultResolve: (res: QueryResult<T>) => void;
+    let resultReject: (err: unknown) => void;
+    const resultPromise = new Promise<QueryResult<T>>((res, rej) => {
+      resultResolve = res;
+      resultReject = rej;
+    });
+
+    const savepointPromise = client
+      .savepoint<void>(state.name, async (savepointClient) => {
+        try {
+          setClient(savepointClient);
+
+          const res = await this.queryClient<T>(
+            savepointClient,
+            text,
+            values,
+            arraysMode,
+          );
+          resultResolve(res);
+        } catch (err) {
+          resultReject(err);
+          throw err;
+        }
+
+        return promise;
+      })
+      .finally(() => {
+        setClient(client);
+      });
+
+    state.activeSavepoint = {
+      async release() {
+        resolve();
+        await savepointPromise;
+      },
+      async rollback(err) {
+        reject(err);
+        await savepointPromise.catch(noop);
+      },
+    };
+
+    return resultPromise;
   },
 
   close(client: postgres.Sql): Promise<void> {

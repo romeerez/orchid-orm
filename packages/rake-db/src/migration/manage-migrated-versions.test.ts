@@ -158,6 +158,7 @@ describe('manageMigratedVersions', () => {
 
   describe('getMigratedVersionsMap', () => {
     const adapter = {
+      isInTransaction: () => false,
       arrays: jest.fn(),
       getSchema() {},
     };

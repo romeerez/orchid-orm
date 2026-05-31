@@ -1,5 +1,11 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSqlBase, QueryResult, Adapter, colors } from 'pqb/internal';
+import {
+  RawSqlBase,
+  QueryResult,
+  Adapter,
+  colors,
+  TransactionAdapter,
+} from 'pqb/internal';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
@@ -17,7 +23,7 @@ export interface TableExpression extends CompareExpression {
 
 export const compareSqlExpressions = async (
   tableExpressions: TableExpression[],
-  adapter: Adapter,
+  adapter: Adapter | TransactionAdapter,
 ) => {
   if (!tableExpressions.length) return;
 
@@ -46,7 +52,11 @@ export const compareSqlExpressions = async (
       `DROP VIEW ${viewName}`,
     ].join('; ');
 
-    const result = await adapter.query(combinedQueries, values, viewName).then(
+    const query = () => adapter.query(combinedQueries, values);
+
+    const result = await (
+      adapter.isInTransaction() ? adapter.savepoint(viewName, query) : query()
+    ).then(
       (res) => (res as unknown as QueryResult[])[1],
       async (err) => {
         // ignore the "type ... does not exist" because the type may be added in the same migration,

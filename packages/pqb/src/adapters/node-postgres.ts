@@ -16,6 +16,7 @@ import {
   DriverAdapter,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
+import { HackySavepointState } from './adapter';
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -73,9 +74,6 @@ const queryClient = <T extends QueryResultRow = QueryResultRow>(
   client: PoolClient,
   text: string,
   values?: unknown[],
-  // only has effect in a transaction
-  startingSavepoint?: string,
-  releasingSavepoint?: string,
   // SQL session state (role and setConfig) from async storage
   arraysMode?: boolean,
 ): Promise<QueryResult<T>> => {
@@ -100,29 +98,13 @@ const queryClient = <T extends QueryResultRow = QueryResultRow>(
     });
 
     return __lock.then(() => {
-      const promise =
-        startingSavepoint || releasingSavepoint
-          ? performQueryOnClientWithSavepoint(
-              client,
-              params,
-              startingSavepoint,
-              releasingSavepoint,
-            )
-          : client.query(params);
+      const promise = client.query(params);
       promise.then(resolve, resolve);
       return promise;
     });
   }
 
-  const promise =
-    startingSavepoint || releasingSavepoint
-      ? performQueryOnClientWithSavepoint(
-          client,
-          params,
-          startingSavepoint,
-          releasingSavepoint,
-        )
-      : client.query(params);
+  const promise = client.query(params);
 
   (client as unknown as { __lock?: Promise<unknown> }).__lock =
     promise.catch(noop);
@@ -205,6 +187,85 @@ export const NodePostgresAdapter: DriverAdapter = {
     }
   },
 
+  async savepoint<T>(
+    client: PoolClient,
+    // node-postgres doesn't need to switch the client in a savepoint
+    _setClient: (client: PoolClient) => void,
+    name: string,
+    cb: () => Promise<T>,
+  ): Promise<T> {
+    const safeName = name.replaceAll('"', '""');
+    try {
+      await queryClient(client, `SAVEPOINT "${safeName}"`);
+      const res = await cb();
+      await queryClient(client, `RELEASE SAVEPOINT "${safeName}"`);
+      return res;
+    } catch (err) {
+      await queryClient(client, `ROLLBACK TO SAVEPOINT "${safeName}"`);
+      throw err;
+    }
+  },
+
+  async hackySavepoint<T extends QueryResultRow>(
+    client: PoolClient,
+    // node-postgres doesn't need to switch the client in a savepoint
+    _setClient: (client: PoolClient) => void,
+    state: HackySavepointState,
+    text: string,
+    values?: unknown[],
+    arraysMode?: boolean,
+  ): Promise<QueryResult<T>> {
+    const safeName = state.name.replaceAll('"', '""');
+
+    let resolve: () => void;
+    let reject: (err: unknown) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+
+    let resultResolve: (res: QueryResult<T>) => void;
+    let resultReject: (err: unknown) => void;
+    const resultPromise = new Promise<QueryResult<T>>((res, rej) => {
+      resultResolve = res;
+      resultReject = rej;
+    });
+
+    const savepointPromise = (async () => {
+      try {
+        await queryClient(client, `SAVEPOINT "${safeName}"`);
+
+        try {
+          const res = await queryClient<T>(client, text, values, arraysMode);
+          resultResolve!(res);
+        } catch (err) {
+          resultReject!(err);
+          throw err;
+        }
+
+        const result = await promise;
+        await queryClient(client, `RELEASE SAVEPOINT "${safeName}"`);
+        return result;
+      } catch (err) {
+        await queryClient(client, `ROLLBACK TO SAVEPOINT "${safeName}"`);
+        throw err;
+      }
+    })();
+
+    state.activeSavepoint = {
+      async release() {
+        resolve();
+        await savepointPromise;
+      },
+      async rollback(err) {
+        reject(err);
+        await savepointPromise.catch(noop);
+      },
+    };
+
+    return resultPromise;
+  },
+
   close(pool: Pool): Promise<void> {
     return pool.end();
   },
@@ -214,32 +275,4 @@ const defaultTypesConfig = {
   getTypeParser(id: number) {
     return defaultTypeParsers[id] || returnArg;
   },
-};
-
-const performQueryOnClientWithSavepoint = (
-  client: PoolClient,
-  params: unknown,
-  startingSavepoint?: string,
-  releasingSavepoint?: string,
-) => {
-  let promise = startingSavepoint
-    ? client
-        .query(`SAVEPOINT "${startingSavepoint}"`)
-        .then(() => client.query(params as never))
-    : client.query(params as never);
-
-  if (releasingSavepoint) {
-    promise = promise.then(
-      async (res) => {
-        await client.query(`RELEASE SAVEPOINT "${releasingSavepoint}"`);
-        return res;
-      },
-      async (err) => {
-        await client.query(`ROLLBACK TO SAVEPOINT "${releasingSavepoint}"`);
-        throw err;
-      },
-    );
-  }
-
-  return promise;
 };

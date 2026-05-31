@@ -162,7 +162,7 @@ export interface Adapter {
   driverAdapter: DriverAdapter;
 
   // Connection state
-  isInTransaction(): boolean;
+  isInTransaction(this: Adapter): this is TransactionAdapter;
 
   // Error handling
   assignError(to: QueryError, from: Error): void;
@@ -171,9 +171,6 @@ export interface Adapter {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>>;
@@ -185,9 +182,6 @@ export interface Adapter {
   >(
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>>;
@@ -221,7 +215,21 @@ export interface Adapter {
  * Adapter interface for transaction contexts.
  */
 export interface TransactionAdapter extends Adapter {
-  isInTransaction(): true;
+  isInTransaction(this: Adapter): this is TransactionAdapter;
+  savepoint<T>(name: string, cb: () => Promise<T>): Promise<T>;
+
+  /**
+   * This is a workaround for postgres-js savepoint limitations.
+   * Postgres-js dictates this:
+   * - must use its `savepoint` method over manual `SAVEPOINT` because when doing it manually there is no way to prevent transaction from being rolled back when a query in a savepoint fails.
+   * - must use its `sql` client from inside the `savepoint` method for the lifetime of the savepoint because of the reason above.
+   */
+  hackySavepoint<T extends QueryResultRow = QueryResultRow>(
+    state: HackySavepointState,
+    text: string,
+    values?: unknown[],
+    arraysMode?: boolean,
+  ): Promise<QueryResult<T>>;
 }
 
 // oxlint-disable-next-line @typescript-eslint/no-explicit-any
@@ -244,9 +252,6 @@ export interface DriverAdapter {
     client: Client,
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     arraysMode?: boolean,
   ): Promise<QueryResult<T>>;
@@ -255,6 +260,20 @@ export interface DriverAdapter {
     cb: (client: DriverClient) => Promise<Result>,
     options?: string,
   ): Promise<Result>;
+  savepoint<T>(
+    client: Client,
+    setClient: (client: Client) => void,
+    name: string,
+    cb: () => Promise<T>,
+  ): Promise<T>;
+  hackySavepoint<T extends QueryResultRow>(
+    client: Client,
+    setClient: (client: Client) => void,
+    state: HackySavepointState,
+    text: string,
+    values?: unknown[],
+    arraysMode?: boolean,
+  ): Promise<QueryResult<T>>;
   close(pool: Pool): Promise<void>;
 }
 
@@ -313,9 +332,6 @@ export class AdapterClass implements Adapter {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
@@ -324,8 +340,6 @@ export class AdapterClass implements Adapter {
       this.driverAdapter,
       text,
       values,
-      startingSavepoint,
-      releasingSavepoint,
       sqlSessionState,
     );
   }
@@ -337,9 +351,6 @@ export class AdapterClass implements Adapter {
   >(
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>> {
@@ -348,8 +359,6 @@ export class AdapterClass implements Adapter {
       this.driverAdapter,
       text,
       values,
-      startingSavepoint,
-      releasingSavepoint,
       sqlSessionState,
       true,
     );
@@ -362,7 +371,7 @@ export class AdapterClass implements Adapter {
     });
   }
 
-  isInTransaction(): boolean {
+  isInTransaction(this: Adapter): this is TransactionAdapter {
     return false;
   }
 
@@ -417,6 +426,16 @@ export class AdapterClass implements Adapter {
   }
 }
 
+export interface HackySavepointStateActiveSavepoint {
+  release(): Promise<void>;
+  rollback(err: unknown): Promise<void>;
+}
+
+export interface HackySavepointState {
+  name: string;
+  activeSavepoint?: HackySavepointStateActiveSavepoint;
+}
+
 /**
  * Shared runtime transaction adapter orchestrator over a driver-specific transaction adapter.
  */
@@ -437,9 +456,6 @@ export class TransactionAdapterClass implements TransactionAdapter {
   query<T extends QueryResultRow = QueryResultRow>(
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
@@ -450,8 +466,6 @@ export class TransactionAdapterClass implements TransactionAdapter {
       this.client,
       text,
       values,
-      startingSavepoint,
-      releasingSavepoint,
       setup,
     );
   }
@@ -463,9 +477,6 @@ export class TransactionAdapterClass implements TransactionAdapter {
   >(
     text: string,
     values?: unknown[],
-    // only has effect in a transaction
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>> {
@@ -476,8 +487,6 @@ export class TransactionAdapterClass implements TransactionAdapter {
       this.client,
       text,
       values,
-      startingSavepoint,
-      releasingSavepoint,
       setup,
       true,
     );
@@ -487,7 +496,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
     return this.adapter.clone(params);
   }
 
-  isInTransaction(): true {
+  isInTransaction(this: Adapter): this is TransactionAdapter {
     return true;
   }
 
@@ -527,6 +536,35 @@ export class TransactionAdapterClass implements TransactionAdapter {
     );
   }
 
+  savepoint<T>(name: string, cb: () => Promise<T>): Promise<T> {
+    return this.driverAdapter.savepoint(
+      this.client,
+      (client) => {
+        this.client = client;
+      },
+      name,
+      cb,
+    );
+  }
+
+  hackySavepoint<T extends QueryResultRow = QueryResultRow>(
+    state: HackySavepointState,
+    text: string,
+    values?: unknown[],
+    arraysMode?: boolean,
+  ): Promise<QueryResult<T>> {
+    return this.driverAdapter.hackySavepoint(
+      this.client,
+      (client) => {
+        this.client = client;
+      },
+      state,
+      text,
+      values,
+      arraysMode,
+    );
+  }
+
   close(): Promise<void> {
     return this.adapter.close();
   }
@@ -548,8 +586,8 @@ const transaction = <T>(
   poolOrClient: Pool | Client,
   options: AdapterTransactionOptions | undefined,
   cb: (adapter: TransactionAdapter) => Promise<T>,
-  transactionAdapter?: Adapter,
-) => {
+  transactionAdapter?: TransactionAdapter,
+): Promise<T> => {
   const sql = {
     values: emptyArray,
   } as unknown as SingleSqlItem;
@@ -567,7 +605,7 @@ const transaction = <T>(
     state?.transactionId !== undefined ? state.transactionId + 1 : 0;
 
   const fn = (transactionAdapter: TransactionAdapter) => {
-    if (log) log.afterQuery(sql, ctx.logData);
+    if (log && sql.text) log.afterQuery(sql, ctx.logData);
     if (log) ctx.logData = log.beforeQuery(commitSql);
 
     if (state || !asyncStorage) {
@@ -620,8 +658,6 @@ const transaction = <T>(
       fn,
       ctx,
       transactionId,
-      sql,
-      log,
     );
   } else {
     return realTransaction(
@@ -712,63 +748,52 @@ const realTransaction = async <T>(
 const nestedTransaction = async <T>(
   adapter: Adapter,
   driverAdapter: DriverAdapter,
-  transactionAdapter: Adapter,
+  transactionAdapter: TransactionAdapter,
   client: Client,
   options: AdapterTransactionOptions | undefined,
   cb: (adapter: TransactionAdapter) => Promise<T>,
   ctx: TransactionCtx,
   transactionId: number,
-  sql: SingleSqlItem,
-  log?: QueryLogObject,
 ) => {
   const state = ctx.state;
   const parentRole = state?.transactionRole;
   const parentSetConfig = state?.transactionSetConfig;
 
-  sql.text = `SAVEPOINT "t${transactionId}"`;
-  if (log) ctx.logData = log.beforeQuery(sql);
+  const result = await transactionAdapter.savepoint(
+    `t${transactionId}`,
+    async () => {
+      const setRoleSql = getSetRoleSql(parentRole, options);
+      if (setRoleSql) {
+        // awaited by await below
+        driverAdapter.queryClient(client, setRoleSql);
+      }
 
-  await transactionAdapter.arrays(sql.text, sql.values);
+      const setConfigSql = getSetConfigSql(parentSetConfig, options);
+      if (setConfigSql) {
+        // awaited by await below
+        driverAdapter.queryClient(client, setConfigSql);
+      }
 
-  const setRoleSql = getSetRoleSql(parentRole, options);
-  if (setRoleSql) {
-    // awaited by await below
-    driverAdapter.queryClient(client, setRoleSql);
-  }
+      let result;
+      try {
+        result = await cb(new TransactionAdapterClass(adapter, client));
+        // config is reverted by rollback to savepoint, role is not reverted and it is undone manually in the finally section
+      } finally {
+        const resetRoleSql = getResetRoleSql(parentRole, options);
+        if (resetRoleSql) {
+          await driverAdapter.queryClient(client, resetRoleSql);
+        }
+      }
 
-  const setConfigSql = getSetConfigSql(parentSetConfig, options);
-  if (setConfigSql) {
-    // awaited by await below
-    driverAdapter.queryClient(client, setConfigSql);
-  }
+      const resetSetConfigSql = getResetSetConfigSql(parentSetConfig, options);
+      if (resetSetConfigSql) {
+        // awaited by await release savepoint
+        driverAdapter.queryClient(client, resetSetConfigSql);
+      }
 
-  let result;
-  try {
-    result = await cb(new TransactionAdapterClass(adapter, client));
-  } catch (err) {
-    // config is reverted by this rollback, role is not reverted and it is undone manually in the finally section
-    sql.text = `ROLLBACK TO SAVEPOINT "t${transactionId}"`;
-    if (log) ctx.logData = log.beforeQuery(sql);
-    await transactionAdapter.arrays(sql.text, sql.values);
-    if (log) log.afterQuery(sql, ctx.logData);
-    throw err;
-  } finally {
-    const resetRoleSql = getResetRoleSql(parentRole, options);
-    if (resetRoleSql) {
-      await driverAdapter.queryClient(client, resetRoleSql);
-    }
-  }
-
-  const resetSetConfigSql = getResetSetConfigSql(parentSetConfig, options);
-  if (resetSetConfigSql) {
-    // awaited by await release savepoint
-    driverAdapter.queryClient(client, resetSetConfigSql);
-  }
-
-  sql.text = `RELEASE SAVEPOINT "t${transactionId}"`;
-  if (log) ctx.logData = log.beforeQuery(sql);
-  await transactionAdapter.arrays(sql.text, sql.values);
-  if (log) log.afterQuery(sql, ctx.logData);
+      return result;
+    },
+  );
 
   // transactionId is trx.testTransactionCount when only the test transactions are left,
   // and it's time to execute after commit hooks, because they won't be executed for test transactions.
@@ -850,9 +875,6 @@ const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
   driverAdapter: DriverAdapter,
   text: string,
   values?: unknown[],
-  // only has effect in a transaction
-  startingSavepoint?: string,
-  releasingSavepoint?: string,
   // SQL session state (role and setConfig) from async storage
   sqlSessionState?: SqlSessionState,
   arraysMode?: boolean,
@@ -866,8 +888,6 @@ const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
       client || pool,
       text,
       values,
-      startingSavepoint,
-      releasingSavepoint,
       setup,
       arraysMode,
     );
@@ -881,8 +901,6 @@ const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
       client,
       text,
       values,
-      startingSavepoint,
-      releasingSavepoint,
       setup,
       arraysMode,
     );
@@ -898,44 +916,18 @@ const runQueryHandleSetupAndCleanup = <
   client: Client,
   text: string,
   values?: unknown[],
-  // only has effect in a transaction
-  startingSavepoint?: string,
-  releasingSavepoint?: string,
   setup?: SqlSessionContextSetupResult,
   arraysMode?: boolean,
 ): Promise<QueryResult<T>> => {
   if (setup) {
     return sqlSessionContextExecute<T>(
-      (text, values) =>
-        driverAdapter.queryClient(
-          client,
-          text,
-          values,
-          undefined,
-          undefined,
-          true,
-        ),
+      (text, values) => driverAdapter.queryClient(client, text, values, true),
       setup,
-      () =>
-        driverAdapter.queryClient(
-          client,
-          text,
-          values,
-          startingSavepoint,
-          releasingSavepoint,
-          arraysMode,
-        ),
+      () => driverAdapter.queryClient(client, text, values, arraysMode),
     );
   }
 
-  return driverAdapter.queryClient(
-    client,
-    text,
-    values,
-    startingSavepoint,
-    releasingSavepoint,
-    arraysMode,
-  );
+  return driverAdapter.queryClient(client, text, values, arraysMode);
 };
 
 interface AdapterConnectionState {
