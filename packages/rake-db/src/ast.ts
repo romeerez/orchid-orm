@@ -99,6 +99,7 @@ export namespace RakeDbAst {
     comment?: string | null;
     compression?: string;
     primaryKey?: boolean;
+    primaryKeyName?: string;
     checks?: QbColumn.Data.Check[];
     foreignKeys?: TableData.ColumnReferences[];
     indexes?: TableData.ColumnIndex[];

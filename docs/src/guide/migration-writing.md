@@ -216,13 +216,15 @@ The callback of the `changeTable` is different from `createTable` in the way tha
 
 ### add, drop
 
-`add` will add a column (or a check) on migrating, and remove it on rollback.
+`add` will add a column, or a standalone column/table item, on migrating and remove it on rollback.
 
-`drop` will remove a column (or a check) on migrating, and add it on rollback.
+`drop` will remove a column, or a standalone column/table item, on migrating and add it on rollback.
 
 The column in `add` or `drop` can have all the same methods as when creating a table, such methods as `index`, `unique`, `exclude`, and `foreignKey`.
 
-Supports adding a composite primary key, foreign key, index, exclude - the same as when creating a table.
+To add or drop an existing column's primary key, check, foreign key, index, unique index, or exclude constraint without adding or dropping the column itself, pass a standalone helper to `t.add` or `t.drop` under the column key.
+
+Supports adding or dropping a composite primary key, foreign key, index, exclude - the same as when creating a table.
 
 ```ts
 import { change } from '../db-script';
@@ -235,20 +237,55 @@ change(async (db) => {
     // remove column
     column2: t.drop(t.boolean()),
 
-    // add a check to the column
-    column3: t.add(t.check(t.sql`column3 > 5`)),
+    // add or drop a primary key on an existing column
+    column3: t.add(t.primaryKey('table_column3_pkey')),
+    column4: t.drop(t.primaryKey('table_column4_pkey')),
 
-    // remove a check from the column
-    column4: t.drop(t.check(t.sql`column4 > 5`)),
+    // add or drop a check on an existing column
+    column5: t.add(t.check(t.sql`column5 > 5`, 'column5_check')),
+    column6: t.drop(t.check(t.sql`column6 > 5`, 'column6_check')),
+
+    // add or drop a foreign key on an existing column
+    column7: t.add(
+      t.foreignKey('otherTable', 'otherTableId', {
+        name: 'column7ForeignKey',
+      }),
+    ),
+    column8: t.drop(
+      t.foreignKey('otherTable', 'otherTableId', {
+        name: 'column8ForeignKey',
+      }),
+    ),
+
+    // add or drop an index on an existing column
+    column9: t.add(t.index({ name: 'column9Index' })),
+    column10: t.drop(t.index({ name: 'column10Index' })),
+
+    // add or drop a unique index on an existing column
+    column11: t.add(t.unique({ name: 'column11Unique' })),
+    column12: t.drop(t.unique({ name: 'column12Unique' })),
+
+    // add or drop an EXCLUDE constraint on an existing column
+    column13: t.add(t.exclude('&&', { name: 'column13Exclude' })),
+    column14: t.drop(t.exclude('&&', { name: 'column14Exclude' })),
 
     // add composite primary key:
     ...t.add(t.primaryKey(['foo', 'bar'])),
 
+    // drop composite primary key:
+    ...t.drop(t.primaryKey(['foo', 'bar'])),
+
     // add composite index:
     ...t.add(t.index(['foo', 'bar'])),
 
+    // drop composite index:
+    ...t.drop(t.index(['foo', 'bar'])),
+
     // add composite unique index:
     ...t.add(t.unique(['foo', 'bar'])),
+
+    // drop composite unique index:
+    ...t.drop(t.unique(['foo', 'bar'])),
 
     // add EXCLUDE constraint on two columns
     ...t.add(
@@ -261,13 +298,32 @@ change(async (db) => {
       ),
     ),
 
+    // drop EXCLUDE constraint on two columns
+    ...t.drop(
+      t.exclude(
+        [
+          { column: 'column1', with: '=' },
+          { column: 'column2', with: '<>' },
+        ],
+        { name: 'tableExclude', using: 'GIST' },
+      ),
+    ),
+
     // add composite foreign key:
     ...t.add(
       t.foreignKey(['foo', 'bar'], 'otherTable', ['otherFoo', 'otherBar']),
     ),
 
+    // drop composite foreign key:
+    ...t.drop(
+      t.foreignKey(['foo', 'bar'], 'otherTable', ['otherFoo', 'otherBar']),
+    ),
+
     // add a table check
     ...t.add(t.check(t.sql`column3 > column4`)),
+
+    // drop a table check
+    ...t.drop(t.check(t.sql`column3 > column4`)),
 
     // add a constraint
     ...t.add(
@@ -291,7 +347,7 @@ import { change } from '../db-script';
 
 change(async (db) => {
   await db.changeTable('table', (t) => ({
-    // add column when migrating up, drop it when mirating down
+    // add column when migrating up, drop it when migrating down
     column: t.text(),
   }));
 });
@@ -299,21 +355,21 @@ change(async (db) => {
 
 ### change
 
-Takes two columns or checks.
+Takes two columns or standalone column helpers.
 When migrating, it will change the column to the second element,
 and when doing rollback will change the column to the first element.
 
-Dropping or creating a primary key on multiple columns is allowed.
+When only changing an existing column's primary key, check, foreign key, index, unique index, or exclude constraint without changing the column type, use the standalone helper directly inside `t.change`.
+
+Use `t.add(...)` and `t.drop(...)` for adding or removing standalone column items.
+
+Dropping or creating a primary key on multiple columns is allowed with full-column changes.
 
 Index options are listed [here](/guide/migration-column-methods#index).
 
 Exclude constraint options are listed [here](/guide/migration-column-methods#exclude).
 
 Foreign key options are listed [here](/guide/migration-column-methods#foreignkey).
-
-When only changing a column foreign key without changing the column type, use
-`t.foreignKey` directly inside `t.change`. Use no-argument `t.noForeignKey()`
-for the side of the change where the foreign key is absent.
 
 Composite foreign keys continue to use the table-level
 `t.foreignKey([...], ...)` syntax.
@@ -351,51 +407,47 @@ change(async (db) => {
     // change column comment
     column8: t.change(t.comment('from comment'), t.comment('to comment')),
 
-    // add index
-    column9: t.change(t.integer(), t.integer().index()),
+    // change primary key
+    column9: t.change(
+      t.primaryKey('oldPrimaryKeyName'),
+      t.primaryKey('newPrimaryKeyName'),
+    ),
 
-    // remove index
-    column10: t.change(t.integer().index(), t.integer()),
+    // change check
+    column10: t.change(
+      t.check(t.sql`column10 > 5`, 'oldCheckName'),
+      t.check(t.sql`column10 < 10`, 'newCheckName'),
+    ),
 
     // change index
     column11: t.change(
-      t.integer().index({
+      t.index({
         // index options to be applied when migrating down
+        name: 'oldIndexName',
       }),
-      t.integer().index({
+      t.index({
         // index options to be applied when migrating up
+        name: 'newIndexName',
       }),
     ),
 
-    // add primary key
-    column12: t.change(t.integer(), t.integer().primaryKey()),
-
-    // drop primary key
-    column13: t.change(t.integer().primaryKey(), t.integer()),
-
-    // add foreign key
-    column14: t.change(
-      t.noForeignKey(),
-      t.foreignKey('otherTable', 'otherTableId'),
+    // change unique index
+    column12: t.change(
+      t.unique({ name: 'oldUniqueName' }),
+      t.unique({ name: 'newUniqueName' }),
     ),
 
-    // remove foreign key
-    column15: t.change(
-      t.foreignKey('otherTable', 'otherTableId'),
-      t.noForeignKey(),
-    ),
-
-    // change foreign key
-    column16: t.change(
+    // change foreign key without repeating the column type
+    column13: t.change(
       t.foreignKey('oneTable', 'oneColumn', {
-        // foreign key options to be applied when migrating up
+        // foreign key options to be applied when migrating down
         name: 'oneForeignKeyName',
         match: 'PARTIAL',
         onUpdate: 'RESTRICT',
         onDelete: 'SET DEFAULT',
       }),
       t.foreignKey('otherTable', 'otherColumn', {
-        // foreign key options to be applied when migrating down
+        // foreign key options to be applied when migrating up
         name: 'otherForeignKeyName',
         match: 'FULL',
         onUpdate: 'NO ACTION',
@@ -403,29 +455,25 @@ change(async (db) => {
       }),
     ),
 
-    // add exclude
-    column17: t.change(t.integer(), t.integer().exclude('=')),
-
-    // remove exclude
-    column18: t.change(t.integer().exclude('='), t.integer()),
-
     // change exclude
-    column19: t.change(
-      t.integer().exclude('=', {
+    column14: t.change(
+      t.exclude('=', {
         // exclude options to be applied when migrating down
+        name: 'oldExcludeName',
       }),
-      t.integer().exclude('=', {
+      t.exclude('&&', {
         // exclude options to be applied when migrating up
+        name: 'newExcludeName',
       }),
     ),
 
     // change various column properties at once
-    column20: t.change(
+    column15: t.change(
       t
         .integer()
         .collate('de_DE')
         .default(123)
-        .comprssion('pglz')
+        .compression('pglz')
         .comment('from comment')
         .index({ name: 'oneIndexName' })
         .foreignKey('oneTable', 'oneColumn', {
@@ -442,13 +490,6 @@ change(async (db) => {
         .foreignKey('otherTable', 'otherColumn', {
           name: 'otherForeignKeyName',
         }),
-    ),
-
-    column21: t.change(
-      // change from this check:
-      t.check(t.sql`column17 > 5`),
-      // to this check:
-      t.check(t.sql`column17 < 10`),
     ),
   }));
 });

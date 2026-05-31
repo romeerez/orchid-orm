@@ -465,6 +465,32 @@ describe('changeTable', () => {
             `),
         );
       });
+
+      it('should add and drop standalone foreign key', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addFkey: t[action](
+                t.foreignKey('otherTable', 'foreignId', {
+                  name: 'addForeignKeyName',
+                  match: 'FULL',
+                  onUpdate: 'SET NULL',
+                  onDelete: 'CASCADE',
+                }),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD CONSTRAINT "addForeignKeyName" FOREIGN KEY ("add_fkey") REFERENCES "otherTable"("foreign_id") MATCH FULL ON DELETE CASCADE ON UPDATE SET NULL
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "addForeignKeyName"
+            `),
+        );
+      });
     });
 
     describe('timestamps', () => {
@@ -838,6 +864,25 @@ describe('changeTable', () => {
             `),
         );
       });
+
+      it('should add and drop standalone primary key', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addPrimaryKey: t[action](t.primaryKey('addPrimaryKeyName')),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              ADD CONSTRAINT "addPrimaryKeyName" PRIMARY KEY ("add_primary_key")
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              DROP CONSTRAINT "addPrimaryKeyName"
+            `),
+        );
+      });
     });
 
     describe('index', () => {
@@ -926,6 +971,45 @@ describe('changeTable', () => {
                 DROP INDEX "compositeIndexOnTable" CASCADE
               `,
             ]),
+        );
+      });
+
+      it('should add and drop standalone indexes', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addIndex: t[action](
+                t.index({
+                  name: 'addIndexName',
+                  nullsNotDistinct: true,
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `CREATE INDEX "addIndexName" ON "table" ("add_index") NULLS NOT DISTINCT`,
+            ]),
+          () => expectSql([`DROP INDEX "addIndexName"`]),
+        );
+      });
+
+      it('should add and drop standalone unique indexes', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addUnique: t[action](
+                t.unique({
+                  name: 'addUniqueName',
+                  nullsNotDistinct: true,
+                  dropMode: 'CASCADE',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `CREATE UNIQUE INDEX "addUniqueName" ON "table" ("add_unique") NULLS NOT DISTINCT`,
+            ]),
+          () => expectSql([`DROP INDEX "addUniqueName" CASCADE`]),
         );
       });
     });
@@ -1266,6 +1350,26 @@ describe('changeTable', () => {
             ]),
         );
       });
+
+      it('should add and drop standalone exclude', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addExclude: t[action](
+                t.exclude('&&', {
+                  name: 'addExcludeName',
+                  using: 'GIST',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `ALTER TABLE "table" ADD CONSTRAINT "addExcludeName" EXCLUDE USING GIST ("add_exclude" WITH &&)`,
+            ]),
+          () =>
+            expectSql([`ALTER TABLE "table" DROP CONSTRAINT "addExcludeName"`]),
+        );
+      });
     });
 
     describe('foreign key', () => {
@@ -1387,6 +1491,28 @@ describe('changeTable', () => {
             expectSql(`
               ALTER TABLE "table"
                 DROP CONSTRAINT "name"
+            `),
+        );
+      });
+
+      it('should add and drop standalone check', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addCheck: t[action](
+                t.check(t.sql('addCheckSql'), 'addCheckName'),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD CONSTRAINT "addCheckName"
+                  CHECK (addCheckSql)
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP CONSTRAINT "addCheckName"
             `),
         );
       });
@@ -2150,68 +2276,14 @@ describe('changeTable', () => {
         );
       });
 
-      it('should add and drop foreign key with noForeignKey marker', async () => {
-        await testUpAndDown(
-          () =>
-            db.changeTable('table', (t) => ({
-              addFkey: t.change(
-                t.noForeignKey(),
-                t.foreignKey('otherTable', 'foreignId', {
-                  name: 'customName',
-                  onDelete: 'CASCADE',
-                }),
-              ),
-              dropFkey: t.change(
-                t.foreignKey('oldTable', 'oldId', {
-                  name: 'oldName',
-                  onDelete: 'SET NULL',
-                }),
-                t.noForeignKey(),
-              ),
-            })),
-          () =>
-            expectSql(`
-              ALTER TABLE "table"
-                DROP CONSTRAINT "oldName",
-                ADD CONSTRAINT "customName" FOREIGN KEY ("add_fkey") REFERENCES "otherTable"("foreign_id") ON DELETE CASCADE
-            `),
-          () =>
-            expectSql(`
-              ALTER TABLE "table"
-                DROP CONSTRAINT "customName",
-                ADD CONSTRAINT "oldName" FOREIGN KEY ("drop_fkey") REFERENCES "oldTable"("old_id") ON DELETE SET NULL
-            `),
-        );
-      });
-
-      it('should require pairing noForeignKey with foreignKey in change', async () => {
-        await expect(
-          db.changeTable('table', (t) => ({
-            col: t.change(t.noForeignKey(), t.integer()),
-          })),
-        ).rejects.toThrow(
-          't.noForeignKey() in t.change(...) must be paired with t.foreignKey(...)',
-        );
-      });
-
-      it('should not allow noForeignKey in add/drop', async () => {
-        await expect(
-          db.changeTable('table', (t) => ({
-            // `noForeignKey` is change-only.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            col: t.add(t.noForeignKey() as any),
-          })),
-        ).rejects.toThrow(
-          't.noForeignKey() is only supported in t.change(...)',
-        );
-      });
-
       it('should respect t.name for short foreign key changes', async () => {
         await testUpAndDown(
           () =>
             db.changeTable('table', (t) => ({
               columnKey: t.name('customColumn').change(
-                t.noForeignKey(),
+                t.foreignKey('oldTable', 'oldId', {
+                  name: 'oldName',
+                }),
                 t.foreignKey('otherTable', 'otherId', {
                   name: 'customColumnFkey',
                 }),
@@ -2220,18 +2292,132 @@ describe('changeTable', () => {
           () =>
             expectSql(`
               ALTER TABLE "table"
+                DROP CONSTRAINT "oldName",
                 ADD CONSTRAINT "customColumnFkey" FOREIGN KEY ("custom_column") REFERENCES "otherTable"("other_id")
             `),
           () =>
             expectSql(`
               ALTER TABLE "table"
-                DROP CONSTRAINT "customColumnFkey"
+                DROP CONSTRAINT "customColumnFkey",
+                ADD CONSTRAINT "oldName" FOREIGN KEY ("custom_column") REFERENCES "oldTable"("old_id")
             `),
         );
       });
     });
 
     describe('index', () => {
+      it('should change standalone primary key', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.primaryKey('fromPrimaryKey'),
+                t.primaryKey('toPrimaryKey'),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              DROP CONSTRAINT "fromPrimaryKey",
+              ADD CONSTRAINT "toPrimaryKey" PRIMARY KEY ("col_umn")
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+              DROP CONSTRAINT "toPrimaryKey",
+              ADD CONSTRAINT "fromPrimaryKey" PRIMARY KEY ("col_umn")
+            `),
+        );
+      });
+
+      it('should change standalone index', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.index({
+                  name: 'fromIndex',
+                  dropMode: 'CASCADE',
+                }),
+                t.unique({
+                  name: 'toIndex',
+                  nullsNotDistinct: true,
+                  dropMode: 'RESTRICT',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `DROP INDEX "fromIndex" CASCADE`,
+              `CREATE UNIQUE INDEX "toIndex" ON "table" ("col_umn") NULLS NOT DISTINCT`,
+            ]),
+          () =>
+            expectSql([
+              `DROP INDEX "toIndex" RESTRICT`,
+              `CREATE INDEX "fromIndex" ON "table" ("col_umn")`,
+            ]),
+        );
+      });
+
+      it('should change standalone unique index', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.unique({
+                  name: 'fromUnique',
+                  nullsNotDistinct: true,
+                  dropMode: 'CASCADE',
+                }),
+                t.unique({
+                  name: 'toUnique',
+                  dropMode: 'RESTRICT',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `DROP INDEX "fromUnique" CASCADE`,
+              `CREATE UNIQUE INDEX "toUnique" ON "table" ("col_umn")`,
+            ]),
+          () =>
+            expectSql([
+              `DROP INDEX "toUnique" RESTRICT`,
+              `CREATE UNIQUE INDEX "fromUnique" ON "table" ("col_umn") NULLS NOT DISTINCT`,
+            ]),
+        );
+      });
+
+      it('should change standalone exclude', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.exclude('&&', {
+                  name: 'fromExclude',
+                  using: 'GIST',
+                  dropMode: 'CASCADE',
+                }),
+                t.exclude('=', {
+                  name: 'toExclude',
+                  using: 'SPGIST',
+                  dropMode: 'RESTRICT',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `ALTER TABLE "table" DROP CONSTRAINT "fromExclude" CASCADE`,
+              `ALTER TABLE "table" ADD CONSTRAINT "toExclude" EXCLUDE USING SPGIST ("col_umn" WITH =)`,
+            ]),
+          () =>
+            expectSql([
+              `ALTER TABLE "table" DROP CONSTRAINT "toExclude" RESTRICT`,
+              `ALTER TABLE "table" ADD CONSTRAINT "fromExclude" EXCLUDE USING GIST ("col_umn" WITH &&)`,
+            ]),
+        );
+      });
+
       it('should add index', async () => {
         await testUpAndDown(
           () =>

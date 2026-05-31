@@ -1,5 +1,11 @@
 # Breaking changes
 
+## orchid-orm 1.70
+
+In rake-db migrations:
+
+Dropping `noForeignKey` because now the migrations support `columnName: t.drop(t.foreignKey(...))` that serves the same purpose.
+
 ## orchid-orm 1.69
 
 Prohibiting update and delete of all records, allowing doing so using `all()`.

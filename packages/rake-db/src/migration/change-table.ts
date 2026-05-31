@@ -74,7 +74,15 @@ const resetChangeTableData = () => {
   changeTableData = newChangeTableData();
 };
 
-const addOrDropChanges: RakeDbAst.ChangeTableItem.Column[] = [];
+const addOrDropChanges: (
+  | RakeDbAst.ChangeTableItem.Column
+  | RakeDbAst.ChangeTableItem.Change
+)[] = [];
+const standaloneCheckChanges: {
+  index: number;
+  type: 'add' | 'drop';
+  item: CheckConstraintItem;
+}[] = [];
 
 type Add = typeof add;
 // add column
@@ -94,14 +102,32 @@ function add(
   consumeColumnName();
   setName(this, item);
 
-  if (isNoForeignKeyChangeInput(item as ChangeInput)) {
-    throw new Error('t.noForeignKey() is only supported in t.change(...)');
-  }
-
   if (item instanceof Column) {
     const result = addOrDrop('add', item, options);
-    if (result.type === 'change') return result;
+    if (result.type === 'change') {
+      result.name ??= getName(this);
+      return result;
+    }
     addOrDropChanges.push(result);
+    return (addOrDropChanges.length - 1) as unknown as EmptyObject;
+  }
+
+  if (isStandaloneAddOrDropInput(item)) {
+    const result = standaloneAddOrDropToChange('add', item);
+    result.name ??= getName(this);
+    addOrDropChanges.push(result);
+    return (addOrDropChanges.length - 1) as unknown as EmptyObject;
+  }
+
+  if (isStandaloneCheckAddOrDropInput(item)) {
+    const result = standaloneAddOrDropToChange('add', item);
+    result.name ??= getName(this);
+    addOrDropChanges.push(result);
+    standaloneCheckChanges.push({
+      index: addOrDropChanges.length - 1,
+      type: 'add',
+      item,
+    });
     return (addOrDropChanges.length - 1) as unknown as EmptyObject;
   }
 
@@ -133,14 +159,32 @@ const drop = function (this: TableChangeMethods, item, options) {
   consumeColumnName();
   setName(this, item);
 
-  if (isNoForeignKeyChangeInput(item as ChangeInput)) {
-    throw new Error('t.noForeignKey() is only supported in t.change(...)');
-  }
-
   if (item instanceof Column) {
     const result = addOrDrop('drop', item, options);
-    if (result.type === 'change') return result;
+    if (result.type === 'change') {
+      result.name ??= getName(this);
+      return result;
+    }
     addOrDropChanges.push(result);
+    return addOrDropChanges.length - 1;
+  }
+
+  if (isStandaloneAddOrDropInput(item)) {
+    const result = standaloneAddOrDropToChange('drop', item);
+    result.name ??= getName(this);
+    addOrDropChanges.push(result);
+    return addOrDropChanges.length - 1;
+  }
+
+  if (isStandaloneCheckAddOrDropInput(item)) {
+    const result = standaloneAddOrDropToChange('drop', item);
+    result.name ??= getName(this);
+    addOrDropChanges.push(result);
+    standaloneCheckChanges.push({
+      index: addOrDropChanges.length - 1,
+      type: 'drop',
+      item,
+    });
     return addOrDropChanges.length - 1;
   }
 
@@ -201,6 +245,28 @@ const addOrDrop = (
   };
 };
 
+const standaloneAddOrDropToChange = (
+  type: 'add' | 'drop',
+  item:
+    | ColumnForeignKeyChangeInput
+    | ColumnPrimaryKeyChangeInput
+    | ColumnIndexChangeInput
+    | ColumnExcludeChangeInput
+    | CheckConstraintItem,
+): RakeDbAst.ChangeTableItem.Change => {
+  const empty = columnTypeToColumnChange({
+    type: 'change',
+    to: {},
+  });
+  const change = changeInputToColumnChange(item);
+
+  return {
+    type: 'change',
+    from: type === 'add' ? empty : change,
+    to: type === 'add' ? change : empty,
+  };
+};
+
 interface Change extends RakeDbAst.ChangeTableItem.Change, ChangeOptions {}
 
 type ChangeOptions = RakeDbAst.ChangeTableItem.ChangeUsing;
@@ -220,8 +286,18 @@ interface ColumnForeignKeyChangeInput {
   columnForeignKey: TableData.ColumnReferences;
 }
 
-interface NoForeignKeyChangeInput {
-  noForeignKey: true;
+interface ColumnPrimaryKeyChangeInput {
+  columnPrimaryKey: {
+    name?: string;
+  };
+}
+
+interface ColumnIndexChangeInput {
+  columnIndex: TableData.ColumnIndex;
+}
+
+interface ColumnExcludeChangeInput {
+  columnExclude: TableData.ColumnExclude;
 }
 
 type ChangeInput =
@@ -229,7 +305,9 @@ type ChangeInput =
   | OneWayChange
   | NonUniqDataItem
   | ColumnForeignKeyChangeInput
-  | NoForeignKeyChangeInput;
+  | ColumnPrimaryKeyChangeInput
+  | ColumnIndexChangeInput
+  | ColumnExcludeChangeInput;
 
 const isColumnForeignKeyChangeInput = (
   item: ChangeInput,
@@ -237,10 +315,43 @@ const isColumnForeignKeyChangeInput = (
   return 'columnForeignKey' in item;
 };
 
-const isNoForeignKeyChangeInput = (
+const isColumnPrimaryKeyChangeInput = (
   item: ChangeInput,
-): item is NoForeignKeyChangeInput => {
-  return 'noForeignKey' in item;
+): item is ColumnPrimaryKeyChangeInput => {
+  return 'columnPrimaryKey' in item;
+};
+
+const isColumnIndexChangeInput = (
+  item: ChangeInput,
+): item is ColumnIndexChangeInput => {
+  return 'columnIndex' in item;
+};
+
+const isColumnExcludeChangeInput = (
+  item: ChangeInput,
+): item is ColumnExcludeChangeInput => {
+  return 'columnExclude' in item;
+};
+
+const isStandaloneAddOrDropInput = (
+  item: EmptyObject | Record<string, Column>,
+): item is
+  | ColumnForeignKeyChangeInput
+  | ColumnPrimaryKeyChangeInput
+  | ColumnIndexChangeInput
+  | ColumnExcludeChangeInput => {
+  return (
+    isColumnForeignKeyChangeInput(item as ChangeInput) ||
+    isColumnPrimaryKeyChangeInput(item as ChangeInput) ||
+    isColumnIndexChangeInput(item as ChangeInput) ||
+    isColumnExcludeChangeInput(item as ChangeInput)
+  );
+};
+
+const isStandaloneCheckAddOrDropInput = (
+  item: EmptyObject | Record<string, Column>,
+): item is CheckConstraintItem => {
+  return isCheckConstraintItem(item as unknown as NonUniqDataItem);
 };
 
 type TableDataForeignKeyArgs =
@@ -282,27 +393,33 @@ const isCheckConstraintItem = (
 
 const changeInputToColumnChange = (
   item: ChangeInput,
-  opposite: ChangeInput,
 ): RakeDbAst.ColumnChange => {
   if (item instanceof Column || 'type' in item) {
     return columnTypeToColumnChange(item);
   }
 
-  if (isColumnForeignKeyChangeInput(item)) {
+  if (isColumnPrimaryKeyChangeInput(item)) {
     return {
-      foreignKeys: [item.columnForeignKey],
+      primaryKey: true,
+      primaryKeyName: item.columnPrimaryKey.name,
     };
   }
 
-  if (isNoForeignKeyChangeInput(item)) {
-    if (!isColumnForeignKeyChangeInput(opposite)) {
-      throw new Error(
-        't.noForeignKey() in t.change(...) must be paired with t.foreignKey(...)',
-      );
-    }
-
+  if (isColumnIndexChangeInput(item)) {
     return {
-      foreignKeys: [],
+      indexes: [item.columnIndex],
+    };
+  }
+
+  if (isColumnExcludeChangeInput(item)) {
+    return {
+      excludes: [item.columnExclude],
+    };
+  }
+
+  if (isColumnForeignKeyChangeInput(item)) {
+    return {
+      foreignKeys: [item.columnForeignKey],
     };
   }
 
@@ -353,6 +470,11 @@ const columnTypeToColumnChange = (
 
 const nameKey = Symbol('name');
 
+const getName = (self: TableChangeMethods) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (self as any)[nameKey] as string | undefined;
+};
+
 const setName = (
   self: TableChangeMethods,
   item: RakeDbAst.ColumnChange | Column,
@@ -374,6 +496,52 @@ interface TableChangeMethods extends TableMethods, TableDataMethods<string> {
   name(name: string): TableChangeMethods;
   add: Add;
   drop: Add;
+  primaryKey<Columns extends [string, ...string[]], Name extends string>(
+    columns: Columns,
+    name?: Name,
+  ): {
+    tableDataItem: true;
+    columns: Columns;
+    name: string extends Name ? never : Name;
+  };
+  primaryKey(name?: string): ColumnPrimaryKeyChangeInput;
+  index(
+    columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+    options?: TableData.Index.OptionsArg,
+  ): NonUniqDataItem;
+  index(options?: TableData.Index.ColumnArg): ColumnIndexChangeInput;
+  unique<
+    Columns extends [
+      string | TableData.Index.ColumnOrExpressionOptions,
+      ...(string | TableData.Index.ColumnOrExpressionOptions)[],
+    ],
+    Name extends string,
+  >(
+    columns: Columns,
+    options?: TableData.Index.UniqueOptionsArg<Name>,
+  ): {
+    tableDataItem: true;
+    columns: Columns extends (
+      | string
+      | TableData.Index.ColumnOptionsForColumn<string>
+    )[]
+      ? {
+          [I in keyof Columns]: 'column' extends keyof Columns[I]
+            ? Columns[I]['column']
+            : Columns[I];
+        }
+      : never;
+    name: string extends Name ? never : Name;
+  };
+  unique(options?: TableData.Index.UniqueColumnArg): ColumnIndexChangeInput;
+  exclude(
+    columns: TableData.Exclude.ColumnOrExpressionOptions[],
+    options?: TableData.Exclude.Options,
+  ): NonUniqDataItem;
+  exclude(
+    with_: string,
+    options?: TableData.Exclude.ColumnArg,
+  ): ColumnExcludeChangeInput;
   foreignKey<Shape>(
     columns: [string, ...string[]],
     fnOrTable: () => new () => { columns: { shape: Shape } },
@@ -391,7 +559,6 @@ interface TableChangeMethods extends TableMethods, TableDataMethods<string> {
     foreignColumn: string,
     options?: TableData.References.Options,
   ): ColumnForeignKeyChangeInput;
-  noForeignKey(): NoForeignKeyChangeInput;
   change(from: ChangeInput, to: ChangeInput, using?: ChangeOptions): Change;
   default(value: unknown | RawSqlBase): OneWayChange;
   nullable(): OneWayChange;
@@ -444,6 +611,221 @@ function foreignKey(
   };
 }
 
+type TableDataPrimaryKeyArgs = [columns: [string, ...string[]], name?: string];
+type ColumnPrimaryKeyArgs = [name?: string];
+
+function primaryKey<Columns extends [string, ...string[]], Name extends string>(
+  columns: Columns,
+  name?: Name,
+): {
+  tableDataItem: true;
+  columns: Columns;
+  name: string extends Name ? never : Name;
+};
+function primaryKey(name?: string): ColumnPrimaryKeyChangeInput;
+function primaryKey(...args: TableDataPrimaryKeyArgs | ColumnPrimaryKeyArgs):
+  | {
+      tableDataItem: true;
+      columns: [string, ...string[]];
+      name: string;
+    }
+  | ColumnPrimaryKeyChangeInput {
+  if (Array.isArray(args[0])) {
+    const [columns, name] = args as TableDataPrimaryKeyArgs;
+    return tableDataMethods.primaryKey(columns, name) as {
+      tableDataItem: true;
+      columns: [string, ...string[]];
+      name: string;
+    };
+  }
+
+  const [name] = args as ColumnPrimaryKeyArgs;
+  return {
+    columnPrimaryKey: {
+      name,
+    },
+  };
+}
+
+type ColumnIndexArgs = [options?: TableData.Index.ColumnArg];
+type TableDataIndexArgs =
+  | [
+      columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+      options?: TableData.Index.OptionsArg,
+    ]
+  | [
+      columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+      name: string,
+      options?: TableData.Index.OptionsArg,
+    ];
+
+function index(
+  columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+  options?: TableData.Index.OptionsArg,
+): NonUniqDataItem;
+function index(options?: TableData.Index.ColumnArg): ColumnIndexChangeInput;
+function index(
+  ...args: TableDataIndexArgs | ColumnIndexArgs
+): NonUniqDataItem | ColumnIndexChangeInput {
+  if (Array.isArray(args[0])) {
+    const [columns, first, second] = args as TableDataIndexArgs;
+    if (typeof first === 'string') {
+      return (
+        tableDataMethods.index as (
+          columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
+          name: string,
+          options?: TableData.Index.OptionsArg,
+        ) => NonUniqDataItem
+      )(columns, first, second);
+    }
+    return tableDataMethods.index(columns, first) as NonUniqDataItem;
+  }
+
+  const [options] = args as ColumnIndexArgs;
+  return {
+    columnIndex: {
+      options: {
+        ...options,
+      },
+    },
+  };
+}
+
+type ColumnUniqueArgs = [options?: TableData.Index.UniqueColumnArg];
+type TableDataUniqueArgs =
+  | [
+      columns: [
+        string | TableData.Index.ColumnOrExpressionOptions,
+        ...(string | TableData.Index.ColumnOrExpressionOptions)[],
+      ],
+      options?: TableData.Index.UniqueOptionsArg,
+    ]
+  | [
+      columns: [
+        string | TableData.Index.ColumnOrExpressionOptions,
+        ...(string | TableData.Index.ColumnOrExpressionOptions)[],
+      ],
+      name: string,
+      options?: TableData.Index.UniqueOptionsArg,
+    ];
+function unique<
+  Columns extends [
+    string | TableData.Index.ColumnOrExpressionOptions,
+    ...(string | TableData.Index.ColumnOrExpressionOptions)[],
+  ],
+  Name extends string,
+>(
+  columns: Columns,
+  options?: TableData.Index.UniqueOptionsArg<Name>,
+): {
+  tableDataItem: true;
+  columns: Columns extends (
+    | string
+    | TableData.Index.ColumnOptionsForColumn<string>
+  )[]
+    ? {
+        [I in keyof Columns]: 'column' extends keyof Columns[I]
+          ? Columns[I]['column']
+          : Columns[I];
+      }
+    : never;
+  name: string extends Name ? never : Name;
+};
+function unique(
+  options?: TableData.Index.UniqueColumnArg,
+): ColumnIndexChangeInput;
+function unique(...args: TableDataUniqueArgs | ColumnUniqueArgs):
+  | {
+      tableDataItem: true;
+      columns: string[];
+      name: string;
+    }
+  | ColumnIndexChangeInput {
+  if (Array.isArray(args[0])) {
+    const [columns, first, second] = args as TableDataUniqueArgs;
+    if (typeof first === 'string') {
+      return (
+        tableDataMethods.unique as (
+          columns: [
+            string | TableData.Index.ColumnOrExpressionOptions,
+            ...(string | TableData.Index.ColumnOrExpressionOptions)[],
+          ],
+          name: string,
+          options?: TableData.Index.UniqueOptionsArg,
+        ) => {
+          tableDataItem: true;
+          columns: string[];
+          name: string;
+        }
+      )(columns, first, second);
+    }
+    return tableDataMethods.unique(columns, first) as {
+      tableDataItem: true;
+      columns: string[];
+      name: string;
+    };
+  }
+
+  const [options] = args as ColumnUniqueArgs;
+  return {
+    columnIndex: {
+      options: {
+        ...options,
+        unique: true,
+      },
+    },
+  };
+}
+
+type TableDataExcludeArgs =
+  | [
+      columns: TableData.Exclude.ColumnOrExpressionOptions[],
+      options?: TableData.Exclude.Options,
+    ]
+  | [
+      columns: TableData.Exclude.ColumnOrExpressionOptions[],
+      name: string,
+      options?: TableData.Exclude.Options,
+    ];
+type ColumnExcludeArgs = [with_: string, options?: TableData.Exclude.ColumnArg];
+
+function exclude(
+  columns: TableData.Exclude.ColumnOrExpressionOptions[],
+  options?: TableData.Exclude.Options,
+): NonUniqDataItem;
+function exclude(
+  with_: string,
+  options?: TableData.Exclude.ColumnArg,
+): ColumnExcludeChangeInput;
+function exclude(
+  ...args: TableDataExcludeArgs | ColumnExcludeArgs
+): NonUniqDataItem | ColumnExcludeChangeInput {
+  if (Array.isArray(args[0])) {
+    const [columns, first, second] = args as TableDataExcludeArgs;
+    if (typeof first === 'string') {
+      return (
+        tableDataMethods.exclude as (
+          columns: TableData.Exclude.ColumnOrExpressionOptions[],
+          name: string,
+          options?: TableData.Exclude.Options,
+        ) => NonUniqDataItem
+      )(columns, first, second);
+    }
+    return tableDataMethods.exclude(columns, first) as NonUniqDataItem;
+  }
+
+  const [with_, options] = args as ColumnExcludeArgs;
+
+  return {
+    columnExclude: {
+      with: with_,
+      options: {
+        ...options,
+      },
+    },
+  };
+}
+
 const tableChangeMethods: TableChangeMethods = {
   ...tableMethods,
   ...tableDataMethods,
@@ -455,14 +837,15 @@ const tableChangeMethods: TableChangeMethods = {
   },
   add,
   drop,
+  primaryKey,
+  index,
+  unique,
+  exclude,
   foreignKey,
-  noForeignKey() {
-    return { noForeignKey: true };
-  },
   change(from, to, using) {
     consumeColumnName();
-    const f = changeInputToColumnChange(from, to);
-    const t = changeInputToColumnChange(to, from);
+    const f = changeInputToColumnChange(from);
+    const t = changeInputToColumnChange(to);
     setName(this, f);
     setName(this, t);
 
@@ -549,6 +932,7 @@ export const changeTable = async <CT>(
   Object.assign(tableChanger, tableChangeMethods);
 
   addOrDropChanges.length = 0;
+  standaloneCheckChanges.length = 0;
   const changeData = fn?.(tableChanger) || {};
 
   const schema = migration.adapter.getSchema();
@@ -588,6 +972,8 @@ const makeAst = (
       | RakeDbAst.ChangeTableItem.Rename
       | RakeDbAst.ChangeTableItem.Column;
 
+    if (item === undefined) continue;
+
     if (typeof item === 'number') {
       consumedChanges[item] = true;
       item = addOrDropChanges[item];
@@ -623,10 +1009,21 @@ const makeAst = (
     }
   }
 
+  for (const checkChange of standaloneCheckChanges) {
+    if (consumedChanges[checkChange.index]) continue;
+    parseTableDataInput(changeTableData[checkChange.type], checkChange.item);
+    consumedChanges[checkChange.index] = true;
+  }
+
   for (let i = 0; i < addOrDropChanges.length; i++) {
     if (consumedChanges[i]) continue;
 
     const change = addOrDropChanges[i];
+    if (change.type === 'change') {
+      throw new Error(
+        'Standalone helper add/drop changes must be assigned to a column key',
+      );
+    }
     const name = change.item.data.name;
     if (!name) {
       throw new Error(`Column in ...t.${change.type}() must have a name`);
@@ -900,6 +1297,23 @@ const alterTableSql = (
   values,
 });
 
+const setPrimaryKeyName = (
+  key: string,
+  primaryKey: PrimaryKey,
+  name?: string,
+) => {
+  if (!name) return;
+
+  // A single ALTER TABLE statement can only add/drop one primary key name.
+  if (primaryKey.name && primaryKey.name !== name) {
+    throw new Error(
+      `Cannot use different primary key names in standalone changes for column ${key}`,
+    );
+  }
+
+  primaryKey.name = name;
+};
+
 const handlePrerequisitesForTableItem = (
   schema: QuerySchema | undefined,
   key: string,
@@ -934,6 +1348,7 @@ const handlePrerequisitesForTableItem = (
     }
 
     if (item.from.primaryKey) {
+      setPrimaryKeyName(key, dropPrimaryKeys, item.from.primaryKeyName);
       dropPrimaryKeys.columns.push(
         item.from.column
           ? getColumnName(item.from.column, key, snakeCase)
@@ -945,6 +1360,7 @@ const handlePrerequisitesForTableItem = (
     }
 
     if (item.to.primaryKey) {
+      setPrimaryKeyName(key, addPrimaryKeys, item.to.primaryKeyName);
       addPrimaryKeys.columns.push(
         item.to.column
           ? getColumnName(item.to.column, key, snakeCase)
