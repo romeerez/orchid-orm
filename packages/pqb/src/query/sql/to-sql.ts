@@ -129,7 +129,6 @@ export const toSql: ToSql = (
   const sql: string[] = [];
   const values = topCtx?.values || [];
   const ctx: ToSQLCtx = {
-    //
     topCtx: topCtx!,
     qb: table.qb,
     q: query,
