@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.33.12
+
+### Patch Changes
+
+- 8d98a8a0: Fix savepoint handling for postgres-js: rolled back savepoint used to rollback the transaction, now it won't (#702)
+- Updated dependencies [8d98a8a0]
+  - pqb@0.66.4
+
 ## 2.33.11
 
 ### Patch Changes

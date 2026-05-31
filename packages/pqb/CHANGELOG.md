@@ -1,5 +1,11 @@
 # pqb
 
+## 0.66.4
+
+### Patch Changes
+
+- 8d98a8a0: Fix savepoint handling for postgres-js: rolled back savepoint used to rollback the transaction, now it won't (#702)
+
 ## 0.66.3
 
 ### Patch Changes
