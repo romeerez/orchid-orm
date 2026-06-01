@@ -118,6 +118,7 @@ export {
   type DbDomainArg,
   type DbExtension,
   type DbRlsOptions,
+  type RlsPolicy,
   type TableRlsConfig,
   type DbSharedOptions,
   type DbSqlMethod,
