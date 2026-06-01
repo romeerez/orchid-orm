@@ -58,7 +58,7 @@
   - 5.1.4 make sure you didn't forget to cover the implementation with tests
   - 5.1.5 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
   - 5.1.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 5.2 Rake-db policy support
+- [x] 5.2 Rake-db policy support
   - 5.2.1 Add typed `createPolicy`, `dropPolicy`, and `changePolicy` migration methods with permissive/restrictive mode, command-specific `using` and `withCheck` rules, role targets, and reversible rollback data.
   - 5.2.2 Add policy AST, dependency sorting, migration SQL execution, generated migration code, structure-to-AST conversion, and pull support independently of ORM table declarations.
   - 5.2.3 Make `changePolicy` use direct `ALTER POLICY` for supported rename, role, `USING`, and `WITH CHECK` changes, and recreate policies when table, mode, or command changes.

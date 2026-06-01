@@ -231,6 +231,51 @@ export const astToGenerateItem = (
       deps.push(schema, `${schema}.${ast.table}`);
       break;
     }
+    case 'policy': {
+      const defaultSchema = ast.schema ?? currentSchema;
+      const [tableSchema = defaultSchema, tableName] =
+        getSchemaAndTableFromName(defaultSchema, ast.table);
+      deps.push(tableSchema, `${tableSchema}.${tableName}`);
+      pushPolicyRoleDeps(deps, ast.to);
+
+      if (ast.action === 'create') {
+        add.push(`policy:${ast.name}`);
+      } else {
+        drop.push(`policy:${ast.name}`);
+      }
+
+      break;
+    }
+    case 'changePolicy': {
+      const defaultSchema = ast.schema ?? currentSchema;
+      const [tableSchema = defaultSchema, tableName] =
+        getSchemaAndTableFromName(defaultSchema, ast.table);
+      deps.push(tableSchema, `${tableSchema}.${tableName}`);
+
+      const fromTable = ast.from.table ? ast.from.table : tableName;
+      const fromName = ast.from.name ? ast.from.name : ast.name;
+      const toTable = ast.to.table ? ast.to.table : tableName;
+      const toName = ast.to.name ? ast.to.name : ast.name;
+
+      const [fromSchema = tableSchema, fromTableName] =
+        getSchemaAndTableFromName(tableSchema, fromTable);
+      const [toSchema = tableSchema, toTableName] = getSchemaAndTableFromName(
+        tableSchema,
+        toTable,
+      );
+      deps.push(fromSchema, `${fromSchema}.${fromTableName}`);
+      deps.push(toSchema, `${toSchema}.${toTableName}`);
+
+      if (fromName !== toName) {
+        drop.push(`policy:${fromName}`);
+        add.push(`policy:${toName}`);
+      }
+
+      pushPolicyRoleDeps(deps, ast.from.to);
+      pushPolicyRoleDeps(deps, ast.to.to);
+
+      break;
+    }
     default:
       exhaustive(ast);
   }
@@ -397,4 +442,10 @@ const analyzeTableData = (
       }
     }
   }
+};
+
+const pushPolicyRoleDeps = (deps: string[], roles: string[] | undefined) => {
+  if (!roles) return;
+
+  deps.push(...roles.map((role) => `role:${role}`));
 };
