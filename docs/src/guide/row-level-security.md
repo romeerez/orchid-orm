@@ -25,7 +25,6 @@ export class ProjectTable extends BaseTable {
 
   rls = defineRls({
     enable: true,
-    force: true,
     permit: [
       {
         name: 'project_select_same_tenant',
@@ -51,6 +50,10 @@ Table flags:
 - `enable`: enable row level security on the table.
 - `force`: force row level security for the table owner as well.
 
+When `force` is omitted in an Orchid table RLS declaration, Orchid treats it as `true`.
+This is intentionally safer than PostgreSQL's table default, where table owners bypass RLS unless `FORCE ROW LEVEL SECURITY` is set.
+Forcing owner checks makes tests, migration checks, and other owner-like connections less likely to pass while production app roles behave differently.
+
 You can define project defaults with `orchidORM` `rls.tableRlsDefaults`:
 
 ```ts
@@ -60,7 +63,6 @@ export const db = orchidORM(
     rls: {
       tableRlsDefaults: {
         enable: true,
-        force: false,
       },
     },
   },
@@ -73,11 +75,49 @@ export const db = orchidORM(
 Defaults are applied only to tables that have an explicit `rls = defineRls(...)` declaration.
 Tables without an `rls` declaration are ignored by the RLS migration generator.
 
+Set `force: false` when table-owner bypass behavior is intentional.
+You can opt out on a single table:
+
+```ts
+rls = defineRls({
+  enable: true,
+  force: false,
+  permit: [
+    {
+      name: 'project_select_same_tenant',
+      for: 'SELECT',
+      to: 'app_user',
+      using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+    },
+  ],
+});
+```
+
+Or make omitted table `force` values default to PostgreSQL's owner-bypass behavior for the project:
+
+```ts
+export const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    rls: {
+      tableRlsDefaults: {
+        force: false,
+      },
+    },
+  },
+  {
+    project: ProjectTable,
+  },
+);
+```
+
 ## RLS policies
 
 `permit` policies map to PostgreSQL `AS PERMISSIVE`, and `restrict` policies map to `AS RESTRICTIVE`.
 `permit` is for policies that can allow access.
 `restrict` can only further limit rows that were already allowed by applicable permissive policies.
+`defineRls` requires `permit` with at least one policy, so omitting `permit`, passing an empty array, or declaring only `restrict` policies is a TypeScript error.
+This guards against accidentally enabling RLS in a default-deny state where no policy can allow access.
 
 ```ts
 export class ProjectTable extends BaseTable {
@@ -311,7 +351,7 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 ## PostgreSQL RLS gotchas
 
 - RLS does not replace ordinary privileges. Roles still need `GRANT` (to be supported) or [default privileges](/guide/generate-migrations.html#default-privileges) for table access.
-- Table owners bypass RLS by default. Use `force: true` to apply RLS to the table owner as well.
+- PostgreSQL lets table owners bypass RLS by default. Orchid treats omitted table declaration `force` as `true`; set `force: false` only when owner bypass is intentional.
 - Superusers and roles with `BYPASSRLS` bypass RLS policies.
 - By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, create the view with `WITH (security_invoker = true)` when the caller's permissions and RLS policies should be used instead.
 - `TRUNCATE`, `REFERENCES`, and internal constraint checks are not governed by row policies in the same way as `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.

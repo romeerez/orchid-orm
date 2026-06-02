@@ -36,7 +36,7 @@
   - 1.5.1 Add or update transaction tests for top-level `setConfig`, top-level `role`, nested `setConfig` override/restore, nested role override/restore, resetting child-only config keys, rollback-to-savepoint restore, and deeper nested restore.
   - 1.5.2 Add or update tests showing transaction-level context does not change query-scoped `$withOptions` / `withOptions` nested-scope behavior.
   - 1.5.4 Verify the implementation conforms to `guidelines/code.md` and `packages/pqb/src/query/guidelines/code.md`.
-  - 1.5.5 Run `pnpm --filter pqb check --silent -o` for changed pqb tests when focused verification is enough, then run `pnpm pqb check` and `pnpm pqb types` before marking pqb work complete.
+  - 1.5.5 Run `pnpm pqb check --silent -o` for changed pqb tests when focused verification is enough, then run `pnpm pqb check` and `pnpm pqb types` before marking pqb work complete.
   - 1.5.6 If implementation details diverge from `spec.md`, update `spec.md` before marking tasks complete.
 
 ## 2. orm
@@ -46,7 +46,7 @@
   - 2.1.2 Keep ORM delegation to `pqb` unchanged apart from accepting and forwarding the expanded option shape.
   - 2.1.3 Add or update ORM type/runtime coverage if `$transaction` has its own transaction option surface.
   - 2.1.4 Verify the implementation conforms to guidelines.
-  - 2.1.5 Run `pnpm --filter orm check --silent -o` for changed orm tests when focused verification is enough, then run `pnpm orm check` and `pnpm orm types` before marking orm work complete.
+  - 2.1.5 Run `pnpm orm check --silent -o` for changed orm tests when focused verification is enough, then run `pnpm orm check` and `pnpm orm types` before marking orm work complete.
   - 2.1.6 If implementation details diverge from `spec.md`, update `spec.md` before marking tasks complete.
 
 ## 3. docs

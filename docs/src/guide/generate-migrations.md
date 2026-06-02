@@ -64,7 +64,6 @@ export const db = orchidORM(
     rls: {
       tableRlsDefaults: {
         enable: true,
-        force: false,
       },
     },
   },
@@ -72,10 +71,16 @@ export const db = orchidORM(
 );
 ```
 
+On the code side, an omitted table `force` value defaults to `true` after project `tableRlsDefaults` are applied.
+This intentionally differs from PostgreSQL's database default, where table owners bypass RLS unless the table is forced.
+The safer Orchid default makes generated migrations add `FORCE ROW LEVEL SECURITY` for declared RLS tables unless you opt out, which helps owner-like test and migration connections exercise the same policy boundary as application roles.
+
+To keep PostgreSQL owner-bypass behavior, set `force: false` on the table declaration or set `rls.tableRlsDefaults.force: false` for the project.
+
 For tables with `rls` declarations, generated migrations compare:
 
 - table flags: `enable` and `force`
-- policies from `permit` and `restrict`
+- policies from required non-empty `permit` declarations and optional `restrict` declarations
 
 See [Row Level Security](/guide/row-level-security#table-rls-declaration-and-defaults) for setup and behavior details, including policy declaration and how defaults are applied.
 

@@ -380,7 +380,10 @@ const getActualItems = async (
     codeItems.tables.push({
       table: table.table as string,
       shape: table.shape,
-      internal: table.internal,
+      internal: {
+        ...table.internal,
+        rls: internal.rls,
+      },
       q: {
         schema: getQuerySchema(table),
       },

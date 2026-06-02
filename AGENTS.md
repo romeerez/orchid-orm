@@ -71,8 +71,8 @@ Packages are located in `packages/`:
 
 - All packages use **Jest**
 - **Always run tests after changing code when ready**
-- Test a single file with: `pnpm --filter <pkg> check --silent path/to/file.test.ts`
-- Test all changed files: `pnpm --filter <pkg> check --silent -o`
+- Test a single file with: `pnpm <pkg> check --silent path/to/file.test.ts`
+- Test all changed files: `pnpm <pkg> check --silent -o`
 
 ## Structure and File Naming
 

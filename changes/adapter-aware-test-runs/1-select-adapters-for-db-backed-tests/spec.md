@@ -3,9 +3,9 @@
 Introduce adapter-aware test execution for first-party packages that run real database queries so local test commands still default to `postgres-js`, contributors can switch one run to `node-postgres` with an env var, and package `test:ci` scripts can rerun the same eligible suites against every registered adapter in sequence.
 
 ```sh
-pnpm --filter pqb check --silent
+pnpm pqb check --silent
 
-ORCHID_TEST_ADAPTER=node-postgres pnpm --filter pqb check --silent
+ORCHID_TEST_ADAPTER=node-postgres pnpm pqb check --silent
 
 pnpm test:ci
 ```
