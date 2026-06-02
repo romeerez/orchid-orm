@@ -1,0 +1,3 @@
+interface:
+  display_name: "Type Check"
+  short_description: "Run Orchid ORM TypeScript checks"

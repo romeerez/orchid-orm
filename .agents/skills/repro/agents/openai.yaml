@@ -1,0 +1,3 @@
+interface:
+  display_name: "Repro"
+  short_description: "Create Orchid ORM issue reproduction tests"

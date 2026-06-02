@@ -1,13 +1,17 @@
 ---
-name: 'Spec'
-description: Complete a selected idea's feature design using selected-variant.md when present and otherwise the user prompt, then write or update spec.md and tasks.md
-category: Workflow
-tags: [spec, tasks, design, planning]
+name: spec
+description: Use when the user prompts "write spec" or "make spec".
 ---
 
 Ignore other spec-writing, brainstorming skills if any.
 
-Read the selected idea requirements from `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md` when it exists; otherwise use the user's prompt as the source of truth for the selected idea's requirements. Inspect the relevant Orchid docs and code, and write or update:
+Resolve exactly one authoritative requirements baseline for the selected idea:
+
+1. `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md`, when it exists.
+2. If the prompt says `idea <number>`, the section titled exactly `# <number>` in `specs/<feature-name>/ideas.md`.
+3. Otherwise, the user's prompt.
+
+Inspect the relevant Orchid docs and code, and write or update:
 
 - `specs/<feature-name>/<NUMBER-idea-name>/spec.md`
 - `specs/<feature-name>/<NUMBER-idea-name>/tasks.md`
@@ -16,7 +20,7 @@ Read the selected idea requirements from `specs/<feature-name>/<NUMBER-idea-name
 
 - a feature folder inside `specs/`
 - an idea number or idea title inside that feature folder
-- any additional prompt details that define or refine the idea, especially when `selected-variant.md` is missing
+- any additional prompt details that define or refine the idea, especially when neither `selected-variant.md` nor an `ideas.md` section applies
 
 Examples:
 
@@ -32,12 +36,8 @@ Produce two implementation inputs for the selected idea:
 
 This command is a design-completion workflow, not a research-only workflow and not an implementation workflow.
 
-Use exactly one authoritative requirements baseline for the selected idea:
-
-- If `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md` exists, it is the authoritative source of requirements. Trust its goals, scope, constraints, and confirmed decisions. Preserve its intent precisely; only fill gaps and add missing design that it already implies but does not fully define.
-- If `selected-variant.md` does not exist, the user's `/spec ...` prompt is the authoritative source of truth for the selected idea's requirements. Trust the prompt's stated goals, scope, constraints, examples, naming, and confirmed decisions. Preserve the prompt's intent precisely; only fill gaps needed to turn it into a complete design.
-
 The authoritative requirements baseline is not necessarily a complete finished design, and it is not the only context that matters.
+Trust its goals, scope, constraints, examples, naming, and confirmed decisions. Preserve its intent precisely; only fill gaps needed to turn it into a complete design.
 Use the baseline together with relevant Orchid docs, real code, and the optional parent `research.md` to complete the public API and high-level behavior where needed.
 
 Ensure there are no conflicts or contradictions between the authoritative requirements baseline and the resulting `spec.md`.
@@ -77,34 +77,23 @@ If there are any, the authoritative requirements baseline wins; change `spec.md`
 
 3. **Verify the available input files**
 
-   Confirm whether:
-   - `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md` exists
-   - `specs/<feature-name>/research.md` exists; it is optional
+   Confirm which baseline source wins by the ordered rule above.
+   If the prompt says `idea <number>` and `selected-variant.md` is missing, `specs/<feature-name>/ideas.md` must exist and contain a section titled exactly `# <number>`.
+   Also confirm whether `specs/<feature-name>/research.md` exists; it is optional.
 
    Ignore every other file in `specs/<feature-name>/`.
 
    Do not create `selected-variant.md` in this command.
-   If `selected-variant.md` is missing, continue and use the user's prompt as the authoritative requirements baseline.
+   Do not create `ideas.md` in this command.
 
 4. **Read the authoritative requirements baseline carefully**
 
-   Before drafting anything, determine which authoritative requirements baseline applies and read it fully.
+   Before drafting anything, read the full winning baseline:
+   - the full `selected-variant.md`
+   - or the full matching `ideas.md` `# <number>` section
+   - or the full user prompt
 
-   If `selected-variant.md` exists:
-   - Read the full `selected-variant.md`.
-   - Understand:
-     - the goal of the selected idea
-     - the proposed public interface
-     - explicit constraints and trade-offs
-     - what is already decided
-     - what is still implied rather than specified
-     - which packages or docs are likely affected
-   - If the file has a `## Refinement` section, treat the confirmed questions and answers there as part of the current design intent.
-   - If the main body and a confirmed refinement answer conflict, use the confirmed refinement answer as the newer decision.
-
-   If `selected-variant.md` does not exist:
-   - Read the full user prompt carefully.
-   - Treat the prompt as the source of truth for the selected idea's requirements.
+   For the winning baseline:
    - Understand:
      - the goal of the selected idea
      - the proposed public interface or workflow
@@ -112,8 +101,12 @@ If there are any, the authoritative requirements baseline wins; change `spec.md`
      - what is already decided
      - what is still implied rather than specified
      - which packages or docs are likely affected
-   - Treat explicit examples, naming, and stated behavior in the prompt as confirmed design intent unless the prompt itself corrects them.
-   - If the prompt only identifies the folder and idea but does not provide enough user-visible requirements to define the feature without inventing it from scratch, stop and ask one focused clarifying question.
+   - Treat explicit examples, naming, and stated behavior in the baseline as confirmed design intent unless the baseline itself corrects them.
+   - If the winning baseline is missing or does not provide enough user-visible requirements to define the feature without inventing it from scratch, stop and ask one focused clarifying question.
+
+   If `selected-variant.md` is the winning baseline:
+   - If the file has a `## Refinement` section, treat the confirmed questions and answers there as part of the current design intent.
+   - If the main body and a confirmed refinement answer conflict, use the confirmed refinement answer as the newer decision.
 
 5. **Read broader research when available**
 
@@ -326,9 +319,10 @@ The unnumbered guideline bullets that follow inside section `0` are required sup
 
 The guideline list under that `0` task must be the exact same guideline list that would otherwise have been emitted for this feature: always `guidelines/code.md`, plus every relevant nested `guidelines/code.md` for the directories that the implementation will change
 
-After the mandatory `0` section, the file must be split into valid implementation sections only: affected package sections and, when needed, one `docs` section for work under the repo root `docs/` folder.
+After the mandatory `0` section, the file must be split into valid implementation sections plus one final changeset section: affected package sections, when needed one `docs` section for work under the repo root `docs/` folder, and a final `changeset` section.
 Package section titles must use the package folder names from `packages/<package-name>`. Root docs work must use the section title `docs`.
-Order the sections by implementation dependency order, with lower-level packages before downstream ones and the optional `docs` section placed where the work fits best, usually after code changes.
+Order the implementation sections by implementation dependency order, with lower-level packages before downstream ones and the optional `docs` section placed at the end of the implementation work.
+After the optional `docs` section when present, otherwise after the last implementation section, add a final `changeset` section with the next section number and a task to follow `.agents/skills/changeset/SKILL.md` to finalize the change.
 
 Inside every later implementation section, each checkbox task item must itself own a nested subtask list:
 
@@ -394,6 +388,11 @@ Use this structure:
 
 - [ ] 3.1 <title of the docs change slice>
   - 3.1.1 <high-level actionable docs subtask for the repo root docs/ folder>
+
+## 4. changeset
+
+- [ ] 4.1 Finalize the change
+  - 4.1.1 Follow `.agents/skills/changeset/SKILL.md` to finalize the change.
 ```
 
 While writing `tasks.md`, keep this implementation-time rule in mind, but do not emit it as a separate section:
@@ -430,9 +429,10 @@ While writing `tasks.md`, keep this implementation-time rule in mind, but do not
 - A single checkbox task may span multiple files.
 - Do not split tasks by file unless the responsibilities are actually different.
 - If one requirement spans multiple packages, create a separate task in each affected package section.
-- After the mandatory `## 0. read spec.md and guidelines` section, only affected package sections and, when needed, one `docs` section for work under the repo root `docs/` folder are valid.
+- After the mandatory `## 0. read spec.md and guidelines` section, only affected package sections, when needed one `docs` section for work under the repo root `docs/` folder, and one final `changeset` section are valid.
 - Use the `docs` section only for work in the repo root `docs/` folder. Keep package-local docs in the relevant package section.
 - Do not create empty package or `docs` sections.
+- Always add the final `changeset` section after the optional `docs` section when present, otherwise after the last implementation section, with the next section number and one non-coding checkbox task that requires following `.agents/skills/changeset/SKILL.md` to finalize the change.
 - Every checkbox task and its subtasks together should make it clear what needs to change and include the intent, constraint, or key idea when that is not obvious from the title alone.
 - Subtasks may mention likely code locations, exported functions, or docs pages when that helps orient the implementor.
 - Do not micromanage exact edits or turn tasks into file-by-file instructions.
@@ -457,7 +457,7 @@ Verify that:
 - every coding task ends with the four mandatory verification subtasks, while non-coding tasks do not
 - the guideline bullets under section `0` are present but are not treated as extra subtasks
 - every guideline entry under that `0` section matches a directory that the design or tasks actually affect, and `guidelines/code.md` is always listed
-- every affected package in the design appears in `tasks.md`, and a `docs` section appears when the design includes work under the repo root `docs/` folder
+- every affected package in the design appears in `tasks.md`, a `docs` section appears when the design includes work under the repo root `docs/` folder, and the final `changeset` section appears after the optional `docs` section when present, otherwise after the last implementation section
 - the tasks are ordered so the change can be implemented iteratively
 - the tasks remain concise and do not duplicate the design document
 
@@ -466,7 +466,7 @@ Verify that:
 Before finishing, verify:
 
 - the correct `specs/<feature-name>/<NUMBER-idea-name>` folder was chosen
-- the authoritative requirements baseline was read fully before writing: `selected-variant.md` when it exists, otherwise the user prompt
+- the authoritative requirements baseline was resolved by the ordered rule and read fully before writing
 - only `research.md` was used from the parent feature folder
 - relevant Orchid docs and code were actually inspected
 - the final `spec.md` achieves the authoritative requirements baseline goals
@@ -487,18 +487,18 @@ Before finishing, verify:
 - every coding task ends with the four mandatory verification subtasks about guideline conformance, test coverage, package tests and type checks, and meaningful spec updates
 - non-coding tasks, such as repo-root docs-only tasks, do not include those coding-verification subtasks
 - that `0` section includes the guideline list with `guidelines/code.md` and every relevant nested `guidelines/code.md` for the directories the feature will change
-- `tasks.md` is grouped into valid implementation sections with the required numbering format: plain `0.1` and `0.2` list items in section `0`, then checkbox tasks for affected package sections and, when needed, `docs` for work under the repo root `docs/` folder
+- `tasks.md` is grouped into valid sections with the required numbering format: plain `0.1` and `0.2` list items in section `0`, then checkbox tasks for affected package sections, when needed `docs` for work under the repo root `docs/` folder, and a final `changeset` section
 - `tasks.md` contains no standalone test tasks and no exact test-writing instructions beyond the mandatory per-coding-task coverage reminder
 - documentation work under the repo root `docs/`, if needed, uses a `docs` section, while package-local docs stay in the relevant package section
+- the final `changeset` section contains a non-coding task to follow `.agents/skills/changeset/SKILL.md` to finalize the change
 - the combined tasks fully cover the final design
 
 **Guardrails**
 
 - Do not generate `spec.md` from the authoritative requirements baseline alone. Inspect Orchid docs and code first.
-- If `selected-variant.md` exists, do not ignore, weaken, or casually contradict its requirements; only extend the missing parts of the design that it implies but does not already define.
-- If `selected-variant.md` does not exist, do not ignore, weaken, or casually contradict the user's prompt; preserve the prompt as the source of truth for the selected idea's requirements while completing the missing design.
+- Do not ignore, weaken, or casually contradict the winning baseline; preserve it as the source of truth while completing the missing design.
 - Do not ignore confirmed decisions recorded in `## Refinement` when `selected-variant.md` exists.
-- Do not treat a missing `selected-variant.md` as a blocker for this command.
+- Do not treat a missing `selected-variant.md` as a blocker for this command when a matching `ideas.md` section or sufficient user prompt is available.
 - Do not add `Assumptions` for naming choices, small interface-shape preferences, or other minor details.
 - Do not read unrelated parent-folder files besides `research.md`.
 - Do not create a capability entry just by copying the selected idea or feature name without showing why that responsibility should exist on its own.
@@ -517,6 +517,6 @@ Before finishing, verify:
 - Do not let nested subtasks drift into file-by-file edits, helper extraction notes, literal test titles, or other microsteps.
 - Do not forget the four mandatory verification subtasks at the end of every coding task's subtask list.
 - Do not append those coding-verification subtasks to non-coding tasks.
-- Do not create arbitrary non-package sections in `tasks.md`; after `## 0. read spec.md and guidelines`, only affected package sections and the optional `docs` section for the repo root `docs/` folder are allowed.
+- Do not create arbitrary non-package sections in `tasks.md`; after `## 0. read spec.md and guidelines`, only affected package sections, the optional `docs` section for the repo root `docs/` folder, and the final `changeset` section are allowed.
 - Do not pad `tasks.md` with filler subtasks, standalone tests, or generic busywork.
-- Ask a focused clarifying question only when folder or idea resolution is genuinely ambiguous, or when `selected-variant.md` is missing and the prompt does not provide enough user-visible requirements to define the feature without inventing it from scratch.
+- Ask a focused clarifying question only when folder or idea resolution is genuinely ambiguous, or when the winning baseline is missing or too thin to define the feature without inventing it from scratch.
