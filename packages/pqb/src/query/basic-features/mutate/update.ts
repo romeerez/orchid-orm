@@ -148,9 +148,7 @@ type UpdateManyBySelf = UpdateSelf &
 
 // Data type for updateMany / updateManyOptional (PK-based)
 type UpdateManyData<T extends UpdateSelf> = ({
-  [K in keyof T['shape'] as T['shape'][K] extends {
-    data: { primaryKey: string };
-  }
+  [K in keyof T['shape'] as T['shape'][K] extends Column.Modifiers.IsPrimaryKey<string>
     ? K
     : never]: T['shape'][K]['queryType'] | Expression;
 } & {
@@ -163,20 +161,16 @@ type UpdateManyByKeys<T extends UpdateManyBySelf> =
   | T['internal']['uniqueColumnTuples'];
 
 // Extract key column names from a string or tuple
-type UpdateManyByKeyColumns<Keys> = Keys extends string
-  ? Keys
-  : Keys extends unknown[]
-    ? Keys[number] & string
-    : never;
+type UpdateManyByKeyColumns<K> = K extends string[] ? K[number] : K;
 
 // Data type for updateManyBy / updateManyByOptional (custom keys)
 // Inlined to minimize mapped type instantiations
-type UpdateManyByData<T extends UpdateSelf, K extends string> = ({
-  [P in K & keyof T['inputType']]-?: T['inputType'][P];
+type UpdateManyByData<T extends UpdateSelf, K> = ({
+  [P in K & keyof T['inputType']]: T['inputType'][P];
 } & {
-  [P in keyof T['inputType'] as P extends K ? never : P]?:
-    | T['inputType'][P]
-    | Expression;
+  [P in keyof T['inputType']]?: P extends K
+    ? T['inputType'][P]
+    : T['inputType'][P] | Expression;
 })[];
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult
@@ -881,7 +875,7 @@ export class QueryUpdate {
   updateManyBy<
     T extends UpdateManyBySelf,
     Keys extends UpdateManyByKeys<T>,
-    K extends string = UpdateManyByKeyColumns<Keys>,
+    K = UpdateManyByKeyColumns<Keys>,
   >(
     this: T,
     keys: Keys,
@@ -908,7 +902,7 @@ export class QueryUpdate {
   updateManyByOptional<
     T extends UpdateManyBySelf,
     Keys extends UpdateManyByKeys<T>,
-    K extends string = UpdateManyByKeyColumns<Keys>,
+    K = UpdateManyByKeyColumns<Keys>,
   >(
     this: T,
     keys: Keys,
