@@ -1,6 +1,6 @@
 /**
  * Agent configuration for syncing .agents/ contents to agent-specific folders.
- * Each agent has different folder structures and file formats for commands and skills.
+ * Each agent has different folder structures for skills.
  *
  * Run with: pnpm ai-sync [agent-key]
  */
@@ -13,14 +13,8 @@ interface AgentConfig {
   name: string;
   /** Folder name for this agent (e.g., .windsurf, .cursor) */
   folder: string;
-  /** Where slash commands/workflows should be copied to (relative to agent folder) */
-  commandsPath: string;
   /** Where skills should be copied to (relative to agent folder) */
   skillsPath: string;
-  /** File extension/format for commands (e.g., .md) */
-  commandsFormat: string;
-  /** Whether commands need YAML frontmatter */
-  requiresFrontmatter: boolean;
   /** Additional notes about this agent's configuration */
   notes?: string;
 }
@@ -29,70 +23,47 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
   windsurf: {
     name: 'Windsurf',
     folder: '.windsurf',
-    commandsPath: 'workflows',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: true,
-    notes:
-      'Workflows are markdown files with YAML frontmatter (description field). Invoked via /workflow-name',
+    notes: 'Skills are copied from .agents/skills/ to .windsurf/skills/',
   },
   cursor: {
     name: 'Cursor',
     folder: '.cursor',
-    commandsPath: 'commands',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: false,
-    notes:
-      'Commands are markdown files, no frontmatter required. Also supports ~/.cursor/commands for global commands',
+    notes: 'Skills are copied from .agents/skills/ to .cursor/skills/',
   },
   claude: {
     name: 'Claude Code',
     folder: '.claude',
-    commandsPath: 'commands',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: true,
     notes:
       'Skills are directories with SKILL.md file containing frontmatter (name, description). Also supports ~/.claude/skills/ globally',
   },
   codex: {
     name: 'Codex (OpenAI)',
     folder: '.codex',
-    commandsPath: 'commands',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: true,
     notes:
       'Skills loaded from .agents/skills/ scanning up to repo root, or ~/.agents/skills/ globally. Uses SKILL.md with frontmatter',
   },
   kilo: {
     name: 'Kilo Code',
     folder: '.kilo',
-    commandsPath: 'commands',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: true,
     notes:
       'Also compatible with .claude/skills/ and .agents/skills/ for interoperability',
   },
   antigravity: {
     name: 'Antigravity (Google)',
     folder: '.agent',
-    commandsPath: 'commands',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: true,
     notes:
       'Uses .agent/skills/ (workspace) or ~/.gemini/antigravity/skills/ (global). Skills are directory-based with SKILL.md',
   },
   copilot: {
     name: 'GitHub Copilot',
     folder: '.github',
-    commandsPath: 'commands',
     skillsPath: 'skills',
-    commandsFormat: '.md',
-    requiresFrontmatter: true,
     notes:
       'Supports .github/skills/, .claude/skills/, or .agents/skills/. Global: ~/.copilot/skills/, ~/.claude/skills/, or ~/.agents/skills/',
   },
@@ -100,7 +71,6 @@ const AGENT_CONFIGS: Record<string, AgentConfig> = {
 
 // The source of truth paths
 const SOURCE_PATHS = {
-  commands: '.agents/commands',
   skills: '.agents/skills',
 } as const;
 
@@ -136,40 +106,6 @@ function copyDir(src: string, dest: string): void {
     } else {
       copyFile(srcPath, destPath);
     }
-  }
-}
-
-/**
- * Sync commands for a specific agent
- */
-function syncCommands(config: AgentConfig): void {
-  const sourceDir = path.resolve(SOURCE_PATHS.commands);
-  const destDir = path.resolve(path.join(config.folder, config.commandsPath));
-
-  if (!fs.existsSync(sourceDir)) {
-    console.log(`  No commands directory found at ${SOURCE_PATHS.commands}`);
-    return;
-  }
-
-  ensureDir(destDir);
-
-  const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = path.join(sourceDir, entry.name);
-
-    if (entry.isDirectory()) {
-      // Skip directories in commands
-      continue;
-    }
-
-    // Only copy files with matching format
-    if (!entry.name.endsWith(config.commandsFormat)) {
-      continue;
-    }
-
-    const destPath = path.join(destDir, entry.name);
-    copyFile(srcPath, destPath);
-    console.log(`  Copied command: ${entry.name}`);
   }
 }
 
@@ -216,7 +152,6 @@ function syncAgent(agentKey: string): void {
   console.log(`\nSyncing for ${config.name} (${agentKey})...`);
   console.log(`  Target folder: ${config.folder}/`);
 
-  syncCommands(config);
   syncSkills(config);
 
   console.log(`  Done!`);

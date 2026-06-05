@@ -1,8 +1,6 @@
 ---
-name: 'Task'
-description: Resolve a change task list from `changes/` and implement only the requested checkbox tasks and their nested subtasks
-category: Workflow
-tags: [workflow, implementation, tasks, changes]
+name: task
+description: Use when the user prompts "do task".
 ---
 
 Implement the mandatory section `0` preflight first, then implement only the requested checkbox tasks from an existing change.

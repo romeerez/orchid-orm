@@ -1,8 +1,6 @@
 ---
-name: 'Refine'
-description: Interactively refine an existing feature design document, update it in place, and keep a refinement log
-category: Workflow
-tags: [refine, design, interactive, changes]
+name: refine
+description: Use when the user prompts "refine design".
 ---
 
 Run an interactive refinement session for an existing feature design document.
@@ -24,7 +22,7 @@ This workflow can start in two ways:
 
 1. **Directly from the user**
 
-   The argument after `/refine` should identify:
+   The prompt argument should identify:
    - a feature or change folder
    - an idea number or idea title
    - optionally, a file name to refine

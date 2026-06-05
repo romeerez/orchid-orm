@@ -1,8 +1,6 @@
 ---
-name: 'Write About'
-description: Write a new about.md for a feature by reading its code and mapping dependencies
-category: Docs
-tags: [docs, architecture, analysis]
+name: write-about
+description: Use when the user prompts "write about for".
 ---
 
 Write a new `about.md` for a specific feature and save it in that feature's folder.
@@ -37,7 +35,6 @@ Examples:
    Prefer the narrowest cohesive directory that represents the feature.
 
    Good signals:
-
    - A dedicated directory in `packages/*/src/`
    - A group of files sharing a clear feature name
    - Tests colocated with the feature
@@ -50,7 +47,6 @@ Examples:
    The output file must be `<feature-folder>/about.md`.
 
    If the user named a feature that is implemented across scattered files without an obvious folder:
-
    - Find the nearest cohesive feature directory
    - If there still is no clear home for `about.md`, ask the user where they want it stored
 
@@ -62,7 +58,6 @@ Examples:
    Then read nearby tests, public exports, and adjacent supporting files that define how the feature behaves.
 
    You should understand:
-
    - What the feature exposes
    - What responsibilities belong to it
    - What is core behavior vs helper implementation detail
@@ -73,18 +68,15 @@ Examples:
    Decide how this feature contributes to the end product so you can explain its purpose and use cases accurately.
 
    One useful lens is whether it is primarily **public** or **internal**:
-
    - A **public** feature directly adds, changes, configures, or exposes behavior that an end user can intentionally use
    - An **internal** feature mainly supports other features and does not itself add a direct public interface
 
    This distinction is not the goal by itself. Use it only to sharpen the explanation of:
-
    - Why the feature exists
    - How it is used
    - Which public behavior it adds, changes, or enables
 
    Examples:
-
    - `soft-delete` is best explained through the user-visible behavior it adds: configuration, query behavior changes, and related query methods
    - `mutative-queries-select-relations` is best explained through the public features it enables: selecting relations from create/update/delete flows
 
@@ -95,7 +87,6 @@ Examples:
    Inspect imports and direct usage inside the feature to identify what it depends on.
 
    Focus on meaningful dependencies:
-
    - Other internal features
    - Public/internal package entry points
    - Important utility layers the feature relies on for its behavior
@@ -107,7 +98,6 @@ Examples:
    Search for usages of the feature outside its own folder to learn what depends on it.
 
    Look for:
-
    - Imports from the feature
    - Public exports that expose it
    - Other features that call into it
@@ -120,7 +110,6 @@ Examples:
 7. **Distill intent**
 
    Before writing, explicitly decide:
-
    - Why this feature exists
    - What problem it solves
    - Which distinct use cases it serves
@@ -135,7 +124,6 @@ Examples:
 8. **Ask clarifying questions when needed**
 
    You must stop and ask if any of these are unclear:
-
    - Which folder is the feature
    - The feature boundary
    - The intended audience or naming
@@ -182,7 +170,6 @@ Examples:
    ```
 
    Notes:
-
    - The title must be the feature name
    - Purpose is the most important section; it should capture intent, not just behavior
    - Use cases are the second priority; they should show the real ways the feature is used or matters

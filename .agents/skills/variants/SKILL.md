@@ -1,8 +1,6 @@
 ---
-name: 'Variants'
-description: Read a specific idea and write or update changes/<feature-name>/<NUMBER-idea-name>/variants.md
-category: Workflow
-tags: [variants, design, research, changes]
+name: variants
+description: Use when the user prompts "make variants".
 ---
 
 Read a specific idea from `changes/<feature-name>/ideas.md`, research solution variants for it, and write or update `changes/<feature-name>/<NUMBER-idea-name>/variants.md`.
