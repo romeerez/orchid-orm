@@ -16,7 +16,10 @@ export const verifyMigration = async (
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,
   roles?: { whereSql?: string },
-  defaultPrivileges?: { loadDefaultPrivileges?: boolean },
+  structureParams?: {
+    loadDefaultPrivileges?: boolean;
+    loadGrants?: boolean;
+  },
 ): Promise<string | false | undefined> => {
   const migrationFn = new Function('change', migrationCode);
 
@@ -47,7 +50,7 @@ export const verifyMigration = async (
           (table) => !!table.internal.tableRls,
         ),
         roles,
-        loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
+        ...structureParams,
       });
       generateMigrationParams.verifying = true;
 

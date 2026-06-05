@@ -129,4 +129,44 @@ describe('generate', () => {
       rls: false,
     });
   });
+
+  it('should not load default privileges when roles do not have defaultPrivileges', async () => {
+    asMock(verifyMigration).mockResolvedValue(undefined);
+
+    await arrange({
+      dbOptions: {
+        roles: [{ name: 'name' }],
+      },
+      tables: [table()],
+    });
+
+    await act();
+
+    expect(asMock(introspectDbSchema).mock.calls[0][1]).toMatchObject({
+      loadDefaultPrivileges: false,
+    });
+    expect(asMock(verifyMigration).mock.calls[0][5]).toMatchObject({
+      loadDefaultPrivileges: false,
+    });
+  });
+
+  it('should load default privileges when at least one role has defaultPrivileges defined', async () => {
+    asMock(verifyMigration).mockResolvedValue(undefined);
+
+    await arrange({
+      dbOptions: {
+        roles: [{ name: 'name', defaultPrivileges: [] }],
+      },
+      tables: [table()],
+    });
+
+    await act();
+
+    expect(asMock(introspectDbSchema).mock.calls[0][1]).toMatchObject({
+      loadDefaultPrivileges: true,
+    });
+    expect(asMock(verifyMigration).mock.calls[0][5]).toMatchObject({
+      loadDefaultPrivileges: true,
+    });
+  });
 });

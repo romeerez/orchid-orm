@@ -26,7 +26,7 @@
 
 ## 2. orm
 
-- [ ] 2.1 Add `grants.generator.ts`
+- [x] 2.1 Add `grants.generator.ts`
   - 2.1.1 Request `loadGrants: true` during initial generation and verification whenever ORM grant metadata is present.
   - 2.1.2 Normalize configured grant metadata and introspected grants into comparable direct-grant state, including effective grantor, current-schema handling, supported privilege expansion, and concrete state derived from schema-wide metadata.
   - 2.1.3 Generate grant AST items for missing configured privileges and revoke AST items for stale actual privileges, including the grant-option transition rules from `spec.md`.

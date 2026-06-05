@@ -46,6 +46,13 @@ const schemaOrDatabaseTargetKeyToSql: Record<
   databases: 'DATABASE',
 };
 
+const specialRoleSpecs = new Set([
+  'PUBLIC',
+  'CURRENT_ROLE',
+  'CURRENT_USER',
+  'SESSION_USER',
+]);
+
 export const changeGrant = async (
   migration: Migration,
   up: boolean,
@@ -175,7 +182,7 @@ const addTargetQueries = (
 
   if (grantablePrivileges?.length) {
     queries.push(
-      buildQuery(ast, grantablePrivileges, targetSql, true, isRevoke),
+      buildQuery(ast, grantablePrivileges, targetSql, !isRevoke, isRevoke),
     );
   }
 };
@@ -214,7 +221,7 @@ const buildQuery = (
     parts.push('TO');
   }
 
-  parts.push(ast.to.map((role) => `"${role}"`).join(', '));
+  parts.push(ast.to.map(formatRoleSpec).join(', '));
 
   if (ast.grantedBy) {
     parts.push('GRANTED BY', `"${ast.grantedBy}"`);
@@ -229,4 +236,8 @@ const buildQuery = (
   }
 
   return parts.join(' ');
+};
+
+const formatRoleSpec = (role: string): string => {
+  return specialRoleSpecs.has(role) ? role : `"${role}"`;
 };

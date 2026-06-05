@@ -90,6 +90,14 @@ export const generate = async (
 
   const db = await getDbFromConfig(config, dbPath);
   const { columnTypes, internal } = db.$qb;
+  const loadDefaultPrivileges =
+    internal.roles?.some((role) => role.defaultPrivileges !== undefined) ??
+    false;
+
+  const structureParams = {
+    loadDefaultPrivileges,
+    loadGrants: !!internal.grants,
+  };
 
   const rolesDbStructureParam = internal.roles
     ? internal.managedRolesSql
@@ -102,7 +110,7 @@ export const generate = async (
     config,
     db,
     rolesDbStructureParam,
-    internal.roles ? { loadDefaultPrivileges: true } : undefined,
+    structureParams,
     afterPull,
   );
 
@@ -154,7 +162,7 @@ export const generate = async (
       migrationCode,
       generateMigrationParams,
       rolesDbStructureParam,
-      internal.roles ? { loadDefaultPrivileges: true } : undefined,
+      structureParams,
     );
 
     if (result !== undefined) {
@@ -237,7 +245,10 @@ const migrateAndPullStructures = async (
   config: RakeDbConfig,
   db: DbInstance,
   roles?: { whereSql?: string },
-  defaultPrivileges?: { loadDefaultPrivileges?: boolean },
+  structureParams?: {
+    loadDefaultPrivileges?: boolean;
+    loadGrants?: boolean;
+  },
   afterPull?: AfterPull,
 ): Promise<{
   dbStructure: IntrospectedStructure;
@@ -272,7 +283,8 @@ const migrateAndPullStructures = async (
       introspectDbSchema(adapter, {
         rls: hasCodeTablesWithRls(db),
         roles,
-        loadDefaultPrivileges: defaultPrivileges?.loadDefaultPrivileges,
+        loadDefaultPrivileges: structureParams?.loadDefaultPrivileges,
+        loadGrants: structureParams?.loadGrants,
       }),
     ),
   );
@@ -468,7 +480,39 @@ const getActualItems = async (
     }
   }
 
+  if (internal.grants) {
+    for (const grant of internal.grants) {
+      addGrantSchemas(codeItems.schemas, currentSchema, grant);
+    }
+  }
+
   return codeItems;
+};
+
+const addGrantSchemas = (
+  schemas: Set<string>,
+  currentSchema: string,
+  grant: NonNullable<QueryInternal['grants']>[number],
+) => {
+  for (const schema of [
+    ...(grant.schemas ?? []),
+    ...(grant.allTablesIn ?? []),
+    ...(grant.allSequencesIn ?? []),
+    ...(grant.allRoutinesIn ?? []),
+  ]) {
+    schemas.add(schema);
+  }
+
+  for (const target of [
+    ...(grant.tables ?? []),
+    ...(grant.sequences ?? []),
+    ...(grant.routines ?? []),
+    ...(grant.types ?? []),
+    ...(grant.domains ?? []),
+  ]) {
+    const [schema] = getSchemaAndTableFromName(currentSchema, target);
+    if (schema) schemas.add(schema);
+  }
 };
 
 const processEnumColumn = (
