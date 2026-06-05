@@ -1,5 +1,16 @@
 # pqb
 
+## 0.66.7
+
+### Patch Changes
+
+- 67530de1: Fix table `as` alias to be properly use in `where` callback (#710)
+- a0be9a3c: Fix missing `constraint` field in a database error (#584)
+- 0c7f752f: Require at least one permissive table RLS policy and default omitted `force` to `true` in Orchid (#611)
+- 693c7c81: Add typed PostgreSQL grant and revoke support across ORM metadata, rake-db migrations, generated migration reconciliation, and table-local grant declarations (#611)
+- 8d29f90f: Fix `queryHelper.table` to be present at runtime, rename queryHelper `args` and `result` to be prefixed with \_\_ as they are type-only (#712)
+- 6b9ea510: Add row-level security policy support for migrations, introspection, and generated migration output (#611)
+
 ## 0.66.6
 
 ### Patch Changes
