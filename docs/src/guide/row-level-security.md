@@ -4,17 +4,15 @@ description: Row Level Security status, setup fundamentals, and Orchid-supported
 
 # Row Level Security
 
-RLS support in Orchid ORM is currently work in progress.
-You can already set up everything needed for RLS yourself with raw SQL in migrations, and Orchid provides some supporting features listed below.
+Orchid ORM supports declaring table Row Level Security (RLS) flags and policies on table classes, generating migrations from those declarations, and writing RLS migrations manually with `rake-db` methods.
 
 ## Table RLS declaration and defaults
 
-For table-level RLS flags, declare `rls` on a table with `defineRls`:
+Declare `rls` on a table with `defineRls`:
 
 ```ts
-import { createBaseTable, defineRls } from 'orchid-orm';
-
-export const BaseTable = createBaseTable();
+import { defineRls } from 'orchid-orm';
+import { BaseTable, sql } from './base-table';
 
 export class ProjectTable extends BaseTable {
   readonly table = 'project';
@@ -22,16 +20,33 @@ export class ProjectTable extends BaseTable {
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     tenantId: t.uuid(),
+    archivedAt: t.timestamp().nullable(),
   }));
 
   rls = defineRls({
     enable: true,
     force: true,
+    permit: [
+      {
+        name: 'project_select_same_tenant',
+        for: 'SELECT',
+        to: ['app_user', 'app_admin'],
+        using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+      },
+    ],
+    restrict: [
+      {
+        name: 'project_select_not_archived',
+        for: 'SELECT',
+        to: 'app_user',
+        using: sql`archived_at IS NULL`,
+      },
+    ],
   });
 }
 ```
 
-`defineRls` currently supports only:
+Table flags:
 
 - `enable`: enable row level security on the table.
 - `force`: force row level security for the table owner as well.
@@ -56,7 +71,107 @@ export const db = orchidORM(
 ```
 
 Defaults are applied only to tables that have an explicit `rls = defineRls(...)` declaration.
-Tables without `rls` declaration are ignored by the RLS migration generator in this phase.
+Tables without an `rls` declaration are ignored by the RLS migration generator.
+
+## RLS policies
+
+`permit` policies map to PostgreSQL `AS PERMISSIVE`, and `restrict` policies map to `AS RESTRICTIVE`.
+`permit` is for policies that can allow access.
+`restrict` can only further limit rows that were already allowed by applicable permissive policies.
+
+```ts
+export class ProjectTable extends BaseTable {
+  readonly table = 'project';
+
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    tenantId: t.uuid(),
+    archivedAt: t.timestamp().nullable(),
+  }));
+
+  rls = defineRls({
+    enable: true,
+    force: true,
+    permit: [
+      {
+        name: 'project_select_same_tenant',
+        for: 'SELECT',
+        to: ['app_user', 'app_admin'],
+        using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+      },
+      {
+        name: 'project_insert_same_tenant',
+        for: 'INSERT',
+        to: 'app_user',
+        withCheck: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+      },
+    ],
+    restrict: [
+      {
+        name: 'project_not_archived',
+        for: 'UPDATE',
+        to: 'app_user',
+        using: sql`archived_at IS NULL`,
+        withCheck: sql`archived_at IS NULL`,
+      },
+    ],
+  });
+}
+```
+
+Policy fields:
+
+- `name`: policy name, scoped to the table.
+- `for`: one of `'ALL'`, `'SELECT'`, `'INSERT'`, `'UPDATE'`, `'DELETE'`; when omitted, PostgreSQL uses `ALL`.
+- `to`: one role or an array of roles. Define roles and grants separately.
+- `using`: raw SQL expression for row visibility and existing-row checks.
+- `withCheck`: raw SQL expression for inserted or updated rows.
+
+Policy expression rules:
+
+- `SELECT` and `DELETE` require `using` and do not accept `withCheck`.
+- `INSERT` requires `withCheck` and does not accept `using`.
+- `UPDATE`, `ALL`, and omitted `for` require both `using` and `withCheck`.
+
+**At least one applicable `permit` policy is required to allow access.**
+Without it, roles subject to RLS cannot access rows; superusers and roles with `BYPASSRLS` bypass this.
+When RLS is enabled, PostgreSQL denies access unless at least one applicable permissive policy allows it.
+A restrictive policy by itself does not allow access, even when the restrictive condition looks useful.
+Define at least one applicable `permit` policy for every role and command that should be able to read or change rows.
+
+Policy expressions are raw SQL.
+Use `current_setting('name', true)` when a setting may be absent; the second argument makes PostgreSQL return `NULL` instead of throwing for a missing setting.
+
+## Migration generation
+
+When a table has an `rls` declaration, generated migrations compare the table RLS flags and policies with the database.
+Run `db g` after changing RLS declarations to generate the corresponding migration.
+
+Use `generatorIgnore.rls.tables` for tables whose RLS flags and policies are managed outside Orchid while ordinary table, column, and constraint diffs should still be generated.
+Use `generatorIgnore.rls.policies` to ignore only specific policy names on a table.
+See [generatorIgnore](/guide/generate-migrations#generatorignore) for examples.
+
+## Manual policy migrations
+
+Use `createPolicy`, `dropPolicy`, and `changePolicy` when writing RLS policies manually:
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.createPolicy('project', 'project_select_same_tenant', {
+    as: 'PERMISSIVE',
+    for: 'SELECT',
+    to: ['app_user', 'app_admin'],
+    using: db.sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+  });
+
+  await db.enableRls('project');
+  await db.forceRls('project');
+});
+```
+
+For the full manual migration API, including `dropPolicy` and `changePolicy`, see [migration writing](/guide/migration-writing#createpolicy-droppolicy-changepolicy).
 
 ## RLS intro
 
@@ -74,14 +189,16 @@ It can be excessive for simple single-tenant systems, or for apps where keeping 
 2. Grant required privileges to that role.
    RLS does not replace normal `GRANT` privileges, it adds row filtering on top.
    Prefer [default privileges](/guide/generate-migrations#default-privileges) so new objects stay consistent.
-3. Enable RLS and define table policies in SQL migrations.
-   Once RLS is enabled, if no applicable policy exists, PostgreSQL falls back to default deny.
+3. Enable RLS and define table policies.
+   Once RLS is enabled, if no applicable permissive policy exists, PostgreSQL falls back to default deny.
 4. Set per-request context (such as user id) in SQL session for every incoming request.
    Policies can read such values with `current_setting(...)`.
    This must be isolated per request so one user cannot accidentally reuse another user's session context.
 
-Use transaction-scoped [`$transaction({ role, setConfig }, cb)`](/guide/transactions.html#sql-session-context-in-transactions) when request DB work should run in one transaction.
-Use query-scoped [`$withOptions({ role, setConfig }, cb)`](/guide/orm-methods.html#role-and-setconfig-sql-session) when the request should not be wrapped in one transaction.
+Use transaction-scoped [`$transaction({ role, setConfig }, cb)`](/guide/transactions.html#sql-session-context-in-transactions) when several DB calls for one request should share the same transaction-local role and settings, such as one `tenantId`.
+The caveat is that the request keeps a transaction open for all work inside the callback, with the usual long-running transaction trade-offs.
+Use query-scoped [`$withOptions({ role, setConfig }, cb)`](/guide/orm-methods.html#role-and-setconfig-sql-session) when each DB call should remain independent.
+The caveat is extra DB calls around each query to set the request context and then clear it, but no request-wide transaction is held open.
 
 ## Request-scoped RLS context
 
@@ -184,7 +301,18 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 
 - Manage roles in migration generation: [roles](/guide/generate-migrations#roles)
 - Manage default privileges in migration generation: [default privileges](/guide/generate-migrations#default-privileges)
+- Declare table RLS flags and policies with `defineRls`, and generate migrations for them.
+- Write manual table RLS and policy migrations with `rake-db` methods.
 - Automatically set SQL session `role` and/or `setConfig` for a transaction with `$transaction`.
   See details and examples in [SQL session context in transactions](/guide/transactions.html#sql-session-context-in-transactions).
 - Automatically set SQL session `role` and/or `setConfig` per query scope with `$withOptions`.
   See details and examples in [$withOptions role and setConfig](/guide/orm-methods.html#role-and-setconfig-sql-session).
+
+## PostgreSQL RLS gotchas
+
+- RLS does not replace ordinary privileges. Roles still need `GRANT` (to be supported) or [default privileges](/guide/generate-migrations.html#default-privileges) for table access.
+- Table owners bypass RLS by default. Use `force: true` to apply RLS to the table owner as well.
+- Superusers and roles with `BYPASSRLS` bypass RLS policies.
+- By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, create the view with `WITH (security_invoker = true)` when the caller's permissions and RLS policies should be used instead.
+- `TRUNCATE`, `REFERENCES`, and internal constraint checks are not governed by row policies in the same way as `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+- Use `current_setting('app.some_setting', true)` in policies when missing request context should evaluate to `NULL` rather than fail the query.
