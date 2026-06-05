@@ -361,6 +361,6 @@ Cons: highest operational overhead for provisioning, routing, connections, and r
 - RLS does not replace ordinary privileges. Roles still need `GRANT` (to be supported) or [default privileges](/guide/generate-migrations.html#default-privileges) for table access.
 - PostgreSQL lets table owners bypass RLS by default. Orchid treats omitted table declaration `force` as `true`; set `force: false` only when owner bypass is intentional.
 - Superusers and roles with `BYPASSRLS` bypass RLS policies.
-- By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, create the view with `WITH (security_invoker = true)` when the caller's permissions and RLS policies should be used instead.
+- By default, when a view reads an RLS table, PostgreSQL checks underlying table permissions and RLS policies as the view owner. In PostgreSQL 15 and newer, Orchid's `createView` uses `securityInvoker: true` by default so the caller's permissions and RLS policies are used instead; set `securityInvoker: false` only when owner-checked behavior is intentional.
 - `TRUNCATE`, `REFERENCES`, and internal constraint checks are not governed by row policies in the same way as `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
 - Use `current_setting('app.some_setting', true)` in policies when missing request context should evaluate to `NULL` rather than fail the query.

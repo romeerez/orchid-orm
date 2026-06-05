@@ -1,5 +1,13 @@
 # Breaking changes
 
+## orchid-orm 1.71, rake-db 2.35
+
+In rake-db migrations, `createView` now creates views with `securityInvoker: true` by default.
+
+Previously, omitting `with.securityInvoker` used PostgreSQL's ordinary owner-checked view behavior.
+After this change, omitted `with.securityInvoker` uses caller permissions and caller RLS policies.
+Set `with: { securityInvoker: false }` when owner-checked view behavior is intentional.
+
 ## orchid-orm 1.70
 
 In rake-db migrations:
