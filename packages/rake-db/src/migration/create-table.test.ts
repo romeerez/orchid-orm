@@ -1413,7 +1413,7 @@ describe('create and drop table', () => {
 
         db[action]('table', () => ({}));
 
-        expect(console.warn).toBeCalledWith(
+        expect(console.warn).toHaveBeenCalledWith(
           'Table table has no primary key.\nYou can suppress this error by setting { noPrimaryKey: true } after a table name.',
         );
       });

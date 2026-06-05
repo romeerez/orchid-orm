@@ -15,10 +15,12 @@ describe('init', () => {
 
     await init(testInitConfig);
 
-    expect(mkdir).toBeCalledWith(testInitConfig.dbDirPath, { recursive: true });
+    expect(mkdir).toHaveBeenCalledWith(testInitConfig.dbDirPath, {
+      recursive: true,
+    });
 
     for (const key in initSteps) {
-      expect(initSteps[key as keyof typeof initSteps]).toBeCalledWith(
+      expect(initSteps[key as keyof typeof initSteps]).toHaveBeenCalledWith(
         testInitConfig,
       );
     }

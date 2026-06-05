@@ -43,8 +43,8 @@ describe('recurrent', () => {
 
     await runRecurrentMigrations(adapters, config);
 
-    expect(readdir).toBeCalledTimes(1);
-    expect(log).not.toBeCalled();
+    expect(readdir).toHaveBeenCalledTimes(1);
+    expect(log).not.toHaveBeenCalled();
   });
 
   it('should throw if readdir error is not ENOENT', async () => {
@@ -74,7 +74,7 @@ describe('recurrent', () => {
 
     await runRecurrentMigrations([adapters[0]], config);
 
-    expect(readdir).toBeCalledWith(config.recurrentPath);
+    expect(readdir).toHaveBeenCalledWith(config.recurrentPath);
 
     expect(asMock(stat).mock.calls.flat()).toEqual([
       join(config.recurrentPath, 'one.sql'),
@@ -88,7 +88,7 @@ describe('recurrent', () => {
       join(config.recurrentPath, 'one.sql'),
     ]);
 
-    expect(config.logger.log).toBeCalledWith(
+    expect(config.logger.log).toHaveBeenCalledWith(
       `Applied 1 recurrent migration file`,
     );
   });
@@ -129,8 +129,8 @@ describe('recurrent', () => {
 
     await runRecurrentMigrations(adapters, config);
 
-    expect(readdir).toBeCalledWith(config.recurrentPath);
-    expect(readdir).toBeCalledWith(join(config.recurrentPath, 'dir'));
+    expect(readdir).toHaveBeenCalledWith(config.recurrentPath);
+    expect(readdir).toHaveBeenCalledWith(join(config.recurrentPath, 'dir'));
 
     expect(asMock(stat).mock.calls.flat()).toEqual([
       join(config.recurrentPath, 'dir'),
@@ -155,7 +155,7 @@ describe('recurrent', () => {
       join(config.recurrentPath, 'dir', 'inner.sql'),
     ]);
 
-    expect(config.logger.log).toBeCalledWith(
+    expect(config.logger.log).toHaveBeenCalledWith(
       `Applied 3 recurrent migration files`,
     );
   });

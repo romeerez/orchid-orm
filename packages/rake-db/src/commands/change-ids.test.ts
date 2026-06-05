@@ -87,7 +87,9 @@ describe('changeIds', () => {
 
     await act('serial');
 
-    expect(logger.log).toBeCalledWith(`.rename-to-serial.json already exists`);
+    expect(logger.log).toHaveBeenCalledWith(
+      `.rename-to-serial.json already exists`,
+    );
   });
 
   it('should remove existing file for renaming if it is for a different kind', async () => {
@@ -97,7 +99,7 @@ describe('changeIds', () => {
 
     await act('serial');
 
-    expect(fs.unlink).toBeCalledWith(
+    expect(fs.unlink).toHaveBeenCalledWith(
       path.join(config.migrationsPath, '.rename-to-timestamp.json'),
     );
   });
@@ -107,7 +109,7 @@ describe('changeIds', () => {
 
     await act('serial');
 
-    expect(fs.writeFile).toBeCalledWith(
+    expect(fs.writeFile).toHaveBeenCalledWith(
       path.join(config.migrationsPath, fileNamesToChangeMigrationId.serial),
       `{
   "111_a.ts": 1,
@@ -122,7 +124,7 @@ describe('changeIds', () => {
 
     await act('timestamp');
 
-    expect(fs.writeFile).toBeCalledWith(
+    expect(fs.writeFile).toHaveBeenCalledWith(
       path.join(config.migrationsPath, fileNamesToChangeMigrationId.timestamp),
       `{
   "111_a.ts": 1001,
@@ -149,7 +151,7 @@ describe('changeIds', () => {
 
     await act('serial');
 
-    expect(query).toBeCalledWith(
+    expect(query).toHaveBeenCalledWith(
       `UPDATE "schemaMigrations" AS t SET version = v.version FROM (VALUES ` +
         `('111', $1, '0001'), ` +
         `('222', $2, '0002'), ` +
