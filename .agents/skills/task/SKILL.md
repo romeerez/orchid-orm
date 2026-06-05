@@ -20,6 +20,7 @@ Examples:
 
 **Selectors**
 
+- `1`: all selectable checkbox tasks in section `1`, with each selected task's nested subtasks
 - `1.1`: only checkbox task `1.1` and its nested subtasks
 - `from 1 till 2`: all selectable checkbox tasks in sections `1` through `2`, with each selected task's nested subtasks
 - `all from 1`: all selectable checkbox tasks from section `1` to the end, with each selected task's nested subtasks
