@@ -322,7 +322,7 @@ export {
 export { getSupportedDefaultPrivileges, type DefaultPrivileges } from './index';
 
 // Grants
-export { Grant } from './query/extra-features/grants/grants.db';
+export { type Grant } from './query/extra-features/grants/grants.db';
 
 // Computed columns
 export {

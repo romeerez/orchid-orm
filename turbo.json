@@ -9,7 +9,12 @@
       "outputs": ["coverage/**"]
     },
     "types": {},
-    "build": {},
+    "build": {
+      // https://github.com/romeerez/orchid-orm/issues/711
+      // the `dependsOn` instructs turborepo to build package dependencies first
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
     "lint": {},
     "lint:check": {},
     "fmt": {},

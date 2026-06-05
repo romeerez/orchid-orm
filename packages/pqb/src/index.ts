@@ -365,7 +365,7 @@ export {
 } from './query/extra-features/default-privileges/default-privileges';
 
 // Grants
-export { Grant } from './query/extra-features/grants/grants.db';
+export { type Grant } from './query/extra-features/grants/grants.db';
 
 // Computed columns
 export {
