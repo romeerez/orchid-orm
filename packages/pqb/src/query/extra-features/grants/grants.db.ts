@@ -40,6 +40,13 @@ export namespace Grant {
     grantablePrivileges?: TablePrivilege[];
   }
 
+  export interface TableClassGrant {
+    to: Role;
+    grantedBy?: string;
+    privileges?: TablePrivilege[];
+    grantablePrivileges?: TablePrivilege[];
+  }
+
   export interface AllTablesInGrant {
     to: Role;
     grantedBy?: string;

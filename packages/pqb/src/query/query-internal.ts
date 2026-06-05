@@ -50,6 +50,8 @@ export interface QueryInternal<
   roles?: DbRole[];
   rls?: Rls.Options;
   tableRls?: Rls.TableConfig;
+  // Table-local grant metadata for migration generation.
+  tableGrants?: Grant.TableClassGrant[];
   managedRolesSql?: string;
   // Default grantor role for grant metadata.
   defaultGrantedBy?: string;

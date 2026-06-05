@@ -12,6 +12,8 @@ import {
   UnknownColumn,
   getQuerySchema,
   emptyObject,
+  Grant,
+  toArray,
 } from 'pqb/internal';
 import { Query } from 'pqb';
 import {
@@ -96,7 +98,7 @@ export const generate = async (
 
   const structureParams = {
     loadDefaultPrivileges,
-    loadGrants: !!internal.grants,
+    loadGrants: !!internal.grants || hasCodeTablesWithGrants(db),
   };
 
   const rolesDbStructureParam = internal.roles
@@ -126,6 +128,7 @@ export const generate = async (
     internal,
     columnTypes,
   );
+  const effectiveGrants = getEffectiveGrants(internal.grants, codeItems);
 
   const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
 
@@ -133,7 +136,10 @@ export const generate = async (
     structureToAstCtx,
     codeItems,
     currentSchema,
-    internal,
+    internal: {
+      ...internal,
+      grants: effectiveGrants,
+    },
   };
 
   const ast: RakeDbAst[] = [];
@@ -306,6 +312,45 @@ const hasCodeTablesWithRls = (db: DbInstance): boolean => {
   }
 
   return false;
+};
+
+const hasCodeTablesWithGrants = (db: DbInstance): boolean => {
+  for (const key in db) {
+    if (key[0] === '$') continue;
+
+    const table = db[key as keyof typeof db] as Query;
+    if (table.internal.tableGrants?.length) return true;
+  }
+
+  return false;
+};
+
+const getEffectiveGrants = (
+  grants: QueryInternal['grants'],
+  codeItems: CodeItems,
+): QueryInternal['grants'] => {
+  const effectiveGrants = grants ? [...grants] : [];
+
+  for (const table of codeItems.tables) {
+    const tableGrants = table.internal.tableGrants;
+    if (!tableGrants?.length) continue;
+
+    const tableTarget = table.q.schema
+      ? `${table.q.schema}.${table.table}`
+      : table.table;
+
+    for (const grant of tableGrants) {
+      const internalGrant: Grant.InternalPrivilege = {
+        ...grant,
+        to: toArray(grant.to),
+        tables: [tableTarget],
+      };
+
+      effectiveGrants.push(internalGrant);
+    }
+  }
+
+  return effectiveGrants.length ? effectiveGrants : undefined;
 };
 
 const compareDbStructures = (
