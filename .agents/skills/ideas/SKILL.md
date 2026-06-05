@@ -1,8 +1,6 @@
 ---
-name: 'Ideas'
-description: Read changes/<feature-name>/research.md and write or update changes/<feature-name>/ideas.md
-category: Workflow
-tags: [ideas, planning, changes]
+name: ideas
+description: Use when the user prompts "write ideas" or "make ideas".
 ---
 
 Read an existing `changes/<feature-name>/research.md` and write or update `changes/<feature-name>/ideas.md`.

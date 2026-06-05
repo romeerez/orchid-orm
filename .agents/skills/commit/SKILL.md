@@ -1,5 +1,6 @@
 ---
-description: Commit an archived OpenSpec change
+name: commit
+description: Use when the user prompts commit.
 ---
 
 Commit an archived OpenSpec change securely and intelligently.
@@ -10,7 +11,7 @@ Commit an archived OpenSpec change securely and intelligently.
 
 1. **Verify Archive Status**
 
-   If the user requests to commit a change that is still in `openspec/changes/` (active/not archived), **abort immediately**. 
+   If the user requests to commit a change that is still in `openspec/changes/` (active/not archived), **abort immediately**.
    Inform the user: "Change must be archived first. Please run the archive command or archive it manually before committing."
 
 2. **Select the Archived Change by Analyzing Uncommitted Files**
@@ -22,8 +23,8 @@ Commit an archived OpenSpec change securely and intelligently.
    - If the uncommitted files match exactly one non-committed archive, select it automatically.
    - If they match multiple archives, list those specific archives and use the **AskUserQuestion tool** to let the user select one.
    - If they match no archives (or if there are no uncommitted files), prompt the user for guidance or ask for a change name.
-   
-   *Rule*: Only commit **one feature** (one change) at a time.
+
+   _Rule_: Only commit **one feature** (one change) at a time.
 
 3. **Read Artifacts for Context**
 
@@ -68,7 +69,7 @@ Commit an archived OpenSpec change securely and intelligently.
 **Feature:** <change-name>
 **Commit Title:** <commit-title-with-issue-number>
 
-Successfully committed the feature. 
+Successfully committed the feature.
 
 **Files Committed:**
 - src/path/to/file.ts
@@ -80,6 +81,7 @@ Successfully committed the feature.
 ```
 
 **Guardrails**
+
 - Never commit active (unarchived) changes. Abort and require archiving first.
 - Only commit one feature at a time.
 - Do not blindly `git add .`. Only stage files that contextually belong to the archived tasks.

@@ -30,13 +30,23 @@ export namespace RlsPolicy {
   export type Policy = ForSelectOrDelete | ForInsert | ForAllOrUpdate;
 }
 
-export interface TableRlsConfig {
-  enable?: boolean;
-  force?: boolean;
-  permit?: RlsPolicy.Policy[];
-  restrict?: RlsPolicy.Policy[];
-}
+export namespace Rls {
+  export interface TableConfig {
+    enable?: boolean;
+    force?: boolean;
+    permit: [RlsPolicy.Policy, ...RlsPolicy.Policy[]];
+    restrict?: RlsPolicy.Policy[];
+  }
 
-export interface DbRlsOptions {
-  tableRlsDefaults?: TableRlsConfig;
+  export interface TableDefaults {
+    /**
+     * Default RLS table flags for declarations that omit them.
+     */
+    enable?: boolean;
+    force?: boolean;
+  }
+
+  export interface Options {
+    tableRlsDefaults?: TableDefaults;
+  }
 }

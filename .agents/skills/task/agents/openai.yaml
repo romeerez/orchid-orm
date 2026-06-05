@@ -1,0 +1,3 @@
+interface:
+  display_name: "Task"
+  short_description: "Implement Orchid ORM change tasks"

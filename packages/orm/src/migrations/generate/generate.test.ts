@@ -94,7 +94,17 @@ describe('generate', () => {
         class One extends BaseTable {
           table = 'one';
           noPrimaryKey = true;
-          rls = defineRls({ enable: true });
+          rls = defineRls({
+            enable: true,
+            permit: [
+              {
+                name: 'one_select_policy',
+                for: 'SELECT',
+                to: 'public',
+                using: BaseTable.sql`id > 0`,
+              },
+            ],
+          });
         },
       ],
     });
