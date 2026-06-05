@@ -421,7 +421,7 @@ export class AdapterClass implements Adapter {
     for (const key in errorFields) {
       (to as unknown as RecordUnknown)[key] = (
         from as unknown as RecordUnknown
-      )[key];
+      )[errorFields[key]];
     }
   }
 }
