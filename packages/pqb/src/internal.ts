@@ -25,6 +25,7 @@ export {
   toCamelCase,
   toPascalCase,
   toSnakeCase,
+  quoteIdentifier,
   type EmptyObject,
   type EmptyTuple,
   type MaybeArray,

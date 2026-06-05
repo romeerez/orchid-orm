@@ -70,13 +70,6 @@ export const makeSql = (
   };
 };
 
-export const quoteSchemaAndTable = (
-  schema: string | undefined,
-  table: string,
-): string => {
-  return schema ? `"${schema}"."${table}"` : `"${table}"`;
-};
-
 export const requireTableOrStringFrom = (query: ToSQLQuery): string => {
   const table =
     query.table ||

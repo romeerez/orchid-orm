@@ -771,6 +771,104 @@ const astEncoders: {
 
     return `await db.${method}(${table});`;
   },
+  policy(ast, _config, currentSchema) {
+    const table = quoteSchemaTable(
+      { schema: ast.schema, name: ast.table },
+      currentSchema,
+    );
+    return [
+      `await db.${ast.action}Policy(${table}, ${singleQuote(ast.name)}, {`,
+      policyDefinitionToCode(ast),
+      '});',
+    ];
+  },
+  changePolicy(ast, _config, currentSchema) {
+    const table = quoteSchemaTable(
+      { schema: ast.schema, name: ast.table },
+      currentSchema,
+    );
+
+    return [
+      `await db.changePolicy(${table}, ${singleQuote(ast.name)}, {`,
+      [
+        'from: {',
+        policyChangeDefinitionToCode(ast.from),
+        '},',
+        'to: {',
+        policyChangeDefinitionToCode(ast.to),
+        '},',
+      ],
+      '});',
+    ];
+  },
+};
+
+const policyDefinitionToCode = (policy: RakeDbAst.PolicyDefinition): Code[] => {
+  const code: Code[] = [`as: ${singleQuote(policy.as)},`];
+
+  if (policy.for) {
+    code.push(`for: ${singleQuote(policy.for)},`);
+  }
+
+  if (policy.to?.length) {
+    code.push(`to: [${policy.to.map(singleQuote).join(', ')}],`);
+  }
+
+  if (policy.using) {
+    code.push(`using: ${rawSqlStringToCode(policy.using)},`);
+  }
+
+  if (policy.withCheck) {
+    code.push(`withCheck: ${rawSqlStringToCode(policy.withCheck)},`);
+  }
+
+  return code;
+};
+
+const policyChangeDefinitionToCode = (
+  policy: RakeDbAst.PolicyChangeDefinition,
+): Code[] => {
+  const code: Code[] = [];
+
+  if ('table' in policy && policy.table) {
+    code.push(`table: ${singleQuote(policy.table)},`);
+  }
+
+  if (policy.name) {
+    code.push(`name: ${singleQuote(policy.name)},`);
+  }
+
+  if (isPolicyRecreateDefinition(policy)) {
+    code.push(...policyDefinitionToCode(policy));
+  } else {
+    if (policy.to?.length) {
+      code.push(`to: [${policy.to.map(singleQuote).join(', ')}],`);
+    }
+
+    if (policy.using) {
+      code.push(`using: ${rawSqlStringToCode(policy.using)},`);
+    }
+
+    if (policy.withCheck) {
+      code.push(`withCheck: ${rawSqlStringToCode(policy.withCheck)},`);
+    }
+  }
+
+  return code;
+};
+
+const isPolicyRecreateDefinition = (
+  policy: RakeDbAst.PolicyChangeDefinition,
+): policy is RakeDbAst.PolicyDefinition => {
+  return (
+    policy.as !== undefined ||
+    policy.for !== undefined ||
+    policy.table !== undefined
+  );
+};
+
+const rawSqlStringToCode = (sql: string) => {
+  return `db.sql${backtickQuote(sql)}`;
 };
 
 const roleParams = (

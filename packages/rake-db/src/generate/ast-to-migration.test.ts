@@ -1654,4 +1654,109 @@ change(async (db) => {
       );
     });
   });
+
+  describe('policy', () => {
+    it('should generate createPolicy for current schema table', () => {
+      const result = act([
+        {
+          type: 'policy',
+          action: 'create',
+          table: 'project',
+          name: 'project_select_same_tenant',
+          as: 'PERMISSIVE',
+          for: 'SELECT',
+          to: ['app_user', 'app_admin'],
+          using: "tenant_id = current_setting('app.tenant_id', true)::uuid",
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createPolicy('project', 'project_select_same_tenant', {
+    as: 'PERMISSIVE',
+    for: 'SELECT',
+    to: ['app_user', 'app_admin'],
+    using: db.sql\`tenant_id = current_setting('app.tenant_id', true)::uuid\`,
+  });
+});
+`,
+      );
+    });
+
+    it('should generate dropPolicy for schema-qualified table', () => {
+      const result = act([
+        {
+          type: 'policy',
+          action: 'drop',
+          schema: 'app',
+          table: 'project',
+          name: 'project_insert_same_tenant',
+          as: 'RESTRICTIVE',
+          for: 'INSERT',
+          to: ['app_user'],
+          withCheck: "tenant_id = current_setting('app.tenant_id', true)::uuid",
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.dropPolicy('app.project', 'project_insert_same_tenant', {
+    as: 'RESTRICTIVE',
+    for: 'INSERT',
+    to: ['app_user'],
+    withCheck: db.sql\`tenant_id = current_setting('app.tenant_id', true)::uuid\`,
+  });
+});
+`,
+      );
+    });
+
+    it('should generate changePolicy', () => {
+      const result = act([
+        {
+          type: 'changePolicy',
+          table: 'project',
+          name: 'project_select_same_tenant',
+          from: {
+            name: 'project_select_same_tenant',
+            to: ['app_user'],
+            using: "tenant_id = current_setting('app.tenant_id', true)::uuid",
+          },
+          to: {
+            name: 'project_select_same_tenant_v2',
+            to: ['app_user', 'app_admin'],
+            using:
+              "tenant_id = current_setting('app.tenant_id', true)::uuid AND archived_at IS NULL",
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.changePolicy('project', 'project_select_same_tenant', {
+    from: {
+      name: 'project_select_same_tenant',
+      to: ['app_user'],
+      using: db.sql\`tenant_id = current_setting('app.tenant_id', true)::uuid\`,
+    },
+    to: {
+      name: 'project_select_same_tenant_v2',
+      to: ['app_user', 'app_admin'],
+      using: db.sql\`tenant_id = current_setting('app.tenant_id', true)::uuid AND archived_at IS NULL\`,
+    },
+  });
+});
+`,
+      );
+    });
+  });
 });
