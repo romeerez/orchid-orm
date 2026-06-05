@@ -195,6 +195,33 @@ describe('db', () => {
     });
   });
 
+  describe('grants', () => {
+    it('should store grantor metadata with normalized grants', () => {
+      const db = createDbWithAdapter({
+        adapter: testAdapter,
+        defaultGrantedBy: 'owner',
+        grants: [
+          {
+            to: 'app_user',
+            grantedBy: 'admin',
+            tables: ['project'],
+            privileges: ['SELECT'],
+          },
+        ],
+      });
+
+      expect(db.internal.defaultGrantedBy).toBe('owner');
+      expect(db.internal.grants).toEqual([
+        {
+          to: ['app_user'],
+          grantedBy: 'admin',
+          tables: ['project'],
+          privileges: ['SELECT'],
+        },
+      ]);
+    });
+  });
+
   describe('noPrimaryKey', () => {
     it('should throw error when no primary key by default', () => {
       const db = createDbWithAdapter({ adapter: testAdapter });

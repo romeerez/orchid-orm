@@ -61,6 +61,7 @@ import {
   pushOrNewArray,
   RecordString,
   RecordUnknown,
+  toArray,
   toSnakeCase,
 } from '../utils';
 import { Adapter, QueryArraysResult } from '../adapters/adapter';
@@ -84,6 +85,7 @@ import { QuerySchema } from './basic-features/schema/schema';
 import { AsyncState } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
 import { Rls } from './extra-features/rls/rls.db';
+import { Grant } from './extra-features/grants/grants.db';
 
 export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in {
@@ -136,6 +138,11 @@ export interface DbSharedOptions extends QueryLogOptions {
   nestedCreateBatchMax?: number;
   roles?: DbRole[];
   managedRolesSql?: string;
+  /**
+   * Default grantor role for grant metadata.
+   */
+  defaultGrantedBy?: string;
+  grants?: Grant.Privilege[];
 }
 
 export interface DbOptions<
@@ -905,6 +912,16 @@ export const _initQueryBuilder = (
   qb.internal.generatorIgnore = options.generatorIgnore;
   qb.internal.roles = options.roles;
   qb.internal.managedRolesSql = options.managedRolesSql;
+  qb.internal.defaultGrantedBy = options.defaultGrantedBy;
+
+  if (options.grants) {
+    qb.internal.grants = options.grants.map((grant) => ({
+      ...grant,
+      to: toArray(grant.to),
+    }));
+  }
+
+  qb.internal.rls = options.rls;
 
   return (qb.qb = qb as never);
 };
