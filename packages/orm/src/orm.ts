@@ -50,8 +50,8 @@ interface OrchidORMQueryHelper<
   ): Result extends Query ? MergeQuery<T, Result> : Result;
   isQueryHelper: true;
   table: Q['table'];
-  args: Args;
-  result: Result;
+  __args: Args;
+  __result: Result;
 }
 
 export interface OrchidORMTableHelper<T extends Query> {

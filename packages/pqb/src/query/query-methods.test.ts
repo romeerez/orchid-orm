@@ -819,6 +819,12 @@ describe('queryMethods', () => {
 
       assertType<Awaited<QueryHelperResult<typeof helper>>, UserRecord[]>();
     });
+
+    it('should have table property available at runtime', () => {
+      const helper = User.makeHelper((q) => q.select('id'));
+
+      expect(helper.table).toBe('user');
+    });
   });
 
   describe('narrowType', () => {
