@@ -53,7 +53,7 @@ describe('listMigrationsStatuses', () => {
 
     await listMigrationsStatuses(adapters, config);
 
-    expect(config.logger.log).toBeCalledWith(` Database: dbname
+    expect(config.logger.log).toHaveBeenCalledWith(` Database: dbname
 
  Status | Migration ID | Name
 ------------------------------------------
@@ -97,7 +97,7 @@ describe('listMigrationsStatuses', () => {
 
     await listMigrationsStatuses(adapters, config, { showUrl: true });
 
-    expect(config.logger.log).toBeCalledWith(` Database: dbname
+    expect(config.logger.log).toHaveBeenCalledWith(` Database: dbname
 
  Status | Migration ID | Name
 ------------------------------------------

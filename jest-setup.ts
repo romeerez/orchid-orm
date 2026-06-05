@@ -7,6 +7,10 @@ import { setRawSqlPrepareSubQueryForSql } from './packages/pqb/src/query/express
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+// Jest bloats error traces (starting from v30) with virtual module loader entries
+// and in some cases it's not enough to find the origin, therefore maxing out the limit
+Error.stackTraceLimit = 1000;
+
 jest.mock('timers/promises', () => ({
   setTimeout: jest.fn(),
 }));

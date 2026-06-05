@@ -99,7 +99,7 @@ describe('pull', () => {
 
     await pullDbStructure(adapter, makeConfig());
 
-    expect(log).toBeCalledWith('Database pulled successfully');
+    expect(log).toHaveBeenCalledWith('Database pulled successfully');
   });
 
   it('should write migration file with correct arguments', async () => {
@@ -273,14 +273,14 @@ change(async (db) => {
 `,
     );
 
-    expect(saveMigratedVersion).toBeCalledWith(
+    expect(saveMigratedVersion).toHaveBeenCalledWith(
       expect.any(Object),
       'timestamp',
       'pull',
       config,
     );
 
-    expect(warn).toBeCalledWith(`Found unsupported types:
+    expect(warn).toHaveBeenCalledWith(`Found unsupported types:
 - customType is used for column schema.table1.customTypeColumn
 Append \`as\` method manually to this column to treat it as other column type`);
   });
@@ -303,12 +303,12 @@ Append \`as\` method manually to this column to treat it as other column type`);
 
     await pullDbStructure(adapter, config);
 
-    expect(warn).toBeCalledWith(`Found unsupported types:
+    expect(warn).toHaveBeenCalledWith(`Found unsupported types:
 - unknown1 is used for column public.table.column1
 - unknown2 is used for column public.table.column2
 Append \`as\` method manually to these columns to treat them as other column type`);
 
-    expect(log).toBeCalledWith('Database pulled successfully');
+    expect(log).toHaveBeenCalledWith('Database pulled successfully');
   });
 
   it(`should add simple timestamps and do not add name('snake_case'), but add name('camelCase') when snakeCase: true`, async () => {
@@ -354,7 +354,7 @@ change(async (db) => {
 `,
     );
 
-    expect(saveMigratedVersion).toBeCalledWith(
+    expect(saveMigratedVersion).toHaveBeenCalledWith(
       expect.any(Object),
       'timestamp',
       'pull',

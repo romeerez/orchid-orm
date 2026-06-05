@@ -25,29 +25,37 @@ import {
 import { orchidORM as postgresJsOrchidORM } from '../../orm/src/adapters/postgres-js';
 import { rakeDb as postgresJsRakeDb } from '../../rake-db/src/adapters/postgres-js';
 
-export const testingWithPostgresJS = true;
+export type TestAdapterName = 'postgres-js' | 'node-postgres';
 
-function setupNodePostgres() {
-  return {
+export const defaultAdapter: TestAdapterName = 'postgres-js';
+
+const adapterSetups = {
+  'node-postgres': () => ({
     TestAdapter: NodePostgresAdapter,
     createDb: nodePostgresCreateDb,
     orchidORM: nodePostgresOrchidORM,
     rakeDb: nodePostgresRakeDb,
-  };
-}
-
-function setupPostgresJs() {
-  return {
+  }),
+  'postgres-js': () => ({
     TestAdapter: PostgresJsAdapter,
     createDb: postgresJsCreateDb,
     orchidORM: postgresJsOrchidORM,
     rakeDb: postgresJsRakeDb,
-  };
+  }),
+} as const;
+
+const isTestAdapterName = (adapter: string): adapter is TestAdapterName =>
+  adapter in adapterSetups;
+
+const adapterName = process.env.ADAPTER || defaultAdapter;
+
+if (!isTestAdapterName(adapterName)) {
+  throw new Error(
+    `Invalid ADAPTER "${adapterName}", expected "postgres-js" or "node-postgres"`,
+  );
 }
 
-const driverItems = testingWithPostgresJS
-  ? setupPostgresJs()
-  : setupNodePostgres();
+const driverItems = adapterSetups[adapterName]();
 
 export const allDriverAdapters = {
   nodePostgres: NodePostgresAdapter,

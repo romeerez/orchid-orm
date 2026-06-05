@@ -32,12 +32,12 @@ Write the test for that requirement first, then make the relevant changes in the
 - When creating a new test file, look at how nearby similar features are tested.
 - Start with a minimal test that covers the simplest positive case. You do not need to run it before changing code.
 - Write the minimal amount of code needed to support that test.
-- Run the test with `pnpm --filter <pkg> check --silent path/to/file.test.ts`, where `<pkg>` is the package folder name such as `pqb`, `orm`, or `rake-db`. For `schemaConfigs` packages, use `valibot` or `zod`.
+- Run the test with `pnpm <pkg> check path/to/file.test.ts`, where `<pkg>` is the package folder name such as `pqb`, `orm`, or `rake-db`. For `schemaConfigs` packages, use `valibot` or `zod`.
 - If the test fails, keep fixing the code until it passes.
 - For a simple change, once the code is ready, confirm that either one test is enough to cover the requirement or add enough tests to cover it properly.
 - For a medium change, write several tests in one pass, then implement support for them in one pass, and repeat until the requirements are covered.
 - For a complex change, work one test at a time: write a single test, implement support for it, and repeat until the requirements are covered.
-- Once the new tests and code changes for the task are complete, run all affected tests in the package with `pnpm --filter <pkg> check --silent -o` and fix any failures.
+- Once the new tests and code changes for the task are complete, run all affected tests in the package with `pnpm <pkg> check -o` and fix any failures.
 - Then run the same command for every public package that depends on the changed package. Only test `test-factory`, `zod`, and `valibot` when you changed something inside `pqb/src/columns/`.
 - When testing dependent packages, only run public packages: `orm`, `pqb`, `rake-db`, `test-factory`, `zod`, and `valibot`. Ignore the rest.
 

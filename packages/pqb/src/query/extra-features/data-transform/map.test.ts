@@ -170,7 +170,7 @@ describe('map', () => {
       const res = await User.findOptional(0).map(fn);
 
       expect(res).toBe(undefined);
-      expect(fn).not.toBeCalled();
+      expect(fn).not.toHaveBeenCalled();
     });
 
     describe('nested map', () => {

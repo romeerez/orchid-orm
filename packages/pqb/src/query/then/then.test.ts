@@ -88,7 +88,7 @@ describe('then', () => {
         })
         .catch(transactionCatch);
 
-      expect(transactionCatch).not.toBeCalled();
+      expect(transactionCatch).not.toHaveBeenCalled();
 
       assertType<
         typeof res,
@@ -126,7 +126,7 @@ describe('then', () => {
 
       expect(result).toBe(false);
 
-      expect(catcher).toBeCalledWith(expect.any(QueryError));
+      expect(catcher).toHaveBeenCalledWith(expect.any(QueryError));
     });
 
     it('should not catch other errors', async () => {
@@ -150,8 +150,8 @@ describe('then', () => {
         { column: boolean }[] | { err: unknown } | string
       >();
 
-      expect(uniqueCatcher).not.toBeCalled();
-      expect(anyCatcher).toBeCalled();
+      expect(uniqueCatcher).not.toHaveBeenCalled();
+      expect(anyCatcher).toHaveBeenCalled();
 
       expect(err).toEqual({ err: expect.any(QueryError) });
     });
@@ -179,7 +179,7 @@ describe('then', () => {
         })
         .catch(transactionCatch);
 
-      expect(transactionCatch).not.toBeCalled();
+      expect(transactionCatch).not.toHaveBeenCalled();
 
       assertType<
         typeof res,

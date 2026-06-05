@@ -28,7 +28,7 @@ describe('transaction', () => {
         throw new Error('Throw error to rollback');
       }).catch(noop);
 
-      expect(transactionSpy).toBeCalledTimes(1);
+      expect(transactionSpy).toHaveBeenCalledTimes(1);
       expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
         line(`
           INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")

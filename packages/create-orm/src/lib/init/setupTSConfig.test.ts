@@ -27,7 +27,7 @@ describe('setupTSConfig', () => {
   it('should not change tsconfig.json if it exists', async () => {
     await initSteps.setupTSConfig({ ...testInitConfig, hasTsConfig: true });
 
-    expect(writeFile).not.toBeCalled();
+    expect(writeFile).not.toHaveBeenCalled();
   });
 
   it('should add vite types for vite-node', async () => {

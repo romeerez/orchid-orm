@@ -11,7 +11,7 @@ AdapterClass.prototype.arrays = query;
 describe('none', () => {
   test('mock is set up correctly', async () => {
     await User;
-    expect(query).toBeCalled();
+    expect(query).toHaveBeenCalled();
     query.mockClear();
   });
 
@@ -24,7 +24,7 @@ describe('none', () => {
     ]);
 
     expect(result).toEqual([[], [], [], []]);
-    expect(query).not.toBeCalled();
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('should return undefined for return types `one`, `value`, `void`', async () => {
@@ -35,7 +35,7 @@ describe('none', () => {
     ]);
 
     expect(result).toEqual([undefined, undefined, undefined]);
-    expect(query).not.toBeCalled();
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('should return 0 for return type `rowCount`', async () => {
@@ -46,7 +46,7 @@ describe('none', () => {
     ]);
 
     expect(result).toEqual([0, 0, 0]);
-    expect(query).not.toBeCalled();
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('should throw NotFoundError for return types `oneOrThrow`, `valueOrThrow`', async () => {
@@ -59,7 +59,7 @@ describe('none', () => {
       { status: 'rejected', reason: expect.any(NotFoundError) },
       { status: 'rejected', reason: expect.any(NotFoundError) },
     ]);
-    expect(query).not.toBeCalled();
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('should return false for exists', async () => {

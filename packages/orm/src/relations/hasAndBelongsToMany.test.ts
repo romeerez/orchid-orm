@@ -1398,7 +1398,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch create', async () => {
@@ -1410,7 +1410,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
       });
     });
@@ -2036,7 +2036,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch create', async () => {
@@ -2048,7 +2048,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
       });
     });
@@ -2552,7 +2552,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
-          expect(afterDelete).toBeCalledWith(ids, expect.any(Db));
+          expect(afterDelete).toHaveBeenCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -2588,7 +2588,10 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeDelete).toHaveBeenCalledTimes(1);
           expect(afterDelete).toHaveBeenCalledTimes(1);
-          expect(afterDelete).toBeCalledWith([ids[0], ids[2]], expect.any(Db));
+          expect(afterDelete).toHaveBeenCalledWith(
+            [ids[0], ids[2]],
+            expect.any(Db),
+          );
         });
       });
     });
@@ -2724,7 +2727,10 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith([{ IdOfChat }], expect.any(Db));
+          expect(afterUpdate).toHaveBeenCalledWith(
+            [{ IdOfChat }],
+            expect.any(Db),
+          );
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -2754,7 +2760,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeUpdate).toHaveBeenCalledTimes(1);
           expect(afterUpdate).toHaveBeenCalledTimes(1);
-          expect(afterUpdate).toBeCalledWith(
+          expect(afterUpdate).toHaveBeenCalledWith(
             [{ IdOfChat: ids[0] }, { IdOfChat: ids[1] }],
             expect.any(Db),
           );
@@ -2879,7 +2885,7 @@ describe('hasAndBelongsToMany', () => {
 
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
-          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
 
         it('should invoke callbacks in a batch update', async () => {
@@ -2899,7 +2905,7 @@ describe('hasAndBelongsToMany', () => {
           expect(beforeCreate).toHaveBeenCalledTimes(1);
           expect(afterCreate).toHaveBeenCalledTimes(1);
           expect(ids).toHaveLength(2);
-          expect(afterCreate).toBeCalledWith(ids, expect.any(Db));
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
       });
     });

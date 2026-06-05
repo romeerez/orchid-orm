@@ -71,7 +71,7 @@ describe('queryMethods', () => {
     });
 
     it('should throw if not found', async () => {
-      await expect(() => User.take()).rejects.toThrowError(NotFoundError);
+      await expect(() => User.take()).rejects.toThrow(NotFoundError);
     });
 
     it('should change value to valueOrThrow', async () => {

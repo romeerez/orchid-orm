@@ -177,8 +177,8 @@ describe('adapter runtime abstractions', () => {
 
           expect(result).toBe(123);
 
-          expect(beginSpy).toBeCalledTimes(1);
-          expect(savepointSpy).toBeCalledTimes(1);
+          expect(beginSpy).toHaveBeenCalledTimes(1);
+          expect(savepointSpy).toHaveBeenCalledTimes(1);
           expect(querySpy.mock.calls.map((call) => call[1])).toEqual([
             'SELECT 123 as result',
           ]);
@@ -207,8 +207,8 @@ describe('adapter runtime abstractions', () => {
             ),
           ).rejects.toThrow('error');
 
-          expect(beginSpy).toBeCalledTimes(1);
-          expect(savepointSpy).toBeCalledTimes(1);
+          expect(beginSpy).toHaveBeenCalledTimes(1);
+          expect(savepointSpy).toHaveBeenCalledTimes(1);
           expect(querySpy.mock.calls.map((call) => call[1])).toEqual([]);
         });
 

@@ -113,7 +113,7 @@ describe('manageMigratedVersions', () => {
         migrationsTable: 'schema.table',
       });
 
-      expect(db.silentArrays).toBeCalledWith(
+      expect(db.silentArrays).toHaveBeenCalledWith(
         'INSERT INTO "schema"."table"(version, name) VALUES ($1, $2)',
         ['123', 'name'],
       );
@@ -136,7 +136,7 @@ describe('manageMigratedVersions', () => {
         },
       );
 
-      expect(db.silentArrays).toBeCalledWith(
+      expect(db.silentArrays).toHaveBeenCalledWith(
         'DELETE FROM "schema"."table" WHERE version = $1 AND name = $2',
         ['123', 'name'],
       );

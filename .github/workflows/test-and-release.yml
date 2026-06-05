@@ -83,7 +83,9 @@ jobs:
         run: pnpm db migrate
 
       - name: Run tests
-        run: pnpm test:ci
+        run: |
+          ADAPTER=postgres-js pnpm check:coverage
+          ADAPTER=node-postgres pnpm check
 
       - name: Lint & Format
         run: ./node_modules/.bin/turbo run lint:check fmt:check
