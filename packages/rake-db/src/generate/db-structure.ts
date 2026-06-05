@@ -3,6 +3,7 @@ import {
   EmptyObject,
   RecordUnknown,
   DefaultPrivileges,
+  type RlsPolicy,
   type RecordOptionalString,
   type SearchWeight,
 } from 'pqb/internal';
@@ -14,9 +15,22 @@ export namespace DbStructure {
     tableName: string;
   }
 
+  export type RlsPolicyMode = RlsPolicy.PolicyMode;
+  export type RlsPolicyCommand = RlsPolicy.PolicyCommand;
+
+  export interface RlsPolicy extends TableNameAndSchemaName {
+    name: string;
+    mode: RlsPolicyMode;
+    command: RlsPolicyCommand;
+    roles: string[];
+    using?: string;
+    withCheck?: string;
+  }
+
   export interface TableRls {
     enable: boolean;
     force: boolean;
+    policies?: RlsPolicy[];
   }
 
   export interface Table {
@@ -209,7 +223,18 @@ export namespace DbStructure {
   }
 }
 
-namespace RawDbStructure {
+export namespace RawDbStructure {
+  export interface RlsPolicy {
+    schemaName: string;
+    tableName: string;
+    name: string;
+    mode: RlsPolicy.PolicyMode;
+    command: RlsPolicy.PolicyCommand;
+    roles: string[];
+    using?: string;
+    withCheck?: string;
+  }
+
   export interface DefaultPrivilege {
     grantor: string;
     grantee: string;
@@ -676,6 +701,34 @@ const defaultPrivilegesSql = `SELECT COALESCE(json_agg(t.*), '[]') FROM (
   GROUP BY "grantor", "grantee", "schema", "object"
 ) t`;
 
+const policiesSql = `SELECT
+  n.nspname AS "schemaName",
+  c.relname AS "tableName",
+  p.polname AS "name",
+  CASE WHEN p.polpermissive
+    THEN 'PERMISSIVE'
+    ELSE 'RESTRICTIVE'
+  END AS "mode",
+  CASE p.polcmd
+    WHEN '*' THEN 'ALL'
+    WHEN 'r' THEN 'SELECT'
+    WHEN 'a' THEN 'INSERT'
+    WHEN 'w' THEN 'UPDATE'
+    WHEN 'd' THEN 'DELETE'
+  END AS "command",
+  ARRAY(
+    SELECT COALESCE(r.rolname, 'public')
+    FROM unnest(p.polroles) roleOid
+    LEFT JOIN pg_roles r ON r.oid = roleOid
+    ORDER BY roleOid = 0 DESC, COALESCE(r.rolname, 'public')
+  ) AS "roles",
+  pg_get_expr(p.polqual, p.polrelid) AS "using",
+  pg_get_expr(p.polwithcheck, p.polrelid) AS "withCheck"
+FROM pg_policy p
+JOIN pg_class c ON c.oid = p.polrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+ORDER BY n.nspname, c.relname, p.polname`;
+
 // procedures
 // `SELECT
 //   n.nspname AS "schemaName",
@@ -722,7 +775,7 @@ const sql = (version: number, params?: IntrospectDbStructureParams) =>
     params?.loadDefaultPrivileges
       ? `, (${defaultPrivilegesSql}) AS "defaultPrivileges"`
       : ''
-  }`;
+  }${params?.rls ? `, ${jsonAgg(policiesSql, 'policies')}` : ''}`;
 
 export interface IntrospectedStructure {
   version: number;
@@ -756,6 +809,7 @@ interface RawIntrospectedStructure {
   collations: DbStructure.Collation[];
   roles?: DbStructure.Role[];
   defaultPrivileges?: RawDbStructure.DefaultPrivilege[];
+  policies?: RawDbStructure.RlsPolicy[];
   managedRolesSql?: string;
 }
 
@@ -917,9 +971,46 @@ export async function introspectDbSchema(
     }
   }
 
+  if (raw.policies) {
+    const policiesByTable = raw.policies.reduce((acc, policy) => {
+      nullsToUndefined(policy);
+
+      const key = `${policy.schemaName}.${policy.tableName}`;
+      const existing = acc.get(key);
+
+      const mappedPolicy: DbStructure.RlsPolicy = {
+        schemaName: policy.schemaName,
+        tableName: policy.tableName,
+        name: policy.name,
+        mode: policy.mode,
+        command: policy.command,
+        roles: policy.roles,
+        using: policy.using,
+        withCheck: policy.withCheck,
+      };
+
+      if (existing) {
+        existing.push(mappedPolicy);
+      } else {
+        acc.set(key, [mappedPolicy]);
+      }
+
+      return acc;
+    }, new Map<string, DbStructure.RlsPolicy[]>());
+
+    for (const table of raw.tables) {
+      if (!table.rls) continue;
+
+      table.rls.policies =
+        policiesByTable.get(`${table.schemaName}.${table.name}`) ?? [];
+    }
+  }
+
+  const { policies: _policies, ...structureWithoutPolicies } = raw;
+
   return {
     version,
-    ...raw,
+    ...structureWithoutPolicies,
     defaultPrivileges: raw.defaultPrivileges && [
       ...raw.defaultPrivileges
         .reduce((acc, privilege) => {

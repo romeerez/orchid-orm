@@ -96,6 +96,14 @@ describe('structureToAst', () => {
   });
 
   describe('table', () => {
+    it('should introspect with rls enabled', async () => {
+      structure.tables = [dbStructureMockFactory.table()];
+
+      await structureToAst(ctx, adapter, config);
+
+      expect(introspectDbSchema).toBeCalledWith(adapter, { rls: true });
+    });
+
     it('should add table', async () => {
       structure.tables = [dbStructureMockFactory.table({ comment: 'comment' })];
 
@@ -177,6 +185,91 @@ describe('structureToAst', () => {
           indexes: [],
           excludes: [],
           constraints: [],
+        },
+        {
+          type: 'tableRls',
+          action: 'enable',
+          schema: 'app',
+          table: 'project',
+        },
+        {
+          type: 'tableRls',
+          action: 'force',
+          schema: 'app',
+          table: 'project',
+        },
+      ]);
+    });
+
+    it('should add policy ast items before table RLS flags', async () => {
+      structure.tables = [
+        dbStructureMockFactory.table({
+          schemaName: 'app',
+          name: 'project',
+          rls: {
+            enable: true,
+            force: true,
+            policies: [
+              {
+                schemaName: 'app',
+                tableName: 'project',
+                name: 'project_select_same_tenant',
+                mode: 'PERMISSIVE',
+                command: 'SELECT',
+                roles: ['app_user', 'app_admin'],
+                using:
+                  "tenant_id = current_setting('app.tenant_id', true)::uuid",
+              },
+              {
+                schemaName: 'app',
+                tableName: 'project',
+                name: 'project_insert_same_tenant',
+                mode: 'RESTRICTIVE',
+                command: 'INSERT',
+                roles: ['app_user'],
+                withCheck:
+                  "tenant_id = current_setting('app.tenant_id', true)::uuid",
+              },
+            ],
+          },
+        }),
+      ];
+
+      const ast = await structureToAst(ctx, adapter, config);
+
+      expect(ast).toEqual([
+        {
+          type: 'table',
+          action: 'create',
+          schema: 'app',
+          name: 'project',
+          shape: {},
+          noPrimaryKey: 'ignore',
+          indexes: [],
+          excludes: [],
+          constraints: [],
+        },
+        {
+          type: 'policy',
+          action: 'create',
+          schema: 'app',
+          table: 'project',
+          name: 'project_select_same_tenant',
+          as: 'PERMISSIVE',
+          for: 'SELECT',
+          to: ['app_user', 'app_admin'],
+          using: "tenant_id = current_setting('app.tenant_id', true)::uuid",
+        },
+        {
+          type: 'policy',
+          action: 'create',
+          schema: 'app',
+          table: 'project',
+          name: 'project_insert_same_tenant',
+          as: 'RESTRICTIVE',
+          for: 'INSERT',
+          to: ['app_user'],
+          withCheck: "tenant_id = current_setting('app.tenant_id', true)::uuid",
         },
         {
           type: 'tableRls',

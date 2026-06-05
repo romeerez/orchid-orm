@@ -51,14 +51,14 @@
 
 ## 5. rake-db
 
-- [ ] 5.1 DB structure introspection for RLS policies
+- [x] 5.1 DB structure introspection for RLS policies
   - 5.1.1 Expand `introspectDbSchema(adapter, { rls: true })` to load policy metadata from Postgres, including table identity, policy name, mode, command, roles, `USING`, and `WITH CHECK`.
   - 5.1.2 Preserve the no-policy behavior from table-flag introspection when `rls` is omitted or false.
   - 5.1.3 verify if the implementation conforms to guidelines
   - 5.1.4 make sure you didn't forget to cover the implementation with tests
   - 5.1.5 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
   - 5.1.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 5.2 Rake-db policy support
+- [x] 5.2 Rake-db policy support
   - 5.2.1 Add typed `createPolicy`, `dropPolicy`, and `changePolicy` migration methods with permissive/restrictive mode, command-specific `using` and `withCheck` rules, role targets, and reversible rollback data.
   - 5.2.2 Add policy AST, dependency sorting, migration SQL execution, generated migration code, structure-to-AST conversion, and pull support independently of ORM table declarations.
   - 5.2.3 Make `changePolicy` use direct `ALTER POLICY` for supported rename, role, `USING`, and `WITH CHECK` changes, and recreate policies when table, mode, or command changes.
@@ -69,7 +69,7 @@
 
 ## 6. orm
 
-- [ ] 6.1 ORM table policy config and migration generation
+- [x] 6.1 ORM table policy config and migration generation
   - 6.1.1 Expand `defineRls` to the final table policy shape with required `permit`, optional `restrict`, raw SQL expressions, role targets, and command-specific TypeScript rules.
   - 6.1.2 Normalize declared policies, compare them to introspected policies for tables with `rls`, and generate rake-db policy methods in the ordering required by RLS enablement and default-deny behavior.
   - 6.1.3 Add RLS-specific generator ignore support for managed tables or named policies without changing ordinary table diffing behavior.
@@ -80,7 +80,7 @@
 
 ## 7. docs
 
-- [ ] 7.1 Document RLS policies
+- [x] 7.1 Document RLS policies
   - 7.1.1 Add policy docs that show `permit` and `restrict`, raw SQL expressions, policy command rules, role targets, migration generation, and manual rake-db policy methods.
   - 7.1.2 Warn that users must define at least one applicable `permit` policy to allow access; restrictive policies alone still result in Postgres deny-all behavior.
   - 7.1.3 Keep roles and grants documented as separate requirements, and call out owner, superuser, `BYPASSRLS`, view, constraint-check, and `current_setting(..., true)` gotchas.

@@ -1,26 +1,15 @@
-import { introspectDbSchema, IntrospectedStructure } from './db-structure';
+import {
+  introspectDbSchema,
+  IntrospectedStructure,
+  RawDbStructure,
+} from './db-structure';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 import { asMock, TestAdapter } from 'test-utils';
 import { AdapterClass } from 'pqb/internal';
 
-interface RawDefaultPrivilege {
-  grantor: string;
-  grantee: string;
-  schema?: string;
-  object:
-    | 'relation'
-    | 'sequence'
-    | 'function'
-    | 'type'
-    | 'schema'
-    | 'large_object';
-  privileges: string[];
-  isGrantables: boolean[];
-}
-
 const defaultPrivilege = (
-  data: Partial<RawDefaultPrivilege> = {},
-): RawDefaultPrivilege => ({
+  data: Partial<RawDbStructure.DefaultPrivilege> = {},
+): RawDbStructure.DefaultPrivilege => ({
   grantor: 'postgres',
   grantee: 'app_user',
   schema: 'public',
@@ -30,12 +19,30 @@ const defaultPrivilege = (
   ...data,
 });
 
+const rlsPolicy = (
+  data: Partial<RawDbStructure.RlsPolicy> = {},
+): RawDbStructure.RlsPolicy => ({
+  schemaName: 'public',
+  tableName: 'table',
+  name: 'table_select_policy',
+  mode: 'PERMISSIVE',
+  command: 'SELECT',
+  roles: ['app_user'],
+  using: "(tenant_id = current_setting('app.tenant_id', true)::uuid)",
+  withCheck: undefined,
+  ...data,
+});
+
 const adapter = new AdapterClass({
   driverAdapter: TestAdapter,
   config: { databaseURL: process.env.PG_URL },
 });
 
-const mockQueryResult = (data: Partial<IntrospectedStructure>) => {
+const mockQueryResult = (
+  data: Partial<IntrospectedStructure> & {
+    policies?: RawDbStructure.RlsPolicy[];
+  },
+) => {
   jest.spyOn(adapter, 'query').mockResolvedValueOnce({
     rowCount: 1,
     fields: [],
@@ -435,9 +442,76 @@ describe('dbStructure', () => {
       expect(tables).toEqual([table]);
 
       const sql = asMock(adapter.query).mock.calls[1][0];
-      expect(sql.includes('relrowsecurity')).toBe(true);
-      expect(sql.includes('relforcerowsecurity')).toBe(true);
       expect(sql.includes('nr.nspname = n.nspname')).toBe(true);
+    });
+
+    it('should load table rls policies when rls is true', async () => {
+      mockQueryResult({
+        tables: [
+          dbStructureMockFactory.table({
+            name: 'table',
+            rls: {
+              enable: true,
+              force: false,
+            },
+          }),
+        ],
+        policies: [
+          rlsPolicy(),
+          rlsPolicy({
+            name: 'table_insert_policy',
+            mode: 'RESTRICTIVE',
+            command: 'UPDATE',
+            roles: ['public', 'app_admin'],
+            using: "(owner_id = current_setting('app.user_id', true)::uuid)",
+            withCheck:
+              "(tenant_id = current_setting('app.tenant_id', true)::uuid)",
+          }),
+          rlsPolicy({
+            tableName: 'other_table',
+            name: 'other_table_select_policy',
+          }),
+        ],
+      });
+
+      const { tables } = await introspectDbSchema(adapter, { rls: true });
+
+      expect(tables).toEqual([
+        dbStructureMockFactory.table({
+          name: 'table',
+          rls: {
+            enable: true,
+            force: false,
+            policies: [
+              {
+                schemaName: 'public',
+                tableName: 'table',
+                name: 'table_select_policy',
+                mode: 'PERMISSIVE',
+                command: 'SELECT',
+                roles: ['app_user'],
+                using:
+                  "(tenant_id = current_setting('app.tenant_id', true)::uuid)",
+              },
+              {
+                schemaName: 'public',
+                tableName: 'table',
+                name: 'table_insert_policy',
+                mode: 'RESTRICTIVE',
+                command: 'UPDATE',
+                roles: ['public', 'app_admin'],
+                using:
+                  "(owner_id = current_setting('app.user_id', true)::uuid)",
+                withCheck:
+                  "(tenant_id = current_setting('app.tenant_id', true)::uuid)",
+              },
+            ],
+          },
+        }),
+      ]);
+
+      const sql = asMock(adapter.query).mock.calls[1][0];
+      expect(sql.includes('FROM pg_policy p')).toBe(true);
     });
 
     it('should not load table rls flags when rls is not set', async () => {
@@ -448,8 +522,7 @@ describe('dbStructure', () => {
       expect(tables).toEqual([]);
 
       const sql = asMock(adapter.query).mock.calls[1][0];
-      expect(sql.includes('relrowsecurity')).toBe(false);
-      expect(sql.includes('relforcerowsecurity')).toBe(false);
+      expect(sql.includes('FROM pg_policy p')).toBe(false);
     });
   });
 });

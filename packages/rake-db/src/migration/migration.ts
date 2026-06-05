@@ -46,7 +46,15 @@ import {
   ChangeDefaultPrivilegesArg,
 } from './default-privilege';
 import { DbStructure } from '../generate/db-structure';
-import { enableOrDisableRls, forceOrNoForceRls } from './rls';
+import {
+  ChangeRlsPolicyParams,
+  createOrDropPolicy,
+  dropOrCreatePolicy,
+  enableOrDisableRls,
+  forceOrNoForceRls,
+  RlsPolicyDefinition,
+  changePolicy as changePolicyRls,
+} from './rls';
 
 // Drop mode to use when dropping various database entities.
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -1496,6 +1504,30 @@ export class Migration<CT = unknown> {
 
   noForceRls(tableName: string): Promise<void> {
     return forceOrNoForceRls(this, !this.up, tableName);
+  }
+
+  createPolicy(
+    tableName: string,
+    policyName: string,
+    params: RlsPolicyDefinition,
+  ): Promise<void> {
+    return createOrDropPolicy(this, this.up, tableName, policyName, params);
+  }
+
+  dropPolicy(
+    tableName: string,
+    policyName: string,
+    params: RlsPolicyDefinition,
+  ): Promise<void> {
+    return dropOrCreatePolicy(this, this.up, tableName, policyName, params);
+  }
+
+  changePolicy(
+    tableName: string,
+    policyName: string,
+    params: ChangeRlsPolicyParams,
+  ): Promise<void> {
+    return changePolicyRls(this, this.up, tableName, policyName, params);
   }
 }
 

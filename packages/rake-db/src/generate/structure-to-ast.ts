@@ -83,7 +83,7 @@ export const structureToAst = async (
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];
 
-  const data = await introspectDbSchema(adapter);
+  const data = await introspectDbSchema(adapter, { rls: true });
 
   for (const name of data.schemas) {
     if (name === 'public') continue;
@@ -113,6 +113,22 @@ export const structureToAst = async (
       continue;
 
     ast.push(tableToAst(ctx, data, table, 'create', domains));
+
+    for (const policy of table.rls?.policies || []) {
+      ast.push({
+        type: 'policy',
+        action: 'create',
+        schema:
+          table.schemaName === ctx.currentSchema ? undefined : table.schemaName,
+        table: table.name,
+        name: policy.name,
+        as: policy.mode,
+        for: policy.command,
+        to: policy.roles,
+        using: policy.using,
+        withCheck: policy.withCheck,
+      });
+    }
 
     if (table.rls?.enable) {
       ast.push({
