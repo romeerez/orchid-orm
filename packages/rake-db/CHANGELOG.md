@@ -1,5 +1,23 @@
 # rake-db
 
+## 2.35.0
+
+### Minor Changes
+
+- b86c1cd5: Default rake-db `createView` to `securityInvoker: true` so views over RLS-managed tables use caller permissions and caller policies unless explicitly opted out with `securityInvoker: false` (#611)
+
+### Patch Changes
+
+- ba5ee38a: Add typed PostgreSQL grant and revoke support across ORM metadata, rake-db migrations, generated migration reconciliation, and table-local grant declarations (#611)
+- b637f91c: Add row-level security policy support for migrations, introspection, and generated migration output (#611)
+- Updated dependencies [1060355d]
+- Updated dependencies [9dc560fe]
+- Updated dependencies [95d026da]
+- Updated dependencies [ba5ee38a]
+- Updated dependencies [ce81cd27]
+- Updated dependencies [b637f91c]
+  - pqb@0.66.7
+
 ## 2.34.1
 
 ### Patch Changes

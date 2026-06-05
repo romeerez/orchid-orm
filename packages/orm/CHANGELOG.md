@@ -1,5 +1,28 @@
 # orchid-orm
 
+## 1.71.0
+
+### Minor Changes
+
+- b86c1cd5: Default rake-db `createView` to `securityInvoker: true` so views over RLS-managed tables use caller permissions and caller policies unless explicitly opted out with `securityInvoker: false` (#611)
+
+### Patch Changes
+
+- 1060355d: Fix table `as` alias to be properly use in `where` callback (#710)
+- 95d026da: Require at least one permissive table RLS policy and default omitted `force` to `true` in Orchid (#611)
+- ba5ee38a: Add typed PostgreSQL grant and revoke support across ORM metadata, rake-db migrations, generated migration reconciliation, and table-local grant declarations (#611)
+- ce81cd27: Fix `queryHelper.table` to be present at runtime, rename queryHelper `args` and `result` to be prefixed with \_\_ as they are type-only (#712)
+- b637f91c: Add row-level security policy support for migrations, introspection, and generated migration output (#611)
+- Updated dependencies [1060355d]
+- Updated dependencies [9dc560fe]
+- Updated dependencies [95d026da]
+- Updated dependencies [b86c1cd5]
+- Updated dependencies [ba5ee38a]
+- Updated dependencies [ce81cd27]
+- Updated dependencies [b637f91c]
+  - pqb@0.66.7
+  - rake-db@2.35.0
+
 ## 1.70.1
 
 ### Patch Changes
