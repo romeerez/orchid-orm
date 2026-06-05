@@ -218,14 +218,8 @@ const processWhere = (
         ands.push(`(${moveMutativeQueryToCte(ctx, q)})`);
       }
     } else {
-      pushWhereToSql(
-        ands,
-        ctx,
-        query,
-        query.q,
-        query.table && `"${query.table}"`,
-        true,
-      );
+      const as = getQueryAs(query);
+      pushWhereToSql(ands, ctx, query, query.q, as && `"${as}"`, true);
     }
     return;
   }

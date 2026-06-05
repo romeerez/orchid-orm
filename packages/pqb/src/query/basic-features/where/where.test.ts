@@ -11,6 +11,21 @@ import { testWhere, testWhereExists } from './test-where';
 import { assertType, db, expectSql, sql } from 'test-utils';
 
 describe('where', () => {
+  describe('callback', () => {
+    it('should use the `as` from the query', () => {
+      const q = db.user
+        .as('u')
+        .select('Id')
+        .where((q) => q.where({ Name: 'name' }));
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "u"."id" "Id" FROM "schema"."user" "u" WHERE ("u"."name" = $1)`,
+        ['name'],
+      );
+    });
+  });
+
   describe('relation', () => {
     it('should allow where-ing on a column of a selected relation', () => {
       db.user
