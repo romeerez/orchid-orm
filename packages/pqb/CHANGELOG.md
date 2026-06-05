@@ -1,5 +1,11 @@
 # pqb
 
+## 0.66.8
+
+### Patch Changes
+
+- c677743f: Fix build process to compile package dependencies first to properly resolve d.ts types (#711)
+
 ## 0.66.7
 
 ### Patch Changes

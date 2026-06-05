@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.71.1
+
+### Patch Changes
+
+- c677743f: Fix build process to compile package dependencies first to properly resolve d.ts types (#711)
+- Updated dependencies [c677743f]
+  - pqb@0.66.8
+  - rake-db@2.35.1
+
 ## 1.71.0
 
 ### Minor Changes
