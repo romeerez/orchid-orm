@@ -15,7 +15,7 @@
   - 1.1.5 make sure you didn't forget to cover the implementation with tests
   - 1.1.6 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
   - 1.1.7 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
-- [ ] 1.2 Support grant AST in generated migrations (don't change orm yet)
+- [x] 1.2 Support grant AST in generated migrations (don't change orm yet)
   - 1.2.1 Render `RakeDbAst.Grant` items as generated `db.grant` or `db.revoke` calls, preserving target keys, role lists, `grantedBy`, ordinary privileges, grantable privileges, and `revokeMode` only when present.
   - 1.2.2 Add grant dependency metadata so generated grants are ordered with roles, grantors, schemas, and target objects consistently with the existing role and default-privilege generation model.
   - 1.2.3 Preserve manual migration grant/revoke behavior while removing the current generated-migration rejection for grant AST nodes.
