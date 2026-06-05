@@ -51,7 +51,7 @@ change(async (db) => {
 ## What Changes
 
 - Add `db.grant(params)` for PostgreSQL object `GRANT` statements in manual `rake-db` migrations.
-- Add `db.revoke(params)` for PostgreSQL object `REVOKE` statements, including `REVOKE GRANT OPTION FOR` and `CASCADE` / `RESTRICT` through `revokeMode`.
+- Add `db.revoke(params)` for PostgreSQL object `REVOKE` statements, including `CASCADE` / `RESTRICT` through `revokeMode`.
 - Use the same strict public argument type for `grant` and `revoke`, reusing `pqb` grant target, privilege, `to`, `grantedBy`, and `grantablePrivileges` concepts.
 - Add one loose internal `rake-db` grant privilege shape that extends `pqb` `Grant.InternalPrivilege` with `revokeMode` for SQL rendering and future generated migration reuse.
 - Document the migration DSL and keep generated grant reconciliation, grant introspection, and ORM metadata comparison out of scope.
@@ -64,7 +64,7 @@ change(async (db) => {
 ## Capabilities
 
 - `grant-migration-dsl`: Execute typed existing-object `GRANT` statements from manual `rake-db` migrations.
-- `revoke-migration-dsl`: Execute typed existing-object `REVOKE` statements from manual `rake-db` migrations, including grant-option-only revocation.
+- `revoke-migration-dsl`: Execute typed existing-object `REVOKE` statements from manual `rake-db` migrations.
 - `grant-sql-state`: Provide one loose internal grant/revoke statement shape that SQL rendering and later generated grant reconciliation can share.
 
 ## Detailed Design
@@ -96,8 +96,8 @@ type GrantMigrationArg = PqbGrant.Privilege & {
 - `privileges` on `grant` emits an ordinary `GRANT ... ON ... TO ...` statement.
 - `grantablePrivileges` on `grant` emits `GRANT ... ON ... TO ... WITH GRANT OPTION`.
 - `privileges` on `revoke` emits ordinary `REVOKE ... ON ... FROM ...` and removes both ordinary privileges and their grant options, matching PostgreSQL behavior.
-- `grantablePrivileges` on `revoke` emits `REVOKE GRANT OPTION FOR ... ON ... FROM ...` and leaves the underlying ordinary privilege in place.
-- When both `privileges` and `grantablePrivileges` are present, `rake-db` emits separate statements so each privilege group has the correct grant-option behavior.
+- `grantablePrivileges` on `revoke` emits ordinary `REVOKE ... ON ... FROM ...` for those privileges. It uses the same privilege meaning as `grantablePrivileges` on `grant`: the migration is revoking a privilege that should be restored with grant option on rollback.
+- When both `privileges` and `grantablePrivileges` are present, `rake-db` emits separate statements so rollback can restore each privilege group with the correct grant-option behavior.
 - `revokeMode` emits `CASCADE` or `RESTRICT` only when the emitted statement is a `REVOKE`; omitted mode uses PostgreSQL's default `RESTRICT` behavior without adding a keyword.
 
 ### Target and Privilege Semantics

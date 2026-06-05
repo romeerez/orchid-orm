@@ -1263,6 +1263,116 @@ change(async (db) => {
 });
 ```
 
+## grant, revoke
+
+Grant or revoke direct privileges on existing PostgreSQL objects.
+These methods are for existing objects only.
+Use [changeDefaultPrivileges](/guide/migration-writing#changedefaultprivileges) for privileges that PostgreSQL should apply to future objects created by a role.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.createRole('app_user', { canLogin: true });
+
+  await db.grant({
+    to: 'app_user',
+    schemas: ['public'],
+    privileges: ['USAGE'],
+  });
+
+  await db.grant({
+    to: 'app_user',
+    tables: ['project', 'task'],
+    privileges: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+  });
+
+  await db.grant({
+    to: 'app_user',
+    sequences: ['project_id_seq'],
+    privileges: ['USAGE', 'SELECT'],
+  });
+});
+```
+
+`grantablePrivileges` grants privileges with `WITH GRANT OPTION`:
+
+```ts
+change(async (db) => {
+  await db.grant({
+    to: 'reporting_admin',
+    tables: ['project'],
+    grantablePrivileges: ['SELECT'],
+    grantedBy: 'app_owner',
+  });
+});
+```
+
+`revoke` accepts the same target and privilege shape.
+In `revoke`, `to` names the roles whose privileges are revoked:
+
+```ts
+change(async (db) => {
+  await db.revoke({
+    to: 'PUBLIC',
+    routines: ['public.reset_password(text)'],
+    privileges: ['EXECUTE'],
+    revokeMode: 'CASCADE',
+  });
+
+  await db.revoke({
+    to: 'readonly',
+    tables: ['project'],
+    grantablePrivileges: ['UPDATE'],
+    revokeMode: 'RESTRICT',
+  });
+});
+```
+
+Options:
+
+- `to`: one role or a non-empty array of roles. `PUBLIC`, `CURRENT_ROLE`, `CURRENT_USER`, and `SESSION_USER` are emitted as PostgreSQL role specifications.
+- `grantedBy`: optional grantor role emitted as `GRANTED BY`.
+- `privileges`: ordinary privileges to grant or revoke.
+- `grantablePrivileges`: privileges to grant with grant option, or privileges to revoke that should be restored with grant option on rollback.
+- `revokeMode`: `CASCADE` or `RESTRICT`, used only when a `REVOKE` statement is emitted.
+
+Supported targets:
+
+| Target key       | PostgreSQL target            | Privileges                                                                   |
+| ---------------- | ---------------------------- | ---------------------------------------------------------------------------- |
+| `schemas`        | `ON SCHEMA`                  | ALL, USAGE, CREATE                                                           |
+| `tables`         | `ON TABLE`                   | ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN |
+| `allTablesIn`    | `ON ALL TABLES IN SCHEMA`    | ALL, SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN |
+| `sequences`      | `ON SEQUENCE`                | ALL, USAGE, SELECT, UPDATE                                                   |
+| `allSequencesIn` | `ON ALL SEQUENCES IN SCHEMA` | ALL, USAGE, SELECT, UPDATE                                                   |
+| `routines`       | `ON ROUTINE`                 | ALL, EXECUTE                                                                 |
+| `allRoutinesIn`  | `ON ALL ROUTINES IN SCHEMA`  | ALL, EXECUTE                                                                 |
+| `types`          | `ON TYPE`                    | ALL, USAGE                                                                   |
+| `domains`        | `ON DOMAIN`                  | ALL, USAGE                                                                   |
+| `databases`      | `ON DATABASE`                | ALL, CREATE, CONNECT, TEMPORARY, TEMP                                        |
+
+`ALL` renders as `ALL PRIVILEGES`.
+`TEMP` is accepted as a database privilege alias for `TEMPORARY`.
+`MAINTAIN` is supported by PostgreSQL 17 and newer.
+
+Concrete table, sequence, routine, type, and domain names may be schema-qualified.
+Unqualified concrete object names are prefixed with the configured migration schema.
+Schema-wide targets such as `allTablesIn`, `allSequencesIn`, and `allRoutinesIn` contain schema names directly and are not schema-prefixed.
+
+When both `privileges` and `grantablePrivileges` are provided, Orchid emits separate SQL statements so rollback can restore each privilege group correctly.
+On rollback, `grant` emits the matching `REVOKE`, and `revoke` emits the matching `GRANT`.
+Rolling back `revoke({ grantablePrivileges })` grants those privileges back with `WITH GRANT OPTION`.
+
+Common PostgreSQL grant gotchas:
+
+- Granting table privileges does not grant access to sequences used by that table.
+- A role usually needs `USAGE` on the schema before it can access objects in that schema.
+- Revoking a direct grant from a role or from `PUBLIC` does not prove the role has no effective access through membership, ownership, or superuser bypass.
+- `GRANT` and `REVOKE` affect existing objects only; use default privileges for objects created later.
+
+For ORM-side declaration and migration generation of grants, see [Generate Migrations](/guide/generate-migrations#grants).
+
 ## changeDefaultPrivileges
 
 Grant or revoke default privileges for a role on objects created in a schema or globally.

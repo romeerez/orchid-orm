@@ -144,8 +144,8 @@ namespace RakeDbAst {
 - `astToMigration` renders `action: 'grant'` as `await db.grant({...})` and `action: 'revoke'` as `await db.revoke({...})`.
 - Generated code uses the public `rake-db` grant/revoke argument shape from idea 2 instead of raw SQL.
 - `to`, target arrays, `privileges`, `grantablePrivileges`, `grantedBy`, and `revokeMode` are rendered only when present.
-- `grantablePrivileges` on generated `grant` means grant with grant option. `grantablePrivileges` on generated `revoke` means revoke grant option only.
-- When generated reconciliation needs to remove a privilege entirely, including any grant option, it emits that privilege in `privileges` on `db.revoke`, not in `grantablePrivileges`.
+- `grantablePrivileges` on generated `grant` means grant with grant option. `grantablePrivileges` on generated `revoke` means revoke a privilege that should be granted back with grant option on rollback.
+- When generated reconciliation needs to remove a grantable privilege entirely, including any grant option, it emits that privilege in `grantablePrivileges` on `db.revoke`.
 - Generated grant items declare dependencies on referenced roles, grantor roles, schemas, and concrete object targets so grant changes are ordered after role and object creation and before role or object removal where the generator ordering model can express that.
 - Generated migration reports include concise grant and revoke messages, with grant-option changes reported separately from ordinary privilege changes, matching the style of default-privilege reports.
 
@@ -174,8 +174,9 @@ Grant option is part of the desired state for each target, grantee, grantor, and
 - If code declares an ordinary privilege and the database has no such privilege, generate `db.grant({ privileges: [...] })`.
 - If code declares a grantable privilege and the database has no such privilege, generate `db.grant({ grantablePrivileges: [...] })`.
 - If code declares a grantable privilege and the database has only an ordinary privilege, generate `db.grant({ grantablePrivileges: [...] })` to add the grant option.
-- If code declares an ordinary privilege and the database has the same privilege with grant option, generate `db.revoke({ grantablePrivileges: [...] })` to remove only the grant option.
-- If code does not declare a privilege and the database has either an ordinary or grantable version, generate `db.revoke({ privileges: [...] })` so PostgreSQL removes both the privilege and any grant option.
+- If code declares an ordinary privilege and the database has the same privilege with grant option, generate `db.revoke({ grantablePrivileges: [...] })` followed by `db.grant({ privileges: [...] })` so the grant option is removed while the ordinary privilege remains.
+- If code does not declare a privilege and the database has an ordinary version, generate `db.revoke({ privileges: [...] })`.
+- If code does not declare a privilege and the database has a grantable version, generate `db.revoke({ grantablePrivileges: [...] })` so rollback restores the grant with grant option.
 
 ### Ignore Semantics
 
