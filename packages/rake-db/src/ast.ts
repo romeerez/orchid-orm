@@ -7,6 +7,7 @@ import {
   TableData,
   type Column as QbColumn,
   type RlsPolicy,
+  type Grant as PqbGrant,
 } from 'pqb/internal';
 import { DropMode } from './migration/migration';
 import { DbStructure } from './generate/db-structure';
@@ -33,7 +34,8 @@ export type RakeDbAst =
   | RakeDbAst.DefaultPrivilege
   | RakeDbAst.TableRls
   | RakeDbAst.Policy
-  | RakeDbAst.PolicyChange;
+  | RakeDbAst.PolicyChange
+  | RakeDbAst.Grant;
 
 export namespace RakeDbAst {
   export interface Table extends TableData {
@@ -355,5 +357,11 @@ export namespace RakeDbAst {
     name: string;
     from: PolicyChangeDefinition;
     to: PolicyChangeDefinition;
+  }
+
+  export interface Grant extends PqbGrant.InternalPrivilege {
+    type: 'grant';
+    action: 'grant' | 'revoke';
+    revokeMode?: 'CASCADE' | 'RESTRICT';
   }
 }

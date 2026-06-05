@@ -55,6 +55,7 @@ import {
   RlsPolicyDefinition,
   changePolicy as changePolicyRls,
 } from './rls';
+import { changeGrant, GrantMigrationArg } from './grant';
 
 // Drop mode to use when dropping various database entities.
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -1528,6 +1529,14 @@ export class Migration<CT = unknown> {
     params: ChangeRlsPolicyParams,
   ): Promise<void> {
     return changePolicyRls(this, this.up, tableName, policyName, params);
+  }
+
+  grant(params: GrantMigrationArg): Promise<void> {
+    return changeGrant(this, this.up, params);
+  }
+
+  revoke(params: GrantMigrationArg): Promise<void> {
+    return changeGrant(this, !this.up, params);
   }
 }
 
