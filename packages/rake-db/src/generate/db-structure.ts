@@ -3,6 +3,7 @@ import {
   EmptyObject,
   RecordUnknown,
   DefaultPrivileges,
+  type RlsPolicy,
   type RecordOptionalString,
   type SearchWeight,
 } from 'pqb/internal';
@@ -14,13 +15,8 @@ export namespace DbStructure {
     tableName: string;
   }
 
-  export type RlsPolicyMode = 'PERMISSIVE' | 'RESTRICTIVE';
-  export type RlsPolicyCommand =
-    | 'ALL'
-    | 'SELECT'
-    | 'INSERT'
-    | 'UPDATE'
-    | 'DELETE';
+  export type RlsPolicyMode = RlsPolicy.PolicyMode;
+  export type RlsPolicyCommand = RlsPolicy.PolicyCommand;
 
   export interface RlsPolicy extends TableNameAndSchemaName {
     name: string;
@@ -232,8 +228,8 @@ export namespace RawDbStructure {
     schemaName: string;
     tableName: string;
     name: string;
-    mode: 'PERMISSIVE' | 'RESTRICTIVE';
-    command: DbStructure.RlsPolicyCommand;
+    mode: RlsPolicy.PolicyMode;
+    command: RlsPolicy.PolicyCommand;
     roles: string[];
     using?: string;
     withCheck?: string;
