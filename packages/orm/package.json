@@ -1,126 +1,115 @@
 {
-  "name": "orchid-orm",
-  "version": "1.71.1",
-  "description": "Postgres ORM",
-  "keywords": [
-    "orm",
-    "pg",
-    "postgres",
-    "ts",
-    "typescript"
-  ],
-  "homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
-  "license": "ISC",
-  "author": "Roman Kushyn",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/romeerez/orchid-orm.git",
-    "directory": "packages/orm"
-  },
-  "files": [
-    "dist",
-    "codegen"
-  ],
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "typings": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "require": {
-        "default": "./dist/index.js",
-        "types": "./dist/index.d.ts"
-      },
-      "import": {
-        "default": "./dist/index.mjs",
-        "types": "./dist/index.d.ts"
-      }
-    },
-    "./codegen": {
-      "require": {
-        "default": "./codegen/index.js",
-        "types": "./codegen/index.d.ts"
-      },
-      "import": {
-        "default": "./codegen/index.mjs",
-        "types": "./codegen/index.d.ts"
-      }
-    },
-    "./node-postgres": {
-      "require": {
-        "default": "./dist/node-postgres.js",
-        "types": "./dist/node-postgres.d.ts"
-      },
-      "import": {
-        "default": "./dist/node-postgres.mjs",
-        "types": "./dist/node-postgres.d.ts"
-      }
-    },
-    "./postgres-js": {
-      "require": {
-        "default": "./dist/postgres-js.js",
-        "types": "./dist/postgres-js.d.ts"
-      },
-      "import": {
-        "default": "./dist/postgres-js.mjs",
-        "types": "./dist/postgres-js.d.ts"
-      }
-    },
-    "./migrations": {
-      "require": {
-        "default": "./dist/migrations/index.js",
-        "types": "./dist/migrations/index.d.ts"
-      },
-      "import": {
-        "default": "./dist/migrations/index.mjs",
-        "types": "./dist/migrations/index.d.ts"
-      }
-    },
-    "./migrations/node-postgres": {
-      "require": {
-        "default": "./dist/migrations/node-postgres.js",
-        "types": "./dist/migrations/node-postgres.d.ts"
-      },
-      "import": {
-        "default": "./dist/migrations/node-postgres.mjs",
-        "types": "./dist/migrations/node-postgres.d.ts"
-      }
-    },
-    "./migrations/postgres-js": {
-      "require": {
-        "default": "./dist/migrations/postgres-js.js",
-        "types": "./dist/migrations/postgres-js.d.ts"
-      },
-      "import": {
-        "default": "./dist/migrations/postgres-js.mjs",
-        "types": "./dist/migrations/postgres-js.d.ts"
-      }
-    }
-  },
-  "scripts": {
-    "test": "jest --watch --verbose false",
-    "check": "jest",
-    "check:coverage": "jest --coverage --coverageReporters json-summary",
-    "types": "tsc",
-    "build": "rimraf ./dist/ ./codegen/ && rolldown -c ./rolldown.config.mjs",
-    "lint": "oxlint --fix",
-    "lint:check": "oxlint",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
-    "prepublishOnly": "pnpm build"
-  },
-  "dependencies": {
-    "inflection": "*",
-    "pqb": "workspace:*",
-    "prompts": "2.4.2",
-    "rake-db": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/prompts": "2.4.2",
-    "orchid-orm-schema-to-zod": "workspace:*",
-    "test-utils": "workspace:*",
-    "zod": "4.3.6"
-  },
-  "peerDependencies": {
-    "typescript": "*"
-  }
+	"name": "orchid-orm",
+	"version": "1.71.1",
+	"description": "Postgres ORM",
+	"keywords": [
+		"orm",
+		"pg",
+		"postgres",
+		"ts",
+		"typescript"
+	],
+	"homepage": "https://orchid-orm.netlify.app/guide/orm-and-query-builder.html",
+	"license": "ISC",
+	"author": "Roman Kushyn",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/romeerez/orchid-orm.git",
+		"directory": "packages/orm"
+	},
+	"files": [
+		"dist"
+	],
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"typings": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"require": {
+				"default": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			},
+			"import": {
+				"default": "./dist/index.mjs",
+				"types": "./dist/index.d.ts"
+			}
+		},
+		"./node-postgres": {
+			"require": {
+				"default": "./dist/node-postgres.js",
+				"types": "./dist/node-postgres.d.ts"
+			},
+			"import": {
+				"default": "./dist/node-postgres.mjs",
+				"types": "./dist/node-postgres.d.ts"
+			}
+		},
+		"./postgres-js": {
+			"require": {
+				"default": "./dist/postgres-js.js",
+				"types": "./dist/postgres-js.d.ts"
+			},
+			"import": {
+				"default": "./dist/postgres-js.mjs",
+				"types": "./dist/postgres-js.d.ts"
+			}
+		},
+		"./migrations": {
+			"require": {
+				"default": "./dist/migrations/index.js",
+				"types": "./dist/migrations/index.d.ts"
+			},
+			"import": {
+				"default": "./dist/migrations/index.mjs",
+				"types": "./dist/migrations/index.d.ts"
+			}
+		},
+		"./migrations/node-postgres": {
+			"require": {
+				"default": "./dist/migrations/node-postgres.js",
+				"types": "./dist/migrations/node-postgres.d.ts"
+			},
+			"import": {
+				"default": "./dist/migrations/node-postgres.mjs",
+				"types": "./dist/migrations/node-postgres.d.ts"
+			}
+		},
+		"./migrations/postgres-js": {
+			"require": {
+				"default": "./dist/migrations/postgres-js.js",
+				"types": "./dist/migrations/postgres-js.d.ts"
+			},
+			"import": {
+				"default": "./dist/migrations/postgres-js.mjs",
+				"types": "./dist/migrations/postgres-js.d.ts"
+			}
+		}
+	},
+	"scripts": {
+		"test": "jest --watch --verbose false",
+		"check": "jest",
+		"check:coverage": "jest --coverage --coverageReporters json-summary",
+		"types": "tsc",
+		"build": "rimraf ./dist/ ./codegen/ && rolldown -c ./rolldown.config.mjs",
+		"lint": "oxlint --fix",
+		"lint:check": "oxlint",
+		"fmt": "oxfmt",
+		"fmt:check": "oxfmt --check",
+		"prepublishOnly": "pnpm build"
+	},
+	"dependencies": {
+		"inflection": "*",
+		"pqb": "workspace:*",
+		"prompts": "2.4.2",
+		"rake-db": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/prompts": "2.4.2",
+		"orchid-orm-schema-to-zod": "workspace:*",
+		"test-utils": "workspace:*",
+		"zod": "4.3.6"
+	},
+	"peerDependencies": {
+		"typescript": "*"
+	}
 }
