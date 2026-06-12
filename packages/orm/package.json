@@ -18,8 +18,7 @@
     "directory": "packages/orm"
   },
   "files": [
-    "dist",
-    "codegen"
+    "dist"
   ],
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -33,16 +32,6 @@
       "import": {
         "default": "./dist/index.mjs",
         "types": "./dist/index.d.ts"
-      }
-    },
-    "./codegen": {
-      "require": {
-        "default": "./codegen/index.js",
-        "types": "./codegen/index.d.ts"
-      },
-      "import": {
-        "default": "./codegen/index.mjs",
-        "types": "./codegen/index.d.ts"
       }
     },
     "./node-postgres": {
