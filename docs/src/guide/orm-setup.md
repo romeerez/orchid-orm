@@ -35,6 +35,8 @@ Returns an instance with tables and some specific functions prefixed with a `$` 
 import { orchidORM } from 'orchid-orm/postgres-js';
 // for node-postgres driver:
 import { orchidORM } from 'orchid-orm/node-postgres';
+// for Bun SQL driver:
+import { orchidORM } from 'orchid-orm/bun';
 
 // import all tables
 import { UserTable } from './tables/user';
@@ -70,6 +72,21 @@ export const db = orchidORM(
 );
 ```
 
+### Bun SQL
+
+Bun SQL is supported via the `orchid-orm/bun` adapter and works only under the Bun runtime.
+
+The most important caveat is that Bun parses timestamps and dates into its own custom Date-like object.
+Such objects look like and act like normal JavaScript `Date` objects, but `returnedRow.createdAt instanceof Date` is `false`.
+
+There is also a Bun bug for parsing `timestamp without time zone`.
+It was fixed in [oven-sh/bun#31212](https://github.com/oven-sh/bun/pull/31212), but the fix is not released yet.
+Use a Bun canary version until the fix is available in a stable release.
+
+Bun does not parse Postgres result fields.
+This should not be a problem when using ORM abstractions, but it can bite when making raw SQL queries.
+`fields` are empty when no rows are returned.
+
 ## split ORM initialization
 
 `orchidORM` shown above is the default and recommended way to set up the ORM.
@@ -79,6 +96,10 @@ you can split setup into a table bundle and a later DB binding step.
 ```ts
 import { bundleOrchidORMTables } from 'orchid-orm';
 import { makeOrchidOrmDb } from 'orchid-orm/postgres-js';
+// for node-postgres driver:
+// import { makeOrchidOrmDb } from 'orchid-orm/node-postgres';
+// for Bun SQL driver:
+// import { makeOrchidOrmDb } from 'orchid-orm/bun';
 
 import { UserTable } from './tables/user';
 import { MessageTable } from './tables/message';
@@ -98,7 +119,7 @@ export const db = makeOrchidOrmDb(orm, {
 });
 ```
 
-`makeOrchidOrmDb` is exported from both `orchid-orm/postgres-js` and `orchid-orm/node-postgres`,
+`makeOrchidOrmDb` is exported from `orchid-orm/postgres-js`, `orchid-orm/node-postgres`, and `orchid-orm/bun`,
 and accepts the same driver-specific options as `orchidORM` from the same path.
 
 The bundled `orm` has only your table keys, and each bundled table object exposes only `makeHelper`.

@@ -23,9 +23,16 @@ import {
   toSnakeCase,
   DefaultColumnTypes,
   DefaultSchemaConfig,
+  defaultSchemaConfig,
 } from 'pqb/internal';
 import { createTable, CreateTableResult } from './create-table';
-import { changeTable, TableChangeData, TableChanger } from './change-table';
+import {
+  changeTable,
+  makeTableChangeMethods,
+  TableChangeData,
+  TableChangeMethods,
+  TableChanger,
+} from './change-table';
 import {
   getSchemaAndTableFromName,
   quoteNameFromString,
@@ -56,6 +63,7 @@ import {
   changePolicy as changePolicyRls,
 } from './rls';
 import { changeGrant, GrantMigrationArg } from './grant';
+import { makeTableMethods, TableMethods } from './table-methods';
 
 // Drop mode to use when dropping various database entities.
 export type DropMode = 'CASCADE' | 'RESTRICT';
@@ -211,6 +219,25 @@ export class Migration<CT = unknown> {
   // They are pulled from a `baseTable` or a `columnTypes` option of the `rakeDb` config.
   public columnTypes!: CT;
 
+  private tableMethods: TableMethods | undefined;
+  private getTableMethods() {
+    let { tableMethods } = this;
+    if (!tableMethods) {
+      const schemaConfig = defaultSchemaConfig();
+      tableMethods = makeTableMethods(schemaConfig);
+    }
+    return tableMethods;
+  }
+
+  private tableChangeMethods: TableChangeMethods | undefined;
+  private getTableChangeMethods() {
+    let { tableChangeMethods } = this;
+    if (!tableChangeMethods) {
+      tableChangeMethods = makeTableChangeMethods(this.getTableMethods());
+    }
+    return tableChangeMethods;
+  }
+
   /**
    * `createTable` accepts a string for a table name, optional options, and a callback to specify columns.
    *
@@ -316,7 +343,15 @@ export class Migration<CT = unknown> {
     third?: any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    return createTable(this, this.up, tableName, first, second, third);
+    return createTable(
+      this,
+      this.getTableMethods(),
+      this.up,
+      tableName,
+      first,
+      second,
+      third,
+    );
   }
 
   /**
@@ -355,7 +390,15 @@ export class Migration<CT = unknown> {
     third?: any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<any> {
-    return createTable(this, !this.up, tableName, first, second, third);
+    return createTable(
+      this,
+      this.getTableMethods(),
+      !this.up,
+      tableName,
+      first,
+      second,
+      third,
+    );
   }
 
   /**
@@ -404,7 +447,14 @@ export class Migration<CT = unknown> {
     const [fn, options] =
       typeof cbOrOptions === 'function' ? [cbOrOptions, {}] : [cb, cbOrOptions];
 
-    return changeTable(this, this.up, tableName, options, fn);
+    return changeTable(
+      this,
+      this.getTableChangeMethods(),
+      this.up,
+      tableName,
+      options,
+      fn,
+    );
   }
 
   /**
@@ -478,7 +528,14 @@ export class Migration<CT = unknown> {
     columnName: string,
     fn: (t: MigrationColumnTypes<CT>) => Column,
   ): Promise<void> {
-    return addColumn(this, this.up, tableName, columnName, fn);
+    return addColumn(
+      this,
+      this.getTableChangeMethods(),
+      this.up,
+      tableName,
+      columnName,
+      fn,
+    );
   }
 
   /**
@@ -493,7 +550,14 @@ export class Migration<CT = unknown> {
     columnName: string,
     fn: (t: MigrationColumnTypes<CT>) => Column,
   ): Promise<void> {
-    return addColumn(this, !this.up, tableName, columnName, fn);
+    return addColumn(
+      this,
+      this.getTableChangeMethods(),
+      !this.up,
+      tableName,
+      columnName,
+      fn,
+    );
   }
 
   /**
@@ -526,7 +590,14 @@ export class Migration<CT = unknown> {
     columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
     ...args: [options?: TableData.Index.OptionsArg]
   ): Promise<void> {
-    return addIndex(this, this.up, tableName, columns, ...args);
+    return addIndex(
+      this,
+      this.getTableChangeMethods(),
+      this.up,
+      tableName,
+      columns,
+      ...args,
+    );
   }
 
   /**
@@ -541,7 +612,14 @@ export class Migration<CT = unknown> {
     columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
     ...args: [options?: TableData.Index.OptionsArg]
   ): Promise<void> {
-    return addIndex(this, !this.up, tableName, columns, ...args);
+    return addIndex(
+      this,
+      this.getTableChangeMethods(),
+      !this.up,
+      tableName,
+      columns,
+      ...args,
+    );
   }
 
   /**
@@ -616,6 +694,7 @@ export class Migration<CT = unknown> {
   ): Promise<void> {
     return addForeignKey(
       this,
+      this.getTableChangeMethods(),
       this.up,
       tableName,
       columns,
@@ -643,6 +722,7 @@ export class Migration<CT = unknown> {
   ): Promise<void> {
     return addForeignKey(
       this,
+      this.getTableChangeMethods(),
       !this.up,
       tableName,
       columns,
@@ -679,7 +759,14 @@ export class Migration<CT = unknown> {
     columns: [string, ...string[]],
     name?: string,
   ): Promise<void> {
-    return addPrimaryKey(this, this.up, tableName, columns, name);
+    return addPrimaryKey(
+      this,
+      this.getTableChangeMethods(),
+      this.up,
+      tableName,
+      columns,
+      name,
+    );
   }
 
   /**
@@ -694,7 +781,14 @@ export class Migration<CT = unknown> {
     columns: [string, ...string[]],
     name?: string,
   ): Promise<void> {
-    return addPrimaryKey(this, !this.up, tableName, columns, name);
+    return addPrimaryKey(
+      this,
+      this.getTableChangeMethods(),
+      !this.up,
+      tableName,
+      columns,
+      name,
+    );
   }
 
   /**
@@ -712,7 +806,13 @@ export class Migration<CT = unknown> {
    * @param check - raw SQL for the check
    */
   addCheck(tableName: string, check: RawSqlBase): Promise<void> {
-    return addCheck(this, this.up, tableName, check);
+    return addCheck(
+      this,
+      this.getTableChangeMethods(),
+      this.up,
+      tableName,
+      check,
+    );
   }
 
   /**
@@ -722,7 +822,13 @@ export class Migration<CT = unknown> {
    * @param check - raw SQL for the check
    */
   dropCheck(tableName: string, check: RawSqlBase): Promise<void> {
-    return addCheck(this, !this.up, tableName, check);
+    return addCheck(
+      this,
+      this.getTableChangeMethods(),
+      !this.up,
+      tableName,
+      check,
+    );
   }
 
   /**
@@ -1559,7 +1665,6 @@ const wrapWithEnhancingError = async <Result>(
       err.message += `\nSQL: ${text}${
         values ? `\nVariables: ${JSON.stringify(values)}` : ''
       }`;
-      throw new (err.constructor as { new (err: unknown): unknown })(err);
     }
     throw err;
   }
@@ -1605,12 +1710,13 @@ const wrapWithLog = async <Result>(
  */
 const addColumn = <CT>(
   migration: Migration<CT>,
+  tableChangeMethods: TableChangeMethods,
   up: boolean,
   tableName: string,
   columnName: string,
   fn: (t: MigrationColumnTypes<CT>) => Column,
 ): Promise<void> => {
-  return changeTable(migration, up, tableName, {}, (t) => ({
+  return changeTable(migration, tableChangeMethods, up, tableName, {}, (t) => ({
     [columnName]: t.add(fn(t)),
   }));
 };
@@ -1620,12 +1726,13 @@ const addColumn = <CT>(
  */
 const addIndex = (
   migration: Migration,
+  tableChangeMethods: TableChangeMethods,
   up: boolean,
   tableName: string,
   columns: (string | TableData.Index.ColumnOrExpressionOptions)[],
   ...args: [options?: TableData.Index.OptionsArg]
 ): Promise<void> => {
-  return changeTable(migration, up, tableName, {}, (t) => ({
+  return changeTable(migration, tableChangeMethods, up, tableName, {}, (t) => ({
     ...t.add(t.index(columns, ...args)),
   }));
 };
@@ -1635,6 +1742,7 @@ const addIndex = (
  */
 const addForeignKey = (
   migration: Migration,
+  tableChangeMethods: TableChangeMethods,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
@@ -1642,7 +1750,7 @@ const addForeignKey = (
   foreignColumns: [string, ...string[]],
   options?: TableData.References.Options,
 ): Promise<void> => {
-  return changeTable(migration, up, tableName, {}, (t) => ({
+  return changeTable(migration, tableChangeMethods, up, tableName, {}, (t) => ({
     ...t.add(t.foreignKey(columns, foreignTable, foreignColumns, options)),
   }));
 };
@@ -1652,12 +1760,13 @@ const addForeignKey = (
  */
 const addPrimaryKey = (
   migration: Migration,
+  tableChangeMethods: TableChangeMethods,
   up: boolean,
   tableName: string,
   columns: [string, ...string[]],
   name?: string,
 ): Promise<void> => {
-  return changeTable(migration, up, tableName, {}, (t) => ({
+  return changeTable(migration, tableChangeMethods, up, tableName, {}, (t) => ({
     ...t.add(t.primaryKey(columns, name)),
   }));
 };
@@ -1667,11 +1776,12 @@ const addPrimaryKey = (
  */
 const addCheck = (
   migration: Migration,
+  tableChangeMethods: TableChangeMethods,
   up: boolean,
   tableName: string,
   check: RawSqlBase,
 ): Promise<void> => {
-  return changeTable(migration, up, tableName, {}, (t) => ({
+  return changeTable(migration, tableChangeMethods, up, tableName, {}, (t) => ({
     ...t.add(t.check(check)),
   }));
 };

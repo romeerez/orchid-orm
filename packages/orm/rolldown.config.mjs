@@ -19,6 +19,9 @@ export default [
   ...rolldownExportFile('src/adapters/postgres-js', 'dist/postgres-js', {
     forbidImportFrom: src,
   }),
+  ...rolldownExportFile('src/adapters/bun', 'dist/bun', {
+    forbidImportFrom: src,
+  }),
   ...rolldownExportFile('src/migrations/index', 'dist/migrations/index'),
   ...rolldownExportFile(
     'src/migrations/adapters/node-postgres',
@@ -28,4 +31,5 @@ export default [
     'src/migrations/adapters/postgres-js',
     'dist/migrations/postgres-js',
   ),
+  ...rolldownExportFile('src/migrations/adapters/bun', 'dist/migrations/bun'),
 ];

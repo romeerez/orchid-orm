@@ -1,4 +1,6 @@
 import { Column } from './column';
+import { PostgresInterval } from '../adapters/driver-adapter-shared';
+import { AdapterSchemaConfigOptions } from '../adapters/adapter';
 
 export interface ColumnSchemaGetterTableClass {
   prototype: {
@@ -29,9 +31,14 @@ export interface ColumnTypeSchemaArg {
   error?: unknown;
 }
 
+export interface SchemaConfigFnWithOptions extends AdapterSchemaConfigOptions {
+  (): ColumnSchemaConfig;
+}
+
 export interface ColumnSchemaConfig<
   T extends Column.Pick.Data = Column.Pick.Data,
 > extends ColumnTypeSchemaArg {
+  intervalParse?(input: unknown): PostgresInterval;
   dateAsNumber: unknown;
   dateAsDate: unknown;
   enum: unknown;

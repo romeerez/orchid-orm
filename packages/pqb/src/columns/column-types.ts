@@ -158,7 +158,12 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       return new TimeColumn<SchemaConfig>(schema, precision);
     },
     interval(fields, precision) {
-      return new IntervalColumn<SchemaConfig>(schema, fields, precision);
+      return new IntervalColumn(
+        schema,
+        fields,
+        precision,
+        schema.intervalParse,
+      );
     },
     boolean() {
       return new BooleanColumn<SchemaConfig>(schema);

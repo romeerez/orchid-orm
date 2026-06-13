@@ -60,6 +60,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # timezone-related bug is fixed in canary, not released at the time of writing: https://github.com/oven-sh/bun/pull/31212
+          bun-version: canary
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10.32.1
@@ -82,10 +88,17 @@ jobs:
         working-directory: packages/rake-db
         run: pnpm db migrate
 
-      - name: Run tests
+      - name: (postgres-js) Run tests
         run: |
           ADAPTER=postgres-js pnpm check:coverage
+
+      - name: (node-postgres) Run tests
+        run: |
           ADAPTER=node-postgres pnpm check
+
+      - name: (bun) Run tests
+        run: |
+          ADAPTER=bun pnpm bun:check
 
       - name: Lint & Format
         run: ./node_modules/.bin/turbo run lint:check fmt:check

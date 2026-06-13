@@ -31,6 +31,10 @@ import {
   setColumnParseNull,
   setDataValue,
   StringData,
+  ColumnSchemaConfig,
+  AdapterSchemaConfigOptions,
+  getDateAsNumberFn,
+  getDateAsDateFn,
 } from 'pqb/internal';
 import {
   z,
@@ -63,8 +67,12 @@ class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends JSONColumn<
   ZodSchemaConfig,
   ZodSchema
 > {
-  constructor(schema: ZodSchema) {
-    super(zodSchemaConfig, schema);
+  constructor(
+    schemaConfig: ZodSchemaConfig,
+    schema: ZodSchema,
+    encodedByDriver?: boolean,
+  ) {
+    super(schemaConfig, schema, encodedByDriver);
   }
 }
 
@@ -157,8 +165,8 @@ class ZodArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
   ZodArray<Item['outputSchema']>,
   ZodArray<Item['querySchema']>
 > {
-  constructor(item: Item) {
-    super(zodSchemaConfig, item, z.array(item.inputSchema));
+  constructor(schemaConfig: ZodSchemaConfig, item: Item) {
+    super(schemaConfig, item, z.array(item.inputSchema));
   }
 }
 
@@ -521,7 +529,7 @@ export interface BareZodType {
   _output: unknown;
 }
 
-export interface ZodSchemaConfig {
+export interface ZodSchemaConfig extends ColumnSchemaConfig {
   type: ZodTypeAny;
 
   parse<
@@ -758,286 +766,302 @@ export interface ZodSchemaConfig {
   geographyPointSchema(): PointSchemaZod;
 }
 
-// parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown) => new Date(value as string);
-
-export const zodSchemaConfig: ZodSchemaConfig = {
-  type: undefined as unknown as ZodTypeAny,
-  parse(schema, fn) {
-    return setColumnParse(this as never, fn, schema);
-  },
-  parseNull(schema, fn) {
-    return setColumnParseNull(this as never, fn, schema);
-  },
-  encode(schema, fn) {
-    return setColumnEncode(this as never, fn, schema);
-  },
-  asType(_types) {
-    return this as never;
-  },
-  narrowType(type) {
-    const c = Object.create(this);
-    if ((c as Column.Pick.Data).data.generated) {
-      c.outputSchema = c.querySchema = type;
-    } else {
-      c.inputSchema = c.outputSchema = c.querySchema = type;
-    }
-    return c as never;
-  },
-  narrowAllTypes(types) {
-    const c = Object.create(this);
-    if (types.input) {
-      c.inputSchema = types.input;
-    }
-    if (types.output) {
-      c.outputSchema = types.output;
-    }
-    if (types.query) {
-      c.querySchema = types.query;
-    }
-    return c as never;
-  },
-  dateAsNumber() {
-    return this.parse(z.number(), Date.parse as never) as never;
-  },
-  dateAsDate() {
-    return this.parse(z.date(), parseDateToDate) as never;
-  },
-  enum(dataType, type) {
-    return new EnumColumn(
-      zodSchemaConfig,
-      dataType,
-      Object.values(type),
-      z.enum(type),
-    ) as never;
-  },
-  array(item) {
-    return new ZodArrayColumn(item);
-  },
-  nullable() {
-    return makeColumnNullable(
-      this as never,
-      z.nullable(this.inputSchema),
-      this.nullSchema
-        ? this.outputSchema.or(this.nullSchema)
-        : z.nullable(this.outputSchema),
-      z.nullable(this.querySchema),
-    ) as never;
-  },
-  json<ZodSchema extends ZodTypeAny = ZodUnknown>(schema?: ZodSchema) {
-    return new ZodJSONColumn((schema ?? z.unknown()) as ZodSchema);
-  },
-  boolean: () => z.boolean(),
-  buffer: () => z.instanceof(Buffer),
-  unknown: () => z.unknown(),
-  never: () => z.never(),
-  stringSchema: () => z.string(),
-  stringMin(min) {
-    return z.string().min(min);
-  },
-  stringMax(max) {
-    return z.string().max(max);
-  },
-  stringMinMax(min, max) {
-    return z.string().min(min).max(max);
-  },
-  number: () => z.number(),
-  int: () => z.number().int(),
-
-  stringNumberDate: () => z.coerce.date(),
-
-  timeInterval: () =>
-    z.object({
-      years: z.number().optional(),
-      months: z.number().optional(),
-      days: z.number().optional(),
-      hours: z.number().optional(),
-      minutes: z.number().optional(),
-      seconds: z.number().optional(),
-    }),
-
-  bit: (max?: number) =>
-    (max ? z.string().max(max) : z.string()).regex(/[10]/g),
-
-  uuid: () => z.string().uuid(),
-
-  inputSchema() {
-    return mapSchema(this, 'inputSchema');
-  },
-
-  outputSchema() {
-    return mapSchema(this, 'outputSchema');
-  },
-
-  querySchema() {
-    const shape: RecordUnknown = {};
-    const { shape: columns } = this.prototype.columns;
-
-    for (const key in columns) {
-      const column = columns[key] as Column;
-      if (columns[key].dataType) {
-        shape[key] = column.querySchema.optional();
+export const zodSchemaConfig = (
+  options?: AdapterSchemaConfigOptions,
+): ZodSchemaConfig => {
+  const schemaConfig: ZodSchemaConfig = {
+    type: undefined as unknown as ZodTypeAny,
+    parse(schema, fn) {
+      return setColumnParse(this as never, fn, schema);
+    },
+    parseNull(schema, fn) {
+      return setColumnParseNull(this as never, fn, schema);
+    },
+    encode(schema, fn) {
+      return setColumnEncode(this as never, fn, schema);
+    },
+    asType(_types) {
+      return this as never;
+    },
+    narrowType(type) {
+      const c = Object.create(this);
+      if ((c as Column.Pick.Data).data.generated) {
+        c.outputSchema = c.querySchema = type;
+      } else {
+        c.inputSchema = c.outputSchema = c.querySchema = type;
       }
-    }
+      return c as never;
+    },
+    narrowAllTypes(types) {
+      const c = Object.create(this);
+      if (types.input) {
+        c.inputSchema = types.input;
+      }
+      if (types.output) {
+        c.outputSchema = types.output;
+      }
+      if (types.query) {
+        c.querySchema = types.query;
+      }
+      return c as never;
+    },
+    dateAsNumber() {
+      return this.parse(z.number(), getDateAsNumberFn(this)) as never;
+    },
+    dateAsDate() {
+      return this.parse(z.date(), getDateAsDateFn(this)) as never;
+    },
+    enum(dataType, type) {
+      return new EnumColumn(
+        schemaConfig,
+        dataType,
+        Object.values(type),
+        z.enum(type),
+      ) as never;
+    },
+    array(item) {
+      return new ZodArrayColumn(schemaConfig, item);
+    },
+    nullable() {
+      return makeColumnNullable(
+        this as never,
+        z.nullable(this.inputSchema),
+        this.nullSchema
+          ? this.outputSchema.or(this.nullSchema)
+          : z.nullable(this.outputSchema),
+        z.nullable(this.querySchema),
+      ) as never;
+    },
+    json<ZodSchema extends ZodTypeAny = ZodUnknown>(schema?: ZodSchema) {
+      return new ZodJSONColumn(
+        schemaConfig,
+        (schema ?? z.unknown()) as ZodSchema,
+        options?.jsonEncodedByDriver,
+      );
+    },
+    boolean: () => z.boolean(),
+    buffer: () => z.instanceof(Buffer),
+    unknown: () => z.unknown(),
+    never: () => z.never(),
+    stringSchema: () => z.string(),
+    stringMin(min) {
+      return z.string().min(min);
+    },
+    stringMax(max) {
+      return z.string().max(max);
+    },
+    stringMinMax(min, max) {
+      return z.string().min(min).max(max);
+    },
+    number: () => z.number(),
+    int: () => z.number().int(),
 
-    return z.object(shape) as never;
-  },
+    stringNumberDate: () => z.coerce.date(),
 
-  createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    const input = this.inputSchema() as ZodObject<ZodRawShape>;
+    timeInterval: () =>
+      z.object({
+        years: z.number().optional(),
+        months: z.number().optional(),
+        days: z.number().optional(),
+        hours: z.number().optional(),
+        minutes: z.number().optional(),
+        seconds: z.number().optional(),
+      }),
 
-    const shape: ZodShape = {};
-    const { shape: columns } = this.prototype.columns;
+    bit: (max?: number) =>
+      (max ? z.string().max(max) : z.string()).regex(/[10]/g),
 
-    for (const key in columns) {
-      const column = columns[key];
-      if (column.dataType && !column.data.primaryKey) {
-        shape[key] = input.shape[key];
+    uuid: () => z.string().uuid(),
 
-        if (column.data.isNullable || column.data.default !== undefined) {
-          shape[key] = optional(shape[key]);
+    inputSchema() {
+      return mapSchema(this, 'inputSchema');
+    },
+
+    outputSchema() {
+      return mapSchema(this, 'outputSchema');
+    },
+
+    querySchema() {
+      const shape: RecordUnknown = {};
+      const { shape: columns } = this.prototype.columns;
+
+      for (const key in columns) {
+        const column = columns[key] as Column;
+        if (columns[key].dataType) {
+          shape[key] = column.querySchema.optional();
         }
       }
-    }
 
-    return z.object(shape) as unknown as CreateSchema<T>;
-  },
+      return z.object(shape) as never;
+    },
 
-  updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    return (this.createSchema() as ZodObject<ZodRawShape>).partial() as never;
-  },
+    createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+      const input = this.inputSchema() as ZodObject<ZodRawShape>;
 
-  pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    const pkeys: Record<string, true> = {};
+      const shape: ZodShape = {};
+      const { shape: columns } = this.prototype.columns;
 
-    const {
-      columns: { shape },
-    } = this.prototype;
-    for (const key in shape) {
-      if (shape[key].dataType && shape[key].data.primaryKey) {
-        pkeys[key] = true;
+      for (const key in columns) {
+        const column = columns[key];
+        if (column.dataType && !column.data.primaryKey) {
+          shape[key] = input.shape[key];
+
+          if (column.data.isNullable || column.data.default !== undefined) {
+            shape[key] = optional(shape[key]);
+          }
+        }
       }
-    }
 
-    return (this.querySchema() as ZodObject<ZodRawShape>)
-      .pick(pkeys)
-      .required() as never;
-  },
+      return z.object(shape) as unknown as CreateSchema<T>;
+    },
 
-  /**
-   * `error` allows to specify two following validation messages:
-   *
-   * ```ts
-   * t.text().error({
-   *   required: 'This column is required',
-   *   invalidType: 'This column must be an integer',
-   * });
-   * ```
-   *
-   * It will be converted into `Zod`'s messages:
-   *
-   * ```ts
-   * z.string({
-   *   required_error: 'This column is required',
-   *   invalid_type_error: 'This column must be an integer',
-   * });
-   * ```
-   *
-   * Each validation method can accept an error message as a string:
-   *
-   * ```ts
-   * t.text().min(5, 'Must be 5 or more characters long');
-   * t.text().max(5, 'Must be 5 or fewer characters long');
-   * t.text().length(5, 'Must be exactly 5 characters long');
-   * t.text().email('Invalid email address');
-   * t.text().url('Invalid url');
-   * t.text().emoji('Contains non-emoji characters');
-   * t.text().uuid('Invalid UUID');
-   * t.text().includes('tuna', 'Must include tuna');
-   * t.text().startsWith('https://', 'Must provide secure URL');
-   * t.text().endsWith('.com', 'Only .com domains allowed');
-   * ```
-   *
-   * Except for `text().datetime()` and `text().ip()`:
-   *
-   * these methods can have their own parameters, so the error message is passed in object.
-   *
-   * ```ts
-   * t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
-   * t.text().ip({ message: 'Invalid IP address' });
-   * ```
-   *
-   * Error messages are supported for a JSON schema as well:
-   *
-   * ```ts
-   * t.json((j) =>
-   *   j.object({
-   *     one: j
-   *       .string()
-   *       .error({ required: 'One is required' })
-   *       .min(5, 'Must be 5 or more characters long'),
-   *     two: j
-   *       .string()
-   *       .error({ invalidType: 'Two should be a string' })
-   *       .max(5, 'Must be 5 or fewer characters long'),
-   *     three: j.string().length(5, 'Must be exactly 5 characters long'),
-   *   }),
-   * );
-   * ```
-   *
-   * @param errors - object, key is either 'required' or 'invalidType', value is an error message
-   */
-  error(errors) {
-    const c = this as Column;
-    const { errors: old } = c.data;
-    const newErrors = old ? { ...old, ...errors } : errors;
-    const { required, invalidType } = newErrors;
+    updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+      return (this.createSchema() as ZodObject<ZodRawShape>).partial() as never;
+    },
 
-    const errorMap: $ZodErrorMap = (iss) => {
-      if (iss.code === 'invalid_type') {
-        return iss.input === undefined ? required : invalidType;
+    pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+      const pkeys: Record<string, true> = {};
+
+      const {
+        columns: { shape },
+      } = this.prototype;
+      for (const key in shape) {
+        if (shape[key].dataType && shape[key].data.primaryKey) {
+          pkeys[key] = true;
+        }
       }
-      // not sure if this is correct to return undefined for other errors,
-      // let's wait for an issue.
-      return;
-    };
 
-    (c.inputSchema as ZodTypeAny).def.error =
-      (c.outputSchema as ZodTypeAny).def.error =
-      (c.querySchema as ZodTypeAny).def.error =
-        errorMap;
+      return (this.querySchema() as ZodObject<ZodRawShape>)
+        .pick(pkeys)
+        .required() as never;
+    },
 
-    return setColumnData(c, 'errors', newErrors as never) as never;
-  },
+    /**
+     * `error` allows to specify two following validation messages:
+     *
+     * ```ts
+     * t.text().error({
+     *   required: 'This column is required',
+     *   invalidType: 'This column must be an integer',
+     * });
+     * ```
+     *
+     * It will be converted into `Zod`'s messages:
+     *
+     * ```ts
+     * z.string({
+     *   required_error: 'This column is required',
+     *   invalid_type_error: 'This column must be an integer',
+     * });
+     * ```
+     *
+     * Each validation method can accept an error message as a string:
+     *
+     * ```ts
+     * t.text().min(5, 'Must be 5 or more characters long');
+     * t.text().max(5, 'Must be 5 or fewer characters long');
+     * t.text().length(5, 'Must be exactly 5 characters long');
+     * t.text().email('Invalid email address');
+     * t.text().url('Invalid url');
+     * t.text().emoji('Contains non-emoji characters');
+     * t.text().uuid('Invalid UUID');
+     * t.text().includes('tuna', 'Must include tuna');
+     * t.text().startsWith('https://', 'Must provide secure URL');
+     * t.text().endsWith('.com', 'Only .com domains allowed');
+     * ```
+     *
+     * Except for `text().datetime()` and `text().ip()`:
+     *
+     * these methods can have their own parameters, so the error message is passed in object.
+     *
+     * ```ts
+     * t.text().datetime({ message: 'Invalid datetime string! Must be UTC.' });
+     * t.text().ip({ message: 'Invalid IP address' });
+     * ```
+     *
+     * Error messages are supported for a JSON schema as well:
+     *
+     * ```ts
+     * t.json((j) =>
+     *   j.object({
+     *     one: j
+     *       .string()
+     *       .error({ required: 'One is required' })
+     *       .min(5, 'Must be 5 or more characters long'),
+     *     two: j
+     *       .string()
+     *       .error({ invalidType: 'Two should be a string' })
+     *       .max(5, 'Must be 5 or fewer characters long'),
+     *     three: j.string().length(5, 'Must be exactly 5 characters long'),
+     *   }),
+     * );
+     * ```
+     *
+     * @param errors - object, key is either 'required' or 'invalidType', value is an error message
+     */
+    error(errors) {
+      const c = this as Column;
+      const { errors: old } = c.data;
+      const newErrors = old ? { ...old, ...errors } : errors;
+      const { required, invalidType } = newErrors;
 
-  smallint: () => new SmallIntColumnZod(zodSchemaConfig),
-  integer: () => new IntegerColumnZod(zodSchemaConfig),
-  real: () => new RealColumnZod(zodSchemaConfig),
-  smallSerial: () => new SmallSerialColumnZod(zodSchemaConfig),
-  serial: () => new SerialColumnZod(zodSchemaConfig),
+      const errorMap: $ZodErrorMap = (iss) => {
+        if (iss.code === 'invalid_type') {
+          return iss.input === undefined ? required : invalidType;
+        }
+        // not sure if this is correct to return undefined for other errors,
+        // let's wait for an issue.
+        return;
+      };
 
-  bigint: () => new BigIntColumnZod(zodSchemaConfig),
-  decimal: (precision, scale) =>
-    new DecimalColumnZod(zodSchemaConfig, precision, scale),
-  doublePrecision: () => new DoublePrecisionColumnZod(zodSchemaConfig),
-  bigSerial: () => new BigSerialColumnZod(zodSchemaConfig),
-  money: () => new MoneyColumnZod(zodSchemaConfig),
-  varchar: (limit) => new VarCharColumnZod(zodSchemaConfig, limit),
-  text: () => new TextColumnZod(zodSchemaConfig),
-  string: (limit) => new StringColumnZod(zodSchemaConfig, limit),
-  citext: () => new CitextColumnZod(zodSchemaConfig),
+      (c.inputSchema as ZodTypeAny).def.error =
+        (c.outputSchema as ZodTypeAny).def.error =
+        (c.querySchema as ZodTypeAny).def.error =
+          errorMap;
 
-  date: () => new DateColumnZod(zodSchemaConfig),
-  timestampNoTZ: (precision) =>
-    new TimestampNoTzColumnZod(zodSchemaConfig, precision),
-  timestamp: (precision) => new TimestampColumnZod(zodSchemaConfig, precision),
+      return setColumnData(c, 'errors', newErrors as never) as never;
+    },
 
-  geographyPointSchema: () =>
-    (pointSchema ??= z.object({
-      srid: z.number().optional(),
-      lon: z.number(),
-      lat: z.number(),
-    })),
+    smallint: () => new SmallIntColumnZod(schemaConfig),
+    integer: () => new IntegerColumnZod(schemaConfig),
+    real: () => new RealColumnZod(schemaConfig),
+    smallSerial: () => new SmallSerialColumnZod(schemaConfig),
+    serial: () => new SerialColumnZod(schemaConfig),
+
+    bigint: () => new BigIntColumnZod(schemaConfig),
+    decimal: (precision, scale) =>
+      new DecimalColumnZod(schemaConfig, precision, scale),
+    doublePrecision: () => new DoublePrecisionColumnZod(schemaConfig),
+    bigSerial: () => new BigSerialColumnZod(schemaConfig),
+    money: () => new MoneyColumnZod(schemaConfig),
+    varchar: (limit) => new VarCharColumnZod(schemaConfig, limit),
+    text: () => new TextColumnZod(schemaConfig),
+    string: (limit) => new StringColumnZod(schemaConfig, limit),
+    citext: () => new CitextColumnZod(schemaConfig),
+
+    date: () => new DateColumnZod(schemaConfig, options?.dateParsedByDriver),
+    timestampNoTZ: (precision) =>
+      new TimestampNoTzColumnZod(
+        schemaConfig,
+        precision,
+        options?.dateParsedByDriver,
+      ),
+    timestamp: (precision) =>
+      new TimestampColumnZod(
+        schemaConfig,
+        precision,
+        options?.dateParsedByDriver,
+      ),
+
+    geographyPointSchema: () =>
+      (pointSchema ??= z.object({
+        srid: z.number().optional(),
+        lon: z.number(),
+        lat: z.number(),
+      })),
+  };
+
+  return schemaConfig;
 };
 
 type MapSchema<

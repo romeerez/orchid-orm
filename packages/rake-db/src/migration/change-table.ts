@@ -55,7 +55,7 @@ import {
   nameColumnChecks,
   primaryKeyToSql,
 } from './migration.utils';
-import { TableMethods, tableMethods } from './table-methods';
+import { TableMethods } from './table-methods';
 import { TableQuery } from './create-table';
 
 interface ChangeTableData {
@@ -492,7 +492,8 @@ const setName = (
   }
 };
 
-interface TableChangeMethods extends TableMethods, TableDataMethods<string> {
+export interface TableChangeMethods
+  extends TableMethods, TableDataMethods<string> {
   name(name: string): TableChangeMethods;
   add: Add;
   drop: Add;
@@ -826,7 +827,9 @@ function exclude(
   };
 }
 
-const tableChangeMethods: TableChangeMethods = {
+export const makeTableChangeMethods = (
+  tableMethods: TableMethods,
+): TableChangeMethods => ({
   ...tableMethods,
   ...tableDataMethods,
   name(name) {
@@ -898,7 +901,7 @@ const tableChangeMethods: TableChangeMethods = {
   rename(name) {
     return { type: 'rename', name };
   },
-};
+});
 
 export type TableChanger<CT> = MigrationColumnTypes<CT> & TableChangeMethods;
 
@@ -913,6 +916,7 @@ export type TableChangeData = Record<
 
 export const changeTable = async <CT>(
   migration: Migration<CT>,
+  tableChangeMethods: TableChangeMethods,
   up: boolean,
   tableName: string,
   options: ChangeTableOptions,

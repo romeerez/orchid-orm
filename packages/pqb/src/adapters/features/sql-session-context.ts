@@ -1,7 +1,7 @@
 import { type IsQuery } from '../../query';
 import { NestedSqlSessionError } from '../../query/errors';
 import { type PickQueryQ } from '../../query/pick-query-types';
-import { type QueryResult, type QueryResultRow } from '../adapter';
+import { type QueryResult } from '../adapter';
 import { quoteIdentifier } from '../../utils';
 
 export interface SqlSessionState {
@@ -30,7 +30,7 @@ export interface SqlSessionContextSetupResult {
 }
 
 export interface SqlSessionContextQueryFn {
-  (sql: string, values?: unknown[]): Promise<QueryResult<QueryResultRow>>;
+  (sql: string, values?: unknown[]): Promise<QueryResult>;
 }
 
 interface CapturedSessionState {
@@ -161,11 +161,11 @@ export const sqlSessionContextHasState = (
   );
 };
 
-export const sqlSessionContextExecute = async <T extends QueryResultRow>(
+export const sqlSessionContextExecute = async <T extends QueryResult>(
   query: SqlSessionContextQueryFn,
   setup: SqlSessionContextSetupResult | undefined,
-  mainQuery: () => Promise<QueryResult<T>>,
-): Promise<QueryResult<T>> => {
+  mainQuery: () => Promise<T>,
+): Promise<T> => {
   if (!setup) {
     return mainQuery();
   }

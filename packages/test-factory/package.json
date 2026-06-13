@@ -34,8 +34,10 @@
     }
   },
   "scripts": {
-    "test": "jest --watch --verbose false",
+    "test": "jest --watch --reporters default --verbose false",
+    "bun:test": "bun --bun jest --watch --reporters default --verbose false --runInBand",
     "check": "jest",
+    "bun:check": "bun --bun jest --runInBand",
     "check:coverage": "jest --coverage --coverageReporters json-summary",
     "types": "tsc",
     "build": "rimraf ./dist/ && rolldown -c ../../rolldown.config.mjs",

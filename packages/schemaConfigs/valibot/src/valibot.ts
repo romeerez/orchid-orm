@@ -29,6 +29,10 @@ import {
   setColumnParseNull,
   setDataValue,
   StringData,
+  ColumnSchemaConfig,
+  AdapterSchemaConfigOptions,
+  getDateAsNumberFn,
+  getDateAsDateFn,
 } from 'pqb/internal';
 import {
   actionIssue,
@@ -99,8 +103,12 @@ class ValibotJSONColumn<Schema extends BaseSchema> extends JSONColumn<
   ValibotSchemaConfig,
   Schema
 > {
-  constructor(schema: Schema) {
-    super(valibotSchemaConfig, schema);
+  constructor(
+    schemaConfig: ValibotSchemaConfig,
+    schema: Schema,
+    jsonEncodedByDriver?: boolean,
+  ) {
+    super(schemaConfig, schema, jsonEncodedByDriver);
   }
 }
 
@@ -203,8 +211,8 @@ class ValibotArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
   ArraySchema<Item['outputSchema']>,
   ArraySchema<Item['querySchema']>
 > {
-  constructor(item: Item) {
-    super(valibotSchemaConfig, item, array(item.inputSchema, []));
+  constructor(schemaConfig: ValibotSchemaConfig, item: Item) {
+    super(schemaConfig, item, array(item.inputSchema, []));
   }
 }
 
@@ -697,7 +705,7 @@ type PointSchemaValibot = ObjectSchema<{
 
 let pointSchema: PointSchemaValibot | undefined;
 
-export interface ValibotSchemaConfig {
+export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   type: BaseSchema;
 
   parse<
@@ -936,199 +944,214 @@ export interface ValibotSchemaConfig {
   geographyPointSchema(): PointSchemaValibot;
 }
 
-// parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown) => new Date(value as string);
+export const valibotSchemaConfig = (
+  options: AdapterSchemaConfigOptions,
+): ValibotSchemaConfig => {
+  const schemaConfig: ValibotSchemaConfig = {
+    type: undefined as unknown as BaseSchema,
+    parse(schema, fn) {
+      return setColumnParse(this as never, fn, schema);
+    },
+    parseNull(schema, fn) {
+      return setColumnParseNull(this as never, fn, schema);
+    },
+    encode(schema, fn) {
+      return setColumnEncode(this as never, fn, schema);
+    },
+    asType(_types) {
+      return this as never;
+    },
+    narrowType(type) {
+      const c = Object.create(this);
+      if ((c as Column.Pick.Data).data.generated) {
+        c.outputSchema = c.querySchema = type;
+      } else {
+        c.inputSchema = c.outputSchema = c.querySchema = type;
+      }
+      return c as never;
+    },
+    narrowAllTypes(types) {
+      const c = Object.create(this);
+      if (types.input) {
+        c.inputSchema = types.input;
+      }
+      if (types.output) {
+        c.outputSchema = types.output;
+      }
+      if (types.query) {
+        c.querySchema = types.query;
+      }
+      return c as never;
+    },
+    dateAsNumber() {
+      return this.parse(number([]), getDateAsNumberFn(this));
+    },
+    dateAsDate() {
+      return this.parse(date([]), getDateAsDateFn(this) as never);
+    },
+    enum(dataType, type) {
+      return new EnumColumn(schemaConfig, dataType, type, picklist(type));
+    },
+    array(item) {
+      return new ValibotArrayColumn(schemaConfig, item);
+    },
+    nullable() {
+      return makeColumnNullable(
+        this as never,
+        nullable(this.inputSchema),
+        this.nullSchema
+          ? union([this.outputSchema, this.nullSchema])
+          : nullable(this.outputSchema),
+        nullable(this.querySchema),
+      ) as never;
+    },
+    json<Schema extends BaseSchema = UnknownSchema>(schema?: Schema) {
+      return new ValibotJSONColumn(
+        schemaConfig,
+        (schema ?? unknown([])) as Schema,
+        options?.jsonEncodedByDriver,
+      );
+    },
+    boolean: () => boolean([]),
+    buffer: () => instance(Buffer, []),
+    unknown: () => unknown([]),
+    never: () => never(),
+    stringSchema: () => string([]),
+    stringMin(min) {
+      return string([minLength(min)]);
+    },
+    stringMax(max) {
+      return string([maxLength(max)]);
+    },
+    stringMinMax(min, max) {
+      return string([minLength(min), maxLength(max)]);
+    },
+    number: () => number([]),
+    int: () => number([integer()]),
 
-export const valibotSchemaConfig: ValibotSchemaConfig = {
-  type: undefined as unknown as BaseSchema,
-  parse(schema, fn) {
-    return setColumnParse(this as never, fn, schema);
-  },
-  parseNull(schema, fn) {
-    return setColumnParseNull(this as never, fn, schema);
-  },
-  encode(schema, fn) {
-    return setColumnEncode(this as never, fn, schema);
-  },
-  asType(_types) {
-    return this as never;
-  },
-  narrowType(type) {
-    const c = Object.create(this);
-    if ((c as Column.Pick.Data).data.generated) {
-      c.outputSchema = c.querySchema = type;
-    } else {
-      c.inputSchema = c.outputSchema = c.querySchema = type;
-    }
-    return c as never;
-  },
-  narrowAllTypes(types) {
-    const c = Object.create(this);
-    if (types.input) {
-      c.inputSchema = types.input;
-    }
-    if (types.output) {
-      c.outputSchema = types.output;
-    }
-    if (types.query) {
-      c.querySchema = types.query;
-    }
-    return c as never;
-  },
-  dateAsNumber() {
-    return this.parse(number([]), Date.parse as never);
-  },
-  dateAsDate() {
-    return this.parse(date([]), parseDateToDate);
-  },
-  enum(dataType, type) {
-    return new EnumColumn(valibotSchemaConfig, dataType, type, picklist(type));
-  },
-  array(item) {
-    return new ValibotArrayColumn(item);
-  },
-  nullable() {
-    return makeColumnNullable(
-      this as never,
-      nullable(this.inputSchema),
-      this.nullSchema
-        ? union([this.outputSchema, this.nullSchema])
-        : nullable(this.outputSchema),
-      nullable(this.querySchema),
-    ) as never;
-  },
-  json<Schema extends BaseSchema = UnknownSchema>(schema?: Schema) {
-    return new ValibotJSONColumn((schema ?? unknown([])) as Schema);
-  },
-  boolean: () => boolean([]),
-  buffer: () => instance(Buffer, []),
-  unknown: () => unknown([]),
-  never: () => never(),
-  stringSchema: () => string([]),
-  stringMin(min) {
-    return string([minLength(min)]);
-  },
-  stringMax(max) {
-    return string([maxLength(max)]);
-  },
-  stringMinMax(min, max) {
-    return string([minLength(min), maxLength(max)]);
-  },
-  number: () => number([]),
-  int: () => number([integer()]),
+    stringNumberDate: () =>
+      coerce(date([]), (input) => new Date(input as string)),
 
-  stringNumberDate: () =>
-    coerce(date([]), (input) => new Date(input as string)),
+    timeInterval: () =>
+      object(
+        {
+          years: optional(number()),
+          months: optional(number()),
+          days: optional(number()),
+          hours: optional(number()),
+          minutes: optional(number()),
+          seconds: optional(number()),
+        },
+        [],
+      ),
 
-  timeInterval: () =>
-    object(
-      {
-        years: optional(number()),
-        months: optional(number()),
-        days: optional(number()),
-        hours: optional(number()),
-        minutes: optional(number()),
-        seconds: optional(number()),
-      },
-      [],
-    ),
+    bit: (max?: number) =>
+      max ? string([maxLength(max), regex(/[10]/g)]) : string([regex(/[10]/g)]),
 
-  bit: (max?: number) =>
-    max ? string([maxLength(max), regex(/[10]/g)]) : string([regex(/[10]/g)]),
+    uuid: () => string([uuid()]),
 
-  uuid: () => string([uuid()]),
+    inputSchema() {
+      return mapSchema(this, 'inputSchema');
+    },
 
-  inputSchema() {
-    return mapSchema(this, 'inputSchema');
-  },
+    outputSchema() {
+      return mapSchema(this, 'outputSchema');
+    },
 
-  outputSchema() {
-    return mapSchema(this, 'outputSchema');
-  },
+    querySchema() {
+      return partial(mapSchema(this, 'querySchema'));
+    },
 
-  querySchema() {
-    return partial(mapSchema(this, 'querySchema'));
-  },
+    createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+      const input = this.inputSchema() as ObjectSchema<ObjectEntries>;
 
-  createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    const input = this.inputSchema() as ObjectSchema<ObjectEntries>;
+      const shape: ObjectEntries = {};
+      const { shape: columns } = this.prototype.columns;
 
-    const shape: ObjectEntries = {};
-    const { shape: columns } = this.prototype.columns;
+      for (const key in columns) {
+        const column = columns[key];
+        if (column.dataType && !column.data.primaryKey) {
+          shape[key] = input.entries[key];
 
-    for (const key in columns) {
-      const column = columns[key];
-      if (column.dataType && !column.data.primaryKey) {
-        shape[key] = input.entries[key];
-
-        if (column.data.isNullable || column.data.default !== undefined) {
-          shape[key] = optional(shape[key]);
+          if (column.data.isNullable || column.data.default !== undefined) {
+            shape[key] = optional(shape[key]);
+          }
         }
       }
-    }
 
-    return object(shape) as CreateSchema<T>;
-  },
+      return object(shape) as CreateSchema<T>;
+    },
 
-  updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    return partial(this.createSchema() as never) as UpdateSchema<T>;
-  },
+    updateSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+      return partial(this.createSchema() as never) as UpdateSchema<T>;
+    },
 
-  pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
-    const keys: string[] = [];
+    pkeySchema<T extends ColumnSchemaGetterTableClass>(this: T) {
+      const keys: string[] = [];
 
-    const {
-      columns: { shape },
-    } = this.prototype;
-    for (const key in shape) {
-      if (shape[key].data.primaryKey) {
-        keys.push(key);
+      const {
+        columns: { shape },
+      } = this.prototype;
+      for (const key in shape) {
+        if (shape[key].data.primaryKey) {
+          keys.push(key);
+        }
       }
-    }
 
-    return required(
-      pick(this.querySchema() as never, keys as never),
-    ) as PkeySchema<T>;
-  },
+      return required(
+        pick(this.querySchema() as never, keys as never),
+      ) as PkeySchema<T>;
+    },
 
-  error(message: string) {
-    const c = this as Column;
-    c.inputSchema.message =
-      c.outputSchema.message =
-      c.querySchema.message =
-        message;
-    return c as never;
-  },
+    error(message: string) {
+      const c = this as Column;
+      c.inputSchema.message =
+        c.outputSchema.message =
+        c.querySchema.message =
+          message;
+      return c as never;
+    },
 
-  smallint: () => new SmallIntColumnValibot(valibotSchemaConfig),
-  integer: () => new IntegerColumnValibot(valibotSchemaConfig),
-  real: () => new RealColumnValibot(valibotSchemaConfig),
-  smallSerial: () => new SmallSerialColumnValibot(valibotSchemaConfig),
-  serial: () => new SerialColumnValibot(valibotSchemaConfig),
+    smallint: () => new SmallIntColumnValibot(schemaConfig),
+    integer: () => new IntegerColumnValibot(schemaConfig),
+    real: () => new RealColumnValibot(schemaConfig),
+    smallSerial: () => new SmallSerialColumnValibot(schemaConfig),
+    serial: () => new SerialColumnValibot(schemaConfig),
 
-  bigint: () => new BigIntColumnValibot(valibotSchemaConfig),
-  decimal: (precision, scale) =>
-    new DecimalColumnValibot(valibotSchemaConfig, precision, scale),
-  doublePrecision: () => new DoublePrecisionColumnValibot(valibotSchemaConfig),
-  bigSerial: () => new BigSerialColumnValibot(valibotSchemaConfig),
-  money: () => new MoneyColumnValibot(valibotSchemaConfig),
-  varchar: (limit) => new VarCharColumnValibot(valibotSchemaConfig, limit),
-  text: () => new TextColumnValibot(valibotSchemaConfig),
-  string: (limit) => new StringColumnValibot(valibotSchemaConfig, limit),
-  citext: () => new CitextColumnValibot(valibotSchemaConfig),
+    bigint: () => new BigIntColumnValibot(schemaConfig),
+    decimal: (precision, scale) =>
+      new DecimalColumnValibot(schemaConfig, precision, scale),
+    doublePrecision: () => new DoublePrecisionColumnValibot(schemaConfig),
+    bigSerial: () => new BigSerialColumnValibot(schemaConfig),
+    money: () => new MoneyColumnValibot(schemaConfig),
+    varchar: (limit) => new VarCharColumnValibot(schemaConfig, limit),
+    text: () => new TextColumnValibot(schemaConfig),
+    string: (limit) => new StringColumnValibot(schemaConfig, limit),
+    citext: () => new CitextColumnValibot(schemaConfig),
 
-  date: () => new DateColumnValibot(valibotSchemaConfig),
-  timestampNoTZ: (precision) =>
-    new TimestampNoTzColumnValibot(valibotSchemaConfig, precision),
-  timestamp: (precision) =>
-    new TimestampColumnValibot(valibotSchemaConfig, precision),
+    date: () =>
+      new DateColumnValibot(schemaConfig, options?.dateParsedByDriver),
+    timestampNoTZ: (precision) =>
+      new TimestampNoTzColumnValibot(
+        schemaConfig,
+        precision,
+        options?.dateParsedByDriver,
+      ),
+    timestamp: (precision) =>
+      new TimestampColumnValibot(
+        schemaConfig,
+        precision,
+        options?.dateParsedByDriver,
+      ),
 
-  geographyPointSchema: () =>
-    (pointSchema ??= object({
-      srid: optional(number()),
-      lon: number(),
-      lat: number(),
-    })),
+    geographyPointSchema: () =>
+      (pointSchema ??= object({
+        srid: optional(number()),
+        lon: number(),
+        lat: number(),
+      })),
+  };
+  return schemaConfig;
 };
 
 type MapSchema<

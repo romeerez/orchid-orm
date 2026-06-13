@@ -159,6 +159,7 @@ describe('manageMigratedVersions', () => {
   describe('getMigratedVersionsMap', () => {
     const adapter = {
       isInTransaction: () => false,
+      query: jest.fn(),
       arrays: jest.fn(),
       getSchema() {},
     };
@@ -169,7 +170,7 @@ describe('manageMigratedVersions', () => {
       getMigratedVersionsMap(ctx, adapter as unknown as Adapter, testConfig);
 
     it('should throw NoMigrationsTableError if no migration table', async () => {
-      adapter.arrays.mockRejectedValueOnce(
+      adapter.query.mockRejectedValueOnce(
         Object.assign(new Error(), { code: '42P01' }),
       );
 
@@ -179,46 +180,9 @@ describe('manageMigratedVersions', () => {
     it('should rethrow unknown errors', async () => {
       const err = new Error();
 
-      adapter.arrays.mockRejectedValueOnce(err);
+      adapter.query.mockRejectedValueOnce(err);
 
       await expect(act()).rejects.toThrow(err);
-    });
-
-    it('should add the name column and fill it from migrations if the column does not exist', async () => {
-      const rows = [['123'], ['124']];
-
-      adapter.arrays.mockResolvedValueOnce({
-        fields: [{}],
-        rows,
-      });
-
-      ctx.migrationsPromise = Promise.resolve({
-        migrations: [
-          { path: '/path/to/123_a', version: '123', load: async () => {} },
-          { path: '/path/to/124_b', version: '124', load: async () => {} },
-        ],
-      });
-
-      await act();
-
-      expect(adapter.arrays.mock.calls).toEqual([
-        ['SELECT * FROM "schemaMigrations" ORDER BY version'],
-        ['ALTER TABLE "schemaMigrations" ADD COLUMN name TEXT'],
-        [
-          'UPDATE "schemaMigrations" SET name = $2 WHERE version = $1',
-          ['123', 'a'],
-        ],
-        [
-          'UPDATE "schemaMigrations" SET name = $2 WHERE version = $1',
-          ['124', 'b'],
-        ],
-        ['ALTER TABLE "schemaMigrations" ALTER COLUMN name SET NOT NULL'],
-      ]);
-
-      expect(rows).toEqual([
-        ['123', 'a'],
-        ['124', 'b'],
-      ]);
     });
   });
 });

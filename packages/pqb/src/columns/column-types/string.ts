@@ -11,8 +11,8 @@ import {
 } from '../operators';
 import { setColumnDefaultParse } from '../column.utils';
 import {
-  defaultSchemaConfig,
   DefaultSchemaConfig,
+  internalSchemaConfig,
 } from '../default-schema-config';
 import { StringData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
@@ -143,7 +143,7 @@ export class TextColumn<
 
   private static _instance: TextColumn<DefaultSchemaConfig> | undefined;
   static get instance() {
-    return (this._instance ??= new TextColumn(defaultSchemaConfig));
+    return (this._instance ??= new TextColumn(internalSchemaConfig));
   }
 
   constructor(schema: Schema) {
@@ -698,7 +698,7 @@ export class XMLColumn<Schema extends ColumnSchemaConfig> extends Column<
 
   private static _instance: XMLColumn<DefaultSchemaConfig> | undefined;
   static get instance() {
-    return (this._instance ??= new XMLColumn(defaultSchemaConfig));
+    return (this._instance ??= new XMLColumn(internalSchemaConfig));
   }
 
   constructor(schema: Schema) {

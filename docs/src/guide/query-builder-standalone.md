@@ -16,6 +16,8 @@ It is accepting the same options as `orchidORM` + options of `createBaseTable`:
 import { createDb } from 'pqb/postgres-js';
 // for node-postgres driver:
 import { createDb } from 'pqb/node-postgres';
+// for Bun SQL driver:
+import { createDb } from 'pqb/bun';
 
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 // or

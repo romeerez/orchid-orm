@@ -20,7 +20,6 @@ import {
   VirtualColumn,
   WhereArg,
   TableData,
-  defaultSchemaConfig,
   ColumnSchemaConfig,
   emptyArray,
   EmptyObject,
@@ -46,6 +45,7 @@ import {
   noop,
   _queryInsertMany,
   _hookSelectColumns,
+  internalSchemaConfig,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -367,7 +367,7 @@ export const makeBelongsToMethod = (
       return query.where(obj as never);
     },
     virtualColumn: new BelongsToVirtualColumn(
-      defaultSchemaConfig,
+      internalSchemaConfig,
       relationName,
       state,
     ),

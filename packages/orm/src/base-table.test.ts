@@ -9,13 +9,11 @@ import {
 import { orchidORMWithAdapter } from './orm';
 import {
   Column,
-  makeColumnTypes,
   Operators,
   TextColumn,
   getCallerFilePath,
   QueryHookUtils,
   DefaultSchemaConfig,
-  defaultSchemaConfig,
   QuerySchema,
 } from 'pqb/internal';
 import { useTestORM } from './test-utils/orm.test-utils';
@@ -29,6 +27,8 @@ import {
   testAdapter,
   testColumnTypes,
   UserData,
+  testDefaultColumnTypes,
+  testDefaultSchemaConfig,
 } from 'test-utils';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
@@ -101,7 +101,7 @@ describe('baseTable', () => {
   describe('setColumns', () => {
     it('should store columns in the prototype of the table', () => {
       const shape = {
-        id: makeColumnTypes(defaultSchemaConfig).identity().primaryKey(),
+        id: testDefaultColumnTypes.identity().primaryKey(),
       };
 
       class SomeTable extends BaseTable {
@@ -119,7 +119,7 @@ describe('baseTable', () => {
         dataType = 'type';
         operators = Operators.any;
         constructor() {
-          super(defaultSchemaConfig, defaultSchemaConfig.unknown);
+          super(testDefaultSchemaConfig, testDefaultSchemaConfig.unknown);
         }
         toCode() {
           return '';
@@ -150,7 +150,10 @@ describe('baseTable', () => {
     it('should return date as string by default', async () => {
       await db.user.create(UserData);
 
-      const BaseTable = createBaseTable();
+      const BaseTable = createBaseTable({
+        schemaConfig: () => testDefaultSchemaConfig,
+      });
+
       class UserTable extends BaseTable {
         schema = 'schema';
         readonly table = 'user';

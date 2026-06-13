@@ -40,7 +40,7 @@ describe('postgres-js', () => {
       expect(result.fields).toEqual([{ name: 'one' }]);
     });
 
-    it('uses values() in arrays mode', async () => {
+    it('uses values() for arrays query', async () => {
       const objectResult = makeRawResult([{ one: 1 }], [{ name: 'one' }]);
       const arraysResult = makeRawResult([[1]], [{ name: 'one' }]);
 
@@ -63,7 +63,6 @@ describe('postgres-js', () => {
       expect(query.values).toHaveBeenCalledTimes(1);
       expect(result.rowCount).toBe(1);
       expect(result.rows[0]).toEqual([1]);
-      expect(result.fields).toEqual([{ name: 'one' }]);
     });
   });
 });

@@ -103,7 +103,7 @@ describe('create functions', () => {
 
       assertType<typeof res, UserRecord>();
 
-      expect(res.updatedAt).toBeInstanceOf(Date);
+      expect(res.updatedAt).toEqual(expect.any(Date));
     });
 
     it('should support a query builder for a column', () => {

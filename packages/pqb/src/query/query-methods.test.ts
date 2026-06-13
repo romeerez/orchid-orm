@@ -192,11 +192,13 @@ describe('queryMethods', () => {
 
   describe('rows', () => {
     it('returns array of rows', async () => {
+      await User.insert(userData);
+
       const { rows: expected } = await testAdapter.arrays(
-        `SELECT ${userColumnsSql} FROM "schema"."user"`,
+        `SELECT "id", "name" FROM "schema"."user"`,
       );
 
-      const received = await User.rows();
+      const received = await User.select('id', 'name').rows();
 
       expect(received).toEqual(expected);
     });

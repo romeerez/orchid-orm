@@ -14,7 +14,7 @@ import {
 import {
   addColumnParserToQuery,
   Column,
-  defaultSchemaConfig,
+  internalSchemaConfig,
   JSONTextColumn,
   setColumnData,
   UnknownColumn,
@@ -260,7 +260,7 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
             let tempColumns: Set<string> | undefined;
             let renames: RecordString | undefined;
             for (const column of hookSelect.keys()) {
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              //
               const select = hookSelect!.get(column)!;
 
               if (select.as) (renames ??= {})[column] = select.as;
@@ -357,7 +357,7 @@ const collectNestedSelectBatches = (
   );
 
   while (stack.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    //
     const item = stack.pop()!;
     const { i } = item;
     if (i === last) {
@@ -537,7 +537,7 @@ export const setParserForSelectedString = (
           q.batchParsers = [...(q.batchParsers || [])];
           cloned = true;
         }
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //
         q.batchParsers!.push(bp);
       }
     }
@@ -661,7 +661,7 @@ export const getShapeFromSelect = (
                   )
                 : UnknownColumn.instance;
             } else {
-              result[key] = new JSONTextColumn(defaultSchemaConfig);
+              result[key] = new JSONTextColumn(internalSchemaConfig);
             }
           }
         }

@@ -1,9 +1,7 @@
 import { createMigrationInterface, DbMigration } from './migration/migration';
 import {
   DefaultColumnTypes,
-  makeColumnTypes,
   DefaultSchemaConfig,
-  defaultSchemaConfig,
   Adapter,
   MaybeArray,
   noop,
@@ -12,6 +10,7 @@ import {
 } from 'pqb/internal';
 import { join } from 'node:path';
 import { rakeDbConfigDefaults, RakeDbConfig } from './config';
+import { testDefaultColumnTypes } from 'test-utils';
 
 let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;
 
@@ -25,7 +24,7 @@ export const testConfig: RakeDbConfig & {
   transaction: 'single',
   basePath: __dirname,
   dbScript: 'dbScript.ts',
-  columnTypes: makeColumnTypes(defaultSchemaConfig),
+  columnTypes: testDefaultColumnTypes,
   log: false,
   logger: {
     log: jest.fn(),

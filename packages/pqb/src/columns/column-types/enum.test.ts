@@ -1,6 +1,10 @@
-import { assertType, testZodColumnTypes as t, testDb } from 'test-utils';
+import {
+  assertType,
+  testZodColumnTypes as t,
+  testDb,
+  testDefaultSchemaConfig,
+} from 'test-utils';
 import { makeColumnTypes } from '../column-types';
-import { defaultSchemaConfig } from '../default-schema-config';
 
 import { ColumnToCodeCtx } from '../code';
 
@@ -42,7 +46,7 @@ describe('enum column', () => {
   });
 
   it('should have string literal union output and input type', () => {
-    const t = makeColumnTypes(defaultSchemaConfig);
+    const t = makeColumnTypes(testDefaultSchemaConfig);
     const column = t.enum('mood', ['sad', 'ok', 'happy']);
 
     assertType<typeof column.outputType, 'sad' | 'ok' | 'happy'>();

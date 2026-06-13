@@ -199,7 +199,7 @@ db.table
       two: t.string(),
     }),
     // define SQL expression:
-    (q) => sql`(VALUES (1, 'two')) t(one, two)`,
+    (q) => sql`VALUES (1, 'two')`,
   )
   // is not prefixed in the middle of a query chain
   .withSql(
@@ -207,7 +207,7 @@ db.table
     (t) => ({
       x: t.integer(),
     }),
-    (q) => sql`(VALUES (1)) t(x)`,
+    (q) => sql`VALUES (1)`,
   )
   .from('alias');
 ```
@@ -230,7 +230,7 @@ db.table
       one: t.integer(),
       two: t.string(),
     }),
-    (q) => sql`(VALUES (1, 'two')) t(one, two)`,
+    (q) => sql`VALUES (1, 'two')`,
   )
   .from('alias');
 ```

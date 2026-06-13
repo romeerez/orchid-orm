@@ -12,6 +12,7 @@ import {
   createDb as cdb,
 } from 'pqb/node-postgres';
 import { DbSharedOptions, AdapterClass } from 'pqb/internal';
+export { nodePostgresSchemaConfig } from 'pqb/node-postgres';
 
 export const Adapter = NodePostgresAdapter;
 

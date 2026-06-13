@@ -10,7 +10,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { setTimeout } from 'node:timers/promises';
 import { QueryError } from '../query/errors';
 import {
-  _runAfterCommitHooks,
   AfterCommitErrorHandler,
   IsolationLevel,
   Query,
@@ -34,6 +33,8 @@ import {
   getSetConfigSql,
   getSetRoleSql,
 } from './adapter.utils';
+import { _runAfterCommitHooks } from '../query/basic-features/transaction/transaction';
+import { PostgresInterval } from './driver-adapter-shared';
 
 export type { SqlSessionState } from './features/sql-session-context';
 
@@ -46,19 +47,16 @@ export interface QueryResultRow {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface QueryResult<T extends QueryResultRow = any> {
+export interface QueryResult<T = any> {
   rowCount: number;
   rows: T[];
+  /**
+   * node-postgres and postgres-js: fields are present even for empty results.
+   * Bun doesn't implement fields in the same way, fields are empty if no rows returned.
+   */
   fields: {
     name: string;
   }[];
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface QueryArraysResult<R extends any[] = any[]> {
-  rowCount: number;
-  rows: R[];
-  fields: { name: string }[];
 }
 
 export interface AdapterConfigBase {
@@ -175,7 +173,9 @@ export interface Adapter {
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>>;
 
-  // make a query to get rows as array of column values
+  // make a query to get rows as array of column values.
+  // Selecting fields of the same names works fine with node-postgres and postgres-js,
+  // but not for Bun SQL until it supports parsing fields info from Postgres response.
   arrays<
     // oxlint-disable-next-line @typescript-eslint/no-explicit-any
     R extends any[] = any[],
@@ -184,7 +184,7 @@ export interface Adapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
-  ): Promise<QueryArraysResult<R>>;
+  ): Promise<QueryResult<R>>;
 
   /**
    * Run a transaction
@@ -237,10 +237,23 @@ type Pool = any;
 // oxlint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = any;
 
+export interface AdapterSchemaConfigOptions {
+  // true by default, node-postgres has false
+  jsonEncodedByDriver?: boolean;
+  // false by default, Bun has true
+  dateParsedByDriver?: boolean;
+  // Bun requires wrapping arrays in `sql.array`
+  arrayEncode?(input: unknown): unknown;
+  // node-postgres does that out of the box, postgres-js does it with default parsers, Bun provides this function
+  intervalParse?(input: string): PostgresInterval;
+}
+
 /**
  * Adapter class used by runtime orchestrator to create driver-specific adapters.
  */
 export interface DriverAdapter {
+  noFieldsForArrays?: boolean;
+  schemaConfig?: AdapterSchemaConfigOptions;
   // oxlint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
   errorFields: RecordString;
@@ -248,11 +261,10 @@ export interface DriverAdapter {
   manualPool: boolean;
   borrow(pool: Pool): Client;
   release(client: Client): void;
-  queryClient<T extends QueryResultRow = QueryResultRow>(
+  queryClient<T = QueryResultRow>(
     client: Client,
     text: string,
     values?: unknown[],
-    // SQL session state (role and setConfig) from async storage
     arraysMode?: boolean,
   ): Promise<QueryResult<T>>;
   begin<DriverClient, Result>(
@@ -335,7 +347,7 @@ export class AdapterClass implements Adapter {
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>> {
-    return runQueryHandlePool<T>(
+    return runQueryHandlePool<QueryResult<T>>(
       this.pool,
       this.driverAdapter,
       text,
@@ -353,8 +365,8 @@ export class AdapterClass implements Adapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
-  ): Promise<QueryArraysResult<R>> {
-    return runQueryHandlePool<R>(
+  ): Promise<QueryResult<R>> {
+    return runQueryHandlePool<QueryResult<R>>(
       this.pool,
       this.driverAdapter,
       text,
@@ -461,7 +473,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
   ): Promise<QueryResult<T>> {
     const setup = sqlSessionContextComputeSetup(sqlSessionState);
 
-    return runQueryHandleSetupAndCleanup<T>(
+    return runQueryHandleSetupAndCleanup<QueryResult<T>>(
       this.driverAdapter,
       this.client,
       text,
@@ -479,10 +491,10 @@ export class TransactionAdapterClass implements TransactionAdapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
-  ): Promise<QueryArraysResult<R>> {
+  ): Promise<QueryResult<R>> {
     const setup = sqlSessionContextComputeSetup(sqlSessionState);
 
-    return runQueryHandleSetupAndCleanup<R>(
+    return runQueryHandleSetupAndCleanup<QueryResult<R>>(
       this.driverAdapter,
       this.client,
       text,
@@ -870,7 +882,7 @@ const runAfterCommit = (
   });
 };
 
-const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
+const runQueryHandlePool = async <Result extends QueryResult = QueryResult>(
   pool: Pool,
   driverAdapter: DriverAdapter,
   text: string,
@@ -879,11 +891,11 @@ const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
   sqlSessionState?: SqlSessionState,
   arraysMode?: boolean,
   client?: Client,
-): Promise<QueryResult<T>> => {
+): Promise<Result> => {
   const setup = sqlSessionContextComputeSetup(sqlSessionState);
 
   if (client || (!driverAdapter.manualPool && !setup)) {
-    return runQueryHandleSetupAndCleanup(
+    return runQueryHandleSetupAndCleanup<Result>(
       driverAdapter,
       client || pool,
       text,
@@ -896,7 +908,7 @@ const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
   client = await driverAdapter.borrow(pool);
 
   try {
-    return await runQueryHandleSetupAndCleanup(
+    return await runQueryHandleSetupAndCleanup<Result>(
       driverAdapter,
       client,
       text,
@@ -910,7 +922,7 @@ const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
 };
 
 const runQueryHandleSetupAndCleanup = <
-  T extends QueryResultRow = QueryResultRow,
+  Result extends QueryResult = QueryResult,
 >(
   driverAdapter: DriverAdapter,
   client: Client,
@@ -918,16 +930,19 @@ const runQueryHandleSetupAndCleanup = <
   values?: unknown[],
   setup?: SqlSessionContextSetupResult,
   arraysMode?: boolean,
-): Promise<QueryResult<T>> => {
+): Promise<Result> => {
+  const mainQuery = () =>
+    driverAdapter.queryClient(client, text, values, arraysMode);
+
   if (setup) {
-    return sqlSessionContextExecute<T>(
+    return sqlSessionContextExecute<Result>(
       (text, values) => driverAdapter.queryClient(client, text, values, true),
       setup,
-      () => driverAdapter.queryClient(client, text, values, arraysMode),
+      mainQuery as () => Promise<Result>,
     );
   }
 
-  return driverAdapter.queryClient(client, text, values, arraysMode);
+  return mainQuery() as Promise<Result>;
 };
 
 interface AdapterConnectionState {
@@ -1160,3 +1175,6 @@ const defaultConnectRetryStrategy = (
   return (attempt) =>
     setTimeout((param.factor ?? 1.5) ** (attempt - 1) * (param.delay ?? 50));
 };
+
+export const getDriverErrorCode = (err: object) =>
+  'errno' in err ? err.errno : (err as { code?: string }).code;

@@ -1,10 +1,9 @@
-import { testDb } from 'test-utils';
+import { testDb, testDefaultSchemaConfig } from 'test-utils';
 import {
   PostgisGeographyPointColumn,
   PostgisPoint,
   postgisTypmodToSql,
 } from './postgis';
-import { defaultSchemaConfig } from '../default-schema-config';
 
 import { ColumnToCodeCtx } from '../code';
 
@@ -21,7 +20,9 @@ describe('postgis columns', () => {
   };
 
   describe('geography.point', () => {
-    const pointColumn = new PostgisGeographyPointColumn(defaultSchemaConfig);
+    const pointColumn = new PostgisGeographyPointColumn(
+      testDefaultSchemaConfig,
+    );
 
     it('should parse coords with default srid', async () => {
       const result = await testDb.get(

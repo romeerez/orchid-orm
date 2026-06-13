@@ -1,12 +1,14 @@
 import { createBaseTable } from 'orchid-orm';
 import { orchidORM as orchidOrmPostgresJs } from 'orchid-orm/postgres-js';
 import { orchidORM as orchidOrmNodePostgres } from 'orchid-orm/node-postgres';
+import { orchidORM as orchidOrmBun } from 'orchid-orm/bun';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { valibotSchemaConfig } from 'orchid-orm-valibot';
 import { z } from 'zod/v4';
 import { any } from 'valibot';
 import { rakeDb as rakeDbPostgresJs } from 'orchid-orm/migrations/postgres-js';
 import { rakeDb as rakeDbNodePostgres } from 'orchid-orm/migrations/node-postgres';
+import { rakeDb as rakeDbBun } from 'orchid-orm/migrations/bun';
 import { ormFactory, tableFactory } from 'orchid-orm-test-factory';
 
 /** ORM **/
@@ -63,6 +65,13 @@ export const dbZodNodePostgres = orchidOrmNodePostgres(
   },
 );
 
+export const dbZodBun = orchidOrmBun(
+  {},
+  {
+    table: TableZod,
+  },
+);
+
 export const dbValibotPostgresJs = orchidOrmPostgresJs(
   {},
   {
@@ -87,6 +96,13 @@ export const changePostgresJs = rakeDbPostgresJs({
 });
 
 export const changeNodePostgres = rakeDbNodePostgres({
+  baseTable: BaseTableZod,
+  dbPath: './db',
+  migrationsPath: './migrations',
+  import: (path: string) => import(path),
+});
+
+export const changeBun = rakeDbBun({
   baseTable: BaseTableZod,
   dbPath: './db',
   migrationsPath: './migrations',

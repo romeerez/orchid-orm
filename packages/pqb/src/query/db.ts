@@ -64,7 +64,7 @@ import {
   toArray,
   toSnakeCase,
 } from '../utils';
-import { Adapter, QueryArraysResult } from '../adapters/adapter';
+import { Adapter, QueryResult } from '../adapters/adapter';
 import { NotFoundError, QueryError, QueryErrorName } from './errors';
 import { ColumnsParsers } from './query-columns/query-column-parsers';
 import { DynamicSQLArg, StaticSQLArgs } from './expressions/expression';
@@ -149,7 +149,7 @@ export interface DbOptions<
   SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
 > extends DbSharedOptions {
-  schemaConfig?: SchemaConfig;
+  schemaConfig?: () => SchemaConfig;
   // concrete column types or a callback for overriding standard column types
   // this types will be used in tables to define their columns
   columnTypes?:
@@ -635,8 +635,8 @@ export class Db<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queryArrays<R extends any[] = any[]>(
     ...args: SQLQueryArgs
-  ): Promise<QueryArraysResult<R>> {
-    return performQuery<QueryArraysResult<R>>(this, args, 'arrays');
+  ): Promise<QueryResult<R>> {
+    return performQuery<QueryResult<R>>(this, args, 'arrays');
   }
 }
 
@@ -790,13 +790,20 @@ export const createDbWithAdapter = <
   log,
   logger,
   snakeCase,
-  schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
-  columnTypes: ctOrFn = makeColumnTypes(schemaConfig) as unknown as ColumnTypes,
+  schemaConfig:
+    schemaConfigFn = defaultSchemaConfig as unknown as () => SchemaConfig,
+  columnTypes,
   schema,
   ...options
 }: DbOptionsWithAdapter<SchemaConfig, ColumnTypes>): DbResult<ColumnTypes> => {
   const { adapter } = options;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+  const schemaConfig = schemaConfigFn();
+
+  const ctOrFn =
+    columnTypes || (makeColumnTypes(schemaConfig) as unknown as ColumnTypes);
+
+  // oxlint-disable-next-line typescript/no-explicit-any
   const commonOptions: DbTableOptions<any, any, Column.QueryColumns> = {
     log,
     logger,
@@ -855,7 +862,7 @@ export const createDbWithAdapter = <
 
   Object.setPrototypeOf(db, Db.prototype);
 
-  db.sql = _createDbSqlMethod(ct) as typeof db.sql;
+  db.sql = _createDbSqlMethod(ct) as unknown as typeof db.sql;
 
   return db as never;
 };

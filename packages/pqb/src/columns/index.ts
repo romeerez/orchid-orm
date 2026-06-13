@@ -21,4 +21,3 @@ export * from './any-shape';
 export * from './column-data-types';
 export * from './column-schema';
 export * from './timestamps';
-export * from './types';

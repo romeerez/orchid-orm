@@ -1,14 +1,9 @@
 import { RakeDbConfig, rakeDbConfigDefaults } from 'rake-db';
-import {
-  defaultSchemaConfig,
-  makeColumnTypes,
-  noop,
-  QueryLogger,
-} from 'pqb/internal';
+import { noop, QueryLogger } from 'pqb/internal';
 import path from 'node:path';
 import { join } from 'node:path';
 import { createBaseTable } from '../base-table';
-import { testColumnTypes } from 'test-utils';
+import { testColumnTypes, testDefaultColumnTypes } from 'test-utils';
 
 export const BaseTable = createBaseTable({
   columnTypes: testColumnTypes,
@@ -26,7 +21,7 @@ export const testConfig: RakeDbConfig & {
   baseTable: BaseTable,
   dbPath: 'src/db/db.ts',
   dbScript: 'dbScript.ts',
-  columnTypes: makeColumnTypes(defaultSchemaConfig),
+  columnTypes: testDefaultColumnTypes,
   log: false,
   logger: {
     log: jest.fn(),

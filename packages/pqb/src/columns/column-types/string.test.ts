@@ -169,18 +169,6 @@ describe('string columns', () => {
 
   describe('binary', () => {
     describe('bytea', () => {
-      it('is a string originally, if we remove the default parser', async () => {
-        const result = await testDb.get(
-          testDb.sql`'text'::bytea`.type(() =>
-            t.bytea().parse(z.string(), (str) => str),
-          ),
-        );
-
-        assertType<typeof result, string>();
-
-        expect(result).toBe('\\x' + Buffer.from('text').toString('hex'));
-      });
-
       it('should output Buffer', async () => {
         const result = await testDb.get(
           testDb.sql`'text'::bytea`.type(() => t.bytea()),

@@ -543,8 +543,11 @@ const constraintsSql = `SELECT
   t.relname AS "tableName",
   c.conname AS "name",
   (
-    SELECT json_agg(ccu.column_name)
+    SELECT json_agg(ccu.column_name ORDER BY a.attnum)
     FROM information_schema.constraint_column_usage ccu
+    JOIN pg_catalog.pg_attribute a
+      ON a.attrelid = c.conrelid
+     AND a.attname = ccu.column_name
     WHERE contype = 'p'
       AND ccu.constraint_name = c.conname
       AND ccu.table_schema = s.nspname
@@ -983,6 +986,7 @@ export async function introspectDbSchema(
 
   const data = await db.query<RawIntrospectedStructure>(sql(version, params));
   const raw = data.rows[0];
+  console.log(raw.constraints);
 
   for (const domain of raw.domains) {
     domain.checks = domain.checks?.filter((check) => check);

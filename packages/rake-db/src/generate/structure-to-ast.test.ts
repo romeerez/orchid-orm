@@ -15,7 +15,6 @@ import {
   TimestampTZColumn,
   VarCharColumn,
   DefaultSchemaConfig,
-  defaultSchemaConfig,
   RawSql,
   isRawSQL,
   TemplateLiteralArgs,
@@ -24,7 +23,7 @@ import {
 import { structureToAst, StructureToAstCtx } from './structure-to-ast';
 import { RakeDbAst } from '../ast';
 import { getIndexName, getExcludeName } from '../migration/migration.utils';
-import { asMock, TestAdapter } from 'test-utils';
+import { asMock, TestAdapter, testDefaultSchemaConfig } from 'test-utils';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 import { testConfig } from '../rake-db.test-utils';
 
@@ -42,8 +41,8 @@ const ctx: StructureToAstCtx = {
   unsupportedTypes: {},
   snakeCase: false,
   currentSchema: 'custom',
-  columnSchemaConfig: defaultSchemaConfig,
-  columnsByType: makeColumnsByType(defaultSchemaConfig),
+  columnSchemaConfig: testDefaultSchemaConfig,
+  columnsByType: makeColumnsByType(testDefaultSchemaConfig),
 };
 
 const structure = {

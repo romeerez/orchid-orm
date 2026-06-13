@@ -438,7 +438,7 @@ const privateOrchidORMWithAdapter = <T extends TableClasses>(
 
     qb = _initQueryBuilder(
       adapter,
-      makeColumnTypes(defaultSchemaConfig),
+      makeColumnTypes(defaultSchemaConfig(adapter.driverAdapter.schemaConfig)),
       asyncStorage,
       commonOptions,
       options,

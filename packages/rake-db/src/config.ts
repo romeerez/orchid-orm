@@ -3,8 +3,8 @@ import {
   ColumnSchemaConfig,
   DbResult,
   DefaultColumnTypes,
-  DefaultSchemaConfig,
   defaultSchemaConfig,
+  DefaultSchemaConfig,
   MaybePromise,
   NoPrimaryKeyOption,
   QueryLogOptions,
@@ -167,7 +167,7 @@ export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
 
 export const rakeDbConfigDefaults = {
   ...migrateConfigDefaults,
-  schemaConfig: defaultSchemaConfig,
+  schemaConfig: defaultSchemaConfig(),
   snakeCase: false,
   commands: {},
   log: true,

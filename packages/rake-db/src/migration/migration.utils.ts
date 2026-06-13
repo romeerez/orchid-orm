@@ -128,6 +128,13 @@ export const columnToSql = (
   return line.join(' ');
 };
 
+const getDefaultEncode = (column: Column.Pick.Data) => {
+  return (
+    column.data.encode ??
+    ((column as Column).dataType === 'jsonb' ? JSON.stringify : undefined)
+  );
+};
+
 export const encodeColumnDefault = (
   def: unknown,
   values: unknown[],
@@ -137,16 +144,20 @@ export const encodeColumnDefault = (
     if (isRawSQL(def)) {
       return `(${def.toSQL({ values })})`;
     } else {
+      // oxlint-disable-next-line typescript/no-explicit-any
+      let encode: ((input: any) => unknown) | undefined;
+
       return escapeForMigration(
         column instanceof ArrayColumn && Array.isArray(def)
           ? '{' +
-              (column.data.item.data.encode
-                ? def.map((x) => column.data.item.data.encode(x))
+              // oxlint-disable-next-line no-cond-assign
+              ((encode = getDefaultEncode(column.data.item))
+                ? def.map((x) => encode!(x))
                 : def
               ).join(',') +
               '}'
-          : column?.data.encode
-            ? column.data.encode(def)
+          : column && (encode = getDefaultEncode(column))
+            ? encode(def)
             : def,
       );
     }

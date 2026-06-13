@@ -514,7 +514,7 @@ const getTypeCasts = async (
 ) => {
   let typeCasts = typeCastsCache.value;
   if (!typeCasts) {
-    const { rows } = await adapter.arrays(`SELECT s.typname, t.typname
+    const { rows } = await adapter.arrays(`SELECT s.typname s, t.typname t
 FROM pg_cast
 JOIN pg_type AS s ON s.oid = castsource
 JOIN pg_type AS t ON t.oid = casttarget`);

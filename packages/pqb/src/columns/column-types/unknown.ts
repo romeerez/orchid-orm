@@ -1,13 +1,13 @@
 import { VirtualColumn } from './virtual';
 import { RawSql } from '../../query/expressions/raw-sql';
-import { defaultSchemaConfig } from '../default-schema-config';
+import { internalSchemaConfig } from '../default-schema-config';
 import { ColumnSchemaConfig } from '../column-schema';
 
 // unknown column is used for the case of raw SQL when user doesn't specify a column
 export class UnknownColumn<
   Schema extends ColumnSchemaConfig,
 > extends VirtualColumn<Schema> {
-  static instance = new UnknownColumn(defaultSchemaConfig);
+  static instance = new UnknownColumn(internalSchemaConfig);
 
   selectable = true;
 

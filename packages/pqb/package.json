@@ -61,11 +61,23 @@
         "default": "./dist/postgres-js.mjs",
         "types": "./dist/postgres-js.d.ts"
       }
+    },
+    "./bun": {
+      "require": {
+        "default": "./dist/bun.js",
+        "types": "./dist/bun.d.ts"
+      },
+      "import": {
+        "default": "./dist/bun.mjs",
+        "types": "./dist/bun.d.ts"
+      }
     }
   },
   "scripts": {
     "test": "jest --watch --reporters default --verbose false",
+    "bun:test": "bun --bun jest --watch --reporters default --verbose false --runInBand",
     "check": "jest",
+    "bun:check": "bun --bun jest --runInBand",
     "check:coverage": "jest --coverage --coverageReporters json-summary",
     "types": "tsc",
     "build": "rimraf ./dist/ && rolldown -c ./rolldown.config.mjs",

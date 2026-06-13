@@ -4,10 +4,16 @@ import {
   orchidORMWithAdapter,
 } from 'orchid-orm';
 import { PickQueryQ } from 'pqb/internal';
-import { now, testAdapter, testColumnTypes } from './test-utils';
+import {
+  now,
+  testAdapter,
+  testColumnTypes,
+  testDefaultSchemaConfig,
+} from './test-utils';
 
 export const BaseTable = createBaseTable({
   snakeCase: true,
+  schemaConfig: () => testDefaultSchemaConfig,
   columnTypes: testColumnTypes,
 });
 

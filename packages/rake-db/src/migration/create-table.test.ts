@@ -1,11 +1,7 @@
 import { expectSql, getDb, resetDb, toLine } from '../rake-db.test-utils';
-import {
-  setDefaultLanguage,
-  makeColumnTypes,
-  defaultSchemaConfig,
-} from 'pqb/internal';
+import { setDefaultLanguage } from 'pqb/internal';
 import { Db } from 'pqb';
-import { asMock, sql } from 'test-utils';
+import { asMock, sql, testDefaultColumnTypes } from 'test-utils';
 
 const db = getDb();
 
@@ -865,7 +861,7 @@ describe('create and drop table', () => {
       setDefaultLanguage('english');
     });
 
-    const t = makeColumnTypes(defaultSchemaConfig);
+    const t = testDefaultColumnTypes;
     const columns = {
       iD: t.identity().primaryKey(),
       titLe: t.text(),

@@ -49,6 +49,25 @@ export const { sql } = BaseTable;
 
 See [override column types](/guide/columns-overview#override-column-types) for details of customizing columns.
 
+When using the `node-postgres` or `bun` adapters, set the `schemaConfig` imported from the corresponding adapter.
+Nothing is needed when using `postgres-js`.
+
+Different Postgres drivers have different column type parsing behavior and restrictions,
+and this adjusts how OrchidORM column types encode and parse certain column types.
+
+```ts
+import { createBaseTable } from 'orchid-orm';
+import { nodePostgresSchemaConfig } from 'pqb/node-postgres';
+import { bunSchemaConfig } from 'orchid-orm/bun';
+
+export const BaseTable = createBaseTable({
+  // for node-postgres
+  schemaConfig: nodePostgresSchemaConfig,
+  // for bun
+  schemaConfig: bunSchemaConfig,
+});
+```
+
 Tables are defined as classes `table` and `columns` required properties:
 
 `table` is a table name and `columns` is for defining table column types (see [Columns schema](/guide/columns-overview) document for details).

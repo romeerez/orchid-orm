@@ -1,0 +1,30 @@
+import { BunAdapter, BunAdapterOptions } from 'pqb/bun';
+import { AdapterClass, MaybeArray, toArray } from 'pqb/internal';
+import {
+  rakeDbCliWithAdapter,
+  RakeDbFn,
+  setRakeDbCliRunFn,
+  incrementIntermediateCaller,
+} from 'rake-db';
+
+export const rakeDb = ((inputConfig, args = process.argv.slice(2)) => {
+  if (!('__rakeDbConfig' in inputConfig)) {
+    incrementIntermediateCaller();
+  }
+
+  const rakeDb = rakeDbCliWithAdapter(inputConfig, args);
+  return {
+    ...rakeDb,
+    run(options) {
+      const adapters = toArray(options).map((config) => {
+        return new AdapterClass({
+          driverAdapter: BunAdapter,
+          config,
+        });
+      });
+      return rakeDb.run(adapters);
+    },
+  };
+}) as RakeDbFn<MaybeArray<BunAdapterOptions>>;
+
+setRakeDbCliRunFn(rakeDb);

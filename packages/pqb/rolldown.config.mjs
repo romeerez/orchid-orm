@@ -43,9 +43,15 @@ export default [
     forbidImportFrom: packageJson.name,
   }),
   ...rolldownExportFile('src/adapters/node-postgres', 'dist/node-postgres', {
+    allowImportFrom: join(src, 'adapters'),
     forbidImportFrom: src,
   }),
   ...rolldownExportFile('src/adapters/postgres-js', 'dist/postgres-js', {
+    allowImportFrom: join(src, 'adapters'),
+    forbidImportFrom: src,
+  }),
+  ...rolldownExportFile('src/adapters/bun', 'dist/bun', {
+    allowImportFrom: join(src, 'adapters'),
     forbidImportFrom: src,
   }),
 ];

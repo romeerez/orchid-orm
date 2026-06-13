@@ -46,6 +46,30 @@ export const BaseTable = createBaseTable({
 });
 ```
 
+When using `node-postgres` or `bun` Postgres drivers, wrap the adapter's `schemaConfig` with the validation config.
+Nothing is needed when using `postgres-js`.
+
+```ts
+import { createBaseTable } from 'orchid-orm';
+import { nodePostgresSchemaConfig } from 'pqb/node-postgres';
+import { bunSchemaConfig } from 'orchid-orm/bun';
+
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+import { valibotSchemaConfig } from 'orchid-orm-valibot';
+
+export const BaseTable = createBaseTable({
+  // for node-postgres with zod
+  schemaConfig: () => zodSchemaConfig(nodePostgresSchemaConfig),
+  // for bun with zod
+  schemaConfig: () => zodSchemaConfig(bunSchemaConfig),
+
+  // for node-postgres with valibot
+  schemaConfig: () => valibotSchemaConfig(nodePostgresSchemaConfig),
+  // for bun with valibot
+  schemaConfig: () => valibotSchemaConfig(bunSchemaConfig),
+});
+```
+
 All table classes will now expose schemas for different purposes.
 
 - `Table.inputSchema()` - validating input data for inserting records, primary keys are not omitted.

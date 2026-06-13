@@ -4,7 +4,7 @@ import { NodePostgresAdapter } from './node-postgres';
 interface MockQueryResult<Row = unknown> {
   rowCount: number;
   rows: Row[];
-  fields: Array<{ name: string }>;
+  fields?: Array<{ name: string }>;
 }
 
 const makeQueryResult = <Row>(
@@ -46,7 +46,7 @@ describe('node-postgres', () => {
       expect(result.fields).toEqual([{ name: 'one' }]);
     });
 
-    it('uses rowMode=array in arrays mode', async () => {
+    it('uses rowMode=array for arrays query', async () => {
       const rawResult = makeQueryResult([[1]], [{ name: 'one' }]);
       const client = {
         query: jest.fn(() => Promise.resolve(rawResult)),
@@ -68,7 +68,6 @@ describe('node-postgres', () => {
       );
       expect(result.rowCount).toBe(1);
       expect(result.rows[0]).toEqual([1]);
-      expect(result.fields).toEqual([{ name: 'one' }]);
     });
   });
 });

@@ -16,12 +16,13 @@ import {
   db,
   UserData,
   UserDefaultSelect,
+  testJsonValue,
+  testAdapterConfig,
 } from 'test-utils';
 import { raw } from '../query/expressions/raw-sql';
 import { Operators } from './operators';
 import { z, ZodLiteral, ZodNumber } from 'zod/v4';
 import { assignDbDataToColumn } from './column-from-db.utils';
-import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { ColumnSchemaConfig } from './column-schema';
 
 describe('column type', () => {
@@ -386,16 +387,16 @@ describe('column type', () => {
           },
         );
 
-        expect(typeof (await UserWithPlainTimestamp.take()).createdAt).toBe(
-          'string',
+        expect((await UserWithPlainTimestamp.take()).createdAt).toEqual(
+          expect.any(testAdapterConfig?.dateParsedByDriver ? Date : String),
         );
       });
 
       it('should parse all columns', async () => {
-        expect((await db.user.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await db.user.take()).createdAt instanceof Date).toBe(true);
+        expect((await db.user.all())[0].createdAt).toEqual(expect.any(Date));
+        expect((await db.user.take()).createdAt).toEqual(expect.any(Date));
         const idx = Object.keys(db.user.q.shape).indexOf('createdAt');
-        expect((await db.user.rows())[0][idx] instanceof Date).toBe(true);
+        expect((await db.user.rows())[0][idx]).toEqual(expect.any(Date));
       });
 
       it('should parse joined record columns', async () => {
@@ -504,7 +505,7 @@ describe('column type', () => {
     const dbZod = createDbWithAdapter({
       snakeCase: true,
       adapter: testAdapter,
-      schemaConfig: zodSchemaConfig,
+      schemaConfig: () => testSchemaConfig,
       columnTypes: (t) => ({
         ...t,
         numberTimestamp: () =>
@@ -549,7 +550,7 @@ describe('column type', () => {
     );
 
     const userColumnsSql =
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       UserWithCustomTimestamps.q.selectAllColumns!.join(', ');
 
     describe.each`
@@ -815,7 +816,7 @@ describe('column type', () => {
       expectSql(
         q.toSQL(),
         `INSERT INTO "schema"."user"("name", "password", "data") VALUES ($1, $2, $3)`,
-        [userData.name, userData.password, '["foo"]'],
+        [userData.name, userData.password, testJsonValue(['foo'])],
       );
     });
   });
@@ -1026,7 +1027,7 @@ describe('column type', () => {
     it('should have toSQL', () => {
       const values: unknown[] = [];
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       const sql = column.generated`1 + ${2}`.data.generated!.toSQL({
         values,
         snakeCase: undefined,
@@ -1037,14 +1038,14 @@ describe('column type', () => {
     });
 
     it('should have toCode', () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       const sql = column.generated`1 + ${2}`.data.generated!;
 
       expect(sql.toCode()).toBe('.generated`1 + ${2}`');
     });
 
     it('should have toCode for raw argument', () => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      //
       const sql = column.generated({ raw: 'raw' }).data.generated!;
 
       expect(sql.toCode()).toBe(".generated({ raw: 'raw' })");
@@ -1052,7 +1053,7 @@ describe('column type', () => {
 
     it('should have toCode for raw argument with values', () => {
       const sql =
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //
         column.generated({ raw: 'raw', values: { num: 123 } }).data.generated!;
 
       expect(sql.toCode()).toBe(

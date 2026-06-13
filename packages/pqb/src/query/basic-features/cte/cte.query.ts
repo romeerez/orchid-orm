@@ -270,7 +270,7 @@ export class CteQuery {
   ) {
     const q = _clone(this);
 
-    // eslint-disable-next-line prefer-const
+    //
     let [options, queryArg] = third
       ? [second as CteArgsOptions, third]
       : [undefined, second];
@@ -391,7 +391,7 @@ export class CteQuery {
   withRecursive(name: string, ...args: unknown[]) {
     const q = _clone(this);
 
-    // eslint-disable-next-line prefer-const
+    //
     let [options, baseFn, recursiveFn] = (
       args.length === 2 ? [{}, args[0], args[1]] : args
     ) as [
@@ -445,7 +445,7 @@ export class CteQuery {
    *       two: t.string(),
    *     }),
    *     // define SQL expression:
-   *     (q) => sql`(VALUES (1, 'two')) t(one, two)`,
+   *     (q) => sql`VALUES (1, 'two')`,
    *   )
    *   // is not prefixed in the middle of a query chain
    *   .withSql(
@@ -453,7 +453,7 @@ export class CteQuery {
    *     (t) => ({
    *       x: t.integer(),
    *     }),
-   *     (q) => sql`(VALUES (1)) t(x)`,
+   *     (q) => sql`VALUES (1)`,
    *   )
    *   .from('alias');
    * ```
@@ -476,7 +476,7 @@ export class CteQuery {
    *       one: t.integer(),
    *       two: t.string(),
    *     }),
-   *     (q) => sql`(VALUES (1, 'two')) t(one, two)`,
+   *     (q) => sql`VALUES (1, 'two')`,
    *   )
    *   .from('alias');
    * ```

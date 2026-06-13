@@ -40,10 +40,10 @@ import {
   RelationJoinQuery,
   toArray,
   toSnakeCase,
-  defaultSchemaConfig,
   Column,
   QueryHasWhere,
   QuerySchema,
+  internalSchemaConfig,
 } from 'pqb/internal';
 import {
   addAutoForeignKey,
@@ -405,7 +405,7 @@ export const makeHasAndBelongsToManyMethod = (
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(
       subQuery,
-      defaultSchemaConfig,
+      internalSchemaConfig,
       relationName,
       state,
     ),

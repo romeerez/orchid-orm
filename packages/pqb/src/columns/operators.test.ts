@@ -1,7 +1,7 @@
 import { UserDataType } from '../test-utils/pqb.test-utils';
 import {
   assertType,
-  columnTypes,
+  testDefaultColumnTypes,
   db,
   expectSql,
   sql,
@@ -11,7 +11,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 
-const t = columnTypes;
+const t = testDefaultColumnTypes;
 
 describe('operators', () => {
   it('should ignore undefined values', () => {

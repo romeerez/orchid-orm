@@ -9,7 +9,7 @@ Despite thousands tests written, may have bugs, please drop an issue if you enco
 Supporting other than Postgres databases isn't planned: simply too much effort to support additional dbs,
 focusing on ORM features and Postgres-specific features and optimizations instead.
 
-It is limited to node-postgres only, supporting other Postgres adapters is in the plans.
+It supports `node-postgres`, `postgres-js`, and `Bun SQL` Postgres adapters.
 
 You can use OrchidORM for the app connected to multiple databases, but it cannot manage table relations spread across databases.
 

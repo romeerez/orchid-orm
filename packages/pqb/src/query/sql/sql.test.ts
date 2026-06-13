@@ -3,7 +3,7 @@ import { BooleanColumn, Column } from '../../columns';
 import { createDbWithAdapter } from '../db';
 import { User, userColumnsSql } from '../../test-utils/pqb.test-utils';
 import { Expression } from '../expressions/expression';
-import { emptyObject } from '../../utils';
+import { emptyObject, noop } from '../../utils';
 import { ToSQLCtx } from './to-sql';
 
 describe('sql', () => {
@@ -12,6 +12,7 @@ describe('sql', () => {
     const db = createDbWithAdapter({
       adapter: testAdapter,
       columnTypes: {
+        setDriverAdapter: noop,
         type: () => type,
       },
     });

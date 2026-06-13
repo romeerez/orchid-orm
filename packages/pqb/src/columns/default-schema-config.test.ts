@@ -1,6 +1,6 @@
-import { assertType, columnTypes } from 'test-utils';
+import { assertType, testDefaultColumnTypes } from 'test-utils';
 
-const t = columnTypes;
+const t = testDefaultColumnTypes;
 const text = t.text();
 const timestamp = t.timestamp();
 

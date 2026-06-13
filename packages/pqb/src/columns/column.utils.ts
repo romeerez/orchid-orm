@@ -48,7 +48,7 @@ export const setColumnParse = (
 
 export const setColumnParseNull = (
   column: Column.Pick.Data,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //
   fn: () => unknown,
   nullSchema?: unknown,
 ) => {
@@ -62,6 +62,13 @@ export const setColumnParseNull = (
     : (input: unknown) => (input === null ? fn() : input);
 
   return c;
+};
+
+export const setColumnDefaultEncode = (
+  column: Column.Pick.Data,
+  fn: (input: any) => unknown, // eslint-disable-line @typescript-eslint/no-explicit-any
+) => {
+  column.data.encode = fn;
 };
 
 export const setColumnEncode = (

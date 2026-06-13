@@ -10,7 +10,7 @@ import {
   TableDataItem,
   emptyObject,
   MaybeArray,
-  QueryArraysResult,
+  QueryResult,
   RecordUnknown,
   QuerySchema,
 } from 'pqb/internal';
@@ -40,14 +40,14 @@ import {
   quoteWithSchema,
 } from '../common';
 import { RakeDbAst } from '../ast';
-import { tableMethods } from './table-methods';
+import { TableMethods } from './table-methods';
 import { NoPrimaryKey } from '../errors';
 import { Db } from 'pqb';
 
 export interface TableQuery {
   text: string;
   values?: unknown[];
-  then?(result: QueryArraysResult): void;
+  then?(result: QueryResult): void;
 }
 
 export interface CreateTableResult<
@@ -63,6 +63,7 @@ export const createTable = async <
   Shape extends ColumnsShape,
 >(
   migration: Migration<CT>,
+  tableMethods: TableMethods,
   up: boolean,
   tableName: Table,
   first?: TableOptions | ColumnsShapeCallback<CT, Shape>,

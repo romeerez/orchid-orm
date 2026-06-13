@@ -24,12 +24,14 @@ const getCommonOptions = (from, to, options = {}) => {
     /^node:/,
   ];
 
-  const { externalForFiles, forbidImportFrom } = options;
+  const { allowImportFrom, externalForFiles, forbidImportFrom } = options;
 
   const common = {
     input: `${from}.ts`,
     external(id, fromFile) {
-      if (forbidImportFrom && id.startsWith(forbidImportFrom)) {
+      const allowed = allowImportFrom && id.startsWith(allowImportFrom);
+
+      if (forbidImportFrom && !allowed && id.startsWith(forbidImportFrom)) {
         throw new Error(
           `Failed to build ${from}: cannot import ${id} from ${fromFile}`,
         );
