@@ -19,7 +19,6 @@ import {
   PickQueryQ,
   _queryWhere,
   SelectableFromShape,
-  defaultSchemaConfig,
   ColumnSchemaConfig,
   EmptyObject,
   getPrimaryKeys,
@@ -39,6 +38,7 @@ import {
   _clone,
   _appendQuery,
   _queryUpsert,
+  internalSchemaConfig,
 } from 'pqb/internal';
 import {
   addAutoForeignKey,
@@ -477,7 +477,7 @@ export const makeHasManyMethod = (
       return _queryDefaults(query.where(values as never), { ...on, ...values });
     },
     virtualColumn: new HasManyVirtualColumn(
-      defaultSchemaConfig,
+      internalSchemaConfig,
       relationName,
       state,
     ),

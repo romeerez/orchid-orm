@@ -3,8 +3,8 @@ import { columnCode, ColumnToCodeCtx } from '../code';
 import { Code } from '../code';
 import { Operators, OperatorsBoolean } from '../operators';
 import {
-  defaultSchemaConfig,
   DefaultSchemaConfig,
+  internalSchemaConfig,
 } from '../default-schema-config';
 import { ColumnSchemaConfig } from '../column-schema';
 
@@ -20,7 +20,7 @@ export class BooleanColumn<Schema extends ColumnSchemaConfig> extends Column<
 
   private static _instance: BooleanColumn<DefaultSchemaConfig> | undefined;
   static get instance() {
-    return (this._instance ??= new BooleanColumn(defaultSchemaConfig));
+    return (this._instance ??= new BooleanColumn(internalSchemaConfig));
   }
 
   constructor(schema: Schema) {

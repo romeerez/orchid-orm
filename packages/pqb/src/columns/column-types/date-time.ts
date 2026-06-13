@@ -1,18 +1,45 @@
 import { Column } from '../column';
 import { joinTruthy } from '../../utils';
-import { TimeInterval } from '../types';
 import { Code, ColumnToCodeCtx, dateDataToCode } from '../code';
 import { columnCode } from '../code';
 import { Operators, OperatorsDate, OperatorsTime } from '../operators';
 import { DateColumnData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
+import { PostgresInterval } from '../../adapters/driver-adapter-shared';
+import { setColumnDefaultParse } from '../column.utils';
 
 export type DateColumnInput = string | number | Date;
 
+const dateToString = (value: Date): string => value.toISOString();
+
 // encode string, number, or Date to a Date object,
-const dateTimeEncode = (input: DateColumnInput) => {
-  return typeof input === 'number' ? new Date(input) : input;
+const dateTimeEncode = (value: DateColumnInput) => {
+  return typeof value === 'number' ? new Date(value) : value;
 };
+
+// In Bun, it is Date normally, but string in case of nested json
+const parseStringOrDateToNumber = (value: unknown): number =>
+  typeof value === 'string' ? Date.parse(value) : (value as Date).getTime();
+
+export const getDateAsNumberFn = (column: {
+  data: Column.Data;
+  dateParsedByDriver?: boolean;
+}) =>
+  column.dateParsedByDriver
+    ? parseStringOrDateToNumber
+    : (Date.parse as (input: unknown) => number);
+
+// parse a date string to date object, with respect to null
+const parseDateToDate = (value: unknown): Date => new Date(value as string);
+
+// In Bun, it is Date normally, but string in case of nested json
+const parseStringOrDateToDate = (value: unknown): Date =>
+  typeof value === 'string' ? new Date(value) : (value as Date);
+
+export const getDateAsDateFn = (column: {
+  data: Column.Data;
+  dateParsedByDriver?: boolean;
+}) => (column.dateParsedByDriver ? parseStringOrDateToDate : parseDateToDate);
 
 // common class for Date and DateTime columns
 export abstract class DateBaseColumn<
@@ -31,13 +58,19 @@ export abstract class DateBaseColumn<
   asNumber: Schema['dateAsNumber'];
   asDate: Schema['dateAsDate'];
 
-  constructor(schema: Schema) {
+  constructor(
+    schema: Schema,
+    public dateParsedByDriver?: boolean,
+  ) {
     super(
       schema,
       schema.stringNumberDate() as never,
       schema.stringSchema() as never,
       schema.stringNumberDate() as never,
     );
+    if (dateParsedByDriver) {
+      this._parse = dateToString as never;
+    }
     this.asNumber = schema.dateAsNumber;
     this.asDate = schema.dateAsDate;
     this.data.encode = dateTimeEncode;
@@ -64,8 +97,12 @@ export abstract class DateTimeBaseClass<
 > extends DateBaseColumn<Schema> {
   declare data: DateColumnData & { dateTimePrecision?: number };
 
-  constructor(schema: Schema, dateTimePrecision?: number) {
-    super(schema);
+  constructor(
+    schema: Schema,
+    dateTimePrecision?: number,
+    dateParsedByDriver?: boolean,
+  ) {
+    super(schema, dateParsedByDriver);
     this.data.dateTimePrecision = dateTimePrecision;
   }
 
@@ -188,21 +225,58 @@ export class TimeColumn<Schema extends ColumnSchemaConfig> extends Column<
   }
 }
 
+const addIntervalPart = (
+  parts: string[],
+  value: number | undefined,
+  unit: string,
+) => {
+  if (value) {
+    parts.push(`${value} ${unit}`);
+  }
+};
+
+const serializePostgresInterval = (
+  input: Partial<PostgresInterval>,
+): string => {
+  const parts: string[] = [];
+
+  addIntervalPart(parts, input.years, 'years');
+  addIntervalPart(parts, input.months, 'months');
+  addIntervalPart(parts, input.days, 'days');
+  addIntervalPart(parts, input.hours, 'hours');
+  addIntervalPart(parts, input.minutes, 'minutes');
+  addIntervalPart(parts, input.seconds, 'seconds');
+  addIntervalPart(parts, input.milliseconds, 'milliseconds');
+
+  return parts.length ? parts.join(' ') : '0 seconds';
+};
+
 // interval [ fields ] [ (p) ]	16 bytes	time interval	-178000000 years	178000000 years	1 microsecond
 export class IntervalColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
-  TimeInterval,
+  PostgresInterval,
   ReturnType<Schema['timeInterval']>,
-  OperatorsDate
+  OperatorsDate,
+  Partial<PostgresInterval>,
+  PostgresInterval
 > {
   declare data: Column.Data & { fields?: string; precision?: number };
   dataType = 'interval' as const;
   operators = Operators.date;
 
-  constructor(schema: Schema, fields?: string, precision?: number) {
+  constructor(
+    schema: Schema,
+    fields?: string,
+    precision?: number,
+    parse?: (input: string) => PostgresInterval,
+  ) {
     super(schema, schema.timeInterval() as never);
     this.data.fields = fields;
     this.data.precision = precision;
+    if (parse) {
+      setColumnDefaultParse(this, parse);
+    }
+    this.data.encode = serializePostgresInterval;
   }
 
   toCode(ctx: ColumnToCodeCtx, key: string): Code {

@@ -14,7 +14,7 @@ but you can use `rake-db` as a standalone tool and import the same functions fro
 Most of the functions accept a `db` argument, which can be one of:
 
 - instance returned by [orchidORM](/guide/orm-setup.html#instantiate-orchidorm).
-- adapter: a wrapper of node-postgres or postgres-js, which you can import from `orchid-orm/postgres-js` as `Adapter` class.
+- adapter: a wrapper of node-postgres, postgres-js, or Bun SQL, which you can import from `orchid-orm/postgres-js`, `orchid-orm/node-postgres`, or `orchid-orm/bun` as `Adapter` class.
 
 All the exposed functions are designed to respect the currently opened transaction.
 
@@ -24,6 +24,10 @@ The exposed functions aren't closing connection automatically, remember to call 
 
 ```ts
 import { rakeDb } from 'orchid-orm/migrations/postgres-js';
+// or for node-postgres:
+import { rakeDb } from 'orchid-orm/migrations/node-postgres';
+// or for Bun SQL:
+import { rakeDb } from 'orchid-orm/migrations/bun';
 
 const migrator = rakeDb(rakeDbConfig);
 

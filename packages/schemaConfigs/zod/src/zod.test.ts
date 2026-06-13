@@ -19,7 +19,8 @@ import {
 } from 'zod/v4';
 import { AssertEqual, assertType } from 'test-utils';
 
-const t = makeColumnTypes(zodSchemaConfig);
+const schemaConfig = zodSchemaConfig();
+const t = makeColumnTypes(schemaConfig);
 
 type TypeBase = {
   inputSchema: ZodTypeAny;
@@ -105,11 +106,11 @@ describe('zod schema config', () => {
 
     const klass = {
       prototype: { columns },
-      inputSchema: zodSchemaConfig.inputSchema,
-      outputSchema: zodSchemaConfig.outputSchema,
-      querySchema: zodSchemaConfig.querySchema,
-      pkeySchema: zodSchemaConfig.pkeySchema,
-      createSchema: zodSchemaConfig.createSchema,
+      inputSchema: schemaConfig.inputSchema,
+      outputSchema: schemaConfig.outputSchema,
+      querySchema: schemaConfig.querySchema,
+      pkeySchema: schemaConfig.pkeySchema,
+      createSchema: schemaConfig.createSchema,
     };
 
     const type = {
@@ -143,11 +144,11 @@ describe('zod schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: zodSchemaConfig.inputSchema,
-        outputSchema: zodSchemaConfig.outputSchema,
-        querySchema: zodSchemaConfig.querySchema,
-        pkeySchema: zodSchemaConfig.pkeySchema,
-        createSchema: zodSchemaConfig.createSchema,
+        inputSchema: schemaConfig.inputSchema,
+        outputSchema: schemaConfig.outputSchema,
+        querySchema: schemaConfig.querySchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
       };
 
       const schema = klass.querySchema();
@@ -180,10 +181,10 @@ describe('zod schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: zodSchemaConfig.inputSchema,
-        querySchema: zodSchemaConfig.outputSchema,
-        pkeySchema: zodSchemaConfig.pkeySchema,
-        createSchema: zodSchemaConfig.createSchema,
+        inputSchema: schemaConfig.inputSchema,
+        querySchema: schemaConfig.outputSchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
       };
 
       const createSchema = klass.createSchema();
@@ -212,11 +213,11 @@ describe('zod schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: zodSchemaConfig.inputSchema,
-        querySchema: zodSchemaConfig.outputSchema,
-        pkeySchema: zodSchemaConfig.pkeySchema,
-        createSchema: zodSchemaConfig.createSchema,
-        updateSchema: zodSchemaConfig.updateSchema,
+        inputSchema: schemaConfig.inputSchema,
+        querySchema: schemaConfig.outputSchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
+        updateSchema: schemaConfig.updateSchema,
       };
 
       const updateSchema = klass.updateSchema();
@@ -244,10 +245,10 @@ describe('zod schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: zodSchemaConfig.inputSchema,
-        querySchema: zodSchemaConfig.outputSchema,
-        pkeySchema: zodSchemaConfig.pkeySchema,
-        createSchema: zodSchemaConfig.createSchema,
+        inputSchema: schemaConfig.inputSchema,
+        querySchema: schemaConfig.outputSchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
       };
 
       const pkeySchema = klass.pkeySchema();
@@ -894,13 +895,11 @@ describe('zod schema config', () => {
     });
   });
 
-  const xml = t.xml();
-  const jsonText = t.jsonText();
-  assertAllTypes<typeof xml | typeof jsonText, ZodString>();
-
-  describe.each(['xml', 'jsonText'])('%s', (method) => {
+  describe('xml', () => {
     it('should parse to a string without validation', () => {
-      const type = t[method as 'xml']();
+      const type = t.xml();
+
+      assertAllTypes<typeof type, ZodString>();
 
       expectAllParse(type, 'string', 'string');
 
@@ -1019,6 +1018,13 @@ describe('zod schema config', () => {
       const expected = z.object({ bool: z.boolean() });
       assertAllTypes<typeof type, typeof expected>();
     });
+
+    it('should parse jsonText to unknown', () => {
+      const type = t.jsonText();
+
+      const expected = z.unknown();
+      assertAllTypes<typeof type, typeof expected>();
+    });
   });
 
   describe('as', () => {
@@ -1133,7 +1139,7 @@ describe('zod schema config', () => {
     class Virtual extends VirtualColumn<ZodSchemaConfig> {}
 
     it('should return ZodNever from columnToZod', () => {
-      const type = new Virtual(zodSchemaConfig);
+      const type = new Virtual(schemaConfig);
 
       assertAllTypes<typeof type, ZodNever>();
 
@@ -1163,7 +1169,7 @@ describe('zod schema config', () => {
 
   describe('custom type', () => {
     it('should convert it to a base column', () => {
-      const type = new CustomTypeColumn(zodSchemaConfig, 'customType').as(
+      const type = new CustomTypeColumn(schemaConfig, 'customType').as(
         t.integer(),
       );
 

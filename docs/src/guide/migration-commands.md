@@ -406,6 +406,9 @@ import { rakeDb } from 'rake-db/postgres-js'; // when using rake-db as a standal
 // for node-postgres driver:
 import { rakeDb } from 'orchid-orm/migrations/node-postgres'; // when using ORM
 import { rakeDb } from 'rake-db/node-postgres'; // when using rake-db as a standalone tool
+// for Bun SQL driver:
+import { rakeDb } from 'orchid-orm/migrations/bun'; // when using ORM
+import { rakeDb } from 'rake-db/bun'; // when using rake-db as a standalone tool
 
 import { createDb } from 'pqb';
 import { config } from './config';

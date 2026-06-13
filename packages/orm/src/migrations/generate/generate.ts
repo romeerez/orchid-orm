@@ -5,7 +5,6 @@ import {
   ArrayColumn,
   ColumnsShape,
   Column,
-  defaultSchemaConfig,
   DomainColumn,
   PickQueryInternal,
   QueryInternal,
@@ -467,8 +466,7 @@ const getActualItems = async (
         domains.set(column.dataType, {
           schemaName,
           name,
-          column: (column.data.as ??
-            new UnknownColumn(defaultSchemaConfig)) as Column,
+          column: (column.data.as ?? UnknownColumn.instance) as Column,
         });
       } else {
         const en =

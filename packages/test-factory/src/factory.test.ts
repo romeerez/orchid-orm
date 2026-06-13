@@ -2,21 +2,18 @@ import { FactoryConfig, ormFactory, tableFactory } from './factory';
 import { db, User, BaseTable, Profile } from './test-utils';
 import { z, ZodObject, ZodRawShape } from 'zod/v4';
 import { orchidORMWithAdapter } from 'orchid-orm';
-import {
-  ColumnsShape,
-  makeColumnTypes,
-  DefaultColumnTypes,
-} from 'pqb/internal';
+import { ColumnsShape, DefaultColumnTypes } from 'pqb/internal';
 import {
   assertType,
   testAdapter,
+  zodColumnTypes,
   testDbOptions,
   useTestDatabase,
 } from 'test-utils';
-import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
+import { ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { faker } from '@faker-js/faker';
 
-const t = makeColumnTypes(zodSchemaConfig);
+const t = zodColumnTypes;
 
 describe('factory', () => {
   useTestDatabase();
@@ -715,8 +712,6 @@ describe('factory', () => {
   });
 
   describe('unique columns', () => {
-    const columnTypes = makeColumnTypes(zodSchemaConfig);
-
     const makeTable = <T extends ColumnsShape>(
       fn: (t: DefaultColumnTypes<ZodSchemaConfig>) => T,
     ) => {
@@ -724,7 +719,7 @@ describe('factory', () => {
         readonly table = 'table';
         columns = this.setColumns((t) => ({
           id: t.identity().primaryKey(),
-          ...fn(columnTypes),
+          ...fn(zodColumnTypes),
         }));
       };
     };

@@ -23,6 +23,7 @@ import {
   MessageData,
   sql,
   testDb,
+  testJsonValue,
   UserData,
   useTestDatabase,
 } from 'test-utils';
@@ -1787,7 +1788,7 @@ describe('updateMany', () => {
           FROM (VALUES ($1::int4, $2::jsonb)) "v"("id", "meta")
           WHERE "message"."id" = "v"."id"
         `,
-        [1, '{"foo":1}'],
+        [1, testJsonValue({ foo: 1 })],
       );
     });
   });

@@ -21,6 +21,7 @@ import {
   BooleanColumn,
   DecimalColumn,
   IntegerColumn,
+  internalSchemaConfig,
   JSONTextColumn,
   NumberAsStringBaseColumn,
   NumberBaseColumn,
@@ -29,7 +30,6 @@ import {
   XMLColumn,
 } from '../../../columns';
 import { Column } from '../../../columns/column';
-import { defaultSchemaConfig } from '../../../columns/default-schema-config';
 import {
   _getSelectableColumn,
   _queryGetOptional,
@@ -60,12 +60,12 @@ export const isSelectingCount = (q: PickQueryQ) => {
 
 // `count` returns `bigint` type that is represented by a string.
 // This is needed to parse the value back to a number.
-const intNullable = new IntegerColumn(defaultSchemaConfig)
+const intNullable = new IntegerColumn(internalSchemaConfig)
   .nullable()
   .parse(parseInt as never);
 
 // double-precision is represented by string in JS, parse it to float.
-const floatNullable = new RealColumn(defaultSchemaConfig)
+const floatNullable = new RealColumn(internalSchemaConfig)
   .nullable()
   .parse(parseFloat as never);
 
@@ -79,7 +79,7 @@ const xmlNullable = XMLColumn.instance.nullable();
 
 const stringAsNumberNullable =
   new (NumberAsStringBaseColumn as unknown as typeof DecimalColumn)(
-    defaultSchemaConfig,
+    internalSchemaConfig,
   ).nullable();
 
 const numericResultColumn = (

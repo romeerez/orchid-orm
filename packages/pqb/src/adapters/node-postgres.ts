@@ -14,9 +14,21 @@ import {
   QuerySchema,
   AdapterClass,
   DriverAdapter,
+  defaultSchemaConfig,
+  quoteIdentifier,
+  AdapterSchemaConfigOptions,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
 import { HackySavepointState } from './adapter';
+
+const schemaConfig: AdapterSchemaConfigOptions = {
+  jsonEncodedByDriver: false,
+};
+
+export const nodePostgresSchemaConfig = Object.assign(
+  () => defaultSchemaConfig(schemaConfig),
+  schemaConfig,
+);
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -27,6 +39,7 @@ export const createDb = <
 }: DbOptions<SchemaConfig, ColumnTypes> &
   Omit<NodePostgresAdapterOptions, 'log'>): DbResult<ColumnTypes> => {
   return createDbWithAdapter({
+    schemaConfig: nodePostgresSchemaConfig as unknown as () => SchemaConfig,
     ...options,
     log,
     adapter: new AdapterClass({
@@ -54,7 +67,6 @@ for (const key in types.builtins) {
   types.builtins.TIMESTAMP,
   types.builtins.TIMESTAMPTZ,
   types.builtins.CIRCLE,
-  types.builtins.BYTEA,
 ].forEach((id) => {
   delete defaultTypeParsers[id];
 });
@@ -70,11 +82,10 @@ export interface NodePostgresAdapterOptions extends Omit<AdapterConfig, 'log'> {
   schema?: QuerySchema;
 }
 
-const queryClient = <T extends QueryResultRow = QueryResultRow>(
+const queryClient = <T = QueryResultRow>(
   client: PoolClient,
   text: string,
   values?: unknown[],
-  // SQL session state (role and setConfig) from async storage
   arraysMode?: boolean,
 ): Promise<QueryResult<T>> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,23 +109,27 @@ const queryClient = <T extends QueryResultRow = QueryResultRow>(
     });
 
     return __lock.then(() => {
-      const promise = client.query(params);
+      const promise = client.query(params) as Promise<QueryResult>;
       promise.then(resolve, resolve);
-      return promise;
+      return promise.then((result) =>
+        arraysMode ? normalizeArraysResult(result) : result,
+      ) as Promise<QueryResult<T>>;
     });
   }
 
-  const promise = client.query(params);
+  const promise = client.query(params) as Promise<QueryResult>;
 
   (client as unknown as { __lock?: Promise<unknown> }).__lock =
     promise.catch(noop);
 
-  return promise;
+  return promise.then((result) =>
+    arraysMode ? normalizeArraysResult(result) : result,
+  ) as Promise<QueryResult<T>>;
 };
 
 export const NodePostgresAdapter: DriverAdapter = {
   manualPool: true,
-
+  schemaConfig,
   errorClass: DatabaseError,
   errorFields: {
     message: 'message',
@@ -194,14 +209,14 @@ export const NodePostgresAdapter: DriverAdapter = {
     name: string,
     cb: () => Promise<T>,
   ): Promise<T> {
-    const safeName = name.replaceAll('"', '""');
+    const safeName = quoteIdentifier(name);
     try {
-      await queryClient(client, `SAVEPOINT "${safeName}"`);
+      await queryClient(client, `SAVEPOINT ${safeName}`);
       const res = await cb();
-      await queryClient(client, `RELEASE SAVEPOINT "${safeName}"`);
+      await queryClient(client, `RELEASE SAVEPOINT ${safeName}`);
       return res;
     } catch (err) {
-      await queryClient(client, `ROLLBACK TO SAVEPOINT "${safeName}"`);
+      await queryClient(client, `ROLLBACK TO SAVEPOINT ${safeName}`);
       throw err;
     }
   },
@@ -233,21 +248,21 @@ export const NodePostgresAdapter: DriverAdapter = {
 
     const savepointPromise = (async () => {
       try {
-        await queryClient(client, `SAVEPOINT "${safeName}"`);
+        await queryClient(client, `SAVEPOINT ${safeName}`);
 
         try {
           const res = await queryClient<T>(client, text, values, arraysMode);
-          resultResolve!(res);
+          resultResolve!(res as QueryResult<T>);
         } catch (err) {
           resultReject!(err);
           throw err;
         }
 
         const result = await promise;
-        await queryClient(client, `RELEASE SAVEPOINT "${safeName}"`);
+        await queryClient(client, `RELEASE SAVEPOINT ${safeName}`);
         return result;
       } catch (err) {
-        await queryClient(client, `ROLLBACK TO SAVEPOINT "${safeName}"`);
+        await queryClient(client, `ROLLBACK TO SAVEPOINT ${safeName}`);
         throw err;
       }
     })();
@@ -275,4 +290,13 @@ const defaultTypesConfig = {
   getTypeParser(id: number) {
     return defaultTypeParsers[id] || returnArg;
   },
+};
+
+const normalizeArraysResult = <
+  // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+  R extends any[] = any[],
+>(
+  result: QueryResult,
+): QueryResult<R> => {
+  return result as unknown as QueryResult<R>;
 };

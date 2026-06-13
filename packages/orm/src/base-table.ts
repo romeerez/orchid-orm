@@ -515,7 +515,7 @@ export function createBaseTable<
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
   ColumnTypes = DefaultColumnTypes<SchemaConfig>,
 >({
-  schemaConfig = defaultSchemaConfig as unknown as SchemaConfig,
+  schemaConfig = defaultSchemaConfig as unknown as () => SchemaConfig,
   columnTypes: columnTypesArg,
   snakeCase,
   filePath: filePathArg,
@@ -524,7 +524,7 @@ export function createBaseTable<
   language,
   autoForeignKeys,
 }: {
-  schemaConfig?: SchemaConfig;
+  schemaConfig?: () => SchemaConfig;
   // concrete column types or a callback for overriding standard column types
   // this types will be used in tables to define their columns
   columnTypes?:
@@ -544,12 +544,14 @@ export function createBaseTable<
   // automatically create foreign keys for relations
   autoForeignKeys?: boolean | TableData.References.BaseOptions;
 } = {}): BaseTableClass<SchemaConfig, ColumnTypes> {
+  const schema = schemaConfig();
+
   const columnTypes = (
     typeof columnTypesArg === 'function'
       ? (
           columnTypesArg as (t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes
-        )(makeColumnTypes(schemaConfig))
-      : columnTypesArg || makeColumnTypes(schemaConfig)
+        )(makeColumnTypes(schema))
+      : columnTypesArg || makeColumnTypes(schema)
   ) as ColumnTypes;
 
   // stack is needed only if filePath wasn't given
@@ -579,7 +581,7 @@ export function createBaseTable<
       this.instance();
       // Nullish coalescing assignment (??=), for some reason, compiles to != null and miss undefined
       return this._inputSchema === undefined
-        ? (this._inputSchema = schemaConfig.inputSchema.call(this as never))
+        ? (this._inputSchema = schema.inputSchema.call(this as never))
         : this._inputSchema;
     }
 
@@ -587,7 +589,7 @@ export function createBaseTable<
     static outputSchema() {
       this.instance();
       return this._outputSchema === undefined
-        ? (this._outputSchema = schemaConfig.outputSchema.call(this as never))
+        ? (this._outputSchema = schema.outputSchema.call(this as never))
         : this._outputSchema;
     }
 
@@ -595,7 +597,7 @@ export function createBaseTable<
     static querySchema() {
       this.instance();
       return this._querySchema === undefined
-        ? (this._querySchema = schemaConfig.querySchema.call(this as never))
+        ? (this._querySchema = schema.querySchema.call(this as never))
         : this._querySchema;
     }
 
@@ -603,7 +605,7 @@ export function createBaseTable<
     static createSchema() {
       this.instance();
       return this._createSchema === undefined
-        ? (this._createSchema = schemaConfig.createSchema.call(this as never))
+        ? (this._createSchema = schema.createSchema.call(this as never))
         : this._createSchema;
     }
 
@@ -611,7 +613,7 @@ export function createBaseTable<
     static updateSchema() {
       this.instance();
       return this._updateSchema === undefined
-        ? (this._updateSchema = schemaConfig.updateSchema.call(this as never))
+        ? (this._updateSchema = schema.updateSchema.call(this as never))
         : this._updateSchema;
     }
 
@@ -619,7 +621,7 @@ export function createBaseTable<
     static pkeySchema() {
       this.instance();
       return this._pkeySchema === undefined
-        ? (this._pkeySchema = schemaConfig.pkeySchema.call(this as never))
+        ? (this._pkeySchema = schema.pkeySchema.call(this as never))
         : this._pkeySchema;
     }
 

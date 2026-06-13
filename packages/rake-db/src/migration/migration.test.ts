@@ -7,7 +7,7 @@ import {
   toLine,
 } from '../rake-db.test-utils';
 import { raw, singleQuote } from 'pqb/internal';
-import { asMock, sql, testAdapter } from 'test-utils';
+import { asMock, sql, testAdapter, testDefaultColumnTypes } from 'test-utils';
 import { createMigrationInterface } from './migration';
 
 const db = getDb();
@@ -24,7 +24,7 @@ describe('migration', () => {
 
     it('should add SQL to the Postgres error class', async () => {
       const db = createMigrationInterface(testAdapter, true, {}).getDb(
-        undefined,
+        testDefaultColumnTypes,
       );
 
       const err = await db.query`invalid`.catch((err) => err);

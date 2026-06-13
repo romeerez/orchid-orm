@@ -32,7 +32,6 @@ const testGenerate = async (name: string, content: string) => {
 
 describe('newMigration', () => {
   beforeEach(() => {
-    jest.useFakeTimers().setSystemTime(new Date(2000, 0, 1, 0, 0, 0));
     jest.clearAllMocks();
     asMock(fs.readdir).mockReturnValue(Promise.resolve([]));
   });

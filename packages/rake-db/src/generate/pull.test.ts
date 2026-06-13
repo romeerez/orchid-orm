@@ -3,13 +3,11 @@ import { pullDbStructure } from './pull';
 import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
 import { saveMigratedVersion } from '../migration/manage-migrated-versions';
 import {
-  makeColumnTypes,
   DefaultColumnTypes,
-  defaultSchemaConfig,
   DefaultSchemaConfig,
   AdapterClass,
 } from 'pqb/internal';
-import { asMock, TestAdapter } from 'test-utils';
+import { asMock, TestAdapter, testDefaultColumnTypes } from 'test-utils';
 import { makeRakeDbConfig } from '../config.public';
 import { RakeDbConfig } from '../config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
@@ -61,7 +59,7 @@ class BaseTable {
   types!: DefaultColumnTypes<DefaultSchemaConfig>;
   snakeCase?: boolean;
 }
-BaseTable.prototype.types = makeColumnTypes(defaultSchemaConfig);
+BaseTable.prototype.types = testDefaultColumnTypes;
 
 const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
   makeRakeDbConfig({

@@ -79,6 +79,7 @@ export {
 // Column schema configuration
 export {
   defaultSchemaConfig,
+  internalSchemaConfig,
   getColumnTypes,
   makeColumnTypes,
   setColumnData,
@@ -96,7 +97,10 @@ export {
   DateTimeBaseClass,
   DateTimeTzBaseClass,
   Column,
+  getDateAsNumberFn,
+  getDateAsDateFn,
   type ColumnSchemaConfig,
+  type SchemaConfigFnWithOptions,
   type ColumnSchemaGetterColumns,
   type ColumnSchemaGetterTableClass,
   type ColumnTypeSchemaArg,
@@ -347,15 +351,16 @@ export {
   TransactionAdapterClass,
   makeConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
+  getDriverErrorCode,
   type Adapter,
   type TransactionAdapter,
   type DriverAdapter,
   type AdapterParams,
   type AdapterConfigBase,
   type QueryResult,
-  type QueryArraysResult,
   type QueryResultRow,
   type AfterCommitStandaloneHook,
+  type AdapterSchemaConfigOptions,
 } from './adapters/adapter';
 
 // Default privileges

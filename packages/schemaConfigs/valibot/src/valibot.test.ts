@@ -28,9 +28,11 @@ import {
   UnionSchema,
   literal,
   LiteralSchema,
+  unknown,
 } from 'valibot';
 
-const t = makeColumnTypes(valibotSchemaConfig);
+const schemaConfig = valibotSchemaConfig();
+const t = makeColumnTypes(schemaConfig);
 
 type TypeBase = {
   inputSchema: BaseSchema;
@@ -104,11 +106,11 @@ describe('valibot schema config', () => {
 
     const klass = {
       prototype: { columns },
-      inputSchema: valibotSchemaConfig.inputSchema,
-      outputSchema: valibotSchemaConfig.outputSchema,
-      querySchema: valibotSchemaConfig.querySchema,
-      pkeySchema: valibotSchemaConfig.pkeySchema,
-      createSchema: valibotSchemaConfig.createSchema,
+      inputSchema: schemaConfig.inputSchema,
+      outputSchema: schemaConfig.outputSchema,
+      querySchema: schemaConfig.querySchema,
+      pkeySchema: schemaConfig.pkeySchema,
+      createSchema: schemaConfig.createSchema,
     };
 
     const type = {
@@ -142,11 +144,11 @@ describe('valibot schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: valibotSchemaConfig.inputSchema,
-        outputSchema: valibotSchemaConfig.outputSchema,
-        querySchema: valibotSchemaConfig.querySchema,
-        pkeySchema: valibotSchemaConfig.pkeySchema,
-        createSchema: valibotSchemaConfig.createSchema,
+        inputSchema: schemaConfig.inputSchema,
+        outputSchema: schemaConfig.outputSchema,
+        querySchema: schemaConfig.querySchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
       };
 
       const schema = klass.querySchema();
@@ -179,10 +181,10 @@ describe('valibot schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: valibotSchemaConfig.inputSchema,
-        querySchema: valibotSchemaConfig.outputSchema,
-        pkeySchema: valibotSchemaConfig.pkeySchema,
-        createSchema: valibotSchemaConfig.createSchema,
+        inputSchema: schemaConfig.inputSchema,
+        querySchema: schemaConfig.outputSchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
       };
 
       const createSchema = klass.createSchema();
@@ -211,11 +213,11 @@ describe('valibot schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: valibotSchemaConfig.inputSchema,
-        querySchema: valibotSchemaConfig.outputSchema,
-        pkeySchema: valibotSchemaConfig.pkeySchema,
-        createSchema: valibotSchemaConfig.createSchema,
-        updateSchema: valibotSchemaConfig.updateSchema,
+        inputSchema: schemaConfig.inputSchema,
+        querySchema: schemaConfig.outputSchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
+        updateSchema: schemaConfig.updateSchema,
       };
 
       const updateSchema = klass.updateSchema();
@@ -243,10 +245,10 @@ describe('valibot schema config', () => {
 
       const klass = {
         prototype: { columns },
-        inputSchema: valibotSchemaConfig.inputSchema,
-        querySchema: valibotSchemaConfig.outputSchema,
-        pkeySchema: valibotSchemaConfig.pkeySchema,
-        createSchema: valibotSchemaConfig.createSchema,
+        inputSchema: schemaConfig.inputSchema,
+        querySchema: schemaConfig.outputSchema,
+        pkeySchema: schemaConfig.pkeySchema,
+        createSchema: schemaConfig.createSchema,
       };
 
       const pkeySchema = klass.pkeySchema();
@@ -786,13 +788,11 @@ describe('valibot schema config', () => {
     });
   });
 
-  const xml = t.xml();
-  const jsonText = t.jsonText();
-  assertAllTypes<typeof xml | typeof jsonText, StringSchema>();
-
-  describe.each(['xml', 'jsonText'])('%s', (method) => {
+  describe('xml', () => {
     it('should parse to a string without validation', () => {
-      const type = t[method as 'xml']();
+      const type = t.xml();
+
+      assertAllTypes<typeof type, StringSchema>();
 
       expectAllParse(type, 'string', 'string');
 
@@ -897,6 +897,13 @@ describe('valibot schema config', () => {
       );
 
       const expected = object({ bool: boolean() });
+      assertAllTypes<typeof type, typeof expected>();
+    });
+
+    it('should parse jsonText to unknown', () => {
+      const type = t.jsonText();
+
+      const expected = unknown();
       assertAllTypes<typeof type, typeof expected>();
     });
   });
@@ -1018,7 +1025,7 @@ describe('valibot schema config', () => {
     class Virtual extends VirtualColumn<ValibotSchemaConfig> {}
 
     it('should result in a never type', () => {
-      const type = new Virtual(valibotSchemaConfig);
+      const type = new Virtual(schemaConfig);
 
       assertAllTypes<typeof type, NeverSchema>();
 
@@ -1048,7 +1055,7 @@ describe('valibot schema config', () => {
 
   describe('custom type', () => {
     it('should convert it to a base column', () => {
-      const type = new CustomTypeColumn(valibotSchemaConfig, 'customType').as(
+      const type = new CustomTypeColumn(schemaConfig, 'customType').as(
         t.integer(),
       );
 

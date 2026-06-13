@@ -5,6 +5,7 @@ import {
   Adapter,
   colors,
   TransactionAdapter,
+  getDriverErrorCode,
 } from 'pqb/internal';
 import { AbortSignal } from '../generate';
 
@@ -61,7 +62,7 @@ export const compareSqlExpressions = async (
       async (err) => {
         // ignore the "type ... does not exist" because the type may be added in the same migration,
         // but throw on other errors
-        if (err.code !== '42704') {
+        if (typeof err === 'object' && getDriverErrorCode(err) !== '42704') {
           throw err;
         }
       },

@@ -194,7 +194,7 @@ await db.$withOptions(
 );
 ```
 
-This works consistently across both supported adapters (`node-postgres` and `postgres-js`) even though their internal connection handling differs.
+This works consistently across supported adapters (`node-postgres`, `postgres-js`, and Bun SQL) even though their internal connection handling differs.
 
 For query-scoped SQL session options, see [$withOptions](/guide/orm-methods.html#withoptions).
 

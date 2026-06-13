@@ -8,7 +8,7 @@ import {
 } from '../code';
 import { columnCode } from '../code';
 import { Operators, OperatorsArray } from '../operators';
-import { setColumnDefaultParse } from '../column.utils';
+import { setColumnDefaultEncode, setColumnDefaultParse } from '../column.utils';
 import { ArrayMethodsData } from '../column-data-types';
 import { ColumnSchemaConfig, ColumnTypeSchemaArg } from '../column-schema';
 
@@ -60,6 +60,7 @@ export class ArrayColumn<
     schema: Schema,
     item: Item,
     inputType: InputType,
+    defaultEncode?: (input: unknown) => unknown,
     outputType?: OutputType,
     queryType?: QueryType,
   ) {
@@ -69,6 +70,9 @@ export class ArrayColumn<
     item.data.isNullable = true;
 
     setColumnDefaultParse(this, (input) => parse.call(this as never, input));
+    if (defaultEncode) {
+      setColumnDefaultEncode(this, defaultEncode);
+    }
 
     this.data.item = item instanceof ArrayColumn ? item.data.item : item;
     this.data.name = item.data.name;

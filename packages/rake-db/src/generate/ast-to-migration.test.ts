@@ -1,18 +1,11 @@
 import { astToMigration } from './ast-to-migration';
-import {
-  makeColumnTypes,
-  raw,
-  defaultSchemaConfig,
-  TableData,
-} from 'pqb/internal';
+import { raw, TableData } from 'pqb/internal';
 import { RakeDbAst } from '../ast';
 import { makeRakeDbConfig } from '../config.public';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
+import { testDefaultColumnTypes } from 'test-utils';
 
-const columnTypes = makeColumnTypes(defaultSchemaConfig);
-const t = {
-  ...columnTypes,
-};
+const t = testDefaultColumnTypes;
 
 const config = makeRakeDbConfig({
   migrationsPath: 'migrations',

@@ -3,12 +3,12 @@ import { columnCode, ColumnToCodeCtx } from '../code';
 import { Operators, OperatorsJson, OperatorsText } from '../operators';
 import { Code } from '../code';
 import {
-  defaultSchemaConfig,
   DefaultSchemaConfig,
+  internalSchemaConfig,
 } from '../default-schema-config';
 import { ColumnSchemaConfig, ColumnTypeSchemaArg } from '../column-schema';
 
-const encode = (x: unknown) => (x === null ? x : JSON.stringify(x));
+export const encodeJson = (x: unknown) => (x === null ? x : JSON.stringify(x));
 
 // Type of JSON column (jsonb).
 export class JSONColumn<
@@ -19,9 +19,15 @@ export class JSONColumn<
   dataType = 'jsonb' as const;
   operators = Operators.json;
 
-  constructor(schema: Schema, inputType: Schema['type']) {
+  constructor(
+    schema: Schema,
+    inputType: Schema['type'],
+    encodedByDriver = true,
+  ) {
     super(schema, inputType as InputSchema);
-    this.data.encode = encode;
+    if (!encodedByDriver) {
+      this.data.encode = encodeJson;
+    }
     this.data.parseItem = JSON.parse;
   }
 
@@ -33,8 +39,8 @@ export class JSONColumn<
 // JSON non-binary type, stored as a text in the database, so it doesn't have rich functionality.
 export class JSONTextColumn<Schema extends ColumnSchemaConfig> extends Column<
   Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
+  unknown,
+  ReturnType<Schema['unknown']>,
   OperatorsText
 > {
   dataType = 'json' as const;
@@ -42,7 +48,7 @@ export class JSONTextColumn<Schema extends ColumnSchemaConfig> extends Column<
 
   private static _instance: JSONTextColumn<DefaultSchemaConfig> | undefined;
   static get instance() {
-    return (this._instance ??= new JSONTextColumn(defaultSchemaConfig));
+    return (this._instance ??= new JSONTextColumn(internalSchemaConfig));
   }
 
   constructor(schema: Schema) {

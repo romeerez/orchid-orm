@@ -376,10 +376,10 @@ const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
       'SELECT ' +
         compareSql.expressions
           .map(
-            (x) =>
+            (x, i) =>
               `${freezeSqlClock(x.inDb)} = (${
                 x.inCode && freezeSqlClock(x.inCode)
-              })`,
+              }) "${i}"`,
           )
           .join(', '),
       compareSql.values,

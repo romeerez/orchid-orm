@@ -5,10 +5,13 @@ import {
   joinWords,
   quoteWithSchema,
 } from './common';
-import { defaultSchemaConfig } from 'pqb/internal';
 import path from 'path';
-import { asMock } from 'test-utils';
-import { getCallerFilePath, getStackTrace } from 'pqb/internal';
+import { asMock, testDefaultColumnTypes } from 'test-utils';
+import {
+  getCallerFilePath,
+  getStackTrace,
+  defaultSchemaConfig,
+} from 'pqb/internal';
 import { RakeDbConfig } from './config';
 import { makeRakeDbConfig, rakeDbCommands } from './config.public';
 import { processMigrateConfig } from './commands/migrate-or-rollback';
@@ -17,7 +20,7 @@ describe('common', () => {
   describe('processRakeDbConfig', () => {
     it('should return config with defaults', () => {
       const result = makeRakeDbConfig({
-        columnTypes: {},
+        columnTypes: testDefaultColumnTypes,
         basePath: __dirname,
         dbScript: 'dbScript.ts',
         migrationsPath: 'custom-path',
@@ -30,12 +33,12 @@ describe('common', () => {
         __rakeDbConfig: true,
         basePath: __dirname,
         dbScript: 'dbScript.ts',
-        columnTypes: {},
+        columnTypes: testDefaultColumnTypes,
         migrationId: { serial: 4 },
         migrationsPath,
         recurrentPath: path.join(migrationsPath, 'recurrent'),
         migrationsTable: 'schemaMigrations',
-        schemaConfig: defaultSchemaConfig,
+        schemaConfig: expect.any(Object),
         snakeCase: false,
         import: expect.any(Function),
         log: true,

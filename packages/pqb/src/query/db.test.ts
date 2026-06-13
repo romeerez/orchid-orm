@@ -3,7 +3,7 @@ import { createDbWithAdapter } from './db';
 import {
   assertType,
   BaseTable,
-  columnTypes,
+  testDefaultColumnTypes,
   createTestDb,
   expectSql,
   sql,
@@ -11,11 +11,12 @@ import {
   testDb,
   testDbOptions,
   useTestDatabase,
+  testDefaultSchemaConfig,
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
 import {
   DefaultSchemaConfig,
-  defaultSchemaConfig,
+  internalSchemaConfig,
   VirtualColumn,
 } from '../columns';
 import { RecordUnknown } from '../utils';
@@ -68,8 +69,8 @@ describe('db', () => {
     class Virtual extends VirtualColumn<DefaultSchemaConfig> {}
 
     const Table = testDb('table', () => ({
-      id: columnTypes.identity().primaryKey(),
-      virtual: new Virtual(defaultSchemaConfig),
+      id: testDefaultColumnTypes.identity().primaryKey(),
+      virtual: new Virtual(internalSchemaConfig),
     }));
 
     expect(Table.q.selectAllShape).toEqual({
@@ -128,12 +129,13 @@ describe('db', () => {
   });
 
   describe('overriding column types', () => {
-    it('should return date as string by default', async () => {
+    it('should return date as string by default unless it is Bun SQL', async () => {
       await User.create(userData);
 
       const db = createDbWithAdapter({
         adapter: testAdapter,
         snakeCase: true,
+        schemaConfig: () => testDefaultSchemaConfig,
       });
       const table = db(
         'user',

@@ -52,7 +52,11 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
   dbFile?: string;
 }) => {
   adapters = options.map(
-    (config) => new AdapterClass({ driverAdapter: TestAdapter, config }),
+    (config) =>
+      new AdapterClass({
+        driverAdapter: TestAdapter,
+        config,
+      }),
   );
   closers = adapters.map((adapter) => () => adapter.close());
 

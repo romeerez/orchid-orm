@@ -14,6 +14,8 @@ import { AdapterClass, orchidORMWithAdapter } from 'orchid-orm';
 import { Adapter as PostgresJsAdapter } from 'orchid-orm/postgres-js';
 // for node-postgres driver:
 // import { Adapter as NodePostgresAdapter } from 'orchid-orm/node-postgres';
+// for Bun SQL driver:
+// import { Adapter as BunAdapter } from 'orchid-orm/bun';
 
 const adapter = new AdapterClass({
   driverAdapter: PostgresJsAdapter,
@@ -37,6 +39,10 @@ If you need to bundle tables before database config exists, use `bundleOrchidORM
 ```ts
 import { bundleOrchidORMTables } from 'orchid-orm';
 import { makeOrchidOrmDb } from 'orchid-orm/postgres-js';
+// for node-postgres driver:
+// import { makeOrchidOrmDb } from 'orchid-orm/node-postgres';
+// for Bun SQL driver:
+// import { makeOrchidOrmDb } from 'orchid-orm/bun';
 
 import { UserTable } from './tables/user';
 import { MessageTable } from './tables/message';

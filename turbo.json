@@ -4,6 +4,7 @@
     "check": {
       "env": ["ADAPTER"]
     },
+    "bun:check": {},
     "check:coverage": {
       "env": ["ADAPTER"],
       "outputs": ["coverage/**"]

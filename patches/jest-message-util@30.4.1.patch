@@ -1,0 +1,18 @@
+diff --git a/build/index.js b/build/index.js
+index 5fb9ccc2c3611ee7840c4ea734b3c243916743fc..32db34b8b5f05982f61c3fd5a248db96dd0078b5 100644
+--- a/build/index.js
++++ b/build/index.js
+@@ -292,6 +292,13 @@ function formatErrorStack(errorOrStack, config, options, testPath) {
+     message,
+     stack
+   } = separateMessageFromStack(sourceStack);
++  if (typeof errorOrStack !== 'string' && errorOrStack.message) {
++    const errorMessage = trim(errorOrStack.message);
++    if (!message.includes(errorMessage)) {
++      stack = message ? `${message}\n${stack}` : stack;
++      message = errorOrStack.message;
++    }
++  }
+   stack = options.noStackTrace ? '' : `${STACK_TRACE_COLOR(formatStackTrace(stack, config, options, testPath))}\n`;
+   message = checkForCommonEnvironmentErrors(message);
+   message = indentAllLines(message);

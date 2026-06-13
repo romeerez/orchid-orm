@@ -164,7 +164,7 @@ If the query fails, it does `ROLLBACK TO SAVEPOINT` to recover the transaction f
 
 `postgres-js` sends the save-point and the query SQLs simultaneously, without introducing additional round-trips.
 
-But the same is not possible with `node-postgres` and in case of using it the `catch` adds additional round-trips.
+The same is not possible with `node-postgres` or Bun SQL, so with these adapters `catch` adds additional round-trips.
 
 ## catchUniqueError
 

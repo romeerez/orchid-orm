@@ -1,5 +1,5 @@
 import { Query } from 'pqb';
-import { Column, RawSql } from 'pqb/internal';
+import { Column, internalSchemaConfig, RawSql } from 'pqb/internal';
 import {
   _appendQuery,
   _clone,
@@ -18,7 +18,6 @@ import {
   CreateData,
   CreateManyMethodsNames,
   CreateMethodsNames,
-  defaultSchemaConfig,
   EmptyObject,
   getPrimaryKeys,
   isQueryReturnsAll,
@@ -565,7 +564,7 @@ export const makeHasOneMethod = (
       return _queryDefaults(query.where(values as never), { ...on, ...values });
     },
     virtualColumn: new HasOneVirtualColumn(
-      defaultSchemaConfig,
+      internalSchemaConfig,
       relationName,
       state,
     ),

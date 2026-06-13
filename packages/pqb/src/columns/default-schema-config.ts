@@ -1,5 +1,7 @@
 import {
   DateColumn,
+  getDateAsDateFn,
+  getDateAsNumberFn,
   TimestampColumn,
   TimestampTZColumn,
 } from './column-types/date-time';
@@ -28,6 +30,7 @@ import { Column, setColumnData } from './column';
 import { setColumnParse, setColumnParseNull } from './column.utils';
 import { ColumnSchemaConfig } from './column-schema';
 import { MaybeArray, noop } from '../utils';
+import { AdapterSchemaConfigOptions } from '../adapters/adapter';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
   parse<T extends Column.Pick.ForParse, Output>(
@@ -58,7 +61,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     },
   >(
     this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    //
     _fn: (
       type: <Type, Input = Type, Output = Type, Query = Type>() => {
         type: Type;
@@ -74,7 +77,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     Types extends Column.InputOutputQueryTypes,
   >(
     this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    //
     _fn: (
       type: <
         Type extends T['inputType'] extends T['outputType'] & T['queryType']
@@ -93,7 +96,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     Types extends Column.InputOutputQueryTypes,
   >(
     this: T,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    //
     _fn: (
       type: <
         Types extends {
@@ -168,89 +171,108 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
   timestamp(precision?: number): TimestampTZColumn<DefaultSchemaConfig>;
 }
 
-// parse a date string to date object, with respect to null
-const parseDateToDate = (value: unknown): Date => new Date(value as string);
+export const defaultSchemaConfig = (
+  options?: AdapterSchemaConfigOptions,
+): DefaultSchemaConfig => {
+  const schemaConfig = {
+    intervalParse: options?.intervalParse,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    parse(fn: (input: any) => unknown) {
+      return setColumnParse(this as never, fn);
+    },
+    parseNull(fn: () => unknown) {
+      return setColumnParseNull(this as never, fn);
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    encode(fn: (input: any) => unknown) {
+      return setColumnData(this as Column.Pick.Data, 'encode', fn);
+    },
+    asType() {
+      return this as never;
+    },
+    narrowType() {
+      return this as never;
+    },
+    narrowAllTypes() {
+      return this as never;
+    },
+    dateAsNumber(this: { data: Column.Data; parse(fn: unknown): unknown }) {
+      return this.parse(getDateAsNumberFn(this)) as never;
+    },
+    dateAsDate(this: { data: Column.Data; parse(fn: unknown): unknown }) {
+      return this.parse(getDateAsDateFn(this)) as never;
+    },
+    enum<const T extends readonly [string, ...string[]]>(
+      dataType: string,
+      type: T,
+    ) {
+      return new EnumColumn(schemaConfig, dataType, type, undefined);
+    },
+    array<Item extends ArrayColumnValue>(item: Item) {
+      return new ArrayColumn(
+        schemaConfig,
+        item,
+        undefined,
+        options?.arrayEncode,
+      );
+    },
+    boolean: noop,
+    buffer: noop,
+    unknown: noop,
+    never: noop,
+    stringSchema: noop,
+    stringMin: noop,
+    stringMax: noop,
+    stringMinMax: noop,
+    number: noop,
+    int: noop,
+    stringNumberDate: noop,
+    timeInterval: noop,
+    bit: noop,
+    uuid: noop,
+    nullable(this: Column.Pick.ForNullable) {
+      return setColumnData(this, 'isNullable', true);
+    },
+    json() {
+      return new JSONColumn(
+        schemaConfig,
+        undefined,
+        options?.jsonEncodedByDriver,
+      );
+    },
+    setErrors: noop,
 
-export const defaultSchemaConfig = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parse(fn: (input: any) => unknown) {
-    return setColumnParse(this as never, fn);
-  },
-  parseNull(fn: () => unknown) {
-    return setColumnParseNull(this as never, fn);
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  encode(fn: (input: any) => unknown) {
-    return setColumnData(this as Column.Pick.Data, 'encode', fn);
-  },
-  asType() {
-    return this as never;
-  },
-  narrowType() {
-    return this as never;
-  },
-  narrowAllTypes() {
-    return this as never;
-  },
-  dateAsNumber(this: { data: Column.Data; parse(fn: unknown): unknown }) {
-    return this.parse(Date.parse) as never;
-  },
-  dateAsDate(this: { data: Column.Data; parse(fn: unknown): unknown }) {
-    return this.parse(parseDateToDate) as never;
-  },
-  enum<const T extends readonly [string, ...string[]]>(
-    dataType: string,
-    type: T,
-  ) {
-    return new EnumColumn(defaultSchemaConfig, dataType, type, undefined);
-  },
-  array<Item extends ArrayColumnValue>(item: Item) {
-    return new ArrayColumn(defaultSchemaConfig, item, undefined);
-  },
-  boolean: noop,
-  buffer: noop,
-  unknown: noop,
-  never: noop,
-  stringSchema: noop,
-  stringMin: noop,
-  stringMax: noop,
-  stringMinMax: noop,
-  number: noop,
-  int: noop,
-  stringNumberDate: noop,
-  timeInterval: noop,
-  bit: noop,
-  uuid: noop,
-  nullable(this: Column.Pick.ForNullable) {
-    return setColumnData(this, 'isNullable', true);
-  },
-  json() {
-    return new JSONColumn(defaultSchemaConfig, undefined);
-  },
-  setErrors: noop,
+    smallint: () => new SmallIntColumn(schemaConfig),
+    integer: () => new IntegerColumn(schemaConfig),
+    real: () => new RealColumn(schemaConfig),
+    smallSerial: () => new SmallSerialColumn(schemaConfig),
+    serial: () => new SerialColumn(schemaConfig),
 
-  smallint: () => new SmallIntColumn(defaultSchemaConfig),
-  integer: () => new IntegerColumn(defaultSchemaConfig),
-  real: () => new RealColumn(defaultSchemaConfig),
-  smallSerial: () => new SmallSerialColumn(defaultSchemaConfig),
-  serial: () => new SerialColumn(defaultSchemaConfig),
+    bigint: () => new BigIntColumn(schemaConfig),
+    decimal: (precision?: number, scale?: number) =>
+      new DecimalColumn(schemaConfig, precision, scale),
+    doublePrecision: () => new DoublePrecisionColumn(schemaConfig),
+    bigSerial: () => new BigSerialColumn(schemaConfig),
+    money: () => new MoneyColumn(schemaConfig),
+    varchar: (limit: number) => new VarCharColumn(schemaConfig, limit),
+    text: () => new TextColumn(schemaConfig),
+    string: (limit?: number) => new StringColumn(schemaConfig, limit),
+    citext: () => new CitextColumn(schemaConfig),
 
-  bigint: () => new BigIntColumn(defaultSchemaConfig),
-  decimal: (precision?: number, scale?: number) =>
-    new DecimalColumn(defaultSchemaConfig, precision, scale),
-  doublePrecision: () => new DoublePrecisionColumn(defaultSchemaConfig),
-  bigSerial: () => new BigSerialColumn(defaultSchemaConfig),
-  money: () => new MoneyColumn(defaultSchemaConfig),
-  varchar: (limit: number) => new VarCharColumn(defaultSchemaConfig, limit),
-  text: () => new TextColumn(defaultSchemaConfig),
-  string: (limit?: number) => new StringColumn(defaultSchemaConfig, limit),
-  citext: () => new CitextColumn(defaultSchemaConfig),
+    date: () => new DateColumn(schemaConfig, options?.dateParsedByDriver),
+    timestampNoTZ: (precision?: number) =>
+      new TimestampColumn(schemaConfig, precision, options?.dateParsedByDriver),
+    timestamp: (precision?: number) =>
+      new TimestampTZColumn(
+        schemaConfig,
+        precision,
+        options?.dateParsedByDriver,
+      ),
 
-  date: () => new DateColumn(defaultSchemaConfig),
-  timestampNoTZ: (precision?: number) =>
-    new TimestampColumn(defaultSchemaConfig, precision),
-  timestamp: (precision?: number) =>
-    new TimestampTZColumn(defaultSchemaConfig, precision),
+    geographyPointSchema: noop,
+  } as unknown as DefaultSchemaConfig;
 
-  geographyPointSchema: noop,
-} as unknown as DefaultSchemaConfig;
+  return schemaConfig;
+};
+
+export const internalSchemaConfig = defaultSchemaConfig();

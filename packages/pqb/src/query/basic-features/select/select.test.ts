@@ -21,9 +21,9 @@ import {
 } from '../../../test-utils/pqb.test-utils';
 import {
   DateColumn,
-  defaultSchemaConfig,
   DefaultSchemaConfig,
   IntegerColumn,
+  internalSchemaConfig,
   JSONTextColumn,
   VirtualColumn,
 } from '../../../columns';
@@ -99,7 +99,7 @@ describe('select', () => {
 
       const Table = Object.create(User);
       Table.q = {
-        shape: { ...Table.shape, virtual: new Virtual(defaultSchemaConfig) },
+        shape: { ...Table.shape, virtual: new Virtual(internalSchemaConfig) },
       };
 
       const q = Table.select('*');
@@ -368,10 +368,10 @@ describe('select', () => {
           createdAt: User.shape.createdAt,
         });
 
-        expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await q.take()).createdAt instanceof Date).toBe(true);
-        expect((await q.rows())[0][0] instanceof Date).toBe(true);
-        expect((await q.get('createdAt')) instanceof Date).toBe(true);
+        expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
+        expect((await q.take()).createdAt).toEqual(expect.any(Date));
+        expect((await q.rows())[0][0]).toEqual(expect.any(Date));
+        expect(await q.get('createdAt')).toEqual(expect.any(Date));
       });
 
       it('should parse columns of the table, selected by column name and table name', async () => {
@@ -383,10 +383,10 @@ describe('select', () => {
           createdAt: User.shape.createdAt,
         });
 
-        expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await q.take()).createdAt instanceof Date).toBe(true);
-        expect((await q.rows())[0][0] instanceof Date).toBe(true);
-        expect((await q.get('user.createdAt')) instanceof Date).toBe(true);
+        expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
+        expect((await q.take()).createdAt).toEqual(expect.any(Date));
+        expect((await q.rows())[0][0]).toEqual(expect.any(Date));
+        expect(await q.get('user.createdAt')).toEqual(expect.any(Date));
       });
 
       it('should parse columns of joined table', async () => {
@@ -400,10 +400,10 @@ describe('select', () => {
           createdAt: User.shape.createdAt,
         });
 
-        expect((await q.all())[0].createdAt instanceof Date).toBe(true);
-        expect((await q.take()).createdAt instanceof Date).toBe(true);
-        expect((await q.rows())[0][0] instanceof Date).toBe(true);
-        expect((await q.get('user.createdAt')) instanceof Date).toBe(true);
+        expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
+        expect((await q.take()).createdAt).toEqual(expect.any(Date));
+        expect((await q.rows())[0][0]).toEqual(expect.any(Date));
+        expect(await q.get('user.createdAt')).toEqual(expect.any(Date));
       });
     });
 
@@ -1168,9 +1168,9 @@ describe('select', () => {
         date: User.shape.createdAt,
       });
 
-      expect((await q.all())[0].date instanceof Date).toBe(true);
-      expect((await q.take()).date instanceof Date).toBe(true);
-      expect((await q.rows())[0][0] instanceof Date).toBe(true);
+      expect((await q.all())[0].date).toEqual(expect.any(Date));
+      expect((await q.take()).date).toEqual(expect.any(Date));
+      expect((await q.rows())[0][0]).toEqual(expect.any(Date));
     });
 
     it('should parse columns of the table, selected by column name and table name', async () => {
@@ -1184,9 +1184,9 @@ describe('select', () => {
         date: User.shape.createdAt,
       });
 
-      expect((await q.all())[0].date instanceof Date).toBe(true);
-      expect((await q.take()).date instanceof Date).toBe(true);
-      expect((await q.rows())[0][0] instanceof Date).toBe(true);
+      expect((await q.all())[0].date).toEqual(expect.any(Date));
+      expect((await q.take()).date).toEqual(expect.any(Date));
+      expect((await q.rows())[0][0]).toEqual(expect.any(Date));
     });
 
     it('should parse columns of joined table', async () => {
@@ -1200,9 +1200,9 @@ describe('select', () => {
         date: User.shape.createdAt,
       });
 
-      expect((await q.all())[0].date instanceof Date).toBe(true);
-      expect((await q.take()).date instanceof Date).toBe(true);
-      expect((await q.rows())[0][0] instanceof Date).toBe(true);
+      expect((await q.all())[0].date).toEqual(expect.any(Date));
+      expect((await q.take()).date).toEqual(expect.any(Date));
+      expect((await q.rows())[0][0]).toEqual(expect.any(Date));
     });
 
     it('should parse raw column', async () => {
@@ -1218,9 +1218,9 @@ describe('select', () => {
         date: expect.any(DateColumn),
       });
 
-      expect((await q.all())[0].date instanceof Date).toBe(true);
-      expect((await q.take()).date instanceof Date).toBe(true);
-      expect((await q.rows())[0][0] instanceof Date).toBe(true);
+      expect((await q.all())[0].date).toEqual(expect.any(Date));
+      expect((await q.take()).date).toEqual(expect.any(Date));
+      expect((await q.rows())[0][0]).toEqual(expect.any(Date));
     });
 
     describe('sub query', () => {
@@ -1235,11 +1235,9 @@ describe('select', () => {
           users: expect.any(JSONTextColumn),
         });
 
-        expect((await q.all())[0].users[0].createdAt instanceof Date).toBe(
-          true,
-        );
-        expect((await q.take()).users[0].createdAt instanceof Date).toBe(true);
-        expect((await q.rows())[0][0][0].createdAt instanceof Date).toBe(true);
+        expect((await q.all())[0].users[0].createdAt).toEqual(expect.any(Date));
+        expect((await q.take()).users[0].createdAt).toEqual(expect.any(Date));
+        expect((await q.rows())[0][0][0].createdAt).toEqual(expect.any(Date));
       });
 
       it('should parse subquery item columns', async () => {
@@ -1253,9 +1251,9 @@ describe('select', () => {
           user: expect.any(JSONTextColumn),
         });
 
-        expect((await q.all())[0].user?.createdAt instanceof Date).toBe(true);
-        expect((await q.take()).user?.createdAt instanceof Date).toBe(true);
-        expect((await q.rows())[0][0]?.createdAt instanceof Date).toBe(true);
+        expect((await q.all())[0].user?.createdAt).toEqual(expect.any(Date));
+        expect((await q.take()).user?.createdAt).toEqual(expect.any(Date));
+        expect((await q.rows())[0][0]?.createdAt).toEqual(expect.any(Date));
       });
 
       it('should parse subquery single value', async () => {
@@ -1285,9 +1283,9 @@ describe('select', () => {
           dates: expect.any(JSONTextColumn),
         });
 
-        expect((await q.all())[0].dates[0] instanceof Date).toBe(true);
-        expect((await q.take()).dates[0] instanceof Date).toBe(true);
-        expect((await q.rows())[0][0][0] instanceof Date).toBe(true);
+        expect((await q.all())[0].dates[0]).toEqual(expect.any(Date));
+        expect((await q.take()).dates[0]).toEqual(expect.any(Date));
+        expect((await q.rows())[0][0][0]).toEqual(expect.any(Date));
       });
 
       it('should cast decimal to text for a sub-selected record', () => {

@@ -1,10 +1,5 @@
 import { DbMigration } from './migration';
-import {
-  DefaultColumnTypes,
-  defaultSchemaConfig,
-  DefaultSchemaConfig,
-  makeColumnTypes,
-} from 'pqb/internal';
+import { RakeDbConfig } from '../config';
 
 export interface RakeDbChangeFnConfig {
   columnTypes: unknown;
@@ -19,17 +14,11 @@ export interface MigrationChangeFn<ColumnTypes> {
   (fn: ChangeCallback<ColumnTypes>): MigrationChange;
 }
 
-export const createMigrationChangeFn = <
-  ColumnTypes = DefaultColumnTypes<DefaultSchemaConfig>,
->(config: {
-  columnTypes?: ColumnTypes;
-}): MigrationChangeFn<ColumnTypes> => {
-  const conf = config.columnTypes
-    ? (config as RakeDbChangeFnConfig)
-    : { columnTypes: makeColumnTypes(defaultSchemaConfig) };
-
+export const createMigrationChangeFn = <ColumnTypes>(
+  config: RakeDbConfig<ColumnTypes>,
+): MigrationChangeFn<ColumnTypes> => {
   return (fn) => {
-    const change: MigrationChange = { fn: fn as never, config: conf };
+    const change: MigrationChange = { fn: fn as never, config };
     pushChange(change);
     return change;
   };

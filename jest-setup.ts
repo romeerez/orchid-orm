@@ -1,9 +1,47 @@
 import dotenv from 'dotenv';
+import * as timers from 'node:timers';
 import path from 'path';
 import { QueryData, RecordUnknown } from './packages/pqb/src/internal';
 import { skipQueryKeysForSubQuery } from './packages/pqb/src/query/sql/get-is-join-sub-query';
 import { setPrepareSubQueryForSql } from './packages/pqb/src/columns/operators';
 import { setRawSqlPrepareSubQueryForSql } from './packages/pqb/src/query/expressions/raw-sql';
+
+/**
+ * Workaround for Bun SQL:
+ * Bun SQL returns timestamps as Date-like objects, they are not `instanceof Date`.
+ */
+const isBun = process.env.ADAPTER === 'bun';
+const originalExpectAny = expect.any;
+expect.any = (cls: unknown) => {
+  if (isBun && cls === Date) {
+    return {
+      ...originalExpectAny(cls),
+      asymmetricMatch(value: unknown) {
+        return Object.prototype.toString.call(value) === '[object Date]';
+      },
+    };
+  }
+  return originalExpectAny(cls);
+};
+
+const ensureTimerGlobal = (
+  key: 'setTimeout' | 'clearTimeout' | 'setImmediate' | 'clearImmediate',
+) => {
+  if (typeof globalThis[key] === 'function') {
+    return;
+  }
+
+  Object.defineProperty(globalThis, key, {
+    configurable: true,
+    writable: true,
+    value: timers[key],
+  });
+};
+
+ensureTimerGlobal('setTimeout');
+ensureTimerGlobal('clearTimeout');
+ensureTimerGlobal('setImmediate');
+ensureTimerGlobal('clearImmediate');
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
@@ -26,6 +64,10 @@ jest.mock(
     virtual: true,
   },
 );
+
+jest.mock('orchid-orm/bun', () => require('./packages/orm/src/adapters/bun'), {
+  virtual: true,
+});
 
 jest.mock(
   'orchid-orm/node-postgres',
@@ -59,7 +101,15 @@ jest.mock(
   },
 );
 
+jest.mock('pqb/bun', () => require('./packages/pqb/src/adapters/bun'), {
+  virtual: true,
+});
+
 jest.mock('rake-db', () => require('./packages/rake-db/src'), {
+  virtual: true,
+});
+
+jest.mock('rake-db/bun', () => require('./packages/rake-db/src/adapters/bun'), {
   virtual: true,
 });
 

@@ -16,6 +16,7 @@ import {
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
 import { HackySavepointState } from './adapter';
+import { parseInterval } from './driver-adapter-shared';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -59,12 +60,27 @@ class PostgresJsResult<T extends QueryResultRow> implements QueryResult<T> {
   }
 }
 
+class PostgresJsArraysResult<
+  // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+  R extends any[],
+> implements QueryResult<R> {
+  rowCount: number;
+  rows: R[];
+  fields: QueryResult['fields'];
+
+  constructor(result: RawResult) {
+    this.rowCount = result.count;
+    this.rows = result as never;
+    this.fields = result.statement.columns;
+  }
+}
+
 const types: Record<string, Partial<postgres.PostgresType>> = {
   bytea: {
     to: 17,
     from: 17 as never,
     serialize: (x) => '\\x' + Buffer.from(x).toString('hex'),
-    // omit parse, let bytea return a string, so it remains consistent with when it's selected via JSON
+    parse: (x: string) => Buffer.from(x.slice(2), 'hex'),
   },
   dateAndTimestampAsStrings: {
     to: 25,
@@ -74,25 +90,11 @@ const types: Record<string, Partial<postgres.PostgresType>> = {
   interval: {
     from: [1186],
     serialize: returnArg,
-    parse(str: string) {
-      const [years, , months, , days, , time] = str.split(' ');
-      const [hours, minutes, seconds] = time.split(':');
-
-      return {
-        years: years ? Number(years) : 0,
-        months: months ? Number(months) : 0,
-        days: days ? Number(days) : 0,
-        hours: hours ? Number(hours) : 0,
-        minutes: minutes ? Number(minutes) : 0,
-        seconds: seconds ? Number(seconds) : 0,
-      };
-    },
+    parse: parseInterval,
   },
-  // overrides the built-in json type to not serialize it, because it incorrectly serializes
   json: {
     to: 114,
     from: [114, 3802],
-    serialize: returnArg,
     parse: (x) => {
       return JSON.parse(x);
     },
@@ -120,7 +122,10 @@ export const PostgresJsAdapter: DriverAdapter = {
   },
 
   configure(params: PostgresJsAdapterOptions): postgres.Sql {
-    const config: PostgresJsAdapterOptions = { ...params, types };
+    const config: PostgresJsAdapterOptions = {
+      ...params,
+      types,
+    };
 
     if (config.setConfig?.search_path) {
       config.connection = {
@@ -139,11 +144,10 @@ export const PostgresJsAdapter: DriverAdapter = {
     return sql;
   },
 
-  async queryClient<T extends QueryResultRow = QueryResultRow>(
+  async queryClient<T = QueryResultRow>(
     client: TransactionSql,
     text: string,
     values?: unknown[],
-    // SQL session state (role and setConfig) from async storage
     arraysMode?: boolean,
   ): Promise<QueryResult<T>> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,11 +157,14 @@ export const PostgresJsAdapter: DriverAdapter = {
 
     const result = await query;
     if (result.constructor === Array) {
-      return (result as RawResult[]).map(
-        (res) => new PostgresJsResult(res),
+      return (result as RawResult[]).map((res) =>
+        makePostgresJsResult(res, arraysMode),
       ) as never;
     } else {
-      return new PostgresJsResult(result as RawResult);
+      return makePostgresJsResult(
+        result as RawResult,
+        arraysMode,
+      ) as QueryResult<T>;
     }
   },
 
@@ -243,7 +250,7 @@ export const PostgresJsAdapter: DriverAdapter = {
             values,
             arraysMode,
           );
-          resultResolve(res);
+          resultResolve(res as QueryResult<T>);
         } catch (err) {
           resultReject(err);
           throw err;
@@ -272,4 +279,13 @@ export const PostgresJsAdapter: DriverAdapter = {
   close(client: postgres.Sql): Promise<void> {
     return client.end();
   },
+};
+
+const makePostgresJsResult = (
+  result: RawResult,
+  arraysMode?: boolean,
+): QueryResult => {
+  return arraysMode
+    ? new PostgresJsArraysResult(result)
+    : new PostgresJsResult(result);
 };

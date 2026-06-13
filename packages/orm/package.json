@@ -54,6 +54,16 @@
         "types": "./dist/postgres-js.d.ts"
       }
     },
+    "./bun": {
+      "require": {
+        "default": "./dist/bun.js",
+        "types": "./dist/bun.d.ts"
+      },
+      "import": {
+        "default": "./dist/bun.mjs",
+        "types": "./dist/bun.d.ts"
+      }
+    },
     "./migrations": {
       "require": {
         "default": "./dist/migrations/index.js",
@@ -83,11 +93,23 @@
         "default": "./dist/migrations/postgres-js.mjs",
         "types": "./dist/migrations/postgres-js.d.ts"
       }
+    },
+    "./migrations/bun": {
+      "require": {
+        "default": "./dist/migrations/bun.js",
+        "types": "./dist/migrations/bun.d.ts"
+      },
+      "import": {
+        "default": "./dist/migrations/bun.mjs",
+        "types": "./dist/migrations/bun.d.ts"
+      }
     }
   },
   "scripts": {
-    "test": "jest --watch --verbose false",
+    "test": "jest --watch --reporters default --verbose false",
+    "bun:test": "bun --bun jest --watch --reporters default --verbose false --runInBand",
     "check": "jest",
+    "bun:check": "bun --bun jest --runInBand",
     "check:coverage": "jest --coverage --coverageReporters json-summary",
     "types": "tsc",
     "build": "rimraf ./dist/ ./codegen/ && rolldown -c ./rolldown.config.mjs",

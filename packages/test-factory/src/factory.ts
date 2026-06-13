@@ -500,7 +500,9 @@ const isoTime = (c: Column.Pick.Data, sequence: number) => {
           from: data.min || new Date(-8640000000000000),
           to: data.max || new Date(8640000000000000),
         })
-      : new Date((fixedTime ??= faker.date.anytime()).getTime() + sequence)
+      : new Date(
+          (fixedTime ??= faker.date.anytime()).getTime() + sequence * 1000,
+        )
   ).toISOString();
 };
 

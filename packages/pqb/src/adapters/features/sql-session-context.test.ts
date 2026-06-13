@@ -1,4 +1,4 @@
-import { db } from 'test-utils';
+import { BaseTable, TestAdapter, testDbOptions } from 'test-utils';
 import { OrchidOrmInternalError } from '../../query/errors';
 import {
   SqlSessionState,
@@ -7,6 +7,8 @@ import {
   sqlSessionContextExecute,
   sqlSessionContextHasState,
 } from './sql-session-context';
+import { orchidORMWithAdapter } from 'orchid-orm';
+import { AdapterClass } from '../adapter';
 
 describe('adapter.utils', () => {
   describe('sqlSessionContextComputeSetup', () => {
@@ -271,6 +273,30 @@ describe('adapter.utils', () => {
 });
 
 describe('storage', () => {
+  class UserTable extends BaseTable {
+    readonly table = 'user';
+    columns = this.setColumns((t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    }));
+  }
+
+  const db = orchidORMWithAdapter(
+    {
+      adapter: new AdapterClass({
+        driverAdapter: TestAdapter,
+        config: {
+          ...testDbOptions,
+          max: 1,
+        } as never,
+      }),
+      log: !process.env.CI,
+      schema: () => 'schema',
+    },
+    {
+      user: UserTable,
+    },
+  );
+
   afterAll(db.$close);
 
   describe('sql session state', () => {

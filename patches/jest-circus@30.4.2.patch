@@ -1,0 +1,26 @@
+diff --git a/build/jestAdapterInit.js b/build/jestAdapterInit.js
+index 7ea71fc07141d8835a35f81dad73a3689c0dda48..a9760949be2453ef112257167a90400a5575ff97 100644
+--- a/build/jestAdapterInit.js
++++ b/build/jestAdapterInit.js
+@@ -1480,9 +1480,10 @@ const _makeTimeoutMessage = (timeout, isHook, takesDoneCallback) => `Exceeded ti
+ 
+ // Global values can be overwritten by mocks or tests. We'll capture
+ // the original values in the variables before we require any files.
++const nodeTimers = require("node:timers");
+ const {
+-  setTimeout,
+-  clearTimeout
++  setTimeout = nodeTimers.setTimeout,
++  clearTimeout = nodeTimers.clearTimeout
+ } = globalThis;
+ function checkIsError(error) {
+   return !!(error && error.message && error.stack);
+@@ -1585,7 +1586,7 @@ const callAsyncCircusFn = (testOrHook, testContext, {
+     completed = true;
+     // If timeout is not cleared/unrefed the node process won't exit until
+     // it's resolved.
+-    timeoutID.unref?.();
++    timeoutID?.unref?.();
+     clearTimeout(timeoutID);
+   });
+ };

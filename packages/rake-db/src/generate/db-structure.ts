@@ -543,8 +543,11 @@ const constraintsSql = `SELECT
   t.relname AS "tableName",
   c.conname AS "name",
   (
-    SELECT json_agg(ccu.column_name)
+    SELECT json_agg(ccu.column_name ORDER BY a.attnum)
     FROM information_schema.constraint_column_usage ccu
+    JOIN pg_catalog.pg_attribute a
+      ON a.attrelid = c.conrelid
+     AND a.attname = ccu.column_name
     WHERE contype = 'p'
       AND ccu.constraint_name = c.conname
       AND ccu.table_schema = s.nspname
@@ -558,15 +561,21 @@ const constraintsSql = `SELECT
         ft.relname,
         'columns',
         (
-          SELECT json_agg(ccu.column_name)
+          SELECT json_agg(ccu.column_name ORDER BY a.attnum)
           FROM information_schema.key_column_usage ccu
+          JOIN pg_catalog.pg_attribute a
+            ON a.attrelid = c.conrelid
+           AND a.attname = ccu.column_name
           WHERE ccu.constraint_name = c.conname
             AND ccu.table_schema = cs.nspname
         ),
         'foreignColumns',
         (
-          SELECT json_agg(ccu.column_name)
+          SELECT json_agg(ccu.column_name ORDER BY a.attnum)
           FROM information_schema.constraint_column_usage ccu
+          JOIN pg_catalog.pg_attribute a
+            ON a.attrelid = c.confrelid
+           AND a.attname = ccu.column_name
           WHERE ccu.constraint_name = c.conname
             AND ccu.table_schema = cs.nspname
         ),

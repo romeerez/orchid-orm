@@ -8,11 +8,13 @@ import {
   testDb,
   testSchemaConfig,
   useTestDatabase,
+  testAdapterName,
+  testDefaultColumnTypes,
 } from 'test-utils';
-import { TimeInterval } from '../types';
 import { z } from 'zod/v4';
 import { Column } from '../column';
 import { ColumnToCodeCtx } from '../code';
+import { PostgresInterval } from '../../adapters/driver-adapter-shared';
 
 const ctx: ColumnToCodeCtx = {
   t: 't',
@@ -37,10 +39,16 @@ describe('date time columns', () => {
   describe('date', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'1999-01-08'::date`.type(() => t.date()),
+        testDb.sql`'1999-01-08'::date`.type(() =>
+          testDefaultColumnTypes.date(),
+        ),
       );
 
-      expect(result).toBe('1999-01-08');
+      if (testAdapterName === 'bun') {
+        expect(result).toBe('1999-01-08T00:00:00.000Z');
+      } else {
+        expect(result).toBe('1999-01-08');
+      }
 
       assertType<typeof result, string>();
     });
@@ -82,11 +90,16 @@ describe('date time columns', () => {
 
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'1999-01-08 04:05:06'::timestamp`.type(
-          () => new TimestampTZColumn(testSchemaConfig),
+        testDb.sql`'1999-01-08 04:05:06'::timestamp`.type(() =>
+          testDefaultColumnTypes.timestampNoTZ(),
         ),
       );
-      expect(result).toBe('1999-01-08 04:05:06');
+
+      if (testAdapterName === 'bun') {
+        expect(result).toBe('1999-01-08T04:05:06.000Z');
+      } else {
+        expect(result).toBe('1999-01-08 04:05:06');
+      }
 
       assertType<typeof result, string>();
     });
@@ -141,10 +154,15 @@ describe('date time columns', () => {
     it('should output string', async () => {
       const result = await testDb.get(
         testDb.sql`'1999-01-08 04:05:06 +0'::timestamptz AT TIME ZONE 'UTC'`.type(
-          () => new TimestampTZColumn(testSchemaConfig),
+          () => testDefaultColumnTypes.timestamp(),
         ),
       );
-      expect(result).toBe('1999-01-08 04:05:06');
+
+      if (testAdapterName === 'bun') {
+        expect(result).toBe('1999-01-08T04:05:06.000Z');
+      } else {
+        expect(result).toBe('1999-01-08 04:05:06');
+      }
 
       assertType<typeof result, string>();
     });
@@ -211,10 +229,11 @@ describe('date time columns', () => {
   describe('interval', () => {
     it('should output string', async () => {
       const result = await testDb.get(
-        testDb.sql`'1 year 2 months 3 days 4 hours 5 minutes 6 seconds'::interval`.type(
-          () => t.interval(),
+        testDb.sql`'1 year 2 months 3 days 4 hours 5 minutes 6 seconds 7 milliseconds'::interval`.type(
+          (t) => t.interval(),
         ),
       );
+
       expect(result).toEqual({
         years: 1,
         months: 2,
@@ -222,9 +241,10 @@ describe('date time columns', () => {
         hours: 4,
         minutes: 5,
         seconds: 6,
+        milliseconds: 7,
       });
 
-      assertType<typeof result, TimeInterval>();
+      assertType<typeof result, PostgresInterval>();
     });
 
     it('should have toCode', () => {
@@ -372,8 +392,8 @@ describe('date time columns', () => {
 
       assertType<typeof user, { createdAt: Date; updatedAt: Date }>();
 
-      expect(user.createdAt).toBeInstanceOf(Date);
-      expect(user.updatedAt).toBeInstanceOf(Date);
+      expect(user.createdAt).toEqual(expect.any(Date));
+      expect(user.updatedAt).toEqual(expect.any(Date));
 
       const updateQuery = UserWithNumberTimestamp.find(id).update({
         createdAt: now,

@@ -1,0 +1,32 @@
+diff --git a/build/index.js b/build/index.js
+index 5bf6efb757332bb7a7108cf8f3f75e39c9b22818..ba2a127c1c6099368fcae27b5fff71a3acbe31cf 100644
+--- a/build/index.js
++++ b/build/index.js
+@@ -480,6 +480,9 @@ function protectProperties(value, properties = [], depth = 2) {
+       });
+       for (const key of getProtectedKeys(value, properties)) {
+         try {
++          if (hasAccessor(value, key)) {
++            continue;
++          }
+           const nested = Reflect.get(value, key);
+           protectProperties(nested, [], depth - 1);
+         } catch {
+@@ -494,6 +497,17 @@ function protectProperties(value, properties = [], depth = 2) {
+     process.emitWarning = originalEmitWarning;
+   }
+ }
++function hasAccessor(value, key) {
++  let current = value;
++  while (current) {
++    const descriptor = Reflect.getOwnPropertyDescriptor(current, key);
++    if (descriptor) {
++      return descriptor.get !== undefined;
++    }
++    current = Reflect.getPrototypeOf(current);
++  }
++  return false;
++}
+ 
+ /**
+  * Whether the given value has properties that can be deleted (regardless of protection).

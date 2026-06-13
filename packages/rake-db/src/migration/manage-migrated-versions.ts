@@ -2,19 +2,14 @@ import { RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
 import {
   Adapter,
+  getDriverErrorCode,
   QueryLogger,
   RecordOptionalString,
   RecordString,
-  RecordUnknown,
   TransactionAdapter,
 } from 'pqb/internal';
 import { RakeDbConfig, RakeDbRenameMigrations } from '../config';
-import path from 'node:path';
-import {
-  getDigitsPrefix,
-  getMigrations,
-  getMigrationVersion,
-} from './migrations-set';
+import { getMigrationVersion } from './migrations-set';
 import {
   renameMigrationVersionsInDb,
   RenameMigrationVersionsValue,
@@ -100,7 +95,7 @@ export type RakeDbAppliedVersions = {
 export class NoMigrationsTableError extends Error {}
 
 export const getMigratedVersionsMap = async (
-  ctx: RakeDbCtx,
+  _ctx: RakeDbCtx,
   adapter: Adapter | TransactionAdapter,
   config: Pick<
     MigrateConfigInternal,
@@ -116,7 +111,9 @@ export const getMigratedVersionsMap = async (
   const table = migrationsSchemaTableSql(adapter, config);
 
   const queryVersion = () =>
-    adapter.arrays<[string, string]>(`SELECT * FROM ${table} ORDER BY version`);
+    adapter.query<{ version: string; name: string }>(
+      `SELECT * FROM ${table} ORDER BY version`,
+    );
 
   let result;
   try {
@@ -126,55 +123,22 @@ export const getMigratedVersionsMap = async (
       result = await queryVersion();
     }
   } catch (err) {
-    if ((err as RecordUnknown).code === '42P01') {
+    if (err && typeof err === 'object' && getDriverErrorCode(err) === '42P01') {
       throw new NoMigrationsTableError();
     } else {
       throw err;
     }
   }
 
-  if (!result.fields[1]) {
-    const { migrations } = await getMigrations(ctx, config, true);
-
-    const map: RecordString = {};
-    for (const item of migrations) {
-      const name = path.basename(item.path);
-      map[item.version] = name.slice(getDigitsPrefix(name).length + 1);
-    }
-
-    for (const row of result.rows) {
-      const [version] = row;
-      const name = map[version];
-      if (!name) {
-        throw new Error(
-          `Migration for version ${version} is stored in db but is not found among available migrations`,
-        );
-      }
-
-      row[1] = name;
-    }
-
-    await adapter.arrays(`ALTER TABLE ${table} ADD COLUMN name TEXT`);
-
-    await Promise.all(
-      result.rows.map(([version, name]) =>
-        adapter.arrays(`UPDATE ${table} SET name = $2 WHERE version = $1`, [
-          version,
-          name,
-        ]),
-      ),
-    );
-
-    await adapter.arrays(`ALTER TABLE ${table} ALTER COLUMN name SET NOT NULL`);
-  }
-
-  let versions = Object.fromEntries(result.rows);
+  let versions = Object.fromEntries(
+    result.rows.map(({ version, name }) => [version, name]),
+  );
 
   if (renameTo) {
     versions = await renameMigrations(config, adapter, versions, renameTo);
   }
 
-  return { map: versions, sequence: result.rows.map((row) => +row[0]) };
+  return { map: versions, sequence: result.rows.map((row) => +row.version) };
 };
 
 async function renameMigrations(

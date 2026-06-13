@@ -343,7 +343,10 @@ export class Table extends BaseTable {
 }
 ```
 
-When using ORM without a [validation library](/guide/columns-validation-methods), you can set an arbitrary type to `json`.
+`t.jsonText()` is a Postgres `json` column.
+It accepts any user-provided data and automatically parses JSON values loaded from the database, so both input and output TypeScript types are `unknown`.
+
+When using ORM without a [validation library](/guide/columns-validation-methods), you can set an arbitrary type to `jsonb` with `t.json`.
 Make sure to only save properly validated data.
 
 ```ts

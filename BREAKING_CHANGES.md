@@ -1,5 +1,38 @@
 # Breaking changes
 
+## orchid-orm 1.72
+
+When using the `node-postgres` adapter, pass `nodePostgresSchemaConfig` to `schemaConfig` in `createBaseTable`.
+This aligns OrchidORM column encoding and parsing behavior with node-postgres column type parsing.
+
+```ts
+import { createBaseTable } from 'orchid-orm';
+import { nodePostgresSchemaConfig } from 'pqb/node-postgres';
+
+export const BaseTable = createBaseTable({
+  schemaConfig: nodePostgresSchemaConfig,
+});
+```
+
+When also using Zod or Valibot schemas, wrap the adapter config:
+
+```ts
+import { createBaseTable } from 'orchid-orm';
+import { nodePostgresSchemaConfig } from 'pqb/node-postgres';
+import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
+
+export const BaseTable = createBaseTable({
+  schemaConfig: () => zodSchemaConfig(nodePostgresSchemaConfig),
+});
+```
+
+## rake-db 2.36.1
+
+`rake-db` no longer upgrades legacy migration tracking tables that are missing the `name` column.
+
+The `name` column was added in 2024, and previous versions automatically added and populated it so existing projects could migrate without manual steps.
+That compatibility path has been removed now that supported projects are expected to already have the column.
+
 ## orchid-orm 1.71, rake-db 2.35
 
 In rake-db migrations, `createView` now creates views with `securityInvoker: true` by default.

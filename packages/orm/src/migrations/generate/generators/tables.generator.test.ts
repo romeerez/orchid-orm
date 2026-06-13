@@ -2,7 +2,6 @@ import { useGeneratorsTestUtils } from './generators.test-utils';
 import {
   DefaultColumnTypes,
   DefaultSchemaConfig,
-  defaultSchemaConfig,
   UnknownColumn,
   colors,
 } from 'pqb/internal';
@@ -115,7 +114,7 @@ describe('tables', () => {
               (t) => ({
                 naMe: t.string(),
                 iNt: t.integer(),
-                virtUal: new UnknownColumn(defaultSchemaConfig),
+                virtUal: UnknownColumn.instance,
                 creatEd: t.timestamps().createdAt,
                 updatEd: t.timestamps().updatedAt,
               }),

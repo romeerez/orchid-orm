@@ -1,5 +1,9 @@
 import { testTransaction, createDbWithAdapter } from 'pqb';
-import { AdapterClass } from 'pqb/internal';
+import {
+  AdapterClass,
+  DriverAdapter,
+  SchemaConfigFnWithOptions,
+} from 'pqb/internal';
 import { Column } from 'pqb/internal';
 import {
   makeColumnTypes,
@@ -15,6 +19,7 @@ import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
   createDb as nodePostgresCreateDb,
   NodePostgresAdapter,
+  nodePostgresSchemaConfig,
 } from 'pqb/node-postgres';
 import { orchidORM as nodePostgresOrchidORM } from '../../orm/src/adapters/node-postgres';
 import { rakeDb as nodePostgresRakeDb } from '../../rake-db/src/adapters/node-postgres';
@@ -24,8 +29,11 @@ import {
 } from 'pqb/postgres-js';
 import { orchidORM as postgresJsOrchidORM } from '../../orm/src/adapters/postgres-js';
 import { rakeDb as postgresJsRakeDb } from '../../rake-db/src/adapters/postgres-js';
+import { createDb as bunCreateDb, BunAdapter, bunSchemaConfig } from 'pqb/bun';
+import { orchidORM as bunOrchidORM } from '../../orm/src/adapters/bun';
+import { rakeDb as bunsRakeDb } from '../../rake-db/src/adapters/bun';
 
-export type TestAdapterName = 'postgres-js' | 'node-postgres';
+export type TestAdapterName = 'postgres-js' | 'node-postgres' | 'bun';
 
 export const defaultAdapter: TestAdapterName = 'postgres-js';
 
@@ -42,25 +50,56 @@ const adapterSetups = {
     orchidORM: postgresJsOrchidORM,
     rakeDb: postgresJsRakeDb,
   }),
+  bun: () => ({
+    TestAdapter: BunAdapter,
+    createDb: bunCreateDb,
+    orchidORM: bunOrchidORM,
+    rakeDb: bunsRakeDb,
+  }),
 } as const;
 
 const isTestAdapterName = (adapter: string): adapter is TestAdapterName =>
   adapter in adapterSetups;
 
-const adapterName = process.env.ADAPTER || defaultAdapter;
+export const testAdapterName = (process.env.ADAPTER ||
+  defaultAdapter) as TestAdapterName;
 
-if (!isTestAdapterName(adapterName)) {
+if (!isTestAdapterName(testAdapterName)) {
   throw new Error(
-    `Invalid ADAPTER "${adapterName}", expected "postgres-js" or "node-postgres"`,
+    `Invalid ADAPTER "${testAdapterName}", expected "postgres-js" or "node-postgres"`,
   );
 }
 
-const driverItems = adapterSetups[adapterName]();
+const driverItems = adapterSetups[testAdapterName]();
 
-export const allDriverAdapters = {
-  nodePostgres: NodePostgresAdapter,
-  postgresJs: PostgresJsAdapter,
-};
+export const allDriverAdapters: {
+  [K in TestAdapterName]?: {
+    adapter: DriverAdapter;
+    schemaConfig?: SchemaConfigFnWithOptions;
+  };
+} = process.versions.bun
+  ? {
+      bun: {
+        adapter: BunAdapter,
+        schemaConfig: bunSchemaConfig,
+      },
+    }
+  : {
+      'node-postgres': {
+        adapter: NodePostgresAdapter,
+        schemaConfig: nodePostgresSchemaConfig,
+      },
+      'postgres-js': {
+        adapter: PostgresJsAdapter,
+      },
+    };
+
+export const testAdapterConfig =
+  allDriverAdapters[testAdapterName]?.schemaConfig;
+
+export const testJsonValue = (x: unknown): unknown =>
+  !(testAdapterConfig?.jsonEncodedByDriver ?? true) ? JSON.stringify(x) : x;
+
 export const TestAdapter = driverItems.TestAdapter;
 export const createTestDb = driverItems.createDb;
 export const testOrchidORM = driverItems.orchidORM;
@@ -75,22 +114,24 @@ export const testDbOptions = {
   onnotice: noop,
 };
 
-export const testSchemaConfig = zodSchemaConfig;
+export const testSchemaConfig = zodSchemaConfig();
 
 export const testAdapter = new AdapterClass({
   driverAdapter: TestAdapter,
   config: testDbOptions,
 });
 
-export const columnTypes = makeColumnTypes(defaultSchemaConfig);
+export const testDefaultSchemaConfig = defaultSchemaConfig(testAdapterConfig);
+
+export const testDefaultColumnTypes = makeColumnTypes(testDefaultSchemaConfig);
 
 export const testColumnTypes = {
-  ...columnTypes,
+  ...testDefaultColumnTypes,
   timestamp(precision?: number) {
-    return columnTypes.timestamp(precision).asDate();
+    return testDefaultColumnTypes.timestamp(precision).asDate();
   },
   timestampNoTZ(precision?: number) {
-    return columnTypes.timestampNoTZ(precision).asDate();
+    return testDefaultColumnTypes.timestampNoTZ(precision).asDate();
   },
 };
 
@@ -104,7 +145,9 @@ export const testDb = createDbWithAdapter({
 
 export const { sql } = testDb;
 
-const zodColumnTypes = makeColumnTypes(zodSchemaConfig);
+export const zodColumnTypes = makeColumnTypes(
+  zodSchemaConfig(testDefaultSchemaConfig),
+);
 
 export const testZodColumnTypes = {
   ...zodColumnTypes,

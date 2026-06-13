@@ -258,7 +258,7 @@ Direct `SET ROLE`, `RESET ROLE`, or `set_config(...)` calls inside the callback 
 
 [//]: # 'has JSDoc'
 
-Adapter is a wrapper on top of `postgres-js`, `node-postgres`, or other db driver.
+Adapter is a wrapper on top of `postgres-js`, `node-postgres`, Bun SQL, or other db driver.
 
 When in transaction, returns a db adapter object for the transaction,
 returns a default adapter object otherwise.

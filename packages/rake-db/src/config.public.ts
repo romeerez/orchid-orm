@@ -238,14 +238,14 @@ export const makeRakeDbConfig = <ColumnTypes>(
 
   if ('baseTable' in config && config.baseTable) {
     const { types } = config.baseTable.prototype;
-    result.columnTypes = types || defaultColumnTypes(defaultSchemaConfig);
+    result.columnTypes = types || defaultColumnTypes(defaultSchemaConfig());
   } else {
     const ct = 'columnTypes' in config && config.columnTypes;
     result.columnTypes = ((typeof ct === 'function'
       ? (ct as (t: DefaultColumnTypes<ColumnSchemaConfig>) => unknown)(
-          defaultColumnTypes(defaultSchemaConfig),
+          defaultColumnTypes(defaultSchemaConfig()),
         )
-      : ct) || defaultColumnTypes(defaultSchemaConfig)) as ColumnTypes;
+      : ct) || defaultColumnTypes(defaultSchemaConfig())) as ColumnTypes;
   }
 
   if (config.migrationId === 'serial') {

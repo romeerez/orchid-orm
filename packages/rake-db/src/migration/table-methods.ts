@@ -1,23 +1,25 @@
 import {
   EnumColumn,
-  defaultSchemaConfig,
-  DefaultSchemaConfig,
+  ColumnTypeSchemaArg,
+  ColumnSchemaConfig,
 } from 'pqb/internal';
 
 export interface TableMethods {
   enum(
     name: string,
-  ): EnumColumn<DefaultSchemaConfig, undefined, [string, ...string[]]>;
+  ): EnumColumn<ColumnTypeSchemaArg, undefined, [string, ...string[]]>;
 }
 
-export const tableMethods = {
+export const makeTableMethods = (
+  schemaConfig: ColumnSchemaConfig,
+): TableMethods => ({
   enum(name: string) {
     // empty array will be filled during the migration by querying db
     return new EnumColumn(
-      defaultSchemaConfig,
+      schemaConfig,
       name,
       [] as unknown as [string, ...string[]],
       undefined,
     );
   },
-};
+});

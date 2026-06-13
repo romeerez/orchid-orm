@@ -1,0 +1,20 @@
+diff --git a/build/index.js b/build/index.js
+index 4cb3d652eb5112027234ed799f1ba6913654aaa5..925f62f2ea29300d2d83108a10698900a0c10a27 100644
+--- a/build/index.js
++++ b/build/index.js
+@@ -3061,8 +3061,13 @@ class CoreModuleProvider {
+     };
+     class Module extends _nodeModule().default.Module {}
+     for (const [key, value] of Object.entries(_nodeModule().default.Module)) {
+-      // @ts-expect-error: no index signature
+-      Module[key] = value;
++      const desc = Object.getOwnPropertyDescriptor(Module, key) || {
++        value,
++        writable: true,
++        enumerable: true,
++        configurable: true
++      };
++      Object.defineProperty(Module, key, desc);
+     }
+     Module.Module = Module;
+     if ('createRequire' in _nodeModule().default) {

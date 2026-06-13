@@ -11,6 +11,7 @@ import { getValueKey } from '../basic-features/get/get-value-key';
 import {
   Adapter,
   AfterCommitHook,
+  getDriverErrorCode,
   HackySavepointState,
   QueryResult,
   SqlSessionState,
@@ -350,7 +351,8 @@ const then = async (
     const tempReturnType =
       tableHook?.select ||
       cteHooks?.hasSelect ||
-      (returnType === 'rows' && q.q.batchParsers) ||
+      (returnType === 'rows' &&
+        (q.q.batchParsers || adapter.driverAdapter.noFieldsForArrays)) ||
       checkIfNeedResultAllForMutativeQueriesSelectRelations(sql)
         ? 'all'
         : returnType;
@@ -788,10 +790,11 @@ const then = async (
   } catch (err) {
     let error;
     if (err instanceof adapter.errorClass) {
+      // errno for Bun SQL, code for others
+      const code = getDriverErrorCode(err);
       if (
         // a special not found error thrown by 'not-found'::int
-        'code' in err &&
-        err.code === '22P02' &&
+        code === '22P02' &&
         err.message.endsWith(`"not-found"`)
       ) {
         error = new NotFoundError(q);

@@ -1,10 +1,10 @@
 import { RakeDbAst } from '../ast';
 import { astToGenerateItem, GenerateItem } from './ast-to-generate-items';
-import { defaultSchemaConfig, makeColumnTypes } from 'pqb/internal';
 import { testConfig } from '../rake-db.test-utils';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
+import { testDefaultColumnTypes } from 'test-utils';
 
-const t = makeColumnTypes(defaultSchemaConfig);
+const t = testDefaultColumnTypes;
 
 const tableAst: RakeDbAst.Table = {
   type: 'table',
