@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Doc"
+  short_description: "Write internal docs near Orchid ORM code"
+  default_prompt: "Use $code-doc to document a feature from changes/ or related implementation code."
