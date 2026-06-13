@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.72.1
+
+### Patch Changes
+
+- 46349210: Expose static table names on helpers returned by `bundleOrchidORMTables` while keeping bundled table entries non-queryable (#707)
+
 ## 1.72.0
 
 ### Minor Changes
