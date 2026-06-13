@@ -99,7 +99,7 @@ jobs:
         run: ./node_modules/.bin/turbo run lint:check fmt:check
 
       - name: Type-check
-        run: ./node_modules/.bin/turbo run types
+        run: pnpm types
 
       - name: Test build
         run: |
