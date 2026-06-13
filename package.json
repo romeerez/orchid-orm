@@ -9,7 +9,7 @@
     "check": "turbo run check --filter=!./packages/repro",
     "bun:check": "turbo run bun:check --filter=!./packages/repro",
     "check:coverage": "turbo run check:coverage --cache-dir=.turbo",
-    "types": "turbo run types",
+    "types": "turbo run types --filter=!./packages/test-builds",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "lint:check": "turbo run lint:check",
@@ -25,6 +25,7 @@
     "valibot": "pnpm --filter orchid-orm-valibot",
     "test-factory": "pnpm --filter orchid-orm-test-factory",
     "test-utils": "pnpm --filter test-utils",
+    "test-builds": "pnpm --filter test-builds",
     "repro": "pnpm --filter repro",
     "doc": "cd docs && npm start",
     "doc:build": "cd docs && pnpm build"

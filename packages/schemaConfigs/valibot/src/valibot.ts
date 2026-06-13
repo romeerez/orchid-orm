@@ -945,7 +945,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
 }
 
 export const valibotSchemaConfig = (
-  options: AdapterSchemaConfigOptions,
+  options?: AdapterSchemaConfigOptions,
 ): ValibotSchemaConfig => {
   const schemaConfig: ValibotSchemaConfig = {
     type: undefined as unknown as BaseSchema,
