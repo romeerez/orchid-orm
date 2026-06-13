@@ -895,13 +895,11 @@ describe('zod schema config', () => {
     });
   });
 
-  const xml = t.xml();
-  const jsonText = t.jsonText();
-  assertAllTypes<typeof xml | typeof jsonText, ZodString>();
-
-  describe.each(['xml', 'jsonText'])('%s', (method) => {
+  describe('xml', () => {
     it('should parse to a string without validation', () => {
-      const type = t[method as 'xml']();
+      const type = t.xml();
+
+      assertAllTypes<typeof type, ZodString>();
 
       expectAllParse(type, 'string', 'string');
 
@@ -1018,6 +1016,13 @@ describe('zod schema config', () => {
       );
 
       const expected = z.object({ bool: z.boolean() });
+      assertAllTypes<typeof type, typeof expected>();
+    });
+
+    it('should parse jsonText to unknown', () => {
+      const type = t.jsonText();
+
+      const expected = z.unknown();
       assertAllTypes<typeof type, typeof expected>();
     });
   });

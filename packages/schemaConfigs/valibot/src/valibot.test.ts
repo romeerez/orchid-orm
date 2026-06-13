@@ -28,6 +28,7 @@ import {
   UnionSchema,
   literal,
   LiteralSchema,
+  unknown,
 } from 'valibot';
 
 const schemaConfig = valibotSchemaConfig();
@@ -787,13 +788,11 @@ describe('valibot schema config', () => {
     });
   });
 
-  const xml = t.xml();
-  const jsonText = t.jsonText();
-  assertAllTypes<typeof xml | typeof jsonText, StringSchema>();
-
-  describe.each(['xml', 'jsonText'])('%s', (method) => {
+  describe('xml', () => {
     it('should parse to a string without validation', () => {
-      const type = t[method as 'xml']();
+      const type = t.xml();
+
+      assertAllTypes<typeof type, StringSchema>();
 
       expectAllParse(type, 'string', 'string');
 
@@ -898,6 +897,13 @@ describe('valibot schema config', () => {
       );
 
       const expected = object({ bool: boolean() });
+      assertAllTypes<typeof type, typeof expected>();
+    });
+
+    it('should parse jsonText to unknown', () => {
+      const type = t.jsonText();
+
+      const expected = unknown();
       assertAllTypes<typeof type, typeof expected>();
     });
   });
