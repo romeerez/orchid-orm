@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.72.0
+
+### Minor Changes
+
+- 8af75160: Bun SQL support (#601)
+
+### Patch Changes
+
+- Updated dependencies [8af75160]
+  - rake-db@2.36.0
+  - pqb@0.67.0
+
 ## 1.71.1
 
 ### Patch Changes

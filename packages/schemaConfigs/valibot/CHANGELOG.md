@@ -1,5 +1,16 @@
 # orchid-orm-valibot
 
+## 0.4.0
+
+### Minor Changes
+
+- 8af75160: Bun SQL support (#601)
+
+### Patch Changes
+
+- Updated dependencies [8af75160]
+  - pqb@0.67.0
+
 ## 0.3.142
 
 ### Patch Changes

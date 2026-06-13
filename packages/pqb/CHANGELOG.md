@@ -1,5 +1,11 @@
 # pqb
 
+## 0.67.0
+
+### Minor Changes
+
+- 8af75160: Bun SQL support (#601)
+
 ## 0.66.8
 
 ### Patch Changes

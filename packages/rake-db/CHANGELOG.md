@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.36.0
+
+### Minor Changes
+
+- 8af75160: Bun SQL support (#601)
+
+### Patch Changes
+
+- Updated dependencies [8af75160]
+  - pqb@0.67.0
+
 ## 2.35.1
 
 ### Patch Changes

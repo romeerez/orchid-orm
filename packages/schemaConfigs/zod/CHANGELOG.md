@@ -1,5 +1,16 @@
 # orchid-orm-schema-to-zod
 
+## 1.1.0
+
+### Minor Changes
+
+- 8af75160: Bun SQL support (#601)
+
+### Patch Changes
+
+- Updated dependencies [8af75160]
+  - pqb@0.67.0
+
 ## 1.0.90
 
 ### Patch Changes
