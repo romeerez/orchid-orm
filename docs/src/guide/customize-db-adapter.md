@@ -52,6 +52,8 @@ export const orm = bundleOrchidORMTables({
   message: MessageTable,
 });
 
+export const userTableName = orm.user.table;
+
 export const selectUserProfile = orm.user.makeHelper((q) =>
   q.select('id', 'name'),
 );
@@ -62,6 +64,7 @@ export const db = makeOrchidOrmDb(orm, {
 });
 ```
 
-The bundle has only your table keys, and each bundled table object exposes only `makeHelper`.
-Bundled table objects are not queryable table objects and do not expose query-building, SQL generation, relation, metadata, or execution APIs.
-Use the returned DB-aware `db` for all table queries, SQL generation, relation APIs, metadata access, and execution.
+The bundle has only your table keys, and each bundled table object exposes only the static table name as `table` and `makeHelper`.
+Bundled table objects are not queryable table objects and do not expose query-building, SQL generation, relation, query metadata, or execution APIs.
+
+Use the returned DB-aware `db` for all table queries, SQL generation, relation APIs, query metadata, and execution.

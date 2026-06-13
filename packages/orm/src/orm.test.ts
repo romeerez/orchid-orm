@@ -385,11 +385,24 @@ describe('orm', () => {
       expect('$transaction' in orm).toBe(false);
     });
 
-    it('should expose only makeHelper for bundled tables and keep helper usage', () => {
+    it('should expose static table name on bundled tables and keep helper usage', () => {
       const orm = bundleOrchidORMTables({
         user: BundleUserTable,
         profile: BundleProfileTable,
       });
+
+      expect(orm.user.table).toBe('user');
+      expect('schema' in orm.user).toBe(false);
+      expect('columns' in orm.user).toBe(false);
+      expect('softDelete' in orm.user).toBe(false);
+      expect('scopes' in orm.user).toBe(false);
+      expect('$query' in orm.user).toBe(false);
+      expect(Object.keys(orm.user)).toEqual(['table', 'makeHelper']);
+      assertType<typeof orm.user.table, 'user'>();
+      // @ts-expect-error schema is table-class-only metadata.
+      orm.user.schema;
+      // @ts-expect-error columns is table-class-only metadata.
+      orm.user.columns;
 
       const helper = orm.user.makeHelper((q) => q.select('id'));
       assertType<Awaited<QueryHelperResult<typeof helper>>, { id: number }[]>();

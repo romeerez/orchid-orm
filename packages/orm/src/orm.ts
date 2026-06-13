@@ -56,6 +56,14 @@ interface OrchidORMQueryHelper<
 }
 
 export interface OrchidORMTableHelper<T extends Query> {
+  /**
+   * Static table name from the table class.
+   */
+  table: T['table'];
+
+  /**
+   * Create a helper that binds to the DB-aware table query when used.
+   */
   makeHelper<Args extends unknown[], Result>(
     fn: (q: T, ...args: Args) => Result,
   ): OrchidORMQueryHelper<T, Args, Result>;
@@ -344,7 +352,13 @@ export const bundleOrchidORMTables = <T extends TableClasses>(
   let dbAwareInstance: OrchidORMDbTables;
 
   for (const key in tables) {
+    const tableClass = tables[key];
+    const table = (
+      tableClass as unknown as { instance(): ORMTableInput }
+    ).instance().table;
+
     result[key] = {
+      table,
       makeHelper(arg: unknown) {
         // oxlint-disable-next-line typescript/no-explicit-any
         let fn: (...args: any[]) => unknown;

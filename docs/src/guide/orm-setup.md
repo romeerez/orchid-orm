@@ -109,6 +109,8 @@ export const orm = bundleOrchidORMTables({
   message: MessageTable,
 });
 
+export const userTableName = orm.user.table;
+
 export const selectUserProfile = orm.user.makeHelper((q) =>
   q.select('id', 'name'),
 );
@@ -122,11 +124,11 @@ export const db = makeOrchidOrmDb(orm, {
 `makeOrchidOrmDb` is exported from `orchid-orm/postgres-js`, `orchid-orm/node-postgres`, and `orchid-orm/bun`,
 and accepts the same driver-specific options as `orchidORM` from the same path.
 
-The bundled `orm` has only your table keys, and each bundled table object exposes only `makeHelper`.
+The bundled `orm` has only your table keys, and each bundled table object exposes only the static table name as `table` and `makeHelper`.
 It has no root `$` ORM methods such as `$query`, `$transaction`, `$withOptions`, `$from`, or `$close`.
-Bundled table objects are not queryable table objects: they do not expose query-building, SQL generation, relation, metadata, or execution APIs.
+Bundled table objects are not queryable table objects: they do not expose query-building, SQL generation, relation, query metadata, or execution APIs.
 
-Use the `db` returned from `makeOrchidOrmDb` for all table queries, relation queries, SQL generation, metadata access, and execution.
+Use the `db` returned from `makeOrchidOrmDb` for all table queries, relation queries, SQL generation, query metadata, and execution.
 Helpers defined from bundled tables are reusable on the DB-aware tables returned by `makeOrchidOrmDb`.
 
 Table `init` hooks run when the DB-aware ORM instance is created by `makeOrchidOrmDb`, not when tables are bundled.
