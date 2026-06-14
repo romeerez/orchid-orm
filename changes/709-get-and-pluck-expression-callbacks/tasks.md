@@ -8,16 +8,33 @@
 
 ## 1. pqb
 
-- [ ] 1.1 Add expression callback arguments to scalar selection methods.
-  - 1.1.1 Extend `get`, `getOptional`, and `pluck` argument typing so callbacks receive the current query and must return an `Expression`.
-  - 1.1.2 Resolve callback arguments during query construction and route the returned expression through the same scalar selection path used by direct expression arguments.
-  - 1.1.3 Preserve current column-name and direct-expression behavior, including parser setup, nullable result typing, return type metadata, and chained expression operators.
-  - 1.1.4 verify if the implementation conforms to guidelines
-  - 1.1.5 make sure you didn't forget to cover the implementation with tests
-  - 1.1.6 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
-  - 1.1.7 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+- [x] 1.1 Support expression callbacks in `get`, `getOptional`, and `pluck`.
+  - 1.1.1 Extract the inner body of the `processSelectArg` object-argument `for (key in arg)` loop into a reusable function and keep `processSelectArg` using that function.
+  - 1.1.2 Use the extracted function from `get`, `getOptional`, and `pluck` for callback-returned expressions only, while preserving existing column-name and direct-expression behavior.
+  - 1.1.3 After the extraction and before adding new behavior, verify that all existing `pqb` and `orm` tests still pass.
+  - 1.1.4 Temporarily add `if (isExpression(value)) { throw new Error('temp') }` inside the extracted function, run the relevant `pqb` and `orm` tests, and record where `select` expression callback behavior is covered.
+  - 1.1.5 Remove the temporary throw and add equivalent expression callback coverage for `get`, `getOptional`, and `pluck`.
+  - 1.1.6 verify if the implementation conforms to guidelines
+  - 1.1.7 make sure you didn't forget to cover the implementation with tests
+  - 1.1.8 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
+  - 1.1.9 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+- [x] 1.2 Support single-value query callbacks in `get`, `getOptional`, and `pluck`.
+  - 1.2.1 Extend `get`, `getOptional`, and `pluck` callback typing so callbacks may return a query whose `returnType` is `value` or `valueOrThrow`.
+  - 1.2.2 Route callback-returned single-value queries through the extracted select callback resolver, preserving parser setup, nullable result typing, return type metadata, relation lateral joins, aliases, and generated SQL.
+  - 1.2.3 Temporarily add `throw new Error('temp')` inside the extracted function's `if (returnType === 'value' || returnType === 'valueOrThrow') {` branch, run the relevant `pqb` and `orm` tests, and record where `select` single-value query callback behavior is covered.
+  - 1.2.4 Remove the temporary throw and add equivalent single-value query callback coverage for `get`, `getOptional`, and `pluck`.
+  - 1.2.5 Verify the downstream ORM relation behavior that depends on pqb callback selection still passes, including `pnpm orm check` when the implementation is ready.
+  - 1.2.6 verify if the implementation conforms to guidelines
+  - 1.2.7 make sure you didn't forget to cover the implementation with tests
+  - 1.2.8 make sure the package test and typecheck commands are passing (`pnpm pqb check` and `pnpm pqb types`; `pqb` is the folder name under `packages/`, not the `package.json` name)
+  - 1.2.9 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
 
 ## 2. docs
 
-- [ ] 2.1 Document scalar expression callbacks.
-  - 2.1.1 Update the root query-method docs for `get`, `getOptional`, and `pluck` with examples that use `q.ref` or `q.column` inside a callback returning an SQL expression.
+- [x] 2.1 Document scalar selection callbacks.
+  - 2.1.1 Update the root query-method docs for `get`, `getOptional`, and `pluck` with examples that use `q.ref`, `q.column`, or relation scalar queries inside callbacks.
+
+## 3. changeset
+
+- [x] 3.1 Finalize the change.
+  - 3.1.1 Follow `.agents/skills/changeset/SKILL.md` to finalize the change.

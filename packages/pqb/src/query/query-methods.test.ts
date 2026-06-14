@@ -12,7 +12,6 @@ import {
   assertType,
   db,
   expectSql,
-  now,
   sql,
   testAdapter,
   testDb,
@@ -209,30 +208,6 @@ describe('queryMethods', () => {
       });
 
       assertType<typeof q, 'Invalid return type of x'>();
-    });
-  });
-
-  describe('pluck', () => {
-    beforeEach(async () => {
-      for (let i = 0; i < 3; i++) {
-        await User.create({ ...userData, createdAt: now });
-      }
-    });
-
-    it('should return array of column values, properly parsed', async () => {
-      const result = await User.pluck('createdAt');
-
-      expect(result).toEqual([now, now, now]);
-
-      assertType<typeof result, Date[]>();
-    });
-
-    it('should support raw expression', async () => {
-      const result = await User.pluck(testDb.sql`123`.type((t) => t.integer()));
-
-      expect(result).toEqual([123, 123, 123]);
-
-      assertType<typeof result, number[]>();
     });
   });
 

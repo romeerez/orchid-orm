@@ -157,6 +157,13 @@ export namespace Query {
     export type Arg<T extends OrderNamespace.ArgThis> = OrderNamespace.Arg<T>;
     export type Args<T extends OrderNamespace.ArgThis> = OrderNamespace.Args<T>;
   }
+
+  export namespace Pick {
+    export interface SingleValueResult {
+      result: { value: Column.Pick.OutputType };
+      returnType: 'value' | 'valueOrThrow';
+    }
+  }
 }
 
 export type SelectableOfType<T extends PickQuerySelectable, Type> = {

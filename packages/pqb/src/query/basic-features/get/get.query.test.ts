@@ -4,7 +4,15 @@ import {
   User,
   userData,
 } from '../../../test-utils/pqb.test-utils';
-import { assertType, expectSql, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  db,
+  expectSql,
+  ProfileData,
+  testDb,
+  useTestDatabase,
+  UserData,
+} from 'test-utils';
 import { NotFoundError } from '../../errors';
 
 describe('get', () => {
@@ -90,6 +98,82 @@ describe('get', () => {
       );
     });
 
+    it('should select raw from a callback and return a single value', async () => {
+      await User.create({ ...userData, age: 20 });
+
+      const q = User.get((q) =>
+        testDb.sql`${q.ref('age')} + 1`.type((t) => t.integer()),
+      );
+
+      const result = await q;
+
+      assertType<typeof result, number>();
+
+      expect(result).toBe(21);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."age" + 1
+          FROM "schema"."user"
+          LIMIT 1
+        `,
+      );
+    });
+
+    it('should select value query from a callback and return a single value', async () => {
+      await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const q = db.user.get((q) => q.profile.get('Bio'));
+
+      const result = await q;
+
+      assertType<typeof result, string | null>();
+      // @ts-expect-error scalar callbacks only accept expressions or single-value queries
+      db.user.get((q) => q.profile);
+
+      expect(result).toBe(ProfileData.Bio);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "value"."value" "value"
+          FROM "schema"."user"
+          JOIN LATERAL (
+            SELECT "profile"."bio" "value"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          ) "value" ON true
+          LIMIT 1
+        `,
+      );
+    });
+
+    it('should throw when optional value query from a callback is not found', async () => {
+      await db.user.create(UserData);
+
+      const q = db.user.get((q) => q.profile.getOptional('Bio'));
+
+      await expect(() => q).rejects.toThrow(NotFoundError);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "value"."value" "value"
+          FROM "schema"."user"
+          JOIN LATERAL (
+            SELECT "profile"."bio" "value"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          ) "value" ON true
+          LIMIT 1
+        `,
+      );
+    });
+
     it('should throw if not found', async () => {
       await expect(() => User.get('id')).rejects.toThrow(NotFoundError);
     });
@@ -154,6 +238,86 @@ describe('get', () => {
         `
           SELECT count(*)::int
           FROM "schema"."user"
+          LIMIT 1
+        `,
+      );
+    });
+
+    it('should select raw from a callback and return a single value when exists', async () => {
+      await User.create({ ...userData, age: 20 });
+
+      const q = User.getOptional((q) =>
+        testDb.sql`${q.ref('age')} + 1`.type((t) => t.integer()),
+      );
+
+      const result = await q;
+
+      assertType<typeof result, number | undefined>();
+
+      expect(result).toBe(21);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."age" + 1
+          FROM "schema"."user"
+          LIMIT 1
+        `,
+      );
+    });
+
+    it('should select optional value query from a callback and return a single value when exists', async () => {
+      await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const q = db.user.getOptional((q) => q.profile.getOptional('createdAt'));
+
+      const result = await q;
+
+      assertType<typeof result, Date | undefined>();
+      // @ts-expect-error scalar callbacks only accept expressions or single-value queries
+      db.user.getOptional((q) => q.profile.select('Bio'));
+
+      expect(result).toEqual(ProfileData.createdAt);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "value"."value" "value"
+          FROM "schema"."user"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."created_at" "value"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          ) "value" ON true
+          LIMIT 1
+        `,
+      );
+    });
+
+    it('should not throw when value query from a callback is not found', async () => {
+      await db.user.create(UserData);
+
+      const q = db.user.getOptional((q) => q.profile.get('Bio'));
+
+      const result = await q;
+
+      assertType<typeof result, string | null | undefined>();
+
+      expect(result).toBe(null);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "value"."value" "value"
+          FROM "schema"."user"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."bio" "value"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          ) "value" ON true
           LIMIT 1
         `,
       );

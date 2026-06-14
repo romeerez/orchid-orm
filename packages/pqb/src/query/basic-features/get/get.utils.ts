@@ -1,16 +1,18 @@
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { Operators, setQueryOperators } from '../../../columns/operators';
 import { getFullColumnTable } from '../../query.utils';
-import { Column } from '../../../columns';
+import { addColumnParserToQuery, Column } from '../../../columns';
 import {
   PickQueryQ,
+  PickQueryRelationsWithData,
   PickQuerySelectable,
   PickQueryShape,
   PickQueryTable,
 } from '../../pick-query-types';
-import { Expression } from '../../expressions/expression';
+import { Expression, isExpression } from '../../expressions/expression';
 import {
   IsQuery,
+  Query,
   SetQueryReturnsColumnOptional,
   SetQueryReturnsColumnOrThrow,
   SetQueryReturnsValueOptional,
@@ -19,17 +21,33 @@ import {
 import { getValueKey } from './get-value-key';
 import {
   addParserForRawExpression,
+  processSelectAsArg,
   setParserForSelectedString,
 } from '../select/select.utils';
 import { getQueryAs } from '../as/as';
+import type { SelectAsFnArg } from '../select/select';
 
-export type QueryGetSelf = PickQuerySelectable;
+export interface QueryGetSelf
+  extends PickQuerySelectable, PickQueryRelationsWithData {}
 
 // `get` method argument, accepts a string for a column name or a raw SQL
-export type GetArg<T extends QueryGetSelf> = GetStringArg<T> | Expression;
+export type GetArg<T extends QueryGetSelf> =
+  | GetStringArg<T>
+  | Expression
+  | ((q: SelectAsFnArg<T>) => Expression | Query.Pick.SingleValueResult);
 
 export type GetStringArg<T extends PickQuerySelectable> =
   keyof T['__selectable'] & string;
+
+type ResolveGetArgColumn<Arg> = Arg extends Expression
+  ? Arg['result']['value']
+  : Arg extends (q: never) => infer R
+    ? R extends Expression
+      ? R['result']['value']
+      : R extends Query.Pick.SingleValueResult
+        ? R['result']['value']
+        : never
+    : never;
 
 // `get` method result: returns a column type for raw expression or a value type for string argument
 export type GetResult<
@@ -37,18 +55,14 @@ export type GetResult<
   Arg extends GetArg<T>,
 > = Arg extends string
   ? SetQueryReturnsValueOrThrow<T, Arg>
-  : Arg extends Expression
-    ? SetQueryReturnsColumnOrThrow<T, Arg['result']['value']>
-    : never;
+  : SetQueryReturnsColumnOrThrow<T, ResolveGetArgColumn<Arg>>;
 
 export type GetResultOptional<
   T extends QueryGetSelf,
   Arg extends GetArg<T>,
 > = Arg extends string
   ? SetQueryReturnsValueOptional<T, Arg>
-  : Arg extends Expression
-    ? SetQueryReturnsColumnOptional<T, Arg['result']['value']>
-    : never;
+  : SetQueryReturnsColumnOptional<T, ResolveGetArgColumn<Arg>>;
 
 export const _getSelectableColumn = (
   q: IsQuery,
@@ -91,21 +105,35 @@ const _get = <
 
   q.returnType = returnType;
 
-  let type: Column | undefined;
-  if (typeof arg === 'string') {
-    const joinedAs = q.valuesJoinedAs?.[arg];
+  let type: Column.Pick.QueryColumn | undefined;
+  let value: unknown = arg;
+
+  if (typeof value === 'function') {
+    const item = processSelectAsArg(
+      query as never,
+      getQueryAs(query as never),
+      'value',
+      value as never,
+    );
+    if (item !== false) {
+      value = item;
+    }
+  }
+
+  if (typeof value === 'string') {
+    const joinedAs = q.valuesJoinedAs?.[value];
 
     type = (
       joinedAs
         ? q.joinedShapes?.[joinedAs]?.value
-        : _getSelectableColumn(query as never, arg)
-    ) as Column | undefined;
+        : _getSelectableColumn(query as never, value)
+    ) as Column.Pick.QueryColumn | undefined;
 
     q.getColumn = type;
 
     const selected = setParserForSelectedString(
       query as never,
-      joinedAs ? joinedAs + '.' + arg : arg,
+      joinedAs ? joinedAs + '.' + value : value,
       getQueryAs(query as never),
       getValueKey,
     );
@@ -114,10 +142,20 @@ const _get = <
       ? [(q.expr = new SelectItemExpression(query as never, selected, type))]
       : undefined;
   } else {
-    type = arg.result.value as Column | undefined;
-    q.getColumn = type;
-    addParserForRawExpression(query as never, getValueKey, arg);
-    q.select = [(q.expr = arg)];
+    if (isExpression(value)) {
+      type = value.result.value as Column.Pick.QueryColumn | undefined;
+      q.getColumn = type;
+      addParserForRawExpression(query as never, getValueKey, value);
+      q.select = [(q.expr = value)];
+    } else {
+      const selected = value as Query;
+      q.getColumn = selected.q.getColumn;
+      if (q.getColumn) {
+        addColumnParserToQuery(q, getValueKey, q.getColumn);
+      }
+
+      q.select = selected ? [{ selectAs: { value: selected } }] : undefined;
+    }
   }
 
   return setQueryOperators(

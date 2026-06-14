@@ -387,8 +387,6 @@ export const processSelectArg = <T extends SelectSelf>(
   arg: SelectArg<T>,
   columnAs?: string | getValueKey,
 ): SelectItem | undefined | false => {
-  const query = q as unknown as Query;
-
   if (typeof arg === 'string') {
     return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
   }
@@ -396,104 +394,126 @@ export const processSelectArg = <T extends SelectSelf>(
   const selectAs: SelectAsValue = {};
 
   for (const key in arg as unknown as SelectAsArg<T>) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let value = (arg as unknown as SelectAsArg<T>)[key] as any;
-    let joinQuery: boolean | undefined;
-
-    if (typeof value === 'function') {
-      value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
-
-      if (isQueryNone(value)) {
-        if (value.q.innerJoinLateral) {
-          return false;
-        }
-      }
-
-      if (!isExpression(value)) {
-        if (
-          isRelationQuery(value) &&
-          // `subQuery = 1` case is when callback returns the same query as it gets,
-          // for example `q => q.get('name')`.
-          (value as unknown as Query).q.subQuery !== 1
-        ) {
-          joinQuery = true;
-          setSelectRelation(query.q);
-
-          value = value.joinQuery(value, q as unknown as IsQuery);
-
-          let subQuery;
-          const { returnType, innerJoinLateral } = value.q;
-          if (!returnType || returnType === 'all') {
-            subQuery = value.json(false);
-
-            // no need to coalesce in case of inner lateral join.
-            if (!innerJoinLateral) {
-              value.q.coalesceValue = emptyArrSQL;
-            }
-          } else if (returnType === 'pluck') {
-            // no select in case of plucking a computed
-            subQuery = value.q.select
-              ? value
-                  .wrap(cloneQueryBaseUnscoped(value))
-                  .jsonAgg(value.q.select[0])
-              : value.json(false);
-
-            value.q.coalesceValue = emptyArrSQL;
-          } else {
-            if (returnType === 'value' || returnType === 'valueOrThrow') {
-              if (value.q.select) {
-                // todo: investigate what is this for
-                if (typeof value.q.select[0] === 'string') {
-                  value.q.select[0] = {
-                    selectAs: { r: value.q.select[0] },
-                  };
-                }
-
-                subQuery = value;
-              } else {
-                subQuery = value.json(false);
-              }
-            } else {
-              subQuery = value;
-            }
-          }
-
-          const as = _joinLateral(
-            q,
-            innerJoinLateral ? 'JOIN' : 'LEFT JOIN',
-            subQuery,
-            key,
-            // no need for `ON p.r IS NOT NULL` check when joining a single record,
-            // `JOIN` will handle it on itself.
-            innerJoinLateral &&
-              returnType !== 'one' &&
-              returnType !== 'oneOrThrow',
-          );
-
-          if (as) {
-            value.q.joinedForSelect = _copyQueryAliasToQuery(
-              value,
-              q as unknown as Query,
-              as,
-            );
-          }
-        }
-
-        value = prepareSubQueryForSql(q as never, value);
-      }
-    }
-
-    selectAs[key] = addParserForSelectItem(
-      q as unknown as Query,
+    const item = processSelectAsArg(
+      q,
       as,
       key,
-      value,
-      key,
-      joinQuery,
+      (arg as unknown as SelectAsArg<T>)[key],
     );
+    // propagate `none` state of a joined sub-query
+    if (item === false) return false;
+
+    selectAs[key] = item;
   }
 
   return { selectAs };
+};
+
+export const processSelectAsArg = <T extends SelectSelf>(
+  q: T,
+  as: string | undefined,
+  key: string,
+  arg: SelectAsArg<T>[string],
+): SelectAsValue[string] | false => {
+  const query = q as unknown as Query;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let value = arg as any;
+  let joinQuery: boolean | undefined;
+
+  if (typeof value === 'function') {
+    value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
+
+    if (isQueryNone(value)) {
+      if (value.q.innerJoinLateral) {
+        return false;
+      }
+    }
+
+    if (!isExpression(value)) {
+      if (
+        isRelationQuery(value) &&
+        // `subQuery = 1` case is when callback returns the same query as it gets,
+        // for example `q => q.get('name')`.
+        (value as unknown as Query).q.subQuery !== 1
+      ) {
+        joinQuery = true;
+        setSelectRelation(query.q);
+
+        value = value.joinQuery(value, q as unknown as IsQuery);
+
+        let subQuery;
+        const { returnType, innerJoinLateral } = value.q;
+        if (!returnType || returnType === 'all') {
+          subQuery = value.json(false);
+
+          // no need to coalesce in case of inner lateral join.
+          if (!innerJoinLateral) {
+            value.q.coalesceValue = emptyArrSQL;
+          }
+        } else if (returnType === 'pluck') {
+          // no select in case of plucking a computed
+          subQuery = value.q.select
+            ? value
+                .wrap(cloneQueryBaseUnscoped(value))
+                .jsonAgg(value.q.select[0])
+            : value.json(false);
+
+          value.q.coalesceValue = emptyArrSQL;
+        } else {
+          if (returnType === 'value' || returnType === 'valueOrThrow') {
+            if (value.q.select) {
+              // todo: investigate what is this for
+              if (typeof value.q.select[0] === 'string') {
+                value.q.select[0] = {
+                  selectAs: { r: value.q.select[0] },
+                };
+              }
+
+              subQuery = value;
+            } else {
+              subQuery = value.json(false);
+            }
+          } else {
+            subQuery = value;
+          }
+        }
+
+        const joinLateral =
+          innerJoinLateral || query.q.returnType === 'valueOrThrow';
+
+        const as = _joinLateral(
+          q,
+          joinLateral ? 'JOIN' : 'LEFT JOIN',
+          subQuery,
+          key,
+          // no need for `ON p.r IS NOT NULL` check when joining a single record,
+          // `JOIN` will handle it on itself.
+          innerJoinLateral &&
+            returnType !== 'one' &&
+            returnType !== 'oneOrThrow',
+        );
+
+        if (as) {
+          value.q.joinedForSelect = _copyQueryAliasToQuery(
+            value,
+            q as unknown as Query,
+            as,
+          );
+        }
+      }
+
+      value = prepareSubQueryForSql(q as never, value);
+    }
+  }
+
+  return addParserForSelectItem(
+    query as never,
+    as,
+    key,
+    value as SelectableOrExpression<T> | Query,
+    key,
+    joinQuery,
+  );
 };
 
 // process string select arg

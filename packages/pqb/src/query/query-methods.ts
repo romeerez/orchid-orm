@@ -6,7 +6,6 @@ import {
   QueryTake,
   QueryTakeOptional,
   SetQueryReturnsAll,
-  SetQueryReturnsPluck,
   SetQueryReturnsRows,
   SetQueryReturnsVoid,
 } from './query';
@@ -60,6 +59,7 @@ import { QueryLog } from './basic-features/log/log';
 import { QueryHooks } from './extra-features/hooks/hooks';
 import { QueryUpsert } from './basic-features/mutate/upsert';
 import { QueryGet } from './basic-features/get/get.query';
+import { QueryPluck } from './basic-features/pluck/pluck.query';
 import {
   MergeQuery,
   MergeQueryArg,
@@ -74,14 +74,13 @@ import { _chain } from './extra-features/chain/chain';
 import { QueryOrCreate } from './basic-features/mutate/or-create';
 import { WithDataItems } from './basic-features/cte/cte.sql';
 import { Column } from '../columns';
-import { Expression, SelectableOrExpression } from './expressions/expression';
+import { Expression } from './expressions/expression';
 import { applyMixins, EmptyObject } from '../utils';
 import {
   PickQueryResultReturnType,
   PickQueryRelations,
   PickQueryResult,
   PickQueryResultReturnTypeUniqueColumns,
-  PickQuerySelectable,
   PickQuerySelectableShapeAs,
   PickQuerySelectableShapeRelationsReturnTypeIsSubQuery,
   PickQueryShapeResultReturnTypeSinglePrimaryKey,
@@ -97,7 +96,6 @@ import { QuerySql, Sql } from './sql/sql';
 import { OrchidOrmInternalError } from './errors';
 import { SQLQueryArgs } from './db-sql-query';
 import { _clone, QueryClone } from './basic-features/clone/clone';
-import { addParserForSelectItem } from './basic-features/select/select.utils';
 import { QueryExpressions } from './expressions/query-expressions';
 import { QueryWrap } from './basic-features/wrap/wrap';
 import { QueryDistinct } from './basic-features/distinct/distinct';
@@ -328,6 +326,7 @@ export interface QueryMethods<ColumnTypes>
     QueryUpsert,
     QueryOrCreate,
     QueryGet,
+    QueryPluck,
     MergeQueryMethods,
     QuerySql<ColumnTypes>,
     QueryTransform,
@@ -405,32 +404,6 @@ export class QueryMethods<ColumnTypes> {
    */
   rows<T extends PickQueryResult>(this: T): SetQueryReturnsRows<T> {
     return _queryRows(_clone(this)) as never;
-  }
-
-  /**
-   * `.pluck` returns a single array of a single selected column values:
-   *
-   * ```ts
-   * const ids = await db.table.select('id').pluck();
-   * // ids are an array of all users' id like [1, 2, 3]
-   * ```
-   * @param select - column name or a raw SQL
-   */
-  pluck<T extends PickQuerySelectable, S extends SelectableOrExpression<T>>(
-    this: T,
-    select: S,
-  ): SetQueryReturnsPluck<T, S> {
-    const q = _clone(this);
-    q.q.returnType = 'pluck';
-
-    const selected = addParserForSelectItem(
-      q as never,
-      q.q.as || q.table,
-      'pluck',
-      select,
-    );
-    q.q.select = selected ? [selected as never] : undefined;
-    return q as never;
   }
 
   /**
@@ -1071,6 +1044,7 @@ applyMixins(QueryMethods, [
   QueryOrCreate,
   QueryHooks,
   QueryGet,
+  QueryPluck,
   MergeQueryMethods,
   QuerySql,
   QueryTransform,

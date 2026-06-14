@@ -178,6 +178,30 @@ const firstNameOptional: string | undefined =
   await db.table.getOptional('name');
 ```
 
+`get` and `getOptional` can also accept a callback that receives the current
+query and returns a SQL expression or a single-value query. Use it when the
+selected value needs access to `q.ref`, `q.column`, or a relation query:
+
+```ts
+const isOwnPost: boolean = await db.post
+  .find(postId)
+  .get((q) => sql((t) => t.boolean())`${q.ref('userId')} = ${currentUserId}`);
+
+const fullName: string = await db.user.get(
+  (q) =>
+    sql((t) => t.string())`${q.column('firstName')} || ' ' || ${q.column(
+      'lastName',
+    )}`,
+);
+
+const authorName: string | undefined = await db.post
+  .find(postId)
+  .getOptional((q) => q.author.get('name'));
+```
+
+The callback is called while building the query. It must return a SQL-building
+object, not a JavaScript value computed for every result row.
+
 ## rows
 
 [//]: # 'has JSDoc'
@@ -206,6 +230,16 @@ rows.forEach((row) => {
 ```ts
 const ids = await db.table.pluck('id');
 // ids are an array of all users' id like [1, 2, 3]
+```
+
+`pluck` supports the same callback form as `get` and `getOptional`:
+
+```ts
+const ownPostFlags: boolean[] = await db.post.pluck(
+  (q) => sql((t) => t.boolean())`${q.ref('userId')} = ${currentUserId}`,
+);
+
+const commentsCounts: number[] = await db.post.pluck((q) => q.comments.count());
 ```
 
 ## exec

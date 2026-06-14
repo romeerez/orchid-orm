@@ -34,7 +34,7 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResult<T, Arg> {
-    return _queryGet(_clone(this), arg) as never;
+    return _queryGet(_clone(this) as unknown as T, arg) as never;
   }
 
   /**
@@ -50,6 +50,6 @@ export class QueryGet {
     this: T,
     arg: Arg,
   ): GetResultOptional<T, Arg> {
-    return _queryGetOptional(_clone(this), arg) as never;
+    return _queryGetOptional(_clone(this) as unknown as T, arg) as never;
   }
 }
