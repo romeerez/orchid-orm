@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.36.2
+
+### Patch Changes
+
+- 8648dd79: Fix logging config issue for rake-db `migrate` (#658)
+
 ## 2.36.1
 
 ### Patch Changes
