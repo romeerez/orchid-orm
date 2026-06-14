@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.72.4
+
+### Patch Changes
+
+- 3b63b4af: Add type-level read-only table support that keeps read queries available while gating mutation APIs and relation actions that would mutate read-only tables (#360)
+- Updated dependencies [3b63b4af]
+  - pqb@0.67.2
+  - rake-db@2.36.3
+
 ## 1.72.3
 
 ### Patch Changes
