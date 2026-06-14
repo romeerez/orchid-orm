@@ -157,6 +157,8 @@ export {
   type WhereArg,
 } from './index';
 
+export { type UpdateSelf } from './query/basic-features/mutate/update';
+
 // Internal query functions (prefixed with _)
 export {
   _appendQuery,
@@ -394,4 +396,4 @@ export { UnknownColumn } from './index';
 export { type IsolationLevel, type TransactionOptions } from './index';
 
 // Error types
-export { OrchidOrmError } from './query/errors';
+export { CannotMutateReadOnlyTableError, OrchidOrmError } from './query/errors';

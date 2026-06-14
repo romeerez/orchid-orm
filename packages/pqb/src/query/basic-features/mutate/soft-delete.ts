@@ -1,4 +1,4 @@
-import { IsQuery } from '../../query';
+import { IsQuery, Query } from '../../query';
 import { RawSql } from '../../expressions/raw-sql';
 import { Column } from '../../../columns/column';
 import { RecordUnknown, setObjectValueImmutable } from '../../../utils';
@@ -69,7 +69,8 @@ export interface QueryWithSoftDelete
     PickQueryResult,
     PickQueryReturnType,
     PickQueryHasSelect,
-    PickQueryHasWhere {
+    PickQueryHasWhere,
+    Query.Pick.IsNotReadOnly {
   __scopes: NonDeletedScope;
 }
 

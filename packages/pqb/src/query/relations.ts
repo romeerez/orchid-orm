@@ -42,7 +42,7 @@ export interface RelationConfigBase extends IsQuery {
   omitForeignKeyInCreate: PropertyKey;
   // Data for `create` method that may have required properties.
   // Only `belongsTo` has it for required foreign keys.
-  dataForCreate?: RelationConfigDataForCreate;
+  dataForCreate: RelationConfigDataForCreate | undefined;
   // Data for `create` method with all optional properties.
   // Other than `belongsTo` relation kinds use it.
   optionalDataForCreate: unknown;

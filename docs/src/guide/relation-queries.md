@@ -395,6 +395,14 @@ But not create and connect at the same time.
 For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relation:
 while updating the author, you can create new books, connect some books, and delete books by conditions.
 
+When the related table has `readonly readOnly = true`, nested actions that would create, update, delete, or upsert records in that related table are unavailable at the TypeScript level.
+
+Actions are still available when they only mutate the current table or the `hasAndBelongsToMany` join table:
+
+- `belongsTo` can use `set` and `disconnect` because they update the foreign key on the table being updated.
+- `hasAndBelongsToMany` can use `connect` while creating, and `set`, `add`, and `disconnect` while updating, because they only write join table records.
+- `hasOne` and `hasMany` nested mutation actions are unavailable for read-only related tables because they update the related table's foreign key or records.
+
 ### create
 
 #### create in a chain

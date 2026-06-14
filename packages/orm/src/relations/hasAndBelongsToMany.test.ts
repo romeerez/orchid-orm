@@ -16,7 +16,7 @@ import {
   UserData,
   UserSelectAll,
 } from 'test-utils';
-import { createBaseTable } from '../base-table';
+import { createBaseTable } from '../orm-table/base-table';
 import { orchidORMWithAdapter } from '../orm';
 
 const ormParams = {

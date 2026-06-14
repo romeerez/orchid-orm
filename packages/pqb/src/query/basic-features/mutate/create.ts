@@ -51,10 +51,10 @@ import { OrchidOrmInternalError } from '../../errors';
 import { OnConflictMerge } from './insert.sql';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { QueryData } from '../../query-data';
+import { throwIfReadOnly } from '../../query.utils';
 
 export interface CreateSelf
   extends
-    IsQuery,
     PickQueryHasSelect,
     PickQueryDefaults,
     PickQueryResult,
@@ -63,7 +63,8 @@ export interface CreateSelf
     PickQueryReturnType,
     PickQueryShape,
     PickQueryUniqueProperties,
-    PickQueryInputType {}
+    PickQueryInputType,
+    Query.Pick.IsNotReadOnly {}
 
 // Type of argument for `create`, `createMany`, optional argument for `createOneFrom`,
 // `defaults` use a Partial of it.
@@ -118,21 +119,15 @@ export type CreateRelationsData<T extends CreateSelf> =
     keyof T['__defaults'],
     T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
   > &
-    CreateBelongsToData<T> &
+    // Intersection of objects for `belongsTo` relations:
+    // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
+    CreateRelationsDataOmittingFKeys<
+      T,
+      T['relations'][keyof T['relations']]['dataForCreate']
+    > &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
     // { foo: object } | { bar: object }
     T['relations'][keyof T['relations']]['optionalDataForCreate'];
-
-// Intersection of objects for `belongsTo` relations:
-// ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-export type CreateBelongsToData<T extends CreateSelf> = [
-  T['relations'][keyof T['relations']]['dataForCreate'],
-] extends [never]
-  ? EmptyObject
-  : CreateRelationsDataOmittingFKeys<
-      T,
-      T['relations'][keyof T['relations']]['dataForCreate']
-    >;
 
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
@@ -606,6 +601,7 @@ export const _queryCreate = <T extends CreateSelf, Data extends CreateData<T>>(
   q: T,
   data: Data,
 ): CreateResult<T, Data> => {
+  throwIfReadOnly(q as unknown as Query);
   createSelect(q as unknown as Query);
   return _queryInsert(q, data) as never;
 };
@@ -614,6 +610,7 @@ export const _queryInsert = <T extends CreateSelf, Data extends CreateData<T>>(
   query: T,
   data: Data,
 ): InsertResult<T, Data> => {
+  throwIfReadOnly(query as unknown as Query);
   const ctx = createCtx();
   const obj = handleOneData(query, data, ctx) as {
     columns: string[];
@@ -627,6 +624,7 @@ export const _queryCreateMany = <T extends CreateSelf>(
   q: T,
   data: CreateData<T>[],
 ): CreateManyResult<T> => {
+  throwIfReadOnly(q as unknown as Query);
   createSelect(q as unknown as Query);
   return _queryInsertMany(q, data as never) as never;
 };
@@ -635,6 +633,7 @@ export const _queryInsertMany = <T extends CreateSelf>(
   q: T,
   data: CreateData<T>[],
 ): InsertManyResult<T> => {
+  throwIfReadOnly(q as unknown as Query);
   const ctx = createCtx();
   let result = insert(q, handleManyData(q, data, ctx), true) as never;
   if (!data.length) result = (result as Query).none() as never;
@@ -674,7 +673,11 @@ type ExtraPropertiesAreNotAllowed<
   Data,
 > = keyof Data extends keyof T['inputType'] | keyof T['relations']
   ? Data
-  : `Extra properties are not allowed: ${Exclude<keyof Data, keyof T['inputType'] | keyof T['relations']> & string}`;
+  : `Extra properties are not allowed: ${Exclude<
+      keyof Data,
+      keyof T['inputType'] | keyof T['relations']
+    > &
+      string}`;
 
 export class QueryCreate {
   /**
@@ -731,7 +734,7 @@ export class QueryCreate {
     this: T,
     data: ExtraPropertiesAreNotAllowed<T, Data>,
   ): CreateResult<T, Data> {
-    return _queryCreate(_clone(this), data as never) as never;
+    return _queryCreate(_clone(this) as unknown as T, data as never) as never;
   }
 
   /**
@@ -741,7 +744,7 @@ export class QueryCreate {
     this: T,
     data: ExtraPropertiesAreNotAllowed<T, Data>,
   ): InsertResult<T, Data> {
-    return _queryInsert(_clone(this), data as never) as never;
+    return _queryInsert(_clone(this) as unknown as T, data as never) as never;
   }
 
   /**
@@ -789,7 +792,7 @@ export class QueryCreate {
     this: T,
     data: CreateData<T>[],
   ): CreateManyResult<T> {
-    return _queryCreateMany(_clone(this), data) as never;
+    return _queryCreateMany(_clone(this) as unknown as T, data) as never;
   }
 
   /**
@@ -801,7 +804,7 @@ export class QueryCreate {
     this: T,
     data: CreateData<T>[],
   ): InsertManyResult<T> {
-    return _queryInsertMany(_clone(this), data) as never;
+    return _queryInsertMany(_clone(this) as unknown as T, data) as never;
   }
 
   /**

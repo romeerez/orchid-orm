@@ -10,7 +10,9 @@ import {
   isQueryReturnsAll,
   VirtualColumn,
   CreateCtx,
+  CreateSelf,
   UpdateData,
+  UpdateSelf,
   _queryDefaults,
   _queryUpdateOrThrow,
   _queryUpdate,
@@ -58,7 +60,7 @@ import {
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { HasOneOptions, HasOneParams, HasOneQueryThrough } from './hasOne';
-import { ORMTableInput } from '../base-table';
+import { ORMTableInput } from '../orm-table/base-table';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasMany extends RelationThunkBase {
@@ -98,53 +100,59 @@ export interface HasManyInfo<
   params: HasOneParams<T, Rel['options']>;
   maybeSingle: Q;
   omitForeignKeyInCreate: never;
-  optionalDataForCreate: {
-    [P in Name]?: T['relations'][Name]['options'] extends RelationThroughOptions
-      ? EmptyObject
-      : {
-          // create related records
-          create?: CreateData<Q>[];
-          // find existing records by `where` conditions and update their foreign keys with the new id
-          connect?: WhereArg<Q>[];
-          // try finding records by `where` conditions, and create them if not found
-          connectOrCreate?: {
-            where: WhereArg<Q>;
-            create: CreateData<Q>;
-          }[];
-        };
-  };
-  dataForCreate: never;
+  optionalDataForCreate: Q extends Query.Pick.IsNotReadOnly
+    ? {
+        [P in Name]?: T['relations'][Name]['options'] extends RelationThroughOptions
+          ? EmptyObject
+          : {
+              // create related records
+              create?: CreateData<Q>[];
+              // find existing records by `where` conditions and update their foreign keys with the new id
+              connect?: WhereArg<Q>[];
+              // try finding records by `where` conditions, and create them if not found
+              connectOrCreate?: {
+                where: WhereArg<Q>;
+                create: CreateData<Q>;
+              }[];
+            };
+      }
+    : EmptyObject;
+  dataForCreate: undefined;
   // `hasMany` relation data available for update. It supports:
   // - `disconnect` nullifies foreign keys of the related records
   // - `delete` deletes related record found by conditions
   // - `update` updates related records found by conditions with a provided data
-  dataForUpdate: {
-    disconnect?: MaybeArray<WhereArg<Q>>;
-    delete?: MaybeArray<WhereArg<Q>>;
-    update?: {
-      where: MaybeArray<WhereArg<Q>>;
-      data: UpdateData<Q>;
-    };
-  };
+  dataForUpdate: Q extends Query.Pick.IsNotReadOnly
+    ? {
+        disconnect?: MaybeArray<WhereArg<Q>>;
+        delete?: MaybeArray<WhereArg<Q>>;
+        update?: {
+          where: MaybeArray<WhereArg<Q>>;
+          data: UpdateData<Q>;
+        };
+      }
+    : never;
   // Only for records that update a single record:
   // - `set` updates foreign keys of related records found by conditions, nullifies previously connected
   // - `add` updates foreign keys of related records found by conditions, doesn't nullify previously connected
   // - `create` creates related records
-  dataForUpdateOne: {
-    disconnect?: MaybeArray<WhereArg<Q>>;
-    delete?: MaybeArray<WhereArg<Q>>;
-    update?: {
-      where: MaybeArray<WhereArg<Q>>;
-      data: UpdateData<Q>;
-    };
-    set?: MaybeArray<WhereArg<Q>>;
-    add?: MaybeArray<WhereArg<Q>>;
-    create?: CreateData<Q>[];
-  };
+  dataForUpdateOne: Q extends Query.Pick.IsNotReadOnly
+    ? {
+        disconnect?: MaybeArray<WhereArg<Q>>;
+        delete?: MaybeArray<WhereArg<Q>>;
+        update?: {
+          where: MaybeArray<WhereArg<Q>>;
+          data: UpdateData<Q>;
+        };
+        set?: MaybeArray<WhereArg<Q>>;
+        add?: MaybeArray<WhereArg<Q>>;
+        create?: CreateData<Q>[];
+      }
+    : never;
 }
 
 interface State {
-  query: Query;
+  query: Query.NotReadOnlyQuery;
   primaryKeys: string[];
   foreignKeys: string[];
   on?: RecordUnknown;
@@ -176,13 +184,14 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   }
 
   create(
-    self: Query,
+    self: CreateSelf,
     ctx: CreateCtx,
     items: RecordUnknown[],
     rowIndexes: number[],
     count: number,
   ) {
-    if (count <= self.qb.internal.nestedCreateBatchMax) {
+    const querySelf = self as unknown as Query;
+    if (count <= querySelf.qb.internal.nestedCreateBatchMax) {
       interface NestedCreateItem {
         indexes: number[];
         items: RecordUnknown[];
@@ -253,7 +262,7 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       let createAs: string | undefined;
       let connectAs: string | undefined;
       let connectOrCreateAs: string | undefined;
-      _hookSelectColumns(self, primaryKeys, (aliasedPrimaryKeys) => {
+      _hookSelectColumns(querySelf, primaryKeys, (aliasedPrimaryKeys) => {
         foreignKeys.forEach((key, keyI) => {
           const primaryKey = aliasedPrimaryKeys[keyI];
 
@@ -302,11 +311,11 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
       if (create) {
         const query = _queryInsertMany(
-          _clone(rel),
+          _clone(rel) as unknown as CreateSelf,
           create.items.flat() as never,
-        );
+        ) as unknown as Query;
 
-        _appendQuery(self, query, (as) => (createAs = as));
+        _appendQuery(querySelf, query, (as) => (createAs = as));
       }
 
       if (connect) {
@@ -318,7 +327,7 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
           query.q.ensureCount = value.length;
 
-          _appendQuery(self, query, (as) => (connectAs = as));
+          _appendQuery(querySelf, query, (as) => (connectAs = as));
         });
       }
 
@@ -334,13 +343,13 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
               },
             });
 
-            _appendQuery(self, query, (as) => (connectOrCreateAs = as));
+            _appendQuery(querySelf, query, (as) => (connectOrCreateAs = as));
           }
         });
       }
     } else {
       hasRelationHandleCreate(
-        self,
+        querySelf,
         ctx,
         items,
         rowIndexes,
@@ -351,15 +360,16 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     }
   }
 
-  update(q: Query, set: RecordUnknown) {
+  update(q: UpdateSelf, set: RecordUnknown) {
+    const query = q as unknown as Query;
     const params = set[this.key] as NestedUpdateManyItems;
-    if ((params.set || params.create) && isQueryReturnsAll(q)) {
+    if ((params.set || params.create) && isQueryReturnsAll(query)) {
       const key = params.set ? 'set' : 'create';
       throw new Error(`\`${key}\` option is not allowed in a batch update`);
     }
 
     hasRelationHandleUpdate(
-      q,
+      query,
       set,
       this.key,
       this.state.primaryKeys,
@@ -434,7 +444,7 @@ export const makeHasManyMethod = (
 
   if (on) {
     _queryWhere(query, [on]);
-    _queryDefaults(query, on);
+    _queryDefaults(query as unknown as CreateSelf, on);
   }
 
   addAutoForeignKey(
@@ -446,7 +456,12 @@ export const makeHasManyMethod = (
     relation.options,
   );
 
-  const state: State = { query, primaryKeys, foreignKeys, on };
+  const state: State = {
+    query: query as Query.NotReadOnlyQuery,
+    primaryKeys,
+    foreignKeys,
+    on,
+  };
   const len = primaryKeys.length;
 
   const reversedOn: RecordString = {};
@@ -474,7 +489,13 @@ export const makeHasManyMethod = (
         values[foreignKeys[i]] = params[primaryKeys[i]];
       }
 
-      return _queryDefaults(query.where(values as never), { ...on, ...values });
+      return _queryDefaults(
+        query.where(values as never) as unknown as CreateSelf,
+        {
+          ...on,
+          ...values,
+        },
+      ) as unknown as Query;
     },
     virtualColumn: new HasManyVirtualColumn(
       internalSchemaConfig,
@@ -549,9 +570,9 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         }
 
         items[i] = _queryUpdateOrThrow(
-          t.where<Query>({ OR: connect as never[] }),
+          t.where<Query>({ OR: connect as never[] }) as unknown as UpdateSelf,
           obj as never,
-        );
+        ) as unknown as Query;
       }
 
       await Promise.all(items);
@@ -581,9 +602,9 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
 
           queries.push(
             _queryUpdate(
-              t.where(item.where as WhereArg<Query>) as never,
+              t.where(item.where as WhereArg<Query>) as unknown as UpdateSelf,
               obj as never,
-            ),
+            ) as unknown as Query,
           );
         }
       }
@@ -660,7 +681,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         obj[foreignKeys[i]] = data[0][primaryKeys[i]];
       }
 
-      await t.insertMany(
+      await (t as Query.NotReadOnlyQuery).insertMany(
         params.create.map((create) => ({
           ...create,
           ...obj,
@@ -683,10 +704,10 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
 
       const relatedWheres = toArray(params.add);
 
-      const count = await _queryUpdate(
-        t.where({ OR: relatedWheres }) as Query,
+      const count = (await _queryUpdate(
+        t.where({ OR: relatedWheres }) as unknown as UpdateSelf,
         obj as never,
-      );
+      )) as unknown as number;
 
       if (count < relatedWheres.length) {
         throw new OrchidOrmInternalError(
@@ -726,7 +747,10 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         queryToDisconnect = queryToDisconnect.whereNot(setConditions) as never;
       }
 
-      await _queryUpdate(queryToDisconnect, obj as never);
+      await _queryUpdate(
+        queryToDisconnect as unknown as UpdateSelf,
+        obj as never,
+      );
 
       if (setConditions) {
         const obj: RecordUnknown = {};
@@ -735,7 +759,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
         }
 
         await _queryUpdate(
-          t.where<Query>(setConditions as never),
+          t.where<Query>(setConditions as never) as unknown as UpdateSelf,
           obj as never,
         );
       }
@@ -753,7 +777,10 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
       if (params.delete) {
         await _queryDelete(q);
       } else if (params.update) {
-        await _queryUpdate(q, params.update.data as never);
+        await _queryUpdate(
+          q as unknown as UpdateSelf,
+          params.update.data as never,
+        );
       }
     }
   }) as HasManyNestedUpdate;

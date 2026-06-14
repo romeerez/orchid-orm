@@ -24,6 +24,7 @@ import { QueryData } from '../../query-data';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { MaybeArray, RecordUnknown } from '../../../utils';
 import { _clone } from '../clone/clone';
+import { throwIfReadOnly } from '../../query.utils';
 
 export type CreateFromMethodNames =
   | 'createOneFrom'
@@ -93,6 +94,8 @@ const insertFrom = (
   queryMany?: boolean,
   data?: MaybeArray<RecordUnknown>,
 ): CreateSelf => {
+  throwIfReadOnly(query as unknown as Query);
+
   const ctx = createCtx();
 
   const obj =

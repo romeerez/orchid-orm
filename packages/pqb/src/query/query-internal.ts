@@ -37,6 +37,8 @@ export interface QueryInternal<
   noPrimaryKey: boolean;
   // table comment, for migration generator
   comment?: string;
+  // table-level read-only mode; mutation methods throw when this is true
+  readOnly?: boolean;
   // access with `getPrimaryKeys` utility
   primaryKeys?: string[];
   singlePrimaryKey: SinglePrimaryKey;

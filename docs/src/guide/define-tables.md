@@ -37,6 +37,9 @@ export class UserTable extends BaseTable {
   // For "soft delete" functionality
   readonly softDelete = true; // or a string with a column name
 
+  // Type-level read-only table.
+  readonly readOnly = true;
+
   columns = this.setColumns(
     (t) => ({
       id: t.uuid().primaryKey(),
@@ -99,7 +102,7 @@ export class UserTable extends BaseTable {
 }
 ```
 
-- `table` and `softDelete` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
+- `table`, `softDelete`, and `readOnly` must be readonly for TS to recognize them properly, other properties don't have to be readonly.
 - for configuring columns see [Columns schema overview](/guide/columns-overview).
 - documentation for composite primary keys, indexes, exclusions, foreign keys, is residing in [migration column methods](/guide/migration-column-methods)
 - for defining table's relations see [Modeling relations](/guide/relations).
@@ -188,6 +191,36 @@ export class NoPrimaryKeyTable extends BaseTable {
 ```
 
 Primary key presence checks are on by default. See [noPrimaryKey in ORM setup](/guide/orm-setup#noPrimaryKey) for global configuration options.
+
+## readOnly tables
+
+Set `readonly readOnly = true` on a table class to keep read queries available and make mutation methods unavailable at the TypeScript level.
+
+```ts
+import { BaseTable } from './base-table';
+
+export class ReportTable extends BaseTable {
+  readonly table = 'report';
+  readonly readOnly = true;
+
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    name: t.text(),
+  }));
+}
+
+await db.report.where({ id: 1 }).select('name');
+
+await db.report.create({ name: 'new report' }); // TypeScript error
+await db.report.find(1).update({ name: 'changed' }); // TypeScript error
+await db.report.find(1).delete(); // TypeScript error
+```
+
+Tables are writable by default. Only the literal `true` enables this behavior.
+
+`readOnly` is a TypeScript API restriction for queries. It does not change migration generation, generated SQL, or database permissions.
+
+This is different from column-level [readOnly()](/guide/common-column-methods#readonly), which forbids assigning a specific column in `create` and `update` data.
 
 ## Infer table types
 

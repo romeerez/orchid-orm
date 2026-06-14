@@ -4,7 +4,7 @@ import {
   RelationThunkBase,
 } from './relations';
 import { NotFoundError, OrchidOrmInternalError, Query } from 'pqb';
-import { ORMTableInput } from '../base-table';
+import { ORMTableInput } from '../orm-table/base-table';
 import {
   _queryCreateManyFrom,
   _queryCreateMany,
@@ -41,9 +41,11 @@ import {
   toArray,
   toSnakeCase,
   Column,
+  CreateSelf,
   QueryHasWhere,
   QuerySchema,
   internalSchemaConfig,
+  UpdateSelf,
 } from 'pqb/internal';
 import {
   addAutoForeignKey,
@@ -111,19 +113,24 @@ export interface HasAndBelongsToManyInfo<
   maybeSingle: Q;
   omitForeignKeyInCreate: never;
   optionalDataForCreate: {
-    [P in Name]?: {
-      // create related records
-      create?: CreateData<Q>[];
-      // find existing records by `where` conditions and update their foreign keys with the new id
-      connect?: WhereArg<Q>[];
-      // try finding records by `where` conditions, and create them if not found
-      connectOrCreate?: {
-        where: WhereArg<Q>;
-        create: CreateData<Q>;
-      }[];
-    };
+    [P in Name]?: Q extends Query.Pick.IsNotReadOnly
+      ? {
+          // create related records
+          create?: CreateData<Q>[];
+          // find existing records by `where` conditions and update their foreign keys with the new id
+          connect?: WhereArg<Q>[];
+          // try finding records by `where` conditions, and create them if not found
+          connectOrCreate?: {
+            where: WhereArg<Q>;
+            create: CreateData<Q>;
+          }[];
+        }
+      : {
+          // find existing records by `where` conditions and update their foreign keys with the new id
+          connect?: WhereArg<Q>[];
+        };
   };
-  dataForCreate: never;
+  dataForCreate: undefined;
   // `hasAndBelongsToMany` relation data available for update. It supports:
   // - `disconnect` deletes join table records for related records found by conditions
   // - `set` creates join table records for related records found by conditions, deletes previous connects
@@ -131,33 +138,45 @@ export interface HasAndBelongsToManyInfo<
   // - `delete` deletes join table records and related records found by conditions
   // - `update` updates related records found by conditions with a provided data
   // - `create` creates related records and a join table records
-  dataForUpdate: {
-    disconnect?: MaybeArray<WhereArg<Q>>;
-    set?: MaybeArray<WhereArg<Q>>;
-    add?: MaybeArray<WhereArg<Q>>;
-    delete?: MaybeArray<WhereArg<Q>>;
-    update?: {
-      where: MaybeArray<WhereArg<Q>>;
-      data: UpdateData<Q>;
-    };
-    create?: CreateData<Q>[];
-  };
-  dataForUpdateOne: {
-    disconnect?: MaybeArray<WhereArg<Q>>;
-    set?: MaybeArray<WhereArg<Q>>;
-    add?: MaybeArray<WhereArg<Q>>;
-    delete?: MaybeArray<WhereArg<Q>>;
-    update?: {
-      where: MaybeArray<WhereArg<Q>>;
-      data: UpdateData<Q>;
-    };
-    create?: CreateData<Q>[];
-  };
+  dataForUpdate: Q extends Query.Pick.IsNotReadOnly
+    ? {
+        disconnect?: MaybeArray<WhereArg<Q>>;
+        set?: MaybeArray<WhereArg<Q>>;
+        add?: MaybeArray<WhereArg<Q>>;
+        delete?: MaybeArray<WhereArg<Q>>;
+        update?: {
+          where: MaybeArray<WhereArg<Q>>;
+          data: UpdateData<Q>;
+        };
+        create?: CreateData<Q>[];
+      }
+    : {
+        disconnect?: MaybeArray<WhereArg<Q>>;
+        set?: MaybeArray<WhereArg<Q>>;
+        add?: MaybeArray<WhereArg<Q>>;
+      };
+  dataForUpdateOne: Q extends Query.Pick.IsNotReadOnly
+    ? {
+        disconnect?: MaybeArray<WhereArg<Q>>;
+        set?: MaybeArray<WhereArg<Q>>;
+        add?: MaybeArray<WhereArg<Q>>;
+        delete?: MaybeArray<WhereArg<Q>>;
+        update?: {
+          where: MaybeArray<WhereArg<Q>>;
+          data: UpdateData<Q>;
+        };
+        create?: CreateData<Q>[];
+      }
+    : {
+        disconnect?: MaybeArray<WhereArg<Q>>;
+        set?: MaybeArray<WhereArg<Q>>;
+        add?: MaybeArray<WhereArg<Q>>;
+      };
 }
 
 interface State {
-  relatedTableQuery: Query;
-  joinTableQuery: Query;
+  relatedTableQuery: Query.NotReadOnlyQuery;
+  joinTableQuery: Query.NotReadOnlyQuery;
   primaryKeys: string[];
   foreignKeys: string[];
   throughForeignKeys: string[];
@@ -167,6 +186,10 @@ interface State {
   throughPrimaryKeysFull: string[];
   primaryKeysShape: Column.Shape.Data;
   on?: RecordUnknown;
+}
+
+interface QueryReturnsOne extends Query {
+  returnType: 'one' | 'oneOrThrow';
 }
 
 class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
@@ -186,13 +209,13 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
   }
 
   create(
-    q: Query,
+    q: CreateSelf,
     ctx: CreateCtx,
     items: RecordUnknown[],
     rowIndexes: number[],
   ) {
     hasRelationHandleCreate(
-      q,
+      q as unknown as Query,
       ctx,
       items,
       rowIndexes,
@@ -202,9 +225,9 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
     );
   }
 
-  update(q: Query, set: RecordUnknown) {
+  update(q: UpdateSelf, set: RecordUnknown) {
     hasRelationHandleUpdate(
-      q,
+      q as unknown as Query,
       set,
       this.key,
       this.state.primaryKeys,
@@ -247,7 +270,7 @@ export const makeHasAndBelongsToManyMethod = (
 
   if (on) {
     _queryWhere(query, [on]);
-    _queryDefaults(query, on);
+    _queryDefaults(query as unknown as CreateSelf, on);
   }
 
   const foreignKeysFull = foreignKeys.map((key, i) => {
@@ -322,8 +345,8 @@ export const makeHasAndBelongsToManyMethod = (
   );
 
   const state: State = {
-    relatedTableQuery: query,
-    joinTableQuery: subQuery,
+    relatedTableQuery: query as Query.NotReadOnlyQuery,
+    joinTableQuery: subQuery as Query.NotReadOnlyQuery,
     primaryKeys,
     foreignKeys,
     throughForeignKeys,
@@ -401,7 +424,9 @@ export const makeHasAndBelongsToManyMethod = (
         return _queryWhere(q, [where as never]);
       });
 
-      return on ? _queryDefaults(q, on) : q;
+      return on
+        ? (_queryDefaults(q as unknown as CreateSelf, on) as unknown as Query)
+        : q;
     },
     virtualColumn: new HasAndBelongsToManyVirtualColumn(
       subQuery,
@@ -447,8 +472,8 @@ export const makeHasAndBelongsToManyMethod = (
           });
 
           const createdCount = await _queryCreateManyFrom(
-            subQuery.count(),
-            baseQuery as Query & { returnType: 'one' | 'oneOrThrow' },
+            subQuery.count() as unknown as CreateSelf,
+            baseQuery as QueryReturnsOne,
             data as never,
           );
 
@@ -538,7 +563,7 @@ const insertToJoinTable = (
     }
   }
 
-  return joinTableTransaction.insertMany(records);
+  return (joinTableTransaction as Query.NotReadOnlyQuery).insertMany(records);
 };
 
 const nestedInsert = ({
@@ -721,7 +746,7 @@ const nestedInsert = ({
       }
     }
 
-    await joinTableQuery.insertMany(records);
+    await (joinTableQuery as Query.NotReadOnlyQuery).insertMany(records);
   }) as HasManyNestedInsert;
 };
 
@@ -754,7 +779,9 @@ const nestedUpdate = (state: State) => {
         }
       }
 
-      await state.joinTableQuery.createMany(records);
+      await (state.joinTableQuery as Query.NotReadOnlyQuery).createMany(
+        records,
+      );
     }
 
     if (params.update) {
@@ -780,8 +807,8 @@ const nestedUpdate = (state: State) => {
             ]);
           }),
           [conditionsToWhereArg(params.update.where as WhereArg<Query>)],
-        ),
-        params.update.data as UpdateData<Query>,
+        ) as unknown as UpdateSelf,
+        params.update.data as never,
       );
     }
 
@@ -799,7 +826,7 @@ const nestedUpdate = (state: State) => {
       ];
 
       try {
-        const count = await state.joinTableQuery
+        const count = await (state.joinTableQuery as Query.NotReadOnlyQuery)
           .insertForEachFrom(
             _querySelect(
               state.relatedTableQuery.whereOneOf(...relatedWheres) as Query,

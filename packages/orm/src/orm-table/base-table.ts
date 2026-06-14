@@ -50,27 +50,27 @@ import {
 import {
   RelationConfigSelf,
   RelationTableToQuery,
-} from './relations/relations';
-import { OrchidORM } from './orm';
+} from '../relations/relations';
+import { OrchidORM } from '../orm';
 import {
   BelongsTo,
   BelongsToInfo,
   BelongsToOptions,
   BelongsToQuery,
-} from './relations/belongsTo';
+} from '../relations/belongsTo';
 import {
   HasOne,
   HasOneInfo,
   HasOneOptions,
   HasOneQuery,
-} from './relations/hasOne';
+} from '../relations/hasOne';
 import {
   HasAndBelongsToMany,
   HasAndBelongsToManyInfo,
   HasAndBelongsToManyOptions,
   HasAndBelongsToManyQuery,
-} from './relations/hasAndBelongsToMany';
-import { HasMany, HasManyInfo, HasManyQuery } from './relations/hasMany';
+} from '../relations/hasAndBelongsToMany';
+import { HasMany, HasManyInfo, HasManyQuery } from '../relations/hasMany';
 import { Db, Query } from 'pqb';
 
 // type of table class itself
@@ -118,7 +118,8 @@ export interface TableToDb<T extends ORMTableInput>
       T['types'],
       T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
       MapTableScopesOption<T>,
-      ColumnsShape.DefaultSelectKeys<T['columns']['shape']>
+      ColumnsShape.DefaultSelectKeys<T['columns']['shape']>,
+      T['readOnly'] extends true ? true : undefined
     > {
   relations: T extends RelationConfigSelf
     ? {
@@ -196,6 +197,8 @@ export interface ORMTableInput {
    * Table-local grants used by migration generation.
    */
   grants?: readonly Grant.TableClassGrant[];
+  // table-level read-only capability; only literal `true` disables mutations
+  readonly readOnly?: boolean;
   // automatically create foreign keys for relations
   autoForeignKeys?: TableData.References.BaseOptions | boolean;
 }

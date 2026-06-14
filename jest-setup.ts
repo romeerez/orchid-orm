@@ -136,8 +136,8 @@ jest.mock('test-utils', () => require('./packages/test-utils/src'), {
 // Deep freeze ORM tables: prevent columns, relations, table data (indexes, constraints, etc.) from being mutated.
 // Cannot freeze instances of classes because `const cloned = Object.create(orig); cloned.data = {...}`
 // doesn't work when `orig` is frozen and already has `data`.
-jest.mock('./packages/orm/src/base-table', () => {
-  const actual = jest.requireActual('./packages/orm/src/base-table');
+jest.mock('./packages/orm/src/orm-table/base-table', () => {
+  const actual = jest.requireActual('./packages/orm/src/orm-table/base-table');
 
   const excludeKeys = new Set([
     'prototype',

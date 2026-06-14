@@ -199,6 +199,10 @@ export interface DbTableOptions<
    */
   comment?: string;
   /**
+   * Disallow runtime create, update, and delete operations.
+   */
+  readOnly?: true | undefined;
+  /**
    * Computed SQL or JS columns definitions
    */
   computed?: ComputedOptionsFactory<ColumnTypes, Shape>;
@@ -214,7 +218,7 @@ export type DbTableOptionScopes<
   Keys extends string = string,
 > = { [K in Keys]: (q: ScopeArgumentQuery<Table, Shape>) => IsQuery };
 
-export interface QueryBuilder extends Query {
+export interface QueryBuilder extends Query.NotReadOnlyQuery {
   returnType: undefined;
 }
 
@@ -229,6 +233,7 @@ export class Db<
   ShapeWithComputed extends Column.QueryColumnsInit = Shape,
   Scopes extends RecordUnknown | undefined = EmptyObject,
   DefaultSelect extends keyof Shape = keyof Shape,
+  ReadOnly extends true | undefined = undefined,
 >
   extends QueryMethods<ColumnTypes>
   implements Query
@@ -237,6 +242,7 @@ export class Db<
   declare __isQuery: true;
   declare __as: Table & string;
   declare __selectable: SelectableFromShape<ShapeWithComputed, Table>;
+  declare readOnly: ReadOnly;
   // declare __subQuery: boolean;
   declare __hasSelect: boolean;
   declare __hasWhere: boolean;
@@ -389,6 +395,7 @@ export class Db<
       snakeCase: options.snakeCase,
       noPrimaryKey: options.noPrimaryKey === 'ignore',
       comment: options.comment,
+      readOnly: options.readOnly,
       nowSQL: options.nowSQL,
       tableData,
       selectAllCount,
@@ -670,10 +677,9 @@ export interface DbTableConstructor<ColumnTypes> {
     ColumnTypes,
     Shape & ComputedColumnsFromOptions<Options['computed']>,
     MapTableScopesOption<Options>,
-    ColumnsShape.DefaultSelectKeys<Shape>
-  > & {
-    ko: Shape;
-  };
+    ColumnsShape.DefaultSelectKeys<Shape>,
+    Options['readOnly'] extends true ? true : undefined
+  >;
 }
 
 export interface DbSqlMethod<ColumnTypes> {

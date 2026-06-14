@@ -7,7 +7,10 @@ import {
   SetQueryReturnsRows,
 } from './query';
 import { emptyObject, getFreeAlias, RecordUnknown } from '../utils';
-import { OrchidOrmInternalError } from './errors';
+import {
+  CannotMutateReadOnlyTableError,
+  OrchidOrmInternalError,
+} from './errors';
 import {
   PickQueryQ,
   PickQueryQAndBaseQuery,
@@ -82,6 +85,12 @@ export const throwIfJoinLateral = (q: PickQueryQ, method: string): void => {
       q as Query,
       `Cannot join a complex query in ${method}`,
     );
+  }
+};
+
+export const throwIfReadOnly = (query: Query): void => {
+  if (query.internal.readOnly) {
+    throw new CannotMutateReadOnlyTableError(query);
   }
 };
 

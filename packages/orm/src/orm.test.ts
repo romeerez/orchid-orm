@@ -15,7 +15,7 @@ import {
   UserData,
   testAdapter,
 } from 'test-utils';
-import { createBaseTable, Selectable } from './base-table';
+import { createBaseTable, Selectable } from './orm-table/base-table';
 import { raw, QuerySchema, RawSql } from 'pqb/internal';
 import { Db, QueryHelperResult } from 'pqb';
 

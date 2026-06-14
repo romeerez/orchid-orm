@@ -1,4 +1,4 @@
-import { ORMTableInput } from '../base-table';
+import { ORMTableInput } from '../orm-table/base-table';
 import { Query } from 'pqb';
 import {
   _queryCreate,
@@ -9,6 +9,7 @@ import {
   _queryWhere,
   CreateCtx,
   CreateData,
+  CreateSelf,
   CreateMethodsNames,
   DeleteMethodsNames,
   getQueryAs,
@@ -17,6 +18,7 @@ import {
   SelectableFromShape,
   setQueryObjectValueImmutable,
   UpdateData,
+  UpdateSelf,
   VirtualColumn,
   WhereArg,
   TableData,
@@ -111,13 +113,15 @@ export interface BelongsToInfo<
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: FK;
-    nested: Required extends true
-      ? {
-          [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
-        }
-      : {
-          [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
-        };
+    nested: Q extends Query.Pick.IsNotReadOnly
+      ? Required extends true
+        ? {
+            [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
+          }
+        : {
+            [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
+          }
+      : never;
   };
   optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
@@ -129,29 +133,35 @@ export interface BelongsToInfo<
   dataForUpdate:
     | { disconnect: boolean }
     | { set: WhereArg<Q> }
-    | { delete: boolean }
-    | { update: UpdateData<Q> }
-    | {
-        create: CreateData<Q>;
-      };
+    | (Q extends Query.Pick.IsNotReadOnly
+        ?
+            | { delete: boolean }
+            | { update: UpdateData<Q> }
+            | {
+                create: CreateData<Q>;
+              }
+        : never);
   // Only for records that update a single record:
   // - `upsert` to update or create the related record
   dataForUpdateOne:
     | { disconnect: boolean }
     | { set: WhereArg<Q> }
-    | { delete: boolean }
-    | { update: UpdateData<Q> }
-    | { create: CreateData<Q> }
-    | {
-        upsert: {
-          update: UpdateData<Q>;
-          create: CreateData<Q> | (() => CreateData<Q>);
-        };
-      };
+    | (Q extends Query.Pick.IsNotReadOnly
+        ?
+            | { delete: boolean }
+            | { update: UpdateData<Q> }
+            | { create: CreateData<Q> }
+            | {
+                upsert: {
+                  update: UpdateData<Q>;
+                  create: CreateData<Q> | (() => CreateData<Q>);
+                };
+              }
+        : never);
 }
 
 interface State {
-  query: Query;
+  query: Query.NotReadOnlyQuery;
   primaryKeys: string[];
   foreignKeys: string[];
   len: number;
@@ -176,7 +186,8 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     this.nestedUpdate = nestedUpdate(this.state);
   }
 
-  create(q: Query, ctx: CreateCtx, items: RecordUnknown[]) {
+  create(q: CreateSelf, ctx: CreateCtx, items: RecordUnknown[]) {
+    const queryForCreate = q as unknown as Query;
     const {
       key,
       state: { query, primaryKeys, foreignKeys },
@@ -234,7 +245,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       const selectPKeys = query.select(...primaryKeys);
 
       _prependWith(
-        q,
+        queryForCreate,
         (as) => {
           const count = create.items.length;
           foreignKeys.forEach((foreignKey, i) => {
@@ -249,14 +260,18 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
             });
           });
         },
-        _queryInsertMany(selectPKeys, create.values),
+        _queryInsertMany(selectPKeys as unknown as CreateSelf, create.values),
       );
     }
 
     if (connect) {
       connect.values.forEach((value, itemI) => {
-        const as = getFreeAlias(q.q.withShapes, 'q');
-        _prependWith(q, as, query.select(...primaryKeys).findBy(value));
+        const as = getFreeAlias(queryForCreate.q.withShapes, 'q');
+        _prependWith(
+          queryForCreate,
+          as,
+          query.select(...primaryKeys).findBy(value),
+        );
 
         foreignKeys.map((foreignKey, i) => {
           connect.items[itemI][foreignKey] = new RawSql(
@@ -277,7 +292,7 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         const selectPKeys = query.select(...primaryKeys);
 
         _prependWith(
-          q,
+          queryForCreate,
           asFn,
           _orCreate(
             _queryWhere(selectPKeys, [(value as { where: never }).where]),
@@ -288,11 +303,12 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     }
   }
 
-  update(q: Query, set: RecordUnknown) {
-    q.q.wrapInTransaction = true;
+  update(q: UpdateSelf, set: RecordUnknown) {
+    const queryForUpdate = q as unknown as Query;
+    queryForUpdate.q.wrapInTransaction = true;
 
     const data = set[this.key] as NestedUpdateOneItem;
-    this.nestedUpdate(q, set, data);
+    this.nestedUpdate(queryForUpdate, set, data);
   }
 }
 
@@ -309,11 +325,17 @@ export const makeBelongsToMethod = (
 
   if (on) {
     _queryWhere(query, [on]);
-    _queryDefaults(query, on);
+    _queryDefaults(query as unknown as CreateSelf, on);
   }
 
   const len = primaryKeys.length;
-  const state: State = { query, primaryKeys, foreignKeys, len, on };
+  const state: State = {
+    query: query as Query.NotReadOnlyQuery,
+    primaryKeys,
+    foreignKeys,
+    len,
+    on,
+  };
 
   addAutoForeignKey(
     tableConfig,
@@ -390,7 +412,10 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
   return ((self, update, params) => {
     if (params.create) {
       const createQuery = _querySelect(
-        _queryCreate(query.clone(), params.create),
+        _queryCreate(
+          query.clone() as unknown as CreateSelf,
+          params.create,
+        ) as unknown as Query,
         primaryKeys,
       );
 
@@ -409,9 +434,14 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       const selectIdsSql = new RawSql('');
 
       const updateQuery = _queryUpdate(
-        _queryWhereIn(query.clone(), true, primaryKeys, selectIdsSql),
-        params.update as UpdateData<Query>,
-      );
+        _queryWhereIn(
+          query.clone() as unknown as Query,
+          true,
+          primaryKeys,
+          selectIdsSql,
+        ) as unknown as UpdateSelf,
+        params.update as never,
+      ) as unknown as Query;
 
       // don't throw "not found" if it is not found for update
       updateQuery.q.returnType = 'value';
@@ -432,7 +462,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys, len }: State) => {
       const upsertQuery = _querySelect(
         _queryUpsert(
           relQuery,
-          params.upsert as UpsertData<UpsertThis, UpdateData<Query>>,
+          params.upsert as UpsertData<UpsertThis, UpdateData<UpdateSelf>>,
         ),
         primaryKeys,
       );

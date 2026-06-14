@@ -10,9 +10,9 @@ export {
   QueryError,
   createDbWithAdapter,
   Db,
+  Expression,
+  isExpression,
   type Query,
   type QueryHelperResult,
   type QuerySchema,
-  Expression,
-  isExpression,
 } from './index';

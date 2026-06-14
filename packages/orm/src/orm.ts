@@ -25,7 +25,7 @@ import {
   TableClasses,
   BaseTableClass,
   TableToDb,
-} from './base-table';
+} from './orm-table/base-table';
 import { applyRelations } from './relations/relations';
 import {
   transaction,
@@ -311,6 +311,7 @@ const assignTablesToOrm = <T extends TableClasses>(
       softDelete: table.softDelete,
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
       comment: table.comment,
+      readOnly: table.readOnly,
       noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
       computed: table.computed as never,
       nowSQL: (

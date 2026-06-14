@@ -46,7 +46,7 @@ export type UpsertData<T extends UpsertThis, Update extends UpdateData<T>> =
 
 export const _queryUpsert = (
   q: Query,
-  data: UpsertData<UpsertThis, UpdateData<Query>>,
+  data: UpsertData<UpsertThis, UpdateData<UpdateSelf>>,
 ): Query => {
   q.q.upsertUpdate = true;
 
@@ -59,10 +59,10 @@ export const _queryUpsert = (
   }
 
   if (!isObjectEmpty(updateData)) {
-    _queryUpdate(q, updateData as never);
+    _queryUpdate(q as unknown as UpdateSelf, updateData as never);
   }
 
-  return _orCreate(q as Query, data.create, updateData, mergeData) as Query;
+  return _orCreate(q, data.create, updateData, mergeData) as Query;
 };
 
 export class QueryUpsert {

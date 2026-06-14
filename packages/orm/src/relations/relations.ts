@@ -1,6 +1,11 @@
 import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
-import { ORMTableInput, TableClass, TableInfo, TableToDb } from '../base-table';
+import {
+  ORMTableInput,
+  TableClass,
+  TableInfo,
+  TableToDb,
+} from '../orm-table/base-table';
 import { OrchidORMDbTables } from '../orm';
 import {
   _queryTake,
@@ -9,12 +14,14 @@ import {
   VirtualColumn,
   WhereArg,
   ColumnSchemaConfig,
-  IsQuery,
   RecordUnknown,
   RelationJoinQuery,
   RelationsBase,
   Column,
   QuerySchema,
+  CreateSelf,
+  PickQuerySelectableRelations,
+  RelationConfigBase,
 } from 'pqb/internal';
 import { HasMany, makeHasManyMethod } from './hasMany';
 import {
@@ -51,7 +58,12 @@ export type RelationToOneDataForCreate<
       };
     };
 
-export type RelationToOneDataForCreateSameQuery<Q extends Query> =
+interface RelationToOneDataForCreateSameQuerySelf
+  extends CreateSelf, PickQuerySelectableRelations {}
+
+export type RelationToOneDataForCreateSameQuery<
+  Q extends RelationToOneDataForCreateSameQuerySelf,
+> =
   | {
       create: CreateData<Q>;
       connect?: never;
@@ -89,7 +101,7 @@ export interface RelationData {
   virtualColumn?: VirtualColumn<ColumnSchemaConfig>;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
-  modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
+  modifyRelatedQuery?: RelationConfigBase['modifyRelatedQuery'];
 }
 
 export type RelationTableToQuery<Relation> = Relation extends {

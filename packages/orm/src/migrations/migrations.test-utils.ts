@@ -2,7 +2,7 @@ import { RakeDbConfig, rakeDbConfigDefaults } from 'rake-db';
 import { noop, QueryLogger } from 'pqb/internal';
 import path from 'node:path';
 import { join } from 'node:path';
-import { createBaseTable } from '../base-table';
+import { createBaseTable } from '../orm-table/base-table';
 import { testColumnTypes, testDefaultColumnTypes } from 'test-utils';
 
 export const BaseTable = createBaseTable({

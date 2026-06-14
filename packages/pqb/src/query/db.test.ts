@@ -14,6 +14,7 @@ import {
   testDefaultSchemaConfig,
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
+import { Query } from './query';
 import {
   DefaultSchemaConfig,
   internalSchemaConfig,
@@ -23,6 +24,7 @@ import { RecordUnknown } from '../utils';
 import { QueryLogger } from './basic-features/log/log';
 import { orchidORMWithAdapter } from 'orchid-orm';
 import { Adapter, TransactionAdapterClass } from '../adapters/adapter';
+import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
@@ -84,6 +86,125 @@ describe('db', () => {
     const s = sql``;
 
     expect(s.columnTypes).toBe(testDb.columnTypes);
+  });
+
+  it('tracks direct table queries as not read-only by default', () => {
+    const table = testDb('table', (t) => ({
+      id: t.identity().primaryKey(),
+    }));
+
+    assertType<typeof table.readOnly, undefined>();
+    const expectMutable = <T extends Query.Pick.IsNotReadOnly>(query: T) =>
+      query;
+    expectMutable(table);
+  });
+
+  it('keeps read APIs and rejects mutation APIs for read-only query types', () => {
+    const User = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text().unique(),
+        password: t.text().select(false),
+      }),
+      undefined,
+      { readOnly: true },
+    );
+
+    const UserSoftDelete = testDb(
+      'user',
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.string(),
+        deletedAt: t.timestamp().nullable(),
+      }),
+      undefined,
+      {
+        readOnly: true,
+        softDelete: true,
+      },
+    );
+
+    const readOnlyError = CannotMutateReadOnlyTableError;
+    // @ts-expect-error read-only query cannot create
+    expect(() => User.create(userData)).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot insert
+    expect(() => User.insert(userData)).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot create many
+    expect(() => User.createMany([userData])).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot insert many
+    expect(() => User.insertMany([userData])).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot create from a query
+      User.createOneFrom(User.select('name', 'password').take()),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot insert from a query
+      User.insertOneFrom(User.select('name', 'password')),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot create many from a query
+      User.createManyFrom(User.select('name', 'password')),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot insert many from a query
+      User.insertManyFrom(User.select('name', 'password')),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot create for each source row
+      User.createForEachFrom(User.select('name', 'password')),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot insert for each source row
+      User.insertForEachFrom(User.select('name', 'password')),
+    ).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot update
+    expect(() => User.all().update({ name: 'name' })).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot update or throw
+    expect(() => User.find(1).updateOrThrow({ name: 'name' })).toThrow(
+      readOnlyError,
+    );
+    // @ts-expect-error read-only query cannot update from another query
+    expect(() => User.updateFrom(() => User)).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot set after updateFrom
+    expect(() => User.all().set({ name: 'name' })).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot increment
+    expect(() => User.all().increment('id')).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot decrement
+    expect(() => User.all().decrement('id')).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot update many
+    expect(() => User.updateMany([{ id: 1, name: 'name' }])).toThrow(
+      readOnlyError,
+    );
+    expect(() =>
+      // @ts-expect-error read-only query cannot optionally update many
+      User.updateManyOptional([{ id: 1, name: 'name' }]),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot update many by unique keys
+      User.updateManyBy('name', [{ name: 'name', password: 'password' }]),
+    ).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot optionally update many by unique keys
+      User.updateManyByOptional('name', {
+        name: 'name',
+        password: 'password',
+      }),
+    ).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot delete
+    expect(() => User.all().delete()).toThrow(readOnlyError);
+    expect(() =>
+      // @ts-expect-error read-only query cannot upsert
+      User.find(1).upsert({ create: userData, update: { name: 'name' } }),
+    ).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot orCreate
+    expect(() => User.find(1).orCreate(userData)).toThrow(readOnlyError);
+    // @ts-expect-error read-only query cannot truncate
+    expect(() => User.truncate()).toThrow(readOnlyError);
+    // @ts-expect-error read-only soft-delete query cannot soft delete
+    expect(() => UserSoftDelete.all().delete()).toThrow(readOnlyError);
+    // @ts-expect-error read-only soft-delete query cannot hard delete
+    expect(() => UserSoftDelete.all().hardDelete()).toThrow(readOnlyError);
   });
 
   it('supports table without schema', () => {

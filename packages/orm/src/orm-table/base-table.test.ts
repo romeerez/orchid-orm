@@ -6,7 +6,7 @@ import {
   Selectable,
   Updatable,
 } from './base-table';
-import { orchidORMWithAdapter } from './orm';
+import { orchidORMWithAdapter } from '../orm';
 import {
   Column,
   Operators,
@@ -16,7 +16,7 @@ import {
   DefaultSchemaConfig,
   QuerySchema,
 } from 'pqb/internal';
-import { useTestORM } from './test-utils/orm.test-utils';
+import { useTestORM } from '../test-utils/orm.test-utils';
 import {
   BaseTable,
   db,

@@ -1,8 +1,13 @@
 import {
   SetQueryReturnsRowCount,
   SetQueryReturnsRowCountMany,
+  Query,
 } from '../../query';
-import { throwIfJoinLateral, throwIfNoWhere } from '../../query.utils';
+import {
+  throwIfJoinLateral,
+  throwIfNoWhere,
+  throwIfReadOnly,
+} from '../../query.utils';
 import {
   PickQueryHasSelectResultReturnType,
   PickQueryHasWhere,
@@ -24,9 +29,15 @@ export type DeleteResult<T extends PickQueryHasSelectResultReturnType> =
       ? SetQueryReturnsRowCountMany<T>
       : SetQueryReturnsRowCount<T>;
 
+export interface DeleteSelf
+  extends
+    PickQueryHasSelectHasWhereResultReturnType,
+    Query.Pick.IsNotReadOnly {}
+
 export const _queryDelete = <T extends PickQueryHasSelectResultReturnType>(
   query: T,
 ): DeleteResult<T> => {
+  throwIfReadOnly(query as unknown as Query);
   const q = (query as unknown as PickQueryQ).q;
   if (!q.select) {
     if (q.returnType === 'oneOrThrow' || q.returnType === 'valueOrThrow') {
@@ -104,7 +115,7 @@ export class QueryDelete {
    *   .from('b');
    * ```
    */
-  delete<T extends PickQueryHasSelectHasWhereResultReturnType>(
+  delete<T extends DeleteSelf>(
     this: T,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ..._args: DeleteArgs<T>

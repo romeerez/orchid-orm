@@ -8,7 +8,11 @@ import {
   SetQueryReturnsRowCountMany,
   SetQueryResult,
 } from '../../query';
-import { throwIfNoWhere, throwOnReadOnlyUpdate } from '../../query.utils';
+import {
+  throwIfNoWhere,
+  throwIfReadOnly,
+  throwOnReadOnlyUpdate,
+} from '../../query.utils';
 import { _queryWhere, QueryHasWhere } from '../where/where';
 import {
   anyShape,
@@ -35,12 +39,9 @@ import {
   PickQueryReturnType,
   PickQuerySelectable,
   PickQueryShape,
-  PickQueryResultReturnTypeUniqueColumns,
-  PickQueryUniqueProperties,
   PickQueryWithData,
 } from '../../pick-query-types';
-import { EmptyObject, RecordUnknown } from '../../../utils';
-import { RelationConfigBase } from '../../relations';
+import { RecordUnknown } from '../../../utils';
 import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { OrchidOrmInternalError } from '../../errors';
@@ -61,7 +62,8 @@ export interface UpdateSelf
     PickQueryInputType,
     PickQueryAs,
     PickQueryHasSelect,
-    PickQueryHasWhere {}
+    PickQueryHasWhere,
+    Query.Pick.IsNotReadOnly {}
 
 // Type of argument for `update` and `updateOrThrow`
 //
@@ -71,40 +73,30 @@ export interface UpdateSelf
 // or a callback with JSON methods.
 //
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
-export type UpdateData<T extends UpdateSelf> =
-  EmptyObject extends T['relations']
-    ? {
-        [K in keyof T['inputType']]?: UpdateColumn<T, K>;
-      }
-    : {
-        [K in
-          | keyof T['inputType']
-          | keyof T['relations']]?: K extends keyof T['inputType']
-          ? UpdateColumn<T, K>
-          : UpdateRelationData<T, T['relations'][K]>;
-      };
-
-// Type of available variants to provide for a specific column when updating.
-// The column value may be a specific value, or raw SQL, or a query returning a single value,
-// or a callback with a relation query that is returning a single value,
-// or a callback with JSON methods.
-type UpdateColumn<T extends UpdateSelf, Key extends keyof T['inputType']> =
-  | T['inputType'][Key]
-  | ((q: {
-      [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
-        ? T['relations'][K]['query']
-        : K extends keyof T
-          ? T[K]
-          : never;
-    }) => QueryOrExpression<T['inputType'][Key]>);
-
-// Add relation operations to the update argument.
-type UpdateRelationData<
-  T extends UpdateSelf,
-  Rel extends RelationConfigBase,
-> = T['returnType'] extends undefined | 'all'
-  ? Rel['dataForUpdate']
-  : Rel['dataForUpdateOne'];
+export type UpdateData<T extends UpdateSelf> = {
+  [K in
+    | keyof T['inputType']
+    | keyof T['relations']]?: K extends keyof T['inputType']
+    ?
+        // Type of available variants to provide for a specific column when updating.
+        // The column value may be a specific value, or raw SQL, or a query returning a single value,
+        // or a callback with a relation query that is returning a single value,
+        // or a callback with JSON methods.
+        | T['inputType'][K]
+        | ((q: {
+            [K in
+              | keyof T['relations']
+              | keyof T]: K extends keyof T['relations']
+              ? T['relations'][K]['query']
+              : K extends keyof T
+                ? T[K]
+                : never;
+          }) => QueryOrExpression<T['inputType'][K]>)
+    : // Add relation operations to the update argument.
+      T['returnType'] extends undefined | 'all'
+      ? T['relations'][K]['dataForUpdate']
+      : T['relations'][K]['dataForUpdateOne'];
+};
 
 // Type of argument for `update`.
 // not available when there are no conditions on the query.
@@ -139,12 +131,14 @@ export type ChangeCountArg<T extends UpdateSelf> =
         : number | string | bigint;
     };
 
-// `type` instead of `interface`: PickQueryResultReturnTypeUniqueColumns and
-// PickQueryUniqueProperties both declare `internal` with different shapes,
-// which `interface extends` cannot merge.
-type UpdateManyBySelf = UpdateSelf &
-  PickQueryResultReturnTypeUniqueColumns &
-  PickQueryUniqueProperties;
+interface UpdateManyBySelf extends UpdateSelf {
+  internal: {
+    uniqueColumns: unknown;
+    uniqueColumnNames: unknown;
+    uniqueColumnTuples: unknown;
+    uniqueConstraints: unknown;
+  };
+}
 
 // Data type for updateMany / updateManyOptional (PK-based)
 type UpdateManyData<T extends UpdateSelf> = ({
@@ -189,6 +183,7 @@ const _queryUpdateMany = <T extends UpdateSelf>(
   strict: boolean,
 ): T => {
   const query = self as unknown as Query;
+  throwIfReadOnly(query);
   const { q } = query;
   const { shape } = q;
 
@@ -233,6 +228,8 @@ export const _queryChangeCounter = <T extends UpdateSelf>(
   op: string,
   data: ChangeCountArg<T>,
 ) => {
+  throwIfReadOnly(self as unknown as Query);
+
   const q = (self as unknown as Query).q;
   q.type = 'update';
 
@@ -278,6 +275,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
   arg: UpdateArg<T>,
 ): UpdateResult<T> => {
   const query = updateSelf as unknown as Query;
+  throwIfReadOnly(query);
   const { q } = query;
 
   q.type = 'update';
@@ -294,7 +292,10 @@ export const _queryUpdate = <T extends UpdateSelf>(
     if (!item && shape !== anyShape) {
       delete set[key];
     } else if (item.data.virtual) {
-      (item as VirtualColumn<ColumnSchemaConfig>).update?.(query, set);
+      (item as VirtualColumn<ColumnSchemaConfig>).update?.(
+        query as unknown as UpdateSelf,
+        set,
+      );
       delete set[key];
     } else {
       if (item) throwOnReadOnlyUpdate(query, item, key);
@@ -568,7 +569,7 @@ export class QueryUpdate {
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
   update<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
-    return _queryUpdate(_clone(this), arg as never) as never;
+    return _queryUpdate(_clone(this) as unknown as T, arg as never) as never;
   }
 
   /**
@@ -601,7 +602,10 @@ export class QueryUpdate {
     this: T,
     arg: UpdateArg<T>,
   ): UpdateResult<T> {
-    return _queryUpdateOrThrow(_clone(this), arg as never) as never;
+    return _queryUpdateOrThrow(
+      _clone(this) as unknown as T,
+      arg as never,
+    ) as never;
   }
 
   /**
@@ -663,6 +667,8 @@ export class QueryUpdate {
   ): JoinResultFromArgs<T, Arg, Cb, true, true> & QueryHasWhere {
     const q = _clone(this);
 
+    throwIfReadOnly(q);
+
     const joinArgs = _joinReturningArgs(
       q,
       true,
@@ -684,7 +690,7 @@ export class QueryUpdate {
    * Use after {@link updateFrom}
    */
   set<T extends UpdateSelf>(this: T, arg: UpdateArg<T>): UpdateResult<T> {
-    return _queryUpdate(_clone(this), arg as never) as never;
+    return _queryUpdate(_clone(this) as unknown as T, arg as never) as never;
   }
 
   /**
@@ -729,7 +735,11 @@ export class QueryUpdate {
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
-    return _queryChangeCounter(_clone(this), '+', data as never);
+    return _queryChangeCounter(
+      _clone(this) as unknown as T,
+      '+',
+      data as never,
+    );
   }
 
   /**
@@ -774,7 +784,11 @@ export class QueryUpdate {
     this: T,
     data: ChangeCountArg<T>,
   ): UpdateResult<T> {
-    return _queryChangeCounter(_clone(this), '-', data as never);
+    return _queryChangeCounter(
+      _clone(this) as unknown as T,
+      '-',
+      data as never,
+    );
   }
 
   /**

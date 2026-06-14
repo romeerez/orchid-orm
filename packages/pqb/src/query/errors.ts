@@ -156,3 +156,9 @@ export class NestedSqlSessionError extends OrchidOrmInternalError {
     );
   }
 }
+
+export class CannotMutateReadOnlyTableError extends OrchidOrmInternalError {
+  constructor(query: IsQuery) {
+    super(query, 'Cannot mutate a readonly table.');
+  }
+}

@@ -15,11 +15,12 @@ import {
   RecordUnknown,
   RelationConfigBase,
   PickQuerySelectableRelations,
+  UpdateSelf,
 } from 'pqb/internal';
 import { Query } from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
-import { BaseTableClass, ORMTableInput } from '../../base-table';
+import { BaseTableClass, ORMTableInput } from '../../orm-table/base-table';
 import { RelationRefsOptions } from './options';
 
 // INNER JOIN the current relation instead of the default OUTER behavior
@@ -65,9 +66,9 @@ export interface NestedUpdateOneItem {
   disconnect?: boolean;
   set?: WhereArg<PickQuerySelectableRelations>;
   delete?: boolean;
-  update?: UpdateData<Query>;
+  update?: UpdateData<UpdateSelf>;
   upsert?: {
-    update: UpdateData<Query>;
+    update: UpdateData<UpdateSelf>;
     create: RecordUnknown | (() => RecordUnknown);
   };
   create: RecordUnknown;
@@ -80,7 +81,7 @@ export interface NestedUpdateManyItems {
   delete?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
   update?: {
     where: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
-    data: UpdateData<Query>;
+    data: UpdateData<UpdateSelf>;
   };
   create: RecordUnknown[];
 }

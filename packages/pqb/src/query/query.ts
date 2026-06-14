@@ -150,9 +150,15 @@ export interface Query
     length: number,
     name: QueryErrorName,
   ) => QueryError;
+
+  readOnly: true | undefined;
 }
 
 export namespace Query {
+  export interface NotReadOnlyQuery extends Query {
+    readOnly: undefined;
+  }
+
   export namespace Order {
     export type Arg<T extends OrderNamespace.ArgThis> = OrderNamespace.Arg<T>;
     export type Args<T extends OrderNamespace.ArgThis> = OrderNamespace.Args<T>;
@@ -162,6 +168,10 @@ export namespace Query {
     export interface SingleValueResult {
       result: { value: Column.Pick.OutputType };
       returnType: 'value' | 'valueOrThrow';
+    }
+
+    export interface IsNotReadOnly {
+      readOnly: undefined;
     }
   }
 }

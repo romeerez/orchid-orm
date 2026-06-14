@@ -16,6 +16,7 @@ import {
   ColumnSchemaConfig,
   CreateCtx,
   CreateData,
+  CreateSelf,
   CreateManyMethodsNames,
   CreateMethodsNames,
   EmptyObject,
@@ -32,11 +33,12 @@ import {
   RelationConfigBase,
   RelationJoinQuery,
   SelectableFromShape,
+  UpdateSelf,
   UpdateData,
   VirtualColumn,
   WhereArg,
 } from 'pqb/internal';
-import { ORMTableInput } from '../base-table';
+import { ORMTableInput } from '../orm-table/base-table';
 import {
   RelationData,
   RelationThunkBase,
@@ -145,45 +147,48 @@ export interface HasOneInfo<
     ? QueryManyTake<Q>
     : QueryManyTakeOptional<Q>;
   omitForeignKeyInCreate: never;
-  optionalDataForCreate: T['relations'][Name]['options'] extends RelationThroughOptions
-    ? EmptyObject
-    : {
-        [P in Name]?: RelationToOneDataForCreate<{
-          nestedCreateQuery: CreateData<Q>;
-          table: Q;
-        }>;
-      };
-  dataForCreate: never;
+  optionalDataForCreate: Q extends Query.Pick.IsNotReadOnly
+    ? T['relations'][Name]['options'] extends RelationThroughOptions
+      ? EmptyObject
+      : {
+          [P in Name]?: RelationToOneDataForCreate<{
+            nestedCreateQuery: CreateData<Q>;
+            table: Q;
+          }>;
+        }
+    : EmptyObject;
+  dataForCreate: undefined;
   // `hasOne` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key of the related record
   // - `delete` to delete the related record
   // - `update` to update the related record
-  dataForUpdate:
-    | { disconnect: boolean }
-    | { delete: boolean }
-    | { update: UpdateData<Q> };
+  dataForUpdate: Q extends Query.Pick.IsNotReadOnly
+    ? { disconnect: boolean } | { delete: boolean } | { update: UpdateData<Q> }
+    : never;
   // Only for records that update a single record:
   // - `set` to update the foreign key of related record found by condition
   // - `upsert` to update or create the related record
   // - `create` to create a related record
-  dataForUpdateOne:
-    | { disconnect: boolean }
-    | { set: WhereArg<Q> }
-    | { delete: boolean }
-    | { update: UpdateData<Q> }
-    | {
-        upsert: {
-          update: UpdateData<Q>;
-          create: CreateData<Q> | (() => CreateData<Q>);
-        };
-      }
-    | {
-        create: CreateData<Q>;
-      };
+  dataForUpdateOne: Q extends Query.Pick.IsNotReadOnly
+    ?
+        | { disconnect: boolean }
+        | { set: WhereArg<Q> }
+        | { delete: boolean }
+        | { update: UpdateData<Q> }
+        | {
+            upsert: {
+              update: UpdateData<Q>;
+              create: CreateData<Q> | (() => CreateData<Q>);
+            };
+          }
+        | {
+            create: CreateData<Q>;
+          }
+    : never;
 }
 
 interface State {
-  query: Query;
+  query: Query.NotReadOnlyQuery;
   primaryKeys: string[];
   foreignKeys: string[];
   on?: RecordUnknown;
@@ -219,13 +224,14 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   }
 
   create(
-    self: Query,
+    self: CreateSelf,
     ctx: CreateCtx,
     items: RecordUnknown[],
     rowIndexes: number[],
     count: number,
   ) {
-    if (count <= self.qb.internal.nestedCreateBatchMax) {
+    const querySelf = self as unknown as Query;
+    if (count <= querySelf.qb.internal.nestedCreateBatchMax) {
       interface NestedCreateItem {
         indexes: number[];
         items: RecordUnknown[];
@@ -276,7 +282,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       let createAs: string | undefined;
       let connectAs: string | undefined;
       let connectOrCreateAs: string | undefined;
-      _hookSelectColumns(self, primaryKeys, (aliasedPrimaryKeys) => {
+      _hookSelectColumns(querySelf, primaryKeys, (aliasedPrimaryKeys) => {
         foreignKeys.forEach((key, keyI) => {
           const primaryKey = aliasedPrimaryKeys[keyI];
 
@@ -321,27 +327,30 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       const { create, connect, connectOrCreate } = nestedCreateItems;
 
       if (create) {
-        const query = _queryInsertMany(_clone(rel), create.items as never);
+        const query = _queryInsertMany(
+          _clone(rel) as unknown as CreateSelf,
+          create.items as never,
+        ) as unknown as Query;
 
-        _appendQuery(self, query, (as) => (createAs = as));
+        _appendQuery(querySelf, query, (as) => (createAs = as));
       }
 
       if (connect) {
         connect.values.forEach((value, i) => {
           const query = _queryUpdateOrThrow(
-            rel.where(value as never) as never,
+            rel.where(value as never) as unknown as UpdateSelf,
             connect.items[i] as never,
-          ) as Query;
+          ) as unknown as Query;
 
           query.q.ensureCount = 1;
 
-          _appendQuery(self, query, (as) => (connectAs = as));
+          _appendQuery(querySelf, query, (as) => (connectAs = as));
         });
       }
 
       if (connectOrCreate) {
         connectOrCreate.values.forEach((value, i) => {
-          const query = _queryUpsert(rel.where(value.where as never) as never, {
+          const query = _queryUpsert(rel.where(value.where as never) as Query, {
             update: connectOrCreate.items[i],
             create: {
               ...(value.create as RecordUnknown),
@@ -349,12 +358,12 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
             },
           });
 
-          _appendQuery(self, query, (as) => (connectOrCreateAs = as));
+          _appendQuery(querySelf, query, (as) => (connectOrCreateAs = as));
         });
       }
     } else {
       hasRelationHandleCreate(
-        self,
+        querySelf,
         ctx,
         items,
         rowIndexes,
@@ -365,11 +374,12 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     }
   }
 
-  update(self: Query, set: RecordUnknown) {
+  update(self: UpdateSelf, set: RecordUnknown) {
+    const querySelf = self as unknown as Query;
     const params = set[this.key] as NestedUpdateOneItem;
     if (
       (params.set || params.create || params.upsert) &&
-      isQueryReturnsAll(self)
+      isQueryReturnsAll(querySelf)
     ) {
       const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
       throw new Error(`\`${key}\` option is not allowed in a batch update`);
@@ -385,7 +395,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       params.delete
     ) {
       let appendedAs: string | undefined;
-      _hookSelectColumns(self, primaryKeys, (aliasedPrimaryKeys) => {
+      _hookSelectColumns(querySelf, primaryKeys, (aliasedPrimaryKeys) => {
         selectIdsSql._sql = selectCteColumnsSql(
           appendedAs as string,
           aliasedPrimaryKeys,
@@ -418,8 +428,11 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         });
       }
 
-      const nullifyOrDeleteQuery = params.update
-        ? _queryUpdate(existingRelQuery, params.update)
+      const nullifyOrDeleteQuery = (params.update
+        ? _queryUpdate(
+            existingRelQuery as unknown as UpdateSelf,
+            params.update as never,
+          )
         : params.upsert
           ? _queryUpsert(existingRelQuery, {
               update: params.upsert.update,
@@ -432,27 +445,35 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
             })
           : params.delete
             ? _queryDelete(existingRelQuery)
-            : _queryUpdate(existingRelQuery, this.setNulls);
+            : _queryUpdate(
+                existingRelQuery as unknown as UpdateSelf,
+                this.setNulls as never,
+              )) as unknown as Query;
 
       nullifyOrDeleteQuery.q.returnType = 'void';
 
-      _appendQuery(self, nullifyOrDeleteQuery, (as) => (appendedAs = as));
+      _appendQuery(querySelf, nullifyOrDeleteQuery, (as) => (appendedAs = as));
 
       if (params.create) {
-        const createQuery = _queryInsert(_clone(relQuery), {
-          ...params.create,
-          ...setIds,
-        });
+        const createQuery = _queryInsert(
+          _clone(relQuery) as unknown as CreateSelf,
+          {
+            ...params.create,
+            ...setIds,
+          },
+        ) as unknown as Query;
 
-        _appendQuery(self, createQuery, noop);
+        _appendQuery(querySelf, createQuery, noop);
       } else if (params.set) {
         const setQuery = _queryUpdate(
-          _queryWhere(_clone(relQuery), [params.set as never]),
-          setIds,
-        );
+          _queryWhere(_clone(relQuery), [
+            params.set as never,
+          ]) as unknown as UpdateSelf,
+          setIds as never,
+        ) as unknown as Query;
         setQuery.q.returnType = 'void';
 
-        _appendQuery(self, setQuery, noop);
+        _appendQuery(querySelf, setQuery, noop);
       }
     }
   }
@@ -521,7 +542,7 @@ export const makeHasOneMethod = (
 
   if (on) {
     _queryWhere(query, [on]);
-    _queryDefaults(query, on);
+    _queryDefaults(query as unknown as CreateSelf, on);
   }
 
   addAutoForeignKey(
@@ -533,7 +554,12 @@ export const makeHasOneMethod = (
     relation.options,
   );
 
-  const state: State = { query, primaryKeys, foreignKeys, on };
+  const state: State = {
+    query: query as Query.NotReadOnlyQuery,
+    primaryKeys,
+    foreignKeys,
+    on,
+  };
   const len = primaryKeys.length;
 
   const reversedOn: RecordString = {};
@@ -561,7 +587,13 @@ export const makeHasOneMethod = (
         values[foreignKeys[i]] = params[primaryKeys[i]];
       }
 
-      return _queryDefaults(query.where(values as never), { ...on, ...values });
+      return _queryDefaults(
+        query.where(values as never) as unknown as CreateSelf,
+        {
+          ...on,
+          ...values,
+        },
+      ) as unknown as Query;
     },
     virtualColumn: new HasOneVirtualColumn(
       internalSchemaConfig,

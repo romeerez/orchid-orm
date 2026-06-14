@@ -1,5 +1,5 @@
 import { Query, SetQueryReturnsVoid } from '../../query';
-import { _queryExec } from '../../query.utils';
+import { _queryExec, throwIfReadOnly } from '../../query.utils';
 import { makeTruncateSql } from './truncate.sql';
 import { _clone } from '../../basic-features/clone/clone';
 
@@ -20,10 +20,12 @@ export class QueryTruncate {
    *
    * @param options - truncate options, may have `cascade: true` and `restartIdentity: true`
    */
-  truncate<T>(
+  truncate<T extends Query.Pick.IsNotReadOnly>(
     this: T,
     options?: { restartIdentity?: boolean; cascade?: boolean },
   ): SetQueryReturnsVoid<T> {
+    throwIfReadOnly(this as unknown as Query);
+
     const query = Object.create(_clone(this)) as Query;
 
     query.toSQL = () => makeTruncateSql(query, options);
