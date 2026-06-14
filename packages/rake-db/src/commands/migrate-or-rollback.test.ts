@@ -25,7 +25,9 @@ import {
   testAdapter,
   testDbOptions,
   useTestDatabase,
+  testDefaultColumnTypes,
 } from 'test-utils';
+import { createDbWithAdapter } from 'pqb';
 import { testConfig } from '../rake-db.test-utils';
 import { getMigrations } from '../migration/migrations-set';
 import {
@@ -49,9 +51,17 @@ jest.mock('../common', () => {
   };
 });
 
-jest.mock('../migration/migrations-set', () => ({
-  getMigrations: jest.fn(() => ({ migrations: [] })),
-}));
+jest.mock('../migration/migrations-set', () => {
+  const actual = jest.requireActual('../migration/migrations-set');
+  return {
+    getMigrations: jest.fn(
+      (ctx: unknown, config: { migrations?: unknown }, ...args: unknown[]) =>
+        config.migrations
+          ? actual.getMigrations(ctx, config, ...args)
+          : { migrations: [] },
+    ),
+  };
+});
 
 jest.mock('../migration/manage-migrated-versions', () => {
   const actual = jest.requireActual('../migration/manage-migrated-versions');
@@ -67,6 +77,8 @@ jest.mock('../migration/manage-migrated-versions', () => {
 });
 
 describe('migrate-or-rollback', () => {
+  beforeEach(jest.clearAllMocks);
+
   const adapter = testAdapter;
   const dbName = new URL(testDbOptions.databaseURL as string).pathname.slice(1);
   const config = { ...testConfig, log: true };
@@ -252,23 +264,62 @@ describe('migrate-or-rollback', () => {
         sequence: [],
       });
 
-      asMock(getMigrations).mockResolvedValueOnce({
-        migrations: [
-          {
-            version: '001',
-            path: 'path',
-            async load() {},
-          },
-        ],
-      });
+      const change = createMigrationChangeFn(testConfig);
+
+      expect(saveMigratedVersion).not.toHaveBeenCalled();
 
       await migrate(adapter, {
-        migrations: {},
+        migrations: {
+          '0001_test': async () => ({
+            default: change(async () => {}),
+          }),
+        },
         log: false,
         logger: mockChangeLogger,
       });
 
+      expect(saveMigratedVersion).toHaveBeenCalled();
       expect(mockChangeLogger.log.mock.calls).toEqual([]);
+    });
+
+    it('should inherit query logging from the db passed to migrate', async () => {
+      const logger = {
+        log: jest.fn(),
+        error: jest.fn(),
+        warn: noop,
+      };
+
+      const db = createDbWithAdapter({
+        adapter: testAdapter,
+        columnTypes: testDefaultColumnTypes,
+        log: { colors: false },
+        logger,
+      });
+
+      const change = createMigrationChangeFn(testConfig);
+
+      expect(saveMigratedVersion).not.toHaveBeenCalled();
+
+      const migrations = {
+        '0001_create_issue658_table': async () => ({
+          default: change(async (db) => {
+            await db.createTable('issue658_user');
+          }),
+        }),
+      };
+
+      await migrate(db, {
+        migrations,
+        migrationsTable: 'issue658SchemaMigrations',
+      });
+
+      expect(saveMigratedVersion).toHaveBeenCalled();
+      expect(logger.log.mock.calls.flat()).toEqual([
+        expect.stringContaining('Created migration versions table'),
+        expect.stringContaining('Migrating database'),
+        expect.stringContaining('CREATE TABLE "issue658_user"'),
+        expect.stringContaining('Migrated file'),
+      ]);
     });
   });
 

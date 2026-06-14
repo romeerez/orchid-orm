@@ -1,6 +1,8 @@
-import { Adapter } from 'pqb/internal';
+import { Adapter, PickQueryQ, QueryData } from 'pqb/internal';
 
 export interface OrmParam {
+  $qb?: PickQueryQ;
+  q?: QueryData;
   $getAdapter(): Adapter;
 }
 

@@ -8,7 +8,6 @@ import {
   MaybePromise,
   NoPrimaryKeyOption,
   pathToLog,
-  QueryLogger,
   QueryLogOptions,
   toArray,
 } from 'pqb/internal';
@@ -120,12 +119,25 @@ export const migrateConfigDefaults = {
 
 export const handleConfigLogger = (
   config: QueryLogOptions,
-): QueryLogger | undefined => {
-  return config.log === true
-    ? config.logger || console
-    : config.log === false
-      ? undefined
-      : config.logger;
+  db?: DbParam,
+): QueryLogOptions | undefined => {
+  const q = db
+    ? '$qb' in db && db.$qb
+      ? db.$qb.q
+      : 'q' in db
+        ? db.q
+        : undefined
+    : undefined;
+
+  return {
+    log: config.log ?? q?.log,
+    logger:
+      config.log === true
+        ? config.logger || q?.logger || console
+        : config.log === false
+          ? undefined
+          : config.logger || q?.logger,
+  };
 };
 
 /**
@@ -138,10 +150,12 @@ export const handleConfigLogger = (
  * - `log: undefined` → preserves existing `logger`
  *
  * @param config - the public config with optional `log` setting
+ * @param db - optionally provided by `migrate` to get the logger from it
  * @returns a processed RakeDbConfig ready for internal use
  */
 export const processMigrateConfig = (
   config: MigrateConfig,
+  db?: DbParam,
 ): MigrateConfigInternal => {
   let migrationsPath;
   if (!('migrations' in config)) {
@@ -158,7 +172,7 @@ export const processMigrateConfig = (
     ...migrateConfigDefaults,
     ...(config as MigrateConfigInternal),
     migrationsPath: migrationsPath as string,
-    logger: handleConfigLogger(config),
+    ...handleConfigLogger(config, db),
   };
 
   if ('baseTable' in config && config.baseTable) {
@@ -194,7 +208,10 @@ function makeMigrateFn(
   ) => Promise<MigrationItem[]>,
 ): MigrateFn {
   return async (db, publicConfig, params): Promise<void> => {
-    const config = processMigrateConfig(publicConfig) as MigrateConfigInternal;
+    const config = processMigrateConfig(
+      publicConfig,
+      db,
+    ) as MigrateConfigInternal;
     const ctx = params?.ctx || {};
     const set = await getMigrations(ctx, config, up);
     const count = params?.count ?? defaultCount;
@@ -299,7 +316,7 @@ export async function runMigration(
 
   const config = {
     ...rawConfig,
-    logger: handleConfigLogger(rawConfig),
+    ...handleConfigLogger(rawConfig),
   };
 
   const adapter = getMaybeTransactionAdapter(db);

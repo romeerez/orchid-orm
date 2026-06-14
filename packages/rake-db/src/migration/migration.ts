@@ -910,9 +910,7 @@ export class Migration<CT = unknown> {
    */
   async renameSchema(from: string, to: string): Promise<void> {
     await this.adapter.query(
-      `ALTER SCHEMA "${this.up ? from : to}" RENAME TO "${
-        this.up ? to : from
-      }"`,
+      `ALTER SCHEMA "${this.up ? from : to}" RENAME TO "${this.up ? to : from}"`,
     );
   }
 
