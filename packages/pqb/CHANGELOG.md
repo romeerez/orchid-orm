@@ -1,5 +1,11 @@
 # pqb
 
+## 0.67.1
+
+### Patch Changes
+
+- 69a881b3: Allow `get`, `getOptional`, and `pluck` to accept query-aware callbacks that return SQL expressions or single-value queries. This matches scalar selection behavior with existing `select` callback semantics, including relation scalar queries and expression helpers such as `q.ref` and `q.column` (#709)
+
 ## 0.67.0
 
 ### Minor Changes

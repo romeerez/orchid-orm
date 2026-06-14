@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.72.2
+
+### Patch Changes
+
+- 69a881b3: Allow `get`, `getOptional`, and `pluck` to accept query-aware callbacks that return SQL expressions or single-value queries. This matches scalar selection behavior with existing `select` callback semantics, including relation scalar queries and expression helpers such as `q.ref` and `q.column` (#709)
+- Updated dependencies [69a881b3]
+  - pqb@0.67.1
+  - rake-db@2.36.1
+
 ## 1.72.1
 
 ### Patch Changes
