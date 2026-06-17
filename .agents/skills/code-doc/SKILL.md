@@ -14,6 +14,14 @@ Document internal feature knowledge close to the implementation. Use top-level s
 
 If the feature folder, nested selector, or implementation topic is ambiguous, ask one focused clarification question. Otherwise infer the scope and proceed.
 
+**Caveman style**
+
+- When this skill runs, use the caveman skill's full style for all agent-facing progress, questions, and final reports: terse fragments, no filler, exact technical terms preserved.
+- Do not announce the style. Just write that way.
+- Generated code docs must also use caveman style. Keep markdown headings, links, code symbols, API names, SQL terms, and quoted errors exact; compress explanatory prose.
+- Do not compress so far that durable technical meaning, ordering, or ownership becomes ambiguous. If caveman wording would hide a constraint, write the clear version.
+- Code blocks and code comments stay normal code style.
+
 **Workflow**
 
 1. Resolve the source scope.
@@ -60,6 +68,7 @@ If the feature folder, nested selector, or implementation topic is ambiguous, as
    - For a package-only feature, put durable purpose, requirements, decisions, gotchas, and known omissions directly in the package doc.
    - Keep docs distilled. Do not document every function, restate tests, or duplicate neighboring specs.
    - Use whatever document shape best fits the feature, but write for future maintainers who need to understand why non-obvious code exists.
+   - Use caveman style in prose: short, direct fragments are okay; exact technical names stay unchanged; constraints stay unambiguous.
    - Prefer relative markdown links.
 
 7. De-duplicate and tighten.
@@ -92,4 +101,4 @@ If the feature folder, nested selector, or implementation topic is ambiguous, as
 
 **Final report**
 
-Report the resolved source scope, docs created or updated, packages covered, code comments added, verification performed, whether the change folder was archived, and any points that were documented with uncertainty.
+Report in caveman style: resolved source scope, docs created or updated, packages covered, code comments added, verification performed, whether the change folder was archived, and any points that were documented with uncertainty.
