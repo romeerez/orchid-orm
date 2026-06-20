@@ -308,7 +308,7 @@ await db.account.create({ balance: '12.3400' });
 const balance = await db.account.get('balance');
 ```
 
-`selectSql` is applied to every selected output of the column, including default selection, `select('*')`, explicit selects, aliases, joined selections, relation JSON payloads, `get`, `pluck`, and mutation `RETURNING`.
+`selectSql` is applied to every selected output of the column, including default selection, `select('*')`, explicit selects, aliases, joined selections, relation JSON payloads, aggregate value arguments such as `sum('balance')`, `get`, `pluck`, and mutation `RETURNING`.
 It is selected by default because it is still a real column.
 Use [select(false)](#exclude-from-default-select) together with `selectSql` when the column should be omitted from default selection and wildcard selection.
 

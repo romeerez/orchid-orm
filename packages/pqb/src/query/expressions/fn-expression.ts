@@ -1,5 +1,5 @@
 import { Query, SetQueryReturnsColumnOrThrow } from '../query';
-import { columnToSql, rawOrColumnToSql } from '../sql/column-to-sql';
+import { columnToSql, selectedColumnToSql } from '../sql/column-to-sql';
 import { OrderItem, pushOrderBySql } from '../basic-features/order/order.sql';
 import { WhereItem, whereToSql } from '../basic-features/where/where.sql';
 import { windowToSql } from '../basic-features/window/window.sql';
@@ -118,9 +118,7 @@ export class FnExpression<
       this.args
         .map((arg) => {
           if (typeof arg === 'string') {
-            return arg === '*'
-              ? '*'
-              : columnToSql(ctx, q, q.shape, arg, quotedAs);
+            return arg === '*' ? '*' : fnArgToSql(ctx, q, arg, quotedAs);
           } else if (arg instanceof Expression) {
             return arg.toSQL(ctx, quotedAs);
           } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {
@@ -129,7 +127,7 @@ export class FnExpression<
             for (const key in pairs) {
               args.push(
                 // ::text is needed to bypass "could not determine data type of parameter" postgres error
-                `${addValue(values, key)}::text, ${rawOrColumnToSql(
+                `${addValue(values, key)}::text, ${fnArgToSql(
                   ctx,
                   q,
                   pairs[key as keyof typeof pairs] as never,
@@ -185,6 +183,23 @@ export class FnExpression<
     return sql.join('');
   }
 }
+
+const fnArgToSql = (
+  ctx: ToSQLCtx,
+  data: QueryData,
+  arg: SelectableOrExpression,
+  quotedAs?: string,
+): string => {
+  if (typeof arg === 'string') {
+    if (arg.endsWith('.*') || data.valuesJoinedAs?.[arg]) {
+      return columnToSql(ctx, data, data.shape, arg, quotedAs);
+    }
+
+    return selectedColumnToSql(ctx, data, data.shape, arg, quotedAs);
+  }
+
+  return (arg as Expression).toSQL(ctx, quotedAs);
+};
 
 // Applies a function expression to the query.
 export function makeFnExpression<

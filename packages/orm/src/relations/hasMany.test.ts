@@ -956,6 +956,7 @@ describe('hasMany', () => {
           Age: null,
           Data: null,
           Picture: null,
+          Balance: null,
         });
       },
 

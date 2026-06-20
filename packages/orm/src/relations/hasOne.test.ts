@@ -749,6 +749,7 @@ describe('hasOne', () => {
           Age: null,
           Data: null,
           Picture: null,
+          Balance: null,
         });
       },
 

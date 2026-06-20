@@ -29,6 +29,7 @@ export class UserTable extends BaseTable {
     Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
     Age: t.name('age').decimal().nullable(),
     Active: t.name('active').boolean().nullable(),
+    Balance: t.name('balance').decimal().nullable(),
     ...t.timestamps(),
   }));
 

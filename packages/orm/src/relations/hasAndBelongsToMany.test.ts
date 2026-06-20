@@ -996,6 +996,7 @@ describe('hasAndBelongsToMany', () => {
           Age: null,
           Data: null,
           Picture: null,
+          Balance: null,
           Id: user.Id,
           Name,
         });
