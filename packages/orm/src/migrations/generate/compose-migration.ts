@@ -16,6 +16,8 @@ import { RakeDbConfig } from 'rake-db';
 import { processRoles } from './generators/roles.generator';
 import { processDefaultPrivileges } from './generators/default-privilege.generator';
 import { processGrants } from './generators/grants.generator';
+import { processViews } from './generators/views.generator';
+import { processMaterializedViews } from './generators/materialized-views.generator';
 
 export interface ComposeMigrationParams {
   structureToAstCtx: StructureToAstCtx;
@@ -78,6 +80,9 @@ export const composeMigration = async (
     params,
     pendingDbTypes,
   );
+
+  await processViews(ast, adapter, dbStructure, params);
+  await processMaterializedViews(ast, adapter, dbStructure, params);
 
   return astToMigration(currentSchema, config, ast);
 };

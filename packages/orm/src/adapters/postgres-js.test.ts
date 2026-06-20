@@ -30,4 +30,19 @@ describe('postgres-js', () => {
     };
     expect('log' in adapter.config).toBe(false);
   });
+
+  it('should not pass `views` param to the driver', () => {
+    const db = orchidORM(
+      {
+        databaseURL: 'postgres://user:@host:123/db?ssl=false',
+        views: {},
+      },
+      {},
+    );
+
+    const adapter = db.$qb.adapterNotInTransaction as unknown as {
+      config: RecordUnknown;
+    };
+    expect('views' in adapter.config).toBe(false);
+  });
 });

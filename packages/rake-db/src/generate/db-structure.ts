@@ -52,6 +52,16 @@ export namespace DbStructure {
     sql: string;
   }
 
+  export interface MaterializedView {
+    schemaName: string;
+    name: string;
+    deps: RakeDbAst.MaterializedView['deps'];
+    columns: Column[];
+    sql: string;
+    isPopulated: boolean;
+    tablespace?: string;
+  }
+
   export interface Procedure {
     schemaName: string;
     name: string;
@@ -431,6 +441,40 @@ JOIN pg_rewrite r ON r.ev_class = c.oid
 WHERE ${filterSchema('nc.nspname')}
 ORDER BY c.relname`;
 
+const materializedViewsSql = `SELECT
+  nc.nspname AS "schemaName",
+  c.relname AS "name",
+  (
+    SELECT COALESCE(json_agg(t.*), '[]')
+    FROM (
+      SELECT
+        ns.nspname AS "schemaName",
+        obj.relname AS "name"
+      FROM pg_class obj
+      JOIN pg_depend dep ON dep.refobjid = obj.oid
+      JOIN pg_rewrite rew ON rew.oid = dep.objid
+      JOIN pg_namespace ns ON ns.oid = obj.relnamespace
+      WHERE rew.ev_class = c.oid AND obj.oid <> c.oid
+    ) t
+  ) "deps",
+  (SELECT coalesce(json_agg(t), '[]') FROM (${columnsSql({
+    schema: 'nc',
+    table: 'c',
+    where: 'a.attrelid = c.oid',
+  })}) t) AS "columns",
+  pg_get_viewdef(c.oid) AS "sql",
+  c.relispopulated AS "isPopulated",
+  spc.spcname AS "tablespace"
+FROM pg_namespace nc
+JOIN pg_class c
+  ON nc.oid = c.relnamespace
+ AND c.relkind = 'm'
+ AND c.relpersistence != 't'
+JOIN pg_rewrite r ON r.ev_class = c.oid
+LEFT JOIN pg_tablespace spc ON spc.oid = c.reltablespace
+WHERE ${filterSchema('nc.nspname')}
+ORDER BY c.relname`;
+
 const indexesSql = `SELECT
   n.nspname "schemaName",
   t.relname "tableName",
@@ -745,7 +789,7 @@ const grantsSql = `SELECT COALESCE(json_agg(t.* ORDER BY t."target", t."schema",
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
   JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) ae ON true
-  WHERE c.relkind IN ('r', 'p')
+  WHERE c.relkind IN ('r', 'p', 'v')
     AND ${filterSchema('n.nspname')}
     AND ae.grantee <> c.relowner
   GROUP BY "grantor", "grantee", "schema", "name", "target"
@@ -909,7 +953,14 @@ const sql = (version: number, params?: IntrospectDbStructureParams) =>
   `SELECT (${schemasSql}) AS "schemas", ${jsonAgg(
     tablesSql(params?.rls),
     'tables',
-  )}, ${jsonAgg(viewsSql, 'views')}, ${jsonAgg(
+  )}, ${
+    params?.loadViews
+      ? `${jsonAgg(viewsSql, 'views')}, ${jsonAgg(
+          materializedViewsSql,
+          'materializedViews',
+        )}, `
+      : ''
+  }${jsonAgg(
     indexesSql,
     'indexes',
   )}, ${jsonAgg(constraintsSql, 'constraints')}, ${jsonAgg(
@@ -933,7 +984,8 @@ export interface IntrospectedStructure {
   version: number;
   schemas: string[];
   tables: DbStructure.Table[];
-  views: DbStructure.View[];
+  views?: DbStructure.View[];
+  materializedViews?: DbStructure.MaterializedView[];
   indexes: DbStructure.Index[];
   excludes: DbStructure.Exclude[];
   constraints: DbStructure.Constraint[];
@@ -951,7 +1003,8 @@ export interface IntrospectedStructure {
 interface RawIntrospectedStructure {
   schemas: string[];
   tables: DbStructure.Table[];
-  views: DbStructure.View[];
+  views?: DbStructure.View[];
+  materializedViews?: DbStructure.MaterializedView[];
   indexes: DbStructure.Index[];
   excludes: DbStructure.Exclude[];
   constraints: DbStructure.Constraint[];
@@ -972,6 +1025,8 @@ interface IntrospectDbStructureParams {
   roles?: {
     whereSql?: string;
   };
+  // Load views for callers that intend to reconcile managed views.
+  loadViews?: boolean;
   loadDefaultPrivileges?: boolean;
   loadGrants?: boolean;
 }
@@ -999,14 +1054,16 @@ export async function introspectDbSchema(
   }
 
   for (const table of raw.tables) {
-    for (const column of table.columns) {
-      nullsToUndefined(column);
-      if (column.identity) nullsToUndefined(column.identity);
-      if (column.compression) {
-        column.compression =
-          (column.compression as string) === 'p' ? 'pglz' : 'lz4';
-      }
-    }
+    processColumns(table.columns);
+  }
+
+  for (const view of raw.views || []) {
+    processColumns(view.columns);
+  }
+
+  for (const materializedView of raw.materializedViews || []) {
+    nullsToUndefined(materializedView);
+    processColumns(materializedView.columns);
   }
 
   const indexes: DbStructure.Index[] = [];
@@ -1254,6 +1311,17 @@ const mapRawGrant = (raw: RawDbStructure.Grant): DbStructure.Grant => {
   }
 
   return grant;
+};
+
+const processColumns = (columns: DbStructure.Column[]) => {
+  for (const column of columns) {
+    nullsToUndefined(column);
+    if (column.identity) nullsToUndefined(column.identity);
+    if (column.compression) {
+      column.compression =
+        (column.compression as string) === 'p' ? 'pglz' : 'lz4';
+    }
+  }
 };
 
 const nullsToUndefined = (obj: EmptyObject) => {

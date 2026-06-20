@@ -46,10 +46,19 @@ export interface CodeTableQueryData {
   schema?: string;
 }
 
+export interface CodeView extends PickQueryInternal {
+  name: string;
+  shape: ColumnsShape;
+  q: CodeTableQueryData;
+  materialized?: boolean;
+  viewData: NonNullable<QueryInternal['viewData']>;
+}
+
 export interface CodeItems {
   schemas: Set<string>;
   enums: Map<string, EnumItem>;
   tables: CodeTable[];
+  views: CodeView[];
   domains: CodeDomain[];
 }
 
@@ -60,6 +69,7 @@ interface AfterPull {
 
 export interface DbInstance {
   $qb: Query;
+  $views?: Record<string, Query>;
 }
 
 export class AbortSignal extends Error {}
@@ -97,7 +107,8 @@ export const generate = async (
 
   const structureParams = {
     loadDefaultPrivileges,
-    loadGrants: !!internal.grants || hasCodeTablesWithGrants(db),
+    loadGrants: !!internal.grants || hasCodeItemsWithGrants(db),
+    loadViews: hasCodeViews(db),
   };
 
   const rolesDbStructureParam = internal.roles
@@ -253,6 +264,7 @@ const migrateAndPullStructures = async (
   structureParams?: {
     loadDefaultPrivileges?: boolean;
     loadGrants?: boolean;
+    loadViews?: boolean;
   },
   afterPull?: AfterPull,
 ): Promise<{
@@ -267,6 +279,7 @@ const migrateAndPullStructures = async (
         schemas: [],
         tables: [],
         views: [],
+        materializedViews: [],
         indexes: [],
         excludes: [],
         constraints: [],
@@ -290,6 +303,7 @@ const migrateAndPullStructures = async (
         roles,
         loadDefaultPrivileges: structureParams?.loadDefaultPrivileges,
         loadGrants: structureParams?.loadGrants,
+        loadViews: structureParams?.loadViews,
       }),
     ),
   );
@@ -313,12 +327,24 @@ const hasCodeTablesWithRls = (db: DbInstance): boolean => {
   return false;
 };
 
-const hasCodeTablesWithGrants = (db: DbInstance): boolean => {
+const hasCodeViews = (db: DbInstance): boolean => {
+  return !!Object.keys(db.$views ?? {}).length;
+};
+
+const hasCodeItemsWithGrants = (db: DbInstance): boolean => {
   for (const key in db) {
     if (key[0] === '$') continue;
 
     const table = db[key as keyof typeof db] as Query;
     if (table.internal.tableGrants?.length) return true;
+  }
+
+  const views = db.$views;
+  if (!views) return false;
+
+  for (const key in views) {
+    const view = views[key];
+    if (view.internal.tableGrants?.length) return true;
   }
 
   return false;
@@ -343,6 +369,25 @@ const getEffectiveGrants = (
         ...grant,
         to: toArray(grant.to),
         tables: [tableTarget],
+      };
+
+      effectiveGrants.push(internalGrant);
+    }
+  }
+
+  for (const view of codeItems.views) {
+    const viewGrants = view.internal.tableGrants;
+    if (!viewGrants?.length) continue;
+
+    const viewTarget = view.q.schema
+      ? `${view.q.schema}.${view.name}`
+      : view.name;
+
+    for (const grant of viewGrants) {
+      const internalGrant: Grant.InternalPrivilege = {
+        ...grant,
+        to: toArray(grant.to),
+        tables: [viewTarget],
       };
 
       effectiveGrants.push(internalGrant);
@@ -407,6 +452,7 @@ const getActualItems = async (
     schemas: new Set(undefined),
     enums: new Map(),
     tables: [],
+    views: [],
     domains: [],
   };
 
@@ -453,34 +499,38 @@ const getActualItems = async (
       }
     }
 
-    for (const key in table.shape) {
-      const column = table.shape[key] as Column;
-      // remove computed columns from the shape
-      if (column.data.computed) {
-        delete table.shape[key];
-      } else if (column instanceof DomainColumn) {
-        const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
-          currentSchema,
-          column.dataType,
-        );
-        domains.set(column.dataType, {
-          schemaName,
-          name,
-          column: (column.data.as ?? UnknownColumn.instance) as Column,
-        });
-      } else {
-        const en =
-          column.dataType === 'enum'
-            ? column
-            : column instanceof ArrayColumn &&
-                column.data.item.dataType === 'enum'
-              ? column.data.item
-              : undefined;
+    processCodeItemShape(
+      table.shape as ColumnsShape,
+      currentSchema,
+      codeItems,
+      domains,
+    );
+  }
 
-        if (en) {
-          processEnumColumn(en, currentSchema, codeItems);
-        }
-      }
+  const views = db.$views;
+  if (views) {
+    for (const key in views) {
+      const view = views[key];
+      const schema = getQuerySchema(view);
+      if (schema) codeItems.schemas.add(schema);
+
+      codeItems.views.push({
+        name: view.table as string,
+        shape: view.shape as ColumnsShape,
+        internal: view.internal,
+        q: {
+          schema,
+        },
+        materialized: view.internal.materialized,
+        viewData: view.internal.viewData ?? {},
+      });
+
+      processCodeItemShape(
+        view.shape as ColumnsShape,
+        currentSchema,
+        codeItems,
+        domains,
+      );
     }
   }
 
@@ -530,6 +580,43 @@ const getActualItems = async (
   }
 
   return codeItems;
+};
+
+const processCodeItemShape = (
+  shape: ColumnsShape,
+  currentSchema: string,
+  codeItems: CodeItems,
+  domains: Map<string, CodeDomain>,
+) => {
+  for (const key in shape) {
+    const column = shape[key] as Column;
+    // remove computed columns from the shape
+    if (column.data.computed) {
+      delete shape[key];
+    } else if (column instanceof DomainColumn) {
+      const [schemaName = currentSchema, name] = getSchemaAndTableFromName(
+        currentSchema,
+        column.dataType,
+      );
+      domains.set(column.dataType, {
+        schemaName,
+        name,
+        column: (column.data.as ?? UnknownColumn.instance) as Column,
+      });
+    } else {
+      const en =
+        column.dataType === 'enum'
+          ? column
+          : column instanceof ArrayColumn &&
+              column.data.item.dataType === 'enum'
+            ? column.data.item
+            : undefined;
+
+      if (en) {
+        processEnumColumn(en, currentSchema, codeItems);
+      }
+    }
+  }
 };
 
 const addGrantSchemas = (

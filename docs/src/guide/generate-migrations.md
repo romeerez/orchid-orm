@@ -48,9 +48,9 @@ If you don't set a custom constraint name for indexes, primary keys, foreign key
 When renaming a table, the table primary key will be also renamed. When renaming a column, its index or foreign key will be renamed as well.
 
 The tool handles migration generation for
-tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, exclude constraints, extensions, domain types.
+tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, exclude constraints, extensions, domain types, and configured views.
 
-Let me know by opening an issue if you'd like to have a support for additional database features such as views, triggers, procedures.
+Let me know by opening an issue if you'd like to have a support for additional database features such as triggers and procedures.
 
 ## row level security
 
@@ -345,9 +345,9 @@ For manual grant and revoke migrations, see [migration writing](/guide/migration
 `db g` command attempts to drop all the database entities that it cannot find in the code.
 
 Use `generatorIgnore` option to preserve db entities that are needed but not reflected in the code.
-Such as when using certain extensions, or libraries, they can create schemas, tables, types, etc.
+Such as when using certain extensions, or libraries, they can create schemas, tables, views, types, etc.
 
-Ignoring a schema also ignores all its tables, domains, enums.
+Ignoring a schema also ignores all its tables, views, domains, enums.
 
 ```ts
 export const db = orchidORM(
@@ -359,6 +359,9 @@ export const db = orchidORM(
       schemas: ['pgboss'],
       // spatial_ref_sys is automatically created by postgis
       tables: ['spatial_ref_sys'],
+      // ignore views managed outside Orchid.
+      // use schema-qualified names for views outside the current schema.
+      views: ['legacy_view', 'analytics.external_view', /^external_/],
       // you can ignore individual enums, domains, extensions.
       enums: [],
       domains: [],
@@ -386,11 +389,17 @@ export const db = orchidORM(
 ```
 
 Top-level `generatorIgnore.tables` ignores the whole table, including its RLS flags and policies.
+Top-level `generatorIgnore.views` ignores view DDL reconciliation for matching views, whether the view exists only in the database, only in code, or in both places.
 `generatorIgnore.rls.tables` ignores only RLS flags and policies for the listed tables without disabling ordinary table diffing.
 `generatorIgnore.rls.policies` ignores only the listed policy names for a table; policy names are matched exactly.
 `generatorIgnore.grants.roles` ignores grants for matching grantee roles.
 `generatorIgnore.grants.<targetKey>` ignores grants for matching grant targets, such as `tables`, `allTablesIn`, `sequences`, `routines`, `types`, `domains`, or `databases`.
 Schema-qualified table names use the same `schema.table` string format as other ignore settings.
+View names use the same format: `view_name` for the current schema or `schema.view_name` for another schema.
+`generatorIgnore.views` selectors may be strings or regular expressions; regular expressions match the normalized view name.
 
 Grant ignore selectors may be a string, a regular expression, or an array of strings and regular expressions.
 Grant-specific ignores suppress grant reconciliation only; they do not disable ordinary object diffing.
+For views, use `generatorIgnore.views` to ignore the view itself: create, drop, SQL, columns, and options.
+Use `generatorIgnore.grants.tables` to ignore privileges on the view, such as `GRANT SELECT ON TABLE my_view`.
+If both the view and its grants are managed outside Orchid, list it in both places.

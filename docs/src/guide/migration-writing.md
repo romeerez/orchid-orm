@@ -1068,12 +1068,10 @@ change(async (db) => {
       temporary: true,
       recursive: true,
       columns: ['n'],
-      with: {
-        checkOption: 'LOCAL', // or 'CASCADED'
-        securityBarrier: true,
-        // securityInvoker defaults to true; set it to false to opt out.
-        securityInvoker: true,
-      },
+      checkOption: 'LOCAL', // or 'CASCADED'
+      securityBarrier: true,
+      // securityInvoker defaults to true; set it to false to opt out.
+      securityInvoker: true,
     },
     `
       VALUES (1)
@@ -1083,6 +1081,142 @@ change(async (db) => {
   );
 });
 ```
+
+## createMaterializedView, dropMaterializedView, refreshMaterializedView
+
+[//]: # 'has JSDoc'
+
+Create, drop, and refresh database materialized views.
+
+Materialized views store the result of their SQL query in the database, so reads can
+be faster, but the stored rows become stale until the materialized view is refreshed.
+PostgreSQL does not allow direct `INSERT`, `UPDATE`, or `DELETE` on a materialized
+view. Use `refreshMaterializedView` to replace its stored rows.
+
+Provide SQL as a string or via `t.sql` that can accept variables.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.createMaterializedView(
+    'analytics.monthlySales',
+    {
+      columns: ['month', 'total'],
+    },
+    `
+      SELECT date_trunc('month', "createdAt") AS month, sum(total) AS total
+      FROM "order"
+      GROUP BY 1
+    `,
+  );
+
+  // materialized views can also accept t.sql with variables:
+  const minimumTotal = 1000;
+  await db.createMaterializedView(
+    'analytics.largeMonthlySales',
+    t.sql`
+      SELECT date_trunc('month', "createdAt") AS month, sum(total) AS total
+      FROM "order"
+      GROUP BY 1
+      HAVING sum(total) >= ${minimumTotal}
+    `,
+  );
+});
+```
+
+Pass `withData: false` to create a materialized view with `WITH NO DATA`.
+PostgreSQL creates the object, but leaves it unpopulated and unscannable until it
+is refreshed with data.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.createMaterializedView(
+    'analytics.monthlySales',
+    {
+      columns: ['month', 'total'],
+      withData: false,
+    },
+    `
+      SELECT date_trunc('month', "createdAt") AS month, sum(total) AS total
+      FROM "order"
+      GROUP BY 1
+    `,
+  );
+});
+```
+
+`dropMaterializedView` takes the same SQL and creation options as
+`createMaterializedView`; they are used to recreate the materialized view on
+rollback. `dropIfExists` and `dropMode` affect the `DROP MATERIALIZED VIEW`
+statement.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.dropMaterializedView(
+    'analytics.monthlySales',
+    {
+      columns: ['month', 'total'],
+      withData: false,
+      dropIfExists: true,
+      dropMode: 'CASCADE',
+    },
+    `
+      SELECT date_trunc('month', "createdAt") AS month, sum(total) AS total
+      FROM "order"
+      GROUP BY 1
+    `,
+  );
+});
+```
+
+Materialized views use PostgreSQL indexes in the same way as tables.
+Use `addIndex` and `dropIndex` with the materialized view name.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.addIndex('analytics.monthlySales', ['month'], {
+    name: 'monthlySalesMonthIndex',
+    unique: true,
+  });
+});
+```
+
+Refresh a materialized view when its stored rows should be replaced.
+`concurrently: true` emits `CONCURRENTLY`, and `withData` controls `WITH DATA` or
+`WITH NO DATA`.
+
+```ts
+import { change } from '../db-script';
+
+change(async (db) => {
+  await db.refreshMaterializedView('analytics.monthlySales');
+
+  await db.refreshMaterializedView('analytics.monthlySales', {
+    concurrently: true,
+    withData: true,
+  });
+
+  await db.refreshMaterializedView('analytics.monthlySales', {
+    withData: false,
+  });
+});
+```
+
+PostgreSQL has extra requirements for concurrent refresh:
+
+- `CONCURRENTLY` cannot be combined with `WITH NO DATA`; Orchid rejects
+  `{ concurrently: true, withData: false }` before running SQL.
+- The materialized view must already be populated.
+- The materialized view must have at least one unique index that uses only column
+  names, covers all rows, and is not an expression or partial index.
+- Only one refresh at a time can run for the same materialized view.
 
 ## createRole, dropRole
 

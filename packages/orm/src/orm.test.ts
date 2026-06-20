@@ -1,4 +1,5 @@
 import {
+  bundleOrchidORM,
   bundleOrchidORMTables,
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
@@ -375,9 +376,11 @@ describe('orm', () => {
     }
 
     it('should return table keys only and keep internals non-enumerable', () => {
-      const orm = bundleOrchidORMTables({
-        user: BundleUserTable,
-        profile: BundleProfileTable,
+      const orm = bundleOrchidORM({
+        tables: {
+          user: BundleUserTable,
+          profile: BundleProfileTable,
+        },
       });
 
       expect(Object.keys(orm)).toEqual(['user', 'profile']);
@@ -386,9 +389,11 @@ describe('orm', () => {
     });
 
     it('should expose static table name on bundled tables and keep helper usage', () => {
-      const orm = bundleOrchidORMTables({
-        user: BundleUserTable,
-        profile: BundleProfileTable,
+      const orm = bundleOrchidORM({
+        tables: {
+          user: BundleUserTable,
+          profile: BundleProfileTable,
+        },
       });
 
       expect(orm.user.table).toBe('user');
@@ -430,6 +435,40 @@ describe('orm', () => {
           LIMIT 1
         `,
         [1],
+      );
+    });
+
+    it('should expose bundled views under $views and bind helpers', () => {
+      class BundleActiveUserView extends BaseTable.View {
+        schema: QuerySchema = 'schema';
+        readonly name = 'active_user';
+        filePath = 'orm.test.ts';
+        columns = this.setColumns((t) => ({
+          id: t.integer(),
+          name: t.text(),
+        }));
+        sql = BaseTable.sql`SELECT id, name FROM "user"`;
+      }
+
+      const orm = bundleOrchidORM({
+        views: {
+          activeUser: BundleActiveUserView,
+        },
+      });
+
+      expect(Object.keys(orm)).toEqual(['$views']);
+      expect(Object.keys(orm.$views)).toEqual(['activeUser']);
+      expect(orm.$views.activeUser.table).toBe('active_user');
+
+      const helper = orm.$views.activeUser.makeHelper((q) => q.select('id'));
+      const local = makeOrchidOrmDbWithAdapter(orm, { db: db.$qb });
+
+      expectSql(
+        helper(local.$views.activeUser).toSQL(),
+        `
+          SELECT "active_user"."id"
+          FROM "schema"."active_user"
+        `,
       );
     });
   });

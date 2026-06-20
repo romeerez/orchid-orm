@@ -124,10 +124,7 @@ export type CreateRelationsData<T extends CreateSelf> =
     CreateRelationsDataOmittingFKeys<
       T,
       T['relations'][keyof T['relations']]['dataForCreate']
-    > &
-    // Union of the rest relations objects, intersection is not needed here because there are no required properties:
-    // { foo: object } | { bar: object }
-    T['relations'][keyof T['relations']]['optionalDataForCreate'];
+    >;
 
 // Intersection of relations that may omit foreign key (belongsTo):
 // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
@@ -139,28 +136,28 @@ export type CreateRelationsDataOmittingFKeys<
   // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
   (
     Union extends RelationConfigDataForCreate
-      ? (
+      ? // belongsTo
+        (
           u: // omit relation columns if they are in defaults, is tested in factory.test.ts
           Union['columns'] extends keyof T['__defaults']
-            ? {
-                [P in Exclude<
-                  Union['columns'] & keyof T['inputType'],
-                  keyof T['__defaults']
-                >]: CreateColumn<T, P>;
-              } & {
-                [P in keyof T['__defaults'] & Union['columns']]?: CreateColumn<
-                  T,
-                  P
-                >;
-              } & Partial<Union['nested']>
+            ? Pick<
+                CreateDataWithDefaults<T, keyof T['__defaults']>,
+                Union['columns']
+              > &
+                Partial<Union['nested']>
             :
-                | {
-                    [P in Union['columns'] &
-                      keyof T['inputType']]: CreateColumn<T, P>;
-                  }
+                | (Pick<
+                    {
+                      [P in keyof T['inputType']]: CreateColumn<T, P>;
+                    },
+                    Union['columns'] & keyof T['inputType']
+                  > & {
+                    [K in keyof Union['nested']]?: never;
+                  })
                 | Union['nested'],
         ) => void
-      : never
+      : // hasOne, hasMany, hasAndBelongsToMany
+        (u: Union) => void
   ) extends (u: infer Obj) => void // must be handled as a function argument, belongsTo.test relies on this
     ? Obj
     : never;

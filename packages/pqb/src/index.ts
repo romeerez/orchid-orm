@@ -468,6 +468,10 @@ export {
 // Core query building
 export { getColumnInfo } from './query/extra-features/get-column-info/get-column-info';
 export { copyTableData } from './query/extra-features/copy-table-data/copy-table-data';
+export {
+  refreshMaterializedView,
+  type RefreshMaterializedViewOptions,
+} from './query/extra-features/materialized-view/materialized-view.query';
 export { testTransaction } from './testTransaction';
 
 // Error types

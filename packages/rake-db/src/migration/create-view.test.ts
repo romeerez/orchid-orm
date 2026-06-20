@@ -91,11 +91,9 @@ describe('create and drop view', () => {
             temporary: true,
             recursive: true,
             columns: ['one', 'two'],
-            with: {
-              checkOption: 'LOCAL',
-              securityBarrier: true,
-              securityInvoker: true,
-            },
+            checkOption: 'LOCAL',
+            securityBarrier: true,
+            securityInvoker: true,
           },
           'sql',
         ),
@@ -156,9 +154,7 @@ describe('create and drop view', () => {
         db[action](
           'name',
           {
-            with: {
-              securityInvoker: false,
-            },
+            securityInvoker: false,
           },
           'sql',
         ),
@@ -179,11 +175,9 @@ describe('create and drop view', () => {
         db[action](
           'name',
           {
-            with: {
-              checkOption: 'LOCAL',
-              securityBarrier: true,
-              securityInvoker: false,
-            },
+            checkOption: 'LOCAL',
+            securityBarrier: true,
+            securityInvoker: false,
           },
           'sql',
         ),

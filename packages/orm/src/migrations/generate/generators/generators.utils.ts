@@ -18,18 +18,18 @@ export interface CompareExpression {
   handle(i?: number): void;
 }
 
-export interface TableExpression extends CompareExpression {
-  source: string;
+export interface SqlExpression extends CompareExpression {
+  source?: string;
 }
 
 export const compareSqlExpressions = async (
-  tableExpressions: TableExpression[],
+  expressions: SqlExpression[],
   adapter: Adapter | TransactionAdapter,
 ) => {
-  if (!tableExpressions.length) return;
+  if (!expressions.length) return;
 
   let id = 1;
-  for (const { source, compare, handle } of tableExpressions) {
+  for (const { source, compare, handle } of expressions) {
     const viewName = `orchidTmpView${id++}`;
     const values: unknown[] = [];
 
@@ -48,7 +48,7 @@ export const compareSqlExpressions = async (
               )
               .join(', ')}`,
         )
-        .join(', ')} FROM ${source})`,
+        .join(', ')}${source ? ` FROM ${source}` : ''})`,
       `SELECT pg_get_viewdef('${viewName}') v`,
       `DROP VIEW ${viewName}`,
     ].join('; ');
@@ -79,6 +79,92 @@ export const compareSqlExpressions = async (
     );
     handle(match);
   }
+};
+
+export interface CompareViewExpression {
+  inDb: string;
+  inCode: string;
+  ast: RakeDbAst.View | RakeDbAst.MaterializedView;
+  onNotEqual(): void;
+}
+
+export const compareViewsExpressions = async (
+  adapter: Adapter,
+  compare: CompareViewExpression[],
+) => {
+  if (!compare.length) return;
+
+  const queries: { batch: string[] }[] = [];
+
+  let id = 1;
+  compare.forEach(({ inCode, ast }, i) => {
+    const viewName = `orchidTmpView${id++}ForViews`;
+
+    queries.push({
+      batch: [
+        `SAVEPOINT "${viewName}S"`,
+        `CREATE TEMPORARY${'recursive' in ast.options && ast.options.recursive ? ' RECURSIVE' : ''} VIEW "${viewName}" (${ast.options.columns?.map((column) => `"${column}"`).join(', ')}) AS (${inCode})`,
+        `SELECT ${i} i, '${viewName}' v, pg_get_viewdef('"${viewName}"') sql`,
+        `DROP VIEW "${viewName}"`,
+        `RELEASE SAVEPOINT "${viewName}S"`,
+      ],
+    });
+  });
+
+  let results;
+  try {
+    const sql = queries.flatMap((q) => q.batch).join(';');
+    const query = () => adapter.query(sql, []);
+    results = (await (adapter.isInTransaction()
+      ? adapter.savepoint('orchidOrmGeneratorViews', query)
+      : query())) as unknown as QueryResult[];
+  } catch {
+    results = (
+      await Promise.all(
+        queries.map(async ({ batch: queries }, i) => {
+          const sql = queries.join(';');
+          const query = () => adapter.query(sql, []);
+          return (await (
+            adapter.isInTransaction()
+              ? adapter.savepoint(`orchidOrmGeneratorViews${i}`, query)
+              : query()
+          ).catch((err) => {
+            if (typeof err === 'object') {
+              const code = getDriverErrorCode(err);
+              if (code === '42703' || code === '42704' || code === '42P01') {
+                return [];
+              }
+            }
+
+            throw err;
+          })) as unknown as QueryResult[];
+        }),
+      )
+    ).flat();
+  }
+
+  const handled = new Set<number>();
+  for (const result of results) {
+    for (const row of result.rows) {
+      if ('sql' in row) {
+        const { i, v } = row;
+        const cmp = compare[i];
+        const hasQuote = !!cmp.inDb.match(/\w*WITH RECURSIVE "/);
+        const sql = row.sql.replaceAll(hasQuote ? v : `"${v}"`, cmp.ast.name);
+
+        if (sql !== cmp.inDb) {
+          cmp.onNotEqual();
+        }
+        handled.add(i);
+      }
+    }
+  }
+
+  compare.forEach((cmp, i) => {
+    if (!handled.has(i)) {
+      cmp.onNotEqual();
+    }
+  });
 };
 
 export const compareSqlExpressionResult = (

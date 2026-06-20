@@ -28,6 +28,7 @@ export type RakeDbAst =
   | RakeDbAst.Constraint
   | RakeDbAst.RenameTableItem
   | RakeDbAst.View
+  | RakeDbAst.MaterializedView
   | RakeDbAst.Role
   | RakeDbAst.RenameRole
   | RakeDbAst.ChangeRole
@@ -269,11 +270,83 @@ export namespace RakeDbAst {
     temporary?: boolean;
     recursive?: boolean;
     columns?: string[];
-    with?: {
-      checkOption?: 'LOCAL' | 'CASCADED';
-      securityBarrier?: boolean;
-      securityInvoker?: boolean;
-    };
+    checkOption?: 'LOCAL' | 'CASCADED';
+    securityBarrier?: boolean;
+    securityInvoker?: boolean;
+  }
+
+  /**
+   * Materialized view migration AST item.
+   */
+  export interface MaterializedView {
+    /**
+     * Identifies the AST item as a materialized view.
+     */
+    type: 'materializedView';
+    /**
+     * Creates or drops the materialized view.
+     */
+    action: 'create' | 'drop';
+    /**
+     * Schema containing the materialized view.
+     */
+    schema?: string;
+    /**
+     * Materialized view name without schema.
+     */
+    name: string;
+    /**
+     * Column shape used by generated migration dependency analysis.
+     */
+    shape: ColumnsShape;
+    /**
+     * SQL query used to define the materialized view.
+     */
+    sql: RawSqlBase;
+    /**
+     * Options used when creating or dropping the materialized view.
+     */
+    options: MaterializedViewOptions;
+    /**
+     * Relations referenced by the materialized view SQL definition.
+     */
+    deps: { schemaName: string; name: string }[];
+  }
+
+  /**
+   * Options for materialized view create and drop migrations.
+   */
+  export interface MaterializedViewOptions {
+    /**
+     * Drops the materialized view only when it exists.
+     */
+    dropIfExists?: boolean;
+    /**
+     * Drop behavior for dependent objects.
+     */
+    dropMode?: DropMode;
+    /**
+     * Explicit materialized view column names.
+     */
+    columns?: string[];
+    /**
+     * Adds WITH DATA or WITH NO DATA when creating the materialized view.
+     */
+    withData?: boolean;
+  }
+
+  /**
+   * Options for refreshing a materialized view.
+   */
+  export interface RefreshMaterializedViewOptions {
+    /**
+     * Refreshes without blocking concurrent selects.
+     */
+    concurrently?: boolean;
+    /**
+     * Adds WITH DATA or WITH NO DATA to the refresh statement.
+     */
+    withData?: boolean;
   }
 
   export interface Role extends DbStructure.Role {

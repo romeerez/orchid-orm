@@ -1,12 +1,11 @@
 import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
 import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
 import {
+  TableToDb,
   ORMTableInput,
   TableClass,
   TableInfo,
-  TableToDb,
 } from '../orm-table/base-table';
-import { OrchidORMDbTables } from '../orm';
 import {
   _queryTake,
   _queryTakeOptional,
@@ -107,7 +106,17 @@ export interface RelationData {
 export type RelationTableToQuery<Relation> = Relation extends {
   related: infer R extends ORMTableInput;
 }
-  ? TableToDb<R>
+  ? TableToDb<
+      R,
+      R['table'] extends string ? R['table'] : R['name'],
+      R['table'] extends string
+        ? R['readOnly'] extends true
+          ? true
+          : undefined
+        : R['readOnly'] extends false
+          ? undefined
+          : true
+    >
   : never;
 
 export interface RelationConfigSelf {
@@ -141,7 +150,7 @@ type DelayedRelations = Map<Query, Record<string, ApplyRelationData[]>>;
 export const applyRelations = (
   qb: Query,
   tables: Record<string, ORMTableInput>,
-  result: OrchidORMDbTables,
+  result: { [K: string]: Query },
   schema?: QuerySchema,
 ) => {
   const tableEntries = Object.entries(tables);

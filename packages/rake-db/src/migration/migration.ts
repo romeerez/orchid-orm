@@ -46,6 +46,10 @@ import {
   interpolateSqlValues,
 } from './migration.utils';
 import { createView } from './create-view';
+import {
+  createMaterializedView,
+  refreshMaterializedView,
+} from './create-materialized-view';
 import { RakeDbConfig } from '../config';
 import { changeRole, createOrDropRole, renameRole } from './role';
 import {
@@ -1392,11 +1396,9 @@ export class Migration<CT = unknown> {
    *       temporary: true,
    *       recursive: true,
    *       columns: ['n'],
-   *       with: {
-   *         checkOption: 'LOCAL', // or 'CASCADED'
-   *         securityBarrier: true,
-   *         securityInvoker: true,
-   *       },
+   *       checkOption: 'LOCAL', // or 'CASCADED'
+   *       securityBarrier: true,
+   *       securityInvoker: true,
    *     },
    *     `
    *       VALUES (1)
@@ -1464,6 +1466,81 @@ export class Migration<CT = unknown> {
       options as RakeDbAst.ViewOptions,
       sql as string | RawSqlBase,
     );
+  }
+
+  /**
+   * Create a materialized view, drop it on rollback.
+   *
+   * @param name - name of the materialized view
+   * @param options - materialized view options
+   * @param sql - SQL to create the materialized view with
+   */
+  createMaterializedView(
+    name: string,
+    options: RakeDbAst.MaterializedViewOptions,
+    sql: string | RawSqlBase,
+  ): Promise<void>;
+  /**
+   * Create a materialized view, drop it on rollback.
+   *
+   * @param name - name of the materialized view
+   * @param sql - SQL to create the materialized view with
+   */
+  createMaterializedView(name: string, sql: string | RawSqlBase): Promise<void>;
+  createMaterializedView(name: string, ...args: unknown[]): Promise<void> {
+    const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
+
+    return createMaterializedView(
+      this,
+      this.up,
+      name,
+      options as RakeDbAst.MaterializedViewOptions,
+      sql as string | RawSqlBase,
+    );
+  }
+
+  /**
+   * Drop a materialized view, create it on rollback.
+   *
+   * @param name - name of the materialized view
+   * @param options - materialized view options
+   * @param sql - SQL to create the materialized view with
+   */
+  dropMaterializedView(
+    name: string,
+    options: RakeDbAst.MaterializedViewOptions,
+    sql: string | RawSqlBase,
+  ): Promise<void>;
+  /**
+   * Drop a materialized view, create it on rollback.
+   *
+   * @param name - name of the materialized view
+   * @param sql - SQL to create the materialized view with
+   */
+  dropMaterializedView(name: string, sql: string | RawSqlBase): Promise<void>;
+  dropMaterializedView(name: string, ...args: unknown[]): Promise<void> {
+    const [options, sql] = args.length === 2 ? args : [emptyObject, args[0]];
+
+    return createMaterializedView(
+      this,
+      !this.up,
+      name,
+      options as RakeDbAst.MaterializedViewOptions,
+      sql as string | RawSqlBase,
+    );
+  }
+
+  /**
+   * Refresh a materialized view.
+   *
+   * @param name - name of the materialized view
+   * @param options - refresh options
+   */
+  refreshMaterializedView(
+    name: string,
+    options?: RakeDbAst.RefreshMaterializedViewOptions,
+  ): Promise<void> {
+    return refreshMaterializedView(this, name, options);
   }
 
   /**

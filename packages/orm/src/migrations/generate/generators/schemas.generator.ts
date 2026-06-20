@@ -44,8 +44,10 @@ export const processSchemas = async (
         const from = dropSchemas[i - 1];
         dropSchemas.splice(i - 1, 1);
 
+        const views = dbStructure.views || [];
+
         renameSchemaInStructures(dbStructure.tables, from, schema);
-        renameSchemaInStructures(dbStructure.views, from, schema);
+        renameSchemaInStructures(views, from, schema);
         renameSchemaInStructures(dbStructure.indexes, from, schema);
         renameSchemaInStructures(dbStructure.excludes, from, schema);
         renameSchemaInStructures(dbStructure.constraints, from, schema);

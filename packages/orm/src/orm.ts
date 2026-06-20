@@ -19,11 +19,12 @@ import {
   ColumnSchemaConfig,
   Rls,
   Grant,
+  EmptyObject,
 } from 'pqb/internal';
 import {
   ORMTableInput,
-  TableClasses,
   BaseTableClass,
+  TableClasses,
   TableToDb,
 } from './orm-table/base-table';
 import { applyRelations } from './relations/relations';
@@ -71,18 +72,53 @@ export interface OrchidORMTableHelper<T extends Query> {
 
 export type OrchidORMTables<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? OrchidORMTableHelper<TableToDb<R>>
+    ? OrchidORMTableHelper<
+        TableToDb<R, R['table'], R['readOnly'] extends true ? true : undefined>
+      >
     : never;
+};
+
+export type OrchidORMViews<T extends TableClasses = TableClasses> = {
+  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
+    ? OrchidORMTableHelper<
+        TableToDb<
+          R,
+          R['name'],
+          R['readOnly'] extends false ? undefined : true,
+          R['materialized'] extends true ? true : undefined
+        >
+      >
+    : never;
+};
+
+export type OrchidORMBundle<
+  T extends TableClasses = TableClasses,
+  V extends TableClasses = TableClasses,
+> = OrchidORMTables<T> & {
+  $views: OrchidORMViews<V>;
 };
 
 export type OrchidORMDbTables<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? TableToDb<R>
+    ? TableToDb<R, R['table'], R['readOnly'] extends true ? true : undefined>
     : never;
 };
 
-export type OrchidORM<T extends TableClasses = TableClasses> =
-  OrchidORMDbTables<T> & OrchidORMMethods;
+export type OrchidORMDbViews<T extends TableClasses = TableClasses> = {
+  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
+    ? TableToDb<
+        R,
+        R['name'],
+        R['readOnly'] extends false ? undefined : true,
+        R['materialized'] extends true ? true : undefined
+      >
+    : never;
+};
+
+export type OrchidORM<
+  T extends TableClasses = TableClasses,
+  V extends TableClasses = TableClasses,
+> = OrchidORMDbTables<T> & { $views: OrchidORMDbViews<V> } & OrchidORMMethods;
 
 /**
  * Identity helper for table row-level security configuration.
@@ -261,8 +297,10 @@ export type OrchidOrmParam<Options> = true | null extends true
 interface OrchidORMBundleMetadata {
   // Original table classes for later DB binding.
   tables: TableClasses;
+  // Original view classes for later DB binding.
+  views: TableClasses;
   // Set db-aware instance so that the minimal preliminary query objects can access it.
-  setDbAwareInstance(orm: OrchidORMDbTables): void;
+  setDbAwareInstance(orm: OrchidORM): void;
 }
 
 const orchidORMBundleMetadataKey = Symbol('orchidORMBundleMetadataKey');
@@ -272,9 +310,19 @@ type CommonOrmOptions = QueryLogOptions & {
   noPrimaryKey?: NoPrimaryKeyOption;
 };
 
+interface OrchidORMSetupOptions<
+  V extends TableClasses = TableClasses,
+> extends DbSharedOptions {
+  /**
+   * First-class regular views exposed under db.$views.
+   */
+  views?: V;
+}
+
 const assignTablesToOrm = <T extends TableClasses>(
+  isTable: boolean,
   tables: T,
-  result: OrchidORMDbTables<T>,
+  result: { [K: string]: Query },
   adapter: Adapter,
   qb: Db,
   asyncStorage: AsyncLocalStorage<AsyncState>,
@@ -285,7 +333,9 @@ const assignTablesToOrm = <T extends TableClasses>(
 
   for (const key in tables) {
     if (key[0] === '$') {
-      throw new Error(`Table class name must not start with $`);
+      throw new Error(
+        `${isTable ? 'Table' : 'View'} class name must not start with $`,
+      );
     }
 
     const tableClass = tables[key];
@@ -311,8 +361,15 @@ const assignTablesToOrm = <T extends TableClasses>(
       softDelete: table.softDelete,
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
       comment: table.comment,
-      readOnly: table.readOnly,
-      noPrimaryKey: table.noPrimaryKey ? 'ignore' : undefined,
+      readOnly: isTable
+        ? table.readOnly
+          ? true
+          : undefined
+        : table.materialized || table.readOnly !== false
+          ? true
+          : undefined,
+      materialized: !isTable && table.materialized ? true : undefined,
+      noPrimaryKey: table.noPrimaryKey || !isTable ? 'ignore' : undefined,
       computed: table.computed as never,
       nowSQL: (
         tableClass as unknown as BaseTableClass<ColumnSchemaConfig, unknown>
@@ -322,12 +379,22 @@ const assignTablesToOrm = <T extends TableClasses>(
     const dbTable = new Db(
       adapter,
       qb,
-      table.table,
+      isTable ? table.table : table.name,
       table.columns.shape,
       table.types,
       asyncStorage,
       options,
       table.columns?.data ?? {},
+      isTable
+        ? undefined
+        : {
+            sql: table.sql,
+            recursive: table.recursive,
+            checkOption: table.checkOption,
+            securityBarrier: table.securityBarrier,
+            securityInvoker: table.securityInvoker,
+            withData: table.withData,
+          },
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;
@@ -340,17 +407,29 @@ const assignTablesToOrm = <T extends TableClasses>(
     result[key] = dbTable as OrchidORMDbTables<T>[Extract<keyof T, string>];
   }
 
-  applyRelations(qb, tableInstances, result, schema);
-
   return tableInstances;
 };
 
-export const bundleOrchidORMTables = <T extends TableClasses>(
-  tables: T,
-): OrchidORMTables<T> => {
-  const result = {} as OrchidORMTables<T>;
+export const bundleOrchidORM = <
+  T extends TableClasses = EmptyObject,
+  V extends TableClasses = EmptyObject,
+>({
+  tables = {} as T,
+  views = {} as V,
+}: {
+  tables?: T;
+  views?: V;
+}): OrchidORMBundle<T, V> => {
+  const result = {} as OrchidORMBundle<T, V>;
+  const bundledViews = {} as OrchidORMViews<V>;
+  const hasViews = Object.keys(views).length > 0;
 
-  let dbAwareInstance: OrchidORMDbTables;
+  Object.defineProperty(result, '$views', {
+    enumerable: hasViews,
+    value: bundledViews,
+  });
+
+  let dbAwareInstance: OrchidORM;
 
   for (const key in tables) {
     const tableClass = tables[key];
@@ -373,8 +452,30 @@ export const bundleOrchidORMTables = <T extends TableClasses>(
     } as never;
   }
 
+  for (const key in views) {
+    const viewClass = views[key];
+    const table = (
+      viewClass as unknown as { instance(): ORMTableInput }
+    ).instance().name;
+
+    bundledViews[key] = {
+      table,
+      makeHelper(arg: unknown) {
+        // oxlint-disable-next-line typescript/no-explicit-any
+        let fn: (...args: any[]) => unknown;
+        return (...args: unknown[]) => {
+          if (!fn) {
+            fn = dbAwareInstance.$views[key].makeHelper(arg as never);
+          }
+          return fn(...args);
+        };
+      },
+    } as never;
+  }
+
   const meta: OrchidORMBundleMetadata = {
     tables,
+    views,
     setDbAwareInstance(orm) {
       dbAwareInstance = orm;
     },
@@ -388,8 +489,15 @@ export const bundleOrchidORMTables = <T extends TableClasses>(
   return result;
 };
 
-const getOrchidORMBundleMetadata = <T extends TableClasses>(
-  orm: OrchidORMTables<T>,
+export const bundleOrchidORMTables = <T extends TableClasses>(
+  tables: T,
+): OrchidORMBundle<T, EmptyObject> => bundleOrchidORM({ tables });
+
+const getOrchidORMBundleMetadata = <
+  T extends TableClasses,
+  V extends TableClasses,
+>(
+  orm: OrchidORMBundle<T, V>,
 ): OrchidORMBundleMetadata => {
   const meta = (
     orm as {
@@ -399,39 +507,54 @@ const getOrchidORMBundleMetadata = <T extends TableClasses>(
 
   if (!meta) {
     throw new Error(
-      'Failed to bind Orchid ORM tables: pass a table bundle created by bundleOrchidORMTables.',
+      'Failed to bind Orchid ORM tables: pass a bundle created by bundleOrchidORM.',
     );
   }
 
   return meta;
 };
 
-export const makeOrchidOrmDbWithAdapter = <T extends TableClasses>(
-  orm: OrchidORMTables<T>,
+export const makeOrchidOrmDbWithAdapter = <
+  T extends TableClasses,
+  V extends TableClasses,
+>(
+  orm: OrchidORMBundle<T, V>,
   options: OrchidOrmParam<
     ({ db: Query } | { adapter: Adapter }) & DbSharedOptions
   >,
-): OrchidORM<T> => {
+): OrchidORM<T, V> => {
   const meta = getOrchidORMBundleMetadata(orm);
-  return privateOrchidORMWithAdapter<T>(
+  return privateOrchidORMWithAdapter<T, V>(
     options,
     meta.tables as T,
+    meta.views as V,
     meta.setDbAwareInstance,
   );
 };
 
-const privateOrchidORMWithAdapter = <T extends TableClasses>(
+const privateOrchidORMWithAdapter = <
+  T extends TableClasses,
+  V extends TableClasses,
+>(
   {
     log,
     logger,
     autoPreparedStatements,
     noPrimaryKey = 'error',
     schema,
+    views,
     ...options
-  }: OrchidOrmParam<({ db: Query } | { adapter: Adapter }) & DbSharedOptions>,
+  }: OrchidOrmParam<
+    ({ db: Query } | { adapter: Adapter }) & OrchidORMSetupOptions<V>
+  >,
   tables: T,
+  bundledViews?: V,
   setDbAwareInstance?: OrchidORMBundleMetadata['setDbAwareInstance'],
-): OrchidORM<T> => {
+): OrchidORM<T, V> => {
+  if (bundledViews) {
+    views = bundledViews;
+  }
+
   const commonOptions: CommonOrmOptions = {
     log,
     logger,
@@ -481,9 +604,12 @@ const privateOrchidORMWithAdapter = <T extends TableClasses>(
     $from: qb.from.bind(qb),
     $close: adapter.close.bind(adapter),
     $withOptions: qb.withOptions.bind(qb),
-  } as unknown as OrchidORM<T>;
+  } as unknown as OrchidORM<T, V>;
+
+  result.$views = {} as OrchidORMDbViews<V>;
 
   const tableInstances = assignTablesToOrm(
+    true,
     tables,
     result as OrchidORMDbTables<T>,
     adapter,
@@ -493,30 +619,80 @@ const privateOrchidORMWithAdapter = <T extends TableClasses>(
     schema,
   );
 
-  setDbAwareInstance?.(result);
+  let viewInstances;
+  if (views) {
+    viewInstances = assignTablesToOrm(
+      false,
+      views,
+      result.$views,
+      adapter,
+      qb,
+      asyncStorage,
+      commonOptions,
+      schema,
+    );
 
-  for (const key in tables) {
-    const table = tableInstances[key] as unknown as {
-      init?(orm: unknown): void;
-      q: QueryData;
-    };
+    const tableDbNames = Object.values(tableInstances).map((table) => {
+      const s =
+        typeof table.schema === 'function' ? table.schema() : table.schema;
+      return `${s ? s + '.' : ''}${table.table}`;
+    });
 
-    if (table.init) {
-      table.init(result);
-      // assign before and after hooks from table.query to the table base query
-      Object.assign(result[key].baseQuery.q, table.q);
+    for (const key in views) {
+      const view = viewInstances[key];
+      const s = typeof view.schema === 'function' ? view.schema() : view.schema;
+      const name = `${s ? s + '.' : ''}${view.name}`;
+      if (tableDbNames.includes(name)) {
+        throw new Error(
+          `Cannot configure both a table and a view for database relation ${name}`,
+        );
+      }
     }
   }
 
-  return result as unknown as OrchidORM<T>;
+  applyRelations(
+    qb,
+    { ...tableInstances, ...viewInstances },
+    { ...result, ...result.$views },
+    schema,
+  );
+
+  setDbAwareInstance?.(result);
+
+  const initItems = [
+    [tableInstances, result],
+    [viewInstances, result.$views],
+  ] as const;
+
+  for (const [items, queries] of initItems) {
+    if (!items) continue;
+
+    for (const key in items) {
+      const table = items[key] as unknown as {
+        init?(orm: unknown): void;
+        q: QueryData;
+      };
+
+      if (table.init) {
+        table.init(result);
+        // assign before and after hooks from table.query to the table base query
+        Object.assign(queries[key].baseQuery.q, table.q);
+      }
+    }
+  }
+
+  return result as unknown as OrchidORM<T, V>;
 };
 
-export const orchidORMWithAdapter = <T extends TableClasses>(
+export const orchidORMWithAdapter = <
+  T extends TableClasses,
+  V extends TableClasses = EmptyObject,
+>(
   options: OrchidOrmParam<
-    ({ db: Query } | { adapter: Adapter }) & DbSharedOptions
+    ({ db: Query } | { adapter: Adapter }) & OrchidORMSetupOptions<V>
   >,
   tables: T,
-): OrchidORM<T> => privateOrchidORMWithAdapter(options, tables);
+): OrchidORM<T, V> => privateOrchidORMWithAdapter(options, tables);
 
 function $getAdapter(this: OrchidORM) {
   return this.$qb.$getAdapter();

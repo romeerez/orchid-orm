@@ -21,7 +21,6 @@ import {
   _queryWhere,
   SelectableFromShape,
   ColumnSchemaConfig,
-  EmptyObject,
   getPrimaryKeys,
   MaybeArray,
   objectHasValues,
@@ -100,26 +99,24 @@ export interface HasManyInfo<
   returnsOne: false;
   query: Q;
   params: HasOneParams<T, Rel['options']>;
-  maybeSingle: Q;
   omitForeignKeyInCreate: never;
-  optionalDataForCreate: Q extends Query.Pick.IsNotReadOnly
-    ? {
-        [P in Name]?: T['relations'][Name]['options'] extends RelationThroughOptions
-          ? EmptyObject
-          : {
-              // create related records
-              create?: CreateData<Q>[];
-              // find existing records by `where` conditions and update their foreign keys with the new id
-              connect?: WhereArg<Q>[];
-              // try finding records by `where` conditions, and create them if not found
-              connectOrCreate?: {
-                where: WhereArg<Q>;
-                create: CreateData<Q>;
-              }[];
-            };
-      }
-    : EmptyObject;
-  dataForCreate: undefined;
+  dataForCreate: {
+    [K in Name]?: Q extends Query.Pick.IsNotReadOnly
+      ? T['relations'][Name]['options'] extends RelationThroughOptions
+        ? never
+        : {
+            // create related records
+            create?: CreateData<Q>[];
+            // find existing records by `where` conditions and update their foreign keys with the new id
+            connect?: WhereArg<Q>[];
+            // try finding records by `where` conditions, and create them if not found
+            connectOrCreate?: {
+              where: WhereArg<Q>;
+              create: CreateData<Q>;
+            }[];
+          }
+      : never;
+  };
   // `hasMany` relation data available for update. It supports:
   // - `disconnect` nullifies foreign keys of the related records
   // - `delete` deletes related record found by conditions

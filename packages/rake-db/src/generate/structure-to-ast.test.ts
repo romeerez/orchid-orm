@@ -50,6 +50,7 @@ const structure = {
   schemas: [],
   tables: [],
   views: [],
+  materializedViews: [],
   indexes: [],
   excludes: [],
   constraints: [],
@@ -1575,12 +1576,100 @@ describe('structureToAst', () => {
       expect(ast.action).toBe('create');
       expect(ast.schema).toBe(undefined);
       expect(ast.options.recursive).toBe(true);
-      expect(ast.options.with?.checkOption).toBe('LOCAL');
-      expect(ast.options.with?.securityBarrier).toBe(true);
-      expect(ast.options.with?.securityInvoker).toBe(true);
+      expect(ast.options.columns).toEqual(['column']);
+      expect(ast.options.checkOption).toBe('LOCAL');
+      expect(ast.options.securityBarrier).toBe(true);
+      expect(ast.options.securityInvoker).toBe(true);
 
       const column = ast.shape.column;
       expect(column.dataType).toBe('int4');
+    });
+  });
+
+  describe('materialized view', () => {
+    it('should add materialized view preserving unpopulated state', async () => {
+      structure.materializedViews = [
+        dbStructureMockFactory.materializedView({
+          isPopulated: false,
+          deps: [{ schemaName: 'public', name: 'table' }],
+        }),
+      ];
+
+      const [ast] = (await structureToAst(ctx, adapter, config)) as [
+        RakeDbAst.MaterializedView,
+      ];
+
+      expect(ast).toEqual({
+        type: 'materializedView',
+        action: 'create',
+        schema: undefined,
+        name: 'materializedView',
+        shape: {
+          column: expect.objectContaining({
+            dataType: 'int4',
+          }),
+        },
+        sql: raw({ raw: 'sql' }),
+        options: {
+          withData: false,
+        },
+        deps: [{ schemaName: 'public', name: 'table' }],
+      });
+    });
+
+    it('should omit withData for populated materialized view', async () => {
+      structure.materializedViews = [dbStructureMockFactory.materializedView()];
+
+      const [ast] = (await structureToAst(ctx, adapter, config)) as [
+        RakeDbAst.MaterializedView,
+      ];
+
+      expect(ast.options).toEqual({});
+    });
+
+    it('should add indexes on materialized views as generated index items', async () => {
+      structure.materializedViews = [
+        dbStructureMockFactory.materializedView({
+          schemaName: 'custom',
+          name: 'monthlySales',
+        }),
+      ];
+      structure.indexes = [
+        dbStructureMockFactory.index({
+          schemaName: 'custom',
+          tableName: 'monthlySales',
+          name: 'monthlySalesMonthIdx',
+          columns: [{ column: 'month' }],
+          unique: true,
+        }),
+      ];
+
+      const ast = await structureToAst(ctx, adapter, config);
+
+      expect(ast).toEqual([
+        expect.objectContaining({
+          type: 'materializedView',
+          name: 'monthlySales',
+        }),
+        {
+          type: 'changeTable',
+          schema: undefined,
+          name: 'monthlySales',
+          shape: {},
+          add: {
+            indexes: [
+              {
+                columns: [{ column: 'month' }],
+                options: {
+                  name: 'monthlySalesMonthIdx',
+                  unique: true,
+                },
+              },
+            ],
+          },
+          drop: {},
+        },
+      ]);
     });
   });
 

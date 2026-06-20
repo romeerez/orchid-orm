@@ -475,12 +475,14 @@ const getSchemaWideTargets = (
   const selectedSchemas = new Set(schemas);
 
   if (targetKey === 'tables') {
+    const views = dbStructure.views || [];
+
     return [
       ...dbStructure.tables.map((table) => ({
         target: `${table.schemaName}.${table.name}`,
         outputTarget: `${table.schemaName}.${table.name}`,
       })),
-      ...dbStructure.views.map((view) => ({
+      ...views.map((view) => ({
         target: `${view.schemaName}.${view.name}`,
         outputTarget: `${view.schemaName}.${view.name}`,
       })),

@@ -13,7 +13,7 @@ import {
   Rls,
 } from 'pqb/internal';
 import { CodeTable } from '../generate';
-import { TableExpression, compareSqlExpressions } from './generators.utils';
+import { SqlExpression, compareSqlExpressions } from './generators.utils';
 
 interface TableRlsState {
   enable: boolean;
@@ -102,7 +102,7 @@ export const processTableRls = async (
       enable: normalizeRlsFlag(dbTable?.rls?.enable, defaultRlsState.enable),
       force: normalizeRlsFlag(dbTable?.rls?.force, false),
     };
-    const policyExpressionComparisons: TableExpression[] = [];
+    const policyExpressionComparisons: SqlExpression[] = [];
     const policyChanges = collectPolicyChanges(
       schemaName,
       table.table,
@@ -273,7 +273,7 @@ const collectPolicyChanges = (
   table: string,
   codePolicies: NormalizedPolicy[],
   dbPolicies: NormalizedPolicy[],
-  compareExpressions: TableExpression[],
+  compareExpressions: SqlExpression[],
   source: string,
 ): RakeDbAst[] => {
   const changes: RakeDbAst[] = [];
@@ -378,7 +378,7 @@ const collectPolicyChanges = (
       continue;
     }
 
-    const compare: TableExpression['compare'] = [];
+    const compare: SqlExpression['compare'] = [];
     if (usingCanCompare) {
       compare.push({
         inDb: dbUsing,

@@ -18,7 +18,7 @@ import { getColumnDbType } from './columns.generator';
 import {
   CompareExpression,
   compareSqlExpressions,
-  TableExpression,
+  SqlExpression,
 } from './generators.utils';
 import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
 
@@ -65,7 +65,7 @@ export const processDomains = async (
     }
   }
 
-  const tableExpressions: TableExpression[] = [];
+  const expressions: SqlExpression[] = [];
   const holdCodeDomains = new Set<ComparableDomain>();
 
   for (const domain of dbStructure.domains) {
@@ -128,7 +128,7 @@ export const processDomains = async (
         currentSchema,
       )})) t(value)`;
 
-      tableExpressions.push({
+      expressions.push({
         compare,
         source,
         handle(i) {
@@ -173,8 +173,8 @@ export const processDomains = async (
     }
   }
 
-  if (tableExpressions.length) {
-    await compareSqlExpressions(tableExpressions, adapter);
+  if (expressions.length) {
+    await compareSqlExpressions(expressions, adapter);
 
     if (holdCodeDomains.size) {
       for (const codeDomain of holdCodeDomains.keys()) {

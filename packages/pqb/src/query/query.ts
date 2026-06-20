@@ -42,6 +42,8 @@ export interface GeneratorIgnore {
   domains?: string[];
   extensions?: string[];
   tables?: string[];
+  /** Regular views to ignore during migration generation. */
+  views?: (string | RegExp)[];
   grants?: Grant.Ignore;
 }
 
@@ -151,12 +153,17 @@ export interface Query
     name: QueryErrorName,
   ) => QueryError;
 
-  readOnly: true | undefined;
+  __readOnly: true | undefined;
+  __materialized: true | undefined;
 }
 
 export namespace Query {
   export interface NotReadOnlyQuery extends Query {
-    readOnly: undefined;
+    __readOnly: undefined;
+  }
+
+  export interface MaterializedQuery extends Query {
+    __materialized: true;
   }
 
   export namespace Order {
@@ -171,7 +178,11 @@ export namespace Query {
     }
 
     export interface IsNotReadOnly {
-      readOnly: undefined;
+      __readOnly: undefined;
+    }
+
+    export interface IsMaterialized {
+      __materialized: true;
     }
   }
 }

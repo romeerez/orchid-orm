@@ -1178,6 +1178,38 @@ describe('astToGenerateItem', () => {
     });
   });
 
+  describe.each(['add', 'drop'] as const)('%s materialized view', (action) => {
+    describe.each(['default', 'custom'] as const)('%s schema', (schema) => {
+      const viewSchema = schema === 'default' ? undefined : schema;
+      const expectSchema = schema === 'default' ? 'public' : schema;
+
+      it('should have materialized view key, and have schema, tables, column types, collation deps', () => {
+        arrange({
+          type: 'materializedView',
+          action: action === 'add' ? 'create' : 'drop',
+          schema: viewSchema,
+          name: 'viewName',
+          shape: {
+            name: t.string().collate('collationName'),
+          },
+          sql: t.sql`sql`,
+          options: {},
+          deps: [{ schemaName: 'public', name: 'table' }],
+        });
+
+        act();
+
+        assertKey(`${expectSchema}.viewName`);
+        assertDeps([
+          expectSchema,
+          'public.table',
+          'public.varchar',
+          'collationName',
+        ]);
+      });
+    });
+  });
+
   it('should handle role', () => {
     const role = dbStructureMockFactory.role();
 

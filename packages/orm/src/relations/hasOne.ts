@@ -24,8 +24,6 @@ import {
   PickQueryQ,
   prepareSubQueryForSql,
   QueryHasWhere,
-  QueryManyTake,
-  QueryManyTakeOptional,
   RecordString,
   RecordUnknown,
   RelationConfigBase,
@@ -140,23 +138,20 @@ export interface HasOneInfo<
   Q extends Query,
 > extends RelationConfigBase {
   returnsOne: true;
+  required: T['relations'][Name]['options']['required'];
   query: Q;
   params: HasOneParams<T, Rel['options']>;
-  maybeSingle: T['relations'][Name]['options']['required'] extends true
-    ? QueryManyTake<Q>
-    : QueryManyTakeOptional<Q>;
   omitForeignKeyInCreate: never;
-  optionalDataForCreate: Q extends Query.Pick.IsNotReadOnly
-    ? T['relations'][Name]['options'] extends RelationThroughOptions
-      ? EmptyObject
-      : {
-          [P in Name]?: RelationToOneDataForCreate<{
+  dataForCreate: {
+    [K in Name]?: Q extends Query.Pick.IsNotReadOnly
+      ? T['relations'][Name]['options'] extends RelationThroughOptions
+        ? EmptyObject
+        : RelationToOneDataForCreate<{
             nestedCreateQuery: CreateData<Q>;
             table: Q;
-          }>;
-        }
-    : EmptyObject;
-  dataForCreate: undefined;
+          }>
+      : never;
+  };
   // `hasOne` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key of the related record
   // - `delete` to delete the related record

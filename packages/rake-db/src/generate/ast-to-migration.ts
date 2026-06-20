@@ -595,18 +595,32 @@ const astEncoders: {
   },
   view(ast, _, currentSchema) {
     const code: Code[] = [
-      `await db.createView(${quoteSchemaTable(ast, currentSchema)}`,
+      `await db.${ast.action}View(${quoteSchemaTable(ast, currentSchema)}`,
     ];
 
     const options: Code[] = [];
-    if (ast.options.recursive) options.push('recursive: true,');
+    const { options: astOptions } = ast;
+    if (astOptions.createOrReplace !== undefined)
+      options.push(`createOrReplace: ${astOptions.createOrReplace},`);
+    if (astOptions.dropIfExists !== undefined)
+      options.push(`dropIfExists: ${astOptions.dropIfExists},`);
+    if (astOptions.dropMode)
+      options.push(`dropMode: '${astOptions.dropMode}',`);
+    if (astOptions.temporary !== undefined)
+      options.push(`temporary: ${astOptions.temporary},`);
+    if (astOptions.recursive !== undefined)
+      options.push(`recursive: ${astOptions.recursive},`);
+    if (astOptions.columns)
+      options.push(
+        `columns: [${astOptions.columns.map(singleQuote).join(', ')}],`,
+      );
 
-    const w = ast.options.with;
-    if (w?.checkOption) options.push(`checkOption: '${w.checkOption}',`);
-    if (w?.securityBarrier)
-      options.push(`securityBarrier: ${w.securityBarrier},`);
-    if (w?.securityInvoker)
-      options.push(`securityInvoker: ${w.securityInvoker},`);
+    if (astOptions.checkOption)
+      options.push(`checkOption: '${astOptions.checkOption}',`);
+    if (astOptions.securityBarrier !== undefined)
+      options.push(`securityBarrier: ${astOptions.securityBarrier},`);
+    if (astOptions.securityInvoker !== undefined)
+      options.push(`securityInvoker: ${astOptions.securityInvoker},`);
 
     if (options.length) {
       addCode(code, ', {');
@@ -615,25 +629,39 @@ const astEncoders: {
 
     addCode(code, ', ');
 
-    if (!ast.sql._values) {
-      const raw = ast.sql._sql;
-      let sql;
-      if (typeof raw === 'string') {
-        sql = raw;
-      } else {
-        sql = '';
-        const parts = raw[0];
-        const last = parts.length - 1;
-        for (let i = 0; i < last; i++) {
-          sql += parts[i] + `\${${raw[i + 1]}}`;
-        }
-        sql += parts[last];
-      }
+    addViewSqlCode(code, ast.sql);
 
-      addCode(code, backtickQuote(sql));
-    } else {
-      addCode(code, rawSqlToCode(ast.sql, 'db'));
+    addCode(code, ');');
+    return code;
+  },
+  materializedView(ast, _, currentSchema) {
+    const code: Code[] = [
+      `await db.${ast.action}MaterializedView(${quoteSchemaTable(
+        ast,
+        currentSchema,
+      )}`,
+    ];
+
+    const options: Code[] = [];
+    const { options: astOptions } = ast;
+    if (astOptions.dropIfExists !== undefined)
+      options.push(`dropIfExists: ${astOptions.dropIfExists},`);
+    if (astOptions.dropMode)
+      options.push(`dropMode: '${astOptions.dropMode}',`);
+    if (astOptions.columns)
+      options.push(
+        `columns: [${astOptions.columns.map(singleQuote).join(', ')}],`,
+      );
+    if (astOptions.withData !== undefined)
+      options.push(`withData: ${astOptions.withData},`);
+
+    if (options.length) {
+      addCode(code, ', {');
+      code.push(options, '}');
     }
+
+    addCode(code, ', ');
+    addViewSqlCode(code, ast.sql);
 
     addCode(code, ');');
     return code;
@@ -915,6 +943,31 @@ const isPolicyRecreateDefinition = (
 
 const rawSqlStringToCode = (sql: string) => {
   return `db.sql${backtickQuote(sql)}`;
+};
+
+const addViewSqlCode = (
+  code: Code[],
+  sqlAst: RakeDbAst.View['sql'] | RakeDbAst.MaterializedView['sql'],
+) => {
+  if (!sqlAst._values) {
+    const raw = sqlAst._sql;
+    let sql;
+    if (typeof raw === 'string') {
+      sql = raw;
+    } else {
+      sql = '';
+      const parts = raw[0];
+      const last = parts.length - 1;
+      for (let i = 0; i < last; i++) {
+        sql += parts[i] + `\${${raw[i + 1]}}`;
+      }
+      sql += parts[last];
+    }
+
+    addCode(code, backtickQuote(sql));
+  } else {
+    addCode(code, rawSqlToCode(sqlAst, 'db'));
+  }
 };
 
 const roleParams = (

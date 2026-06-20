@@ -12,6 +12,7 @@ import { Rls } from './extra-features/rls/rls.db';
 import { AsyncState } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
 import { Grant } from './extra-features/grants/grants.db';
+import { RawSqlBase } from './expressions/raw-sql';
 
 // static query data that is defined only once when the table instance is instantiated
 // and doesn't change anymore
@@ -39,6 +40,8 @@ export interface QueryInternal<
   comment?: string;
   // table-level read-only mode; mutation methods throw when this is true
   readOnly?: boolean;
+  // true for materialized view query objects
+  materialized?: boolean;
   // access with `getPrimaryKeys` utility
   primaryKeys?: string[];
   singlePrimaryKey: SinglePrimaryKey;
@@ -54,6 +57,15 @@ export interface QueryInternal<
   tableRls?: Rls.TableConfig;
   // Table-local grant metadata for migration generation.
   tableGrants?: Grant.TableClassGrant[];
+  // View DDL metadata for migration generation.
+  viewData?: {
+    sql?: string | RawSqlBase;
+    recursive?: boolean;
+    checkOption?: 'LOCAL' | 'CASCADED';
+    securityBarrier?: boolean;
+    securityInvoker?: boolean;
+    withData?: boolean;
+  };
   managedRolesSql?: string;
   // Default grantor role for grant metadata.
   defaultGrantedBy?: string;

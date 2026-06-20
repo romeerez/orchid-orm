@@ -432,7 +432,22 @@ export const report = (
         );
         break;
       }
+      case 'materializedView':
+        code.push(
+          `${
+            a.action === 'create'
+              ? green('+ create materialized view')
+              : red('- drop materialized view')
+          } ${dbItemName(a, currentSchema)}`,
+        );
+        break;
       case 'view':
+        code.push(
+          `${
+            a.action === 'create' ? green('+ create view') : red('- drop view')
+          } ${dbItemName(a, currentSchema)}`,
+        );
+        break;
       case 'collation':
       case 'constraint':
         break;

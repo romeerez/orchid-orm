@@ -185,6 +185,15 @@ const view: DbStructure.View = {
   deps: [],
 };
 
+const materializedView: DbStructure.MaterializedView = {
+  schemaName: 'custom',
+  name: 'materializedView',
+  columns: [intColumn],
+  sql: 'sql',
+  deps: [],
+  isPopulated: true,
+};
+
 const columns = [
   { ...intColumn, name: 'id' },
   { ...textColumn, name: 'name' },
@@ -364,6 +373,12 @@ export const dbStructureMockFactory = {
   }),
   view: (data: Partial<DbStructure.View> = {}): DbStructure.View => ({
     ...view,
+    ...data,
+  }),
+  materializedView: (
+    data: Partial<DbStructure.MaterializedView> = {},
+  ): DbStructure.MaterializedView => ({
+    ...materializedView,
     ...data,
   }),
   role: (data: Partial<DbStructure.Role> = {}): DbStructure.Role => ({

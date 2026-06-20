@@ -54,7 +54,7 @@ If the winning baseline is missing or too thin to define user-visible requiremen
    - Ignore every other parent-folder file.
 5. Read relevant parts of `docs/src/.vitepress/dist/llms.txt` for Orchid API naming, user-facing patterns, and natural extension points.
 6. Inspect only relevant code, tests, exports, docs, and guidelines.
-   - Always include root `guidelines/code.md`, plus nested `guidelines/code.md` files for directories likely to change.
+   - Always include root `guidelines/code.md` or `guidelines/test.md`, plus nested `guidelines/code.md` or `guidelines/test.md` files for directories likely to change.
    - Check whether a similar capability already exists under another name or shape.
    - Respect package boundaries: public APIs export from `src/index.ts`; downstream internal `pqb` access goes through `pqb/internal`.
 
@@ -177,15 +177,15 @@ The file must start with this section before any package or docs work:
 - 0.1 Read `spec.md`, including `spec.md` `## Detailed Design`, before starting any later task. Follow that design for every later task, and make sure the final implementation matches it exactly.
 - 0.2 Check whether any later task you were prompted to do requires coding. If yes, read and follow every guideline below for that work, and verify that all produced code follows them to the letter.
 
-- you must follow guidelines/code.md for coding
-- you must follow <relevant-nested-path>/guidelines/code.md for coding
+- you must follow guidelines/code.md or guidelines/test.md for coding
+- you must follow <relevant-nested-path>/guidelines/code.md or <relevant-nested-path>/guidelines/test.md for coding
 ```
 
 Section `0` rules:
 
 - It contains exactly two numbered entries, `0.1` and `0.2`; both are plain list items, not checkboxes.
 - Guideline bullets are required supporting lines, not subtasks.
-- Include root `guidelines/code.md` and every relevant nested `guidelines/code.md` for directories the implementation will change.
+- Include root `guidelines/code.md` or `guidelines/test.md` and every relevant nested `guidelines/code.md` or `guidelines/test.md` for directories the implementation will change.
 
 After section `0`, only these sections are valid:
 
@@ -249,8 +249,8 @@ Use this structure:
 - 0.1 Read `spec.md`, including `spec.md` `## Detailed Design`, before starting any later task. Follow that design for every later task, and make sure the final implementation matches it exactly.
 - 0.2 Check whether any later task you were prompted to do requires coding. If yes, read and follow every guideline below for that work, and verify that all produced code follows them to the letter.
 
-- you must follow guidelines/code.md for coding
-- you must follow packages/pqb/src/query/guidelines/code.md for coding
+- you must follow guidelines/code.md or guidelines/test.md for coding
+- you must follow packages/pqb/src/query/guidelines/code.md or packages/pqb/src/query/guidelines/test.md for coding
 
 ## 1. pqb
 
@@ -304,7 +304,7 @@ Before finishing, verify:
 - `Detailed Design` is complete, coherent, and not implementation-prescriptive
 - every important `What Changes` item and declared capability is covered by `tasks.md`
 - `tasks.md` starts with section `0`; `0.1` and `0.2` are the only numbered entries there and are not checkboxes
-- section `0` lists root and relevant nested coding guidelines
+- section `0` lists root and relevant nested code or test guidelines
 - every later checkbox task has numbered subtasks; package tasks start with `scope:` and `acceptance:`
 - every coding task ends with the four required verification subtasks, using concrete package names and the two `<pkg>` command templates
 - non-coding tasks do not include coding verification subtasks

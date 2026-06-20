@@ -204,6 +204,10 @@ export interface DbTableOptions<
    */
   readOnly?: true | undefined;
   /**
+   * Mark query objects as backed by a materialized relation.
+   */
+  materialized?: true | undefined;
+  /**
    * Computed SQL or JS columns definitions
    */
   computed?: ComputedOptionsFactory<ColumnTypes, Shape>;
@@ -235,6 +239,7 @@ export class Db<
   Scopes extends RecordUnknown | undefined = EmptyObject,
   DefaultSelect extends keyof Shape = keyof Shape,
   ReadOnly extends true | undefined = undefined,
+  Materialized extends true | undefined = undefined,
 >
   extends QueryMethods<ColumnTypes>
   implements Query
@@ -243,7 +248,8 @@ export class Db<
   declare __isQuery: true;
   declare __as: Table & string;
   declare __selectable: SelectableFromShape<ShapeWithComputed, Table>;
-  declare readOnly: ReadOnly;
+  declare __readOnly: ReadOnly;
+  declare __materialized: Materialized;
   // declare __subQuery: boolean;
   declare __hasSelect: boolean;
   declare __hasWhere: boolean;
@@ -302,6 +308,7 @@ export class Db<
     asyncStorage: AsyncLocalStorage<AsyncState>,
     options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
     tableData: TableData = {},
+    viewData?: QueryInternal['viewData'],
   ) {
     super();
 
@@ -402,7 +409,9 @@ export class Db<
       noPrimaryKey: options.noPrimaryKey === 'ignore',
       comment: options.comment,
       readOnly: options.readOnly,
+      materialized: options.materialized,
       nowSQL: options.nowSQL,
+      viewData,
       tableData,
       selectAllCount,
     } as QueryInternal;
@@ -693,7 +702,8 @@ export interface DbTableConstructor<ColumnTypes> {
     Shape & ComputedColumnsFromOptions<Options['computed']>,
     MapTableScopesOption<Options>,
     ColumnsShape.DefaultSelectKeys<Shape>,
-    Options['readOnly'] extends true ? true : undefined
+    Options['readOnly'] extends true ? true : undefined,
+    Options['materialized'] extends true ? true : undefined
   >;
 }
 

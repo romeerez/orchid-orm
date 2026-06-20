@@ -110,11 +110,26 @@ const view: RakeDbAst.View = {
   sql: raw({ raw: 'sql' }),
   options: {
     recursive: true,
-    with: {
-      checkOption: 'LOCAL',
-      securityBarrier: true,
-      securityInvoker: true,
-    },
+    columns: ['id', 'name'],
+    checkOption: 'LOCAL',
+    securityBarrier: true,
+    securityInvoker: true,
+  },
+  deps: [],
+};
+
+const materializedView: RakeDbAst.MaterializedView = {
+  type: 'materializedView',
+  action: 'create',
+  schema: 'custom',
+  name: 'materializedView',
+  shape: {
+    id: t.integer(),
+  },
+  sql: raw({ raw: 'sql' }),
+  options: {
+    columns: ['id', 'name'],
+    withData: false,
   },
   deps: [],
 };
@@ -1211,6 +1226,7 @@ change(async (db) => {
 change(async (db) => {
   await db.createView('custom.view', {
     recursive: true,
+    columns: ['id', 'name'],
     checkOption: 'LOCAL',
     securityBarrier: true,
     securityInvoker: true,
@@ -1232,10 +1248,148 @@ change(async (db) => {
 change(async (db) => {
   await db.createView('custom.view', {
     recursive: true,
+    columns: ['id', 'name'],
     checkOption: 'LOCAL',
     securityBarrier: true,
     securityInvoker: true,
   }, db.sql({ raw: '$a' }).values({"a":1}));
+});
+`,
+      );
+    });
+
+    it('should drop view', () => {
+      const result = act([{ ...view, action: 'drop' }]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.dropView('custom.view', {
+    recursive: true,
+    columns: ['id', 'name'],
+    checkOption: 'LOCAL',
+    securityBarrier: true,
+    securityInvoker: true,
+  }, \`sql\`);
+});
+`,
+      );
+    });
+  });
+
+  describe('materialized view', () => {
+    it('should create materialized view', () => {
+      const result = act([materializedView]);
+
+      expectResult(
+        result,
+        template(`  await db.createMaterializedView('custom.materializedView', {
+    columns: ['id', 'name'],
+    withData: false,
+  }, \`sql\`);`),
+      );
+    });
+
+    it('should create materialized view with sql values', () => {
+      const result = act([
+        { ...materializedView, sql: raw({ raw: '$a' }).values({ a: 1 }) },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.createMaterializedView('custom.materializedView', {
+    columns: ['id', 'name'],
+    withData: false,
+  }, db.sql({ raw: '$a' }).values({"a":1}));`),
+      );
+    });
+
+    it('should drop materialized view', () => {
+      const result = act([
+        {
+          ...materializedView,
+          action: 'drop',
+          options: {
+            ...materializedView.options,
+            dropIfExists: true,
+            dropMode: 'CASCADE',
+            withData: true,
+          },
+        },
+      ]);
+
+      expectResult(
+        result,
+        template(`  await db.dropMaterializedView('custom.materializedView', {
+    dropIfExists: true,
+    dropMode: 'CASCADE',
+    columns: ['id', 'name'],
+    withData: true,
+  }, \`sql\`);`),
+      );
+    });
+
+    it('should create materialized view after its table and before its index', () => {
+      const result = act([
+        {
+          ...table,
+          schema: undefined,
+          name: 'sales',
+          shape: {
+            id: t.identity().primaryKey(),
+            total: t.integer(),
+          },
+        },
+        {
+          ...materializedView,
+          schema: undefined,
+          name: 'monthlySales',
+          deps: [{ schemaName: 'public', name: 'sales' }],
+        },
+        {
+          type: 'changeTable',
+          name: 'monthlySales',
+          shape: {},
+          add: {
+            indexes: [
+              {
+                columns: [{ column: 'id' }],
+                options: { name: 'monthlySalesIdIdx' },
+              },
+            ],
+          },
+          drop: {},
+        },
+      ]);
+
+      expectResult(
+        result,
+        `import { change } from '../dbScript';
+
+change(async (db) => {
+  await db.createTable('sales', (t) => ({
+    id: t.identity().primaryKey(),
+    total: t.integer(),
+  }));
+});
+
+change(async (db) => {
+  await db.createMaterializedView('monthlySales', {
+    columns: ['id', 'name'],
+    withData: false,
+  }, \`sql\`);
+});
+
+change(async (db) => {
+  await db.changeTable('monthlySales', (t) => ({
+    ...t.add(
+      t.index(['id'], {
+        name: 'monthlySalesIdIdx',
+      })
+    ),
+  }));
 });
 `,
       );

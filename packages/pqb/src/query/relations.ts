@@ -1,14 +1,14 @@
 import {
   PickQueryAs,
-  PickQuerySelectableReturnType,
   PickQuerySelectable,
   PickQueryShape,
   PickQueryTable,
   PickQueryResult,
   PickQueryRelations,
+  PickQueryReturnType,
 } from './pick-query-types';
 import { RecordUnknown } from '../utils';
-import { IsQuery } from './query';
+import { IsQuery, QueryManyTake, QueryManyTakeOptional } from './query';
 
 export interface RelationJoinQuery {
   (joiningQuery: IsQuery, baseQuery: IsQuery): IsQuery;
@@ -21,10 +21,12 @@ export interface RelationConfigQuery
     PickQueryShape,
     PickQueryTable,
     PickQueryAs,
-    PickQueryRelations {}
+    PickQueryRelations,
+    PickQueryReturnType {}
 
 export interface RelationConfigBase extends IsQuery {
   returnsOne: boolean;
+  required?: unknown;
   query: RelationConfigQuery;
   joinQuery: RelationJoinQuery;
   reverseJoin: RelationJoinQuery;
@@ -34,18 +36,13 @@ export interface RelationConfigBase extends IsQuery {
 
   modifyRelatedQuery?(relatedQuery: IsQuery): (query: IsQuery) => void;
 
-  maybeSingle: PickQuerySelectableReturnType;
   // Omit `belongsTo` foreign keys to be able to create records
   // with `db.book.create({ authorId: 123 })`
   // or with `db.book.create({ author: authorData })`.
   // Other relation kinds have `omitForeignKeyInCreate: never`.
   omitForeignKeyInCreate: PropertyKey;
-  // Data for `create` method that may have required properties.
-  // Only `belongsTo` has it for required foreign keys.
-  dataForCreate: RelationConfigDataForCreate | undefined;
-  // Data for `create` method with all optional properties.
-  // Other than `belongsTo` relation kinds use it.
-  optionalDataForCreate: unknown;
+  // Data for `create` method, handled separately for belongsTo and the rest
+  dataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
   primaryKeys: string[];
@@ -59,6 +56,13 @@ export interface RelationConfigDataForCreate {
 export interface RelationsBase {
   [K: string]: RelationConfigBase;
 }
+
+export type RelationQueryMaybeSingle<T extends RelationConfigBase> =
+  T['returnsOne'] extends true
+    ? T['required'] extends true
+      ? QueryManyTake<T['query']>
+      : QueryManyTakeOptional<T['query']>
+    : T['query'];
 
 /* getters */
 

@@ -92,6 +92,8 @@ const mockQueryResult = (
     rows: [
       {
         tables: [],
+        views: [],
+        materializedViews: [],
         domains: [],
         roles: [],
         indexes: [],
@@ -226,6 +228,48 @@ describe('dbStructure', () => {
         languageColumn: 'lang',
       }),
     );
+  });
+
+  it('should not load views by default', async () => {
+    mockQueryResult({
+      views: undefined,
+      materializedViews: undefined,
+    });
+
+    const result = await introspectDbSchema(adapter);
+
+    expect(result.views).toBeUndefined();
+    expect(result.materializedViews).toBeUndefined();
+
+    const sql = asMock(adapter.query).mock.calls[1][0];
+    expect(sql).not.toContain(`AS "views"`);
+    expect(sql).not.toContain(`AS "materializedViews"`);
+    expect(sql).not.toContain(`c.relkind = 'v'`);
+    expect(sql).not.toContain(`c.relkind = 'm'`);
+  });
+
+  it('should load regular and materialized views when enabled', async () => {
+    const view = dbStructureMockFactory.view();
+    const materializedView = dbStructureMockFactory.materializedView({
+      isPopulated: false,
+      tablespace: 'fast_space',
+    });
+    mockQueryResult({
+      views: [view],
+      materializedViews: [materializedView],
+    });
+
+    const { views, materializedViews } = await introspectDbSchema(adapter, {
+      loadViews: true,
+    });
+
+    expect(views).toEqual([view]);
+    expect(materializedViews).toEqual([materializedView]);
+
+    const sql = asMock(adapter.query).mock.calls[1][0];
+    expect(sql).toContain(`c.relkind = 'v'`);
+    expect(sql).toContain(`c.relkind = 'm'`);
+    expect(sql).toContain(`c.relpersistence != 't'`);
   });
 
   describe('roles', () => {

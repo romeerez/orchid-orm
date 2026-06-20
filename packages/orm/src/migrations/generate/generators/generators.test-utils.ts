@@ -63,6 +63,7 @@ const arrange = async (arg: {
   config?: RakeDbConfig;
   options?: { databaseURL: string; schema?: string }[];
   tables?: (typeof BaseTable)[];
+  views?: (typeof BaseTable.View)[];
   selects?: number[];
   dbOptions?: DbSharedOptions;
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
@@ -88,6 +89,11 @@ const arrange = async (arg: {
                 'vector',
               ],
             },
+            views: arg.views
+              ? Object.fromEntries(
+                  arg.views.map((klass) => [klass.name, klass]),
+                )
+              : undefined,
           },
           arg.tables
             ? Object.fromEntries(arg.tables.map((klass) => [klass.name, klass]))

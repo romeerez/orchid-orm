@@ -535,8 +535,106 @@ export class TagTable extends BaseTable {
   };
 }
 
-export class ActiveUserWithProfile extends BaseTable {
-  readonly table = 'activeUserWithProfile';
+export class ActiveUserView extends BaseTable.View {
+  readonly name = 'activeUser';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    name: t.text(),
+    password: t.text(),
+    picture: t.text().nullable(),
+    data: t.json<{ name: string; tags: string[] }>().nullable(),
+    age: t.integer().nullable(),
+    active: t.boolean(),
+    ...t.timestamps(),
+  }));
+
+  sql = `
+    SELECT "user".*
+    FROM "schema"."user"
+    WHERE "user"."active"
+  `;
+
+  relations = {
+    user: this.belongsTo(() => UserTable, {
+      columns: ['id'],
+      references: ['Id'],
+    }),
+
+    profile: this.hasOne(() => ProfileTable, {
+      columns: ['id'],
+      references: ['UserId'],
+    }),
+
+    profilePic: this.hasOne(() => ProfilePicTable, {
+      through: 'profile',
+      source: 'pic',
+    }),
+
+    profiles: this.hasMany(() => ProfileTable, {
+      columns: ['id'],
+      references: ['UserId'],
+    }),
+
+    posts: this.hasMany(() => PostTable, {
+      through: 'user',
+      source: 'posts',
+    }),
+
+    chats: this.hasAndBelongsToMany(() => ChatTable, {
+      columns: ['id'],
+      references: ['userId'],
+      through: {
+        table: 'chatUser',
+        columns: ['chatId'],
+        references: ['IdOfChat'],
+      },
+    }),
+
+    writableActiveUser: this.hasOne(() => WritableActiveUserView, {
+      columns: ['id'],
+      references: ['id'],
+    }),
+  };
+}
+
+export class WritableActiveUserView extends BaseTable.View {
+  readonly name = 'activeUser';
+  readonly readOnly = false;
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    name: t.text(),
+    password: t.text(),
+    picture: t.text().nullable(),
+    data: t.json<{ name: string; tags: string[] }>().nullable(),
+    age: t.integer().nullable(),
+    active: t
+      .boolean()
+      .readOnly()
+      .setOnSave(() => true),
+    ...t.timestamps(),
+  }));
+
+  sql = `
+    SELECT "user".*
+    FROM "schema"."user"
+    WHERE "user"."active"
+  `;
+
+  relations = {
+    profile: this.hasOne(() => ProfileTable, {
+      columns: ['id'],
+      references: ['UserId'],
+    }),
+
+    profiles: this.hasMany(() => ProfileTable, {
+      columns: ['id'],
+      references: ['UserId'],
+    }),
+  };
+}
+
+export class ActiveUserWithProfileView extends BaseTable.View {
+  readonly name = 'activeUserWithProfile';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(),
@@ -545,9 +643,16 @@ export class ActiveUserWithProfile extends BaseTable {
     picture: t.text().nullable(),
     data: t.json<{ name: string; tags: string[] }>().nullable(),
     age: t.integer().nullable(),
-    active: t.boolean().nullable(),
+    active: t.boolean(),
     ...t.timestamps(),
   }));
+
+  sql = `
+    SELECT "user".*, p.bio
+    FROM "schema"."user"
+    JOIN "schema"."profile" p on "user".id = p."user_id"
+    WHERE "user"."active"
+  `;
 }
 
 class CategoryTable extends BaseTable {
@@ -571,6 +676,11 @@ export const db = orchidORMWithAdapter(
     adapter: testAdapter,
     log: !process.env.CI,
     schema: () => 'schema',
+    views: {
+      activeUser: ActiveUserView,
+      writableActiveUser: WritableActiveUserView,
+      activeUserWithProfile: ActiveUserWithProfileView,
+    },
   },
   {
     user: UserTable,
@@ -581,7 +691,6 @@ export const db = orchidORMWithAdapter(
     post: PostTable,
     postTag: PostTagTable,
     tag: TagTable,
-    activeUserWithProfile: ActiveUserWithProfile,
     category: CategoryTable,
     task: TaskTable,
   },

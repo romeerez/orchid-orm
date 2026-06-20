@@ -24,7 +24,6 @@ import {
   TableData,
   ColumnSchemaConfig,
   emptyArray,
-  EmptyObject,
   getPrimaryKeys,
   RecordUnknown,
   RelationConfigBase,
@@ -35,8 +34,6 @@ import {
   RawSql,
   _orCreate,
   QueryHasWhere,
-  QueryManyTake,
-  QueryManyTakeOptional,
   _appendQuery,
   _queryWhereIn,
   _queryUpsert,
@@ -105,11 +102,9 @@ export interface BelongsToInfo<
   Q extends Query,
 > extends RelationConfigBase {
   returnsOne: true;
+  required: Required;
   query: Q;
   params: BelongsToParams<T, FK>;
-  maybeSingle: Required extends true
-    ? QueryManyTake<Q>
-    : QueryManyTakeOptional<Q>;
   omitForeignKeyInCreate: FK;
   dataForCreate: {
     columns: FK;
@@ -121,9 +116,10 @@ export interface BelongsToInfo<
         : {
             [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
           }
-      : never;
+      : {
+          [Key in Name]?: never;
+        };
   };
-  optionalDataForCreate: EmptyObject;
   // `belongsTo` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key for the relation
   // - `set` to update the foreign key with a relation primary key found by conditions

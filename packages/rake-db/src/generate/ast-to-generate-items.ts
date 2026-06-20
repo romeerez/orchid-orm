@@ -64,11 +64,16 @@ export const astToGenerateItem = (
   switch (ast.type) {
     case 'table':
     case 'changeTable':
-    case 'view': {
+    case 'view':
+    case 'materializedView': {
       const schema = ast.schema ?? currentSchema;
       const table = `${schema}.${ast.name}`;
 
-      if (ast.type === 'table' || ast.type === 'view') {
+      if (
+        ast.type === 'table' ||
+        ast.type === 'view' ||
+        ast.type === 'materializedView'
+      ) {
         const keys = ast.action === 'create' ? add : drop;
         keys.push(table);
         deps.push(schema);

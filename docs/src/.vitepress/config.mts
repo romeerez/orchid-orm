@@ -80,6 +80,10 @@ export default {
                 link: '/guide/define-tables',
               },
               {
+                text: 'Views',
+                link: '/guide/views',
+              },
+              {
                 text: 'Generate Migrations',
                 link: '/guide/generate-migrations',
               },

@@ -69,12 +69,12 @@ describe('readOnly', () => {
   };
 
   it('maps table readOnly declarations into query read-only capability', () => {
-    assertType<typeof db.table.readOnly, undefined>();
-    assertType<typeof db.readOnly.readOnly, true>();
+    assertType<typeof db.table.__readOnly, undefined>();
+    assertType<typeof db.readOnly.__readOnly, true>();
 
     const readQuery = db.readOnly.where({ id: 1 }).select('name');
 
-    assertType<typeof readQuery.readOnly, true>();
+    assertType<typeof readQuery.__readOnly, true>();
     assertType<Awaited<typeof readQuery>, { name: string }[]>();
 
     // @ts-expect-error read-only ORM table cannot create

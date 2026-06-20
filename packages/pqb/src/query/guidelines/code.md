@@ -6,6 +6,11 @@ Treat every rule in this file as mandatory for every change in that directory.
 - There are no exceptions for private, internal, helper-only, temporary, or one-file-local code.
 - Before creating a new query file or typing `class ... extends ...Error`, stop and re-check the relevant section below.
 
+## File naming
+
+- Query builder methods, which are mixed into the `QueryMethods` interface, should be kept in files with the `.query` suffix.
+- SQL string composition should be kept in files with the `.sql` suffix.
+
 ## Use feature folders for capabilities
 
 When a task explicitly mentions a capability, treat that as a mandatory checkpoint to decide whether the change belongs in a feature folder.

@@ -21,6 +21,7 @@ import { _clone } from '../clone/clone';
 import { processSelectArg } from './select.utils';
 import { SelectItem } from './select.sql';
 import { QueryThenByReturnType } from '../../then/then';
+import { RelationQueryMaybeSingle } from '../../relations';
 
 export interface SelectSelf
   extends
@@ -50,7 +51,7 @@ export type SelectAsFnArg<T extends PickQueryRelationsWithData> =
     ? T
     : {
         [K in keyof T['relations'] | keyof T]: K extends keyof T['relations']
-          ? T['relations'][K]['maybeSingle'] & SubQueryAddition<T>
+          ? RelationQueryMaybeSingle<T['relations'][K]> & SubQueryAddition<T>
           : K extends keyof T
             ? T[K]
             : never;

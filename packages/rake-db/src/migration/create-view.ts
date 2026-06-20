@@ -70,12 +70,11 @@ const astToQuery = (ast: RakeDbAst.View): SingleSql => {
       );
     }
 
-    const withOptions = options?.with;
     const list: string[] = [];
-    if (withOptions?.checkOption)
-      list.push(`check_option = ${singleQuote(withOptions.checkOption)}`);
-    if (withOptions?.securityBarrier) list.push(`security_barrier = true`);
-    if (withOptions?.securityInvoker !== false)
+    if (options?.checkOption)
+      list.push(`check_option = ${singleQuote(options.checkOption)}`);
+    if (options?.securityBarrier) list.push(`security_barrier = true`);
+    if (options?.securityInvoker !== false)
       list.push(`security_invoker = true`);
     if (list.length) {
       sql.push(`WITH ( ${list.join(', ')} )`);

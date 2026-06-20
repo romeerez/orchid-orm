@@ -38,7 +38,6 @@ import {
   getStackTrace,
   IsQuery,
   MaybeArray,
-  QueryOrExpression,
   RecordUnknown,
   ShallowSimplify,
   toSnakeCase,
@@ -46,6 +45,7 @@ import {
   QuerySchema,
   Rls,
   Grant,
+  RawSqlBase,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -95,11 +95,16 @@ export interface Table extends Query, TableInfo {}
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
 // add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export interface TableToDb<T extends ORMTableInput>
+export interface TableToDb<
+  T extends ORMTableInput,
+  Name extends string | undefined,
+  ReadOnly extends true | undefined,
+  Materialized extends true | undefined = undefined,
+>
   extends
     TableInfo,
     Db<
-      T['table'],
+      Name,
       T['columns']['shape'],
       keyof ShapeColumnPrimaryKeys<T['columns']['shape']> extends never
         ? never
@@ -119,7 +124,8 @@ export interface TableToDb<T extends ORMTableInput>
       T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
       MapTableScopesOption<T>,
       ColumnsShape.DefaultSelectKeys<T['columns']['shape']>,
-      T['readOnly'] extends true ? true : undefined
+      ReadOnly,
+      Materialized
     > {
   relations: T extends RelationConfigSelf
     ? {
@@ -161,30 +167,36 @@ export interface TableToDb<T extends ORMTableInput>
     : EmptyObject;
 }
 
-// type of table instance created by a table class
-// is used only in `orchidORM` constructor to accept proper classes
-export interface ORMTableInput {
-  // table name
-  table: string;
+export interface PickORMTableInputColumns {
   // columns shape and the record type
   columns: {
     shape: Column.Shape.QueryInit;
     data: MaybeArray<TableDataItem>;
   };
-  // database schema containing this table
-  schema?: QuerySchema;
-  // column types defined in base table to use in `setColumns`
-  types: unknown;
-  // suppress no primary key warning
-  noPrimaryKey?: boolean;
-  // path to file where the table is defined
-  filePath: string;
-  // default language for the full text search
-  language?: string;
+}
+
+export interface PickORMTableComputed {
   /**
    * collect computed columns returned by {@link BaseTable.setColumns}
    */
   computed?: ComputedOptionsFactory<never, never>;
+}
+
+export interface PickORMTableInputColumnsAndComputed
+  extends PickORMTableInputColumns, PickORMTableComputed {}
+
+// type of table instance created by a table class
+// is used only in `orchidORM` constructor to accept proper classes
+export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
+  autoForeignKeys?: TableData.References.BaseOptions | boolean;
+  // database schema containing this table
+  schema?: QuerySchema;
+  // column types defined in base table to use in `setColumns`
+  types: unknown;
+  // path to file where the table is defined
+  filePath: string;
+  // default language for the full text search
+  language?: string;
   // Available scopes for this table defined by user.
   scopes?: RecordUnknown;
   // enable soft delete, true for `deletedAt` column, string for column name
@@ -199,43 +211,73 @@ export interface ORMTableInput {
   grants?: readonly Grant.TableClassGrant[];
   // table-level read-only capability; only literal `true` disables mutations
   readonly readOnly?: boolean;
+  // materialized-view capability; only literal `true` marks materialized views
+  readonly materialized?: true;
+
+  /* Only for tables */
+
+  // table name
+  table?: string;
+  // suppress no primary key warning
+  noPrimaryKey?: boolean;
   // automatically create foreign keys for relations
-  autoForeignKeys?: TableData.References.BaseOptions | boolean;
+
+  /* Only for views */
+
+  // view name
+  name?: string;
+  // SQL query that defines this view
+  sql?: string | RawSqlBase;
+  // CREATE VIEW RECURSIVE option used by migration generation.
+  recursive?: boolean;
+  // CREATE VIEW CHECK OPTION used by migration generation.
+  checkOption?: 'LOCAL' | 'CASCADED';
+  // CREATE VIEW security_barrier option used by migration generation.
+  securityBarrier?: boolean;
+  // CREATE VIEW security_invoker option used by migration generation.
+  securityInvoker?: boolean;
+  // CREATE MATERIALIZED VIEW WITH DATA / WITH NO DATA option.
+  withData?: boolean;
 }
 
 // Object type that's allowed in `where` and similar methods of the table.
-export type Queryable<T extends ORMTableInput> = ShallowSimplify<{
+export type Queryable<T extends PickORMTableInputColumns> = ShallowSimplify<{
   [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
 }>;
 
-export type DefaultSelect<T extends ORMTableInput> = ShallowSimplify<
+export type DefaultSelect<T extends PickORMTableInputColumns> = ShallowSimplify<
   ColumnsShape.DefaultOutput<T['columns']['shape']>
 >;
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends ORMTableInput> = T['computed'] extends ((
-  t: never,
-) => infer R extends ComputedOptionsConfig)
-  ? ShallowSimplify<
-      ColumnsShape.Output<T['columns']['shape']> & {
-        [K in keyof R]: R[K] extends QueryOrExpression<unknown>
-          ? R[K]['result']['value']['outputType']
-          : R[K] extends () => {
-                result: { value: infer Value extends Column.Pick.QueryColumn };
-              }
+export type Selectable<T extends PickORMTableInputColumnsAndComputed> =
+  T['computed'] extends ((t: never) => infer R extends ComputedOptionsConfig)
+    ? ShallowSimplify<
+        ColumnsShape.Output<T['columns']['shape']> & {
+          [K in keyof R]: R[K] extends {
+            result: {
+              value: infer Value extends Column.Pick.QueryColumn;
+            };
+          }
             ? Value['outputType']
-            : never;
-      }
-    >
-  : ShallowSimplify<ColumnsShape.Output<T['columns']['shape']>>;
+            : R[K] extends () => {
+                  result: {
+                    value: infer Value extends Column.Pick.QueryColumn;
+                  };
+                }
+              ? Value['outputType']
+              : never;
+        }
+      >
+    : ShallowSimplify<ColumnsShape.Output<T['columns']['shape']>>;
 
 // Object type that conforms `create` method of the table.
-export type Insertable<T extends ORMTableInput> = ShallowSimplify<
+export type Insertable<T extends PickORMTableInputColumns> = ShallowSimplify<
   ColumnsShape.Input<T['columns']['shape']>
 >;
 
 // Object type that conforms `update` method of the table.
-export type Updatable<T extends ORMTableInput> = ShallowSimplify<
+export type Updatable<T extends PickORMTableInputColumns> = ShallowSimplify<
   ColumnsShape.InputPartial<T['columns']['shape']>
 >;
 
@@ -265,7 +307,7 @@ export interface SetColumnsResult<
 }
 
 export interface BaseTableInstance<ColumnTypes> {
-  table: string;
+  table?: string;
   columns: { shape: Column.Shape.QueryInit; data: MaybeArray<TableDataItem> };
   schema?: QuerySchema;
   noPrimaryKey?: boolean;
@@ -391,7 +433,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Shape extends Column.Shape.QueryInit,
     Keys extends string,
   >(
-    this: { table: Table; columns: { shape: Shape } },
+    this: ({ table: Table } | { name: Table }) & { columns: { shape: Shape } },
     scopes: DbTableOptionScopes<Table, Shape, Keys>,
   ): QueryScopes<Keys>;
 
@@ -481,6 +523,8 @@ export interface BaseTableClass<
   getFilePath(): string;
 
   sql: DbSqlMethod<ColumnTypes>;
+  View: TableClass<BaseViewInstance<ColumnTypes>>;
+  MaterializedView: TableClass<BaseMaterializedViewInstance<ColumnTypes>>;
 
   new (): BaseTableInstance<ColumnTypes>;
   instance(): BaseTableInstance<ColumnTypes>;
@@ -511,6 +555,28 @@ export interface BaseTableClass<
    * Equals to partial {@link createSchema}.
    */
   updateSchema: SchemaConfig['updateSchema'];
+}
+
+export interface BaseViewInstance<
+  ColumnTypes,
+> extends BaseTableInstance<ColumnTypes> {
+  name: string;
+  sql: string | RawSqlBase;
+  readonly readOnly?: boolean;
+  recursive?: boolean;
+  checkOption?: 'LOCAL' | 'CASCADED';
+  securityBarrier?: boolean;
+  securityInvoker?: boolean;
+}
+
+export interface BaseMaterializedViewInstance<
+  ColumnTypes,
+> extends BaseTableInstance<ColumnTypes> {
+  name: string;
+  sql: string | RawSqlBase;
+  readonly readOnly?: true;
+  readonly materialized: true;
+  withData?: boolean;
 }
 
 // base table constructor
@@ -653,6 +719,8 @@ export function createBaseTable<
     }
 
     table!: string;
+    name!: string;
+    sql!: string | RawSqlBase;
     columns = defaultColumns;
     schema?: QuerySchema;
     noPrimaryKey?: boolean;
@@ -752,6 +820,21 @@ export function createBaseTable<
   };
 
   applyMixins(base, [QueryHooks]);
+
+  const baseWithView = base as typeof base & {
+    View: typeof base;
+    MaterializedView: typeof base;
+  };
+
+  baseWithView.View = class View extends base {
+    readonly readOnly = true;
+  };
+
+  baseWithView.MaterializedView = class MaterializedView extends (
+    baseWithView.View
+  ) {
+    readonly materialized = true;
+  };
 
   base.prototype.types = columnTypes as typeof base.prototype.types;
   base.prototype.snakeCase = snakeCase;

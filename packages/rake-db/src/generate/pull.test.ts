@@ -29,6 +29,7 @@ const structure = {
   schemas: [],
   tables: [],
   views: [],
+  materializedViews: [],
   indexes: [],
   excludes: [],
   constraints: [],

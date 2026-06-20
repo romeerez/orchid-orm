@@ -105,6 +105,7 @@ import { QueryTruncate } from './extra-features/truncate/truncate';
 import { QueryWindow } from './basic-features/window/window';
 import { QueryWithSchema } from './basic-features/schema/schema';
 import { QueryStorage } from './basic-features/storage/storage';
+import { RelationQueryMaybeSingle } from './relations';
 
 export type GroupArgs<T extends PickQueryResult> = (
   | {
@@ -978,7 +979,7 @@ export class QueryMethods<ColumnTypes> {
     this: T,
     relName: RelName,
     params: T['relations'][RelName]['params'],
-  ): T['relations'][RelName]['maybeSingle'] {
+  ): RelationQueryMaybeSingle<T['relations'][RelName]> {
     return this.relations[relName as string].queryRelated(params) as never;
   }
 
@@ -995,10 +996,14 @@ export class QueryMethods<ColumnTypes> {
         true,
       ]
       ? {
-          [K in keyof T['relations'][RelName]['maybeSingle']]: K extends '__selectable'
-            ? T['relations'][RelName]['maybeSingle']['__selectable'] &
+          [K in keyof RelationQueryMaybeSingle<
+            T['relations'][RelName]
+          >]: K extends '__selectable'
+            ? RelationQueryMaybeSingle<
+                T['relations'][RelName]
+              >['__selectable'] &
                 Omit<T['__selectable'], keyof T['shape']>
-            : T['relations'][RelName]['maybeSingle'][K];
+            : RelationQueryMaybeSingle<T['relations'][RelName]>[K];
         } & IsSubQuery
       : JoinResultRequireMain<
           T['relations'][RelName]['query'],

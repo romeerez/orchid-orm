@@ -24,7 +24,7 @@ import {
   CompareExpression,
   compareSqlExpressions,
   promptCreateOrRename,
-  TableExpression,
+  SqlExpression,
 } from './generators.utils';
 import { processPrimaryKey } from './primary-key.generator';
 import { processIndexesAndExcludes } from './indexes-and-excludes.generator';
@@ -92,7 +92,7 @@ export const processTables = async (
     currentSchema,
   );
   const compareSql: CompareSql = { values: [], expressions: [] };
-  const tableExpressions: TableExpression[] = [];
+  const expressions: SqlExpression[] = [];
   const { changeTables, changeTableSchemas, dropTables, tableShapes } =
     collectChangeAndDropTables(
       adapter,
@@ -127,7 +127,7 @@ export const processTables = async (
     currentSchema,
     config,
     compareSql,
-    tableExpressions,
+    expressions,
     verifying,
     pendingDbTypes,
   );
@@ -136,7 +136,7 @@ export const processTables = async (
 
   await Promise.all([
     applyCompareSql(compareSql, adapter),
-    compareSqlExpressions(tableExpressions, adapter),
+    compareSqlExpressions(expressions, adapter),
   ]);
 
   await processTableRls(
@@ -273,7 +273,7 @@ const applyChangeTables = async (
   currentSchema: string,
   config: RakeDbConfig,
   compareSql: CompareSql,
-  tableExpressions: TableExpression[],
+  expressions: SqlExpression[],
   verifying: boolean | undefined,
   pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
@@ -323,9 +323,7 @@ const applyChangeTables = async (
         .map((x) => `"${x}"`)
         .join(', ')})`;
 
-      tableExpressions.push(
-        ...compareExpressions.map((x) => ({ ...x, source })),
-      );
+      expressions.push(...compareExpressions.map((x) => ({ ...x, source })));
     }
   }
 };

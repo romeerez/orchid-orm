@@ -203,8 +203,27 @@ export const structureToAst = async (
     }
   }
 
-  for (const view of data.views) {
+  for (const view of data.views || []) {
     ast.push(viewToAst(ctx, data, domains, view));
+  }
+
+  for (const view of data.materializedViews || []) {
+    ast.push(materializedViewToAst(ctx, data, domains, view));
+
+    const indexes = materializedViewIndexesToAst(view, data);
+    if (indexes.length) {
+      ast.push({
+        type: 'changeTable',
+        schema:
+          view.schemaName === ctx.currentSchema ? undefined : view.schemaName,
+        name: view.name,
+        shape: {},
+        add: {
+          indexes,
+        },
+        drop: {},
+      });
+    }
   }
 
   if (data.roles) {
@@ -560,15 +579,27 @@ const viewToAst = (
   const shape = makeDbStructureColumnsShape(ctx, data, domains, view);
 
   const options: RakeDbAst.ViewOptions = {};
-  if (view.isRecursive) options.recursive = true;
+  if (view.isRecursive) {
+    options.recursive = true;
+    options.columns = view.columns.map((column) => column.name);
+  }
 
   if (view.with) {
-    const withOptions: Record<string, unknown> = {};
-    options.with = withOptions;
     for (const pair of view.with) {
       const [key, value] = pair.split('=');
-      withOptions[toCamelCase(key) as 'checkOption'] =
-        value === 'true' ? true : value === 'false' ? false : value;
+      switch (toCamelCase(key)) {
+        case 'checkOption':
+          if (value === 'LOCAL' || value === 'CASCADED') {
+            options.checkOption = value;
+          }
+          break;
+        case 'securityBarrier':
+          options.securityBarrier = value === 'true';
+          break;
+        case 'securityInvoker':
+          options.securityInvoker = value === 'true';
+          break;
+      }
     }
   }
 
@@ -584,15 +615,61 @@ const viewToAst = (
   };
 };
 
+const materializedViewToAst = (
+  ctx: StructureToAstCtx,
+  data: IntrospectedStructure,
+  domains: DbStructureDomainsMap,
+  view: DbStructure.MaterializedView,
+): RakeDbAst.MaterializedView => {
+  const options: RakeDbAst.MaterializedViewOptions = {};
+  if (!view.isPopulated) {
+    options.withData = false;
+  }
+
+  return {
+    type: 'materializedView',
+    action: 'create',
+    schema: view.schemaName === ctx.currentSchema ? undefined : view.schemaName,
+    name: view.name,
+    shape: makeDbStructureColumnsShape(ctx, data, domains, view),
+    sql: raw({ raw: view.sql }),
+    options,
+    deps: view.deps,
+  };
+};
+
+const materializedViewIndexesToAst = (
+  view: DbStructure.MaterializedView,
+  data: IntrospectedStructure,
+): TableData.Index[] => {
+  return data.indexes
+    .filter(filterByTableSchema(view.name, view.schemaName))
+    .map((index) => ({
+      columns: index.columns.map((column) => ({
+        ...('expression' in column
+          ? { expression: column.expression }
+          : { column: toCamelCase(column.column) }),
+        collate: column.collate,
+        opclass: column.opclass,
+        order: column.order,
+      })),
+      options: {
+        ...makeIndexOrExcludeOptions(view.name, index, 'indexes'),
+        include: index.include?.map(toCamelCase),
+      },
+    }));
+};
+
 export const makeDbStructureColumnsShape = (
   ctx: StructureToAstCtx,
   data: IntrospectedStructure,
   domains: DbStructureDomainsMap,
-  table: DbStructure.Table | DbStructure.View,
+  table: DbStructure.Table | DbStructure.View | DbStructure.MaterializedView,
   tableData?: StructureToAstTableData,
 ): ColumnsShape => {
   const shape: ColumnsShape = {};
   const checks = tableData ? getDbTableColumnsChecks(tableData) : undefined;
+  const dbTable = tableData ? (table as DbStructure.Table) : undefined;
 
   for (const item of table.columns) {
     const [key, column] = dbColumnToAst(
@@ -601,7 +678,7 @@ export const makeDbStructureColumnsShape = (
       domains,
       table.name,
       item,
-      table,
+      dbTable,
       tableData,
       checks,
     );

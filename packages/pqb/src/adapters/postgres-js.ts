@@ -56,7 +56,7 @@ class PostgresJsResult<T extends QueryResultRow> implements QueryResult<T> {
   constructor(result: RawResult) {
     this.rowCount = result.count;
     this.rows = result as never;
-    this.fields = result.statement.columns;
+    this.fields = result.statement?.columns;
   }
 }
 

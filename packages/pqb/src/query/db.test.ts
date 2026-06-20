@@ -15,6 +15,7 @@ import {
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
 import { Query } from './query';
+import type { GeneratorIgnore } from './query';
 import {
   DefaultSchemaConfig,
   internalSchemaConfig,
@@ -88,15 +89,62 @@ describe('db', () => {
     expect(s.columnTypes).toBe(testDb.columnTypes);
   });
 
+  it('should support ignoring views in generator options', () => {
+    const generatorIgnore: GeneratorIgnore = {
+      tables: ['legacy_table'],
+      views: ['legacy_view', /^external_/],
+    };
+
+    const db = createDbWithAdapter({
+      adapter: testAdapter,
+      generatorIgnore,
+    });
+
+    expect(db.internal.generatorIgnore).toEqual(generatorIgnore);
+  });
+
   it('tracks direct table queries as not read-only by default', () => {
     const table = testDb('table', (t) => ({
       id: t.identity().primaryKey(),
     }));
 
-    assertType<typeof table.readOnly, undefined>();
+    assertType<typeof table.__readOnly, undefined>();
+    assertType<typeof table.__materialized, undefined>();
     const expectMutable = <T extends Query.Pick.IsNotReadOnly>(query: T) =>
       query;
     expectMutable(table);
+  });
+
+  it('tracks materialized query metadata through db construction and read query transformations', () => {
+    const view = testDb(
+      'materialized_view',
+      (t) => ({
+        id: t.identity().primaryKey(),
+      }),
+      undefined,
+      { materialized: true, readOnly: true },
+    );
+
+    const selected = view.select('id');
+    const filtered = view.where({ id: 1 });
+    const cloned = view.clone();
+
+    assertType<typeof view.__materialized, true>();
+    assertType<typeof selected.__materialized, true>();
+    assertType<typeof filtered.__materialized, true>();
+    assertType<typeof cloned.__materialized, true>();
+    const expectMaterialized = <T extends Query.Pick.IsMaterialized>(
+      query: T,
+    ) => query;
+    expectMaterialized(view);
+    expectMaterialized(selected);
+    expectMaterialized(filtered);
+    expectMaterialized(cloned);
+
+    expect(view.internal.materialized).toBe(true);
+    expect(selected.internal.materialized).toBe(true);
+    expect(filtered.internal.materialized).toBe(true);
+    expect(cloned.internal.materialized).toBe(true);
   });
 
   it('keeps read APIs and rejects mutation APIs for read-only query types', () => {

@@ -119,10 +119,9 @@ export interface HasAndBelongsToManyInfo<
   returnsOne: false;
   query: Q;
   params: HasAndBelongsToManyParams<T, FK>;
-  maybeSingle: Q;
   omitForeignKeyInCreate: never;
-  optionalDataForCreate: {
-    [P in Name]?: Q extends Query.Pick.IsNotReadOnly
+  dataForCreate: {
+    [K in Name]?: Q extends Query.Pick.IsNotReadOnly
       ? {
           // create related records
           create?: CreateData<Q>[];
@@ -139,7 +138,6 @@ export interface HasAndBelongsToManyInfo<
           connect?: WhereArg<Q>[];
         };
   };
-  dataForCreate: undefined;
   // `hasAndBelongsToMany` relation data available for update. It supports:
   // - `disconnect` deletes join table records for related records found by conditions
   // - `set` creates join table records for related records found by conditions, deletes previous connects

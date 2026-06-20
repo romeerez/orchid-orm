@@ -350,7 +350,7 @@ export const addAutoForeignKey = (
           fkeyColumn = getColumnKeyFromDbName(to, fkeyColumn);
         } else {
           fkeyTable = (fkey.fnOrTable() as unknown as BaseTableClass<any, any>) // eslint-disable-line @typescript-eslint/no-explicit-any
-            .instance().table;
+            .instance().table as string;
         }
 
         if (toTable === fkeyTable && pkey === fkeyColumn) return;
