@@ -227,6 +227,9 @@ export const toSql: ToSql = (
           upsertOrCreate.q.type = 'upsert';
         }
 
+        upsertOrCreate.q.appendQueries = query.upsertCreateAppendQueries;
+        upsertOrCreate.q.asFns = query.upsertCreateAsFns;
+
         const { makeSql: makeSecondSql } = moveMutativeQueryToCteBase(
           toSql,
           ctx,

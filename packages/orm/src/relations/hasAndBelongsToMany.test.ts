@@ -3,6 +3,7 @@ import { omit, RecordUnknown, TransactionAdapterClass } from 'pqb/internal';
 import {
   chatSelectAll,
   useRelationCallback,
+  useQueryCounter,
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import {
@@ -13,6 +14,7 @@ import {
   expectSql,
   now,
   ChatData,
+  TaskData,
   UserData,
   UserSelectAll,
 } from 'test-utils';
@@ -24,6 +26,8 @@ const ormParams = {
 };
 
 const activeChatData = { ...ChatData, Active: true };
+
+const { resetQueriesCount, getQueriesCount } = useQueryCounter();
 
 describe('hasAndBelongsToMany', () => {
   useTestORM();
@@ -2764,6 +2768,178 @@ describe('hasAndBelongsToMany', () => {
             [{ IdOfChat: ids[0] }, { IdOfChat: ids[1] }],
             expect.any(Db),
           );
+        });
+      });
+    });
+
+    describe('nested upsert', () => {
+      it('should update related records if they exist', async () => {
+        const data = await db.user
+          .select('Id', { taskIds: (q) => q.tasks.pluck('Id') })
+          .create({
+            ...UserData,
+            tasks: {
+              create: [{ ...TaskData, Title: 'task 1' }],
+            },
+          });
+
+        resetQueriesCount();
+
+        const q = db.user.find(data.Id).update({
+          tasks: {
+            upsert: {
+              findBy: { Id: data.taskIds[0] },
+              update: { Title: 'updated 1' },
+              create: { ...TaskData, Title: 'created 1' },
+            },
+          },
+        });
+
+        const count = await q;
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const tasks = await db.user
+          .queryRelated('tasks', { Id: data.Id, UserKey: 'key' })
+          .order('Title')
+          .pluck('Title');
+        expect(tasks).toEqual(['updated 1']);
+      });
+
+      it('should create related records if they do not exist', async () => {
+        const Id = await db.user.get('Id').create(UserData);
+
+        resetQueriesCount();
+
+        const count = await db.user.find(Id).update({
+          tasks: {
+            upsert: {
+              findBy: { Id: 0 },
+              update: { Title: 'updated 1' },
+              create: { ...TaskData, Title: 'created 1' },
+            },
+          },
+        });
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const tasks = await db.user
+          .queryRelated('tasks', { Id, UserKey: 'key' })
+          .order('Title')
+          .pluck('Title');
+        expect(tasks).toEqual(['created 1']);
+      });
+
+      it('should create related records if they do not exist with data from callbacks', async () => {
+        const Id = await db.user.get('Id').create(UserData);
+
+        resetQueriesCount();
+
+        const count = await db.user.find(Id).update({
+          tasks: {
+            upsert: {
+              findBy: { Id: 0 },
+              update: { Title: 'updated 1' },
+              create: () => ({ ...TaskData, Title: 'created 1' }),
+            },
+          },
+        });
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const tasks = await db.user
+          .queryRelated('tasks', { Id, UserKey: 'key' })
+          .order('Title')
+          .pluck('Title');
+        expect(tasks).toEqual(['created 1']);
+      });
+
+      it('should throw in batch update', async () => {
+        expect(() =>
+          db.user.where({ Id: { in: [1, 2, 3] } }).update({
+            tasks: {
+              // @ts-expect-error not allowed in batch update
+              upsert: {
+                findBy: { Title: 'task' },
+                update: { Title: 'updated' },
+                create: { ...TaskData, Title: 'created' },
+              },
+            },
+          }),
+        ).toThrow('`upsert` option is not allowed in a batch update');
+      });
+
+      describe('relation callbacks', () => {
+        const {
+          beforeUpdate,
+          afterUpdate,
+          beforeCreate,
+          afterCreate,
+          resetMocks,
+        } = useRelationCallback(db.user.relations.tasks, ['Id', 'TaskKey']);
+
+        it('should invoke callbacks when updating', async () => {
+          const Id = await db.user.get('Id').create({
+            ...UserData,
+            tasks: {
+              create: [{ ...TaskData, Title: 'task 1' }],
+            },
+          });
+          const ids = await db.task.select('Id', 'TaskKey');
+
+          resetQueriesCount();
+
+          const count = await db.user.find(Id).update({
+            tasks: {
+              upsert: {
+                findBy: { Id: ids[0].Id },
+                update: { Title: 'updated 1' },
+                create: { ...TaskData, Title: 'created 1' },
+              },
+            },
+          });
+
+          expect(getQueriesCount()).toBe(1);
+
+          expect(count).toBe(1);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledWith(ids, expect.any(Db));
+        });
+
+        it('should invoke callbacks when creating', async () => {
+          resetMocks();
+
+          const Id = await db.user.get('Id').create(UserData);
+
+          resetQueriesCount();
+
+          const count = await db.user.find(Id).update({
+            tasks: {
+              upsert: {
+                findBy: { Id: 0 },
+                update: { Title: 'updated 1' },
+                create: { ...TaskData, Title: 'created 1' },
+              },
+            },
+          });
+
+          expect(getQueriesCount()).toBe(1);
+
+          expect(count).toBe(1);
+
+          const ids = await db.task.select('Id', 'TaskKey');
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
         });
       });
     });

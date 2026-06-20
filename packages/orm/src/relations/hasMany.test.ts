@@ -3099,6 +3099,219 @@ describe('hasMany', () => {
       });
     });
 
+    describe('nested upsert', () => {
+      it('should update related records if they exist', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+
+        const data = await db.user
+          .select('Id', { messageIds: (q) => q.messages.pluck('Id') })
+          .create({
+            ...UserData,
+            messages: {
+              create: [{ ...MessageData, ChatId, Text: 'message 1' }],
+            },
+          });
+
+        resetQueriesCount();
+
+        const count = await db.user.find(data.Id).update({
+          messages: {
+            upsert: {
+              findBy: { Id: data.messageIds[0] },
+              update: { Text: 'updated 1' },
+              create: { ...MessageData, ChatId, Text: 'created 1' },
+            },
+          },
+        });
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const messages = await db.user
+          .queryRelated('messages', { Id: data.Id, UserKey: 'key' })
+          .order('Text')
+          .pluck('Text');
+        expect(messages).toEqual(['updated 1']);
+      });
+
+      it('should create related records if they do not exist', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const Id = await db.user.get('Id').create(UserData);
+
+        resetQueriesCount();
+
+        const count = await db.user.find(Id).update({
+          messages: {
+            upsert: {
+              findBy: { Id: 0 },
+              update: { Text: 'updated 1' },
+              create: { ...MessageData, ChatId, Text: 'created 1' },
+            },
+          },
+        });
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const messages = await db.user
+          .queryRelated('messages', { Id, UserKey: 'key' })
+          .order('Text')
+          .pluck('Text');
+        expect(messages).toEqual(['created 1']);
+      });
+
+      it('should create related records if they do not exist with data from callbacks', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+        const Id = await db.user.get('Id').create(UserData);
+
+        resetQueriesCount();
+
+        const count = await db.user.find(Id).update({
+          messages: {
+            upsert: {
+              findBy: { Id: 0 },
+              update: { Text: 'updated 1' },
+              create: () => ({ ...MessageData, ChatId, Text: 'created 1' }),
+            },
+          },
+        });
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const messages = await db.user
+          .queryRelated('messages', { Id, UserKey: 'key' })
+          .order('Text')
+          .pluck('Text');
+        expect(messages).toEqual(['created 1']);
+      });
+
+      it('should create related records when `on` condition does not match for the update', async () => {
+        const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+
+        const data = await db.user
+          .select('Id', { messageIds: (q) => q.messages.pluck('Id') })
+          .create({
+            ...UserData,
+            messages: {
+              create: [
+                { ...MessageData, ChatId, Text: 'message 1' },
+                { ...MessageData, ChatId, Text: 'message 2' },
+              ],
+            },
+          });
+
+        resetQueriesCount();
+
+        const count = await db.user.find(data.Id).update({
+          activeMessages: {
+            upsert: {
+              findBy: { Id: data.messageIds[0] },
+              update: { Text: 'updated 1' },
+              create: { ...MessageData, ChatId, Text: 'created 1' },
+            },
+          },
+        });
+
+        expect(getQueriesCount()).toBe(1);
+
+        expect(count).toBe(1);
+
+        const messages = await db.user
+          .queryRelated('activeMessages', { Id: data.Id, UserKey: 'key' })
+          .order('Text');
+        expect(messages).toMatchObject([{ Text: 'created 1', Active: true }]);
+      });
+
+      it('should throw in batch update', async () => {
+        expect(() =>
+          db.user.where({ Id: { in: [1, 2, 3] } }).update({
+            messages: {
+              // @ts-expect-error not allowed in batch update
+              upsert: {
+                findBy: { Text: 0 },
+                update: { Text: 'updated' },
+                create: { ...MessageData, ChatId: 1, Text: 'created' },
+              },
+            },
+          }),
+        ).toThrow('`upsert` option is not allowed in a batch update');
+      });
+
+      describe('relation callbacks', () => {
+        const {
+          beforeUpdate,
+          afterUpdate,
+          beforeCreate,
+          afterCreate,
+          resetMocks,
+        } = useRelationCallback(db.user.relations.messages, ['Id']);
+
+        it('should invoke callbacks when updating', async () => {
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+          const Id = await db.user.get('Id').create({
+            ...UserData,
+            messages: {
+              create: [{ ...MessageData, ChatId, Text: 'message 1' }],
+            },
+          });
+          const ids = await db.message.select('Id');
+
+          resetQueriesCount();
+
+          const count = await db.user.find(Id).update({
+            messages: {
+              upsert: {
+                findBy: { Id: ids[0].Id },
+                update: { Text: 'updated 1' },
+                create: { ...MessageData, ChatId, Text: 'created 1' },
+              },
+            },
+          });
+
+          expect(getQueriesCount()).toBe(1);
+
+          expect(count).toBe(1);
+
+          expect(beforeUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledTimes(1);
+          expect(afterUpdate).toHaveBeenCalledWith(ids, expect.any(Db));
+        });
+
+        it('should invoke callbacks when creating', async () => {
+          resetMocks();
+
+          const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+          const Id = await db.user.get('Id').create(UserData);
+
+          resetQueriesCount();
+
+          const count = await db.user.find(Id).update({
+            messages: {
+              upsert: {
+                findBy: { Id: 0 },
+                update: { Text: 'updated 1' },
+                create: { ...MessageData, ChatId, Text: 'created 1' },
+              },
+            },
+          });
+
+          expect(getQueriesCount()).toBe(1);
+
+          expect(count).toBe(1);
+
+          const ids = await db.message.select('Id');
+
+          expect(beforeCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledTimes(1);
+          expect(afterCreate).toHaveBeenCalledWith(ids, expect.any(Db));
+        });
+      });
+    });
+
     describe('nested create', () => {
       it('should create new related records', async () => {
         const ChatId = await db.chat.get('IdOfChat').create(ChatData);

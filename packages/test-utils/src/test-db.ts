@@ -39,6 +39,12 @@ export class UserTable extends BaseTable {
       references: ['UserId', 'ProfileKey'],
     }),
 
+    profileNoFkey: this.hasOne(() => ProfileTable, {
+      required: true,
+      columns: ['Id', 'UserKey'],
+      references: ['UserIdNoFkey', 'ProfileKey'],
+    }),
+
     activeProfile: this.hasOne(() => ProfileTable, {
       required: true,
       columns: ['Id', 'UserKey'],
@@ -89,6 +95,11 @@ export class UserTable extends BaseTable {
       references: ['UserId', 'Title'],
     }),
 
+    postsNoFkey: this.hasMany(() => PostTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['UserIdNoFkey', 'Title'],
+    }),
+
     activePosts: this.hasMany(() => PostTable, {
       columns: ['Id', 'UserKey'],
       references: ['UserId', 'Title'],
@@ -132,7 +143,28 @@ export class UserTable extends BaseTable {
         Active: true,
       },
     }),
+
+    tasks: this.hasAndBelongsToMany(() => TaskTable, {
+      columns: ['Id', 'UserKey'],
+      references: ['userId', 'key'],
+      through: {
+        table: 'user_task',
+        columns: ['taskId', 'key'],
+        references: ['Id', 'TaskKey'],
+      },
+    }),
   };
+}
+
+export class TaskTable extends BaseTable {
+  readonly table = 'task';
+  columns = this.setColumns((t) => ({
+    Id: t.name('id').identity().primaryKey(),
+    UserId: t.name('user_id').integer().nullable(),
+    TaskKey: t.name('task_key').text().nullable(),
+    Title: t.name('title').text(),
+    Done: t.name('done').boolean().default(false),
+  }));
 }
 
 export type Profile = DefaultSelect<ProfileTable>;
@@ -147,6 +179,7 @@ export class ProfileTable extends BaseTable {
       .nullable()
       .unique()
       .foreignKey(() => UserTable, 'Id'),
+    UserIdNoFkey: t.name('user_id_no_fkey').integer().nullable().select(false),
     Bio: t.name('bio').text().nullable(),
     Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
@@ -386,7 +419,9 @@ export class PostTable extends BaseTable {
     UserId: t
       .name('user_id')
       .integer()
+      .nullable()
       .foreignKey(() => UserTable, 'Id'),
+    UserIdNoFkey: t.name('user_id_no_fkey').integer().nullable(),
     Active: t.name('active').boolean().nullable(),
     Body: t.name('body').text(),
     Title: t.name('title').text(),
@@ -547,6 +582,7 @@ export const db = orchidORMWithAdapter(
     tag: TagTable,
     activeUserWithProfile: ActiveUserWithProfile,
     category: CategoryTable,
+    task: TaskTable,
   },
 );
 
@@ -590,6 +626,11 @@ export const PostTagData = {
 
 export const TagData = {
   Tag: 'tag',
+};
+
+export const TaskData = {
+  Title: 'title',
+  TaskKey: 'key',
 };
 
 const selectAllAs = (as: string, table: PickQueryQ) =>

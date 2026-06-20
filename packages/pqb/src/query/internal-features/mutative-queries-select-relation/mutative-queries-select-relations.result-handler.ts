@@ -53,7 +53,16 @@ export const loadRelations = async (
     'Cannot select a relation of a table that has no primary keys',
   );
   const selectQuery = _unscope(q, 'nonDeleted');
-  selectQuery.q.type = selectQuery.q.returnType = undefined;
+  // after cloning the mutating query:
+  // type = undefined makes it a select query
+  selectQuery.q.type = undefined;
+  // returnType = undefined: need to select full objects for this relations loading logic to work,
+  // will be transformed to what user requested later.
+  selectQuery.q.returnType = undefined;
+  // the original query can contain mutative withs, need to strip them all for selecting
+  selectQuery.q.with = undefined;
+  selectQuery.q.appendQueries = undefined;
+  selectQuery.q.valuesJoinedAs = undefined;
 
   const matchSourceTableIds: RecordUnknown = {};
   for (const pkey of primaryKeys) {

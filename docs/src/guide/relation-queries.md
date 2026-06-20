@@ -667,9 +667,15 @@ await db.author.where({ id: [1, 2, 3] }).update({
 
 Update related record if exists, and create if it doesn't.
 
-Only available for `belongsTo` and `hasOne` relations.
+Available for `belongsTo`, `hasOne`, `hasMany`, and `hasAndBelongsToMany` relations.
 
 Supported when updating multiple records for `belongsTo`.
+
+For `hasMany` and `hasAndBelongsToMany`, it is available only when updating one record,
+there must be `find`, `findBy`, or `take` before the update.
+
+For `hasMany` and `hasAndBelongsToMany`, provide `findBy` to find a related record to update.
+`findBy` must use a unique column or a unique combination of columns, such as a primary key or columns covered by a unique index.
 
 ```ts
 await db.book.find(1).update({
@@ -681,6 +687,34 @@ await db.book.find(1).update({
       create: {
         name: 'new name',
         email: 'some@email.com',
+      },
+    },
+  },
+});
+
+await db.author.find(1).update({
+  books: {
+    upsert: {
+      findBy: { id: 1 },
+      update: {
+        title: 'new title',
+      },
+      create: {
+        title: 'new title',
+      },
+    },
+  },
+});
+
+await db.post.find(1).update({
+  tags: {
+    upsert: {
+      findBy: { id: 1 },
+      update: {
+        name: 'new tag name',
+      },
+      create: {
+        name: 'new tag name',
       },
     },
   },

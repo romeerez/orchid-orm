@@ -1,11 +1,16 @@
 import {
+  _clone,
   _queryHookAfterCreate,
   _queryHookAfterUpdate,
+  _hookSelectColumns,
+  _queryWhereIn,
   Column,
   CreateCtx,
   getQueryAs,
+  isQueryReturnsAll,
   JoinQueryMethod,
   pushQueryOnForOuter,
+  RawSql,
   setQueryObjectValueImmutable,
   UpdateData,
   WhereArg,
@@ -84,9 +89,69 @@ export interface NestedUpdateManyItems {
     data: UpdateData<UpdateSelf>;
   };
   create: RecordUnknown[];
+  upsert?: {
+    findBy: PickQuerySelectableRelations;
+    update: UpdateData<UpdateSelf>;
+    create?: RecordUnknown | (() => RecordUnknown);
+  };
 }
 
 export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
+
+interface NestedUpdateSingleRecordParams {
+  set?: unknown;
+  create?: unknown;
+  upsert?: unknown;
+}
+
+interface NestedUpdateUpsert {
+  update: UpdateData<UpdateSelf>;
+  create?: RecordUnknown | (() => RecordUnknown);
+}
+
+export interface NestedUpdateRelationIds {
+  existingRelQuery: Query;
+  setIds: RecordUnknown;
+  setAppendedAs: (as: string) => void;
+}
+
+export const throwIfQueryReturnsAllForNestedUpdate = (
+  q: Query,
+  params: NestedUpdateSingleRecordParams,
+) => {
+  if (!(params.set || params.create || params.upsert) || !isQueryReturnsAll(q))
+    return;
+
+  let key: 'set' | 'create' | 'upsert';
+  if (params.set) {
+    key = 'set';
+  } else if (params.create) {
+    key = 'create';
+  } else {
+    key = 'upsert';
+  }
+
+  throw new Error(`\`${key}\` option is not allowed in a batch update`);
+};
+
+const getNestedUpdateUpsertCreate = (upsert: NestedUpdateUpsert) => {
+  if (typeof upsert.create === 'function') {
+    return upsert.create();
+  }
+
+  return upsert.create || emptyObject;
+};
+
+export const makeNestedUpdateUpsertData = (
+  upsert: NestedUpdateUpsert,
+  setIds: RecordUnknown,
+) => ({
+  update: upsert.update,
+  create: {
+    ...getNestedUpdateUpsertCreate(upsert),
+    ...setIds,
+  },
+});
 
 export const getThroughRelation = (
   table: Query,
@@ -346,6 +411,48 @@ export const selectCteColumnsSql = (cteAs: string, columns: string[]) =>
 
 export const selectCteColumnSql = (cteAs: string, column: string) =>
   `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;
+
+export const makeNestedUpdateRelationIds = (
+  q: Query,
+  relQuery: Query,
+  primaryKeys: string[],
+  foreignKeys: string[],
+): NestedUpdateRelationIds => {
+  const selectIdsSql = new RawSql('');
+  const setIds: RecordUnknown = {};
+
+  for (const foreignKey of foreignKeys) {
+    setIds[foreignKey] = new RawSql('');
+  }
+
+  let appendedAs: string | undefined;
+  _hookSelectColumns(q, primaryKeys, (aliasedPrimaryKeys) => {
+    selectIdsSql._sql = selectCteColumnsSql(
+      appendedAs as string,
+      aliasedPrimaryKeys,
+    );
+
+    foreignKeys.forEach((foreignKey, i) => {
+      (setIds[foreignKey] as RawSql)._sql = selectCteColumnSql(
+        appendedAs as string,
+        aliasedPrimaryKeys[i],
+      );
+    });
+  });
+
+  return {
+    existingRelQuery: _queryWhereIn(
+      _clone(relQuery),
+      true,
+      foreignKeys,
+      selectIdsSql,
+    ),
+    setIds,
+    setAppendedAs(as) {
+      appendedAs = as;
+    },
+  };
+};
 
 export const selectCteColumnFromManySql = (
   cteAs: string,

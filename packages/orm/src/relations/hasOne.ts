@@ -12,7 +12,6 @@ import {
   _queryUpdateOrThrow,
   _queryUpsert,
   _queryWhere,
-  _queryWhereIn,
   ColumnSchemaConfig,
   CreateCtx,
   CreateData,
@@ -21,7 +20,6 @@ import {
   CreateMethodsNames,
   EmptyObject,
   getPrimaryKeys,
-  isQueryReturnsAll,
   noop,
   PickQueryQ,
   prepareSubQueryForSql,
@@ -54,13 +52,14 @@ import {
   HasRelJoin,
   joinHasRelation,
   joinHasThrough,
+  makeNestedUpdateRelationIds,
+  makeNestedUpdateUpsertData,
   NestedInsertOneItem,
   NestedInsertOneItemConnectOrCreate,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
   selectCteColumnFromManySql,
-  selectCteColumnSql,
-  selectCteColumnsSql,
+  throwIfQueryReturnsAllForNestedUpdate,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { joinQueryChainHOF } from './common/joinQueryChain';
@@ -377,13 +376,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   update(self: UpdateSelf, set: RecordUnknown) {
     const querySelf = self as unknown as Query;
     const params = set[this.key] as NestedUpdateOneItem;
-    if (
-      (params.set || params.create || params.upsert) &&
-      isQueryReturnsAll(querySelf)
-    ) {
-      const key = params.set ? 'set' : params.create ? 'create' : 'upsert';
-      throw new Error(`\`${key}\` option is not allowed in a batch update`);
-    }
+    throwIfQueryReturnsAllForNestedUpdate(querySelf, params);
 
     const { primaryKeys, foreignKeys, query: relQuery } = this.state;
     if (
@@ -394,72 +387,40 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       params.set ||
       params.delete
     ) {
-      let appendedAs: string | undefined;
-      _hookSelectColumns(querySelf, primaryKeys, (aliasedPrimaryKeys) => {
-        selectIdsSql._sql = selectCteColumnsSql(
-          appendedAs as string,
-          aliasedPrimaryKeys,
-        );
-
-        if (params.create || params.set || params.upsert) {
-          foreignKeys.forEach((foreignKey, i) => {
-            (setIds[foreignKey] as RawSql)._sql = selectCteColumnSql(
-              appendedAs as string,
-              aliasedPrimaryKeys[i],
-            );
-          });
-        }
-      });
-
-      const selectIdsSql = new RawSql('');
-
-      const existingRelQuery = _queryWhereIn(
-        _clone(relQuery),
-        true,
+      const ids = makeNestedUpdateRelationIds(
+        querySelf,
+        relQuery,
+        primaryKeys,
         foreignKeys,
-        selectIdsSql,
       );
-
-      let setIds = undefined as unknown as RecordUnknown;
-      if (params.create || params.set || params.upsert) {
-        setIds = {};
-        foreignKeys.forEach((foreignKey) => {
-          setIds[foreignKey] = new RawSql('');
-        });
-      }
 
       const nullifyOrDeleteQuery = (params.update
         ? _queryUpdate(
-            existingRelQuery as unknown as UpdateSelf,
+            ids.existingRelQuery as unknown as UpdateSelf,
             params.update as never,
           )
         : params.upsert
-          ? _queryUpsert(existingRelQuery, {
-              update: params.upsert.update,
-              create: {
-                ...(typeof params.upsert.create === 'function'
-                  ? params.upsert.create()
-                  : params.upsert.create),
-                ...setIds,
-              },
-            })
+          ? _queryUpsert(
+              ids.existingRelQuery,
+              makeNestedUpdateUpsertData(params.upsert, ids.setIds),
+            )
           : params.delete
-            ? _queryDelete(existingRelQuery)
+            ? _queryDelete(ids.existingRelQuery)
             : _queryUpdate(
-                existingRelQuery as unknown as UpdateSelf,
+                ids.existingRelQuery as unknown as UpdateSelf,
                 this.setNulls as never,
               )) as unknown as Query;
 
       nullifyOrDeleteQuery.q.returnType = 'void';
 
-      _appendQuery(querySelf, nullifyOrDeleteQuery, (as) => (appendedAs = as));
+      _appendQuery(querySelf, nullifyOrDeleteQuery, ids.setAppendedAs);
 
       if (params.create) {
         const createQuery = _queryInsert(
           _clone(relQuery) as unknown as CreateSelf,
           {
             ...params.create,
-            ...setIds,
+            ...ids.setIds,
           },
         ) as unknown as Query;
 
@@ -469,7 +430,7 @@ class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
           _queryWhere(_clone(relQuery), [
             params.set as never,
           ]) as unknown as UpdateSelf,
-          setIds as never,
+          ids.setIds as never,
         ) as unknown as Query;
         setQuery.q.returnType = 'void';
 

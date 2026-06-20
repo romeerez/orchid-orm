@@ -17,3 +17,19 @@ export const _appendQuery = (
     asFn,
   );
 };
+
+export const _appendQueryOnUpsertCreate = (
+  main: Query,
+  append: Query,
+  asFn: (as: string) => void,
+) => {
+  return pushQueryValueImmutable(
+    pushQueryValueImmutable(
+      main,
+      'upsertCreateAppendQueries',
+      prepareSubQueryForSql(main, append),
+    ),
+    'upsertCreateAsFns',
+    asFn,
+  );
+};

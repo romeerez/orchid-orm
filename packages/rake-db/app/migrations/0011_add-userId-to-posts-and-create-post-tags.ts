@@ -2,7 +2,7 @@ import { change } from '../db-script';
 
 change(async (db) => {
   await db.changeTable('schema.post', (t) => ({
-    userId: t.integer().foreignKey('schema.user', 'id'),
+    userId: t.integer().nullable().foreignKey('schema.user', 'id'),
   }));
 });
 

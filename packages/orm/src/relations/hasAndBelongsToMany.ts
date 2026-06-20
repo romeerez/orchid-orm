@@ -12,13 +12,19 @@ import {
   _queryDelete,
   _queryFindBy,
   _queryFindByOptional,
+  _appendQuery,
+  _appendQueryOnUpsertCreate,
+  _clone,
+  _hookSelectColumns,
   _queryHookAfterCreate,
   _queryJoinOn,
   _queryRows,
   _querySelect,
   _queryUpdate,
+  _queryUpsert,
   _queryWhere,
   _queryWhereExists,
+  _queryWhereIn,
   CreateCtx,
   CreateData,
   getQueryAs,
@@ -46,6 +52,7 @@ import {
   QuerySchema,
   internalSchemaConfig,
   UpdateSelf,
+  RawSql,
 } from 'pqb/internal';
 import {
   addAutoForeignKey,
@@ -55,6 +62,8 @@ import {
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
+  NestedUpdateManyItems,
+  throwIfQueryReturnsAllForNestedUpdate,
 } from './common/utils';
 import { HasManyNestedInsert, HasManyNestedUpdate } from './hasMany';
 import { joinQueryChainHOF } from './common/joinQueryChain';
@@ -166,6 +175,11 @@ export interface HasAndBelongsToManyInfo<
           data: UpdateData<Q>;
         };
         create?: CreateData<Q>[];
+        upsert?: {
+          findBy: Q['internal']['uniqueColumns'];
+          update: UpdateData<Q>;
+          create?: CreateData<Q> | (() => CreateData<Q>);
+        };
       }
     : {
         disconnect?: MaybeArray<WhereArg<Q>>;
@@ -175,6 +189,7 @@ export interface HasAndBelongsToManyInfo<
 }
 
 interface State {
+  queryBuilder: Query.NotReadOnlyQuery;
   relatedTableQuery: Query.NotReadOnlyQuery;
   joinTableQuery: Query.NotReadOnlyQuery;
   primaryKeys: string[];
@@ -226,15 +241,119 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
   }
 
   update(q: UpdateSelf, set: RecordUnknown) {
+    const querySelf = q as unknown as Query;
+    const params = set[this.key] as NestedUpdateManyItems;
+
     hasRelationHandleUpdate(
-      q as unknown as Query,
+      querySelf,
       set,
       this.key,
       this.state.primaryKeys,
       this.nestedUpdate,
     );
+
+    if (params.upsert) {
+      throwIfQueryReturnsAllForNestedUpdate(querySelf, {
+        upsert: params.upsert,
+      });
+      nestedUpdateUpsert(querySelf, this.state, params.upsert);
+    }
   }
 }
+
+const selectCteColumnsSql = (cteAs: string, columns: string[]) =>
+  `(SELECT ${columns.map((c) => `"${cteAs}"."${c}"`).join(', ')} FROM "${cteAs}")`;
+
+const selectCteColumnSql = (cteAs: string, column: string) =>
+  `(SELECT "${cteAs}"."${column}" FROM "${cteAs}")`;
+
+const nestedUpdateUpsert = (
+  querySelf: Query,
+  state: State,
+  upsert: NonNullable<NestedUpdateManyItems['upsert']>,
+) => {
+  const parentIdsSql = new RawSql('');
+  const parentValues: RawSql[] = state.foreignKeys.map(() => new RawSql(''));
+  const relatedIdsSql = new RawSql('');
+  const relatedValues = state.throughPrimaryKeys.map(() => new RawSql(''));
+
+  let parentAs: string | undefined;
+  _hookSelectColumns(querySelf, state.primaryKeys, (aliasedPrimaryKeys) => {
+    parentIdsSql._sql = selectCteColumnsSql(
+      parentAs as string,
+      aliasedPrimaryKeys,
+    );
+
+    for (let i = 0; i < state.foreignKeys.length; i++) {
+      parentValues[i]._sql = selectCteColumnSql(
+        parentAs as string,
+        aliasedPrimaryKeys[i],
+      );
+    }
+  });
+
+  const existingRelQuery = _queryWhereExists(
+    _queryWhere(_clone(state.relatedTableQuery), [
+      upsert.findBy as unknown as WhereArg<Query>,
+    ]),
+    state.joinTableQuery,
+    [
+      (q) => {
+        for (let i = 0; i < state.throughPrimaryKeys.length; i++) {
+          _queryJoinOn(q, [
+            state.throughForeignKeysFull[i],
+            state.throughPrimaryKeysFull[i],
+          ]);
+        }
+
+        return _queryWhereIn(q, true, state.foreignKeysFull, parentIdsSql);
+      },
+    ],
+  );
+
+  const upsertQuery = _querySelect(
+    _queryUpsert(existingRelQuery, {
+      update: upsert.update,
+      create: upsert.create || {},
+    }),
+    state.throughPrimaryKeys,
+  ) as unknown as Query;
+
+  const selectAs: RecordUnknown = {};
+  for (let i = 0; i < state.foreignKeys.length; i++) {
+    selectAs[state.foreignKeys[i]] = parentValues[i];
+  }
+  for (let i = 0; i < state.throughForeignKeys.length; i++) {
+    selectAs[state.throughForeignKeys[i]] = relatedValues[i];
+  }
+
+  const joinRows = _querySelect(_clone(state.queryBuilder), [
+    selectAs as never,
+  ]) as Query;
+  _queryWhere(joinRows, [relatedIdsSql] as never);
+
+  const joinQuery = (
+    state.joinTableQuery as Query.NotReadOnlyQuery
+  ).insertForEachFrom(joinRows as never) as Query;
+
+  joinQuery.q.returnType = 'void';
+
+  _appendQuery(
+    querySelf,
+    _appendQueryOnUpsertCreate(upsertQuery, joinQuery, (as) => {
+      relatedIdsSql._sql = `EXISTS (SELECT 1 FROM "${as}")`;
+      for (let i = 0; i < relatedValues.length; i++) {
+        relatedValues[i]._sql = selectCteColumnSql(
+          as,
+          state.throughPrimaryKeys[i],
+        );
+      }
+    }),
+    (as) => {
+      parentAs = as;
+    },
+  );
+};
 
 const removeColumnName = (column: Column.Pick.Data) => {
   if (!column.data.name) return column;
@@ -345,6 +464,7 @@ export const makeHasAndBelongsToManyMethod = (
   );
 
   const state: State = {
+    queryBuilder: qb as Query.NotReadOnlyQuery,
     relatedTableQuery: query as Query.NotReadOnlyQuery,
     joinTableQuery: subQuery as Query.NotReadOnlyQuery,
     primaryKeys,

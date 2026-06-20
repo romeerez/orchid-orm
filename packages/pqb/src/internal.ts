@@ -162,6 +162,7 @@ export { type UpdateSelf } from './query/basic-features/mutate/update';
 // Internal query functions (prefixed with _)
 export {
   _appendQuery,
+  _appendQueryOnUpsertCreate,
   _clone,
   _createDbSqlMethod,
   _hookSelectColumns,

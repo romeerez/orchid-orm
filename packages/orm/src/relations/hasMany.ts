@@ -7,7 +7,6 @@ import { OrchidOrmInternalError, Query } from 'pqb';
 import {
   CreateData,
   WhereArg,
-  isQueryReturnsAll,
   VirtualColumn,
   CreateCtx,
   CreateSelf,
@@ -51,12 +50,15 @@ import {
   HasRelJoin,
   joinHasRelation,
   joinHasThrough,
+  makeNestedUpdateRelationIds,
+  makeNestedUpdateUpsertData,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
   NestedInsertOneItemConnectOrCreate,
   NestedUpdateManyItems,
   selectCteColumnFromManySql,
+  throwIfQueryReturnsAllForNestedUpdate,
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { HasOneOptions, HasOneParams, HasOneQueryThrough } from './hasOne';
@@ -147,6 +149,11 @@ export interface HasManyInfo<
         set?: MaybeArray<WhereArg<Q>>;
         add?: MaybeArray<WhereArg<Q>>;
         create?: CreateData<Q>[];
+        upsert?: {
+          findBy: Q['internal']['uniqueColumns'];
+          update: UpdateData<Q>;
+          create?: CreateData<Q> | (() => CreateData<Q>);
+        };
       }
     : never;
 }
@@ -172,6 +179,7 @@ export type HasManyNestedInsert = (
 class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasManyNestedInsert;
   private readonly nestedUpdate: HasManyNestedUpdate;
+  private readonly setNulls: RecordUnknown;
 
   constructor(
     schema: ColumnSchemaConfig,
@@ -181,6 +189,11 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     super(schema);
     this.nestedInsert = nestedInsert(state);
     this.nestedUpdate = nestedUpdate(state);
+
+    this.setNulls = {};
+    for (const foreignKey of state.foreignKeys) {
+      this.setNulls[foreignKey] = null;
+    }
   }
 
   create(
@@ -360,21 +373,38 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     }
   }
 
-  update(q: UpdateSelf, set: RecordUnknown) {
-    const query = q as unknown as Query;
+  update(self: UpdateSelf, set: RecordUnknown) {
+    const querySelf = self as unknown as Query;
     const params = set[this.key] as NestedUpdateManyItems;
-    if ((params.set || params.create) && isQueryReturnsAll(query)) {
-      const key = params.set ? 'set' : 'create';
-      throw new Error(`\`${key}\` option is not allowed in a batch update`);
-    }
+    throwIfQueryReturnsAllForNestedUpdate(querySelf, params);
 
     hasRelationHandleUpdate(
-      query,
+      querySelf,
       set,
       this.key,
       this.state.primaryKeys,
       this.nestedUpdate,
     );
+
+    if (params.upsert) {
+      const { primaryKeys, foreignKeys, query: relQuery } = this.state;
+
+      const ids = makeNestedUpdateRelationIds(
+        querySelf,
+        relQuery,
+        primaryKeys,
+        foreignKeys,
+      );
+
+      const appendedQuery = _queryUpsert(
+        ids.existingRelQuery,
+        makeNestedUpdateUpsertData(params.upsert, ids.setIds),
+      ) as unknown as Query;
+
+      appendedQuery.q.returnType = 'void';
+
+      _appendQuery(querySelf, appendedQuery, ids.setAppendedAs);
+    }
   }
 }
 
@@ -670,11 +700,12 @@ const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
   }) as HasManyNestedInsert;
 };
 
-const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
+const nestedUpdate = ({ query: relQuery, primaryKeys, foreignKeys }: State) => {
   const len = primaryKeys.length;
 
   return (async (_, data, params) => {
-    const t = query.clone();
+    const t = relQuery.clone();
+
     if (params.create) {
       const obj: RecordUnknown = {};
       for (let i = 0; i < len; i++) {
@@ -692,7 +723,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
     if (params.add) {
       if (data.length > 1) {
         throw new OrchidOrmInternalError(
-          query,
+          relQuery,
           '`connect` is not available when updating multiple records, it is only applicable for a single record update',
         );
       }
@@ -711,7 +742,7 @@ const nestedUpdate = ({ query, primaryKeys, foreignKeys }: State) => {
 
       if (count < relatedWheres.length) {
         throw new OrchidOrmInternalError(
-          query,
+          relQuery,
           `Expected to find at least ${relatedWheres.length} record(s) based on \`add\` conditions, but found ${count}`,
         );
       }

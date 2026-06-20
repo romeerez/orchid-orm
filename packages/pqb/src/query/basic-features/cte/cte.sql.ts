@@ -206,12 +206,10 @@ export const addWithToSql = (
   sql: SingleSql,
   isSubSql?: boolean,
 ): void => {
-  if (!isSubSql && ctx.topCtx.topCTE) {
+  if (!isSubSql && ctx.topCtx.topCTE?.append.length) {
     const sqls: string[] = [];
-    if (!isSubSql && ctx.topCtx.topCTE) {
-      for (const append of ctx.topCtx.topCTE.append) {
-        sqls.push(...append);
-      }
+    for (const append of ctx.topCtx.topCTE.append) {
+      sqls.push(...append);
     }
 
     sql.text = 'WITH ' + sqls.join(', ') + ' ' + sql.text;

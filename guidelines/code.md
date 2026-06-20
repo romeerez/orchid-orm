@@ -253,4 +253,21 @@ const { foo } = obj;
 
 ## only necessary code comments
 
-Comments must only explain what's not obvious from the code.
+Comments must only explain why the non-obvious code is needed.
+
+For non-obvious workarounds, comments should state the concrete case, what goes wrong, and what the code is doing about it.
+
+Bad:
+
+```ts
+// Fix relation select aliases.
+```
+
+Good:
+
+```ts
+// Workaround for soft-delete when selecting a relation.
+// If relation is selected under the same name as primary key,
+// valuesJoinedAs makes SQL use relation instead of pkey for the condition.
+// Temporarily unset valuesJoinedAs.
+```
