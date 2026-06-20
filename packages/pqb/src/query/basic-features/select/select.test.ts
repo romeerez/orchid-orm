@@ -34,6 +34,7 @@ import {
   jsonBuildObjectAllSql,
   ProfileData,
   sql,
+  testDb,
   testZodColumnTypes as t,
   UserData,
   useTestDatabase,
@@ -894,6 +895,25 @@ describe('select', () => {
           },
         },
       ]);
+    });
+
+    it('should select joined table with selectSql as json', () => {
+      const Product = testDb('product', (t) => ({
+        id: t.identity().primaryKey(),
+        userId: t.integer().name('user_id'),
+        price: t.decimal().selectSql((column) => sql`trim_scale(${column})`),
+      }));
+
+      const q = User.join(Product.as('p'), 'p.userId', 'user.id').select('p.*');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT CASE WHEN to_jsonb("p") IS NULL THEN NULL ELSE json_build_object('id', "p"."id", 'userId', "p"."user_id", 'price', trim_scale("p"."price")::text) END "p"
+          FROM "schema"."user"
+          JOIN "schema"."product" "p" ON "p"."user_id" = "user"."id"
+        `,
+      );
     });
 
     it('should select left joined table as json', async () => {

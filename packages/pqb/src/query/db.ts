@@ -51,6 +51,7 @@ import {
   ComputedColumnsFromOptions,
   ComputedOptionsFactory,
 } from './extra-features/computed/computed';
+import { applyColumnSelectSql } from './extra-features/select-sql/select-sql';
 import { DbSqlQuery, performQuery, SQLQueryArgs } from './db-sql-query';
 import { setDb } from '../columns/operators';
 import {
@@ -79,7 +80,7 @@ import {
   _queryHookBeforeSave,
   _queryHookBeforeUpdate,
 } from './extra-features/hooks/hooks';
-import { QueryData, QueryDataScopes } from './query-data';
+import { QueryData, QueryDataScopes, SelectAllColumn } from './query-data';
 import { QueryInternal } from './query-internal';
 import { QuerySchema } from './basic-features/schema/schema';
 import { AsyncState } from './basic-features/storage/storage';
@@ -359,6 +360,11 @@ export class Db<
         selectAllCount++;
       }
 
+      if (column.data.selectSqlFn) {
+        applyColumnSelectSql(column);
+        prepareSelectAll = true;
+      }
+
       const { modifyQuery: mq } = column.data;
       if (mq) {
         modifyQuery = pushOrNewArray(modifyQuery, (q: Query) => mq(q, column));
@@ -448,13 +454,22 @@ export class Db<
 
     if (prepareSelectAll) {
       const selectAllShape: RecordUnknown = (this.q.selectAllShape = {});
-      const list: string[] = [];
+      const list: SelectAllColumn[] = [];
       for (const key in shape) {
         const column = shape[key] as unknown as Column;
         if (!column.data.explicitSelect) {
-          list.push(
-            column.data.name ? `"${column.data.name}" "${key}"` : `"${key}"`,
-          );
+          const { data } = column;
+          const { selectSql } = data;
+
+          let item: SelectAllColumn;
+          if (selectSql) {
+            item = (ctx, quotedAs) =>
+              `(${selectSql.toSQL(ctx, quotedAs)}) "${key}"`;
+          } else {
+            item = data.name ? `"${data.name}" "${key}"` : `"${key}"`;
+          }
+
+          list.push(item);
           selectAllShape[key] = column;
         }
       }

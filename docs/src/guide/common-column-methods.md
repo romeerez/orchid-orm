@@ -1,5 +1,5 @@
 ---
-description: Common column methods including primaryKey, default, nullable, identity, readOnly, setOnCreate, setOnUpdate, and select configuration.
+description: Common column methods including primaryKey, default, nullable, identity, readOnly, setOnCreate, setOnUpdate, selectSql, and select configuration.
 ---
 
 # Common column methods
@@ -279,6 +279,73 @@ Such a column can only be selected explicitly.
 
 ```ts
 const userWithPassword = await db.user.find(123).select('*', 'password');
+```
+
+## selectSql
+
+[//]: # 'has JSDoc'
+
+Use `selectSql` to wrap a stored column with custom SQL whenever it is selected.
+The column remains a normal writable column for create, update, upsert, filtering, ordering, grouping, joins, and migrations.
+
+The callback receives a reference to the physical column, so it can be wrapped without recursively applying `selectSql` again.
+
+```ts
+import { BaseTable, sql } from './base-table';
+
+export class AccountTable extends BaseTable {
+  readonly table = 'account';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    balance: t.decimal().selectSql((column) => sql`trim_scale(${column})`),
+  }));
+}
+
+// INSERT INTO "account"("balance") VALUES ($1)
+await db.account.create({ balance: '12.3400' });
+
+// SELECT trim_scale("account"."balance") "balance" FROM "account"
+const balance = await db.account.get('balance');
+```
+
+`selectSql` is applied to every selected output of the column, including default selection, `select('*')`, explicit selects, aliases, joined selections, relation JSON payloads, `get`, `pluck`, and mutation `RETURNING`.
+It is selected by default because it is still a real column.
+Use [select(false)](#exclude-from-default-select) together with `selectSql` when the column should be omitted from default selection and wildcard selection.
+
+```ts
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  columns = this.setColumns((t) => ({
+    email: t
+      .text()
+      .select(false)
+      .selectSql((column) => sql`decrypt_email(${column})`),
+  }));
+}
+
+// email is omitted from the default selection
+const user = await db.user.take();
+
+// explicit selection applies decrypt_email(...)
+const email = await db.user.get('email');
+```
+
+Writes and query conditions keep using the stored column value.
+For expressions that depend on sibling columns, use [SQL computed columns](/guide/computed-columns#sql-computed-column) or a query-level SQL expression instead.
+
+When the selected SQL returns a different type, type the expression explicitly:
+
+```ts
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  columns = this.setColumns((t) => ({
+    encryptedEmail: t
+      .text()
+      .selectSql((column) =>
+        sql`decrypt_email(${column})`.type((t) => t.text()),
+      ),
+  }));
+}
 ```
 
 ## name

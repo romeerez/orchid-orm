@@ -79,6 +79,13 @@ describe('computed', () => {
       expect('depSql' in User.q.selectAllShape).toBe(false);
     });
 
+    it('should store SQL computed expression as selected-output SQL', () => {
+      const column = User.q.shape.nameAndKey;
+
+      expect(column.data.computed).toBeDefined();
+      expect(column.data.selectSql).toBe(column.data.computed);
+    });
+
     describe('select', () => {
       it('should select computed column', async () => {
         const q = User.select('name', 'nameAndKey', 'decimal', 'depSql').take();

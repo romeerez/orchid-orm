@@ -397,6 +397,7 @@ export const toSql: ToSql = (
             ? Object.entries(tableHooks).map(
                 ([cteName, data]) =>
                   `'${cteName}', (SELECT json_agg(${makeRowToJson(
+                    ctx,
                     cteName,
                     data.shape,
                     false,

@@ -11,6 +11,10 @@ const tableJsonBuildObject = (table: Query) => {
   return (t: string) =>
     (cache[t] ??= `json_build_object(${table.q
       .selectAllColumns!.map((c) => {
+        if (typeof c !== 'string') {
+          throw new Error('Expected a string select-all column in ORM tests');
+        }
+
         const [, name] = c.split(' ');
         return `${name.replaceAll('"', "'")}, ${t}.${name}${
           (table.shape as ColumnsShape)[name.slice(1, -1)]?.data.jsonCast

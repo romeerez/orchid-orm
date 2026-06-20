@@ -5,7 +5,10 @@ export {
   type PickQueryInputType,
   type SqlFn,
   type QueryHelperResult,
+  type ExpressionData,
 } from './query';
+
+export { type ToSQLCtx, type ToSqlValues } from './query/sql/to-sql';
 
 export {
   type OperatorsArray,

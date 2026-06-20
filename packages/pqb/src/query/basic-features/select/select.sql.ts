@@ -2,11 +2,11 @@ import { RawSql } from '../../expressions/raw-sql';
 import {
   columnToSqlWithAs,
   ownColumnToSqlWithAs,
-  simpleColumnToSQL,
+  selectedColumnToSql,
   tableColumnToSqlWithAs,
 } from '../../sql/column-to-sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
-import { QueryData } from '../../query-data';
+import { QueryData, SelectAllColumn } from '../../query-data';
 import { _queryGetOptional } from '../get/get.utils';
 import { queryJson } from '../json/json.utils';
 import { queryWrap } from '../wrap/wrap';
@@ -34,7 +34,7 @@ import {
 import { isRelationQuery } from '../../relations';
 import { OrchidOrmInternalError, UnhandledTypeError } from '../../errors';
 import { Query } from '../../query';
-import { makeRowToJson } from '../../sql/sql';
+import { getSelectedColumnData, makeRowToJson } from '../../sql/sql';
 import {
   MutativeQueriesSelectRelationsSqlState,
   setMutativeQueriesSelectRelationsSqlState,
@@ -90,7 +90,7 @@ export const selectToSqlList = (
   table: ToSQLQuery,
   query: {
     select?: QueryData['select'];
-    selectAllColumns?: string[];
+    selectAllColumns?: SelectAllColumn[];
     selectAllShape?: RecordUnknown;
     join?: QueryData['join'];
     hookSelect?: HookSelect;
@@ -282,14 +282,24 @@ export const selectToSqlList = (
           col = table.q.joinedShapes?.[tableName]?.[columnName] as
             | Column
             | undefined;
-          sql = col?.data.computed
-            ? col.data.computed.toSQL(ctx, `"${tableName}"`)
-            : `"${tableName}"."${col?.data.name || columnName}"`;
+          sql = selectedColumnToSql(
+            ctx,
+            table.q,
+            table.q.shape,
+            select,
+            undefined,
+          );
         } else {
           quotedTable = quotedAs;
           columnName = select;
           col = query.shape[select] as Column | undefined;
-          sql = simpleColumnToSQL(ctx, select, col, quotedAs);
+          sql = selectedColumnToSql(
+            ctx,
+            table.q,
+            query.shape,
+            select,
+            quotedAs,
+          );
         }
       } else {
         columnName = column;
@@ -345,7 +355,7 @@ export const selectToSql = (
   table: ToSQLQuery,
   query: {
     select?: QueryData['select'];
-    selectAllColumns?: string[];
+    selectAllColumns?: SelectAllColumn[];
     selectAllShape?: RecordUnknown;
     join?: QueryData['join'];
     hookSelect?: HookSelect;
@@ -382,7 +392,7 @@ const internalSelectAllSql = (
     updateFrom?: unknown;
     updateMany?: unknown;
     join?: QueryData['join'];
-    selectAllColumns?: string[];
+    selectAllColumns?: SelectAllColumn[];
     selectAllShape?: RecordUnknown;
     shape: Column.QueryColumns;
   },
@@ -390,7 +400,10 @@ const internalSelectAllSql = (
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
 ): string[] => {
   if (jsonList) {
-    Object.assign(jsonList, query.selectAllShape);
+    for (const key in query.selectAllShape) {
+      const column = query.selectAllShape[key] as Column.Pick.Data;
+      jsonList[key] = getSelectedColumnData(column);
+    }
   }
 
   let columnsCount: number | undefined;
@@ -404,7 +417,7 @@ const internalSelectAllSql = (
     ctx.selectedCount += columnsCount;
   }
 
-  return selectAllSql(query, quotedAs, columnsCount);
+  return selectAllSql(query, quotedAs, columnsCount, ctx);
 };
 
 export const selectAllSql = (
@@ -412,21 +425,38 @@ export const selectAllSql = (
     updateFrom?: unknown;
     updateMany?: unknown;
     join?: QueryData['join'];
-    selectAllColumns?: string[];
+    selectAllColumns?: SelectAllColumn[];
     selectAllShape?: RecordUnknown;
     shape: Column.QueryColumns;
   },
   quotedAs?: string,
   columnsCount?: number,
+  ctx?: ToSQLCtx,
 ): string[] => {
   return q.join?.length || q.updateFrom || q.updateMany
-    ? q.selectAllColumns?.map((item) => `${quotedAs}.${item}`) ||
-        (isEmptySelect(q.shape, columnsCount) ? [] : [`${quotedAs}.*`])
+    ? q.selectAllColumns?.map((item) =>
+        selectAllColumnToSql(item, ctx, quotedAs, true),
+      ) || (isEmptySelect(q.shape, columnsCount) ? [] : [`${quotedAs}.*`])
     : q.selectAllColumns
-      ? [...q.selectAllColumns]
+      ? q.selectAllColumns.map((item) =>
+          selectAllColumnToSql(item, ctx, quotedAs),
+        )
       : isEmptySelect(q.shape, columnsCount)
         ? []
         : ['*'];
+};
+
+const selectAllColumnToSql = (
+  item: SelectAllColumn,
+  ctx: ToSQLCtx | undefined,
+  quotedAs: string | undefined,
+  prefix?: true,
+): string => {
+  if (typeof item !== 'string') {
+    return item(ctx as ToSQLCtx, quotedAs);
+  }
+
+  return prefix ? `${quotedAs}.${item}` : item;
 };
 
 const isEmptySelect = (shape: Column.QueryColumns, columnsCount?: number) =>
@@ -489,7 +519,7 @@ const pushSubQuerySql = (
         const shape = mainQuery.joinedShapes?.[
           as
         ] as unknown as Column.Shape.Data;
-        sql = makeRowToJson(table, shape, false);
+        sql = makeRowToJson(ctx, table, shape, false);
         break;
       }
       case 'all':

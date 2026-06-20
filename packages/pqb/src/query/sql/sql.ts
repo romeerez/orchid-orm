@@ -97,6 +97,7 @@ export const quoteFromWithSchema = (
 };
 
 export const makeRowToJson = (
+  ctx: ToSQLCtx,
   table: string,
   shape: Column.Shape.Data,
   aliasName: boolean,
@@ -111,13 +112,23 @@ export const makeRowToJson = (
       continue;
     }
 
-    if ((aliasName && column.data.name) || column.data.jsonCast) {
+    const selectSql = !column.data.computed ? column.data.selectSql : undefined;
+    const outputColumn = getSelectedColumnData(column);
+    if (
+      (aliasName && column.data.name) ||
+      outputColumn.data.jsonCast ||
+      selectSql
+    ) {
       isSimple = false;
     }
 
+    const value = selectSql
+      ? selectSql.toSQL(ctx, `"${table}"`)
+      : `"${table}"."${(aliasName && column.data.name) || key}"`;
+
     list.push(
-      `'${key}', "${table}"."${(aliasName && column.data.name) || key}"${
-        column.data.jsonCast ? `::${column.data.jsonCast}` : ''
+      `'${key}', ${value}${
+        outputColumn.data.jsonCast ? `::${outputColumn.data.jsonCast}` : ''
       }`,
     );
   }
@@ -127,6 +138,15 @@ export const makeRowToJson = (
     : `CASE WHEN to_jsonb("${table}") IS NULL THEN NULL ELSE json_build_object(` +
         list.join(', ') +
         ') END';
+};
+
+export const getSelectedColumnData = (
+  column: Column.Pick.Data,
+): Column.Pick.Data => {
+  return (
+    (column.data.selectSql?.result.value as Column.Pick.Data | undefined) ||
+    column
+  );
 };
 
 export const getSqlText = (sql: Sql) => {

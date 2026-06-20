@@ -16,6 +16,7 @@ such column will persist in the database.
 ## SQL computed column
 
 SQL computed column is going to unwrap into the given SQL when selecting it from the table.
+If you need to transform how a stored writable column is read, use [selectSql](/guide/common-column-methods#selectsql) instead.
 
 In the following example, selecting `fullName` will unwrap into `"firstName" || ' ' || "lastName"` SQL:
 

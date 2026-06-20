@@ -1,6 +1,7 @@
 import { Query } from '../query/query';
 import { emptyObject, RecordString, RecordUnknown } from '../utils';
 import {
+  Expression,
   RawSQLValues,
   StaticSQLArgs,
   TemplateLiteralArgs,
@@ -14,7 +15,9 @@ import { Code, ColumnToCodeCtx } from './code';
 import { Operator } from './operators';
 import { PickQueryInputType, PickQueryShape } from '../query/pick-query-types';
 import { QueryHookUtils } from '../query/extra-features/hooks/hooks';
-import { ColumnDataComputedProp } from '../query';
+import type { ColumnDataComputedProp } from '../query';
+import type { SelectSqlColumn } from '../query/extra-features/select-sql/select-sql';
+import type { ColumnRefExpression } from '../query/expressions/column-ref-expression';
 
 export namespace Column {
   export namespace Modifiers {
@@ -1135,6 +1138,19 @@ export abstract class Column<
     value: Value,
   ): Column.Modifiers.DefaultSelect<T, Value> {
     return setColumnData(this, 'explicitSelect', !value) as never;
+  }
+
+  /**
+   * Set SQL to use when selecting this column.
+   *
+   * The column remains a regular writable database column. Create, update,
+   * filters, ordering, grouping, and migrations still use the physical column.
+   */
+  selectSql<T extends Column.Pick.DataAndDataType, Expr extends Expression>(
+    this: T,
+    fn: (column: ColumnRefExpression<T & Column.Pick.QueryColumn>) => Expr,
+  ): SelectSqlColumn<T, Expr> {
+    return setColumnData(this, 'selectSqlFn', fn as never) as never;
   }
 
   /**

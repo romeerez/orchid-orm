@@ -21,9 +21,10 @@ import { QuerySql } from '../../sql/sql';
 import { finalizeNestedHookSelect } from '../hooks/hooks';
 import { applyBatchTransforms } from '../data-transform/transform';
 import { QueryData } from '../../query-data';
+import { ColumnDataSelectSqlProp } from '../select-sql/select-sql';
 
-export interface ColumnDataComputedProp {
-  // SQL computed columns have an Expression in their data, which will be used for building SQL.
+export interface ColumnDataComputedProp extends ColumnDataSelectSqlProp {
+  // SQL computed-column marker used for virtual/read-only/default-excluded semantics.
   computed?: Expression;
 }
 
@@ -148,6 +149,7 @@ export const applyComputedColumns = (
 
       const { data } = col;
       data.computed = item as Expression;
+      data.selectSql = item as Expression;
       data.explicitSelect = true;
       data.readOnly = true;
 

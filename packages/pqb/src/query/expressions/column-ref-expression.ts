@@ -1,4 +1,4 @@
-import { Column } from '../../columns';
+import { Column } from '../../columns/column';
 import { Expression, ExpressionData } from './expression';
 import { simpleExistingColumnToSQL } from '../sql/column-to-sql';
 import { ToSQLCtx } from '../sql/to-sql';

@@ -6,6 +6,7 @@ import {
   db,
   sql,
   assertType,
+  expectSql,
   ProfileData,
   UserData,
 } from 'test-utils';
@@ -113,6 +114,19 @@ describe('computed', () => {
             'batchComputed',
           ),
       });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT CASE WHEN to_jsonb("record") IS NULL THEN NULL ELSE json_build_object('Id', "record"."Id"::text, 'sqlComputed', "record"."sqlComputed", 'sqlComputedDecimal', "record"."sqlComputedDecimal"::text, 'depSql', "record"."depSql", 'Bio', "record"."Bio") END "record"
+          FROM "schema"."user"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."id" "Id", ("profile"."bio" || ' ' || "profile"."profile_key") "sqlComputed", (1::decimal) "sqlComputedDecimal", ("profile"."bio" || ' ' || "profile"."profile_key" || 'dep') "depSql", "profile"."bio" "Bio"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          ) "record" ON true
+        `,
+      );
 
       const res = await q;
 

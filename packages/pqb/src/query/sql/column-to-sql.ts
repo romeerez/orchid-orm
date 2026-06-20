@@ -5,7 +5,7 @@ import { RecordString } from '../../utils';
 import { ColumnsParsers } from '../query-columns/query-column-parsers';
 import { _getQueryAliasOrName } from '../basic-features/as/as';
 import { Expression, SelectableOrExpression } from '../expressions/expression';
-import { makeRowToJson } from './sql';
+import { getSelectedColumnData, makeRowToJson } from './sql';
 
 /**
  * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
@@ -75,6 +75,36 @@ export const columnToSql = (
   return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
 };
 
+export const selectedColumnToSql = (
+  ctx: ToSQLCtx,
+  data: {
+    aliases?: RecordString;
+    joinedShapes?: QueryData['joinedShapes'];
+  },
+  shape: Column.QueryColumns,
+  column: string,
+  quotedAs?: string,
+): string => {
+  const index = column.indexOf('.');
+  return index !== -1
+    ? selectedColumnWithDotToSql(ctx, data, shape, column, index, quotedAs)
+    : selectedSimpleColumnToSql(ctx, column, shape[column], quotedAs);
+};
+
+const selectedSimpleColumnToSql = (
+  ctx: ToSQLCtx,
+  key: string,
+  column?: Column.Pick.QueryColumn,
+  quotedAs?: string,
+): string => {
+  if (!column) return `"${key}"`;
+
+  const { data } = column as unknown as Column.Pick.Data;
+  return data.selectSql
+    ? `(${data.selectSql.toSQL(ctx, quotedAs)})`
+    : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
+};
+
 /**
  * in a case when ordering or grouping by a column which was selected as expression:
  * ```ts
@@ -129,7 +159,7 @@ const columnWithDotToSql = (
     const shape = data.joinedShapes?.[table];
     return shape
       ? select
-        ? makeRowToJson(table, shape as never, true)
+        ? makeRowToJson(ctx, table, shape as never, true)
         : `"${table}".*`
       : column;
   }
@@ -153,6 +183,46 @@ const columnWithDotToSql = (
     }
 
     return `"${tableName}"."${key}"`;
+  }
+
+  return `"${tableName}"."${key}"`;
+};
+
+const selectedColumnWithDotToSql = (
+  ctx: ToSQLCtx,
+  data: {
+    aliases?: RecordString;
+    joinedShapes?: QueryData['joinedShapes'];
+  },
+  shape: Column.QueryColumns,
+  column: string,
+  index: number,
+  quotedAs?: string,
+): string => {
+  const table = column.slice(0, index);
+  const key = column.slice(index + 1);
+  if (key === '*') {
+    const shape = data.joinedShapes?.[table];
+    return shape ? makeRowToJson(ctx, table, shape as never, true) : column;
+  }
+
+  const tableName = _getQueryAliasOrName(data, table);
+  const quoted = `"${table}"`;
+
+  const col = (quoted === quotedAs
+    ? shape[key]
+    : data.joinedShapes?.[tableName]?.[key]) as unknown as
+    | Column.Pick.Data
+    | undefined;
+
+  if (col) {
+    if (col.data.selectSql) {
+      return `(${col.data.selectSql.toSQL(ctx, quoted)})`;
+    }
+
+    if (col.data.name) {
+      return `"${tableName}"."${col.data.name}"`;
+    }
   }
 
   return `"${tableName}"."${key}"`;
@@ -200,7 +270,7 @@ export const tableColumnToSqlWithAs = (
     const shape = data.joinedShapes?.[table];
     if (shape) {
       if (select) {
-        return makeRowToJson(table, shape as never, true) + ` "${as}"`;
+        return makeRowToJson(ctx, table, shape as never, true) + ` "${as}"`;
       }
 
       return `"${table}"."${table}" "${as}"`;
@@ -216,15 +286,15 @@ export const tableColumnToSqlWithAs = (
     ? data.shape[key]
     : data.joinedShapes?.[tableName][key]) as unknown as Column.Pick.Data;
 
-  if (jsonList) jsonList[as] = col as never;
+  if (jsonList) jsonList[as] = col && getSelectedColumnData(col);
 
   if (col) {
-    if (col.data.name && col.data.name !== key) {
-      return `"${tableName}"."${col.data.name}" "${as}"`;
+    if (col.data.selectSql) {
+      return `(${col.data.selectSql.toSQL(ctx, quoted)}) "${as}"`;
     }
 
-    if (col.data.computed) {
-      return `(${col.data.computed.toSQL(ctx, quoted)}) "${as}"`;
+    if (col.data.name && col.data.name !== key) {
+      return `"${tableName}"."${col.data.name}" "${as}"`;
     }
   }
 
@@ -248,17 +318,17 @@ export const ownColumnToSqlWithAs = (
 
   const col = data.shape[column];
 
-  if (jsonList) jsonList[as] = col;
+  if (jsonList) jsonList[as] = col && getSelectedColumnData(col);
 
   if (col) {
+    if (col.data.selectSql) {
+      return `(${col.data.selectSql.toSQL(ctx, quotedAs)}) "${as}"`;
+    }
+
     if (col.data.name && col.data.name !== column) {
       return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}"${
         col.data.name === as ? '' : ` "${as}"`
       }`;
-    }
-
-    if (col.data.computed) {
-      return `(${col.data.computed.toSQL(ctx, quotedAs)}) "${as}"`;
     }
   }
 

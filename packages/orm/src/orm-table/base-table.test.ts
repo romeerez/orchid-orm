@@ -111,6 +111,39 @@ describe('baseTable', () => {
 
       expect(SomeTable.instance().columns.shape).toEqual(shape);
     });
+
+    it('should support selectSql for ORM table columns', () => {
+      class AccountTable extends BaseTable {
+        readonly table = 'account';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+          balance: t
+            .decimal()
+            .selectSql((column) => sql`trim_scale(${column})`),
+        }));
+      }
+
+      const { account } = orchidORMWithAdapter(
+        { adapter: testAdapter },
+        {
+          account: AccountTable,
+        },
+      );
+
+      expectSql(
+        account.select('balance').toSQL(),
+        'SELECT (trim_scale("account"."balance")) "balance" FROM "account"',
+      );
+
+      expectSql(
+        account.create({ balance: '12.3400' }).toSQL(),
+        `
+          INSERT INTO "account"("balance") VALUES ($1)
+          RETURNING "id", (trim_scale("account"."balance")) "balance"
+        `,
+        ['12.3400'],
+      );
+    });
   });
 
   describe('overriding column types', () => {

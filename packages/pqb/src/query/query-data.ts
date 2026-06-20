@@ -52,6 +52,7 @@ import {
 import { QueryLogger, QueryLogObject } from './basic-features/log/log';
 import { QuerySchema } from './basic-features/schema/schema';
 import { MutativeQueriesSelectRelationsQueryData } from './internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import type { ToSQLCtx } from './sql/to-sql';
 
 export interface RecordOfColumnsShapeBase {
   [K: string]: Column.Shape.QueryInit;
@@ -130,6 +131,12 @@ export interface AsFn {
   (as: string): void;
 }
 
+export interface SelectAllColumnExpression {
+  (ctx: ToSQLCtx, quotedAs?: string): string;
+}
+
+export type SelectAllColumn = string | SelectAllColumnExpression;
+
 export interface QueryData
   extends
     QueryDataAliases,
@@ -166,7 +173,7 @@ export interface QueryData
   schema?: QuerySchema;
   select?: SelectItem[];
   selectCache?: { sql: string; aliases: string[] };
-  selectAllColumns?: string[];
+  selectAllColumns?: SelectAllColumn[];
   /**
    * Subset of the `shape` that only includes columns with no `data.explicitSelect`.
    */

@@ -48,6 +48,9 @@ export {
   type OperatorsJson,
   type OperatorsOrdinalText,
   type Ord,
+  type ExpressionData,
+  type ToSQLCtx,
+  type ToSqlValues,
 } from './index';
 
 // TableData - table configuration and metadata
