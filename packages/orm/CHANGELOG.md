@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.72.7
+
+### Patch Changes
+
+- 4bc6e486: Add `selectSql` for column read projections without changing create and update behavior (#414)
+- Updated dependencies [4bc6e486]
+  - pqb@0.67.4
+  - rake-db@2.36.6
+
 ## 1.72.6
 
 ### Patch Changes

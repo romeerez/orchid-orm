@@ -1,5 +1,11 @@
 # pqb
 
+## 0.67.4
+
+### Patch Changes
+
+- 4bc6e486: Add `selectSql` for column read projections without changing create and update behavior (#414)
+
 ## 0.67.3
 
 ### Patch Changes
