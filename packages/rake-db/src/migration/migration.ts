@@ -1115,7 +1115,7 @@ export class Migration<CT = unknown> {
         `ALTER TYPE ${quoteTable(
           ast.schema,
           ast.name,
-        )} RENAME VALUE "${from}" TO "${to}"`,
+        )} RENAME VALUE ${singleQuote(from)} TO ${singleQuote(to)}`,
       );
     }
   }

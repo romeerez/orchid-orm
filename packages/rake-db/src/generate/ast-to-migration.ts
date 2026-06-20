@@ -521,15 +521,12 @@ const astEncoders: {
       currentSchema,
     )}, [${ast.values.map(singleQuote).join(', ')}]);`;
   },
-  renameEnumValues(ast, config, currentSchema) {
+  renameEnumValues(ast, _, currentSchema) {
     return `await db.renameEnumValues(${quoteSchemaTable(
       ast,
       currentSchema,
     )}, { ${Object.entries(ast.values)
-      .map(
-        ([from, to]) =>
-          `${quoteObjectKey(from, config.snakeCase)}: ${singleQuote(to)}`,
-      )
+      .map(([from, to]) => `${quoteObjectKey(from, false)}: ${singleQuote(to)}`)
       .join(', ')} });`;
   },
   changeEnumValues(ast, _, currentSchema) {

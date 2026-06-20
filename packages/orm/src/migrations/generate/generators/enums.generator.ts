@@ -1,6 +1,13 @@
-import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
+import {
+  DbStructure,
+  IntrospectedStructure,
+  promptSelect,
+  RakeDbAst,
+} from 'rake-db';
 import { promptCreateOrRename } from './generators.utils';
 import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
+import { colors, RecordString } from 'pqb/internal';
+import { AbortSignal } from '../generate';
 
 export interface EnumItem {
   schema?: string;
@@ -42,7 +49,7 @@ export const processEnums = async (
 
     const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
     if (codeEnum) {
-      changeEnum(ast, dbEnum, codeEnum, pendingDbTypes);
+      await changeEnum(ast, dbEnum, codeEnum, pendingDbTypes, verifying);
       continue;
     }
 
@@ -65,7 +72,7 @@ export const processEnums = async (
       });
       pendingDbTypes.add(toSchema, dbEnum.name);
 
-      changeEnum(ast, dbEnum, codeEnum, pendingDbTypes);
+      await changeEnum(ast, dbEnum, codeEnum, pendingDbTypes, verifying);
 
       continue;
     }
@@ -112,7 +119,7 @@ export const processEnums = async (
         });
         pendingDbTypes.add(toSchema, to);
 
-        changeEnum(ast, dbEnum, codeEnum, pendingDbTypes);
+        await changeEnum(ast, dbEnum, codeEnum, pendingDbTypes, verifying);
 
         continue;
       }
@@ -137,41 +144,82 @@ export const processEnums = async (
   }
 };
 
-const changeEnum = (
+const changeEnum = async (
   ast: RakeDbAst[],
   dbEnum: DbStructure.Enum,
   codeEnum: EnumItem,
   pendingDbTypes: PendingDbTypes,
+  verifying: boolean | undefined,
 ) => {
   const { values: dbValues } = dbEnum;
   const { values: codeValues, schema, name } = codeEnum;
+  const addValues = codeValues.filter((value) => !dbValues.includes(value));
+  const dropValues = dbValues.filter((value) => !codeValues.includes(value));
 
   if (dbValues.length < codeValues.length) {
-    if (!dbValues.some((value) => !codeValues.includes(value))) {
+    if (!dropValues.length) {
       ast.push({
         type: 'enumValues',
         action: 'add',
         schema,
         name,
-        values: codeValues.filter((value) => !dbValues.includes(value)),
+        values: addValues,
       });
       pendingDbTypes.add(schema, name);
       return;
     }
   } else if (dbValues.length > codeValues.length) {
-    if (!codeValues.some((value) => !dbValues.includes(value))) {
+    if (!addValues.length) {
       ast.push({
         type: 'enumValues',
         action: 'drop',
         schema,
         name,
-        values: dbValues.filter((value) => !codeValues.includes(value)),
+        values: dropValues,
       });
       pendingDbTypes.add(schema, name);
       return;
     }
-  } else if (!dbValues.some((value) => !codeValues.includes(value))) {
+  } else if (!dropValues.length) {
     return;
+  }
+
+  const enumValueChanges = await promptEnumValueChanges(
+    name,
+    dbValues,
+    codeValues,
+    addValues,
+    dropValues,
+    verifying,
+  );
+  if (enumValueChanges) {
+    let changed = false;
+
+    if (Object.keys(enumValueChanges.renamedValues).length) {
+      ast.push({
+        type: 'renameEnumValues',
+        schema,
+        name,
+        values: enumValueChanges.renamedValues,
+      });
+      changed = true;
+    }
+
+    if (enumValueChanges.fromValues) {
+      ast.push({
+        type: 'changeEnumValues',
+        schema,
+        name,
+        fromValues: enumValueChanges.fromValues,
+        toValues: enumValueChanges.toValues,
+      });
+      changed = true;
+    }
+
+    if (changed) {
+      pendingDbTypes.add(schema, name);
+      return;
+    }
   }
 
   ast.push({
@@ -182,6 +230,60 @@ const changeEnum = (
     toValues: codeValues,
   });
   pendingDbTypes.add(schema, name);
+};
+
+interface EnumValueChanges {
+  renamedValues: RecordString;
+  fromValues?: string[];
+  toValues: string[];
+}
+
+const promptEnumValueChanges = async (
+  enumName: string,
+  dbValues: string[],
+  codeValues: string[],
+  addValues: string[],
+  dropValues: string[],
+  verifying: boolean | undefined,
+): Promise<EnumValueChanges | undefined> => {
+  if (!addValues.length || !dropValues.length) return;
+
+  const renamedValues: RecordString = {};
+  const remainingDropValues = [...dropValues];
+
+  for (const value of addValues) {
+    if (remainingDropValues.length) {
+      if (verifying) throw new AbortSignal();
+
+      const i = await promptSelect({
+        message: `Add or rename ${colors.blueBold(
+          value,
+        )} enum value in ${colors.blueBold(enumName)}?`,
+        options: [
+          `${colors.greenBold('+')} ${value}  ${colors.pale('add enum value')}`,
+          ...remainingDropValues.map(
+            (dropValue) =>
+              `${colors.yellowBold('~')} ${dropValue} ${colors.yellowBold(
+                '=>',
+              )} ${value}  ${colors.pale('rename enum value')}`,
+          ),
+        ],
+      });
+
+      if (i) {
+        const dropValue = remainingDropValues[i - 1];
+        remainingDropValues.splice(i - 1, 1);
+        renamedValues[dropValue] = value;
+      }
+    }
+  }
+
+  const fromValues = dbValues.map((value) => renamedValues[value] ?? value);
+  const toValues = codeValues;
+
+  return fromValues.some((value, i) => value !== toValues[i])
+    ? { renamedValues, fromValues, toValues }
+    : { renamedValues, toValues };
 };
 
 const renameColumnsTypeSchema = (

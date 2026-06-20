@@ -386,22 +386,40 @@ export const report = (
         break;
       }
       case 'changeEnumValues': {
-        if (a.fromValues) {
+        const fromValues = a.fromValues.filter(
+          (value) => !a.toValues.includes(value),
+        );
+        const toValues = a.toValues.filter(
+          (value) => !a.fromValues.includes(value),
+        );
+
+        if (fromValues.length) {
           code.push(
             `${red('- remove values from enum')} ${dbItemName(
               a,
               currentSchema,
-            )}: ${a.fromValues.join(', ')}`,
+            )}: ${fromValues.join(', ')}`,
           );
         }
-        if (a.toValues) {
+        if (toValues.length) {
           code.push(
             `${green('+ add values to enum')} ${dbItemName(
               a,
               currentSchema,
-            )}: ${a.toValues.join(', ')}`,
+            )}: ${toValues.join(', ')}`,
           );
         }
+        break;
+      }
+      case 'renameEnumValues': {
+        code.push(
+          `${yellow('~ rename values in enum')} ${dbItemName(
+            a,
+            currentSchema,
+          )}: ${Object.entries(a.values)
+            .map(([from, to]) => `${from} ${yellow('=>')} ${to}`)
+            .join(', ')}`,
+        );
         break;
       }
       case 'domain': {
@@ -416,7 +434,6 @@ export const report = (
       }
       case 'view':
       case 'collation':
-      case 'renameEnumValues':
       case 'constraint':
         break;
       case 'renameTableItem': {

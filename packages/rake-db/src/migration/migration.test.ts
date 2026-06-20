@@ -838,13 +838,13 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
         (action) => db[action]('enum', { a: 'b', c: 'd' }),
         () =>
           expectSql([
-            `ALTER TYPE "schema"."enum" RENAME VALUE "a" TO "b"`,
-            `ALTER TYPE "schema"."enum" RENAME VALUE "c" TO "d"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'a' TO 'b'`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'c' TO 'd'`,
           ]),
         () =>
           expectSql([
-            `ALTER TYPE "schema"."enum" RENAME VALUE "b" TO "a"`,
-            `ALTER TYPE "schema"."enum" RENAME VALUE "d" TO "c"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'b' TO 'a'`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'd' TO 'c'`,
           ]),
       );
     });
@@ -854,13 +854,13 @@ CREATE TYPE "schema"."enumName" AS ENUM (${values
         (action) => db[action]('schema.enum', { a: 'b', c: 'd' }),
         () =>
           expectSql([
-            `ALTER TYPE "schema"."enum" RENAME VALUE "a" TO "b"`,
-            `ALTER TYPE "schema"."enum" RENAME VALUE "c" TO "d"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'a' TO 'b'`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'c' TO 'd'`,
           ]),
         () =>
           expectSql([
-            `ALTER TYPE "schema"."enum" RENAME VALUE "b" TO "a"`,
-            `ALTER TYPE "schema"."enum" RENAME VALUE "d" TO "c"`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'b' TO 'a'`,
+            `ALTER TYPE "schema"."enum" RENAME VALUE 'd' TO 'c'`,
           ]),
       );
     });

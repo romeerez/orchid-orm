@@ -46,6 +46,59 @@ change(async (db) => {
     assert.report(`${red('- remove values from enum')} status: inactive`);
   });
 
+  it('should rename enum values after prompt', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('my_enum', [
+          'first',
+          'second_old',
+          'third_old',
+          'fourth_old',
+          'fifth',
+        ]);
+
+        await db.createTable('my_table', { noPrimaryKey: true }, (t) => ({
+          myEnumCol: t.enum('my_enum'),
+        }));
+      },
+      tables: [
+        table(
+          (t) => ({
+            myEnumCol: t.enum('my_enum', [
+              'first',
+              'second_new',
+              'third_new',
+              'fourth_new',
+              'fifth',
+            ]),
+          }),
+          undefined,
+          { name: 'my_table' },
+        ),
+      ],
+      selects: [1, 0, 2],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.renameEnumValues('my_enum', { second_old: 'second_new', fourth_old: 'fourth_new' });
+
+  await db.changeEnumValues('my_enum', ['first', 'second_new', 'third_old', 'fourth_new', 'fifth'], ['first', 'second_new', 'third_new', 'fourth_new', 'fifth']);
+});
+`);
+
+    assert.report(
+      `${yellow('~ rename values in enum')} my_enum: second_old ${yellow(
+        '=>',
+      )} second_new, fourth_old ${yellow('=>')} fourth_new
+${red('- remove values from enum')} my_enum: third_old
+${green('+ add values to enum')} my_enum: third_new`,
+    );
+  });
+
   it('should not recreate an index that is unrelated to the enum', async () => {
     await arrange({
       async prepareDb(db) {
