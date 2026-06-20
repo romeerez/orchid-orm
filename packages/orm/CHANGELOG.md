@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.72.6
+
+### Patch Changes
+
+- 2f2d4fb3: Support nested upsert in update of hasMany and hasAndBelongsToMany relations (#385)
+- Updated dependencies [2f2d4fb3]
+  - rake-db@2.36.5
+  - pqb@0.67.3
+
 ## 1.72.5
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.36.5
+
+### Patch Changes
+
+- 2f2d4fb3: Support nested upsert in update of hasMany and hasAndBelongsToMany relations (#385)
+- Updated dependencies [2f2d4fb3]
+  - pqb@0.67.3
+
 ## 2.36.4
 
 ### Patch Changes

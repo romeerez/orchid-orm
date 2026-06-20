@@ -1,5 +1,11 @@
 # pqb
 
+## 0.67.3
+
+### Patch Changes
+
+- 2f2d4fb3: Support nested upsert in update of hasMany and hasAndBelongsToMany relations (#385)
+
 ## 0.67.2
 
 ### Patch Changes
