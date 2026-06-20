@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.72.5
+
+### Patch Changes
+
+- 7eed82af: Support renaming enum values in migration generator (#715)
+- Updated dependencies [7eed82af]
+  - rake-db@2.36.4
+
 ## 1.72.4
 
 ### Patch Changes

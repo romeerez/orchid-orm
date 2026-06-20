@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.36.4
+
+### Patch Changes
+
+- 7eed82af: Support renaming enum values in migration generator (#715)
+
 ## 2.36.3
 
 ### Patch Changes
