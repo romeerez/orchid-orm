@@ -1,5 +1,18 @@
 # orchid-orm
 
+## 1.72.8
+
+### Patch Changes
+
+- 54271234: Add first-class regular PostgreSQL view definitions to Orchid ORM with `$views`, relation support, and opt-in migration generation (#360)
+- 54271234: Add first-class materialized view definitions, migration generation, and refresh helpers (#360)
+- 54271234: Add materialized view migration helpers, pull support, generated migrations, and docs (#360)
+- Updated dependencies [54271234]
+- Updated dependencies [54271234]
+- Updated dependencies [54271234]
+  - pqb@0.67.5
+  - rake-db@2.36.7
+
 ## 1.72.7
 
 ### Patch Changes
