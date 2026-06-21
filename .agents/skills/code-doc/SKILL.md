@@ -83,7 +83,7 @@ If the feature folder, nested selector, or implementation topic is ambiguous, as
    - Do not add comments that restate straightforward code.
 
 9. Verify and archive.
-   - Run relevant checks for changed code. If only markdown docs changed and no repo markdown check exists, inspect the written links and formatting manually.
+   - Run `pnpm verify`. If only markdown docs changed and no packages are affected, inspect the written links and formatting manually.
    - If the skill was run for a full `changes/<id>-*` feature without a nested selector, move the entire feature folder to `changes/archived/` after docs are written and checked.
    - Do not archive when a nested selector such as `1` or `2` was used.
    - Do not archive when the request documented an implementation topic outside `changes/`.

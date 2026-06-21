@@ -215,29 +215,10 @@ Then add change-specific subtasks. End every coding task with these exact verifi
 
 - verify implementation against guidelines
 - code must be covered by tests
-- tests and types must pass for `<package-list>`: `pnpm <pkg> check` and `pnpm <pkg> types`
+- tests and types must pass: run `pnpm verify`
 - reconcile `spec.md` for every new user-visible requirement
 
-When writing those lines in `tasks.md`, keep the backticks around `spec.md`, the package list, and both command templates as shown in the example below.
-
-Tests/types package-list rules:
-
-- Keep the templates exactly as `pnpm <pkg> check` and `pnpm <pkg> types`; do not expand commands per package.
-- Replace `<package-list>` with concrete root script/package names, such as `pqb, orm, rake-db`.
-- Include the changed package plus required downstream packages.
-- If one task spans multiple packages, use the union.
-- For `schema-configs`, list `zod` and `valibot`.
-
-Dependency closure:
-
-- `pqb`: `pqb`, `orm`, `rake-db`, `zod`, `valibot`, `test-factory`
-- `rake-db`: `rake-db`, `orm`, `test-factory`
-- `orm`: `orm`, `test-factory`
-- `zod`: `zod`
-- `valibot`: `valibot`
-- `test-factory`: `test-factory`
-- `create-orm`: `create-orm`
-- `test-utils`: `test-utils`, plus packages the inspected code shows depend on the changed utility
+When writing those lines in `tasks.md`, keep the backticks around `spec.md` and `pnpm verify` as shown in the example below.
 
 Non-coding tasks, including repo-root docs-only tasks and the final changeset task, do not get the four coding verification subtasks.
 
@@ -260,7 +241,7 @@ Use this structure:
   - 1.1.3 <high-level actionable subtask>
   - 1.1.4 verify implementation against guidelines
   - 1.1.5 code must be covered by tests
-  - 1.1.6 tests and types must pass for `pqb`, `orm`, `rake-db`, `zod`, `valibot`, `test-factory`: `pnpm <pkg> check` and `pnpm <pkg> types`
+  - 1.1.6 tests and types must pass: run `pnpm verify`
   - 1.1.7 reconcile `spec.md` for every new user-visible requirement
 
 ## 2. orm
@@ -271,7 +252,7 @@ Use this structure:
   - 2.1.3 <high-level actionable subtask>
   - 2.1.4 verify implementation against guidelines
   - 2.1.5 code must be covered by tests
-  - 2.1.6 tests and types must pass for `orm`, `test-factory`: `pnpm <pkg> check` and `pnpm <pkg> types`
+  - 2.1.6 tests and types must pass: run `pnpm verify`
   - 2.1.7 reconcile `spec.md` for every new user-visible requirement
 
 ## 3. docs
@@ -306,7 +287,7 @@ Before finishing, verify:
 - `tasks.md` starts with section `0`; `0.1` and `0.2` are the only numbered entries there and are not checkboxes
 - section `0` lists root and relevant nested code or test guidelines
 - every later checkbox task has numbered subtasks; package tasks start with `scope:` and `acceptance:`
-- every coding task ends with the four required verification subtasks, using concrete package names and the two `<pkg>` command templates
+- every coding task ends with the four required verification subtasks, including `pnpm verify`
 - non-coding tasks do not include coding verification subtasks
 - sections are only affected packages, optional root `docs`, and final `changeset`
 - tasks are ordered for iterative implementation, avoid standalone test tasks, avoid exact test-writing instructions, and fully cover the design

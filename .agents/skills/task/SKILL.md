@@ -114,7 +114,7 @@ Each task agent must receive:
 8. Verify before marking `[x]`.
    Honor the nested verification subtasks exactly as written for the selected task.
    Run the relevant tests or checks for the affected code.
-   For coding tasks, ensure the implementation conforms to the applicable guidelines, make sure test coverage for the implementation is not missing, run `pnpm <pkg> check` and `pnpm <pkg> types` for each affected package, and update `spec.md` first if user-prompted changes meaningfully affect the feature.
+   For coding tasks, ensure the implementation conforms to the applicable guidelines, make sure test coverage for the implementation is not missing, run `pnpm verify`, and update `spec.md` first if user-prompted changes meaningfully affect the feature.
    If verification fails or cannot be run, do not mark `[x]`.
 
 9. Report:

@@ -71,8 +71,7 @@ Packages are located in `packages/`:
 
 - All packages use **Jest**
 - **Always run tests after changing code when ready**
-- Test a single file with: `pnpm <pkg> check path/to/file.test.ts`
-- Test all changed files: `pnpm <pkg> check -o`
+- Run `pnpm verify` to test and type-check all packages affected by your git changes
 
 ## Structure and File Naming
 

@@ -4,6 +4,7 @@
   "license": "MIT",
   "author": "Roman Kushyn",
   "scripts": {
+    "verify": "node scripts/verify.ts",
     "ai-sync": "tsx scripts/ai-sync.ts",
     "prepare": "lefthook install",
     "check": "turbo run check --filter=!./packages/repro",
