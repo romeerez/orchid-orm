@@ -207,6 +207,43 @@ change(async (db) => {
     assert.report('No changes were detected');
   });
 
+  it('should ignore definition-side generator ignored materialized views', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+        await db.createMaterializedView(
+          'changed_ignored_materialized_view',
+          { columns: ['id'], withData: false },
+          `SELECT id FROM "source"`,
+        );
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      views: [
+        class ChangedIgnoredMaterializedView
+          extends BaseTable.MaterializedView
+        {
+          name = 'changed_ignored_materialized_view';
+          readonly generatorIgnore = true;
+          withData = true;
+          columns = this.setColumns((t) => ({
+            id: t.integer(),
+            active: t.boolean(),
+          }));
+          sql = BaseTable.sql`SELECT id, active FROM "source" WHERE active = true`;
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should ignore materialized views using generatorIgnore.views names', async () => {
     class IgnoredCodeMaterializedView extends BaseTable.MaterializedView {
       name = 'ignored_code_materialized_view';

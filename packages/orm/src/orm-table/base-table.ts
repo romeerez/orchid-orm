@@ -213,6 +213,11 @@ export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
   readonly readOnly?: boolean;
   // materialized-view capability; only literal `true` marks materialized views
   readonly materialized?: true;
+  /**
+   * Keep this table-like definition available at runtime, but exclude it from
+   * generated migration DDL reconciliation.
+   */
+  generatorIgnore?: true;
 
   /* Only for tables */
 
@@ -316,6 +321,11 @@ export interface BaseTableInstance<ColumnTypes> {
   q: QueryData;
   language?: string;
   filePath: string;
+  /**
+   * Keep this table-like definition available at runtime, but exclude it from
+   * generated migration DDL reconciliation.
+   */
+  generatorIgnore?: true;
   result: Column.Shape.QueryInit;
   clone<T extends IsQuery>(this: T): T;
   getFilePath(): string;

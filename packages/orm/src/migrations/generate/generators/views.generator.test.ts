@@ -347,6 +347,72 @@ change(async (db) => {
     assert.report('No changes were detected');
   });
 
+  it('should ignore definition-side generator ignored views', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+        await db.createView('changed_ignored_view', `SELECT id FROM "source"`);
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      views: [
+        class ChangedIgnoredView extends BaseTable.View {
+          name = 'changed_ignored_view';
+          readonly generatorIgnore = true;
+          columns = this.setColumns((t) => ({
+            id: t.integer(),
+            active: t.boolean(),
+          }));
+          sql = BaseTable.sql`SELECT id, active FROM "source" WHERE active = true`;
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
+  it('should preserve grants for definition-side generator ignored views', async () => {
+    class IgnoredGrantView extends GrantView {
+      readonly generatorIgnore = true;
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+        await db.createView('grant_view', `SELECT id FROM "source"`);
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      views: [IgnoredGrantView],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.grant({
+    to: ['app-user'],
+    tables: ['grant_view'],
+    privileges: ['SELECT'],
+  });
+});
+`);
+
+    assert.report(
+      `${green('+ grant privileges')} SELECT on tables grant_view to app-user`,
+    );
+  });
+
   it('should generate grants from view-local metadata', async () => {
     await arrange({
       async prepareDb(db) {

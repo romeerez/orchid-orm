@@ -349,6 +349,24 @@ Such as when using certain extensions, or libraries, they can create schemas, ta
 
 Ignoring a schema also ignores all its tables, views, domains, enums.
 
+You can also set `generatorIgnore = true` on a table or view class.
+The table or view stays available for queries, but `db g` will not create, change, or drop it.
+This works the same as listing its name in `generatorIgnore.tables` or `generatorIgnore.views`.
+
+```ts
+export class LegacyReport extends BaseTable {
+  readonly table = 'legacy_report';
+  generatorIgnore = true;
+
+  columns = this.setColumns((t) => ({
+    id: t.integer().primaryKey(),
+    payload: t.json(),
+  }));
+}
+```
+
+Use `generatorIgnore` in `orchidORM` options for schema-wide ignores, regex selectors, objects without a class definition, and more granular controls:
+
 ```ts
 export const db = orchidORM(
   {

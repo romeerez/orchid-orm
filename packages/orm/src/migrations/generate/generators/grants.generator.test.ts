@@ -841,6 +841,24 @@ change(async (db) => {
     );
   });
 
+  it('should ignore table-local grants for definition-side generator ignored tables', async () => {
+    class IgnoredTableLocalGrantByTable extends TableLocalGrantByTable {
+      readonly generatorIgnore = true;
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await prepareGrantByTable(db);
+      },
+      tables: [IgnoredTableLocalGrantByTable],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should merge table-local grants with top-level grant metadata', async () => {
     const verifyMigrationMock =
       verifyMigrationModule.verifyMigration as jest.MockedFunction<

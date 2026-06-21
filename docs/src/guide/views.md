@@ -269,5 +269,7 @@ When views are configured, the migration generator loads both regular and materi
 For regular views, it uses the view class `schema`, `name`, `columns`, `sql`, grants, and supported view options to generate `createView` and `dropView` migrations.
 For materialized views, it uses `schema`, `name`, `columns`, `sql`, grants, `withData`, dependencies, and indexes to generate `createMaterializedView`, `dropMaterializedView`, and related index migrations.
 
-Use [`generatorIgnore.views`](/guide/generate-migrations#generatorignore) for existing regular views or materialized views that should stay managed outside Orchid.
+Set `generatorIgnore = true` on a view class when the view should stay queryable in code but its DDL is managed outside Orchid.
+This works the same as [`generatorIgnore.views`](/guide/generate-migrations#generatorignore) in ORM config.
+View grants still need [`generatorIgnore.grants`](/guide/generate-migrations#generatorignore).
 There is no separate materialized-view ignore option.

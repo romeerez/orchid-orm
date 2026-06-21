@@ -369,6 +369,7 @@ const assignTablesToOrm = <T extends TableClasses>(
           ? true
           : undefined,
       materialized: !isTable && table.materialized ? true : undefined,
+      generatorIgnore: table.generatorIgnore,
       noPrimaryKey: table.noPrimaryKey || !isTable ? 'ignore' : undefined,
       computed: table.computed as never,
       nowSQL: (

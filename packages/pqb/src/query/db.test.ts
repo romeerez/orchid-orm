@@ -147,6 +147,26 @@ describe('db', () => {
     expect(cloned.internal.materialized).toBe(true);
   });
 
+  it('tracks definition-side generator ignore metadata through query construction and cloning', () => {
+    const table = testDb(
+      'ignored_table',
+      (t) => ({
+        id: t.identity().primaryKey(),
+      }),
+      undefined,
+      { generatorIgnore: true },
+    );
+
+    const selected = table.select('id');
+    const filtered = table.where({ id: 1 });
+    const cloned = table.clone();
+
+    expect(table.internal.generatorIgnored).toBe(true);
+    expect(selected.internal.generatorIgnored).toBe(true);
+    expect(filtered.internal.generatorIgnored).toBe(true);
+    expect(cloned.internal.generatorIgnored).toBe(true);
+  });
+
   it('keeps read APIs and rejects mutation APIs for read-only query types', () => {
     const User = testDb(
       'user',

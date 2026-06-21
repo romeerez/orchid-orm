@@ -6,6 +6,7 @@ import {
   colors,
 } from 'pqb/internal';
 import { DbMigration } from 'rake-db';
+import { defineRls } from '../../../orm';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -71,6 +72,125 @@ describe('tables', () => {
 
     await act();
 
+    assert.report('No changes were detected');
+  });
+
+  it('should ignore definition-side generator ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('ignored_schema');
+        await db.createTable('changed_table', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+        await db.createTable('schema_moved_table', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+      },
+      tables: [
+        class CreatedTable extends BaseTable {
+          table = 'created_table';
+          readonly generatorIgnore = true;
+          noPrimaryKey = true;
+        },
+        class ChangedTable extends BaseTable {
+          table = 'changed_table';
+          readonly generatorIgnore = true;
+          columns = this.setColumns((t) => ({
+            id: t.integer().primaryKey(),
+            name: t.text(),
+          }));
+        },
+        class SchemaMovedTable extends BaseTable {
+          schema = 'ignored_schema';
+          table = 'schema_moved_table';
+          readonly generatorIgnore = true;
+          columns = this.setColumns((t) => ({
+            id: t.integer().primaryKey(),
+          }));
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
+  it('should not ignore managed tables with the same name as definition-side ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('ignored_schema');
+        await db.createTable('shared_table', (t) => ({
+          id: t.integer().primaryKey(),
+        }));
+      },
+      tables: [
+        class IgnoredSchemaTable extends BaseTable {
+          schema = 'ignored_schema';
+          table = 'shared_table';
+          readonly generatorIgnore = true;
+          columns = this.setColumns((t) => ({
+            id: t.integer().primaryKey(),
+          }));
+        },
+        class ManagedTable extends BaseTable {
+          table = 'shared_table';
+          columns = this.setColumns((t) => ({
+            id: t.integer().primaryKey(),
+            name: t.text(),
+          }));
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('shared_table', (t) => ({
+    name: t.add(t.text()),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} shared_table:
+  ${green('+ add column')} name text`);
+  });
+
+  it('should ignore rls for definition-side generator ignored tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('ignored_rls_table', (t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      },
+      tables: [
+        class IgnoredRlsTable extends BaseTable {
+          table = 'ignored_rls_table';
+          readonly generatorIgnore = true;
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+          rls = defineRls({
+            enable: true,
+            permit: [
+              {
+                name: 'ignored_rls_policy',
+                for: 'SELECT',
+                to: 'public',
+                using: BaseTable.sql`id > 0`,
+              },
+            ],
+          });
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration();
     assert.report('No changes were detected');
   });
 
@@ -511,6 +631,46 @@ change(async (db) => {
 `);
 
       assert.report(`${green('+ create table')} joinTable (2 columns)`);
+    });
+
+    it('should ignore definition-side generator ignored join tables', async () => {
+      class One extends BaseTable {
+        table = 'one';
+        noPrimaryKey = true;
+        readonly generatorIgnore = true;
+        columns = this.setColumns((t) => ({
+          iD: t.identity(),
+        }));
+        relations = {
+          twos: this.hasAndBelongsToMany(() => Two, {
+            columns: ['iD'],
+            references: ['oneId'],
+            through: {
+              table: 'ignoredJoinTable',
+              columns: ['twoId'],
+              references: ['iD'],
+            },
+          }),
+        };
+      }
+
+      class Two extends BaseTable {
+        table = 'two';
+        noPrimaryKey = true;
+        columns = this.setColumns((t) => ({
+          iD: t.identity(),
+        }));
+      }
+
+      await arrange({
+        prepareDb,
+        tables: [One, Two],
+      });
+
+      await act();
+
+      assert.migration();
+      assert.report('No changes were detected');
     });
 
     it('should create join table just once when it is defined on both sides', async () => {

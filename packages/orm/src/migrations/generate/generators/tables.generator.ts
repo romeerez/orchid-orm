@@ -161,6 +161,8 @@ const collectCreateTables = (
   currentSchema: string,
 ): CodeTable[] => {
   return tables.reduce<CodeTable[]>((acc, codeTable) => {
+    if (codeTable.internal.generatorIgnored) return acc;
+
     const tableSchema = codeTable.q.schema ?? currentSchema;
     const hasDbTable = dbStructure.tables.some(
       (t) => t.name === codeTable.table && t.schemaName === tableSchema,
@@ -208,7 +210,8 @@ const collectChangeAndDropTables = (
       ignoreTables?.some(
         ({ schema, table }) =>
           table === dbTable.name && schema === dbTable.schemaName,
-      )
+      ) ||
+      isDefinitionIgnoredDbTable(tables, dbTable, currentSchema)
     )
       continue;
 
@@ -241,6 +244,29 @@ const collectChangeAndDropTables = (
   }
 
   return { changeTables, changeTableSchemas, dropTables, tableShapes };
+};
+
+const isDefinitionIgnoredDbTable = (
+  tables: CodeTable[],
+  dbTable: DbStructure.Table,
+  currentSchema: string,
+): boolean => {
+  let hasIgnoredSameName = false;
+
+  for (const codeTable of tables) {
+    if (codeTable.table !== dbTable.name) continue;
+
+    const schema = codeTable.q.schema ?? currentSchema;
+    if (schema === dbTable.schemaName) {
+      return !!codeTable.internal.generatorIgnored;
+    }
+
+    if (codeTable.internal.generatorIgnored) {
+      hasIgnoredSameName = true;
+    }
+  }
+
+  return hasIgnoredSameName;
 };
 
 const applyChangeTableSchemas = (

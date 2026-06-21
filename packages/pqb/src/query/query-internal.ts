@@ -42,6 +42,8 @@ export interface QueryInternal<
   readOnly?: boolean;
   // true for materialized view query objects
   materialized?: boolean;
+  // Table-like definition opts out of migration DDL generation.
+  generatorIgnored?: true;
   // access with `getPrimaryKeys` utility
   primaryKeys?: string[];
   singlePrimaryKey: SinglePrimaryKey;

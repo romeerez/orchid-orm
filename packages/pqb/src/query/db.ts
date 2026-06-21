@@ -208,6 +208,10 @@ export interface DbTableOptions<
    */
   materialized?: true | undefined;
   /**
+   * Exclude a table-like definition from migration DDL generation.
+   */
+  generatorIgnore?: true | undefined;
+  /**
    * Computed SQL or JS columns definitions
    */
   computed?: ComputedOptionsFactory<ColumnTypes, Shape>;
@@ -410,6 +414,7 @@ export class Db<
       comment: options.comment,
       readOnly: options.readOnly,
       materialized: options.materialized,
+      generatorIgnored: options.generatorIgnore,
       nowSQL: options.nowSQL,
       viewData,
       tableData,

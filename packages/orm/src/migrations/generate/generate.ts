@@ -8,6 +8,7 @@ import {
   DomainColumn,
   PickQueryInternal,
   QueryInternal,
+  GeneratorIgnore,
   UnknownColumn,
   getQuerySchema,
   emptyObject,
@@ -138,6 +139,11 @@ export const generate = async (
     internal,
     columnTypes,
   );
+  const generatorIgnore = getGeneratorIgnoreWithDefinitionIgnoredTableLikes(
+    internal.generatorIgnore,
+    codeItems.tables,
+    codeItems.views,
+  );
   const effectiveGrants = getEffectiveGrants(internal.grants, codeItems);
 
   const structureToAstCtx = makeStructureToAstCtx(config, currentSchema);
@@ -148,6 +154,7 @@ export const generate = async (
     currentSchema,
     internal: {
       ...internal,
+      generatorIgnore,
       grants: effectiveGrants,
     },
   };
@@ -397,6 +404,42 @@ const getEffectiveGrants = (
   return effectiveGrants.length ? effectiveGrants : undefined;
 };
 
+const getGeneratorIgnoreWithDefinitionIgnoredTableLikes = (
+  generatorIgnore: GeneratorIgnore | undefined,
+  tables: CodeTable[],
+  views: CodeView[],
+): GeneratorIgnore | undefined => {
+  const ignoredTables = new Set(generatorIgnore?.tables);
+  const ignoredViews = new Set(generatorIgnore?.views);
+  let hasDefinitionIgnoredTableLikes = false;
+
+  for (const table of tables) {
+    if (!table.internal.generatorIgnored) continue;
+
+    hasDefinitionIgnoredTableLikes = true;
+    ignoredTables.add(
+      table.q.schema ? `${table.q.schema}.${table.table}` : table.table,
+    );
+  }
+
+  for (const view of views) {
+    if (!view.internal.generatorIgnored) continue;
+
+    hasDefinitionIgnoredTableLikes = true;
+    ignoredViews.add(
+      view.q.schema ? `${view.q.schema}.${view.name}` : view.name,
+    );
+  }
+
+  return hasDefinitionIgnoredTableLikes
+    ? {
+        ...generatorIgnore,
+        tables: [...ignoredTables],
+        views: [...ignoredViews],
+      }
+    : generatorIgnore;
+};
+
 const compareDbStructures = (
   a: unknown,
   b: unknown,
@@ -491,11 +534,13 @@ const getActualItems = async (
       },
     });
 
-    for (const key in table.relations) {
-      const column = table.shape[key];
-      // column won't be set for has and belongs to many
-      if (column && 'joinTable' in column) {
-        processHasAndBelongsToManyColumn(column, habtmTables, codeItems);
+    if (!table.internal.generatorIgnored) {
+      for (const key in table.relations) {
+        const column = table.shape[key];
+        // column won't be set for has and belongs to many
+        if (column && 'joinTable' in column) {
+          processHasAndBelongsToManyColumn(column, habtmTables, codeItems);
+        }
       }
     }
 
