@@ -284,7 +284,10 @@ export {
 } from './query/expressions/raw-sql';
 export {
   getSqlText,
+  queryToSql,
+  rawSqlToSql,
   quoteTableWithSchema,
+  sqlToRawSql,
   type SingleSql,
 } from './query/sql/sql';
 

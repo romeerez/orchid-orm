@@ -258,7 +258,14 @@ export {
   DynamicRawSQL,
   type RawSqlBase,
 } from './index';
-export { getSqlText, quoteTableWithSchema, type SingleSql } from './index';
+export {
+  getSqlText,
+  queryToSql,
+  rawSqlToSql,
+  quoteTableWithSchema,
+  sqlToRawSql,
+  type SingleSql,
+} from './index';
 
 // RawSql for relations
 export { RawSql } from './index';

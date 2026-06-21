@@ -45,7 +45,7 @@ import {
   QuerySchema,
   Rls,
   Grant,
-  RawSqlBase,
+  type RawSqlBase,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -231,7 +231,9 @@ export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
 
   // view name
   name?: string;
-  // SQL query that defines this view
+  // Query assigned in `init(db)` to define this view.
+  query?: Query;
+  // Raw SQL expression that defines this view.
   sql?: string | RawSqlBase;
   // CREATE VIEW RECURSIVE option used by migration generation.
   recursive?: boolean;
@@ -571,6 +573,7 @@ export interface BaseViewInstance<
   ColumnTypes,
 > extends BaseTableInstance<ColumnTypes> {
   name: string;
+  query?: Query;
   sql: string | RawSqlBase;
   readonly readOnly?: boolean;
   recursive?: boolean;
@@ -583,6 +586,7 @@ export interface BaseMaterializedViewInstance<
   ColumnTypes,
 > extends BaseTableInstance<ColumnTypes> {
   name: string;
+  query?: Query;
   sql: string | RawSqlBase;
   readonly readOnly?: true;
   readonly materialized: true;
@@ -730,6 +734,7 @@ export function createBaseTable<
 
     table!: string;
     name!: string;
+    query?: Query;
     sql!: string | RawSqlBase;
     columns = defaultColumns;
     schema?: QuerySchema;

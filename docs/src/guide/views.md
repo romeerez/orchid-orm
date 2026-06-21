@@ -101,6 +101,53 @@ await db.$views.monthlySales.create({ userId: 1, total: '10' });
 //                         ^ TypeScript error: views are read-only by default.
 ```
 
+## using query-builder to define views
+
+Use `init(db)` when you want to build the view with the query builder.
+The `db` argument is the configured ORM instance, so it has your tables and views:
+
+```ts
+import { orchidORM } from 'orchid-orm';
+import { BaseTable } from './base-table';
+import { SaleTable } from './sale.table';
+import { UserTable } from './user.table';
+
+export class MonthlySalesView extends BaseTable.View {
+  readonly name = 'monthly_sales';
+
+  columns = this.setColumns((t) => ({
+    userId: t.integer(),
+    total: t.decimal(),
+  }));
+
+  init(db: typeof appDb) {
+    this.query = db.sale
+      .select({
+        userId: 'userId',
+        total: (q) => q.sum('total'),
+      })
+      .group('userId');
+  }
+}
+
+export const appDb = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    views: {
+      monthlySales: MonthlySalesView,
+    },
+  },
+  {
+    sale: SaleTable,
+    user: UserTable,
+  },
+);
+```
+
+During `db g`, Orchid compiles `this.query` to SQL and bind values for `createView`.
+It does not execute the query.
+Runtime reads still use `db.$views.<key>`.
+
 Set `readonly readOnly = false` only when you are sure PostgreSQL accepts writes for the view, for example for a simple updatable view or a view with suitable triggers.
 Orchid does not validate view updatability at runtime; PostgreSQL remains responsible for accepting or rejecting the mutation.
 
@@ -266,7 +313,7 @@ Views are managed by `db g` only when they are listed in the ORM `views` option.
 If no ORM views are configured, regular database views and materialized views are not loaded or diffed during migration generation.
 
 When views are configured, the migration generator loads both regular and materialized views.
-For regular views, it uses the view class `schema`, `name`, `columns`, `sql`, grants, and supported view options to generate `createView` and `dropView` migrations.
+For regular views, it uses the view class `schema`, `name`, `columns`, `sql` or the `query` assigned in `init(db)`, grants, and supported view options to generate `createView` and `dropView` migrations.
 For materialized views, it uses `schema`, `name`, `columns`, `sql`, grants, `withData`, dependencies, and indexes to generate `createMaterializedView`, `dropMaterializedView`, and related index migrations.
 
 Set `generatorIgnore = true` on a view class when the view should stay queryable in code but its DDL is managed outside Orchid.

@@ -5,7 +5,12 @@ import {
 import { QueryResult } from '../../adapters/adapter';
 import { PickQueryColumTypes } from '../pick-query-types';
 import { DynamicSQLArg, StaticSQLArgs } from '../expressions/expression';
-import { DynamicRawSQL, raw, RawSql } from '../expressions/raw-sql';
+import {
+  DynamicRawSQL,
+  raw,
+  RawSql,
+  type RawSqlBase,
+} from '../expressions/raw-sql';
 import { Column } from '../../columns';
 import { ToSQLCtx, ToSQLQuery } from './to-sql';
 import { QueryType } from '../query-data';
@@ -14,6 +19,8 @@ import { OrchidOrmInternalError } from '../errors';
 import { QuerySchema } from '../basic-features/schema/schema';
 import { getQuerySchema } from '../basic-features/storage/storage';
 import { MutativeQueriesSelectRelationsSqlProp } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import { type RecordUnknown } from '../../utils';
+import { type Query } from '../query';
 
 export interface SqlCommonOptions
   extends HasTableHook, HasCteHooks, MutativeQueriesSelectRelationsSqlProp {}
@@ -152,6 +159,56 @@ export const getSelectedColumnData = (
 export const getSqlText = (sql: Sql) => {
   if ('text' in sql) return sql.text;
   throw new Error(`Batch SQL is not supported in this query`);
+};
+
+export const queryToSql = (query: Query): SingleSql => {
+  const sql = query.toSQL();
+  if ('batch' in sql) {
+    throw new OrchidOrmInternalError(
+      query,
+      'Batch SQL is not supported in query definitions',
+    );
+  }
+
+  return sql;
+};
+
+export const rawSqlToSql = (sql: string | RawSqlBase): SingleSql => {
+  if (typeof sql === 'string') return { text: sql };
+
+  const values: unknown[] = [];
+  return {
+    text: sql.toSQL({ values }),
+    values,
+  };
+};
+
+export const sqlToRawSql = (sql: SingleSql): RawSqlBase => {
+  const { values } = sql;
+  if (!values?.length) return raw({ raw: sql.text });
+
+  const rawValues: RecordUnknown = {};
+  for (let i = 0; i < values.length; i++) {
+    rawValues[`queryValue${i + 1}`] = values[i];
+  }
+
+  return raw({
+    raw: replaceSqlPlaceholders(sql.text, values.length),
+  }).values(rawValues);
+};
+
+const replaceSqlPlaceholders = (sql: string, valuesCount: number): string => {
+  const parts = sql.split("'");
+  for (let i = 0; i < parts.length; i += 2) {
+    parts[i] = parts[i].replace(/\$(\d+)/g, (match, index) => {
+      const number = Number(index);
+      return number > 0 && number <= valuesCount
+        ? `$queryValue${number}`
+        : match;
+    });
+  }
+
+  return parts.join("'");
 };
 
 export class QuerySql<ColumnTypes> {

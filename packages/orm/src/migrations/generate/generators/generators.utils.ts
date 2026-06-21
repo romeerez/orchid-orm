@@ -1,11 +1,16 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
 import {
-  RawSqlBase,
+  type RawSqlBase,
+  type QueryInternal,
+  type SingleSql,
   QueryResult,
   Adapter,
   colors,
   TransactionAdapter,
   getDriverErrorCode,
+  queryToSql,
+  rawSqlToSql,
+  sqlToRawSql,
 } from 'pqb/internal';
 import { AbortSignal } from '../generate';
 
@@ -21,6 +26,23 @@ export interface CompareExpression {
 export interface SqlExpression extends CompareExpression {
   source?: string;
 }
+
+export const viewDataToSql = (
+  viewData: NonNullable<QueryInternal['viewData']>,
+  viewName: string,
+): RawSqlBase => {
+  return sqlToRawSql(viewDataToQuerySql(viewData, viewName));
+};
+
+const viewDataToQuerySql = (
+  viewData: NonNullable<QueryInternal['viewData']>,
+  viewName: string,
+): SingleSql => {
+  if (viewData.query) return queryToSql(viewData.query);
+  if (viewData.sql !== undefined) return rawSqlToSql(viewData.sql);
+
+  throw new Error(`Either sql or query is required for view ${viewName}`);
+};
 
 export const compareSqlExpressions = async (
   expressions: SqlExpression[],

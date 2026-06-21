@@ -5,6 +5,7 @@ import { ComposeMigrationParams } from '../compose-migration';
 import {
   CompareViewExpression,
   compareViewsExpressions,
+  viewDataToSql,
 } from './generators.utils';
 
 interface ViewPair {
@@ -124,10 +125,7 @@ const codeViewToAst = (
   action: RakeDbAst.View['action'],
 ): RakeDbAst.View => {
   const schema = view.q.schema ?? currentSchema;
-  const sql =
-    typeof view.viewData.sql === 'string'
-      ? raw({ raw: view.viewData.sql })
-      : (view.viewData.sql ?? raw({ raw: '' }));
+  const sql = viewDataToSql(view.viewData, view.name);
 
   return {
     type: 'view',

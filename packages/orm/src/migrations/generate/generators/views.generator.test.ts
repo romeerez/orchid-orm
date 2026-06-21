@@ -1,6 +1,7 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { setGrants } from '../../../orm';
 import { colors } from 'pqb/internal';
+import { Query } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -18,6 +19,14 @@ const { green, red } = colors;
 
 describe('views', () => {
   const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+
+  class SourceTable extends BaseTable {
+    table = 'source';
+    columns = this.setColumns((t) => ({
+      id: t.identity().primaryKey(),
+      active: t.boolean(),
+    }));
+  }
 
   const createSourceTable = async (
     db: Parameters<NonNullable<Parameters<typeof arrange>[0]['prepareDb']>>[0],
@@ -114,6 +123,84 @@ change(async (db) => {
       `${green('+ create view')} active_view`,
       `${green('+ create view')} recursive_view`,
     );
+  });
+
+  it('should create view with query assigned in init', async () => {
+    class InitQueryView extends BaseTable.View {
+      name = 'init_query_view';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+        active: t.boolean(),
+      }));
+
+      init(db: { SourceTable: Query }) {
+        this.query = db.SourceTable.select('id', 'active')
+          .whereSql`"source"."active" = true`;
+      }
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      tables: [SourceTable],
+      views: [InitQueryView],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createView('init_query_view', {
+    columns: ['id', 'active'],
+    securityInvoker: true,
+  }, \`SELECT "source"."id", "source"."active" FROM "source" WHERE ("source"."active" = true)\`);
+});
+`);
+
+    assert.report(`${green('+ create view')} init_query_view`);
+  });
+
+  it('should require sql or query unless view is ignored', async () => {
+    class MissingDefinitionView extends BaseTable.View {
+      name = 'missing_definition_view';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+      }));
+    }
+
+    await arrange({
+      views: [MissingDefinitionView],
+    });
+
+    await expect(act()).rejects.toThrow(
+      'Either sql or query is required for view missing_definition_view',
+    );
+  });
+
+  it('should allow ignored view without sql or query', async () => {
+    class IgnoredMissingDefinitionView extends BaseTable.View {
+      name = 'ignored_missing_definition_view';
+      readonly generatorIgnore = true;
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+      }));
+    }
+
+    await arrange({
+      views: [IgnoredMissingDefinitionView],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
   });
 
   it('should drop view', async () => {

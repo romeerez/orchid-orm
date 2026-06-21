@@ -61,6 +61,7 @@ export interface QueryInternal<
   tableGrants?: Grant.TableClassGrant[];
   // View DDL metadata for migration generation.
   viewData?: {
+    query?: Query;
     sql?: string | RawSqlBase;
     recursive?: boolean;
     checkOption?: 'LOCAL' | 'CASCADED';

@@ -1,5 +1,6 @@
 import { useGeneratorsTestUtils } from './generators.test-utils';
 import { colors } from 'pqb/internal';
+import { Query } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -17,6 +18,14 @@ const { green, red } = colors;
 
 describe('materialized views', () => {
   const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+
+  class SourceTable extends BaseTable {
+    table = 'source';
+    columns = this.setColumns((t) => ({
+      id: t.identity().primaryKey(),
+      active: t.boolean(),
+    }));
+  }
 
   const createSourceTable = async (
     db: Parameters<NonNullable<Parameters<typeof arrange>[0]['prepareDb']>>[0],
@@ -64,6 +73,49 @@ change(async (db) => {
 
     assert.report(
       `${green('+ create materialized view')} active_materialized_view`,
+    );
+  });
+
+  it('should create materialized view with query assigned in init', async () => {
+    class InitQueryMaterializedView extends BaseTable.MaterializedView {
+      name = 'init_query_materialized_view';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+        active: t.boolean(),
+      }));
+
+      init(db: { SourceTable: Query }) {
+        this.query = db.SourceTable.select('id', 'active')
+          .whereSql`"source"."active" = true`;
+      }
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      tables: [SourceTable],
+      views: [InitQueryMaterializedView],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.createMaterializedView('init_query_materialized_view', {
+    columns: ['id', 'active'],
+  }, \`SELECT "source"."id", "source"."active" FROM "source" WHERE ("source"."active" = true)\`);
+});
+`);
+
+    assert.report(
+      `${green('+ create materialized view')} init_query_materialized_view`,
     );
   });
 

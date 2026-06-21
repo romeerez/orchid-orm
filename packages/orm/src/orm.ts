@@ -20,6 +20,7 @@ import {
   Rls,
   Grant,
   EmptyObject,
+  type QueryInternal,
 } from 'pqb/internal';
 import {
   ORMTableInput,
@@ -386,16 +387,7 @@ const assignTablesToOrm = <T extends TableClasses>(
       asyncStorage,
       options,
       table.columns?.data ?? {},
-      isTable
-        ? undefined
-        : {
-            sql: table.sql,
-            recursive: table.recursive,
-            checkOption: table.checkOption,
-            securityBarrier: table.securityBarrier,
-            securityInvoker: table.securityInvoker,
-            withData: table.withData,
-          },
+      getViewData(isTable, table),
     );
 
     (dbTable as unknown as { definedAs: string }).definedAs = key;
@@ -409,6 +401,23 @@ const assignTablesToOrm = <T extends TableClasses>(
   }
 
   return tableInstances;
+};
+
+const getViewData = (
+  isTable: boolean,
+  table: ORMTableInput,
+): QueryInternal['viewData'] | undefined => {
+  if (isTable) return;
+
+  return {
+    query: table.query,
+    sql: table.sql,
+    recursive: table.recursive,
+    checkOption: table.checkOption,
+    securityBarrier: table.securityBarrier,
+    securityInvoker: table.securityInvoker,
+    withData: table.withData,
+  };
 };
 
 export const bundleOrchidORM = <
@@ -661,23 +670,26 @@ const privateOrchidORMWithAdapter = <
   setDbAwareInstance?.(result);
 
   const initItems = [
-    [tableInstances, result],
-    [viewInstances, result.$views],
+    [tableInstances, result, true],
+    [viewInstances, result.$views, false],
   ] as const;
 
-  for (const [items, queries] of initItems) {
+  for (const [items, queries, isTable] of initItems) {
     if (!items) continue;
 
     for (const key in items) {
       const table = items[key] as unknown as {
         init?(orm: unknown): void;
         q: QueryData;
-      };
+      } & ORMTableInput;
 
       if (table.init) {
         table.init(result);
         // assign before and after hooks from table.query to the table base query
         Object.assign(queries[key].baseQuery.q, table.q);
+        if (!isTable) {
+          queries[key].internal.viewData = getViewData(false, table);
+        }
       }
     }
   }

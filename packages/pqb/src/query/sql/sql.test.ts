@@ -5,8 +5,36 @@ import { User, userColumnsSql } from '../../test-utils/pqb.test-utils';
 import { Expression } from '../expressions/expression';
 import { emptyObject, noop } from '../../utils';
 import { ToSQLCtx } from './to-sql';
+import { queryToSql, rawSqlToSql, sqlToRawSql } from './sql';
 
 describe('sql', () => {
+  it('should convert query definition SQL to raw SQL with named values', () => {
+    const sql = sqlToRawSql(
+      queryToSql(User.select('id').where({ name: 'name' })),
+    );
+    const values: unknown[] = [];
+
+    expect(sql.toSQL({ values })).toBe(
+      `SELECT "user"."id" FROM "schema"."user" WHERE "user"."name" = $1`,
+    );
+    expect(values).toEqual(['name']);
+    expect(sql).toMatchObject({
+      _sql: 'SELECT "user"."id" FROM "schema"."user" WHERE "user"."name" = $queryValue1',
+      _values: { queryValue1: 'name' },
+    });
+  });
+
+  it('should convert raw SQL to query SQL shape', () => {
+    const sql = rawSqlToSql(
+      User.sql({ raw: 'name = $name' }).values({ name: 'name' }),
+    );
+
+    expect(sql).toEqual({
+      text: 'name = $1',
+      values: ['name'],
+    });
+  });
+
   it('should use column types in callback from a db instance', () => {
     const type = {} as unknown as Column;
     const db = createDbWithAdapter({
