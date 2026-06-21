@@ -1,5 +1,12 @@
 # pqb
 
+## 0.67.6
+
+### Patch Changes
+
+- d052e1f1: Add `generatorIgnore = true` on table and view class definitions to keep them queryable while excluding their DDL from generated migrations (#716)
+- 1dd28a33: Support ORM query builders as regular view definitions for generated migrations (#717)
+
 ## 0.67.5
 
 ### Patch Changes

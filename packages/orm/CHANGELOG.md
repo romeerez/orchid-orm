@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.72.9
+
+### Patch Changes
+
+- d052e1f1: Add `generatorIgnore = true` on table and view class definitions to keep them queryable while excluding their DDL from generated migrations (#716)
+- 1dd28a33: Support ORM query builders as regular view definitions for generated migrations (#717)
+- Updated dependencies [d052e1f1]
+- Updated dependencies [1dd28a33]
+  - pqb@0.67.6
+  - rake-db@2.36.8
+
 ## 1.72.8
 
 ### Patch Changes
