@@ -2449,6 +2449,169 @@ describe('belongsTo', () => {
     });
   });
 
+  describe('inferred required belongsTo', () => {
+    class UserTable extends BaseTable {
+      schema = 'schema';
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserKey: t.name('user_key').text(),
+        Name: t.name('name').text(),
+        Password: t.name('password').text(),
+      }));
+    }
+
+    class ProfileTable extends BaseTable {
+      schema = 'schema';
+      readonly table = 'profile';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('user_id').integer(),
+        OptionalUserId: t.name('optional_user_id').integer().nullable(),
+        ProfileKey: t.name('profile_key').text(),
+        OptionalProfileKey: t.name('optional_profile_key').text().nullable(),
+        Bio: t.name('bio').text().nullable(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          columns: ['UserId'],
+          references: ['Id'],
+        }),
+        optionalUser: this.belongsTo(() => UserTable, {
+          columns: ['OptionalUserId'],
+          references: ['Id'],
+        }),
+        forcedOptionalUser: this.belongsTo(() => UserTable, {
+          required: false,
+          columns: ['UserId'],
+          references: ['Id'],
+        }),
+        compositeUser: this.belongsTo(() => UserTable, {
+          columns: ['UserId', 'ProfileKey'],
+          references: ['Id', 'UserKey'],
+        }),
+        optionalCompositeUser: this.belongsTo(() => UserTable, {
+          columns: ['UserId', 'OptionalProfileKey'],
+          references: ['Id', 'UserKey'],
+        }),
+      };
+    }
+
+    const db = orchidORMWithAdapter(ormParams, {
+      user: UserTable,
+      profile: ProfileTable,
+    });
+
+    it('should infer required for omitted required when all local columns are non-nullable', async () => {
+      const q = db.profile.queryRelated('user', { UserId: 123 });
+
+      assertType<
+        Awaited<typeof q>,
+        { Id: number; UserKey: string; Name: string; Password: string }
+      >();
+
+      const result = await q.catch((error) => error);
+
+      expect(result).toEqual(expect.any(NotFoundError));
+    });
+
+    it('should infer optional for omitted required when any local column is nullable', async () => {
+      const single = await db.profile.queryRelated('optionalUser', {
+        OptionalUserId: 123,
+      });
+      const composite = await db.profile.queryRelated('optionalCompositeUser', {
+        UserId: 123,
+        OptionalProfileKey: 'key',
+      });
+
+      assertType<
+        typeof single,
+        | { Id: number; UserKey: string; Name: string; Password: string }
+        | undefined
+      >();
+      assertType<
+        typeof composite,
+        | { Id: number; UserKey: string; Name: string; Password: string }
+        | undefined
+      >();
+
+      expect(single).toBe(undefined);
+      expect(composite).toBe(undefined);
+    });
+
+    it('should respect explicit required false when local columns are non-nullable', async () => {
+      const result = await db.profile.queryRelated('forcedOptionalUser', {
+        UserId: 123,
+      });
+
+      assertType<
+        typeof result,
+        | { Id: number; UserKey: string; Name: string; Password: string }
+        | undefined
+      >();
+
+      expect(result).toBe(undefined);
+    });
+
+    it('should infer required for composite belongsTo when all local columns are non-nullable', async () => {
+      const q = db.profile.queryRelated('compositeUser', {
+        UserId: 123,
+        ProfileKey: 'key',
+      });
+
+      assertType<
+        Awaited<typeof q>,
+        { Id: number; UserKey: string; Name: string; Password: string }
+      >();
+
+      const result = await q.catch((error) => error);
+
+      expect(result).toEqual(expect.any(NotFoundError));
+    });
+
+    it('should require a non-nullable belongsTo foreign key or nested relation when creating', () => {
+      class SingleProfileTable extends BaseTable {
+        schema = 'schema';
+        readonly table = 'profile';
+        columns = this.setColumns((t) => ({
+          Id: t.name('id').identity().primaryKey(),
+          UserId: t.name('user_id').integer(),
+          Bio: t.name('bio').text().nullable(),
+        }));
+
+        relations = {
+          user: this.belongsTo(() => UserTable, {
+            columns: ['UserId'],
+            references: ['Id'],
+          }),
+        };
+      }
+
+      const db = orchidORMWithAdapter(ormParams, {
+        user: UserTable,
+        profile: SingleProfileTable,
+      });
+
+      // @ts-expect-error UserId or user is required
+      db.profile.create({
+        Bio: 'bio',
+      });
+
+      db.profile.create({
+        UserId: 1,
+      });
+
+      db.profile.create({
+        user: {
+          connect: {
+            Id: 1,
+          },
+        },
+      });
+    });
+  });
+
   it('should be supported in a `where` callback', () => {
     const q = db.profile.where((q) =>
       q.user.whereIn('Name', ['a', 'b']).count().equals(1),

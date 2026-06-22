@@ -54,6 +54,7 @@ import {
 import { OrchidORM } from '../orm';
 import {
   BelongsTo,
+  BelongsToColumnsRequired,
   BelongsToInfo,
   BelongsToOptions,
   BelongsToQuery,
@@ -135,7 +136,16 @@ export interface TableToDb<
               T,
               K,
               T['relations'][K]['options']['columns'][number] & string,
-              T['relations'][K]['options']['required'],
+              T['relations'][K]['options'] extends {
+                required: infer Required extends boolean;
+              }
+                ? Required
+                : T['relations'][K]['options'] extends { on: unknown }
+                  ? false
+                  : BelongsToColumnsRequired<
+                      T,
+                      T['relations'][K]['options']['columns'][number] & string
+                    >,
               BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
             >
           : T['relations'][K] extends HasOne

@@ -376,6 +376,7 @@ export class MessageTable extends BaseTable {
     }),
 
     activeChat: this.belongsTo(() => ChatTable, {
+      required: false,
       columns: ['ChatId', 'MessageKey'],
       references: ['IdOfChat', 'ChatKey'],
       on: {

@@ -83,6 +83,17 @@ export type BelongsToParams<T extends RelationConfigSelf, FK extends string> = {
   [Name in FK]: T['columns']['shape'][Name]['__type'];
 };
 
+export type BelongsToColumnsRequired<
+  T extends RelationConfigSelf,
+  FK extends string,
+> = {
+  [K in FK]: T['columns']['shape'][K]['data']['isNullable'] extends true
+    ? false
+    : true;
+}[FK] extends true
+  ? true
+  : false;
+
 export type BelongsToQuery<T extends Query, Name extends string> = {
   [P in keyof T]: P extends '__selectable'
     ? SelectableFromShape<T['shape'], Name>
@@ -307,6 +318,18 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     this.nestedUpdate(queryForUpdate, set, data);
   }
 }
+
+export const getBelongsToRequired = (
+  tableConfig: ORMTableInput,
+  relation: BelongsTo,
+) => {
+  const { required } = relation.options;
+  if (typeof required === 'boolean') return required;
+
+  return relation.options.columns.every((key) => {
+    return !tableConfig.columns.shape[key as string].data.isNullable;
+  });
+};
 
 export const makeBelongsToMethod = (
   tableConfig: ORMTableInput,

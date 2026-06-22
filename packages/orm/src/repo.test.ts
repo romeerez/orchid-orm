@@ -103,7 +103,7 @@ describe('createRepo', () => {
 
       assertType<
         Awaited<typeof q>,
-        { id: number; some: { id: number; name: string } | undefined }[]
+        { id: number; some: { id: number; name: string } }[]
       >();
 
       expectSql(

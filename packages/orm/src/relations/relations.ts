@@ -1,4 +1,9 @@
-import { BelongsTo, BelongsToParams, makeBelongsToMethod } from './belongsTo';
+import {
+  BelongsTo,
+  BelongsToParams,
+  getBelongsToRequired,
+  makeBelongsToMethod,
+} from './belongsTo';
 import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
 import {
   TableToDb,
@@ -320,7 +325,12 @@ const applyRelation = (
   }
 
   if (data.returns === 'one') {
-    if (relation.options.required) {
+    const required =
+      type === 'belongsTo'
+        ? getBelongsToRequired(table, relation)
+        : relation.options.required;
+
+    if (required) {
       _queryTake(query);
     } else {
       _queryTakeOptional(query);
