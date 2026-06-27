@@ -10,6 +10,7 @@ import {
   TemplateLiteralArgs,
   templateLiteralSQLToCode,
 } from './expression';
+import { SqlJoinExpression } from './sql-join-expression';
 import { SqlRefExpression } from './sql-ref-expression';
 import { Column } from '../../columns/column';
 import { ColumnSchemaConfig } from '../../columns/column-schema';
@@ -265,6 +266,41 @@ export interface SqlFn {
     : RawSql<Column.Pick.QueryColumn, T>;
 
   /**
+   * `sql.join` builds a SQL list from values and expressions.
+   * Plain values are bound as query parameters, while SQL expressions render as SQL.
+   *
+   * Use it for SQL constructs such as `ARRAY[...]`, `IN (...)`, function arguments,
+   * or tuple lists. The default separator is `, `. Provide a SQL expression as the
+   * custom separator when a different separator is needed.
+   *
+   * ```ts
+   * await db.user.whereSql`"id" IN (${sql.join([1, 2, 3])})`;
+   * ```
+   *
+   * ```ts
+   * await db.user.whereSql`
+   *   (${sql.join([sql.ref('name'), sql.ref('age')])}) IN (${sql.join(
+   *     users.map((user) => sql`(${user.name}, ${user.age})`),
+   *   )})
+   * `;
+   * ```
+   *
+   * ```ts
+   * await db.user.select({
+   *   displayName: (q) =>
+   *     sql<string>`concat(${sql.join(
+   *       [q.column('firstName'), q.column('lastName')],
+   *       sql` || ' ' || `,
+   *     )})`,
+   * });
+   * ```
+   */
+  join<T = unknown>(
+    items: readonly unknown[],
+    separator?: RawSqlBase,
+  ): SqlJoinExpression<Column.Pick.QueryColumnOfType<T>>;
+
+  /**
    * `sql.ref` quotes a SQL identifier such as a table name, column name, or schema name.
    * Use it when you need to dynamically reference an identifier in raw SQL.
    *
@@ -308,6 +344,7 @@ export const sqlFn: SqlFn = ((...args: any[]): any => {
 }) as SqlFn;
 
 sqlFn.ref = (name) => new SqlRefExpression(name);
+sqlFn.join = (items, separator) => new SqlJoinExpression(items, separator);
 sqlFn.unsafe = (sql) => new UnsafeSqlExpression(sql);
 
 export class UnsafeSqlExpression extends Expression {

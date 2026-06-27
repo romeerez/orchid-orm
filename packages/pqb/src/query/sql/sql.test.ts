@@ -347,4 +347,72 @@ describe('sql', () => {
       expectSql(q.toSQL(), `SELECT "name" "value" FROM "schema"."user"`);
     });
   });
+
+  describe('sql.join', () => {
+    it('should render a list of values in whereSql', () => {
+      const q = User.whereSql`ARRAY[${sql.join([1, 2, 3])}]`;
+
+      expectSql(
+        q.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (ARRAY[$1, $2, $3])`,
+        [1, 2, 3],
+      );
+    });
+
+    it('should render expression items without parameterizing them', () => {
+      const q = User.whereSql`${sql.join([
+        sql.ref('name'),
+        sql.ref('user.age'),
+      ])}`;
+
+      expectSql(
+        q.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("name", "user"."age")`,
+      );
+    });
+
+    it('should preserve value order with mixed items and separators', () => {
+      const q = User.whereSql`${sql.join(
+        [1, sql`lower(${'NAME'})`, sql.ref('age'), 4],
+        sql`${'separator'} || `,
+      )}`;
+
+      expectSql(
+        q.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ($1$2 || lower($3)$4 || "age"$5 || $6)`,
+        [1, 'separator', 'NAME', 'separator', 'separator', 4],
+      );
+    });
+
+    it('should accept readonly arrays and render empty lists', () => {
+      const items = [1, 2] as const;
+
+      expectSql(
+        User.whereSql`ARRAY[${sql.join(items)}]`.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (ARRAY[$1, $2])`,
+        [1, 2],
+      );
+
+      expectSql(
+        User.whereSql`IN (${sql.join([])})`.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (IN ())`,
+      );
+    });
+
+    it('should be usable in query builder select', () => {
+      const q = User.select({
+        value: (q) =>
+          sql<string>`concat(${sql.join(
+            [q.column('name'), q.column('age')],
+            sql` || ' ' || `,
+          )})`,
+      });
+
+      assertType<Awaited<typeof q>, { value: string }[]>();
+      expectSql(
+        q.toSQL(),
+        `SELECT concat("user"."name" || ' ' || "user"."age") "value" FROM "schema"."user"`,
+      );
+    });
+  });
 });

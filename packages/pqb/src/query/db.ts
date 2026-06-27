@@ -24,7 +24,9 @@ import {
   RawSql,
   sqlFn,
   UnsafeSqlExpression,
+  type RawSqlBase,
 } from './expressions/raw-sql';
+import { type SqlJoinExpression } from './expressions/sql-join-expression';
 import { SqlRefExpression } from './expressions/sql-ref-expression';
 import { ScopeArgumentQuery } from './extra-features/scope/scope';
 import {
@@ -719,6 +721,10 @@ export interface DbSqlMethod<ColumnTypes> {
   <T>(
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
   ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
+  join<T = unknown>(
+    items: readonly unknown[],
+    separator?: RawSqlBase,
+  ): SqlJoinExpression<Column.Pick.QueryColumnOfType<T>>;
   ref(name: string): SqlRefExpression;
   unsafe(sql: string | number | boolean): UnsafeSqlExpression;
 }
@@ -924,6 +930,7 @@ export function _createDbSqlMethod<ColumnTypes>(
     return sql;
   }) as DbSqlMethod<ColumnTypes>;
   fn.ref = sqlFn.ref;
+  fn.join = sqlFn.join;
   fn.unsafe = sqlFn.unsafe;
   return fn;
 }

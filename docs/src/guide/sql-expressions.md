@@ -163,6 +163,57 @@ sql({
 sql`($one + $two) / $one`.type((t) => t.numeric()).values({ one: 1, two: 2 });
 ```
 
+## sql.join
+
+[//]: # 'has JSDoc'
+
+`sql.join` builds a SQL list from values and expressions.
+Plain values are bound as query parameters, while SQL expressions render as SQL.
+Use it for SQL constructs such as `ARRAY[...]`, `IN (...)`, function arguments, or tuple lists.
+
+```ts
+import { sql } from './base-table';
+
+const nicknames = ['johnny', 'john', 'jon'];
+
+await db.user.whereSql`
+  "nicknames" @> ARRAY[${sql.join(nicknames)}]
+`;
+```
+
+It can also be used for `IN (...)` lists:
+
+```ts
+const ids = [1, 2, 3];
+
+await db.user.whereSql`
+  "id" IN (${sql.join(ids)})
+`;
+```
+
+Items can be SQL expressions, including `sql.ref`, column references, and nested `sql` fragments:
+
+```ts
+await db.user.whereSql`
+  (${sql.join([sql.ref('name'), sql.ref('age')])}) IN (${sql.join(
+    users.map((user) => sql`(${user.name}, ${user.age})`),
+  )})
+`;
+```
+
+By default, items are separated with `, `.
+Pass a SQL expression as the second argument to use a custom separator:
+
+```ts
+await db.user.select({
+  displayName: (q) =>
+    sql<string>`concat(${sql.join(
+      [q.column('firstName'), q.column('lastName')],
+      sql` || ' ' || `,
+    )})`,
+});
+```
+
 ## sql.ref
 
 [//]: # 'has JSDoc'
