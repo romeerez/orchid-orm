@@ -5,6 +5,17 @@ const text = t.text();
 const timestamp = t.timestamp();
 
 describe('defaultSchemaConfig', () => {
+  describe('jsonText', () => {
+    it('accepts custom types', () => {
+      const column = t.jsonText<{ foo: string }>();
+
+      assertType<typeof column.__type, { foo: string }>();
+      assertType<typeof column.__inputType, { foo: string }>();
+      assertType<typeof column.__outputType, { foo: string }>();
+      assertType<typeof column.__queryType, { foo: string }>();
+    });
+  });
+
   describe('asType', () => {
     it('accepts narrowed types', () => {
       const column = text.asType((t) =>

@@ -21,7 +21,6 @@ import {
 } from './column-types/string';
 import { IntervalColumn, TimeColumn } from './column-types/date-time';
 import { BooleanColumn } from './column-types/boolean';
-import { JSONTextColumn } from './column-types/json';
 import { timestampHelpers, TimestampHelpers } from './timestamps';
 import { CustomTypeColumn, DomainColumn } from './column-types/custom-type';
 import { RawSql, sqlFn, SqlFn } from '../query/expressions/raw-sql';
@@ -104,7 +103,7 @@ export interface DefaultColumnTypes<
   uuid(): UUIDColumn<SchemaConfig>;
   xml(): XMLColumn<SchemaConfig>;
   json: SchemaConfig['json'];
-  jsonText(): JSONTextColumn<SchemaConfig>;
+  jsonText: SchemaConfig['jsonText'];
   type(dataType: string): CustomTypeColumn<SchemaConfig>;
   domain(dataType: string): DomainColumn<SchemaConfig>;
 
@@ -220,9 +219,7 @@ export const makeColumnTypes = <SchemaConfig extends ColumnSchemaConfig>(
       return new XMLColumn<SchemaConfig>(schema);
     },
     json: schema.json,
-    jsonText() {
-      return new JSONTextColumn<SchemaConfig>(schema);
-    },
+    jsonText: schema.jsonText,
     type(dataType) {
       return new CustomTypeColumn<SchemaConfig>(schema, dataType);
     },

@@ -681,7 +681,7 @@ export const getShapeFromSelect = (
                   )
                 : UnknownColumn.instance;
             } else {
-              result[key] = new JSONTextColumn(internalSchemaConfig);
+              result[key] = new JSONTextColumn(internalSchemaConfig, undefined);
             }
           }
         }

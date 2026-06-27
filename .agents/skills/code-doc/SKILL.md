@@ -7,9 +7,9 @@ Document internal feature knowledge close to the implementation. Use top-level s
 
 **Inputs**
 
-- `code doc gr`: resolve one `changes/gr-*` folder.
+- `code doc _1`: resolve one `changes/_1-*` folder.
 - `code doc 707`: resolve one `changes/707-*` folder.
-- `code doc gr 2`: document only the nested folder in `changes/gr-*` that starts with `2`.
+- `code doc _1 2`: document only the nested folder in `changes/_1-*` that starts with `2`.
 - `code doc select`: document an implementation topic that may not live in `changes/`.
 
 If the feature folder, nested selector, or implementation topic is ambiguous, ask one focused clarification question. Otherwise infer the scope and proceed.
@@ -55,7 +55,7 @@ If the feature folder, nested selector, or implementation topic is ambiguous, as
    - Do not create a top-level spec just because the source lives in `changes/<id>-*`, has a feature-style name, or includes public API details for one package.
 
 5. Name docs deliberately.
-   - Derive top-level spec names from the change folder only after deciding a top-level spec is warranted. Drop numeric prefixes and short tracking-code prefixes. Example: `changes/gr-grant-revoke` becomes `specs/grant-revoke.md`.
+   - Derive top-level spec names from the change folder only after deciding a top-level spec is warranted. Drop numeric prefixes and short tracking-code prefixes. Example: `changes/_2-grant-revoke` becomes `specs/grant-revoke.md`.
    - Package docs usually match the main implementation file without the TypeScript suffix.
    - Drop implementation-only suffixes such as `.db` when they are not meaningful to the feature doc. Example: `grants.db.ts` gets `grants.md`.
    - Keep meaningful suffixes that describe a package role. Example: `grants.generator.ts` gets `grants.generator.md`.

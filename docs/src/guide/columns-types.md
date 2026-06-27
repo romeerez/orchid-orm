@@ -344,9 +344,9 @@ export class Table extends BaseTable {
 ```
 
 `t.jsonText()` is a Postgres `json` column.
-It accepts any user-provided data and automatically parses JSON values loaded from the database, so both input and output TypeScript types are `unknown`.
+It accepts any user-provided data and automatically parses JSON values loaded from the database.
 
-When using ORM without a [validation library](/guide/columns-validation-methods), you can set an arbitrary type to `jsonb` with `t.json`.
+When using ORM without a [validation library](/guide/columns-validation-methods), you can set an arbitrary TypeScript type for `json` and `jsonb` columns.
 Make sure to only save properly validated data.
 
 ```ts
@@ -354,17 +354,20 @@ export class Table extends BaseTable {
   readonly table = 'table';
   columns = this.setColumns((t) => ({
     data: t.json<{
-      age: number;
       name: string;
       description: string | null;
       tags: string[];
+    }>(),
+
+    dataJsonText: t.jsonText<{
+      info: string;
     }>(),
   }));
 }
 ```
 
-When having a validation library enabled, `json` accepts a callback where you can define a validation schema.
-If omitted, the type is `unknown`.
+When a validation library is enabled, `json` and `jsonText` accept a validation schema.
+If the schema is omitted, the type is `unknown`.
 
 ```ts
 import { z } from 'zod';
@@ -390,11 +393,20 @@ export class Table extends BaseTable {
         tags: array(string()),
       }),
     ),
+
+    dataText: t.jsonText(
+      z.object({
+        age: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+        tags: z.string().array(),
+      }),
+    ),
   }));
 }
 ```
 
-`json` columns support the following `where` operators:
+`json` (but not `jsonText`) columns support the following `where` operators:
 
 ```ts
 db.someTable.where({

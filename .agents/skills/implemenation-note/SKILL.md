@@ -7,7 +7,7 @@ Prepare technical implementation notes for an existing `changes/` idea before ta
 
 **Input**
 
-- A selector like `414 1` or `gr 2`.
+- A selector like `414 1` or `_1 2`.
 - One or several user wishes, concerns, risk areas, or integration questions to research.
 
 The selector resolves to:
@@ -15,7 +15,7 @@ The selector resolves to:
 - `changes/<id>-*/<number>-*/spec.md`
 - `changes/<id>-*/<number>-*/tasks.md`
 
-`<id>` may be numeric or letters. `<number>` is the idea folder number.
+`<id>` is numeric, may start with `_`. `<number>` is the idea folder number.
 
 **Workflow**
 

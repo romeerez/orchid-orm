@@ -10,6 +10,7 @@ import {
   EnumColumn,
   IntegerColumn,
   JSONColumn,
+  JSONTextColumn,
   MoneyColumn,
   RealColumn,
   SerialColumn,
@@ -113,6 +114,20 @@ class ValibotJSONColumn<Schema extends BaseSchema> extends JSONColumn<
   }
 }
 
+class ValibotJSONTextColumn<Schema extends BaseSchema> extends JSONTextColumn<
+  Output<Schema>,
+  ValibotSchemaConfig,
+  Schema
+> {
+  constructor(schemaConfig: ValibotSchemaConfig, schema: Schema) {
+    super(schemaConfig, schema);
+  }
+}
+
+interface ValibotSchemaWithPipe extends RecordUnknown {
+  pipe: unknown[];
+}
+
 function applyMethod(
   column: unknown,
   key: string,
@@ -125,7 +140,9 @@ function applyMethod(
     key,
     value,
     params,
-  ) as Column;
+  ) as unknown as {
+    [K: string]: ValibotSchemaWithPipe;
+  };
 
   const v = validation(
     value as never,
@@ -152,7 +169,9 @@ function applySimpleMethod(
     key,
     true,
     params,
-  ) as Column;
+  ) as unknown as {
+    [K: string]: ValibotSchemaWithPipe;
+  };
 
   const v = validation(
     ...(args as never[]),
@@ -732,7 +751,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   ): Column.Modifiers.ParseNull<T, NullSchema, NullType>;
 
   encode<
-    T extends { type: unknown },
+    T extends Column.Pick.Type,
     InputSchema extends BaseSchema,
     In = Output<InputSchema>,
   >(
@@ -850,11 +869,11 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
                 : T[K];
   };
 
-  dateAsNumber<T extends Column<ValibotSchemaConfig>>(
+  dateAsNumber<T extends Column.Pick.ForParse>(
     this: T,
   ): Column.Modifiers.Parse<T, NumberSchema, number>;
 
-  dateAsDate<T extends Column<ValibotSchemaConfig>>(
+  dateAsDate<T extends Column.Pick.ForParse>(
     this: T,
   ): Column.Modifiers.Parse<T, DateSchema, Date>;
 
@@ -879,6 +898,10 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   json<Schema extends BaseSchema = UnknownSchema>(
     schema?: Schema,
   ): ValibotJSONColumn<Schema>;
+
+  jsonText<Schema extends BaseSchema = UnknownSchema>(
+    schema?: Schema,
+  ): ValibotJSONTextColumn<Schema>;
 
   boolean(): BooleanSchema;
   buffer(): InstanceSchema<typeof Buffer>;
@@ -987,10 +1010,18 @@ export const valibotSchemaConfig = (
       return c as never;
     },
     dateAsNumber() {
-      return this.parse(number([]), getDateAsNumberFn(this));
+      // oxlint-disable-next-line typescript/no-explicit-any
+      return (this as any).parse(
+        number([]),
+        getDateAsNumberFn(this as never),
+      ) as never;
     },
     dateAsDate() {
-      return this.parse(date([]), getDateAsDateFn(this) as never);
+      // oxlint-disable-next-line typescript/no-explicit-any
+      return (this as any).parse(
+        date([]),
+        getDateAsDateFn(this as never),
+      ) as never;
     },
     enum(dataType, type) {
       return new EnumColumn(schemaConfig, dataType, type, picklist(type));
@@ -1013,6 +1044,12 @@ export const valibotSchemaConfig = (
         schemaConfig,
         (schema ?? unknown([])) as Schema,
         options?.jsonEncodedByDriver,
+      );
+    },
+    jsonText<Schema extends BaseSchema = UnknownSchema>(schema?: Schema) {
+      return new ValibotJSONTextColumn(
+        schemaConfig,
+        (schema ?? unknown([])) as Schema,
       );
     },
     boolean: () => boolean([]),
@@ -1107,7 +1144,11 @@ export const valibotSchemaConfig = (
     },
 
     error(message: string) {
-      const c = this as Column;
+      const c = this as Column & {
+        inputSchema: RecordUnknown;
+        outputSchema: RecordUnknown;
+        querySchema: RecordUnknown;
+      };
       c.inputSchema.message =
         c.outputSchema.message =
         (c.querySchema as RecordUnknown).message =

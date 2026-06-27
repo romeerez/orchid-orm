@@ -58,6 +58,7 @@ export interface ColumnSchemaConfig<
   bit(max?: number): unknown;
   uuid(): unknown;
   json(): T;
+  jsonText(): T;
   inputSchema(this: ColumnSchemaGetterTableClass): unknown;
   outputSchema(this: ColumnSchemaGetterTableClass): unknown;
   querySchema(this: ColumnSchemaGetterTableClass): unknown;

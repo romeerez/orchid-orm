@@ -7,7 +7,7 @@ import {
 } from './column-types/date-time';
 import { EnumColumn } from './column-types/enum';
 import { ArrayColumn, ArrayColumnValue } from './column-types/array';
-import { JSONColumn } from './column-types/json';
+import { JSONColumn, JSONTextColumn } from './column-types/json';
 import {
   BigIntColumn,
   BigSerialColumn,
@@ -148,6 +148,13 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     DefaultSchemaConfig
   >;
 
+  jsonText<T>(): JSONTextColumn<
+    // (#286) the default type shouldn't conform to a function,
+    // because otherwise `update` can't differentiate between a function and non-function value
+    unknown extends T ? MaybeArray<string | number | boolean | object> : T,
+    DefaultSchemaConfig
+  >;
+
   inputSchema(): undefined;
   outputSchema(): undefined;
   querySchema(): undefined;
@@ -246,6 +253,9 @@ export const defaultSchemaConfig = (
         undefined,
         options?.jsonEncodedByDriver,
       );
+    },
+    jsonText() {
+      return new JSONTextColumn(schemaConfig, undefined);
     },
     setErrors: noop,
 

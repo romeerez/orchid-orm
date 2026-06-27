@@ -907,6 +907,19 @@ describe('valibot schema config', () => {
       const expected = unknown();
       assertAllTypes<typeof type, typeof expected>();
     });
+
+    it('should parse jsonText with valibot schema', () => {
+      const type = t.jsonText(
+        object({
+          bool: boolean(),
+        }),
+      );
+
+      const expected = object({ bool: boolean() });
+      assertAllTypes<typeof type, typeof expected>();
+      expectAllParse(type, { bool: true }, { bool: true });
+      expectAllThrow(type, { bool: 'true' }, 'Expected boolean');
+    });
   });
 
   describe('as', () => {

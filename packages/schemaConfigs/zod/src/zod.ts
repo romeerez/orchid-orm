@@ -10,6 +10,7 @@ import {
   EnumColumn,
   IntegerColumn,
   JSONColumn,
+  JSONTextColumn,
   MoneyColumn,
   RealColumn,
   SerialColumn,
@@ -73,6 +74,16 @@ class ZodJSONColumn<ZodSchema extends ZodTypeAny> extends JSONColumn<
     encodedByDriver?: boolean,
   ) {
     super(schemaConfig, schema, encodedByDriver);
+  }
+}
+
+class ZodJSONTextColumn<ZodSchema extends ZodTypeAny> extends JSONTextColumn<
+  ZodSchema['_output'],
+  ZodSchemaConfig,
+  ZodSchema
+> {
+  constructor(schemaConfig: ZodSchemaConfig, schema: ZodSchema) {
+    super(schemaConfig, schema);
   }
 }
 
@@ -706,6 +717,10 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
     schema?: ZodSchema,
   ): ZodJSONColumn<ZodSchema>;
 
+  jsonText<ZodSchema extends ZodTypeAny = ZodUnknown>(
+    schema?: ZodSchema,
+  ): ZodJSONTextColumn<ZodSchema>;
+
   boolean(): ZodBoolean;
   buffer(): ZodType<Buffer>;
   unknown(): ZodUnknown;
@@ -852,6 +867,12 @@ export const zodSchemaConfig = (
         schemaConfig,
         (schema ?? z.unknown()) as ZodSchema,
         options?.jsonEncodedByDriver,
+      );
+    },
+    jsonText<ZodSchema extends ZodTypeAny = ZodUnknown>(schema?: ZodSchema) {
+      return new ZodJSONTextColumn(
+        schemaConfig,
+        (schema ?? z.unknown()) as ZodSchema,
       );
     },
     boolean: () => z.boolean(),

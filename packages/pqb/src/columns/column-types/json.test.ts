@@ -63,5 +63,10 @@ describe('json columns', () => {
     it('should have toCode', () => {
       expect(t.jsonText().toCode(ctx, 'key')).toBe('t.jsonText()');
     });
+
+    it('should have toCode with zod schema', () => {
+      const code = t.jsonText(z.object({ foo: z.string() })).toCode(ctx, 'key');
+      expect(codeToString(code, '', '  ')).toBe(`t.jsonText()`);
+    });
   });
 });

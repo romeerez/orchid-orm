@@ -1025,6 +1025,23 @@ describe('zod schema config', () => {
       const expected = z.unknown();
       assertAllTypes<typeof type, typeof expected>();
     });
+
+    it('should parse jsonText with zod schema', () => {
+      const type = t.jsonText(
+        z.object({
+          bool: z.boolean(),
+        }),
+      );
+
+      const expected = z.object({ bool: z.boolean() });
+      assertAllTypes<typeof type, typeof expected>();
+      expectAllParse(type, { bool: true }, { bool: true });
+      expectAllThrow(
+        type,
+        { bool: 'true' },
+        'Invalid input: expected boolean, received string',
+      );
+    });
   });
 
   describe('as', () => {
