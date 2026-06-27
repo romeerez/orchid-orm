@@ -21,11 +21,11 @@
 
 ## 2. docs
 
-- [ ] 2.1 Document inferred `belongsTo` requiredness.
+- [x] 2.1 Document inferred `belongsTo` requiredness.
   - 2.1.1 Update the relations guide to explain that omitted `required` is inferred from local `columns` nullability for `belongsTo`.
   - 2.1.2 Show non-nullable and nullable local foreign-key examples, including composite-key behavior and explicit override guidance.
 
 ## 3. changeset
 
-- [ ] 3.1 Finalize the change.
+- [x] 3.1 Finalize the change.
   - 3.1.1 Follow `.agents/skills/changeset/SKILL.md` to finalize the change.

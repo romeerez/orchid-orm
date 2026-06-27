@@ -277,6 +277,8 @@ export class Db<
   declare then: QueryThenShallowSimplifyArr<ColumnsShape.DefaultOutput<Shape>>;
   declare windows: EmptyObject;
   relations: EmptyObject;
+  declare relationsDataForCreate: EmptyObject;
+  declare relationsDataForCreateOptional: EmptyObject;
   relationQueries: EmptyObject;
   declare withData: EmptyObject;
   error: new (

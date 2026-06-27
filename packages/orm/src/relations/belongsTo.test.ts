@@ -2703,4 +2703,55 @@ describe('belongsTo', () => {
       cId: 1,
     });
   });
+
+  it('should allow omitting a foreign key when one of several `belongsTo` relations using it is provided', () => {
+    class UserTable extends BaseTable {
+      readonly table = 'user';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        active: t.boolean(),
+      }));
+    }
+
+    class ProfileTable extends BaseTable {
+      readonly table = 'profile';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        userId: t.integer(),
+      }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          required: true,
+          columns: ['userId'],
+          references: ['id'],
+        }),
+
+        activeUser: this.belongsTo(() => UserTable, {
+          required: true,
+          columns: ['userId'],
+          references: ['id'],
+          on: {
+            active: true,
+          },
+        }),
+      };
+    }
+
+    const db = orchidORMWithAdapter(ormParams, {
+      profile: ProfileTable,
+      user: UserTable,
+    });
+
+    // @ts-expect-error userId or one of the relations is required
+    db.profile.create({});
+
+    db.profile.create({
+      activeUser: {
+        create: {
+          active: true,
+        },
+      },
+    });
+  });
 });

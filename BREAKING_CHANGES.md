@@ -1,5 +1,14 @@
 # Breaking changes
 
+## orchid-orm 1.73.0, pqb 0.68.0
+
+`belongsTo` now infers omitted `required` from local relation column nullability.
+Before, omitting `required` kept the relation optional.
+After this change, a `belongsTo` whose local `columns` are all non-nullable behaves like `required: true`; if any local column is nullable, it remains optional.
+
+Set `required: false` explicitly when a non-nullable local foreign key must still be treated as optional.
+Custom `pqb` relation config types that used `RelationConfigBase.dataForCreate` should move create input metadata to the query-level `relationsDataForCreate` or `relationsDataForCreateOptional` shapes.
+
 ## orchid-orm 1.72
 
 When using the `node-postgres` adapter, pass `nodePostgresSchemaConfig` to `schemaConfig` in `createBaseTable`.

@@ -105,9 +105,28 @@ export type BelongsToQuery<T extends Query, Name extends string> = {
 } & QueryHasWhere &
   HasRelJoin;
 
+export interface BelongsToDataForCreate<
+  Name extends string,
+  FK extends string,
+  Required,
+  Q extends Query,
+> {
+  columns: FK;
+  nested: Q extends Query.Pick.IsNotReadOnly
+    ? Required extends true
+      ? {
+          [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
+        }
+      : {
+          [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
+        }
+    : {
+        [Key in Name]?: never;
+      };
+}
+
 export interface BelongsToInfo<
   T extends RelationConfigSelf,
-  Name extends string,
   FK extends string,
   Required,
   Q extends Query,
@@ -117,20 +136,6 @@ export interface BelongsToInfo<
   query: Q;
   params: BelongsToParams<T, FK>;
   omitForeignKeyInCreate: FK;
-  dataForCreate: {
-    columns: FK;
-    nested: Q extends Query.Pick.IsNotReadOnly
-      ? Required extends true
-        ? {
-            [Key in Name]: RelationToOneDataForCreateSameQuery<Q>;
-          }
-        : {
-            [Key in Name]?: RelationToOneDataForCreateSameQuery<Q>;
-          }
-      : {
-          [Key in Name]?: never;
-        };
-  };
   // `belongsTo` relation data available for update. It supports:
   // - `disconnect` to nullify a foreign key for the relation
   // - `set` to update the foreign key with a relation primary key found by conditions

@@ -41,8 +41,6 @@ export interface RelationConfigBase extends IsQuery {
   // or with `db.book.create({ author: authorData })`.
   // Other relation kinds have `omitForeignKeyInCreate: never`.
   omitForeignKeyInCreate: PropertyKey;
-  // Data for `create` method, handled separately for belongsTo and the rest
-  dataForCreate: unknown;
   dataForUpdate: unknown;
   dataForUpdateOne: unknown;
   primaryKeys: string[];
@@ -54,7 +52,15 @@ export interface RelationConfigDataForCreate {
 }
 
 export interface RelationsBase {
-  [K: string]: RelationConfigBase;
+  [relationName: string]: RelationConfigBase;
+}
+
+export interface RelationsDataForCreateBase {
+  [relationName: string]: unknown;
+}
+
+export interface RelationsDataForCreateOptionalBase {
+  [relationName: string]: unknown;
 }
 
 export type RelationQueryMaybeSingle<T extends RelationConfigBase> =

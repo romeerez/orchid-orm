@@ -64,8 +64,7 @@ export class BookTable extends BaseTable {
 
   relations = {
     author: this.belongsTo(() => AuthorTable, {
-      // required is affecting on TS type of returned record
-      required: true,
+      // authorId is not nullable, so author is required by default.
       // columns of this table for the connection
       columns: ['authorId'],
       // columns of the related table to connect with
@@ -73,6 +72,82 @@ export class BookTable extends BaseTable {
     }),
   };
 }
+```
+
+For `belongsTo`, `required` is inferred from the `columns` by default.
+When all columns are non-nullable, selected relation results and `queryRelated` return the related record type.
+When any column is nullable, the relation is optional by default.
+
+```ts
+export class BookTable extends BaseTable {
+  readonly table = 'book';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    authorId: t.integer(),
+    editorId: t.integer().nullable(),
+  }));
+
+  relations = {
+    // Required by default because authorId is not nullable.
+    author: this.belongsTo(() => AuthorTable, {
+      columns: ['authorId'],
+      references: ['id'],
+    }),
+
+    // Optional by default because editorId is nullable.
+    editor: this.belongsTo(() => EditorTable, {
+      columns: ['editorId'],
+      references: ['id'],
+    }),
+  };
+}
+```
+
+Composite `belongsTo` relations are required by default only when all `columns` are non-nullable:
+
+```ts
+export class OrderTable extends BaseTable {
+  readonly table = 'order';
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    tenantId: t.integer(),
+    accountId: t.integer(),
+    reviewerTenantId: t.integer(),
+    reviewerId: t.integer().nullable(),
+  }));
+
+  relations = {
+    // Required: tenantId and accountId are both non-nullable.
+    account: this.belongsTo(() => AccountTable, {
+      columns: ['tenantId', 'accountId'],
+      references: ['tenantId', 'id'],
+    }),
+
+    // Optional: reviewerId is nullable.
+    reviewer: this.belongsTo(() => ReviewerTable, {
+      columns: ['reviewerTenantId', 'reviewerId'],
+      references: ['tenantId', 'id'],
+    }),
+  };
+}
+```
+
+Set `required` explicitly when the application needs a different contract from the column nullability:
+
+```ts
+relations = {
+  author: this.belongsTo(() => AuthorTable, {
+    required: false,
+    columns: ['authorId'],
+    references: ['id'],
+  }),
+
+  editor: this.belongsTo(() => EditorTable, {
+    required: true,
+    columns: ['editorId'],
+    references: ['id'],
+  }),
+};
 ```
 
 ## hasOne

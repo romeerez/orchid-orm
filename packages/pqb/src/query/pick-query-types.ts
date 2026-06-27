@@ -1,5 +1,9 @@
 import { EmptyObject, RecordUnknown } from '../utils';
-import { RelationsBase } from './relations';
+import {
+  RelationsBase,
+  RelationsDataForCreateBase,
+  RelationsDataForCreateOptionalBase,
+} from './relations';
 import { Column } from '../columns/column';
 import {
   IsQueries,
@@ -196,6 +200,14 @@ export interface PickQueryWindows {
 
 export interface PickQueryRelations {
   relations: RelationsBase;
+}
+
+export interface PickQueryRelationsDataForCreate {
+  relationsDataForCreate: RelationsDataForCreateBase;
+}
+
+export interface PickQueryRelationsDataForCreateOptional {
+  relationsDataForCreateOptional: RelationsDataForCreateOptionalBase;
 }
 
 export interface PickQueryRelationQueries {

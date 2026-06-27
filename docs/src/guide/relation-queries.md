@@ -9,8 +9,11 @@ description: Relation queries with queryRelated, chain, and nested create, updat
 
 Use `queryRelated` to load related records for an already loaded record.
 
-For `belongsTo` and `hasOne` the result may be undefined if `required: true` is not set in their configuration,
-it's a default.
+For `belongsTo` and `hasOne` the result may be undefined when the relation is optional.
+`belongsTo` is required by default when all foreign key columns (`columns` array) are non-nullable,
+and optional by default when any of foreign keys is nullable.
+
+`hasOne` is optional unless `required: true` is set.
 
 ```ts
 const book = await db.book.find(1);

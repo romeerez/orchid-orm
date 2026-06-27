@@ -35,6 +35,8 @@ import {
   PickQueryRelations,
   PickQueryResult,
   PickQueryReturnType,
+  PickQueryRelationsDataForCreate,
+  PickQueryRelationsDataForCreateOptional,
   PickQueryShape,
   PickQueryUniqueProperties,
   PickQueryWithData,
@@ -59,6 +61,8 @@ export interface CreateSelf
     PickQueryDefaults,
     PickQueryResult,
     PickQueryRelations,
+    PickQueryRelationsDataForCreate,
+    PickQueryRelationsDataForCreateOptional,
     PickQueryWithData,
     PickQueryReturnType,
     PickQueryShape,
@@ -122,48 +126,48 @@ export type CreateRelationsData<T extends CreateSelf> =
     keyof T['__defaults'],
     T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
   > &
-    // Intersection of objects for `belongsTo` relations:
-    // ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-    CreateRelationsDataOmittingFKeys<
-      T,
-      T['relations'][keyof T['relations']]['dataForCreate']
-    >;
+    // Intersect create data per foreign key column, while same-column
+    // belongsTo relations stay in a shared union.
+    CreateRelationsDataOmittingFKeys<T, T['relationsDataForCreate']> &
+    T['relationsDataForCreateOptional'];
 
-// Intersection of relations that may omit foreign key (belongsTo):
-// ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
+// Intersection of create data grouped by column/relation.
+// For belongsTo relations sharing a column this produces:
+// { fooId: number } | { foo: object } | { activeFoo: object }.
 export type CreateRelationsDataOmittingFKeys<
   T extends CreateSelf,
-  // Collect a union of `belongsTo` relation objects.
-  Union,
-> =
-  // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
-  (
-    Union extends RelationConfigDataForCreate
-      ? // belongsTo
-        (
-          u: // omit relation columns if they are in defaults, is tested in factory.test.ts
-          Union['columns'] extends keyof T['__defaults']
-            ? Pick<
-                CreateDataWithDefaults<T, keyof T['__defaults']>,
-                Union['columns']
-              > &
-                Partial<Union['nested']>
-            :
-                | (Pick<
-                    {
-                      [P in keyof T['__inputType']]: CreateColumn<T, P>;
-                    },
-                    Union['columns'] & keyof T['__inputType']
-                  > & {
-                    [K in keyof Union['nested']]?: never;
-                  })
-                | Union['nested'],
-        ) => void
-      : // hasOne, hasMany, hasAndBelongsToMany
-        (u: Union) => void
-  ) extends (u: infer Obj) => void // must be handled as a function argument, belongsTo.test relies on this
+  Data,
+> = EmptyObject extends Data
+  ? EmptyObject
+  : // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
+    {
+        [K in keyof Data]: CreateRelationDataOmittingFKeys<T, Data[K]>;
+      }[keyof Data] extends (u: infer Obj) => void // must be handled as a function argument, belongsTo.test relies on this
     ? Obj
     : never;
+
+type CreateRelationDataOmittingFKeys<T extends CreateSelf, Union> = (
+  u: Union extends RelationConfigDataForCreate
+    ? // omit relation columns if they are in defaults, is tested in factory.test.ts
+      Union['columns'] extends keyof T['__defaults']
+      ? Pick<
+          CreateDataWithDefaults<T, keyof T['__defaults']>,
+          Union['columns']
+        > &
+          Partial<Union['nested']>
+      :
+          | (Pick<
+              {
+                [P in keyof T['__inputType']]: CreateColumn<T, P>;
+              },
+              Union['columns'] & keyof T['__inputType']
+            > & {
+              [K in keyof Union['nested']]?: never;
+            })
+          | Union['nested']
+    : // hasOne, hasMany, hasAndBelongsToMany
+      Union,
+) => void;
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.

@@ -55,6 +55,7 @@ import { OrchidORM } from '../orm';
 import {
   BelongsTo,
   BelongsToColumnsRequired,
+  BelongsToDataForCreate,
   BelongsToInfo,
   BelongsToOptions,
   BelongsToQuery,
@@ -92,6 +93,109 @@ export interface TableInfo {
 }
 
 export interface Table extends Query, TableInfo {}
+
+type BelongsToRequired<
+  T extends RelationConfigSelf,
+  Rel extends BelongsTo,
+> = Rel['options'] extends {
+  required: infer Required extends boolean;
+}
+  ? Required
+  : Rel['options'] extends { on: unknown }
+    ? false
+    : BelongsToColumnsRequired<T, Rel['options']['columns'][number] & string>;
+
+type BelongsToRelationInfo<
+  T extends RelationConfigSelf,
+  Name extends string,
+  Rel extends BelongsTo,
+> = BelongsToInfo<
+  T,
+  Rel['options']['columns'][number] & string,
+  BelongsToRequired<T, Rel>,
+  BelongsToQuery<RelationTableToQuery<Rel>, Name>
+>;
+
+type BelongsToCreateData<
+  T extends RelationConfigSelf,
+  Name extends string,
+  Rel extends BelongsTo,
+> = BelongsToDataForCreate<
+  Name,
+  Rel['options']['columns'][number] & string,
+  BelongsToRequired<T, Rel>,
+  BelongsToQuery<RelationTableToQuery<Rel>, Name>
+>;
+
+type BelongsToCreateDataColumns<T extends RelationConfigSelf> = {
+  [K in keyof T['relations']]: T['relations'][K] extends BelongsTo
+    ? T['relations'][K]['options']['columns'][number] & string
+    : never;
+}[keyof T['relations']];
+
+type BelongsToCreateDataForColumn<
+  T extends RelationConfigSelf,
+  Column extends string,
+> = {
+  [K in keyof T['relations']]: T['relations'][K] extends BelongsTo
+    ? Column extends T['relations'][K]['options']['columns'][number]
+      ? BelongsToCreateData<T, K & string, T['relations'][K]>
+      : never
+    : never;
+}[keyof T['relations']];
+
+type RelationDataForCreate<
+  T extends RelationConfigSelf,
+  Name extends keyof T['relations'] & string,
+> = T['relations'][Name] extends HasOne
+  ? HasOneInfo<
+      T,
+      Name,
+      T['relations'][Name],
+      HasOneQuery<T, Name, RelationTableToQuery<T['relations'][Name]>>
+    >['dataForCreate']
+  : T['relations'][Name] extends HasMany
+    ? HasManyInfo<
+        T,
+        Name,
+        T['relations'][Name],
+        HasManyQuery<T, Name, RelationTableToQuery<T['relations'][Name]>>
+      >['dataForCreate']
+    : T['relations'][Name] extends HasAndBelongsToMany
+      ? HasAndBelongsToManyInfo<
+          T,
+          Name,
+          T['relations'][Name]['options']['columns'][number] & string,
+          HasAndBelongsToManyQuery<
+            Name,
+            RelationTableToQuery<T['relations'][Name]>
+          >
+        >['dataForCreate']
+      : never;
+
+type RelationDataForCreateOptionalNames<T extends RelationConfigSelf> = {
+  [K in keyof T['relations'] & string]: T['relations'][K] extends BelongsTo
+    ? never
+    : K;
+}[keyof T['relations'] & string];
+
+type BelongsToRelationsDataForCreate<T extends RelationConfigSelf> = {
+  [Column in BelongsToCreateDataColumns<T>]: BelongsToCreateDataForColumn<
+    T,
+    Column
+  >;
+};
+
+type RelationsDataForCreateOptional<T extends RelationConfigSelf> =
+  RelationDataForCreateOptionalNames<T> extends never
+    ? EmptyObject
+    : {
+          [K in RelationDataForCreateOptionalNames<T>]: (
+            u: RelationDataForCreate<T, K>,
+          ) => void;
+        }[RelationDataForCreateOptionalNames<T>] extends (u: infer Obj) => void
+      ? Obj
+      : EmptyObject;
 
 // convert table instance type to queryable interface
 // processes relations to a type that's understandable by `pqb`
@@ -132,22 +236,7 @@ export interface TableToDb<
     ? {
         [K in keyof T['relations'] &
           string]: T['relations'][K] extends BelongsTo
-          ? BelongsToInfo<
-              T,
-              K,
-              T['relations'][K]['options']['columns'][number] & string,
-              T['relations'][K]['options'] extends {
-                required: infer Required extends boolean;
-              }
-                ? Required
-                : T['relations'][K]['options'] extends { on: unknown }
-                  ? false
-                  : BelongsToColumnsRequired<
-                      T,
-                      T['relations'][K]['options']['columns'][number] & string
-                    >,
-              BelongsToQuery<RelationTableToQuery<T['relations'][K]>, K>
-            >
+          ? BelongsToRelationInfo<T, K, T['relations'][K]>
           : T['relations'][K] extends HasOne
             ? HasOneInfo<
                 T,
@@ -174,6 +263,12 @@ export interface TableToDb<
                   >
                 : never;
       }
+    : EmptyObject;
+  relationsDataForCreate: T extends RelationConfigSelf
+    ? BelongsToRelationsDataForCreate<T>
+    : EmptyObject;
+  relationsDataForCreateOptional: T extends RelationConfigSelf
+    ? RelationsDataForCreateOptional<T>
     : EmptyObject;
 }
 

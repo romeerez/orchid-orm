@@ -14,7 +14,11 @@ import {
   PickQueryTable,
 } from './pick-query-types';
 import { EmptyObject, RecordKeyTrue, RecordUnknown } from '../utils';
-import { RelationsBase } from './relations';
+import {
+  RelationsBase,
+  RelationsDataForCreateBase,
+  RelationsDataForCreateOptionalBase,
+} from './relations';
 import { QueryError, QueryErrorName } from './errors';
 import { Expression } from './expressions/expression';
 import { GetStringArg } from './basic-features/get/get.utils';
@@ -146,6 +150,8 @@ export interface Query
   catch: QueryCatch;
   windows: EmptyObject;
   relations: RelationsBase;
+  relationsDataForCreate: RelationsDataForCreateBase;
+  relationsDataForCreateOptional: RelationsDataForCreateOptionalBase;
   relationQueries: IsQueries;
   error: new (
     message: string,
