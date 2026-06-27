@@ -1,5 +1,5 @@
 import { User, userData } from '../test-utils/pqb.test-utils';
-import { createDbWithAdapter } from './db';
+import { createDbWithAdapter, Db } from './db';
 import {
   assertType,
   BaseTable,
@@ -67,6 +67,16 @@ describe('db connection', () => {
 
 describe('db', () => {
   useTestDatabase();
+
+  describe('createDb', () => {
+    // for https://github.com/romeerez/orchid-orm/issues/719
+    it('should be assignable to Db type', () => {
+      const db: Db = createDbWithAdapter({
+        adapter: testAdapter,
+      });
+      expect(db).toBeDefined();
+    });
+  });
 
   it('should define `selectAllShape` to ignore virtual columns', () => {
     class Virtual extends VirtualColumn<DefaultSchemaConfig> {}

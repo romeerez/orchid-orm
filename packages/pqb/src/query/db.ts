@@ -733,7 +733,17 @@ export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
 
 export interface DbResult<ColumnTypes>
   extends
-    Db<undefined, never, never, never, never, never, ColumnTypes>,
+    Db<
+      undefined,
+      EmptyObject,
+      never,
+      never,
+      never,
+      never,
+      ColumnTypes,
+      never,
+      never
+    >,
     DbTableConstructor<ColumnTypes> {
   adapterNotInTransaction: Adapter;
   adapter: Adapter;
