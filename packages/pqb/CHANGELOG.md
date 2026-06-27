@@ -1,5 +1,11 @@
 # pqb
 
+## 0.67.7
+
+### Patch Changes
+
+- ccba1514: Fix regression: make `createDb` result assignable to `Db` type (#719)
+
 ## 0.67.6
 
 ### Patch Changes
@@ -2724,7 +2730,7 @@
 
 ### Patch Changes
 
-- Fix update method type to accept values by '__inputType' of the column instead of 'type'
+- Fix update method type to accept values by '\_\_inputType' of the column instead of 'type'
 
 ## 0.11.7
 
