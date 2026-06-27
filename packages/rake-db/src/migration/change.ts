@@ -1,5 +1,4 @@
 import { DbMigration } from './migration';
-import { RakeDbConfig } from '../config';
 
 export interface RakeDbChangeFnConfig {
   columnTypes: unknown;
@@ -15,7 +14,7 @@ export interface MigrationChangeFn<ColumnTypes> {
 }
 
 export const createMigrationChangeFn = <ColumnTypes>(
-  config: RakeDbConfig<ColumnTypes>,
+  config: RakeDbChangeFnConfig,
 ): MigrationChangeFn<ColumnTypes> => {
   return (fn) => {
     const change: MigrationChange = { fn: fn as never, config };

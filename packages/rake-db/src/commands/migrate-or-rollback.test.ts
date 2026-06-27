@@ -219,7 +219,9 @@ describe('migrate-or-rollback', () => {
     it('should use `snakeCase` and `language` from the `baseTable` option, should propagate `noPrimaryKey` option to migrations', async () => {
       let options: unknown;
 
-      const change = createMigrationChangeFn(testConfig);
+      const change = createMigrationChangeFn({
+        columnTypes: testConfig.columnTypes,
+      });
 
       asMock(getMigratedVersionsMap).mockResolvedValueOnce({
         map: {},
@@ -264,7 +266,9 @@ describe('migrate-or-rollback', () => {
         sequence: [],
       });
 
-      const change = createMigrationChangeFn(testConfig);
+      const change = createMigrationChangeFn({
+        columnTypes: testConfig.columnTypes,
+      });
 
       expect(saveMigratedVersion).not.toHaveBeenCalled();
 
@@ -296,7 +300,9 @@ describe('migrate-or-rollback', () => {
         logger,
       });
 
-      const change = createMigrationChangeFn(testConfig);
+      const change = createMigrationChangeFn({
+        columnTypes: testConfig.columnTypes,
+      });
 
       expect(saveMigratedVersion).not.toHaveBeenCalled();
 
