@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.36.9
+
+### Patch Changes
+
+- 24729470: Fix `createMigrationChangeFn` arg type to just `columnTypes` (#718)
+
 ## 2.36.8
 
 ### Patch Changes
