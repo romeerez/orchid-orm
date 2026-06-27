@@ -616,8 +616,16 @@ const quoteJsonValue = (
   if (arg && typeof arg === 'object') {
     if (IN && Array.isArray(arg)) {
       return `(${arg
-        .map((value) => addValue(ctx.values, JSON.stringify(value)) + '::jsonb')
+        .map((value) =>
+          Array.isArray(value)
+            ? addValue(ctx.values, value)
+            : addValue(ctx.values, JSON.stringify(value)) + '::jsonb',
+        )
         .join(', ')})`;
+    }
+
+    if (Array.isArray(arg)) {
+      return addValue(ctx.values, arg);
     }
 
     if (isExpression(arg)) {

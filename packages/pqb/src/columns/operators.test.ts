@@ -1000,7 +1000,40 @@ describe('operators', () => {
     });
 
     describe('operators on json', () => {
+      useTestDatabase();
+
+      const jsonTable = testDb('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+        password: t.text(),
+        data: t.json<string[]>(),
+      }));
+
+      beforeAll(async () => {
+        await jsonTable.insert({
+          name: 'name',
+          password: 'password',
+          data: ['foo', 'bar'],
+        });
+      });
+
       describe('equals', () => {
+        it('should compare json column with array value', async () => {
+          const q = jsonTable.where({ data: { equals: ['foo', 'bar'] } });
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT * FROM "schema"."user"
+                WHERE "user"."data" = $1
+              `,
+            [['foo', 'bar']],
+          );
+
+          const res = await q;
+          expect(res).toHaveLength(1);
+        });
+
         it('should cast param to jsonb', () => {
           const q = db.user
             .get('Data')
@@ -1037,6 +1070,22 @@ describe('operators', () => {
       });
 
       describe('not', () => {
+        it('should compare json column with array value', async () => {
+          const q = jsonTable.where({ data: { not: ['foo', 'bar'] } });
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT * FROM "schema"."user"
+                WHERE "user"."data" != $1
+              `,
+            [['foo', 'bar']],
+          );
+
+          const res = await q;
+          expect(res).toHaveLength(0);
+        });
+
         it('should cast param to jsonb', () => {
           const q = db.user
             .get('Data')
@@ -1070,6 +1119,26 @@ describe('operators', () => {
       });
 
       describe('in', () => {
+        it('should compare json column with array values', async () => {
+          const q = jsonTable.where({
+            data: {
+              in: [['foo', 'bar'], ['baz']],
+            },
+          });
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT * FROM "schema"."user"
+                WHERE "user"."data" IN ($1, $2)
+              `,
+            [['foo', 'bar'], ['baz']],
+          );
+
+          const res = await q;
+          expect(res).toHaveLength(1);
+        });
+
         it('should cast params to jsonb', () => {
           const q = db.user
             .get('Data')
@@ -1103,6 +1172,26 @@ describe('operators', () => {
       });
 
       describe('notIn', () => {
+        it('should compare json column with array values', async () => {
+          const q = jsonTable.where({
+            data: {
+              notIn: [['foo', 'bar'], ['baz']],
+            },
+          });
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT * FROM "schema"."user"
+                WHERE NOT "user"."data" IN ($1, $2)
+              `,
+            [['foo', 'bar'], ['baz']],
+          );
+
+          const res = await q;
+          expect(res).toHaveLength(0);
+        });
+
         it('should cast params to jsonb', () => {
           const q = db.user
             .get('Data')
