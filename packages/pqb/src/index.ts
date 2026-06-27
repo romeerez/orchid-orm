@@ -14,6 +14,7 @@ export {
   type OperatorsArray,
   type OperatorsJson,
   type OperatorsOrdinalText,
+  type OperatorsText,
   type Ord,
 } from './columns/operators';
 

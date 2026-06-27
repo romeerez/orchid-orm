@@ -51,6 +51,7 @@ export {
   type ExpressionData,
   type ToSQLCtx,
   type ToSqlValues,
+  type OperatorsText,
 } from './index';
 
 // TableData - table configuration and metadata
