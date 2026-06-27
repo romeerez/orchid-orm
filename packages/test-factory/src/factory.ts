@@ -13,7 +13,6 @@ import {
   CircleColumn,
   CitextColumn,
   ColumnsShape,
-  ColumnSchemaConfig,
   CreateData,
   CreateSelf,
   DateColumn,
@@ -526,7 +525,7 @@ const numOpts = (
 const num = (
   uniqueColumns: Set<string>,
   key: string,
-  c: Column<ColumnSchemaConfig>,
+  c: Column,
   method: 'int' | 'float' | 'bigInt' | 'amount',
   {
     step,
