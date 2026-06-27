@@ -69,7 +69,7 @@ export type WhereArg<T extends PickQuerySelectableRelations> =
                 values: unknown[][] | IsQuery | Expression;
               }>
             :
-                | T['__selectable'][K]['column']['queryType']
+                | T['__selectable'][K]['column']['__queryType']
                 | null
                 // inlined `ColumnOperators` helper
                 | {
@@ -80,8 +80,8 @@ export type WhereArg<T extends PickQuerySelectableRelations> =
                     result: {
                       value: {
                         // simplified Column.Pick.QueryColumn
-                        queryType:
-                          | T['__selectable'][K]['column']['queryType']
+                        __queryType:
+                          | T['__selectable'][K]['column']['__queryType']
                           | null;
                       };
                     };
@@ -91,8 +91,8 @@ export type WhereArg<T extends PickQuerySelectableRelations> =
                     result: {
                       value: {
                         // simplified Column.Pick.QueryColumn
-                        queryType:
-                          | T['__selectable'][K]['column']['queryType']
+                        __queryType:
+                          | T['__selectable'][K]['column']['__queryType']
                           | null;
                       };
                     };
@@ -176,13 +176,13 @@ export type WhereInValues<
   Column,
 > = Column extends keyof T['__selectable']
   ?
-      | Iterable<T['__selectable'][Column]['column']['queryType']>
+      | Iterable<T['__selectable'][Column]['column']['__queryType']>
       | IsQuery
       | Expression
   :
       | ({
           [I in keyof Column]: Column[I] extends keyof T['__selectable']
-            ? T['__selectable'][Column[I]]['column']['queryType']
+            ? T['__selectable'][Column[I]]['column']['__queryType']
             : never;
         } & {
           length: Column extends { length: number } ? Column['length'] : never;
@@ -194,7 +194,7 @@ export type WhereInValues<
 // Each key is a column name, value is array of column values, or a query returning single column, or a raw SQL expression.
 export type WhereInArg<T extends PickQuerySelectableRelations> = {
   [K in keyof T['__selectable']]?:
-    | Iterable<T['__selectable'][K]['column']['queryType']>
+    | Iterable<T['__selectable'][K]['column']['__queryType']>
     | IsQuery
     | Expression;
 };

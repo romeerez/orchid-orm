@@ -80,7 +80,7 @@ export interface BelongsToOptions<
 }
 
 export type BelongsToParams<T extends RelationConfigSelf, FK extends string> = {
-  [Name in FK]: T['columns']['shape'][Name]['type'];
+  [Name in FK]: T['columns']['shape'][Name]['__type'];
 };
 
 export type BelongsToQuery<T extends Query, Name extends string> = {

@@ -183,7 +183,7 @@ export interface PickQueryUniqueProperties {
 }
 
 export interface PickQueryInputType {
-  inputType: RecordUnknown;
+  __inputType: RecordUnknown;
 }
 
 export interface PickQueryWithData {

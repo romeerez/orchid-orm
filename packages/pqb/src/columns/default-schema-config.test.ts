@@ -11,19 +11,19 @@ describe('defaultSchemaConfig', () => {
         t<'type', 'input', 'output', 'query'>(),
       );
 
-      assertType<typeof column.type, 'type'>();
-      assertType<typeof column.inputType, 'input'>();
-      assertType<typeof column.outputType, 'output'>();
-      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.__type, 'type'>();
+      assertType<typeof column.__inputType, 'input'>();
+      assertType<typeof column.__outputType, 'output'>();
+      assertType<typeof column.__queryType, 'query'>();
     });
 
     it('can set all types from `type`', () => {
       const column = text.asType((t) => t<'type'>());
 
-      assertType<typeof column.type, 'type'>();
-      assertType<typeof column.inputType, 'type'>();
-      assertType<typeof column.outputType, 'type'>();
-      assertType<typeof column.queryType, 'type'>();
+      assertType<typeof column.__type, 'type'>();
+      assertType<typeof column.__inputType, 'type'>();
+      assertType<typeof column.__outputType, 'type'>();
+      assertType<typeof column.__queryType, 'type'>();
     });
 
     it('accepts non-compatible types', () => {
@@ -40,17 +40,17 @@ describe('defaultSchemaConfig', () => {
         t<'text'>(),
       );
 
-      assertType<typeof column.inputType, never>();
-      assertType<typeof column.outputType, 'text'>();
-      assertType<typeof column.queryType, 'text'>();
+      assertType<typeof column.__inputType, never>();
+      assertType<typeof column.__outputType, 'text'>();
+      assertType<typeof column.__queryType, 'text'>();
     });
 
     it('accepts narrowed types', () => {
       const column = text.narrowType((t) => t<'type'>());
 
-      assertType<typeof column.inputType, 'type'>();
-      assertType<typeof column.outputType, 'type'>();
-      assertType<typeof column.queryType, 'type'>();
+      assertType<typeof column.__inputType, 'type'>();
+      assertType<typeof column.__outputType, 'type'>();
+      assertType<typeof column.__queryType, 'type'>();
     });
 
     it('does not accept non-compatible types', () => {
@@ -74,9 +74,9 @@ describe('defaultSchemaConfig', () => {
         t<{ input: 'input'; output: 'output'; query: 'query' }>(),
       );
 
-      assertType<typeof column.inputType, 'input'>();
-      assertType<typeof column.outputType, 'output'>();
-      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.__inputType, 'input'>();
+      assertType<typeof column.__outputType, 'output'>();
+      assertType<typeof column.__queryType, 'query'>();
     });
 
     it('does not accept non-compatible types', () => {

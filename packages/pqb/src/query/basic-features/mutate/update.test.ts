@@ -335,7 +335,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    assertType<typeof result, typeof User.outputType>();
+    assertType<typeof result, typeof User.__outputType>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ name: update.name });
@@ -346,7 +346,7 @@ describe('update', () => {
 
     const result = await User.find(id).update(update).selectAll();
 
-    assertType<typeof result, typeof User.outputType>();
+    assertType<typeof result, typeof User.__outputType>();
 
     expect(result).toMatchObject({ name: update.name });
   });
@@ -474,7 +474,7 @@ describe('update', () => {
     const result = await query;
     expect(result[0]).toMatchObject({ name: update.name });
 
-    assertType<typeof result, (typeof User.outputType)[]>();
+    assertType<typeof result, (typeof User.__outputType)[]>();
 
     const updated = await User.take();
     expect(updated).toMatchObject({ name: update.name });
@@ -487,7 +487,7 @@ describe('update', () => {
       .update(update)
       .selectAll();
 
-    assertType<typeof result, (typeof User.outputType)[]>();
+    assertType<typeof result, (typeof User.__outputType)[]>();
 
     expect(result).toMatchObject([
       { name: update.name },
@@ -623,7 +623,7 @@ describe('update', () => {
     );
 
     const result = await query;
-    assertType<typeof result, typeof User.outputType>();
+    assertType<typeof result, typeof User.__outputType>();
 
     expect(result).toMatchObject({ name: update.name });
   });
@@ -631,7 +631,7 @@ describe('update', () => {
   it('should throw when searching for one to update and it is not found', async () => {
     const q = User.selectAll().findBy({ id: 1 }).update({ name: 'new name' });
 
-    assertType<Awaited<typeof q>, typeof User.outputType>();
+    assertType<Awaited<typeof q>, typeof User.__outputType>();
 
     await expect(q).rejects.toThrow();
   });
@@ -1806,7 +1806,7 @@ describe('updateMany', () => {
 
     it('should map one returnType to all', () => {
       const q = User.selectAll().updateMany([{ id: 1, name: 'a' }]);
-      assertType<Awaited<typeof q>, (typeof User.outputType)[]>();
+      assertType<Awaited<typeof q>, (typeof User.__outputType)[]>();
     });
   });
 });

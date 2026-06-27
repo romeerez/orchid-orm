@@ -1,17 +1,23 @@
 import { singleQuote } from '../../utils';
 import { Column, setColumnData } from '../column';
 import { Code, columnCode, ColumnToCodeCtx } from '../code';
-import { Operators, OperatorsAny } from '../operators';
+import { Operators } from '../operators';
 import { ColumnSchemaConfig } from '../column-schema';
 
 // for a user-defined type, or for unsupported yet type from some module
-export class CustomTypeColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  unknown,
-  ReturnType<Schema['unknown']>,
-  OperatorsAny
-> {
+export class CustomTypeColumn<
+  Schema extends ColumnSchemaConfig,
+> extends Column {
+  declare __schema: Schema;
   operators = Operators.any;
+  declare __type: unknown;
+  declare __inputType: unknown;
+  declare inputSchema: ReturnType<Schema['unknown']>;
+  declare __outputType: unknown;
+  declare outputSchema: ReturnType<Schema['unknown']>;
+  declare __queryType: unknown;
+  declare querySchema: ReturnType<Schema['unknown']>;
+  declare data: Column.Data;
   public dataType: string;
 
   constructor(
@@ -53,10 +59,14 @@ export class CustomTypeColumn<Schema extends ColumnSchemaConfig> extends Column<
   }
 
   as<
-    T extends { inputType: unknown; outputType: unknown; data: Column.Data },
+    T extends {
+      __inputType: unknown;
+      __outputType: unknown;
+      data: Column.Data;
+    },
     C extends {
-      inputType: T['inputType'];
-      outputType: T['outputType'];
+      __inputType: T['__inputType'];
+      __outputType: T['__outputType'];
     },
   >(this: T, column: C): C {
     const c = column as unknown as Column.Pick.TypeSchemas;

@@ -9,8 +9,8 @@ import {
   TransactionAdapterClass,
 } from '../adapters/adapter';
 
-export type UserRecord = typeof User.outputType;
-export type UserInsert = typeof User.inputType;
+export type UserRecord = typeof User.__outputType;
+export type UserInsert = typeof User.__inputType;
 export type UserDataType = { name: string; tags: string[] };
 export const User = testDb('user', (t) => ({
   id: t.identity().primaryKey(),
@@ -46,7 +46,7 @@ export const UserSoftDelete = testDb(
 export const userSoftDeleteColumnsSql =
   UserSoftDelete.q.selectAllColumns!.join(', ');
 
-export type ProfileRecord = typeof Profile.outputType;
+export type ProfileRecord = typeof Profile.__outputType;
 export const Profile = testDb('profile', (t) => ({
   id: t.identity().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
@@ -66,7 +66,7 @@ export const Chat = testDb('chat', (t) => ({
   ...t.timestamps(),
 }));
 
-export type UniqueTableRecord = typeof UniqueTable.outputType;
+export type UniqueTableRecord = typeof UniqueTable.__outputType;
 export const UniqueTable = testDb(
   'uniqueTable',
   (t) => ({
@@ -79,7 +79,7 @@ export const UniqueTable = testDb(
   (t) => t.unique(['thirdColumn', 'fourthColumn']),
 );
 
-export type MessageRecord = typeof Message.outputType;
+export type MessageRecord = typeof Message.__outputType;
 export const Message = testDb(
   'message',
   (t) => ({
@@ -99,7 +99,7 @@ export const messageTableColumnsSql = Message.q
   .selectAllColumns!.map((c) => '"message".' + c)
   .join(', ');
 
-export type SnakeRecord = typeof Snake.outputType;
+export type SnakeRecord = typeof Snake.__outputType;
 export type SnakeData = { name: string; tags: string[] };
 export const Snake = testDb(
   'snake',

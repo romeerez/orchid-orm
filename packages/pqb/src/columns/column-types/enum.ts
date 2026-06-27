@@ -1,15 +1,23 @@
 import { Column } from '../column';
 import { columnCode, ColumnToCodeCtx } from '../code';
 import { Code } from '../code';
-import { Operators, OperatorsOrdinalText } from '../operators';
+import { Operators } from '../operators';
 import { ColumnTypeSchemaArg } from '../column-schema';
 
 export class EnumColumn<
   Schema extends ColumnTypeSchemaArg,
-  SchemaType extends Schema['type'],
+  SchemaType extends Schema['__schemaType'],
   const T extends readonly string[],
-> extends Column<Schema, T[number], SchemaType, OperatorsOrdinalText> {
+> extends Column {
+  declare __schema: Schema;
   operators = Operators.ordinalText;
+  declare __type: T[number];
+  declare __inputType: T[number];
+  declare inputSchema: SchemaType;
+  declare __outputType: T[number];
+  declare outputSchema: SchemaType;
+  declare __queryType: T[number];
+  declare querySchema: SchemaType;
   dataType = 'enum';
 
   constructor(

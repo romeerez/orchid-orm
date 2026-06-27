@@ -17,11 +17,11 @@ export interface SelectSqlCallback {
 export type SelectSqlColumn<
   T extends Column.Pick.DataAndDataType,
   Expr extends Expression,
-> = unknown extends Expr['result']['value']['outputType']
+> = unknown extends Expr['result']['value']['__outputType']
   ? T
   : {
-      [K in keyof T]: K extends 'outputType'
-        ? Expr['result']['value']['outputType']
+      [K in keyof T]: K extends '__outputType'
+        ? Expr['result']['value']['__outputType']
         : T[K];
     };
 

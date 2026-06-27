@@ -29,7 +29,7 @@ interface QueryReturnsFnAdd<
       : K extends 'returnType'
         ? 'valueOrThrow'
         : K extends 'then'
-          ? QueryThen<C['outputType']>
+          ? QueryThen<C['__outputType']>
           : T[K];
   } & C['operators'];
 }
@@ -43,7 +43,7 @@ type SetQueryReturnsFn<
     : K extends 'returnType'
       ? 'valueOrThrow'
       : K extends 'then'
-        ? QueryThen<C['outputType']>
+        ? QueryThen<C['__outputType']>
         : T[K];
 } & QueryReturnsFnAdd<T>;
 

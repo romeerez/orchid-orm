@@ -7,7 +7,7 @@ import {
   ColumnToCodeCtx,
 } from '../code';
 import { columnCode, identityToCode } from '../code';
-import { Operators, OperatorsNumber } from '../operators';
+import { Operators } from '../operators';
 import { TableData } from '../../tableData';
 import { BaseNumberData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
@@ -24,9 +24,17 @@ export interface SerialColumnData extends NumberColumnData {
 
 export abstract class NumberBaseColumn<
   Schema extends ColumnSchemaConfig,
-  SchemaType extends Schema['type'],
-> extends Column<Schema, number, SchemaType, OperatorsNumber> {
+  SchemaType extends Schema['__schemaType'],
+> extends Column {
+  declare __schema: Schema;
+  declare __type: number;
+  declare __inputType: number;
+  declare inputSchema: SchemaType;
   declare data: NumberColumnData;
+  declare __outputType: number;
+  declare outputSchema: SchemaType;
+  declare __queryType: number;
+  declare querySchema: SchemaType;
   operators = Operators.number;
 }
 
@@ -34,6 +42,7 @@ export abstract class IntegerBaseColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberBaseColumn<Schema, ReturnType<Schema['int']>> {
   declare data: NumberColumnData;
+  declare querySchema: ReturnType<Schema['int']>;
   constructor(schema: Schema) {
     super(schema, schema.int() as never);
     this.data.int = true;
@@ -43,14 +52,16 @@ export abstract class IntegerBaseColumn<
 export abstract class NumberAsStringBaseColumn<
   Schema extends ColumnSchemaConfig,
   InputType = string | number,
-> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsNumber,
-  InputType
-> {
+> extends Column {
+  declare __schema: Schema;
+  declare __type: string;
+  declare __inputType: InputType;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.number;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: InputType;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   declare data: Column.Data;
 
   constructor(schema: Schema) {
@@ -69,6 +80,7 @@ export class DecimalColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberAsStringBaseColumn<Schema> {
   declare data: DecimalColumnData;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.number;
   dataType = 'numeric' as const;
 
@@ -141,6 +153,7 @@ export class SmallIntColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
   dataType = 'int2' as const;
+  declare querySchema: ReturnType<Schema['int']>;
 
   constructor(schema: Schema) {
     super(schema);
@@ -152,7 +165,7 @@ export class SmallIntColumn<
     return intToCode(this, ctx, key, 'smallint');
   }
 
-  identity<T extends Column>(
+  identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
   ): IdentityColumn<T> {
@@ -165,6 +178,7 @@ export class IntegerColumn<
   Schema extends ColumnSchemaConfig,
 > extends IntegerBaseColumn<Schema> {
   dataType = 'int4' as const;
+  declare querySchema: ReturnType<Schema['int']>;
 
   constructor(schema: Schema) {
     super(schema);
@@ -176,7 +190,7 @@ export class IntegerColumn<
     return intToCode(this, ctx, key, 'integer');
   }
 
-  identity<T extends Column>(
+  identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
   ): IdentityColumn<T> {
@@ -189,6 +203,7 @@ export class BigIntColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberAsStringBaseColumn<Schema, string | number | bigint> {
   dataType = 'int8' as const;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
 
   constructor(schema: Schema) {
     super(schema);
@@ -199,7 +214,7 @@ export class BigIntColumn<
     return intToCode(this, ctx, key, 'bigint');
   }
 
-  identity<T extends Column>(
+  identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
   ): IdentityColumn<T> {
@@ -212,6 +227,7 @@ export class RealColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberBaseColumn<Schema, ReturnType<Schema['number']>> {
   dataType = 'float4' as const;
+  declare querySchema: ReturnType<Schema['number']>;
 
   constructor(schema: Schema) {
     super(schema, schema.number() as never);
@@ -234,6 +250,7 @@ export class DoublePrecisionColumn<
   Schema extends ColumnSchemaConfig,
 > extends NumberAsStringBaseColumn<Schema> {
   dataType = 'float8' as const;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
 
   constructor(schema: Schema) {
     super(schema);
@@ -251,6 +268,7 @@ export class SmallSerialColumn<
 > extends IntegerBaseColumn<Schema> {
   dataType = 'int2' as const;
   declare data: SerialColumnData;
+  declare querySchema: ReturnType<Schema['int']>;
 
   constructor(schema: Schema) {
     super(schema);
@@ -283,6 +301,7 @@ export class SerialColumn<
 > extends IntegerBaseColumn<Schema> {
   dataType = 'int4' as const;
   declare data: SerialColumnData;
+  declare querySchema: ReturnType<Schema['int']>;
 
   constructor(schema: Schema) {
     super(schema);
@@ -315,6 +334,7 @@ export class BigSerialColumn<
 > extends NumberAsStringBaseColumn<Schema> {
   dataType = 'int8' as const;
   declare data: SerialColumnData;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
 
   constructor(schema: Schema) {
     super(schema);

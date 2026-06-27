@@ -183,7 +183,7 @@ interface NarrowTypeSelf extends PickQueryResultReturnType {
 
 type NarrowInvalidKeys<T extends PickQueryResult, Narrow> = {
   [K in keyof Narrow]: K extends keyof T['result']
-    ? Narrow[K] extends T['result'][K]['outputType']
+    ? Narrow[K] extends T['result'][K]['__outputType']
       ? never
       : K
     : K;
@@ -192,7 +192,7 @@ type NarrowInvalidKeys<T extends PickQueryResult, Narrow> = {
 interface NarrowValueTypeResult<T extends PickQueryResultReturnType, Narrow>
   extends Column.QueryColumns {
   value: {
-    [K in keyof T['result']['value']]: K extends 'outputType'
+    [K in keyof T['result']['value']]: K extends '__outputType'
       ? Narrow
       : T['result']['value'][K];
   };
@@ -201,7 +201,7 @@ interface NarrowValueTypeResult<T extends PickQueryResultReturnType, Narrow>
 interface NarrowPluckTypeResult<T extends PickQueryResultReturnType, Narrow>
   extends Column.QueryColumns {
   pluck: {
-    [K in keyof T['result']['pluck']]: K extends 'outputType'
+    [K in keyof T['result']['pluck']]: K extends '__outputType'
       ? Narrow extends unknown[]
         ? Narrow[number]
         : Narrow
@@ -235,61 +235,61 @@ export type QueryIfResultThen<
   ? QueryThenShallowSimplifyArr<
       {
         [K in keyof T['result']]: K extends keyof R['result']
-          ? T['result'][K]['outputType'] | R['result'][K]['outputType']
-          : T['result'][K]['outputType'];
+          ? T['result'][K]['__outputType'] | R['result'][K]['__outputType']
+          : T['result'][K]['__outputType'];
       } & {
         [K in keyof R['result'] as K extends keyof T['result']
           ? never
-          : K]?: R['result'][K]['outputType'];
+          : K]?: R['result'][K]['__outputType'];
       }
     >
   : T['returnType'] extends 'one'
     ? QueryThenShallowSimplifyOptional<
         {
           [K in keyof T['result']]: K extends keyof R['result']
-            ? T['result'][K]['outputType'] | R['result'][K]['outputType']
-            : T['result'][K]['outputType'];
+            ? T['result'][K]['__outputType'] | R['result'][K]['__outputType']
+            : T['result'][K]['__outputType'];
         } & {
           [K in keyof R['result'] as K extends keyof T['result']
             ? never
-            : K]?: R['result'][K]['outputType'];
+            : K]?: R['result'][K]['__outputType'];
         }
       >
     : T['returnType'] extends 'oneOrThrow'
       ? QueryThenShallowSimplify<
           {
             [K in keyof T['result']]: K extends keyof R['result']
-              ? T['result'][K]['outputType'] | R['result'][K]['outputType']
-              : T['result'][K]['outputType'];
+              ? T['result'][K]['__outputType'] | R['result'][K]['__outputType']
+              : T['result'][K]['__outputType'];
           } & {
             [K in keyof R['result'] as K extends keyof T['result']
               ? never
-              : K]?: R['result'][K]['outputType'];
+              : K]?: R['result'][K]['__outputType'];
           }
         >
       : T['returnType'] extends 'value'
         ? QueryThen<
-            | T['result']['value']['outputType']
-            | R['result']['value']['outputType']
+            | T['result']['value']['__outputType']
+            | R['result']['value']['__outputType']
             | undefined
           >
         : T['returnType'] extends 'valueOrThrow'
           ? QueryThen<
-              | T['result']['value']['outputType']
-              | R['result']['value']['outputType']
+              | T['result']['value']['__outputType']
+              | R['result']['value']['__outputType']
             >
           : T['returnType'] extends 'rows'
             ? QueryThen<
                 (
-                  | T['result'][keyof T['result']]['outputType']
-                  | R['result'][keyof R['result']]['outputType']
+                  | T['result'][keyof T['result']]['__outputType']
+                  | R['result'][keyof R['result']]['__outputType']
                 )[][]
               >
             : T['returnType'] extends 'pluck'
               ? QueryThen<
                   (
-                    | T['result']['pluck']['outputType']
-                    | R['result']['pluck']['outputType']
+                    | T['result']['pluck']['__outputType']
+                    | R['result']['pluck']['__outputType']
                   )[]
                 >
               : QueryThen<void>;
@@ -916,7 +916,7 @@ export class QueryMethods<ColumnTypes> {
           [K in keyof T]: K extends 'result'
             ? T['result'] & {
                 [K in keyof Narrow]: {
-                  outputType: Narrow[K];
+                  __outputType: Narrow[K];
                 };
               }
             : K extends 'then'
@@ -924,7 +924,7 @@ export class QueryMethods<ColumnTypes> {
                   T,
                   T['result'] & {
                     [K in keyof Narrow]: {
-                      outputType: Narrow[K];
+                      __outputType: Narrow[K];
                     };
                   }
                 >
@@ -943,8 +943,8 @@ export class QueryMethods<ColumnTypes> {
             : Narrow
         ) extends (
           T['returnType'] extends 'pluck'
-            ? T['result']['pluck']['outputType']
-            : T['result']['value']['outputType']
+            ? T['result']['pluck']['__outputType']
+            : T['result']['value']['__outputType']
         )
       ? {
           [K in keyof T]: K extends 'result'

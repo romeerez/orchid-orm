@@ -1,6 +1,6 @@
 import { Code, ColumnToCodeCtx } from '../code';
 import { Column } from '../column';
-import { Operators, OperatorsAny } from '../operators';
+import { Operators } from '../operators';
 import { columnCode } from '../code';
 import { setColumnDefaultParse } from '../column.utils';
 import { ColumnSchemaConfig } from '../column-schema';
@@ -34,13 +34,16 @@ const encode = ({ srid = defaultSrid, lon, lat }: PostgisPoint): string => {
 
 export class PostgisGeographyPointColumn<
   Schema extends ColumnSchemaConfig,
-> extends Column<
-  Schema,
-  PostgisPoint,
-  ReturnType<Schema['geographyPointSchema']>,
-  OperatorsAny
-> {
+> extends Column {
+  declare __schema: Schema;
   dataType = 'geography(Point)';
+  declare __type: PostgisPoint;
+  declare __inputType: PostgisPoint;
+  declare inputSchema: ReturnType<Schema['geographyPointSchema']>;
+  declare __outputType: PostgisPoint;
+  declare outputSchema: ReturnType<Schema['geographyPointSchema']>;
+  declare __queryType: PostgisPoint;
+  declare querySchema: ReturnType<Schema['geographyPointSchema']>;
   operators = Operators.any;
 
   // It is used by test-factory

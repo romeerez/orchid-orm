@@ -133,7 +133,7 @@ type NumericReturn<
       T,
       Column.Pick.QueryColumnOfTypeAndOps<
         T['__selectable'][Arg]['column']['dataType'],
-        T['__selectable'][Arg]['column']['type'] | null,
+        T['__selectable'][Arg]['column']['__type'] | null,
         OperatorsNumber
       >
     > &
@@ -143,7 +143,7 @@ type NumericReturn<
         T,
         Column.Pick.QueryColumnOfTypeAndOps<
           Arg['result']['value']['dataType'],
-          Arg['result']['value']['type'] | null,
+          Arg['result']['value']['__type'] | null,
           OperatorsNumber
         >
       > &
@@ -181,9 +181,9 @@ type NullableJSONAggReturn<
   T,
   {
     dataType: 'json';
-    type: (ExpressionOutput<T, Arg>['type'] | null)[] | null;
-    outputType: (ExpressionOutput<T, Arg>['outputType'] | null)[] | null;
-    queryType: (ExpressionOutput<T, Arg>['queryType'] | null)[] | null;
+    __type: (ExpressionOutput<T, Arg>['__type'] | null)[] | null;
+    __outputType: (ExpressionOutput<T, Arg>['__outputType'] | null)[] | null;
+    __queryType: (ExpressionOutput<T, Arg>['__queryType'] | null)[] | null;
     operators: OperatorsArray<never>;
   }
 > &
@@ -200,19 +200,19 @@ type NullableJSONObjectReturn<
   T,
   {
     dataType: 'json';
-    type:
+    __type:
       | {
-          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['type'];
+          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['__type'];
         }
       | null;
-    outputType:
+    __outputType:
       | {
-          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['outputType'];
+          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['__outputType'];
         }
       | null;
-    queryType:
+    __queryType:
       | {
-          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['queryType'];
+          [K in keyof Obj]: ExpressionOutput<T, Obj[K]>['__queryType'];
         }
       | null;
     operators: OperatorsAny;

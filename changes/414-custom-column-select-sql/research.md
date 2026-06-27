@@ -95,7 +95,7 @@ The API should make it clear that this is a read-side SQL projection, not a data
 It should work with existing column type behavior:
 
 - `encode` still applies to create/update values.
-- `_parse` and `outputType` still describe the returned value.
+- `_parse` and `__outputType` still describe the returned value.
 - `jsonCast` still matters for decimal precision when rows are wrapped as JSON.
 - `data.name` still maps property names to database column names.
 - `select(false)` remains a separate feature for excluding columns from default selection.

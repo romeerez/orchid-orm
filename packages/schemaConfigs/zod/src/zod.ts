@@ -94,9 +94,12 @@ function applyMethod<T, Key extends string>(
   const v = value === params ? p : value;
 
   const c = column as Column;
-  cloned.inputSchema = c.inputSchema[key](v, p);
-  cloned.outputSchema = c.outputSchema[key](v, p);
-  cloned.querySchema = c.querySchema[key](v, p);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  cloned.inputSchema = (c.inputSchema as any)[key](v, p);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  cloned.outputSchema = (c.outputSchema as any)[key](v, p);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  cloned.querySchema = (c.querySchema as any)[key](v, p);
   return cloned as never;
 }
 
@@ -107,9 +110,12 @@ function applySimpleMethod<T, Key extends string>(
 ) {
   const c = column as Column;
   const cloned = setDataValue(c, key, true, params) as Column;
-  cloned.inputSchema = c.inputSchema[key](params);
-  cloned.outputSchema = c.outputSchema[key](params);
-  cloned.querySchema = c.querySchema[key](params);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  cloned.inputSchema = (c.inputSchema as any)[key](params);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  cloned.outputSchema = (c.outputSchema as any)[key](params);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  cloned.querySchema = (c.querySchema as any)[key](params);
   return cloned as never;
 }
 
@@ -140,9 +146,10 @@ const arrayMethods: ArrayMethods<Date> = {
   nonEmpty(params) {
     const column = this as Column;
     const cloned = setDataValue(column, 'nonEmpty', true, params) as Column;
-    cloned.inputSchema = column.inputSchema.nonempty(params);
-    cloned.outputSchema = column.outputSchema.nonempty(params);
-    cloned.querySchema = column.querySchema.nonempty(params);
+    //
+    cloned.inputSchema = (column.inputSchema as ZodArray).nonempty(params);
+    cloned.outputSchema = (column.outputSchema as ZodArray).nonempty(params);
+    cloned.querySchema = (column.querySchema as ZodArray).nonempty(params);
     return cloned as never;
   },
 };
@@ -530,7 +537,7 @@ export interface BareZodType {
 }
 
 export interface ZodSchemaConfig extends ColumnSchemaConfig {
-  type: ZodTypeAny;
+  __schemaType: ZodTypeAny;
 
   parse<
     T extends Column.Pick.ForParse,
@@ -539,7 +546,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
   >(
     this: T,
     _schema: OutputSchema,
-    fn: (input: T['type']) => Output,
+    fn: (input: T['__type']) => Output,
   ): Column.Modifiers.Parse<T, OutputSchema, Output>;
 
   parseNull<
@@ -553,7 +560,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
   ): Column.Modifiers.ParseNull<T, NullSchema, NullType>;
 
   encode<
-    T extends { type: unknown },
+    T extends Column.Pick.Type,
     InputSchema extends ZodTypeAny,
     Input = InputSchema['_output'],
   >(
@@ -576,9 +583,9 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
     this: T,
     types: Types,
   ): {
-    [K in keyof T]: K extends 'type'
+    [K in keyof T]: K extends '__type'
       ? Type
-      : K extends 'inputType'
+      : K extends '__inputType'
         ? Types['input'] extends ZodTypeAny
           ? Types['input']['_output']
           : Type
@@ -586,7 +593,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
           ? Types['input'] extends ZodTypeAny
             ? Types['input']
             : TypeSchema
-          : K extends 'outputType'
+          : K extends '__outputType'
             ? Types['output'] extends ZodTypeAny
               ? Types['output']['_output']
               : Type
@@ -594,7 +601,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
               ? Types['output'] extends ZodTypeAny
                 ? Types['output']
                 : TypeSchema
-              : K extends 'queryType'
+              : K extends '__queryType'
                 ? Types['query'] extends ZodTypeAny
                   ? Types['query']['_output']
                   : Type
@@ -608,22 +615,22 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
   narrowType<
     T extends Column.InputOutputQueryTypesWithSchemas,
     Type extends {
-      _output: T['inputType'] extends never
-        ? T['outputType'] & T['queryType']
-        : T['inputType'] & T['outputType'] & T['queryType'];
+      _output: T['__inputType'] extends never
+        ? T['__outputType'] & T['__queryType']
+        : T['__inputType'] & T['__outputType'] & T['__queryType'];
     },
   >(
     this: T,
     type: Type,
   ): {
-    [K in keyof T]: K extends 'inputType'
-      ? T['inputType'] extends never
+    [K in keyof T]: K extends '__inputType'
+      ? T['__inputType'] extends never
         ? never
         : Type['_output']
-      : K extends 'outputType' | 'queryType'
+      : K extends '__outputType' | '__queryType'
         ? Type['_output']
         : K extends 'inputSchema'
-          ? T['inputType'] extends never
+          ? T['__inputType'] extends never
             ? ZodNever
             : Type
           : K extends 'outputSchema' | 'querySchema'
@@ -634,34 +641,34 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
   narrowAllTypes<
     T extends Column.InputOutputQueryTypesWithSchemas,
     Types extends {
-      input?: { _output: T['inputType'] };
-      output?: { _output: T['outputType'] };
-      query?: { _output: T['queryType'] };
+      input?: { _output: T['__inputType'] };
+      output?: { _output: T['__outputType'] };
+      query?: { _output: T['__queryType'] };
     },
   >(
     this: T,
     types: Types,
   ): {
-    [K in keyof T]: K extends 'inputType'
+    [K in keyof T]: K extends '__inputType'
       ? Types['input'] extends BareZodType
         ? Types['input']['_output']
-        : T['inputType']
+        : T['__inputType']
       : K extends 'inputSchema'
         ? Types['input'] extends BareZodType
           ? Types['input']
           : T['inputSchema']
-        : K extends 'outputType'
+        : K extends '__outputType'
           ? Types['output'] extends BareZodType
             ? Types['output']['_output']
-            : T['outputType']
+            : T['__outputType']
           : K extends 'outputSchema'
             ? Types['output'] extends BareZodType
               ? Types['output']
               : T['outputSchema']
-            : K extends 'queryType'
+            : K extends '__queryType'
               ? Types['query'] extends BareZodType
                 ? Types['query']['_output']
-                : T['queryType']
+                : T['__queryType']
               : K extends 'querySchema'
                 ? Types['query'] extends BareZodType
                   ? Types['query']
@@ -669,11 +676,11 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
                 : T[K];
   };
 
-  dateAsNumber<T extends Column<ZodSchemaConfig>>(
+  dateAsNumber<T extends Column.Pick.ForParse>(
     this: T,
   ): Column.Modifiers.Parse<T, ZodNumber, number>;
 
-  dateAsDate<T extends Column<ZodSchemaConfig>>(
+  dateAsDate<T extends Column.Pick.ForParse>(
     this: T,
   ): Column.Modifiers.Parse<T, ZodDate, Date>;
 
@@ -770,7 +777,7 @@ export const zodSchemaConfig = (
   options?: AdapterSchemaConfigOptions,
 ): ZodSchemaConfig => {
   const schemaConfig: ZodSchemaConfig = {
-    type: undefined as unknown as ZodTypeAny,
+    __schemaType: undefined as unknown as ZodTypeAny,
     parse(schema, fn) {
       return setColumnParse(this as never, fn, schema);
     },
@@ -806,10 +813,18 @@ export const zodSchemaConfig = (
       return c as never;
     },
     dateAsNumber() {
-      return this.parse(z.number(), getDateAsNumberFn(this)) as never;
+      // oxlint-disable-next-line typescript/no-explicit-any
+      return (this as any).parse(
+        z.number(),
+        getDateAsNumberFn(this as never),
+      ) as never;
     },
     dateAsDate() {
-      return this.parse(z.date(), getDateAsDateFn(this)) as never;
+      // oxlint-disable-next-line typescript/no-explicit-any
+      return (this as any).parse(
+        z.date(),
+        getDateAsDateFn(this as never),
+      ) as never;
     },
     enum(dataType, type) {
       return new EnumColumn(
@@ -888,7 +903,7 @@ export const zodSchemaConfig = (
       for (const key in columns) {
         const column = columns[key] as Column;
         if (columns[key].dataType) {
-          shape[key] = column.querySchema.optional();
+          shape[key] = (column.querySchema as ZodTypeAny).optional();
         }
       }
 

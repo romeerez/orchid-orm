@@ -35,7 +35,7 @@ export namespace Order {
   type ArgKey<T extends ArgThis> =
     | {
         // filter out runtime computed selectables
-        [K in keyof T['__selectable']]: T['__selectable'][K]['column']['queryType'] extends undefined
+        [K in keyof T['__selectable']]: T['__selectable'][K]['column']['__queryType'] extends undefined
           ? never
           : K;
       }[keyof T['__selectable']]

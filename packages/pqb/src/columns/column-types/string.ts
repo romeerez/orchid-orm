@@ -3,12 +3,7 @@ import { NumberColumnData } from './number';
 import { Code, ColumnToCodeCtx, stringDataToCode } from '../code';
 import { columnCode } from '../code';
 import { RawSql, RawSqlBase } from '../../query/expressions/raw-sql';
-import {
-  Operators,
-  OperatorsNumber,
-  OperatorsOrdinalText,
-  OperatorsText,
-} from '../operators';
+import { Operators, OperatorsOrdinalText, OperatorsText } from '../operators';
 import { setColumnDefaultParse } from '../column.utils';
 import {
   DefaultSchemaConfig,
@@ -30,8 +25,16 @@ export type TextColumnData = StringData;
 export abstract class TextBaseColumn<
   Schema extends ColumnSchemaConfig,
   Ops = OperatorsText,
-> extends Column<Schema, string, ReturnType<Schema['stringSchema']>, Ops> {
+> extends Column {
+  declare __schema: Schema;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
   declare data: TextColumnData;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text as Ops;
 
   constructor(
@@ -139,6 +142,7 @@ export class TextColumn<
 > extends TextBaseColumn<Schema, OperatorsOrdinalText> {
   dataType = 'text' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   private static _instance: TextColumn<DefaultSchemaConfig> | undefined;
@@ -159,19 +163,17 @@ const byteaParse = (val: unknown) =>
   typeof val === 'string' ? Buffer.from(val.slice(2), 'hex') : val;
 
 // To store binary strings
-export class ByteaColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['buffer']>,
-  OperatorsOrdinalText,
-  Buffer,
-  Buffer,
-  ReturnType<Schema['buffer']>,
-  string,
-  ReturnType<Schema['stringSchema']>
-> {
+export class ByteaColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'bytea' as const;
   operators = Operators.ordinalText;
+  declare __type: string;
+  declare __inputType: Buffer;
+  declare inputSchema: ReturnType<Schema['buffer']>;
+  declare __outputType: Buffer;
+  declare outputSchema: ReturnType<Schema['buffer']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
 
   constructor(schema: Schema) {
     super(schema, schema.buffer() as never);
@@ -184,13 +186,16 @@ export class ByteaColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // point	16 bytes	Point on a plane	(x,y)
-export class PointColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class PointColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'point' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -203,13 +208,16 @@ export class PointColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // line	32 bytes	Infinite line	{A,B,C}
-export class LineColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class LineColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'line' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -222,13 +230,16 @@ export class LineColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // lseg	32 bytes	Finite line segment	((x1,y1),(x2,y2))
-export class LsegColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class LsegColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'lseg' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -241,13 +252,16 @@ export class LsegColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // box	32 bytes	Rectangular box	((x1,y1),(x2,y2))
-export class BoxColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class BoxColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'box' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -260,14 +274,17 @@ export class BoxColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // path	16+16n bytes	Closed path (similar to polygon)	((x1,y1),...)
-// path	16+16n bytes	Open path	[(x1,y1),...]
-export class PathColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+// path	16+16n bytes	Open path	[(x1,y1),...)
+export class PathColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'path' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -280,13 +297,16 @@ export class PathColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // polygon	40+16n bytes	Polygon (similar to closed path)	((x1,y1),...)
-export class PolygonColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class PolygonColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'polygon' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -299,13 +319,16 @@ export class PolygonColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // circle	24 bytes	Circle	<(x,y),r> (center point and radius)
-export class CircleColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class CircleColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'circle' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -317,18 +340,17 @@ export class CircleColumn<Schema extends ColumnSchemaConfig> extends Column<
   }
 }
 
-export class MoneyColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['number']>,
-  OperatorsNumber,
-  string | number,
-  number,
-  ReturnType<Schema['number']>,
-  string | number
-> {
+export class MoneyColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'money' as const;
+  declare __type: string;
   declare data: NumberColumnData;
+  declare __inputType: string | number;
+  declare inputSchema: ReturnType<Schema['number']>;
+  declare __outputType: number;
+  declare outputSchema: ReturnType<Schema['number']>;
+  declare __queryType: string | number;
+  declare querySchema: ReturnType<Schema['number']>;
   operators = Operators.number;
 
   constructor(schema: Schema) {
@@ -353,13 +375,16 @@ const moneyParse = Object.assign(
 );
 
 // cidr	7 or 19 bytes	IPv4 and IPv6 networks
-export class CidrColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class CidrColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'cidr' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   constructor(schema: Schema) {
@@ -372,13 +397,16 @@ export class CidrColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // inet	7 or 19 bytes	IPv4 and IPv6 hosts and networks
-export class InetColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsOrdinalText
-> {
+export class InetColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'inet' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
@@ -391,13 +419,16 @@ export class InetColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // macaddr	6 bytes	MAC addresses
-export class MacAddrColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsOrdinalText
-> {
+export class MacAddrColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'macaddr' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
@@ -410,13 +441,16 @@ export class MacAddrColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // macaddr8	8 bytes	MAC addresses (EUI-64 format)
-export class MacAddr8Column<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsOrdinalText
-> {
+export class MacAddr8Column<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'macaddr8' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
@@ -431,13 +465,16 @@ export class MacAddr8Column<Schema extends ColumnSchemaConfig> extends Column<
 // Bit strings are strings of 1's and 0's.
 // They can be used to store or visualize bit masks.
 // There are two SQL bit types: bit(n) and bit varying(n), where n is a positive integer.
-export class BitColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['bit']>,
-  OperatorsOrdinalText
-> {
+export class BitColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'bit' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['bit']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['bit']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['bit']>;
   operators = Operators.ordinalText;
   declare data: Column.Data & { length: number };
 
@@ -459,13 +496,18 @@ export class BitColumn<Schema extends ColumnSchemaConfig> extends Column<
   }
 }
 
-export class BitVaryingColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['bit']>,
-  OperatorsOrdinalText
-> {
+export class BitVaryingColumn<
+  Schema extends ColumnSchemaConfig,
+> extends Column {
+  declare __schema: Schema;
   dataType = 'varbit' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['bit']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['bit']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['bit']>;
   operators = Operators.ordinalText;
   declare data: Column.Data & { length?: number };
 
@@ -491,13 +533,16 @@ export class BitVaryingColumn<Schema extends ColumnSchemaConfig> extends Column<
 type TsVectorGeneratedColumns = string[] | SearchWeightRecord;
 
 // A tsvector value is a sorted list of distinct lexemes
-export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsOrdinalText
-> {
+export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'tsvector' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   constructor(
@@ -630,13 +675,16 @@ export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // A tsquery value stores lexemes that are to be searched for
-export class TsQueryColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsOrdinalText
-> {
+export class TsQueryColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'tsquery' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
@@ -652,13 +700,16 @@ const uuidDefaultSQL = 'gen_random_uuid()';
 const uuidDefault = new RawSql(uuidDefaultSQL);
 
 // uuid stores Universally Unique Identifiers (UUID)
-export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['uuid']>,
-  OperatorsOrdinalText
-> {
+export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'uuid' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['uuid']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['uuid']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['uuid']>;
   operators = Operators.ordinalText;
 
   constructor(schema: Schema) {
@@ -687,13 +738,16 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column<
 }
 
 // xml data type can be used to store XML data
-export class XMLColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsText
-> {
+export class XMLColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'xml' as const;
+  declare __type: string;
+  declare __inputType: string;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.text;
 
   private static _instance: XMLColumn<DefaultSchemaConfig> | undefined;
@@ -714,8 +768,10 @@ export class XMLColumn<Schema extends ColumnSchemaConfig> extends Column<
 export class CitextColumn<
   Schema extends ColumnSchemaConfig,
 > extends TextBaseColumn<Schema, OperatorsOrdinalText> {
+  declare __schema: Schema;
   dataType = 'citext' as const;
   declare data: TextColumnData & { minArg?: number; maxArg?: number };
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   operators = Operators.ordinalText;
 
   constructor(schema: Schema) {

@@ -29,11 +29,16 @@ describe('column type', () => {
   useTestDatabase();
   afterAll(testDb.close);
 
-  class TestColumn<Schema extends ColumnSchemaConfig> extends Column<
-    Schema,
-    number | string
-  > {
+  class TestColumn<Schema extends ColumnSchemaConfig> extends Column {
     dataType = 'test';
+    declare __schema: Schema;
+    declare __type: number | string;
+    declare __inputType: number | string;
+    declare inputSchema: ReturnType<Schema['unknown']>;
+    declare __outputType: number | string;
+    declare outputSchema: ReturnType<Schema['unknown']>;
+    declare __queryType: number | string;
+    declare querySchema: ReturnType<Schema['unknown']>;
     operators = Operators.any;
 
     constructor(schema: Schema) {
@@ -270,7 +275,7 @@ describe('column type', () => {
 
       const q = User.all();
 
-      assertType<Awaited<typeof q>, (typeof User.outputType)[]>();
+      assertType<Awaited<typeof q>, (typeof User.__outputType)[]>();
 
       expectSql(
         q.toSQL(),
@@ -298,7 +303,7 @@ describe('column type', () => {
 
       assertType<
         Awaited<typeof q>,
-        (typeof User.outputType & { password: string })[]
+        (typeof User.__outputType & { password: string })[]
       >();
 
       expectSql(
@@ -333,7 +338,7 @@ describe('column type', () => {
       const fn = (input: number) => input.toString();
       const withEncode = column.encode(z.number(), fn);
       expect(withEncode.data.encode).toBe(fn);
-      assertType<typeof withEncode.inputType, number>();
+      assertType<typeof withEncode.__inputType, number>();
     });
   });
 
@@ -343,7 +348,7 @@ describe('column type', () => {
       const fn = () => 123;
       const withEncode = column.parse(z.number(), fn);
       expect(withEncode.data.parse).toBe(fn);
-      assertType<typeof withEncode.outputType, number>();
+      assertType<typeof withEncode.__outputType, number>();
     });
 
     it('should not override the type to search records with', () => {
@@ -432,7 +437,7 @@ describe('column type', () => {
   });
 
   describe('parseNull', () => {
-    it('should set nullType but not alter outputType', () => {
+    it('should set nullType but not alter __outputType', () => {
       const c = column
         .parse(z.number(), () => 1)
         .parseNull(z.boolean(), () => true);
@@ -441,8 +446,8 @@ describe('column type', () => {
         .parseNull(z.boolean(), () => true)
         .parse(z.number(), () => 1);
 
-      assertType<typeof c.nullType | typeof c2.nullType, boolean>();
-      assertType<typeof c.outputType | typeof c2.outputType, number>();
+      assertType<typeof c.__nullType | typeof c2.__nullType, boolean>();
+      assertType<typeof c.__outputType | typeof c2.__outputType, number>();
     });
 
     it('should alter output type only for nullable column', () => {
@@ -462,11 +467,11 @@ describe('column type', () => {
         .parse(z.number(), () => 1);
 
       assertType<
-        typeof c.nullType | typeof c2.nullType | typeof c3.nullType,
+        typeof c.__nullType | typeof c2.__nullType | typeof c3.__nullType,
         boolean
       >();
       assertType<
-        typeof c.outputType | typeof c2.outputType | typeof c3.outputType,
+        typeof c.__outputType | typeof c2.__outputType | typeof c3.__outputType,
         number | boolean
       >();
     });
@@ -658,21 +663,21 @@ describe('column type', () => {
       if (schema === 'default') {
         const type = td.string().asType((t) => t<'value'>());
 
-        assertType<typeof type.type, 'value'>();
-        assertType<typeof type.inputType, 'value'>();
-        assertType<typeof type.outputType, 'value'>();
-        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.__type, 'value'>();
+        assertType<typeof type.__inputType, 'value'>();
+        assertType<typeof type.__outputType, 'value'>();
+        assertType<typeof type.__queryType, 'value'>();
       } else {
         const type = tz.string().asType({
           type: z.literal('value'),
         });
 
-        assertType<typeof type.type, 'value'>();
-        assertType<typeof type.inputType, 'value'>();
+        assertType<typeof type.__type, 'value'>();
+        assertType<typeof type.__inputType, 'value'>();
         assertType<typeof type.inputSchema, ZodLiteral<'value'>>();
-        assertType<typeof type.outputType, 'value'>();
+        assertType<typeof type.__outputType, 'value'>();
         assertType<typeof type.outputSchema, ZodLiteral<'value'>>();
-        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.__queryType, 'value'>();
         assertType<typeof type.querySchema, ZodLiteral<'value'>>();
       }
     });
@@ -684,21 +689,21 @@ describe('column type', () => {
           .asType((t) => t<'value'>())
           .parse(() => 123);
 
-        assertType<typeof type.type, 'value'>();
-        assertType<typeof type.inputType, 'value'>();
-        assertType<typeof type.outputType, number>();
-        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.__type, 'value'>();
+        assertType<typeof type.__inputType, 'value'>();
+        assertType<typeof type.__outputType, number>();
+        assertType<typeof type.__queryType, 'value'>();
       } else {
         const type = tz
           .string()
           .asType({ type: z.literal('value') })
           .parse(z.number(), () => 123);
 
-        assertType<typeof type.type, 'value'>();
-        assertType<typeof type.inputType, 'value'>();
-        assertType<typeof type.outputType, number>();
+        assertType<typeof type.__type, 'value'>();
+        assertType<typeof type.__inputType, 'value'>();
+        assertType<typeof type.__outputType, number>();
         assertType<typeof type.outputSchema, ZodNumber>();
-        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.__queryType, 'value'>();
       }
     });
 
@@ -709,21 +714,21 @@ describe('column type', () => {
           .asType((t) => t<'value'>())
           .encode((value: number) => '' + value);
 
-        assertType<typeof type.type, 'value'>();
-        assertType<typeof type.inputType, number>();
-        assertType<typeof type.outputType, 'value'>();
-        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.__type, 'value'>();
+        assertType<typeof type.__inputType, number>();
+        assertType<typeof type.__outputType, 'value'>();
+        assertType<typeof type.__queryType, 'value'>();
       } else {
         const type = tz
           .string()
           .asType({ type: z.literal('value') })
           .encode(z.number(), (value: number) => '' + value);
 
-        assertType<typeof type.type, 'value'>();
-        assertType<typeof type.inputType, number>();
+        assertType<typeof type.__type, 'value'>();
+        assertType<typeof type.__inputType, number>();
         assertType<typeof type.inputSchema, ZodNumber>();
-        assertType<typeof type.outputType, 'value'>();
-        assertType<typeof type.queryType, 'value'>();
+        assertType<typeof type.__outputType, 'value'>();
+        assertType<typeof type.__queryType, 'value'>();
       }
     });
 
@@ -733,10 +738,10 @@ describe('column type', () => {
           .string()
           .asType((t) => t<'type', 'input', 'output', 'query'>());
 
-        assertType<typeof type.type, 'type'>();
-        assertType<typeof type.inputType, 'input'>();
-        assertType<typeof type.outputType, 'output'>();
-        assertType<typeof type.queryType, 'query'>();
+        assertType<typeof type.__type, 'type'>();
+        assertType<typeof type.__inputType, 'input'>();
+        assertType<typeof type.__outputType, 'output'>();
+        assertType<typeof type.__queryType, 'query'>();
       } else {
         const type = tz.string().asType({
           type: z.literal('type'),
@@ -745,16 +750,16 @@ describe('column type', () => {
           query: z.literal('query'),
         });
 
-        assertType<typeof type.type, 'type'>();
-        assertType<typeof type.inputType, 'input'>();
-        assertType<typeof type.outputType, 'output'>();
-        assertType<typeof type.queryType, 'query'>();
+        assertType<typeof type.__type, 'type'>();
+        assertType<typeof type.__inputType, 'input'>();
+        assertType<typeof type.__outputType, 'output'>();
+        assertType<typeof type.__queryType, 'query'>();
       }
     });
   });
 
   describe('default', () => {
-    it('should accept `inputType` that may be overridden by `encode`', () => {
+    it('should accept `__inputType` that may be overridden by `encode`', () => {
       testDb(
         'user',
         (t) => ({
@@ -762,7 +767,7 @@ describe('column type', () => {
           balance: t
             .decimal()
             .encode((value: string | number) => '100' + String(value))
-            // the column `type` is `string`, but default should accept `inputType` = `string | number`
+            // the column `type` is `string`, but default should accept `__inputType` = `string | number`
             .default(500),
         }),
         undefined,

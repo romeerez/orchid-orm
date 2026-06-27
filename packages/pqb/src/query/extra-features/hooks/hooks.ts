@@ -28,7 +28,7 @@ export type AfterHook<
 > = QueryAfterHook<
   {
     [K in Select[number]]: K extends keyof Shape
-      ? Shape[K]['outputType']
+      ? Shape[K]['__outputType']
       : never;
   }[]
 >;
@@ -130,9 +130,9 @@ export class QueryHookUtils<T extends PickQueryInputType> {
   ) {}
 
   set = (data: {
-    [K in keyof T['inputType']]?:
-      | T['inputType'][K]
-      | (() => QueryOrExpression<T['inputType'][K]>);
+    [K in keyof T['__inputType']]?:
+      | T['__inputType'][K]
+      | (() => QueryOrExpression<T['__inputType'][K]>);
   }) => {
     const set: RecordUnknown = {};
     for (const key in data) {

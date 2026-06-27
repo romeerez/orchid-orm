@@ -12,7 +12,7 @@ export type UnionArgs<T extends PickQueryResult> = (
   | {
       result: {
         [K in keyof T['result']]: {
-          queryType: T['result'][K]['queryType'];
+          __queryType: T['result'][K]['__queryType'];
         };
       };
     }

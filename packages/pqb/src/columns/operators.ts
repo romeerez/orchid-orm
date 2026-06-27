@@ -76,7 +76,7 @@ export interface Operator<
       : K extends 'returnType'
         ? 'valueOrThrow'
         : K extends 'then'
-          ? QueryThen<Column['outputType']>
+          ? QueryThen<Column['__outputType']>
           : T[K];
   } & Column['operators'];
   // argument type of the function

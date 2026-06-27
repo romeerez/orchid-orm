@@ -128,9 +128,9 @@ describe('number columns', () => {
     });
 
     it('should encode JS BigInt', () => {
-      const { inputType } = t.bigint();
+      const { __inputType } = t.bigint();
 
-      assertType<typeof inputType, string | number | bigint>();
+      assertType<typeof __inputType, string | number | bigint>();
     });
   });
 

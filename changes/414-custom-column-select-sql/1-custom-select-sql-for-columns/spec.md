@@ -59,7 +59,7 @@ column.selectSql((column) => sql`some_sql(${column})`);
 - The self-reference must render the physical database column with the active table alias and must not recursively expand through `selectSql`.
 - The callback returns an existing Orchid SQL expression. Users continue to use `sql`, `.type(...)`, `.values(...)`, and expression operators the same way they do for custom select expressions and SQL computed columns.
 - By default, the column's selected TypeScript output remains the original column output type. If the returned expression is explicitly typed with `.type(...)`, selected output uses that expression result type and parser metadata.
-- `selectSql` does not change the column's `inputType`, `queryType`, validation schema, encoder, database column name, default, nullability, read-only flags, indexes, constraints, or migration metadata.
+- `selectSql` does not change the column's `__inputType`, `__queryType`, validation schema, encoder, database column name, default, nullability, read-only flags, indexes, constraints, or migration metadata.
 
 ### Selection Semantics
 

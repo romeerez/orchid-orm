@@ -1,5 +1,5 @@
 import { Column } from '../column';
-import { Operators, OperatorsAny } from '../operators';
+import { Operators } from '../operators';
 import { ColumnSchemaConfig } from '../column-schema';
 import { RecordUnknown } from '../../utils';
 import {
@@ -10,9 +10,17 @@ import { UpdateSelf } from '../../query/basic-features/mutate/update';
 
 export abstract class VirtualColumn<
   Schema extends ColumnSchemaConfig,
-  InputSchema extends Schema['type'] = ReturnType<Schema['never']>,
-> extends Column<Schema, unknown, InputSchema, OperatorsAny> {
+  InputSchema extends Schema['__schemaType'] = ReturnType<Schema['never']>,
+> extends Column {
+  declare __schema: Schema;
   dataType = '';
+  declare __type: unknown;
+  declare __inputType: unknown;
+  declare inputSchema: InputSchema;
+  declare __outputType: unknown;
+  declare outputSchema: InputSchema;
+  declare __queryType: unknown;
+  declare querySchema: ReturnType<Schema['never']>;
   operators = Operators.any;
 
   constructor(

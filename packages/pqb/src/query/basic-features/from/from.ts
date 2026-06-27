@@ -70,8 +70,8 @@ export type FromResult<
                 ? Arg['result']
                 : K extends 'shape'
                   ? Arg['result']
-                  : K extends 'inputType'
-                    ? Arg['inputType']
+                  : K extends '__inputType'
+                    ? Arg['__inputType']
                     : K extends 'then'
                       ? QueryThenByQuery<T, Arg['result']>
                       : T[K];

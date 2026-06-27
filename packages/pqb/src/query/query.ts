@@ -140,7 +140,7 @@ export interface Query
   returnType: QueryReturnType;
   qb: QueryBuilder;
   columnTypes: unknown;
-  inputType: RecordUnknown;
+  __inputType: RecordUnknown;
   q: QueryData;
   then: QueryThen<unknown>;
   catch: QueryCatch;
@@ -188,7 +188,7 @@ export namespace Query {
 }
 
 export type SelectableOfType<T extends PickQuerySelectable, Type> = {
-  [K in keyof T['__selectable']]: T['__selectable'][K]['column']['type'] extends Type | null
+  [K in keyof T['__selectable']]: T['__selectable'][K]['column']['__type'] extends Type | null
     ? K
     : never;
 }[keyof T['__selectable']];
@@ -197,8 +197,8 @@ export type SelectableOrExpressionOfType<
   T extends PickQuerySelectable,
   C extends Column.Pick.Type,
 > =
-  | SelectableOfType<T, C['type']>
-  | Expression<Column.Pick.QueryColumnOfType<C['type'] | null>>;
+  | SelectableOfType<T, C['__type']>
+  | Expression<Column.Pick.QueryColumnOfType<C['__type'] | null>>;
 
 export const queryTypeWithLimitOne: RecordKeyTrue = {
   one: true,
@@ -238,7 +238,7 @@ export type QueryTakeOptional<T extends PickQueryResultReturnType> =
           [K in keyof T]: K extends 'returnType'
             ? 'value'
             : K extends 'then'
-              ? QueryThen<T['result']['value']['outputType'] | undefined>
+              ? QueryThen<T['result']['value']['__outputType'] | undefined>
               : T[K];
         }
       : {
@@ -268,7 +268,7 @@ export type QueryTake<T extends PickQueryResultReturnType> =
             ? 'valueOrThrow'
             : K extends 'then'
               ? QueryThen<
-                  Exclude<T['result']['value']['outputType'], undefined>
+                  Exclude<T['result']['value']['__outputType'], undefined>
                 >
               : T[K];
         }
@@ -331,7 +331,7 @@ export type SetQueryReturnsPluck<
           : K extends 'returnType'
             ? 'pluck'
             : K extends 'then'
-              ? QueryThen<T['__selectable'][S]['column']['outputType'][]>
+              ? QueryThen<T['__selectable'][S]['column']['__outputType'][]>
               : T[K];
     }
   : {
@@ -346,7 +346,7 @@ export type SetQueryReturnsPluck<
             : K extends 'then'
               ? QueryThen<
                   (S extends Expression
-                    ? S['result']['value']['outputType']
+                    ? S['result']['value']['__outputType']
                     : never)[]
                 >
               : T[K];
@@ -358,7 +358,7 @@ export type SetValueQueryReturnsPluckColumn<T extends PickQueryResult> = {
     : K extends 'returnType'
       ? 'pluck'
       : K extends 'then'
-        ? QueryThen<T['result']['value']['outputType'][]>
+        ? QueryThen<T['result']['value']['__outputType'][]>
         : T[K];
 } & QueryHasSelect;
 
@@ -373,7 +373,7 @@ export type SetQueryReturnsPluckColumnResult<
       : K extends 'result'
         ? Result
         : K extends 'then'
-          ? QueryThen<T['result']['value']['outputType'][]>
+          ? QueryThen<T['result']['value']['__outputType'][]>
           : T[K];
 } & QueryHasSelect;
 
@@ -387,7 +387,7 @@ export type SetValueQueryReturnsValueOrThrow<T extends PickQueryResult> = {
   [K in keyof T]: K extends 'returnType'
     ? 'valueOrThrow'
     : K extends 'then'
-      ? QueryThen<T['result']['value']['outputType']>
+      ? QueryThen<T['result']['value']['__outputType']>
       : T[K];
 };
 
@@ -397,7 +397,7 @@ export type SetQueryReturnsValueOptional<
 > = SetQueryReturnsColumnOptional<
   T,
   {
-    [K in keyof T['__selectable'][Arg]['column']]: K extends 'outputType'
+    [K in keyof T['__selectable'][Arg]['column']]: K extends '__outputType'
       ? T['__selectable'][Arg]['column'][K] | undefined
       : T['__selectable'][Arg]['column'][K];
   }
@@ -414,7 +414,7 @@ export type SetQueryReturnsColumnOrThrow<
     : K extends 'returnType'
       ? 'valueOrThrow'
       : K extends 'then'
-        ? QueryThen<Column['outputType']>
+        ? QueryThen<Column['__outputType']>
         : T[K];
 } & QueryHasSelect;
 
@@ -427,7 +427,7 @@ export type SetQueryReturnsColumnOptional<
     : K extends 'returnType'
       ? 'value'
       : K extends 'then'
-        ? QueryThen<Column['outputType'] | undefined>
+        ? QueryThen<Column['__outputType'] | undefined>
         : T[K];
 } & QueryHasSelect;
 
@@ -437,7 +437,7 @@ export type SetQueryReturnsColumn<T extends PickQueryResult> = {
     : K extends 'returnType'
       ? 'valueOrThrow'
       : K extends 'then'
-        ? QueryThen<T['result']['pluck']['outputType']>
+        ? QueryThen<T['result']['pluck']['__outputType']>
         : T[K];
 } & QueryHasSelect;
 
@@ -452,7 +452,7 @@ export type SetQueryReturnsColumnResult<
       : K extends 'result'
         ? Result
         : K extends 'then'
-          ? QueryThen<Result['pluck']['outputType']>
+          ? QueryThen<Result['pluck']['__outputType']>
           : T[K];
 } & QueryHasSelect;
 

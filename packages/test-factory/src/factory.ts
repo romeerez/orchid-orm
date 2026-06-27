@@ -79,7 +79,7 @@ export interface FactoryConfig {
 }
 
 type FactoryExtend<T extends PickQueryShape> = {
-  [K in keyof T['shape']]?: (sequence: number) => T['shape'][K]['outputType'];
+  [K in keyof T['shape']]?: (sequence: number) => T['shape'][K]['__outputType'];
 };
 
 export interface TableFactoryConfig<
@@ -128,11 +128,11 @@ type BuildResult<T extends TestFactory, Data extends BuildArg<T>> = Result<
 >;
 
 export type CreateArg<T extends TestFactory> = CreateData<{
-  [K in keyof T['table']]: K extends 'inputType'
+  [K in keyof T['table']]: K extends '__inputType'
     ? {
-        [K in keyof T['table']['inputType']]?:
-          | T['table']['inputType'][K]
-          | ((sequence: number) => MaybePromise<T['table']['inputType'][K]>);
+        [K in keyof T['table']['__inputType']]?:
+          | T['table']['__inputType'][K]
+          | ((sequence: number) => MaybePromise<T['table']['__inputType'][K]>);
       }
     : T['table'][K];
 }>;

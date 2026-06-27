@@ -328,7 +328,7 @@ export const instantiateDbColumn = (
           ctx.columnSchemaConfig,
           typeSchema === ctx.currentSchema ? typeName : typeId,
           enumType.values,
-          ctx.columnSchemaConfig.type,
+          ctx.columnSchemaConfig.__schemaType,
         );
       } else {
         column = new CustomTypeColumn(
@@ -356,7 +356,7 @@ export const instantiateDbColumn = (
     const arr = new ArrayColumn(
       ctx.columnSchemaConfig,
       column,
-      ctx.columnSchemaConfig.type,
+      ctx.columnSchemaConfig.__schemaType,
     );
     arr.data.isNullable = dbColumn.isNullable as true;
     arr.data.arrayDims = dbColumn.arrayDims;

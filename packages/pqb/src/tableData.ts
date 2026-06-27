@@ -404,7 +404,7 @@ type ItemUniqueColumns<
   T extends UniqueTableDataItem<Shape>,
 > = {
   [Column in T['columns'][number]]: UniqueQueryTypeOrExpression<
-    Shape[Column]['queryType']
+    Shape[Column]['__queryType']
   >;
 };
 

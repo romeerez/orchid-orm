@@ -2724,7 +2724,7 @@
 
 ### Patch Changes
 
-- Fix update method type to accept values by 'inputType' of the column instead of 'type'
+- Fix update method type to accept values by '__inputType' of the column instead of 'type'
 
 ## 0.11.7
 

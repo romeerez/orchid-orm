@@ -49,7 +49,7 @@ describe('enum column', () => {
     const t = makeColumnTypes(testDefaultSchemaConfig);
     const column = t.enum('mood', ['sad', 'ok', 'happy']);
 
-    assertType<typeof column.outputType, 'sad' | 'ok' | 'happy'>();
-    assertType<typeof column.inputType, 'sad' | 'ok' | 'happy'>();
+    assertType<typeof column.__outputType, 'sad' | 'ok' | 'happy'>();
+    assertType<typeof column.__inputType, 'sad' | 'ok' | 'happy'>();
   });
 });

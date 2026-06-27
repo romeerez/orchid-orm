@@ -500,6 +500,7 @@ describe('valibot schema config', () => {
         InstanceSchema<typeof Buffer>
       >();
       assertType<(typeof type)['querySchema'], StringSchema>();
+      assertType<(typeof type)['querySchema'], StringSchema>();
 
       const buffer = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
       expectAllParse(type, buffer, buffer);
@@ -936,9 +937,9 @@ describe('valibot schema config', () => {
       const column = t.text().narrowType(literal('type'));
 
       assertType<
-        | typeof column.inputType
-        | typeof column.outputType
-        | typeof column.queryType,
+        | typeof column.__inputType
+        | typeof column.__outputType
+        | typeof column.__queryType,
         'type'
       >();
       assertType<
@@ -968,8 +969,11 @@ describe('valibot schema config', () => {
     it('should be supported on a generated column', () => {
       const column = t.text().generated`SELECT 1`.narrowType(literal('type'));
 
-      assertType<typeof column.inputType, never>();
-      assertType<typeof column.outputType | typeof column.queryType, 'type'>();
+      assertType<typeof column.__inputType, never>();
+      assertType<
+        typeof column.__outputType | typeof column.__queryType,
+        'type'
+      >();
       assertType<typeof column.inputSchema, NeverSchema>();
       assertType<
         typeof column.outputSchema | typeof column.querySchema,
@@ -986,11 +990,11 @@ describe('valibot schema config', () => {
         query: literal('query'),
       });
 
-      assertType<typeof column.inputType, 'input'>();
+      assertType<typeof column.__inputType, 'input'>();
       assertType<typeof column.inputSchema, LiteralSchema<'input'>>();
-      assertType<typeof column.outputType, 'output'>();
+      assertType<typeof column.__outputType, 'output'>();
       assertType<typeof column.outputSchema, LiteralSchema<'output'>>();
-      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.__queryType, 'query'>();
       assertType<typeof column.querySchema, LiteralSchema<'query'>>();
 
       expect(column.inputSchema.type).toBe('literal');

@@ -69,7 +69,7 @@ export interface CreateSelf
 // Type of argument for `create`, `createMany`, optional argument for `createOneFrom`,
 // `defaults` use a Partial of it.
 //
-// It maps `inputType` of the table into object to accept a corresponding type,
+// It maps `__inputType` of the table into object to accept a corresponding type,
 // or raw SQL per column, or a sub-query for a column.
 //
 // It allows to omit `belongsTo` foreign keys when a `belongsTo` record is provided by a relation name.
@@ -87,19 +87,21 @@ type CreateDataWithDefaults<
   T extends CreateSelf,
   Defaults extends PropertyKey,
 > = {
-  [K in keyof T['inputType'] as K extends Defaults
+  [K in keyof T['__inputType'] as K extends Defaults
     ? never
     : K]: K extends Defaults ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults]?: K extends keyof T['inputType'] ? CreateColumn<T, K> : never;
+  [K in Defaults]?: K extends keyof T['__inputType']
+    ? CreateColumn<T, K>
+    : never;
 };
 
 type CreateDataWithDefaultsForRelations<
   T extends CreateSelf,
-  Defaults extends keyof T['inputType'],
+  Defaults extends keyof T['__inputType'],
   OmitFKeys extends PropertyKey,
 > = {
-  [K in keyof T['inputType'] as K extends Defaults | OmitFKeys
+  [K in keyof T['__inputType'] as K extends Defaults | OmitFKeys
     ? never
     : K]: K extends Defaults | OmitFKeys ? never : CreateColumn<T, K>;
 } & {
@@ -107,9 +109,10 @@ type CreateDataWithDefaultsForRelations<
 };
 
 // Type of available variants to provide for a specific column when creating
-export type CreateColumn<T extends CreateSelf, K extends keyof T['inputType']> =
-  | T['inputType'][K]
-  | ((q: T) => QueryOrExpression<T['inputType'][K]>);
+export type CreateColumn<
+  T extends CreateSelf,
+  K extends keyof T['__inputType'],
+> = T['__inputType'][K] | ((q: T) => QueryOrExpression<T['__inputType'][K]>);
 
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf> =
@@ -148,9 +151,9 @@ export type CreateRelationsDataOmittingFKeys<
             :
                 | (Pick<
                     {
-                      [P in keyof T['inputType']]: CreateColumn<T, P>;
+                      [P in keyof T['__inputType']]: CreateColumn<T, P>;
                     },
-                    Union['columns'] & keyof T['inputType']
+                    Union['columns'] & keyof T['__inputType']
                   > & {
                     [K in keyof Union['nested']]?: never;
                   })
@@ -240,7 +243,7 @@ type NarrowCreateResult<
       }[keyof T['relations']]
         ? Column.Pick.QueryColumnOfTypeAndOps<
             string,
-            Exclude<T['result'][K]['outputType'], null>,
+            Exclude<T['result'][K]['__outputType'], null>,
             T['result'][K]['operators']
           >
         : T['result'][K];
@@ -668,11 +671,11 @@ export type CreateManyMethodsNames =
 type ExtraPropertiesAreNotAllowed<
   T extends CreateSelf,
   Data,
-> = keyof Data extends keyof T['inputType'] | keyof T['relations']
+> = keyof Data extends keyof T['__inputType'] | keyof T['relations']
   ? Data
   : `Extra properties are not allowed: ${Exclude<
       keyof Data,
-      keyof T['inputType'] | keyof T['relations']
+      keyof T['__inputType'] | keyof T['relations']
     > &
       string}`;
 
@@ -1003,9 +1006,9 @@ export class QueryCreate {
 }
 
 type OnConflictSet<T extends CreateSelf> = {
-  [K in keyof T['inputType']]?:
-    | T['inputType'][K]
-    | (() => QueryOrExpression<T['inputType'][K]>);
+  [K in keyof T['__inputType']]?:
+    | T['__inputType'][K]
+    | (() => QueryOrExpression<T['__inputType'][K]>);
 };
 
 export class OnConflictQueryBuilder<

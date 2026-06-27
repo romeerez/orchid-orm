@@ -35,7 +35,7 @@ import { AdapterSchemaConfigOptions } from '../adapters/adapter';
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
   parse<T extends Column.Pick.ForParse, Output>(
     this: T,
-    fn: (input: T['type']) => Output,
+    fn: (input: T['__type']) => Output,
   ): Column.Modifiers.Parse<T, unknown, Output>;
 
   parseNull<T extends Column.Pick.ForParseNull, Output>(
@@ -43,7 +43,7 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     fn: () => Output,
   ): Column.Modifiers.ParseNull<T, unknown, Output>;
 
-  encode<T extends { type: unknown }, Input>(
+  encode<T extends Column.Pick.Type, Input>(
     this: T,
     fn: (input: Input) => unknown,
   ): Column.Modifiers.Encode<T, unknown, Input>;
@@ -55,9 +55,9 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     T,
     Types extends {
       type: unknown;
-      inputType: unknown;
-      outputType: unknown;
-      queryType: unknown;
+      __inputType: unknown;
+      __outputType: unknown;
+      __queryType: unknown;
     },
   >(
     this: T,
@@ -65,12 +65,18 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     _fn: (
       type: <Type, Input = Type, Output = Type, Query = Type>() => {
         type: Type;
-        inputType: Input;
-        outputType: Output;
-        queryType: Query;
+        __inputType: Input;
+        __outputType: Output;
+        __queryType: Query;
       },
     ) => Types,
-  ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
+  ): {
+    [K in keyof T]: K extends '__type'
+      ? Types['type']
+      : K extends keyof Types
+        ? Types[K]
+        : T[K];
+  };
 
   narrowType<
     T extends Column.InputOutputQueryTypes,
@@ -80,13 +86,14 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     //
     _fn: (
       type: <
-        Type extends T['inputType'] extends T['outputType'] & T['queryType']
-          ? T['outputType'] & T['queryType'] // generated column case
-          : T['inputType'] & T['outputType'] & T['queryType'],
+        Type extends T['__inputType'] extends T['__outputType'] &
+          T['__queryType']
+          ? T['__outputType'] & T['__queryType'] // generated column case
+          : T['__inputType'] & T['__outputType'] & T['__queryType'],
       >() => {
-        inputType: T['inputType'] extends never ? never : Type;
-        outputType: Type;
-        queryType: Type;
+        __inputType: T['__inputType'] extends never ? never : Type;
+        __outputType: Type;
+        __queryType: Type;
       },
     ) => Types,
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
@@ -100,28 +107,28 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
     _fn: (
       type: <
         Types extends {
-          input?: T['inputType'];
-          output?: T['outputType'];
-          query?: T['queryType'];
+          input?: T['__inputType'];
+          output?: T['__outputType'];
+          query?: T['__queryType'];
         },
       >() => {
-        inputType: undefined extends Types['input']
-          ? T['inputType']
+        __inputType: undefined extends Types['input']
+          ? T['__inputType']
           : Types['input'];
-        outputType: undefined extends Types['output']
-          ? T['outputType']
+        __outputType: undefined extends Types['output']
+          ? T['__outputType']
           : Types['output'];
-        queryType: undefined extends Types['query']
-          ? T['queryType']
+        __queryType: undefined extends Types['query']
+          ? T['__queryType']
           : Types['query'];
       },
     ) => Types,
   ): { [K in keyof T]: K extends keyof Types ? Types[K] : T[K] };
 
-  dateAsNumber<T extends Column>(
+  dateAsNumber<T extends Column.Pick.ForParse>(
     this: T,
   ): Column.Modifiers.Parse<T, unknown, number>;
-  dateAsDate<T extends Column>(
+  dateAsDate<T extends Column.Pick.ForParse>(
     this: T,
   ): Column.Modifiers.Parse<T, unknown, Date>;
 

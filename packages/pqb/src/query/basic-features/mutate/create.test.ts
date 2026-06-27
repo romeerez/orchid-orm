@@ -772,7 +772,7 @@ describe('create functions', () => {
         expect(item).toMatchObject(omit(arr[i], ['password']));
       });
 
-      assertType<typeof result, (typeof User.outputType)[]>();
+      assertType<typeof result, (typeof User.__outputType)[]>();
 
       const inserted = await User.all();
       inserted.forEach((item, i) => {

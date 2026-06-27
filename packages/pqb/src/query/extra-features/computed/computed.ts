@@ -55,9 +55,9 @@ export type ComputedOptionsFactory<
 export interface RuntimeComputedQueryColumn<OutputType>
   extends Column.Pick.QueryColumn {
   dataType: 'runtimeComputed';
-  type: never;
-  outputType: OutputType;
-  queryType: undefined;
+  __type: never;
+  __outputType: OutputType;
+  __queryType: undefined;
   operators: { cannotQueryRuntimeComputed: never };
 }
 
@@ -68,7 +68,7 @@ export interface ComputedMethods<
   computeAtRuntime<Deps extends keyof Shape, OutputType>(
     dependsOn: Deps[],
     fn: (record: {
-      [K in keyof Shape & Deps]: Shape[K]['outputType'];
+      [K in keyof Shape & Deps]: Shape[K]['__outputType'];
     }) => OutputType,
   ): { result: { value: RuntimeComputedQueryColumn<OutputType> } };
 
@@ -76,7 +76,7 @@ export interface ComputedMethods<
     dependsOn: Deps[],
     fn: (
       record: {
-        [K in keyof Shape & Deps]: Shape[K]['outputType'];
+        [K in keyof Shape & Deps]: Shape[K]['__outputType'];
       }[],
     ) => MaybePromise<OutputType[]>,
   ): { result: { value: RuntimeComputedQueryColumn<OutputType> } };

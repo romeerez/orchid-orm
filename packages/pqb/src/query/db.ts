@@ -93,13 +93,13 @@ export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
     [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
       ? K
       : never;
-  }[keyof Shape]]: UniqueQueryTypeOrExpression<Shape[K]['queryType']>;
+  }[keyof Shape]]: UniqueQueryTypeOrExpression<Shape[K]['__queryType']>;
 };
 
 export type ShapeUniqueColumns<Shape extends Column.QueryColumnsInit> = {
   [K in keyof Shape]: Shape[K]['data']['unique'] extends string
     ? {
-        [C in K]: UniqueQueryTypeOrExpression<Shape[K]['queryType']>;
+        [C in K]: UniqueQueryTypeOrExpression<Shape[K]['__queryType']>;
       }
     : never;
 }[keyof Shape];
@@ -268,8 +268,8 @@ export class Db<
   declare __defaultSelect: DefaultSelect;
   baseQuery: Query;
   columns: (keyof Shape)[];
-  declare outputType: ColumnsShape.DefaultSelectOutput<Shape>;
-  declare inputType: ColumnsShape.Input<Shape>;
+  declare __outputType: ColumnsShape.DefaultSelectOutput<Shape>;
+  declare __inputType: ColumnsShape.Input<Shape>;
   declare result: { [K in DefaultSelect]: Shape[K] };
   declare returnType: undefined;
   declare then: QueryThenShallowSimplifyArr<ColumnsShape.DefaultOutput<Shape>>;

@@ -76,13 +76,13 @@ export type QueryThenByQuery<
     : T['returnType'] extends 'oneOrThrow'
       ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
       : T['returnType'] extends 'value'
-        ? QueryThen<Result['value']['outputType'] | undefined>
+        ? QueryThen<Result['value']['__outputType'] | undefined>
         : T['returnType'] extends 'valueOrThrow'
-          ? QueryThen<Result['value']['outputType']>
+          ? QueryThen<Result['value']['__outputType']>
           : T['returnType'] extends 'rows'
             ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
             : T['returnType'] extends 'pluck'
-              ? QueryThen<Result['pluck']['outputType'][]>
+              ? QueryThen<Result['pluck']['__outputType'][]>
               : QueryThen<void>;
 
 export type QueryThenByReturnType<
@@ -95,13 +95,13 @@ export type QueryThenByReturnType<
     : T extends 'oneOrThrow'
       ? QueryThenShallowSimplify<ColumnsShape.Output<Result>>
       : T extends 'value'
-        ? QueryThen<Result['value']['outputType'] | undefined>
+        ? QueryThen<Result['value']['__outputType'] | undefined>
         : T extends 'valueOrThrow'
-          ? QueryThen<Result['value']['outputType']>
+          ? QueryThen<Result['value']['__outputType']>
           : T extends 'rows'
             ? QueryThen<ColumnsShape.Output<Result>[keyof Result][][]>
             : T extends 'pluck'
-              ? QueryThen<Result['pluck']['outputType'][]>
+              ? QueryThen<Result['pluck']['__outputType'][]>
               : QueryThen<void>;
 
 // copied from TS standard library because the original `catch` is not decoupled from the Promise

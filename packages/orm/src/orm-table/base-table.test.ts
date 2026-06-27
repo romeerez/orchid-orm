@@ -15,6 +15,7 @@ import {
   QueryHookUtils,
   DefaultSchemaConfig,
   QuerySchema,
+  ColumnTypeSchemaArg,
 } from 'pqb/internal';
 import { useTestORM } from '../test-utils/orm.test-utils';
 import {
@@ -150,6 +151,14 @@ describe('baseTable', () => {
     it('should have .sql with overridden types', () => {
       class Type extends Column {
         dataType = 'type';
+        declare __schema: ColumnTypeSchemaArg;
+        declare __type: unknown;
+        declare __inputType: unknown;
+        declare inputSchema: unknown;
+        declare __outputType: unknown;
+        declare outputSchema: unknown;
+        declare __queryType: unknown;
+        declare querySchema: unknown;
         operators = Operators.any;
         constructor() {
           super(testDefaultSchemaConfig, testDefaultSchemaConfig.unknown);
@@ -562,14 +571,14 @@ describe('baseTable', () => {
   });
 
   describe('Queryable', () => {
-    it('should have a partial shape of column `queryType`', () => {
+    it('should have a partial shape of column `__queryType`', () => {
       class SomeTable extends BaseTable {
         columns = this.setColumns((t) => ({
           foo: t.text() as unknown as Omit<
             TextColumn<DefaultSchemaConfig>,
-            'queryType'
+            '__queryType'
           > & {
-            queryType: number;
+            __queryType: number;
           },
         }));
       }

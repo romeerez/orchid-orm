@@ -33,6 +33,7 @@ import {
   AdapterSchemaConfigOptions,
   getDateAsNumberFn,
   getDateAsDateFn,
+  RecordUnknown,
 } from 'pqb/internal';
 import {
   actionIssue,
@@ -133,7 +134,8 @@ function applyMethod(
 
   cloned.inputSchema.pipe.push(v);
   cloned.outputSchema.pipe.push(v);
-  cloned.querySchema.pipe.push(v);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  (cloned.querySchema as any).pipe.push(v);
 
   return cloned as never;
 }
@@ -159,7 +161,8 @@ function applySimpleMethod(
 
   cloned.inputSchema.pipe.push(v);
   cloned.outputSchema.pipe.push(v);
-  cloned.querySchema.pipe.push(v);
+  // oxlint-disable-next-line typescript/no-explicit-any
+  (cloned.querySchema as any).pipe.push(v);
 
   return cloned as never;
 }
@@ -706,7 +709,7 @@ type PointSchemaValibot = ObjectSchema<{
 let pointSchema: PointSchemaValibot | undefined;
 
 export interface ValibotSchemaConfig extends ColumnSchemaConfig {
-  type: BaseSchema;
+  __schemaType: BaseSchema;
 
   parse<
     T extends Column.Pick.ForParse,
@@ -715,7 +718,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   >(
     this: T,
     _schema: OutputSchema,
-    fn: (input: T['type']) => Out,
+    fn: (input: T['__type']) => Out,
   ): Column.Modifiers.Parse<T, OutputSchema, Out>;
 
   parseNull<
@@ -754,7 +757,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   ): {
     [K in keyof T]: K extends 'type'
       ? Type
-      : K extends 'inputType'
+      : K extends '__inputType'
         ? Types['input'] extends BaseSchema
           ? Output<Types['input']>
           : Type
@@ -762,7 +765,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
           ? Types['input'] extends BaseSchema
             ? Types['input']
             : TypeSchema
-          : K extends 'outputType'
+          : K extends '__outputType'
             ? Types['output'] extends BaseSchema
               ? Output<Types['output']>
               : Type
@@ -770,7 +773,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
               ? Types['output'] extends BaseSchema
                 ? Types['output']
                 : TypeSchema
-              : K extends 'queryType'
+              : K extends '__queryType'
                 ? Types['query'] extends BaseSchema
                   ? Output<Types['query']>
                   : Type
@@ -786,22 +789,22 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
     Type extends BaseSchema<
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       any,
-      T['inputType'] extends never
-        ? T['outputType'] & T['queryType']
-        : T['inputType'] & T['outputType'] & T['queryType']
+      T['__inputType'] extends never
+        ? T['__outputType'] & T['__queryType']
+        : T['__inputType'] & T['__outputType'] & T['__queryType']
     >,
   >(
     this: T,
     types: Type,
   ): {
-    [K in keyof T]: K extends 'inputType'
-      ? T['inputType'] extends never
+    [K in keyof T]: K extends '__inputType'
+      ? T['__inputType'] extends never
         ? never
         : Output<Type>
-      : K extends 'outputType' | 'queryType'
+      : K extends '__outputType' | '__queryType'
         ? Output<Type>
         : K extends 'inputSchema'
-          ? T['inputType'] extends never
+          ? T['__inputType'] extends never
             ? NeverSchema
             : Type
           : K extends 'outputSchema' | 'querySchema'
@@ -812,31 +815,31 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   narrowAllTypes<
     T extends Column.InputOutputQueryTypesWithSchemas,
     Types extends {
-      input?: { _types?: { output: T['inputType'] } };
-      output?: { _types?: { output: T['outputType'] } };
-      query?: { _types?: { output: T['queryType'] } };
+      input?: { _types?: { output: T['__inputType'] } };
+      output?: { _types?: { output: T['__outputType'] } };
+      query?: { _types?: { output: T['__queryType'] } };
     },
   >(
     this: T,
     types: Types,
   ): {
-    [K in keyof T]: K extends 'inputType'
+    [K in keyof T]: K extends '__inputType'
       ? Types['input'] extends BaseSchema
         ? Output<Types['input']>
-        : T['inputType']
+        : T['__inputType']
       : K extends 'inputSchema'
         ? Types['input'] extends BaseSchema
           ? Types['input']
           : T['inputSchema']
-        : K extends 'outputType'
+        : K extends '__outputType'
           ? Types['output'] extends BaseSchema
             ? Output<Types['output']>
-            : T['outputType']
+            : T['__outputType']
           : K extends 'outputSchema'
             ? Types['output'] extends BaseSchema
               ? Types['output']
               : T['outputSchema']
-            : K extends 'queryType'
+            : K extends '__queryType'
               ? Types['query'] extends BaseSchema
                 ? Output<Types['query']>
                 : T['querySchema']
@@ -948,7 +951,7 @@ export const valibotSchemaConfig = (
   options?: AdapterSchemaConfigOptions,
 ): ValibotSchemaConfig => {
   const schemaConfig: ValibotSchemaConfig = {
-    type: undefined as unknown as BaseSchema,
+    __schemaType: undefined as unknown as BaseSchema,
     parse(schema, fn) {
       return setColumnParse(this as never, fn, schema);
     },
@@ -1107,7 +1110,7 @@ export const valibotSchemaConfig = (
       const c = this as Column;
       c.inputSchema.message =
         c.outputSchema.message =
-        c.querySchema.message =
+        (c.querySchema as RecordUnknown).message =
           message;
       return c as never;
     },

@@ -1,7 +1,7 @@
 import { Column } from '../column';
 import { columnCode, ColumnToCodeCtx } from '../code';
 import { Code } from '../code';
-import { Operators, OperatorsBoolean } from '../operators';
+import { Operators } from '../operators';
 import {
   DefaultSchemaConfig,
   internalSchemaConfig,
@@ -9,14 +9,17 @@ import {
 import { ColumnSchemaConfig } from '../column-schema';
 
 // 1 byte, true or false
-export class BooleanColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  boolean,
-  ReturnType<Schema['boolean']>,
-  OperatorsBoolean
-> {
+export class BooleanColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
   dataType = 'bool' as const;
   operators = Operators.boolean;
+  declare __type: boolean;
+  declare __inputType: boolean;
+  declare inputSchema: ReturnType<Schema['boolean']>;
+  declare __outputType: boolean;
+  declare outputSchema: ReturnType<Schema['boolean']>;
+  declare __queryType: boolean;
+  declare querySchema: ReturnType<Schema['boolean']>;
 
   private static _instance: BooleanColumn<DefaultSchemaConfig> | undefined;
   static get instance() {

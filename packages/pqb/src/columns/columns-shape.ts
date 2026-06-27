@@ -17,7 +17,7 @@ export namespace ColumnsShape {
   // Type of data returned from the table query by default, doesn't include computed columns.
   // `const user: User[] = await db.user;`
   export type DefaultOutput<Set extends Column.QueryColumnsInit> = {
-    [K in DefaultSelectKeys<Set>]: Set[K]['outputType'];
+    [K in DefaultSelectKeys<Set>]: Set[K]['__outputType'];
   };
 
   // get columns object type where nullable columns or columns with a default are optional
@@ -32,16 +32,19 @@ export namespace ColumnsShape {
       [K in keyof Shape]: Shape[K]['data']['optional'] extends true ? K : never;
     }[keyof Shape],
   > = {
-    [K in Exclude<keyof Shape, AppReadOnly | Optional>]: Shape[K]['inputType'];
-  } & { [K in Exclude<Optional, AppReadOnly>]?: Shape[K]['inputType'] };
+    [K in Exclude<
+      keyof Shape,
+      AppReadOnly | Optional
+    >]: Shape[K]['__inputType'];
+  } & { [K in Exclude<Optional, AppReadOnly>]?: Shape[K]['__inputType'] };
 
   export type InputPartial<Shape extends Column.QueryColumnsInit> = {
-    [K in keyof Shape]?: Shape[K]['inputType'];
+    [K in keyof Shape]?: Shape[K]['__inputType'];
   };
 
   // output of the shape of columns
   export type Output<Shape extends Column.QueryColumns> = {
-    [K in keyof Shape]: Shape[K]['outputType'];
+    [K in keyof Shape]: Shape[K]['__outputType'];
   };
 
   // table output type returned by default, with no select
@@ -52,17 +55,17 @@ export namespace ColumnsShape {
         | undefined
         ? never
         : K;
-    }[keyof Shape]]: Shape[K]['outputType'];
+    }[keyof Shape]]: Shape[K]['__outputType'];
   };
 
   export interface MapToObjectColumn<Shape extends Column.QueryColumns> {
     dataType: 'object';
-    type: {
-      [K in keyof Shape]: Shape[K]['type'];
+    __type: {
+      [K in keyof Shape]: Shape[K]['__type'];
     };
-    outputType: ShallowSimplify<ObjectOutput<Shape>>;
-    queryType: {
-      [K in keyof Shape]: Shape[K]['queryType'];
+    __outputType: ShallowSimplify<ObjectOutput<Shape>>;
+    __queryType: {
+      [K in keyof Shape]: Shape[K]['__queryType'];
     };
     operators: OperatorsAny;
   }
@@ -71,13 +74,13 @@ export namespace ColumnsShape {
     Shape extends Column.QueryColumns,
   > {
     dataType: 'object';
-    type: {
-      [K in keyof Shape]: Shape[K]['type'];
+    __type: {
+      [K in keyof Shape]: Shape[K]['__type'];
     };
-    outputType: ShallowSimplify<ObjectOutput<Shape>> | undefined;
-    queryType:
+    __outputType: ShallowSimplify<ObjectOutput<Shape>> | undefined;
+    __queryType:
       | {
-          [K in keyof Shape]: Shape[K]['queryType'];
+          [K in keyof Shape]: Shape[K]['__queryType'];
         }
       | null;
     operators: OperatorsAny;
@@ -85,26 +88,26 @@ export namespace ColumnsShape {
 
   export interface MapToPluckColumn<Shape extends Column.QueryColumns> {
     dataType: 'array';
-    type: Shape['pluck']['type'][];
-    outputType: Shape['pluck']['outputType'][];
-    queryType: Shape['pluck']['queryType'][];
+    __type: Shape['pluck']['__type'][];
+    __outputType: Shape['pluck']['__outputType'][];
+    __queryType: Shape['pluck']['__queryType'][];
     operators: OperatorsAny;
   }
 
   export interface MapToObjectArrayColumn<Shape extends Column.QueryColumns> {
     dataType: 'array';
-    type: {
-      [K in keyof Shape]: Shape[K]['type'];
+    __type: {
+      [K in keyof Shape]: Shape[K]['__type'];
     }[];
-    outputType: ShallowSimplify<ObjectOutput<Shape>>[];
-    queryType: {
-      [K in keyof Shape]: Shape[K]['queryType'];
+    __outputType: ShallowSimplify<ObjectOutput<Shape>>[];
+    __queryType: {
+      [K in keyof Shape]: Shape[K]['__queryType'];
     }[];
     operators: OperatorsAny;
   }
 
   // Because this is passed to `ShallowSimplify` it takes fewer instantiations to keep it as a type helper
   type ObjectOutput<Shape extends Column.QueryColumns> = {
-    [K in keyof Shape]: Shape[K]['outputType'];
+    [K in keyof Shape]: Shape[K]['__outputType'];
   };
 }

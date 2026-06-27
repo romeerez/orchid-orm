@@ -88,7 +88,7 @@ export type HasOneParams<
   Options,
 > = Options extends RelationRefsOptions
   ? {
-      [Name in Options['columns'][number]]: T['columns']['shape'][Name]['type'];
+      [Name in Options['columns'][number]]: T['columns']['shape'][Name]['__type'];
     }
   : Options extends RelationThroughOptions
     ? RelationConfigParams<T, T['relations'][Options['through']]>

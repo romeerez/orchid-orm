@@ -35,27 +35,27 @@ export namespace Column {
       };
     };
 
-    // marks the column as a nullable, adds `null` type to `type` and `inputType`
+    // marks the column as a nullable, adds `null` type to `type` and `__inputType`
     export type Nullable<
       T extends Column.Pick.ForNullable,
       InputSchema,
       OutputSchema,
       QuerySchema,
     > = {
-      [K in keyof T]: K extends 'type'
-        ? T['type'] | null
-        : K extends 'inputType'
-          ? T['inputType'] | null
+      [K in keyof T]: K extends '__type'
+        ? T['__type'] | null
+        : K extends '__inputType'
+          ? T['__inputType'] | null
           : K extends 'inputSchema'
             ? InputSchema
-            : K extends 'outputType'
+            : K extends '__outputType'
               ?
-                  | T['outputType']
-                  | (unknown extends T['nullType'] ? null : T['nullType'])
+                  | T['__outputType']
+                  | (unknown extends T['__nullType'] ? null : T['__nullType'])
               : K extends 'outputSchema'
                 ? OutputSchema
-                : K extends 'queryType'
-                  ? T['queryType'] | null
+                : K extends '__queryType'
+                  ? T['__queryType'] | null
                   : K extends 'querySchema'
                     ? QuerySchema
                     : K extends 'data'
@@ -72,11 +72,13 @@ export namespace Column {
     };
 
     export type QueryColumnToNullable<C> = {
-      [K in keyof C]: K extends 'outputType' | 'queryType' ? C[K] | null : C[K];
+      [K in keyof C]: K extends '__outputType' | '__queryType'
+        ? C[K] | null
+        : C[K];
     };
 
     export type QueryColumnToOptional<C> = {
-      [K in keyof C]: K extends 'outputType' ? C[K] | undefined : C[K];
+      [K in keyof C]: K extends '__outputType' ? C[K] | undefined : C[K];
     };
 
     interface DataNullable {
@@ -92,7 +94,7 @@ export namespace Column {
 
     // change the input type of the column
     export type Encode<T, InputSchema, Input> = {
-      [K in keyof T]: K extends 'inputType'
+      [K in keyof T]: K extends '__inputType'
         ? Input
         : K extends 'inputSchema'
           ? InputSchema
@@ -101,14 +103,14 @@ export namespace Column {
 
     // change the output type of the column
     export type Parse<T extends Pick.ForParse, OutputSchema, Output> = {
-      [K in keyof T]: K extends 'outputType'
-        ? null extends T['type']
+      [K in keyof T]: K extends '__outputType'
+        ? null extends T['__type']
           ?
               | (Output extends null ? never : Output)
-              | (unknown extends T['nullType'] ? null : T['nullType'])
+              | (unknown extends T['__nullType'] ? null : T['__nullType'])
           : Output
         : K extends 'outputSchema'
-          ? null extends T['type']
+          ? null extends T['__type']
             ? OutputSchema | T['nullSchema']
             : OutputSchema
           : T[K];
@@ -120,14 +122,14 @@ export namespace Column {
       NullSchema,
       NullType,
     > = {
-      [K in keyof T]: K extends 'outputType'
-        ? null extends T['type']
-          ? Exclude<T['outputType'], null> | NullType
-          : T['outputType']
-        : K extends 'nullType'
+      [K in keyof T]: K extends '__outputType'
+        ? null extends T['__type']
+          ? Exclude<T['__outputType'], null> | NullType
+          : T['__outputType']
+        : K extends '__nullType'
           ? NullType
           : K extends 'outputSchema'
-            ? null extends T['type']
+            ? null extends T['__type']
               ? T['outputSchema'] | NullSchema
               : T['outputSchema']
             : K extends 'nullSchema'
@@ -180,7 +182,7 @@ export namespace Column {
         ? {
             [K in keyof T['data']]: K extends 'default' ? true : T['data'][K];
           }
-        : K extends 'inputType'
+        : K extends '__inputType'
           ? never
           : T[K];
     };
@@ -192,21 +194,21 @@ export namespace Column {
     }
 
     export interface Type {
-      type: unknown;
+      __type: unknown;
     }
 
     export interface OutputType {
-      outputType: unknown;
+      __outputType: unknown;
     }
 
     export interface InputType {
-      inputType: unknown;
+      __inputType: unknown;
     }
 
     export interface DataAndInputType extends Data, InputType {}
 
     export interface NullType {
-      nullType: unknown;
+      __nullType: unknown;
     }
 
     export interface OutputTypeAndOperators extends OutputType {
@@ -221,26 +223,26 @@ export namespace Column {
     //
     export interface QueryColumn extends OutputType {
       dataType: string;
-      type: unknown;
-      queryType: unknown;
+      __type: unknown;
+      __queryType: unknown;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       operators: any;
     }
 
     export interface QueryColumnOfType<T> {
       dataType: string;
-      type: T;
-      outputType: T;
-      queryType: T;
+      __type: T;
+      __outputType: T;
+      __queryType: T;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       operators: any;
     }
 
     export interface QueryColumnOfTypeAndOps<DataType, T, Ops> {
       dataType: DataType;
-      type: T;
-      outputType: T;
-      queryType: T;
+      __type: T;
+      __outputType: T;
+      __queryType: T;
       operators: Ops;
     }
 
@@ -273,8 +275,8 @@ export namespace Column {
 
     export interface ForNullable
       extends Data, Type, InputType, OutputType, TypeSchemas {
-      nullType: unknown;
-      queryType: unknown;
+      __nullType: unknown;
+      __queryType: unknown;
       operators: unknown;
     }
 
@@ -341,9 +343,9 @@ export namespace Column {
   }
 
   export interface InputOutputQueryTypes {
-    inputType: unknown;
-    outputType: unknown;
-    queryType: unknown;
+    __inputType: unknown;
+    __outputType: unknown;
+    __queryType: unknown;
   }
 
   export interface InputOutputQueryTypesWithSchemas extends InputOutputQueryTypes {
@@ -632,51 +634,44 @@ export const setDefaultLanguage = (lang?: string) => {
 // get default language for full text search
 export const getDefaultLanguage = () => defaultLanguage;
 
-export abstract class Column<
-  Schema extends ColumnTypeSchemaArg = ColumnTypeSchemaArg,
-  Type = unknown,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  InputSchema = any,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Ops = any,
-  InputType = Type,
-  OutputType = Type,
-  OutputSchema = InputSchema,
-  QueryType = InputType,
-  QuerySchema = InputSchema,
-> {
+export abstract class Column {
+  abstract __schema: ColumnTypeSchemaArg;
+
   // name of the type in a database
   abstract dataType: string;
 
   // operators supported by the type, that are available in `where` method
-  abstract operators: Ops;
+  // oxlint-disable-next-line typescript/no-explicit-any
+  abstract operators: any;
 
   // turn the column into TS code, used for code generation
   abstract toCode(ctx: ColumnToCodeCtx, key: string): Code;
 
   // Type returned from a database before parsing, it is an output type of db.
-  // Unlike `queryType`, it cannot be a union.
-  type!: Type;
+  // Unlike `__queryType`, it cannot be a union.
+  abstract __type: unknown;
 
   // allowed type for creating and updating, it is processed by `encode` function when it's defined.
-  inputType!: InputType;
+  abstract __inputType: unknown;
 
   // type returned from a database and processed by `parse` function when it's defined.
-  outputType!: OutputType;
+  abstract __outputType: unknown;
 
   // Allowed type to use in `where` and other query methods.
   // Input type of db: timestamp can be sent as a string, a number, or Date (serialized by `pg` driver).
   // It is **not** processed by the ORM, only by a database driver.
-  queryType!: QueryType;
+  abstract __queryType: unknown;
 
-  declare nullType: unknown;
+  declare __nullType: unknown;
   declare nullSchema: unknown;
-  declare isNullable: boolean;
+  abstract inputSchema: unknown;
+  abstract outputSchema: unknown;
+  abstract querySchema: unknown;
 
   // data of the column that specifies column characteristics and validations
   data: Column.Data;
 
-  error: Schema['error'];
+  error: this['__schema']['error'];
 
   _parse?: (input: unknown) => unknown;
 
@@ -684,12 +679,15 @@ export abstract class Column<
     schema: ColumnTypeSchemaArg,
     // type for validation lib for inserting and updating records
     // public inputSchema: InputSchema = undefined as InputSchema,
-    public inputSchema: InputSchema,
+    inputSchema: unknown,
     // type for validation lib for selected data
-    public outputSchema: OutputSchema = inputSchema as unknown as OutputSchema,
+    outputSchema: unknown = inputSchema,
     // type for validation lib for validating filters
-    public querySchema: QuerySchema = inputSchema as unknown as QuerySchema,
+    querySchema: unknown = inputSchema,
   ) {
+    (this as unknown as RecordUnknown).inputSchema = inputSchema;
+    (this as unknown as RecordUnknown).outputSchema = outputSchema;
+    (this as unknown as RecordUnknown).querySchema = querySchema;
     this.parse = schema.parse;
     this.parseNull = schema.parseNull;
     this.encode = schema.encode;
@@ -730,7 +728,11 @@ export abstract class Column<
    */
   default<
     T extends Column.Pick.DataAndInputType,
-    Value extends T['inputType'] | null | RawSqlBase | (() => T['inputType']),
+    Value extends
+      | T['__inputType']
+      | null
+      | RawSqlBase
+      | (() => T['__inputType']),
   >(this: T, value: Value): Column.Modifiers.Default<T, Value> {
     return setColumnData(this, 'default', value) as Column.Modifiers.Default<
       T,
@@ -795,7 +797,7 @@ export abstract class Column<
    * }
    * ```
    */
-  nullable: Schema['nullable'];
+  nullable: this['__schema']['nullable'];
 
   /**
    * Set a custom function to process value for the column when creating or updating a record.
@@ -832,7 +834,7 @@ export abstract class Column<
    *
    * @param fn - function to encode value for a database, argument type is specified by you, return type must be compatible with a database
    */
-  encode: Schema['encode'];
+  encode: this['__schema']['encode'];
 
   /**
    * Set a custom function to process value after loading it from a database.
@@ -871,7 +873,7 @@ export abstract class Column<
    *
    * @param fn - function to parse a value from the database, argument is the type of this column, return type is up to you
    */
-  parse: Schema['parse'];
+  parse: this['__schema']['parse'];
 
   /**
    * Use `parseNull` to specify runtime defaults at selection time.
@@ -917,7 +919,7 @@ export abstract class Column<
    * })
    * ```
    */
-  parseNull: Schema['parseNull'];
+  parseNull: this['__schema']['parseNull'];
 
   /**
    * This method changes a column type without modifying its behavior.
@@ -938,10 +940,14 @@ export abstract class Column<
    * @param column - other column type to inherit from
    */
   as<
-    T extends { inputType: unknown; outputType: unknown; data: Column.Data },
+    T extends {
+      __inputType: unknown;
+      __outputType: unknown;
+      data: Column.Data;
+    },
     C extends {
-      inputType: T['inputType'];
-      outputType: T['outputType'];
+      __inputType: T['__inputType'];
+      __outputType: T['__outputType'];
     },
   >(this: T, column: C): C {
     return setColumnData(
@@ -954,7 +960,7 @@ export abstract class Column<
   /**
    * @deprecated use narrowType instead
    */
-  asType: Schema['asType'];
+  asType: this['__schema']['asType'];
 
   /**
    * `narrowType` narrows TypeScript types of a column. It sets input, output, query type altogether.
@@ -998,8 +1004,10 @@ export abstract class Column<
    * // size will be typed as 'small' | 'medium' | 'large'
    * const size = await db.table.get('size');
    * ```
+   *
+   * @deprecated use `type` instead
    */
-  narrowType: Schema['narrowType'];
+  narrowType: this['__schema']['narrowType'];
 
   /**
    * Allows to narrow different TypeScript types of a column granularly.
@@ -1056,10 +1064,15 @@ export abstract class Column<
    * // size will be typed as 'small' | 'medium' | 'large'
    * const size = await db.table.get('size');
    * ```
+   *
+   * @deprecated use `type`, `inputType`, `outputType`, `queryType` instead
    */
-  narrowAllTypes: Schema['narrowAllTypes'];
+  narrowAllTypes: this['__schema']['narrowAllTypes'];
 
-  input<T extends { inputSchema: unknown }, InputSchema extends Schema['type']>(
+  input<
+    T extends { inputSchema: unknown },
+    InputSchema extends this['__schema']['__schemaType'],
+  >(
     this: T,
     fn: (schema: T['inputSchema']) => InputSchema,
   ): { [K in keyof T]: K extends 'inputSchema' ? InputSchema : T[K] } {
@@ -1070,7 +1083,7 @@ export abstract class Column<
 
   output<
     T extends { outputSchema: unknown },
-    OutputSchema extends Schema['type'],
+    OutputSchema extends this['__schema']['__schemaType'],
   >(
     this: T,
     fn: (schema: T['outputSchema']) => OutputSchema,
@@ -1080,7 +1093,10 @@ export abstract class Column<
     return cloned;
   }
 
-  query<T extends { querySchema: unknown }, QuerySchema extends Schema['type']>(
+  query<
+    T extends { querySchema: unknown },
+    QuerySchema extends this['__schema']['__schemaType'],
+  >(
     this: T,
     fn: (schema: T['querySchema']) => QuerySchema,
   ): { [K in keyof T]: K extends 'querySchema' ? QuerySchema : T[K] } {
@@ -1202,7 +1218,7 @@ export abstract class Column<
    */
   setOnCreate<T extends Column.Pick.QueryInit>(
     this: T,
-    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['inputType'] | void,
+    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['__inputType'] | void,
   ): T {
     return setColumnData(this as never, 'setOnCreate', fn as never) as never;
   }
@@ -1225,7 +1241,7 @@ export abstract class Column<
    */
   setOnUpdate<T extends Column.Pick.QueryInit>(
     this: T,
-    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['inputType'] | void,
+    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['__inputType'] | void,
   ): T {
     return setColumnData(this as never, 'setOnUpdate', fn as never) as never;
   }
@@ -1248,7 +1264,7 @@ export abstract class Column<
    */
   setOnSave<T extends Column.Pick.QueryInit>(
     this: T,
-    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['inputType'] | void,
+    fn: (arg: QueryHookUtils<PickQueryInputType>) => T['__inputType'] | void,
   ): T {
     return setColumnData(this as never, 'setOnSave', fn as never) as never;
   }

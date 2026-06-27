@@ -12,8 +12,7 @@ import { ColumnToCodeCtx } from '../code';
 describe('array column', () => {
   it('should correctly parse various array types', () => {
     const textArray = t.array(t.text());
-
-    assertType<typeof textArray.outputType, string[]>();
+    assertType<typeof textArray.__outputType, string[]>();
 
     const parse = textArray.data.parse!;
     expect(parse('{}')).toEqual([]);
@@ -31,7 +30,7 @@ describe('array column', () => {
     expect(parse(arr)).toEqual(arr);
 
     const intArray = t.array(t.integer());
-    assertType<typeof intArray.outputType, number[]>();
+    assertType<typeof intArray.__outputType, number[]>();
 
     const parseInt = intArray.data.parse!;
     expect(parseInt('{1,2,3}')).toEqual([1, 2, 3]);
@@ -42,7 +41,7 @@ describe('array column', () => {
     expect(parseInt('[0:2]={1,2,3}')).toEqual([1, 2, 3]);
 
     const boolArray = t.array(t.boolean());
-    assertType<typeof boolArray.outputType, boolean[]>();
+    assertType<typeof boolArray.__outputType, boolean[]>();
 
     const parseBool = boolArray.data.parse!;
     expect(parseBool('{{true},{false}}')).toEqual([[true], [false]]);
@@ -56,7 +55,7 @@ describe('array column', () => {
       ),
     );
     assertType<
-      typeof jsonArray.outputType,
+      typeof jsonArray.__outputType,
       ({ a: number } | { b: boolean } | null)[]
     >();
 

@@ -260,8 +260,8 @@ describe('date time columns', () => {
 
   describe('asNumber', () => {
     it('should accept string, number, and Date', () => {
-      const { inputType } = t.timestamp().asNumber();
-      assertType<typeof inputType, string | number | Date>();
+      const { __inputType } = t.timestamp().asNumber();
+      assertType<typeof __inputType, string | number | Date>();
     });
 
     it('should parse and encode timestamp as a number', async () => {
@@ -331,8 +331,8 @@ describe('date time columns', () => {
 
   describe('asDate', () => {
     it('should accept string, number, and Date', () => {
-      const { inputType } = t.timestamp().asDate();
-      assertType<typeof inputType, string | number | Date>();
+      const { __inputType } = t.timestamp().asDate();
+      assertType<typeof __inputType, string | number | Date>();
     });
 
     it('should keep the default type', () => {

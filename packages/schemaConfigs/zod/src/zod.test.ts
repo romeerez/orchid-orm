@@ -1055,9 +1055,9 @@ describe('zod schema config', () => {
       const column = t.text().narrowType(z.literal('type'));
 
       assertType<
-        | typeof column.inputType
-        | typeof column.outputType
-        | typeof column.queryType,
+        | typeof column.__inputType
+        | typeof column.__outputType
+        | typeof column.__queryType,
         'type'
       >();
       assertType<
@@ -1087,8 +1087,11 @@ describe('zod schema config', () => {
     it('should be supported on a generated column', () => {
       const column = t.text().generated`SELECT 1`.narrowType(z.literal('type'));
 
-      assertType<typeof column.inputType, never>();
-      assertType<typeof column.outputType | typeof column.queryType, 'type'>();
+      assertType<typeof column.__inputType, never>();
+      assertType<
+        typeof column.__outputType | typeof column.__queryType,
+        'type'
+      >();
       assertType<typeof column.inputSchema, ZodNever>();
       assertType<
         typeof column.outputSchema | typeof column.querySchema,
@@ -1105,11 +1108,11 @@ describe('zod schema config', () => {
         query: z.literal('query'),
       });
 
-      assertType<typeof column.inputType, 'input'>();
+      assertType<typeof column.__inputType, 'input'>();
       assertType<typeof column.inputSchema, ZodLiteral<'input'>>();
-      assertType<typeof column.outputType, 'output'>();
+      assertType<typeof column.__outputType, 'output'>();
       assertType<typeof column.outputSchema, ZodLiteral<'output'>>();
-      assertType<typeof column.queryType, 'query'>();
+      assertType<typeof column.__queryType, 'query'>();
       assertType<typeof column.querySchema, ZodLiteral<'query'>>();
 
       expect(column.inputSchema).toBeInstanceOf(ZodLiteral);

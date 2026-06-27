@@ -13,15 +13,15 @@ import { ArrayMethodsData } from '../column-data-types';
 import { ColumnSchemaConfig, ColumnTypeSchemaArg } from '../column-schema';
 
 export interface ArrayColumnValue {
-  type: unknown;
+  __type: unknown;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputSchema: any;
-  inputType: unknown;
-  outputType: unknown;
+  __inputType: unknown;
+  __outputType: unknown;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   outputSchema: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  queryType: any;
+  __queryType: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   querySchema: any;
   toSQL(): string;
@@ -41,30 +41,28 @@ export class ArrayColumn<
   InputType,
   OutputType,
   QueryType,
-> extends Column<
-  Schema,
-  Item['type'][],
-  InputType,
-  OperatorsArray<Item['queryType']>,
-  Item['inputType'][],
-  Item['outputType'][],
-  OutputType,
-  Item['queryType'][],
-  QueryType
-> {
+> extends Column {
+  declare __schema: Schema;
   dataType = 'array' as const;
-  operators = Operators.array as OperatorsArray<Item['queryType']>;
+  operators = Operators.array as OperatorsArray<Item['__queryType']>;
   declare data: ArrayData<Item>;
+  declare __type: Item['__type'][];
+  declare __inputType: Item['__type'][];
+  declare inputSchema: InputType;
+  declare __outputType: Item['__outputType'][];
+  declare outputSchema: OutputType;
+  declare __queryType: Item['__queryType'][];
+  declare querySchema: QueryType;
 
   constructor(
     schema: Schema,
     item: Item,
-    inputType: InputType,
+    __inputType: InputType,
     defaultEncode?: (input: unknown) => unknown,
-    outputType?: OutputType,
-    queryType?: QueryType,
+    __outputType?: OutputType,
+    __queryType?: QueryType,
   ) {
-    super(schema, inputType, outputType, queryType);
+    super(schema, __inputType, __outputType, __queryType);
 
     // array items cannot be non-nullable, postgres limitation
     item.data.isNullable = true;

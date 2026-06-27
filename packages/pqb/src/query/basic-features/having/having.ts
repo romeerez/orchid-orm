@@ -7,7 +7,7 @@ import { pushQueryValueImmutable } from '../../query-data';
 // Function argument of `having`:
 // the same query builder as in `select` is passed in, boolean expression is expected to be returned.
 type HavingArgFn<T> = (q: T) => {
-  result: { value: { outputType: boolean } };
+  result: { value: { __outputType: boolean } };
 };
 
 export class Having {

@@ -67,7 +67,7 @@ export interface UpdateSelf
 
 // Type of argument for `update` and `updateOrThrow`
 //
-// It maps the `inputType` of a table into object with column values.
+// It maps the `__inputType` of a table into object with column values.
 // The column value may be a specific value, or raw SQL, or a query returning a single value,
 // or a callback with a relation query that is returning a single value,
 // or a callback with JSON methods.
@@ -75,14 +75,14 @@ export interface UpdateSelf
 // It enables all forms of relation operations such as nested `create`, `connect`, etc.
 export type UpdateData<T extends UpdateSelf> = {
   [K in
-    | keyof T['inputType']
-    | keyof T['relations']]?: K extends keyof T['inputType']
+    | keyof T['__inputType']
+    | keyof T['relations']]?: K extends keyof T['__inputType']
     ?
         // Type of available variants to provide for a specific column when updating.
         // The column value may be a specific value, or raw SQL, or a query returning a single value,
         // or a callback with a relation query that is returning a single value,
         // or a callback with JSON methods.
-        | T['inputType'][K]
+        | T['__inputType'][K]
         | ((q: {
             [K in
               | keyof T['relations']
@@ -91,7 +91,7 @@ export type UpdateData<T extends UpdateSelf> = {
               : K extends keyof T
                 ? T[K]
                 : never;
-          }) => QueryOrExpression<T['inputType'][K]>)
+          }) => QueryOrExpression<T['__inputType'][K]>)
     : // Add relation operations to the update argument.
       T['returnType'] extends undefined | 'all'
       ? T['relations'][K]['dataForUpdate']
@@ -113,20 +113,20 @@ type UpdateResult<T extends UpdateSelf> = T['__hasSelect'] extends true
     : SetQueryReturnsRowCount<T>;
 
 export type NumericColumns<T extends UpdateSelf> = {
-  [K in keyof T['inputType']]: Exclude<
-    T['shape'][K]['queryType'],
+  [K in keyof T['__inputType']]: Exclude<
+    T['shape'][K]['__queryType'],
     string
   > extends number | bigint | null
     ? K
     : never;
-}[keyof T['inputType']];
+}[keyof T['__inputType']];
 
 // `increment` and `decrement` methods argument type.
 // Accepts a column name to change, or an object with column names and number values to increment or decrement with.
 export type ChangeCountArg<T extends UpdateSelf> =
   | NumericColumns<T>
   | {
-      [K in NumericColumns<T>]?: T['shape'][K]['type'] extends number | null
+      [K in NumericColumns<T>]?: T['shape'][K]['__type'] extends number | null
         ? number
         : number | string | bigint;
     };
@@ -144,9 +144,9 @@ interface UpdateManyBySelf extends UpdateSelf {
 type UpdateManyData<T extends UpdateSelf> = ({
   [K in keyof T['shape'] as T['shape'][K] extends Column.Modifiers.IsPrimaryKey<string>
     ? K
-    : never]: T['shape'][K]['queryType'] | Expression;
+    : never]: T['shape'][K]['__queryType'] | Expression;
 } & {
-  [P in keyof T['inputType']]?: T['inputType'][P] | Expression;
+  [P in keyof T['__inputType']]?: T['__inputType'][P] | Expression;
 })[];
 
 // Valid keys for updateManyBy: a single unique column name or a compound tuple
@@ -160,11 +160,11 @@ type UpdateManyByKeyColumns<K> = K extends string[] ? K[number] : K;
 // Data type for updateManyBy / updateManyByOptional (custom keys)
 // Inlined to minimize mapped type instantiations
 type UpdateManyByData<T extends UpdateSelf, K> = ({
-  [P in K & keyof T['inputType']]: T['inputType'][P];
+  [P in K & keyof T['__inputType']]: T['__inputType'][P];
 } & {
-  [P in keyof T['inputType']]?: P extends K
-    ? T['inputType'][P]
-    : T['inputType'][P] | Expression;
+  [P in keyof T['__inputType']]?: P extends K
+    ? T['__inputType'][P]
+    : T['__inputType'][P] | Expression;
 })[];
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult

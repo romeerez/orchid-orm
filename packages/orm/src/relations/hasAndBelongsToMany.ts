@@ -95,7 +95,7 @@ export type HasAndBelongsToManyParams<
   T extends RelationConfigSelf,
   FK extends string,
 > = {
-  [Name in FK]: T['columns']['shape'][Name]['type'];
+  [Name in FK]: T['columns']['shape'][Name]['__type'];
 };
 
 export type HasAndBelongsToManyQuery<

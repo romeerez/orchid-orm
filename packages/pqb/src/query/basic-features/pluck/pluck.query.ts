@@ -38,7 +38,7 @@ export type PluckResult<
               : K extends 'returnType'
                 ? 'pluck'
                 : K extends 'then'
-                  ? QueryThen<R['result']['value']['outputType'][]>
+                  ? QueryThen<R['result']['value']['__outputType'][]>
                   : T[K];
         }
       : never

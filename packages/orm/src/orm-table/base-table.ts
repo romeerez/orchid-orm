@@ -249,7 +249,7 @@ export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
 
 // Object type that's allowed in `where` and similar methods of the table.
 export type Queryable<T extends PickORMTableInputColumns> = ShallowSimplify<{
-  [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['queryType'];
+  [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['__queryType'];
 }>;
 
 export type DefaultSelect<T extends PickORMTableInputColumns> = ShallowSimplify<
@@ -266,13 +266,13 @@ export type Selectable<T extends PickORMTableInputColumnsAndComputed> =
               value: infer Value extends Column.Pick.QueryColumn;
             };
           }
-            ? Value['outputType']
+            ? Value['__outputType']
             : R[K] extends () => {
                   result: {
                     value: infer Value extends Column.Pick.QueryColumn;
                   };
                 }
-              ? Value['outputType']
+              ? Value['__outputType']
               : never;
         }
       >

@@ -2,7 +2,7 @@ import { Column } from '../column';
 import { joinTruthy } from '../../utils';
 import { Code, ColumnToCodeCtx, dateDataToCode } from '../code';
 import { columnCode } from '../code';
-import { Operators, OperatorsDate, OperatorsTime } from '../operators';
+import { Operators } from '../operators';
 import { DateColumnData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
 import { PostgresInterval } from '../../adapters/driver-adapter-shared';
@@ -44,16 +44,16 @@ export const getDateAsDateFn = (column: {
 // common class for Date and DateTime columns
 export abstract class DateBaseColumn<
   Schema extends ColumnSchemaConfig,
-> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringNumberDate']>,
-  OperatorsDate,
-  DateColumnInput,
-  string,
-  ReturnType<Schema['stringSchema']>
-> {
+> extends Column {
+  declare __schema: Schema;
+  declare __type: string;
+  declare __inputType: DateColumnInput;
+  declare inputSchema: ReturnType<Schema['stringNumberDate']>;
   declare data: DateColumnData;
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: DateColumnInput;
+  declare querySchema: ReturnType<Schema['stringNumberDate']>;
   operators = Operators.date;
   asNumber: Schema['dateAsNumber'];
   asDate: Schema['dateAsDate'];
@@ -196,13 +196,16 @@ export class TimestampTZColumn<
 }
 
 // time [ (p) ] [ without time zone ]	8 bytes	time of day (no date)	00:00:00	24:00:00	1 microsecond
-export class TimeColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  string,
-  ReturnType<Schema['stringSchema']>,
-  OperatorsTime
-> {
+export class TimeColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
+  declare __type: string;
+  declare __inputType: ReturnType<Schema['stringSchema']>;
+  declare inputSchema: ReturnType<Schema['stringSchema']>;
   declare data: DateColumnData & { dateTimePrecision?: number };
+  declare __outputType: string;
+  declare outputSchema: ReturnType<Schema['stringSchema']>;
+  declare __queryType: string;
+  declare querySchema: ReturnType<Schema['stringSchema']>;
   dataType = 'time' as const;
   operators = Operators.time;
 
@@ -252,15 +255,16 @@ const serializePostgresInterval = (
 };
 
 // interval [ fields ] [ (p) ]	16 bytes	time interval	-178000000 years	178000000 years	1 microsecond
-export class IntervalColumn<Schema extends ColumnSchemaConfig> extends Column<
-  Schema,
-  PostgresInterval,
-  ReturnType<Schema['timeInterval']>,
-  OperatorsDate,
-  Partial<PostgresInterval>,
-  PostgresInterval
-> {
+export class IntervalColumn<Schema extends ColumnSchemaConfig> extends Column {
+  declare __schema: Schema;
+  declare __type: PostgresInterval;
   declare data: Column.Data & { fields?: string; precision?: number };
+  declare __inputType: Partial<PostgresInterval>;
+  declare inputSchema: ReturnType<Schema['timeInterval']>;
+  declare __outputType: PostgresInterval;
+  declare outputSchema: ReturnType<Schema['timeInterval']>;
+  declare __queryType: PostgresInterval;
+  declare querySchema: ReturnType<Schema['timeInterval']>;
   dataType = 'interval' as const;
   operators = Operators.date;
 
