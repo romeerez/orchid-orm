@@ -6,6 +6,7 @@ import {
   expectSql,
   sql,
   testDb,
+  testJsonValue,
   UserData,
   UserSelectAll,
   useTestDatabase,
@@ -1009,16 +1010,14 @@ describe('operators', () => {
         data: t.json<string[]>(),
       }));
 
-      beforeAll(async () => {
-        await jsonTable.insert({
-          name: 'name',
-          password: 'password',
-          data: ['foo', 'bar'],
-        });
-      });
-
       describe('equals', () => {
         it('should compare json column with array value', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: ['foo', 'bar'],
+          });
+
           const q = jsonTable.where({ data: { equals: ['foo', 'bar'] } });
 
           expectSql(
@@ -1027,7 +1026,7 @@ describe('operators', () => {
                 SELECT * FROM "schema"."user"
                 WHERE "user"."data" = $1
               `,
-            [['foo', 'bar']],
+            [testJsonValue(['foo', 'bar'])],
           );
 
           const res = await q;
@@ -1071,6 +1070,12 @@ describe('operators', () => {
 
       describe('not', () => {
         it('should compare json column with array value', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: ['foo', 'bar'],
+          });
+
           const q = jsonTable.where({ data: { not: ['foo', 'bar'] } });
 
           expectSql(
@@ -1079,7 +1084,7 @@ describe('operators', () => {
                 SELECT * FROM "schema"."user"
                 WHERE "user"."data" != $1
               `,
-            [['foo', 'bar']],
+            [testJsonValue(['foo', 'bar'])],
           );
 
           const res = await q;
@@ -1120,6 +1125,12 @@ describe('operators', () => {
 
       describe('in', () => {
         it('should compare json column with array values', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: ['foo', 'bar'],
+          });
+
           const q = jsonTable.where({
             data: {
               in: [['foo', 'bar'], ['baz']],
@@ -1132,14 +1143,19 @@ describe('operators', () => {
                 SELECT * FROM "schema"."user"
                 WHERE "user"."data" IN ($1, $2)
               `,
-            [['foo', 'bar'], ['baz']],
+            [testJsonValue(['foo', 'bar']), testJsonValue(['baz'])],
           );
 
           const res = await q;
           expect(res).toHaveLength(1);
         });
 
-        it('should cast params to jsonb', () => {
+        it('should not cast params to jsonb', async () => {
+          await db.user.insert({
+            ...UserData,
+            Data: { name: 'name', tags: [] },
+          });
+
           const q = db.user
             .get('Data')
             .jsonPathQueryFirst('$.name')
@@ -1148,12 +1164,15 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT jsonb_path_query_first("user"."data", $1) IN ($2::jsonb)
+                SELECT jsonb_path_query_first("user"."data", $1) IN ($2)
                 FROM "schema"."user"
                 LIMIT 1
               `,
-            ['$.name', '"name"'],
+            ['$.name', testJsonValue('name')],
           );
+
+          const res = await q;
+          expect(res).toBe(true);
         });
 
         it('should use `false` for empty array', () => {
@@ -1173,6 +1192,12 @@ describe('operators', () => {
 
       describe('notIn', () => {
         it('should compare json column with array values', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: ['foo', 'bar'],
+          });
+
           const q = jsonTable.where({
             data: {
               notIn: [['foo', 'bar'], ['baz']],
@@ -1185,14 +1210,19 @@ describe('operators', () => {
                 SELECT * FROM "schema"."user"
                 WHERE NOT "user"."data" IN ($1, $2)
               `,
-            [['foo', 'bar'], ['baz']],
+            [testJsonValue(['foo', 'bar']), testJsonValue(['baz'])],
           );
 
           const res = await q;
           expect(res).toHaveLength(0);
         });
 
-        it('should cast params to jsonb', () => {
+        it('should not cast params to jsonb', async () => {
+          await db.user.insert({
+            ...UserData,
+            Data: { name: 'name', tags: [] },
+          });
+
           const q = db.user
             .get('Data')
             .jsonPathQueryFirst('$.name')
@@ -1201,12 +1231,15 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT NOT jsonb_path_query_first("user"."data", $1) IN ($2::jsonb)
+                SELECT NOT jsonb_path_query_first("user"."data", $1) IN ($2)
                 FROM "schema"."user"
                 LIMIT 1
               `,
-            ['$.name', '"name"'],
+            ['$.name', testJsonValue('name')],
           );
+
+          const res = await q;
+          expect(res).toBe(false);
         });
 
         it('should use `true` for empty array', () => {

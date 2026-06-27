@@ -607,6 +607,9 @@ const jsonPathQueryOp = (
         : ''
   })`;
 
+const shouldEncodeJson = (ctx: ToSQLCtx) =>
+  ctx.q.adapter.driverAdapter.schemaConfig?.jsonEncodedByDriver === false;
+
 const quoteJsonValue = (
   arg: unknown,
   ctx: ToSQLCtx,
@@ -617,15 +620,17 @@ const quoteJsonValue = (
     if (IN && Array.isArray(arg)) {
       return `(${arg
         .map((value) =>
-          Array.isArray(value)
-            ? addValue(ctx.values, value)
-            : addValue(ctx.values, JSON.stringify(value)) + '::jsonb',
+          shouldEncodeJson(ctx)
+            ? addValue(ctx.values, JSON.stringify(value))
+            : addValue(ctx.values, value),
         )
         .join(', ')})`;
     }
 
     if (Array.isArray(arg)) {
-      return addValue(ctx.values, arg);
+      return shouldEncodeJson(ctx)
+        ? addValue(ctx.values, JSON.stringify(arg))
+        : addValue(ctx.values, arg);
     }
 
     if (isExpression(arg)) {
