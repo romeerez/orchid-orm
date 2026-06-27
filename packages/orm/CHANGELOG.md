@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.73.0
+
+### Minor Changes
+
+- d5297f38: Infer `belongsTo` requiredness from local column nullability when `required` is omitted, so non-nullable foreign keys behave as required relations by default (#420)
+
+### Patch Changes
+
+- 87ab0e84: Add `sql.join` for composing safe SQL lists from values and expressions
+- Updated dependencies [87ab0e84]
+- Updated dependencies [d5297f38]
+- Updated dependencies [8bf9c067]
+  - pqb@0.68.0
+  - rake-db@2.36.11
+
 ## 1.72.11
 
 ### Patch Changes
