@@ -2,6 +2,9 @@
 
 ## orchid-orm 1.72
 
+`jsonb` values are now serialized by the database driver instead of by OrchidORM, so the `postgres.js` and `bun` adapters serialize them themselves.
+Previously OrchidORM did `JSON.stringify` and passed the resulting string to the driver; now it passes the value as is, so interpolating an already-stringified value into raw SQL for a `jsonb` parameter serializes it twice — pass the object instead.
+
 When using the `node-postgres` adapter, pass `nodePostgresSchemaConfig` to `schemaConfig` in `createBaseTable`.
 This aligns OrchidORM column encoding and parsing behavior with node-postgres column type parsing.
 
