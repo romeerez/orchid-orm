@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.73.1
+
+### Patch Changes
+
+- 97716c73: Add null-safe `isDistinctFrom` and `isNotDistinctFrom` condition operators that compile to Postgres `IS DISTINCT FROM` and `IS NOT DISTINCT FROM` comparisons. These operators make nullable column filtering available without manual `OR NULL` workarounds. (#723)
+- Updated dependencies [97716c73]
+  - pqb@0.68.1
+  - rake-db@2.36.12
+
 ## 1.73.0
 
 ### Minor Changes
