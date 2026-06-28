@@ -57,6 +57,20 @@ describe('aggregate', () => {
         [3],
       );
     });
+
+    it('should allow to chain agg method with base operators', () => {
+      const q = User.count().isNotDistinctFrom(3);
+
+      assertType<Awaited<typeof q>, boolean>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT count(*) IS NOT DISTINCT FROM $1 FROM "schema"."user"
+        `,
+        [3],
+      );
+    });
   });
 
   describe('aggregate options', () => {
@@ -99,6 +113,16 @@ describe('aggregate', () => {
       expectSql(
         User.count('name', { filter: { age: { not: null } } }).toSQL(),
         'SELECT count("user"."name") FILTER (WHERE "user"."age" IS NOT NULL) FROM "schema"."user"',
+      );
+    });
+
+    it('should support base operators in filter', () => {
+      expectSql(
+        User.count('name', {
+          filter: { id: { isDistinctFrom: 10 } },
+        }).toSQL(),
+        'SELECT count("user"."name") FILTER (WHERE "user"."id" IS DISTINCT FROM $1) FROM "schema"."user"',
+        [10],
       );
     });
 

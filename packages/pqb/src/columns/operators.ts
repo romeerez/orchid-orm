@@ -231,6 +231,8 @@ interface Base<Value> {
   __hasSelect: true;
   equals: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   not: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  isDistinctFrom: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
+  isNotDistinctFrom: Operator<Value | IsQuery | Expression, BooleanQueryColumn>;
   in: Operator<Value[] | IsQuery | Expression, BooleanQueryColumn>;
   notIn: Operator<Value[] | IsQuery | Expression, BooleanQueryColumn>;
 }
@@ -245,6 +247,14 @@ const base = {
     value === null
       ? `${key} IS NOT NULL`
       : `${key} <> ${quoteValue(value, ctx, quotedAs)}`,
+  ),
+  isDistinctFrom: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} IS DISTINCT FROM ${quoteValue(value, ctx, quotedAs)}`,
+  ),
+  isNotDistinctFrom: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} IS NOT DISTINCT FROM ${quoteValue(value, ctx, quotedAs)}`,
   ),
   in: make((key, value, ctx, quotedAs) =>
     Array.isArray(value) && !value.length
@@ -674,6 +684,14 @@ const json = {
     value === null
       ? `nullif(${key}, 'null'::jsonb) IS NOT NULL`
       : `${key} != ${quoteJsonValue(value, ctx, quotedAs)}`,
+  ),
+  isDistinctFrom: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} IS DISTINCT FROM ${quoteJsonValue(value, ctx, quotedAs)}`,
+  ),
+  isNotDistinctFrom: make(
+    (key, value, ctx, quotedAs) =>
+      `${key} IS NOT DISTINCT FROM ${quoteJsonValue(value, ctx, quotedAs)}`,
   ),
   in: make((key, value, ctx, quotedAs) =>
     Array.isArray(value) && !value.length

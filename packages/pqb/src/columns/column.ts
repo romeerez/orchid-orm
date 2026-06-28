@@ -65,6 +65,8 @@ export namespace Column {
                             [K in keyof T['operators']]: K extends
                               | 'equals'
                               | 'not'
+                              | 'isDistinctFrom'
+                              | 'isNotDistinctFrom'
                               ? Operator<T | null>
                               : T['operators'][K];
                           }
@@ -86,10 +88,12 @@ export namespace Column {
       optional: true;
     }
 
-    // allow `null` in .where({ column: { equals: null } }) and the same for `not`
+    // allow `null` in .where({ column: { equals: null } }) and the same for equality-style operators
     export interface OperatorsNullable<T> {
       equals: Operator<T | null>;
       not: Operator<T | null>;
+      isDistinctFrom: Operator<T | null>;
+      isNotDistinctFrom: Operator<T | null>;
     }
 
     // change the input type of the column

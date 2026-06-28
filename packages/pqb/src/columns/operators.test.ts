@@ -62,6 +62,24 @@ describe('operators', () => {
     });
   });
 
+  describe('chaining with base operators', () => {
+    it('should support isDistinctFrom', () => {
+      const q = db.user.get('Name').isDistinctFrom('name');
+
+      assertType<Awaited<typeof q>, boolean>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "user"."name" IS DISTINCT FROM $1
+          FROM "schema"."user"
+          LIMIT 1
+        `,
+        ['name'],
+      );
+    });
+  });
+
   describe('not', () => {
     it('should handle value', () => {
       expectSql(
@@ -90,6 +108,116 @@ describe('operators', () => {
         `
           SELECT ${UserSelectAll} FROM "schema"."user"
           WHERE "user"."name" <> 'name'
+        `,
+      );
+    });
+  });
+
+  describe('isDistinctFrom', () => {
+    it('should handle value', () => {
+      expectSql(
+        db.user.where({ Name: { isDistinctFrom: 'name' } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."name" IS DISTINCT FROM $1
+        `,
+        ['name'],
+      );
+    });
+
+    it('should handle null', () => {
+      expectSql(
+        db.user.where({ Picture: { isDistinctFrom: null } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."picture" IS DISTINCT FROM $1
+        `,
+        [null],
+      );
+    });
+
+    it('should handle sub query', () => {
+      expectSql(
+        db.user
+          .where({ Name: { isDistinctFrom: db.user.select('Name').take() } })
+          .toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."name" IS DISTINCT FROM (SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1)
+        `,
+      );
+    });
+
+    it('should handle raw query', () => {
+      expectSql(
+        db.user.where({ Name: { isDistinctFrom: testDb.sql`'name'` } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."name" IS DISTINCT FROM 'name'
+        `,
+      );
+    });
+
+    it('should keep structural negation', () => {
+      expectSql(
+        [
+          db.user.where({ NOT: { Name: { isDistinctFrom: 'name' } } }).toSQL(),
+          db.user.whereNot({ Name: { isDistinctFrom: 'name' } }).toSQL(),
+        ],
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE NOT "user"."name" IS DISTINCT FROM $1
+        `,
+        ['name'],
+      );
+    });
+  });
+
+  describe('isNotDistinctFrom', () => {
+    it('should handle value', () => {
+      expectSql(
+        db.user.where({ Name: { isNotDistinctFrom: 'name' } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."name" IS NOT DISTINCT FROM $1
+        `,
+        ['name'],
+      );
+    });
+
+    it('should handle null', () => {
+      expectSql(
+        db.user.where({ Picture: { isNotDistinctFrom: null } }).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."picture" IS NOT DISTINCT FROM $1
+        `,
+        [null],
+      );
+    });
+
+    it('should handle sub query', () => {
+      expectSql(
+        db.user
+          .where({
+            Name: { isNotDistinctFrom: db.user.select('Name').take() },
+          })
+          .toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."name" IS NOT DISTINCT FROM (SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1)
+        `,
+      );
+    });
+
+    it('should handle raw query', () => {
+      expectSql(
+        db.user
+          .where({ Name: { isNotDistinctFrom: testDb.sql`'name'` } })
+          .toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user"
+          WHERE "user"."name" IS NOT DISTINCT FROM 'name'
         `,
       );
     });
@@ -1120,6 +1248,32 @@ describe('operators', () => {
               `,
             ['$.name'],
           );
+        });
+      });
+
+      describe('isDistinctFrom', () => {
+        it('should compare json column with array value', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: ['foo', 'bar'],
+          });
+
+          const q = jsonTable.where({
+            data: { isDistinctFrom: ['foo', 'bar'] },
+          });
+
+          expectSql(
+            q.toSQL(),
+            `
+                SELECT * FROM "schema"."user"
+                WHERE "user"."data" IS DISTINCT FROM $1
+              `,
+            [testJsonValue(['foo', 'bar'])],
+          );
+
+          const res = await q;
+          expect(res).toHaveLength(0);
         });
       });
 

@@ -500,6 +500,8 @@ The following operators are available for any kind of column:
 
 - `equals`: `=` operator, it may be useful for comparing column value with JSON object;
 - `not`: `!=` (aka `<>`) not equal operator;
+- `isDistinctFrom`: `IS DISTINCT FROM` null-safe not equal operator;
+- `isNotDistinctFrom`: `IS NOT DISTINCT FROM` null-safe equal operator;
 - `in`: `IN` operator to check if the column value is included in a list of values.
   Takes an array of values, or a sub-query returning a list of values, or a raw SQL expression that returns a list;
 - `notIn`: `NOT IN` operator, and takes the same arguments as `in`.
@@ -514,6 +516,10 @@ db.table.where({
 
   anyColumn: { not: value },
 
+  anyColumn: { isDistinctFrom: value },
+
+  anyColumn: { isNotDistinctFrom: value },
+
   column: {
     in: ['a', 'b', 'c'],
 
@@ -524,6 +530,27 @@ db.table.where({
   },
 });
 ```
+
+Use `isDistinctFrom` and `isNotDistinctFrom` when `NULL` has to participate in the comparison.
+For example, `{ title: { not: 'a' } }` does not match rows where `title` is `NULL`, because SQL `!=` produces an unknown result for `NULL`.
+`isDistinctFrom` compiles to `IS DISTINCT FROM`, so it matches both values different from `'a'` and `NULL` values:
+
+```ts
+// These two filters are equivalent for nullable title filtering:
+await db.post.whereOneOf({ title: { not: 'a' } }, { title: null });
+await db.post.where({ title: { isDistinctFrom: 'a' } });
+
+// SQL: WHERE "title" IS DISTINCT FROM 'a'
+await db.post.where({ title: { isDistinctFrom: 'a' } });
+
+// SQL: WHERE "title" IS NOT DISTINCT FROM 'a'
+await db.post.where({ title: { isNotDistinctFrom: 'a' } });
+
+// SQL: WHERE "title" IS NOT DISTINCT FROM NULL
+await db.post.where({ title: { isNotDistinctFrom: null } });
+```
+
+Condition-object `isDistinctFrom` is unrelated to query-result `distinct()` and aggregate `{ distinct: true }`.
 
 ### ordinal operators
 
