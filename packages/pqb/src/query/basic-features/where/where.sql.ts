@@ -1,18 +1,10 @@
 import { Query } from '../../query';
-import {
-  columnToSql,
-  simpleColumnToSQL,
-  simpleExistingColumnToSQL,
-} from '../../sql/column-to-sql';
+import { columnToSql, simpleColumnToSQL } from '../../sql/column-to-sql';
 import { JoinItemArgs, processJoinItem } from '../join/join.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
-import {
-  PickQueryDataShapeAndJoinedShapes,
-  QueryData,
-  QueryScopeData,
-} from '../../query-data';
+import { JoinedShapes, QueryData, QueryScopeData } from '../../query-data';
 import { Column } from '../../../columns/column';
-import { selectToSql } from '../select/select.sql';
+import { SelectItem, selectToSql } from '../select/select.sql';
 import { OperatorToSQL } from '../../../columns/operators';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
@@ -22,6 +14,7 @@ import { Expression, isExpression } from '../../expressions/expression';
 import { addValue, MaybeArray, RecordUnknown, toArray } from '../../../utils';
 import { WhereSearchItem } from '../../extra-features/search/search.sql';
 import { joinSubQuery } from '../join/join';
+import { ColumnsShape } from '../../../columns';
 
 export type WhereItem =
   | {
@@ -367,7 +360,14 @@ const whereExprOrQuery = (
     let column: Column.Pick.QueryColumn | undefined = query.shape[key];
     let quotedColumn: string | undefined;
     if (column) {
-      quotedColumn = simpleExistingColumnToSQL(ctx, key, column, quotedAs);
+      quotedColumn = simpleColumnToSQL(
+        ctx,
+        query,
+        query.shape,
+        key,
+        column,
+        quotedAs,
+      );
     } else if (!column) {
       const index = key.indexOf('.');
       if (index !== -1) {
@@ -381,7 +381,14 @@ const whereExprOrQuery = (
             : query.joinedShapes?.[table]?.[name]
         ) as typeof column;
 
-        quotedColumn = simpleColumnToSQL(ctx, name, column, quoted);
+        quotedColumn = simpleColumnToSQL(
+          ctx,
+          query,
+          query.shape,
+          name,
+          column,
+          quoted,
+        );
       } else {
         column = query.joinedShapes?.[key]?.value;
         quotedColumn = `"${key}"."${key}"`;
@@ -421,7 +428,8 @@ const whereExprOrQuery = (
 interface OnColumnToSQLQuery {
   joinedShapes?: QueryData['joinedShapes'];
   aliases?: QueryData['aliases'];
-  shape: Column.QueryColumns;
+  shape: ColumnsShape;
+  select?: SelectItem[];
 }
 
 const onColumnToSql = (
@@ -437,7 +445,11 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 
 const pushIn = (
   ctx: ToSQLCtx,
-  query: PickQueryDataShapeAndJoinedShapes,
+  query: {
+    shape: ColumnsShape;
+    joinedShapes?: JoinedShapes;
+    select?: SelectItem[];
+  },
   ands: string[],
   quotedAs: string | undefined,
   arg: {

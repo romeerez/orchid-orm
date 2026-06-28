@@ -1,4 +1,4 @@
-import { PickQueryDataShapeAndJoinedShapes, QueryData } from '../query-data';
+import { JoinedShapes, QueryData } from '../query-data';
 import { ToSQLCtx } from './to-sql';
 import { Column } from '../../columns/column';
 import { RecordString } from '../../utils';
@@ -6,37 +6,138 @@ import { ColumnsParsers } from '../query-columns/query-column-parsers';
 import { _getQueryAliasOrName } from '../basic-features/as/as';
 import { Expression, SelectableOrExpression } from '../expressions/expression';
 import { getSelectedColumnData, makeRowToJson } from './sql';
-
-/**
- * Acts as {@link simpleExistingColumnToSQL} except that the column is optional and will return quoted key if no column.
- */
-export function simpleColumnToSQL(
-  ctx: ToSQLCtx,
-  key: string,
-  column?: Column.Pick.QueryColumn,
-  quotedAs?: string,
-): string {
-  if (!column) return `"${key}"`;
-
-  const { data } = column as unknown as Column.Pick.Data;
-  return data.computed
-    ? `(${data.computed.toSQL(ctx, quotedAs)})`
-    : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
-}
+import { SelectItem } from '../basic-features/select/select.sql';
 
 // Takes a column name without a dot and the optional column object.
 // Handles computed column, uses column.data.name when set, prefixes regular column with `quotedAs`.
-export function simpleExistingColumnToSQL(
+// Returns quoted key if no column is provided.
+export function simpleColumnToSQL(
   ctx: ToSQLCtx,
+  queryData: {
+    select?: SelectItem[];
+    joinedShapes?: JoinedShapes;
+  },
+  shape: Column.QueryColumns,
   key: string,
-  column: Column.Pick.QueryColumn,
+  column?: Column.Pick.QueryColumn,
   quotedAs?: string,
+  select?: true,
+  as?: string,
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
+  useSelectList?: true,
+  skipSelectSql?: true,
 ): string {
-  const { data } = column as unknown as Column.Pick.Data;
-  return data.computed
-    ? `(${data.computed.toSQL(ctx, quotedAs)})`
-    : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
+  let sql: string;
+  let dontAlias: boolean | undefined;
+
+  if (useSelectList && queryData.select) {
+    for (const s of queryData.select) {
+      if (typeof s === 'object' && 'selectAs' in s) {
+        if (key in s.selectAs) {
+          dontAlias = true;
+          sql = simpleColumnToSQL(ctx, queryData, shape, key, shape[key]);
+          break;
+        }
+      }
+    }
+  }
+
+  // @ts-ignore
+  if (!sql) {
+    if (!column) {
+      dontAlias = key === as;
+      sql = `${quotedAs ? `${quotedAs}.` : ''}"${key}"`;
+    } else {
+      if (jsonList && as) {
+        jsonList[as] = column && getSelectedColumnData(column as Column);
+      }
+
+      const { data } = column as unknown as Column.Pick.Data;
+      if (select && data.selectSql && !skipSelectSql) {
+        sql = `(${data.selectSql.toSQL(ctx, quotedAs)})`;
+      } else if (data.computed) {
+        sql = `(${data.computed.toSQL(ctx, quotedAs)})`;
+      } else {
+        const name = data.name || key;
+        dontAlias = name === as;
+        sql = `${quotedAs ? `${quotedAs}.` : ''}"${name}"`;
+      }
+    }
+  }
+
+  if (as && !dontAlias) {
+    sql = `${sql} "${as}"`;
+  }
+
+  return sql;
 }
+
+export const tableColumnToSql = (
+  ctx: ToSQLCtx,
+  data: {
+    valuesJoinedAs?: RecordString;
+    aliases?: RecordString;
+    joinedShapes?: QueryData['joinedShapes'];
+    parsers?: ColumnsParsers;
+    select?: SelectItem[];
+  },
+  shape: Column.QueryColumns,
+  table: string,
+  key: string,
+  quotedAs?: string,
+  select?: true,
+  as?: string,
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
+) => {
+  let sql: string;
+  let dontAlias: boolean | undefined;
+
+  if (key === '*') {
+    if (jsonList && as) {
+      jsonList[as] = undefined;
+    }
+
+    const shape = data.joinedShapes?.[table];
+    if (shape) {
+      sql = select
+        ? makeRowToJson(ctx, table, shape as never, true)
+        : `"${table}".*`;
+    } else {
+      sql = `"${table}"."${key}"`;
+      dontAlias = true;
+    }
+  } else {
+    const tableName = _getQueryAliasOrName(data, table);
+    const quoted = `"${table}"`;
+
+    const col = (quoted === quotedAs
+      ? shape[key]
+      : data.joinedShapes?.[tableName]?.[key]) as unknown as
+      | Column.Pick.Data
+      | undefined;
+
+    if (jsonList && as) {
+      jsonList[as] = col && getSelectedColumnData(col);
+    }
+
+    if (col?.data.selectSql) {
+      sql = `(${col.data.selectSql.toSQL(ctx, quoted)})`;
+    } else if (col?.data.name) {
+      sql = `"${tableName}"."${col.data.name}"`;
+    } else if (col?.data.computed) {
+      sql = `(${col.data.computed.toSQL(ctx, quoted)})`;
+    } else {
+      sql = `"${tableName}"."${key}"`;
+      dontAlias = key === as;
+    }
+  }
+
+  if (as && !dontAlias) {
+    sql = `${sql} "${as}"`;
+  }
+
+  return sql;
+};
 
 export const columnToSql = (
   ctx: ToSQLCtx,
@@ -45,14 +146,18 @@ export const columnToSql = (
     aliases?: RecordString;
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
+    select?: SelectItem[];
   },
   shape: Column.QueryColumns,
   column: string,
   quotedAs?: string,
   select?: true,
+  as?: string,
+  jsonList?: { [K: string]: Column.Pick.Data | undefined },
+  useSelectList?: true,
 ): string => {
   let index = column.indexOf('.');
-  if (index === -1) {
+  if (index === -1 && !select) {
     const joinAs = data.valuesJoinedAs?.[column];
     if (joinAs) {
       column = joinAs + '.' + column;
@@ -61,288 +166,44 @@ export const columnToSql = (
   }
 
   if (index !== -1) {
-    return columnWithDotToSql(
+    const table = column.slice(0, index);
+    const key = column.slice(index + 1);
+    return tableColumnToSql(
       ctx,
       data,
       shape,
-      column,
-      index,
+      table,
+      key,
       quotedAs,
       select,
+      as,
+      jsonList,
     );
   }
 
-  return simpleColumnToSQL(ctx, column, shape[column], quotedAs);
-};
-
-export const selectedColumnToSql = (
-  ctx: ToSQLCtx,
-  data: {
-    aliases?: RecordString;
-    joinedShapes?: QueryData['joinedShapes'];
-  },
-  shape: Column.QueryColumns,
-  column: string,
-  quotedAs?: string,
-): string => {
-  const index = column.indexOf('.');
-  return index !== -1
-    ? selectedColumnWithDotToSql(ctx, data, shape, column, index, quotedAs)
-    : selectedSimpleColumnToSql(ctx, column, shape[column], quotedAs);
-};
-
-const selectedSimpleColumnToSql = (
-  ctx: ToSQLCtx,
-  key: string,
-  column?: Column.Pick.QueryColumn,
-  quotedAs?: string,
-): string => {
-  if (!column) return `"${key}"`;
-
-  const { data } = column as unknown as Column.Pick.Data;
-  return data.selectSql
-    ? `(${data.selectSql.toSQL(ctx, quotedAs)})`
-    : `${quotedAs ? `${quotedAs}.` : ''}"${data.name || key}"`;
-};
-
-/**
- * in a case when ordering or grouping by a column which was selected as expression:
- * ```ts
- * table.select({ x: (q) => q.sum('x') }).group('x').order('x')
- * ```
- * the column must not be prefixed with a table name.
- */
-export const maybeSelectedColumnToSql = (
-  ctx: ToSQLCtx,
-  data: QueryData,
-  column: string,
-  quotedAs?: string,
-): string => {
-  const index = column.indexOf('.');
-  if (index !== -1) {
-    return columnWithDotToSql(ctx, data, data.shape, column, index, quotedAs);
-  } else {
-    if (data.joinedShapes?.[column]) {
-      return `"${column}"."${column}"`;
-    }
-
-    if (data.select) {
-      for (const s of data.select) {
-        if (typeof s === 'object' && 'selectAs' in s) {
-          if (column in s.selectAs) {
-            return simpleColumnToSQL(ctx, column, data.shape[column]);
-          }
-        }
-      }
-    }
-
-    return simpleColumnToSQL(ctx, column, data.shape[column], quotedAs);
-  }
-};
-
-const columnWithDotToSql = (
-  ctx: ToSQLCtx,
-  data: {
-    aliases?: RecordString;
-    joinedShapes?: QueryData['joinedShapes'];
-    parsers?: ColumnsParsers;
-  },
-  shape: Column.QueryColumns,
-  column: string,
-  index: number,
-  quotedAs?: string,
-  select?: true,
-): string => {
-  const table = column.slice(0, index);
-  const key = column.slice(index + 1);
-  if (key === '*') {
-    const shape = data.joinedShapes?.[table];
-    return shape
-      ? select
-        ? makeRowToJson(ctx, table, shape as never, true)
-        : `"${table}".*`
-      : column;
-  }
-
-  const tableName = _getQueryAliasOrName(data, table);
-  const quoted = `"${table}"`;
-
-  const col = (quoted === quotedAs
-    ? shape[key]
-    : data.joinedShapes?.[tableName]?.[key]) as unknown as
-    | Column.Pick.Data
-    | undefined;
-
-  if (col) {
-    if (col.data.name) {
-      return `"${tableName}"."${col.data.name}"`;
-    }
-
-    if (col.data.computed) {
-      return `(${col.data.computed.toSQL(ctx, quoted)})`;
-    }
-
-    return `"${tableName}"."${key}"`;
-  }
-
-  return `"${tableName}"."${key}"`;
-};
-
-const selectedColumnWithDotToSql = (
-  ctx: ToSQLCtx,
-  data: {
-    aliases?: RecordString;
-    joinedShapes?: QueryData['joinedShapes'];
-  },
-  shape: Column.QueryColumns,
-  column: string,
-  index: number,
-  quotedAs?: string,
-): string => {
-  const table = column.slice(0, index);
-  const key = column.slice(index + 1);
-  if (key === '*') {
-    const shape = data.joinedShapes?.[table];
-    return shape ? makeRowToJson(ctx, table, shape as never, true) : column;
-  }
-
-  const tableName = _getQueryAliasOrName(data, table);
-  const quoted = `"${table}"`;
-
-  const col = (quoted === quotedAs
-    ? shape[key]
-    : data.joinedShapes?.[tableName]?.[key]) as unknown as
-    | Column.Pick.Data
-    | undefined;
-
-  if (col) {
-    if (col.data.selectSql) {
-      return `(${col.data.selectSql.toSQL(ctx, quoted)})`;
-    }
-
-    if (col.data.name) {
-      return `"${tableName}"."${col.data.name}"`;
-    }
-  }
-
-  return `"${tableName}"."${key}"`;
-};
-
-export const columnToSqlWithAs = (
-  ctx: ToSQLCtx,
-  data: QueryData,
-  column: string,
-  as: string,
-  quotedAs?: string,
-  select?: true,
-  jsonList?: { [K: string]: Column.Pick.Data | undefined },
-): string => {
-  const index = column.indexOf('.');
-  return index !== -1
-    ? tableColumnToSqlWithAs(
-        ctx,
-        data,
-        column,
-        column.slice(0, index),
-        column.slice(index + 1),
-        as,
-        quotedAs,
-        select,
-        jsonList,
-      )
-    : ownColumnToSqlWithAs(ctx, data, column, as, quotedAs, select, jsonList);
-};
-
-export const tableColumnToSqlWithAs = (
-  ctx: ToSQLCtx,
-  data: QueryData,
-  column: string,
-  table: string,
-  key: string,
-  as: string,
-  quotedAs?: string,
-  select?: true,
-  jsonList?: { [K: string]: Column.Pick.Data | undefined },
-): string => {
-  if (key === '*') {
-    if (jsonList) jsonList[as] = undefined;
-
-    const shape = data.joinedShapes?.[table];
-    if (shape) {
-      if (select) {
-        return makeRowToJson(ctx, table, shape as never, true) + ` "${as}"`;
-      }
-
-      return `"${table}"."${table}" "${as}"`;
-    }
-
-    return column;
-  }
-
-  const tableName = _getQueryAliasOrName(data, table);
-  const quoted = `"${table}"`;
-
-  const col = (quoted === quotedAs
-    ? data.shape[key]
-    : data.joinedShapes?.[tableName][key]) as unknown as Column.Pick.Data;
-
-  if (jsonList) jsonList[as] = col && getSelectedColumnData(col);
-
-  if (col) {
-    if (col.data.selectSql) {
-      return `(${col.data.selectSql.toSQL(ctx, quoted)}) "${as}"`;
-    }
-
-    if (col.data.name && col.data.name !== key) {
-      return `"${tableName}"."${col.data.name}" "${as}"`;
-    }
-  }
-
-  return `"${tableName}"."${key}"${key === as ? '' : ` "${as}"`}`;
-};
-
-export const ownColumnToSqlWithAs = (
-  ctx: ToSQLCtx,
-  data: QueryData,
-  column: string,
-  as: string,
-  quotedAs?: string,
-  select?: true,
-  jsonList?: { [K: string]: Column.Pick.Data | undefined },
-): string => {
-  if (!select && data.joinedShapes?.[column]) {
-    if (jsonList) jsonList[as] = undefined;
-
-    return `"${column}"."${column}" "${as}"`;
-  }
-
-  const col = data.shape[column];
-
-  if (jsonList) jsonList[as] = col && getSelectedColumnData(col);
-
-  if (col) {
-    if (col.data.selectSql) {
-      return `(${col.data.selectSql.toSQL(ctx, quotedAs)}) "${as}"`;
-    }
-
-    if (col.data.name && col.data.name !== column) {
-      return `${quotedAs ? `${quotedAs}.` : ''}"${col.data.name}"${
-        col.data.name === as ? '' : ` "${as}"`
-      }`;
-    }
-  }
-
-  return `${quotedAs ? `${quotedAs}.` : ''}"${column}"${
-    column === as ? '' : ` "${as}"`
-  }`;
+  return simpleColumnToSQL(
+    ctx,
+    data,
+    shape,
+    column,
+    shape[column],
+    quotedAs,
+    select,
+    as,
+    jsonList,
+    useSelectList,
+  );
 };
 
 export const rawOrColumnToSql = (
   ctx: ToSQLCtx,
-  data: PickQueryDataShapeAndJoinedShapes,
+  data: {
+    joinedShapes?: JoinedShapes;
+    select?: SelectItem[];
+  },
+  shape: Column.QueryColumns,
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
-  shape: Column.QueryColumns = data.shape,
   select?: true,
 ): string => {
   return typeof expr === 'string'

@@ -1,7 +1,8 @@
 import { Column } from '../../columns/column';
 import { Expression, ExpressionData } from './expression';
-import { simpleExistingColumnToSQL } from '../sql/column-to-sql';
+import { simpleColumnToSQL } from '../sql/column-to-sql';
 import { ToSQLCtx } from '../sql/to-sql';
+import { emptyObject } from '../../utils';
 
 // Expression created by `Query.column('name')`, it will prefix the column with a table name from query's context.
 export class ColumnRefExpression<
@@ -21,11 +22,18 @@ export class ColumnRefExpression<
   }
 
   makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
-    return simpleExistingColumnToSQL(
+    return simpleColumnToSQL(
       ctx,
+      emptyObject,
+      emptyObject,
       this.name,
       this.result.value,
       quotedAs,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
     );
   }
 }

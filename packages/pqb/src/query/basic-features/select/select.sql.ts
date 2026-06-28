@@ -1,9 +1,8 @@
 import { RawSql } from '../../expressions/raw-sql';
 import {
-  columnToSqlWithAs,
-  ownColumnToSqlWithAs,
-  selectedColumnToSql,
-  tableColumnToSqlWithAs,
+  columnToSql,
+  simpleColumnToSQL,
+  tableColumnToSql,
 } from '../../sql/column-to-sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { QueryData, SelectAllColumn } from '../../query-data';
@@ -141,15 +140,15 @@ export const selectToSqlList = (
               (selectedAs ??= {})[key] = key;
             }
 
-            sql = tableColumnToSqlWithAs(
+            sql = tableColumnToSql(
               ctx,
               table.q,
-              item,
+              table.q.shape,
               tableName,
               key,
-              key === '*' ? tableName : key,
               quotedAs,
               true,
+              key === '*' ? tableName : key,
               jsonList,
             );
           } else {
@@ -158,13 +157,15 @@ export const selectToSqlList = (
               (selectedAs ??= {})[item] = item;
             }
 
-            sql = ownColumnToSqlWithAs(
+            sql = simpleColumnToSQL(
               ctx,
               table.q,
+              table.q.shape,
               item,
-              item,
+              table.q.shape[item],
               quotedAs,
               true,
+              item,
               jsonList,
             );
           }
@@ -216,13 +217,14 @@ export const selectToSqlList = (
               }
 
               list.push(
-                columnToSqlWithAs(
+                columnToSql(
                   ctx,
                   table.q,
+                  table.q.shape,
                   value as string,
-                  as,
                   quotedAs,
                   true,
+                  as,
                   jsonList,
                 ),
               );
@@ -282,24 +284,19 @@ export const selectToSqlList = (
           col = table.q.joinedShapes?.[tableName]?.[columnName] as
             | Column
             | undefined;
-          sql = selectedColumnToSql(
+          sql = columnToSql(
             ctx,
             table.q,
             table.q.shape,
             select,
             undefined,
+            true,
           );
         } else {
           quotedTable = quotedAs;
           columnName = select;
           col = query.shape[select] as Column | undefined;
-          sql = selectedColumnToSql(
-            ctx,
-            table.q,
-            query.shape,
-            select,
-            quotedAs,
-          );
+          sql = columnToSql(ctx, table.q, query.shape, select, quotedAs, true);
         }
       } else {
         columnName = column;

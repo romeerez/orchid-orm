@@ -1,5 +1,5 @@
 import { Query, SetQueryReturnsColumnOrThrow } from '../query';
-import { columnToSql, selectedColumnToSql } from '../sql/column-to-sql';
+import { columnToSql } from '../sql/column-to-sql';
 import { OrderItem, pushOrderBySql } from '../basic-features/order/order.sql';
 import { WhereItem, whereToSql } from '../basic-features/where/where.sql';
 import { windowToSql } from '../basic-features/window/window.sql';
@@ -195,7 +195,7 @@ const fnArgToSql = (
       return columnToSql(ctx, data, data.shape, arg, quotedAs);
     }
 
-    return selectedColumnToSql(ctx, data, data.shape, arg, quotedAs);
+    return columnToSql(ctx, data, data.shape, arg, quotedAs, true);
   }
 
   return (arg as Expression).toSQL(ctx, quotedAs);

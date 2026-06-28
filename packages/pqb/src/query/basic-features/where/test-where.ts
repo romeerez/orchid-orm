@@ -1997,7 +1997,7 @@ export const testWhereExistsCase = ({
           makeSql({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM ${schemaTable}`,
             target: `${joinSchemaTable} "as"`,
-            conditions: `"one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
+            conditions: `"as"."one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
               values.length + (or ? 2 : 1)
             }`,
             where: `"as"."two" = $${values.length + (or ? 1 : 2)}`,

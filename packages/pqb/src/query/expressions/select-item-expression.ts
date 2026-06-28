@@ -1,5 +1,5 @@
 import { selectAllSql } from '../basic-features/select/select.sql';
-import { selectedColumnToSql } from '../sql/column-to-sql';
+import { columnToSql } from '../sql/column-to-sql';
 import { Column } from '../../columns/column';
 import { Expression, ExpressionData } from './expression';
 import { ToSQLCtx, ToSQLQuery } from '../sql/to-sql';
@@ -32,7 +32,7 @@ export class SelectItemExpression<
     return typeof this.item === 'string'
       ? this.item === '*'
         ? selectAllSql(q, quotedAs, undefined, ctx).join(', ')
-        : selectedColumnToSql(ctx, q, q.shape, this.item, quotedAs)
+        : columnToSql(ctx, q, q.shape, this.item, quotedAs, true)
       : this.item.toSQL(ctx, quotedAs);
   }
 }

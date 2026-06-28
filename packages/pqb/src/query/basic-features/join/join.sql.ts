@@ -2,18 +2,13 @@ import { columnToSql, rawOrColumnToSql } from '../../sql/column-to-sql';
 import { IsQuery, Query } from '../../query';
 import { whereToSql } from '../where/where.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
-import {
-  JoinedShapes,
-  PickQueryDataShapeAndJoinedShapes,
-  PickQueryDataShapeAndJoinedShapesAndAliases,
-  QueryData,
-} from '../../query-data';
+import { JoinedShapes, QueryData } from '../../query-data';
 import { RawSql } from '../../expressions/raw-sql';
 import { Column } from '../../../columns/column';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { Expression, isExpression } from '../../expressions/expression';
 import { _getQueryAliasOrName, getQueryAs } from '../as/as';
-import { addValue, RecordUnknown } from '../../../utils';
+import { addValue, RecordString, RecordUnknown } from '../../../utils';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   quoteFromWithSchema,
@@ -21,6 +16,8 @@ import {
   requireTableOrStringFrom,
 } from '../../sql/sql';
 import { getQuerySchema } from '../storage/storage';
+import { SelectItem } from '../select/select.sql';
+import { ColumnsShape } from '../../../columns';
 
 export type SimpleJoinItemNonSubQueryArgs =
   | [{ [K: string]: string | Expression } | Expression | true]
@@ -136,7 +133,13 @@ interface SqlJoinItem {
 export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
-  query: PickQueryDataShapeAndJoinedShapesAndAliases,
+  query: {
+    shape: ColumnsShape;
+    joinedShapes?: JoinedShapes;
+    as?: string;
+    outerAliases?: RecordString;
+    aliases?: RecordString;
+  },
   args: JoinItemArgs,
   quotedAs: string | undefined,
 ): SqlJoinItem => {
@@ -354,7 +357,11 @@ const subJoinToSql = (
 const processArgs = (
   args: SimpleJoinItemNonSubQueryArgs,
   ctx: ToSQLCtx,
-  query: PickQueryDataShapeAndJoinedShapes,
+  query: {
+    joinedShapes?: JoinedShapes;
+    select?: SelectItem[];
+    shape: ColumnsShape;
+  },
   joinAs: string,
   joinShape: Column.QueryColumns,
   quotedAs?: string,
@@ -382,7 +389,11 @@ const processArgs = (
 
 const getConditionsFor3Or4LengthItem = (
   ctx: ToSQLCtx,
-  query: PickQueryDataShapeAndJoinedShapes,
+  query: {
+    joinedShapes?: JoinedShapes;
+    select?: SelectItem[];
+    shape: ColumnsShape;
+  },
   target: string,
   quotedAs: string | undefined,
   args: ItemOf2Or3Length,
@@ -396,15 +407,19 @@ const getConditionsFor3Or4LengthItem = (
   return `${rawOrColumnToSql(
     ctx,
     query,
+    joinShape,
     leftColumn,
     target,
-    joinShape,
-  )} ${op} ${rawOrColumnToSql(ctx, query, rightColumn, quotedAs, query.shape)}`;
+  )} ${op} ${rawOrColumnToSql(ctx, query, query.shape, rightColumn, quotedAs)}`;
 };
 
 const getObjectOrRawConditions = (
   ctx: ToSQLCtx,
-  query: PickQueryDataShapeAndJoinedShapes,
+  query: {
+    joinedShapes?: JoinedShapes;
+    select?: SelectItem[];
+    shape: ColumnsShape;
+  },
   data: { [K: string]: string | Expression } | Expression | true,
   quotedAs: string | undefined,
   joinAs: string,
@@ -428,7 +443,7 @@ const getObjectOrRawConditions = (
           joinShape,
           key,
           joinAs,
-        )} = ${rawOrColumnToSql(ctx, query, value, quotedAs, shape)}`,
+        )} = ${rawOrColumnToSql(ctx, query, shape, value, quotedAs)}`,
       );
     }
 

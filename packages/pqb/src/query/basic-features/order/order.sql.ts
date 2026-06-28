@@ -1,4 +1,4 @@
-import { maybeSelectedColumnToSql } from '../../sql/column-to-sql';
+import { columnToSql } from '../../sql/column-to-sql';
 import { ToSQLCtx } from '../../sql/to-sql';
 import { QueryData } from '../../query-data';
 import { Expression, isExpression } from '../../expressions/expression';
@@ -66,7 +66,7 @@ const addOrder = (
     }) ${order.dir || 'DESC'}`;
   }
 
-  return `${maybeSelectedColumnToSql(ctx, data, column, quotedAs)} ${
+  return `${columnToSql(ctx, data, data.shape, column, quotedAs, undefined, undefined, undefined, true)} ${
     dir || 'ASC'
   }`;
 };
