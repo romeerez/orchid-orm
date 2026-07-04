@@ -80,7 +80,7 @@ describe('computed', () => {
     });
 
     it('should store SQL computed expression as selected-output SQL', () => {
-      const column = User.q.shape.nameAndKey;
+      const column = User.q.selectShape.nameAndKey;
 
       expect(column.data.computed).toBeDefined();
       expect(column.data.selectSql).toBe(column.data.computed);

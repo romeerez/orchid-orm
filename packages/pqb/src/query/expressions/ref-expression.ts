@@ -1,7 +1,7 @@
 import { Column } from '../../columns';
 import { Expression, ExpressionData } from './expression';
 import { Query } from '../query';
-import { columnToSql } from '../sql/column-to-sql';
+import { columnToSqlNotSelect } from '../sql/column-to-sql';
 import { ToSQLCtx } from '../sql/to-sql';
 import { QueryData } from '../query-data';
 
@@ -28,6 +28,12 @@ export class RefExpression<
   makeSQL(ctx: ToSQLCtx): string {
     const q = this.q as QueryData;
     const as = q.as || this.table;
-    return columnToSql(ctx, q, q.shape, this.ref, as && `"${as}"`);
+    return columnToSqlNotSelect(
+      ctx,
+      q,
+      q.selectShape,
+      this.ref,
+      as && `"${as}"`,
+    );
   }
 }

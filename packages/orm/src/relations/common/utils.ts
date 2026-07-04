@@ -300,7 +300,12 @@ export function joinHasRelation(
   const baseAs = getQueryAs(baseQuery);
 
   const q = joiningQuery.clone();
-  setQueryObjectValueImmutable(q, 'joinedShapes', baseAs, baseQuery.q.shape);
+  setQueryObjectValueImmutable(
+    q,
+    'joinedShapes',
+    baseAs,
+    baseQuery.q.selectShape,
+  );
 
   for (let i = 0; i < len; i++) {
     pushQueryOnForOuter(

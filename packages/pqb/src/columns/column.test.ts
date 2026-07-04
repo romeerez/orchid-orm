@@ -400,7 +400,7 @@ describe('column type', () => {
       it('should parse all columns', async () => {
         expect((await db.user.all())[0].createdAt).toEqual(expect.any(Date));
         expect((await db.user.take()).createdAt).toEqual(expect.any(Date));
-        const idx = Object.keys(db.user.q.shape).indexOf('createdAt');
+        const idx = Object.keys(db.user.shape).indexOf('createdAt');
         expect((await db.user.rows())[0][idx]).toEqual(expect.any(Date));
       });
 

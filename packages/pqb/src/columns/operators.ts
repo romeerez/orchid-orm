@@ -1,5 +1,4 @@
 import { IsQuery, Query, SetQueryReturnsColumnOrThrow } from '../query/query';
-import { addColumnParserToQuery } from './column.utils';
 import { Column } from './column';
 import { ToSQLCtx } from '../query/sql/to-sql';
 import { MoveMutativeQueryToCte } from '../query/basic-features/cte/cte.sql';
@@ -20,12 +19,15 @@ import {
   isIterable,
   MaybeArray,
   RecordUnknown,
-  setObjectValueImmutable,
 } from '../utils';
 import { Expression, isExpression } from '../query/expressions/expression';
 import { BooleanQueryColumn } from '../query/basic-features/aggregate/aggregate';
-import { getValueKey } from '../query/basic-features/get/get-value-key';
 import { QueryThen } from '../query';
+import {
+  setValueParserToQuery,
+  getValueParser,
+  setValueParser,
+} from '../query/query-columns/query-column-parsers';
 
 // workaround for circular dependencies between columns and sql
 let moveMutativeQueryToCte: MoveMutativeQueryToCte;
@@ -116,8 +118,8 @@ const make = (
       (q.chain ??= []).push(_op, val || value);
 
       // parser might be set by a previous type, but is not needed for boolean
-      if (q.parsers?.[getValueKey]) {
-        setObjectValueImmutable(q, 'parsers', getValueKey, undefined);
+      if (getValueParser(q.parsers)) {
+        setValueParser(q, undefined);
       }
 
       return setQueryOperators(this as never, boolean as never);
@@ -149,8 +151,8 @@ const makeVarArg = (
       (q.chain ??= []).push(_op, args);
 
       // parser might be set by a previous type, but is not needed for boolean
-      if (q.parsers?.[getValueKey]) {
-        setObjectValueImmutable(q, 'parsers', getValueKey, undefined);
+      if (getValueParser(q.parsers)) {
+        setValueParser(q, undefined);
       }
 
       return setQueryOperators(this as never, boolean as never);
@@ -716,13 +718,13 @@ const json = {
       const chain = (q.chain ??= []);
       chain.push(jsonPathQueryOp, [path, options]);
 
-      if (q.parsers?.[getValueKey]) {
-        setObjectValueImmutable(q, 'parsers', getValueKey, undefined);
+      if (getValueParser(q.parsers)) {
+        setValueParser(q, undefined);
       }
 
       if (options?.type) {
         const type = options.type(columnTypes);
-        addColumnParserToQuery(q, getValueKey, type);
+        setValueParserToQuery(q, type);
 
         // push the type cast `::type` only if operator is applied
         chain.push = (...args: unknown[]) => {

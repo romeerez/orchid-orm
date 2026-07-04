@@ -427,7 +427,7 @@ export class Db<
 
     this.q = {
       adapter: adapterNotInTransaction,
-      shape: shape as Column.QueryColumnsInit,
+      selectShape: shape as Column.QueryColumnsInit,
       handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),

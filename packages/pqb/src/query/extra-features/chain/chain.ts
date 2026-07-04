@@ -54,7 +54,7 @@ export const _chain = (
   _applyRelationAliases(self, q);
 
   q.joinedShapes = {
-    [getQueryAs(self)]: self.q.shape,
+    [getQueryAs(self)]: self.q.selectShape,
     ...self.q.joinedShapes,
   };
 

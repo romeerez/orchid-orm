@@ -14,8 +14,10 @@ import { SelectItem } from '../basic-features/select/select.sql';
 export function simpleColumnToSQL(
   ctx: ToSQLCtx,
   queryData: {
+    valuesJoinedAs?: RecordString;
     select?: SelectItem[];
     joinedShapes?: JoinedShapes;
+    getColumn?: Column;
   },
   shape: Column.QueryColumns,
   key: string,
@@ -26,6 +28,7 @@ export function simpleColumnToSQL(
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
   useSelectList?: true,
   skipSelectSql?: true,
+  skipValueToArray?: true,
 ): string {
   let sql: string;
   let dontAlias: boolean | undefined;
@@ -35,7 +38,20 @@ export function simpleColumnToSQL(
       if (typeof s === 'object' && 'selectAs' in s) {
         if (key in s.selectAs) {
           dontAlias = true;
-          sql = simpleColumnToSQL(ctx, queryData, shape, key, shape[key]);
+          sql = simpleColumnToSQL(
+            ctx,
+            queryData,
+            shape,
+            key,
+            shape[key],
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            true,
+          );
           break;
         }
       }
@@ -60,9 +76,28 @@ export function simpleColumnToSQL(
       } else {
         const name = data.name || key;
         dontAlias = name === as;
+
+        if (!select) {
+          const joinAs = !select && queryData.valuesJoinedAs?.[key];
+          if (joinAs) {
+            quotedAs = `"${joinAs}"`;
+          }
+        }
+
         sql = `${quotedAs ? `${quotedAs}.` : ''}"${name}"`;
       }
     }
+  }
+
+  if (
+    !select &&
+    !useSelectList &&
+    (column as Column)?.data.valueToArray &&
+    !(column as Column).data.skipValueToArray
+  ) {
+    sql += '[1]';
+  } else if (queryData.getColumn?.data.valueToArray && !skipValueToArray) {
+    sql = `array[${sql}]`;
   }
 
   if (as && !dontAlias) {
@@ -74,12 +109,13 @@ export function simpleColumnToSQL(
 
 export const tableColumnToSql = (
   ctx: ToSQLCtx,
-  data: {
+  queryData: {
     valuesJoinedAs?: RecordString;
     aliases?: RecordString;
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
     select?: SelectItem[];
+    getColumn?: Column;
   },
   shape: Column.QueryColumns,
   table: string,
@@ -88,6 +124,7 @@ export const tableColumnToSql = (
   select?: true,
   as?: string,
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
+  skipValueToArray?: true,
 ) => {
   let sql: string;
   let dontAlias: boolean | undefined;
@@ -97,7 +134,7 @@ export const tableColumnToSql = (
       jsonList[as] = undefined;
     }
 
-    const shape = data.joinedShapes?.[table];
+    const shape = queryData.joinedShapes?.[table];
     if (shape) {
       sql = select
         ? makeRowToJson(ctx, table, shape as never, true)
@@ -107,12 +144,12 @@ export const tableColumnToSql = (
       dontAlias = true;
     }
   } else {
-    const tableName = _getQueryAliasOrName(data, table);
+    const tableName = _getQueryAliasOrName(queryData, table);
     const quoted = `"${table}"`;
 
     const col = (quoted === quotedAs
       ? shape[key]
-      : data.joinedShapes?.[tableName]?.[key]) as unknown as
+      : queryData.joinedShapes?.[tableName]?.[key]) as unknown as
       | Column.Pick.Data
       | undefined;
 
@@ -130,6 +167,16 @@ export const tableColumnToSql = (
       sql = `"${tableName}"."${key}"`;
       dontAlias = key === as;
     }
+
+    if (
+      !select &&
+      (col as Column)?.data.valueToArray &&
+      !(col as Column).data.skipValueToArray
+    ) {
+      sql += '[1]';
+    } else if (queryData.getColumn?.data.valueToArray && !skipValueToArray) {
+      sql = `array[${sql}]`;
+    }
   }
 
   if (as && !dontAlias) {
@@ -138,6 +185,33 @@ export const tableColumnToSql = (
 
   return sql;
 };
+
+export const columnToSqlNotSelect = (
+  ctx: ToSQLCtx,
+  data: {
+    valuesJoinedAs?: RecordString;
+    aliases?: RecordString;
+    joinedShapes?: QueryData['joinedShapes'];
+    parsers?: ColumnsParsers;
+    select?: SelectItem[];
+  },
+  shape: Column.QueryColumns,
+  column: string,
+  quotedAs?: string,
+  useSelectList?: true,
+): string =>
+  columnToSql(
+    ctx,
+    data,
+    shape,
+    column,
+    quotedAs,
+    undefined,
+    undefined,
+    undefined,
+    useSelectList,
+    true,
+  );
 
 export const columnToSql = (
   ctx: ToSQLCtx,
@@ -155,16 +229,9 @@ export const columnToSql = (
   as?: string,
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
   useSelectList?: true,
+  skipValueToArray?: true,
 ): string => {
   let index = column.indexOf('.');
-  if (index === -1 && !select) {
-    const joinAs = data.valuesJoinedAs?.[column];
-    if (joinAs) {
-      column = joinAs + '.' + column;
-      index = joinAs.length;
-    }
-  }
-
   if (index !== -1) {
     const table = column.slice(0, index);
     const key = column.slice(index + 1);
@@ -178,6 +245,7 @@ export const columnToSql = (
       select,
       as,
       jsonList,
+      skipValueToArray,
     );
   }
 
@@ -192,6 +260,8 @@ export const columnToSql = (
     as,
     jsonList,
     useSelectList,
+    undefined,
+    skipValueToArray,
   );
 };
 
@@ -205,8 +275,20 @@ export const rawOrColumnToSql = (
   expr: SelectableOrExpression,
   quotedAs: string | undefined,
   select?: true,
+  skipValueToArray?: true,
 ): string => {
   return typeof expr === 'string'
-    ? columnToSql(ctx, data, shape, expr, quotedAs, select)
+    ? columnToSql(
+        ctx,
+        data,
+        shape,
+        expr,
+        quotedAs,
+        select,
+        undefined,
+        undefined,
+        undefined,
+        skipValueToArray,
+      )
     : (expr as Expression).toSQL(ctx, quotedAs);
 };

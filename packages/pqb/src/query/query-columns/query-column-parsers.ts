@@ -1,7 +1,13 @@
-import { FnUnknownToUnknown, MaybePromise } from '../../utils';
+import {
+  FnUnknownToUnknown,
+  MaybePromise,
+  setObjectValueImmutable,
+} from '../../utils';
 import { HookSelect } from '../basic-features/select/hook-select';
-import { Query } from '../query';
-import { getValueKey } from '../basic-features/get/get-value-key';
+import { Query, QueryReturnType } from '../query';
+import { Column } from '../../columns';
+import { PickQueryQ } from '../pick-query-types';
+import { Expression } from '../expressions/expression';
 
 export interface PickQueryDataParsers {
   // column parsers that are applied by default, when not selecting anything
@@ -15,22 +21,29 @@ export interface PickQueryDataParsers {
 // function to parse a single column after loading the data
 export type ColumnParser = FnUnknownToUnknown;
 
+export interface BatchParserPathEntry {
+  key: string;
+  returnType: QueryReturnType;
+}
+
 // To parse all returned rows. Unlike column parser, can return a promise.
 export interface BatchParser {
-  path: string[];
-  fn: (path: string[], queryResult: { rows: unknown[] }) => MaybePromise<void>;
+  path: BatchParserPathEntry[];
+  fn: (
+    path: BatchParserPathEntry[],
+    queryResult: { rows: unknown[] },
+  ) => MaybePromise<void>;
 }
 
 // set of value parsers
 // key is a name of a selected column,
-// or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
-export type ColumnsParsers = { [K in string | getValueKey]?: ColumnParser };
+// 'v' is a special name for a single-value queries parser
+export type ColumnsParsers = { [K in string]?: ColumnParser };
 
 // set of batch parsers
 // is only triggered when loading all,
 // or when using `hookSelect` or computed columns that convert response to `all` internally.
-// key is a name of a selected column,
-// or it can be a `getValueKey` to parse single values requested by the `.get()`, `.count()`, or similar methods
+// key is a name of a selected column
 export type BatchParsers = BatchParser[];
 
 /**
@@ -41,7 +54,7 @@ export type BatchParsers = BatchParser[];
  */
 export const setParserToQuery = (
   query: { parsers?: ColumnsParsers },
-  key: string | getValueKey,
+  key: string,
   parser?: ColumnParser,
 ) => {
   if (parser) {
@@ -62,7 +75,7 @@ export const setParserToQuery = (
  */
 export const overrideParserInQuery = (
   query: { parsers?: ColumnsParsers },
-  key: string | getValueKey,
+  key: string,
   parser: ColumnParser,
 ) => {
   if (query.parsers) {
@@ -89,4 +102,48 @@ export const getQueryParsers = (q: Query, hookSelect?: HookSelect) => {
   }
 
   return q.q.select ? q.q.parsers : q.q.defaultParsers;
+};
+
+export const addColumnParserToQuery = (
+  q: { parsers?: ColumnsParsers },
+  key: string,
+  column: Column.Pick.QueryColumn,
+) => {
+  if ((column as Column)._parse) {
+    setObjectValueImmutable(q, 'parsers', key, (column as Column)._parse);
+  }
+};
+
+export const setValueParserToQuery = (
+  q: { parsers?: ColumnsParsers },
+  column: Column.Pick.QueryColumn,
+) => {
+  addColumnParserToQuery(q, 'v', column);
+};
+
+export const getValueParser = (parsers?: ColumnsParsers) => {
+  return parsers?.v;
+};
+
+export const setValueParser = (
+  q: PickQueryDataParsers,
+  parser: ColumnParser | undefined,
+) => {
+  setObjectValueImmutable(q, 'parsers', 'v', parser);
+};
+
+// export const setValueParserForSelectedString = (
+//   query: PickQueryQAndInternal,
+//   arg: string,
+//   as: string | undefined,
+// ) => setParserForSelectedString(query, arg, as, 'v');
+
+// add a parser for a raw expression column
+// is used by .select and .get methods
+export const addParserForRawExpression = (
+  q: PickQueryQ,
+  key: string,
+  raw: Expression,
+) => {
+  if (raw.result.value) addColumnParserToQuery(q.q, key, raw.result.value);
 };

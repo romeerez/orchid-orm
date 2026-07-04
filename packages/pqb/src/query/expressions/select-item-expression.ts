@@ -32,7 +32,18 @@ export class SelectItemExpression<
     return typeof this.item === 'string'
       ? this.item === '*'
         ? selectAllSql(q, quotedAs, undefined, ctx).join(', ')
-        : columnToSql(ctx, q, q.shape, this.item, quotedAs, true)
+        : columnToSql(
+            ctx,
+            q,
+            q.selectShape,
+            this.item,
+            quotedAs,
+            true,
+            undefined,
+            undefined,
+            undefined,
+            true,
+          )
       : this.item.toSQL(ctx, quotedAs);
   }
 }

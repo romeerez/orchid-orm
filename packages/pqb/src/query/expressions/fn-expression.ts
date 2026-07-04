@@ -4,7 +4,7 @@ import { OrderItem, pushOrderBySql } from '../basic-features/order/order.sql';
 import { WhereItem, whereToSql } from '../basic-features/where/where.sql';
 import { windowToSql } from '../basic-features/window/window.sql';
 import { extendQuery } from '../query.utils';
-import { addColumnParserToQuery, Column } from '../../columns';
+import { Column } from '../../columns';
 import {
   PickQuerySelectableResultRelationsWindows,
   PickQuerySelectable,
@@ -17,12 +17,12 @@ import {
   SelectableOrExpression,
 } from './expression';
 import { addValue, emptyObject, toArray } from '../../utils';
-import { getValueKey } from '../basic-features/get/get-value-key';
 import { WhereArg, WhereArgs } from '../basic-features/where/where';
 import { Order } from '../basic-features/order/order';
 import { WindowArgDeclaration } from '../basic-features/window/window';
 import { ToSQLCtx } from '../sql/to-sql';
 import { QueryData } from '../query-data';
+import { setValueParserToQuery } from '../query-columns/query-column-parsers';
 
 // Additional SQL options that can be accepted by any aggregate function.
 export interface AggregateOptions<
@@ -93,15 +93,6 @@ export class FnExpression<
     this.result = { value };
     this.q = query.q as ExpressionData;
     this.q.expr = this;
-    Object.assign(query, value.operators);
-
-    // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
-    query.q.returnType = 'valueOrThrow';
-    query.q.returnsOne = true;
-    query.q.getColumn = value;
-    query.q.select = [this];
-
-    addColumnParserToQuery(query.q, getValueKey, value);
   }
 
   // Builds function SQL.
@@ -164,7 +155,7 @@ export class FnExpression<
         {
           and: options.filter ? ([options.filter] as WhereItem[]) : undefined,
           or: options.filterOr?.map((item) => [item]) as WhereItem[][],
-          shape: q.shape,
+          selectShape: q.selectShape,
           joinedShapes: q.joinedShapes,
         },
         quotedAs,
@@ -192,10 +183,32 @@ const fnArgToSql = (
 ): string => {
   if (typeof arg === 'string') {
     if (arg.endsWith('.*') || data.valuesJoinedAs?.[arg]) {
-      return columnToSql(ctx, data, data.shape, arg, quotedAs);
+      return columnToSql(
+        ctx,
+        data,
+        data.selectShape,
+        arg,
+        quotedAs,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        true,
+      );
     }
 
-    return columnToSql(ctx, data, data.shape, arg, quotedAs, true);
+    return columnToSql(
+      ctx,
+      data,
+      data.selectShape,
+      arg,
+      quotedAs,
+      true,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
   }
 
   return (arg as Expression).toSQL(ctx, quotedAs);
@@ -216,16 +229,26 @@ export function makeFnExpression<
   (q.baseQuery as unknown as ExpressionTypeMethod).type =
     ExpressionTypeMethod.prototype.type;
 
-  new FnExpression<Query, Column.Pick.QueryColumn>(
-    q,
-    fn,
-    args,
-    options as AggregateOptions<Query> | undefined,
-    type,
-  );
+  q.q.select = [
+    new FnExpression<Query, Column.Pick.QueryColumn>(
+      q,
+      fn,
+      args,
+      options as AggregateOptions<Query> | undefined,
+      type,
+    ),
+  ];
 
+  q.q.getColumn = type;
+  Object.assign(q, type.operators);
+  setValueParserToQuery(q.q, type);
+
+  // Throw happens only on `undefined`, which is not the case for `sum` and other functions that can return `null`.
+  q.q.returnType = 'valueOrThrow';
+  q.q.returnsOne = true;
   // discard 'map` and 'transform' when applying aggregations
   q.q.transform = undefined;
+  q.q.batchParsers = undefined;
 
   return q as never;
 }

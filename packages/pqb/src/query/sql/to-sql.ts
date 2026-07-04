@@ -26,7 +26,7 @@ import { setSqlCtxSelectList } from '../basic-features/select/select.sql';
 import { pushFromAndAs } from '../basic-features/from/fromAndAs.sql';
 import { pushJoinSql } from '../basic-features/join/join.sql';
 import { pushWhereStatementSql } from '../basic-features/where/where.sql';
-import { columnToSql } from './column-to-sql';
+import { columnToSqlNotSelect } from './column-to-sql';
 import { pushHavingSql } from '../basic-features/having/having.sql';
 import { windowToSql } from '../basic-features/window/window.sql';
 import { pushOrderBySql } from '../basic-features/order/order.sql';
@@ -316,7 +316,7 @@ export const toSql: ToSql = (
             const i = (aliases as string[]).indexOf(item as string);
             return i !== -1
               ? i + 1
-              : columnToSql(
+              : columnToSqlNotSelect(
                   ctx,
                   table.q,
                   table.shape,

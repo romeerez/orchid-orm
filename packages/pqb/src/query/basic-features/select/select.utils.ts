@@ -1,7 +1,9 @@
-import { getValueKey } from '../get/get-value-key';
 import {
+  addParserForRawExpression,
   BatchParser,
+  BatchParserPathEntry,
   getQueryParsers,
+  getValueParser,
   setParserToQuery,
 } from '../../query-columns/query-column-parsers';
 import { parseRecord } from '../../then/then';
@@ -12,7 +14,6 @@ import {
   spreadObjectValues,
 } from '../../../utils';
 import {
-  addColumnParserToQuery,
   Column,
   internalSchemaConfig,
   JSONTextColumn,
@@ -37,7 +38,7 @@ import {
   SelectableOrExpression,
 } from '../../expressions/expression';
 import { getFullColumnTable, pushQueryArrayImmutable } from '../../query.utils';
-import { IsQuery, Query } from '../../query';
+import { IsQuery, Query, QueryReturnType } from '../../query';
 import { NotFoundError } from '../../errors';
 import { finalizeNestedHookSelect } from '../../extra-features/hooks/hooks';
 import { applyBatchTransforms } from '../../extra-features/data-transform/transform';
@@ -50,22 +51,13 @@ import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 
 import { setSelectRelation } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.qb';
-
-// add a parser for a raw expression column
-// is used by .select and .get methods
-export const addParserForRawExpression = (
-  q: PickQueryQ,
-  key: string | getValueKey,
-  raw: Expression,
-) => {
-  if (raw.result.value) addColumnParserToQuery(q.q, key, raw.result.value);
-};
+import { _getSelectableColumn } from '../get/get.utils';
 
 // add parsers when selecting a full joined table by name or alias
 const addParsersForSelectJoined = (
   q: PickQueryQ,
   arg: string,
-  as: string | getValueKey = arg,
+  as: string = arg,
 ) => {
   const parsers = q.q.joinedParsers?.[arg];
   if (parsers) {
@@ -78,7 +70,7 @@ const addParsersForSelectJoined = (
       q,
       'batchParsers',
       batchParsers.map((x) => ({
-        path: [as as string, ...x.path],
+        path: [{ key: as as string }, ...x.path],
         fn: x.fn,
       })),
     );
@@ -96,7 +88,7 @@ export interface QueryBatchResult {
 // add parser for a single key-value pair of selected object
 export const addParserForSelectItem = <T extends PickQuerySelectable>(
   query: T,
-  as: string | getValueKey | undefined,
+  as: string | undefined,
   key: string,
   arg: SelectableOrExpression<T> | Query,
   columnAlias?: string,
@@ -110,7 +102,7 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
         query as unknown as Query,
         'batchParsers',
         q.batchParsers.map((bp) => ({
-          path: [key, ...bp.path],
+          path: [{ key, returnType: q.returnType }, ...bp.path],
           fn: bp.fn,
         })),
       );
@@ -130,7 +122,7 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
       q.returnType === 'value'
     ) {
       pushQueryValueImmutable(query as unknown as Query, 'batchParsers', {
-        path: [key],
+        path: [{ key, returnType: q.returnType }],
         fn: (path, queryResult) => {
           const { rows } = queryResult;
           const originalReturnType = q.returnType || 'all';
@@ -138,7 +130,6 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
           const { hookSelect } = q;
           const batches: QueryBatchResult[] = [];
 
-          const last = path.length;
           if (returnType === 'value' || returnType === 'valueOrThrow') {
             if (hookSelect) {
               batches.push = (item) => {
@@ -153,7 +144,7 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
             }
           }
 
-          collectNestedSelectBatches(batches, rows, path, last);
+          collectNestedSelectBatches(batches, rows, path);
 
           switch (returnType) {
             case 'all': {
@@ -215,34 +206,75 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
             }
             case 'value':
             case 'valueOrThrow': {
-              const notNullable = !(q.getColumn as Column.Pick.Data | undefined)
-                ?.data.isNullable;
+              const data = (q.getColumn as Column.Pick.Data | undefined)?.data;
+              const notNullable = !data?.isNullable;
+              const valueToArray = data?.valueToArray;
 
-              const parse = parsers?.[getValueKey];
+              const parse = getValueParser(parsers);
               if (parse) {
                 if (returnType === 'value') {
-                  for (const item of batches) {
-                    item.parent[item.key] = item.data =
-                      item.data === null ? q.notFoundDefault : parse(item.data);
+                  if (valueToArray) {
+                    for (const item of batches) {
+                      item.parent[item.key] = item.data = item.data
+                        ? item.data[0] === null
+                          ? null
+                          : parse(item.data[0])
+                        : q.notFoundDefault;
+                    }
+                  } else {
+                    for (const item of batches) {
+                      item.parent[item.key] = item.data =
+                        item.data === null
+                          ? q.notFoundDefault
+                          : parse(item.data);
+                    }
                   }
                 } else {
-                  for (const item of batches) {
-                    if (notNullable && item.data === null) {
-                      throw new NotFoundError(arg as Query);
-                    }
+                  if (valueToArray) {
+                    for (const item of batches) {
+                      if (!item.data) {
+                        throw new NotFoundError(arg as Query);
+                      }
 
-                    item.parent[item.key] = item.data = parse(item.data);
+                      item.parent[item.key] = item.data =
+                        item.data[0] === null ? null : parse(item.data[0]);
+                    }
+                  } else {
+                    for (const item of batches) {
+                      if (notNullable && item.data === null) {
+                        throw new NotFoundError(arg as Query);
+                      }
+
+                      item.parent[item.key] = item.data = parse(item.data);
+                    }
                   }
                 }
               } else if (returnType === 'value') {
-                for (const item of batches) {
-                  if (item.data === null) {
-                    item.parent[item.key] = item.data = q.notFoundDefault;
+                if (valueToArray) {
+                  for (const item of batches) {
+                    item.parent[item.key] = item.data = item.data
+                      ? item.data[0]
+                      : q.notFoundDefault;
                   }
+                } else {
+                  for (const item of batches) {
+                    if (item.data === undefined) {
+                      item.parent[item.key] = item.data = q.notFoundDefault;
+                    }
+                  }
+                }
+              } else if (valueToArray) {
+                for (const item of batches) {
+                  if (!item.data) {
+                    throw new NotFoundError(arg as Query);
+                  }
+                  item.parent[item.key] = item.data = item.data[0];
                 }
               } else if (notNullable) {
                 for (const { data } of batches) {
-                  if (data === null) throw new NotFoundError(arg as Query);
+                  if (data === null) {
+                    throw new NotFoundError(arg as Query);
+                  }
                 }
               }
 
@@ -260,7 +292,6 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
             let tempColumns: Set<string> | undefined;
             let renames: RecordString | undefined;
             for (const column of hookSelect.keys()) {
-              //
               const select = hookSelect!.get(column)!;
 
               if (select.as) (renames ??= {})[column] = select.as;
@@ -324,9 +355,12 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
     return arg;
   }
 
+  const joinedAs = (query as unknown as Query).q.valuesJoinedAs?.[
+    arg as string
+  ];
   return setParserForSelectedString(
     query as never,
-    arg as string,
+    joinedAs ? joinedAs + '.' + (arg as string) : (arg as string),
     as,
     key,
     columnAlias,
@@ -336,43 +370,55 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
 const collectNestedSelectBatches = (
   batches: QueryBatchResult[],
   rows: unknown[],
-  path: string[],
-  last: number,
+  path: BatchParserPathEntry[],
 ) => {
-  const stack: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    parent: any;
-    key: PropertyKey;
-    i: number;
-  }[] = rows.map(
-    (row) =>
-      ({
-        data: row,
-        parent: row,
-        i: 0,
-        key: path[0],
-      }) as never,
-  );
+  const last = path.length - 1;
+  const { key, returnType } = path[0];
+  for (const row of rows) {
+    processNestedSelectPathEntry(batches, path, key, returnType, 0, last, row);
+  }
+};
 
-  while (stack.length > 0) {
-    //
-    const item = stack.pop()!;
-    const { i } = item;
-    if (i === last) {
-      batches.push(item);
-      continue;
-    }
-
-    const { data } = item;
-    const key = path[i];
-    if (Array.isArray(data)) {
-      for (let key = 0; key < data.length; key++) {
-        stack.push({ data: data[key], parent: data, key, i });
+const processNestedSelectPathEntry = (
+  batches: QueryBatchResult[],
+  path: BatchParserPathEntry[],
+  thisKey: string,
+  thisReturnType: QueryReturnType,
+  i: number,
+  last: number,
+  parent: unknown,
+) => {
+  const data = (parent as RecordUnknown)[thisKey];
+  if (i === last) {
+    batches.push({
+      data,
+      parent,
+      key: thisKey,
+    });
+  } else {
+    const { key, returnType } = path[++i];
+    if (!thisReturnType || thisReturnType === 'all') {
+      for (const row of data as unknown[]) {
+        processNestedSelectPathEntry(
+          batches,
+          path,
+          key,
+          returnType,
+          i,
+          last,
+          row,
+        );
       }
-    } else if (data && typeof data === 'object') {
-      stack.push({ data: data[key], parent: data, key, i: i + 1 });
+    } else {
+      processNestedSelectPathEntry(
+        batches,
+        path,
+        key,
+        returnType,
+        i,
+        last,
+        data,
+      );
     }
   }
 };
@@ -385,25 +431,31 @@ export const processSelectArg = <T extends SelectSelf>(
   q: T,
   as: string | undefined,
   arg: SelectArg<T>,
-  columnAs?: string | getValueKey,
+  columnAs?: string,
 ): SelectItem | undefined | false => {
+  const query = q as unknown as Query;
   if (typeof arg === 'string') {
-    return setParserForSelectedString(q as unknown as Query, arg, as, columnAs);
+    return setParserForSelectedString(query, arg, as, columnAs);
   }
 
   const selectAs: SelectAsValue = {};
+  const selectShape = (query.q.selectShape = { ...query.q.selectShape });
 
   for (const key in arg as unknown as SelectAsArg<T>) {
     const item = processSelectAsArg(
       q,
+      selectAs,
       as,
       key,
       (arg as unknown as SelectAsArg<T>)[key],
+      key,
     );
-    // propagate `none` state of a joined sub-query
-    if (item === false) return false;
-
-    selectAs[key] = item;
+    if (item) {
+      selectShape[key] = item;
+    } else if (item === false) {
+      // propagate `none` state of a joined sub-query
+      return false;
+    }
   }
 
   return { selectAs };
@@ -411,14 +463,18 @@ export const processSelectArg = <T extends SelectSelf>(
 
 export const processSelectAsArg = <T extends SelectSelf>(
   q: T,
+  selectAs: SelectAsValue,
   as: string | undefined,
   key: string,
   arg: SelectAsArg<T>[string],
-): SelectAsValue[string] | false => {
+  columnAlias?: string,
+  outerReturnType?: QueryReturnType,
+): Column | undefined | false => {
   const query = q as unknown as Query;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let value = arg as any;
   let joinQuery: boolean | undefined;
+  let column: Column | undefined;
 
   if (typeof value === 'function') {
     value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
@@ -429,7 +485,9 @@ export const processSelectAsArg = <T extends SelectSelf>(
       }
     }
 
-    if (!isExpression(value)) {
+    if (isExpression(value)) {
+      column = value.result.value as Column;
+    } else {
       if (
         isRelationQuery(value) &&
         // `subQuery = 1` case is when callback returns the same query as it gets,
@@ -502,18 +560,56 @@ export const processSelectAsArg = <T extends SelectSelf>(
         }
       }
 
+      if (value.q.getColumn?.data.skipValueToArray) {
+        value.q.notFoundDefault ??= null;
+      } else if (
+        !value.q.type &&
+        (value.q.returnType === 'value' ||
+          value.q.returnType === 'valueOrThrow')
+      ) {
+        const column = Object.create(
+          value.q.getColumn || UnknownColumn.instance,
+        );
+        column.data = { ...column.data, name: undefined, valueToArray: true };
+        value.q.getColumn = column;
+        if (value.q.expr) {
+          value.q.expr.q.getColumn = column;
+        }
+      }
+
+      if (
+        outerReturnType === 'value' &&
+        value.q.returnType === 'valueOrThrow'
+      ) {
+        value.q.returnType = 'value';
+      }
+
+      column = value.q.getColumn;
+
       value = prepareSubQueryForSql(q as never, value);
     }
+  } else if (typeof value === 'string') {
+    const joinedAs = query.q.valuesJoinedAs?.[value];
+
+    column = (
+      joinedAs
+        ? query.q.joinedShapes?.[joinedAs]?.value
+        : _getSelectableColumn(query as never, value)
+    ) as Column | undefined;
+  } else {
+    column = value.result.value;
   }
 
-  return addParserForSelectItem(
+  selectAs[key] = addParserForSelectItem(
     query as never,
     as,
     key,
     value as SelectableOrExpression<T> | Query,
-    key,
+    columnAlias,
     joinQuery,
   );
+
+  return column;
 };
 
 // process string select arg
@@ -522,8 +618,8 @@ export const processSelectAsArg = <T extends SelectSelf>(
 export const setParserForSelectedString = (
   query: PickQueryQAndInternal,
   arg: string,
-  as: string | getValueKey | undefined,
-  columnAs?: string | getValueKey,
+  as: string | undefined,
+  columnAs?: string,
   columnAlias?: string,
 ): string | undefined => {
   const { q } = query;
@@ -552,12 +648,11 @@ export const setParserForSelectedString = (
   if (batchParsers) {
     let cloned = false;
     for (const bp of batchParsers) {
-      if (bp.path[0] === column) {
+      if (bp.path[0].key === column) {
         if (!cloned) {
           q.batchParsers = [...(q.batchParsers || [])];
           cloned = true;
         }
-        //
         q.batchParsers!.push(bp);
       }
     }
@@ -579,7 +674,7 @@ const selectColumn = (
   query: PickQueryQAndInternal,
   q: QueryData,
   key: string,
-  columnAs?: string | getValueKey,
+  columnAs?: string,
   columnAlias?: string,
 ) => {
   if (key === '*') {
@@ -617,7 +712,7 @@ export const getShapeFromSelect = (
   isSubQuery?: boolean,
 ): Column.QueryColumns => {
   const query = (q as Query).q;
-  const { shape } = query;
+  const { selectShape: shape } = query;
   let select: SelectItem[] | undefined;
 
   if (query.selectedComputeds) {

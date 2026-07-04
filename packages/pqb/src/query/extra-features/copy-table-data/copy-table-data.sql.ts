@@ -2,6 +2,7 @@ import { newToSqlCtx, ToSQLQuery } from '../../sql/to-sql';
 import { escapeString } from '../../../quote';
 import { pushWhereStatementSql } from '../../basic-features/where/where.sql';
 import { quoteTableWithSchema, SingleSql } from '../../sql/sql';
+import { ColumnsShape } from 'pqb/index';
 
 export type CopyOptions<Column = string> = {
   columns?: Column[];
@@ -36,7 +37,10 @@ export const makeCopySql = (
 
   const columns = copy.columns
     ? `(${copy.columns
-        .map((item) => `"${q.shape[item]?.data.name || item}"`)
+        .map(
+          (item) =>
+            `"${(table.shape as ColumnsShape)[item]?.data.name || item}"`,
+        )
         .join(', ')})`
     : '';
 

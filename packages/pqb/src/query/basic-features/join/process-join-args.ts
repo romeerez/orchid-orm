@@ -80,7 +80,7 @@ export const processJoinArgs = (
       const j = joinTo.qb.baseQuery.clone();
       j.table = first;
       j.q = {
-        shape: w.shape,
+        selectShape: w.shape,
         runtimeComputeds: w.computeds,
         adapter: joinToQ.adapter,
         handleResult: joinToQ.handleResult,
@@ -230,7 +230,7 @@ const makeJoinQueryBuilder = (
   }
 
   if (shape) {
-    q.q.shape = shape as ColumnsShape;
+    q.q.selectShape = shape as ColumnsShape;
   }
   return q as never;
 };

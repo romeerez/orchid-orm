@@ -5,7 +5,7 @@ import {
   SelectableFromShape,
 } from '../../query';
 import { Column } from '../../../columns/column';
-import { addColumnParserToQuery, ColumnsShape } from '../../../columns';
+import { ColumnsShape } from '../../../columns';
 import {
   PickQuerySelectableResultRelationsWithDataReturnType,
   PickQueryResultRelationsWithDataReturnTypeShape,
@@ -42,10 +42,10 @@ import {
 } from '../../internal-features/sub-query/sub-query-for-sql';
 import { _queryNone, isQueryNone } from '../../extra-features/none/none';
 import {
+  addColumnParserToQuery,
   BatchParsers,
   ColumnsParsers,
   getQueryParsers,
-  setParserToQuery,
 } from '../../query-columns/query-column-parsers';
 import { preprocessJoinArg, processJoinArgs } from './process-join-args';
 import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
@@ -65,7 +65,6 @@ import { getSqlText } from '../../sql/sql';
 import { JoinValueDedupItem, pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { QueryThenByQuery } from '../../then/then';
-import { getValueKey } from '../get/get-value-key';
 
 // Type of column names of a `with` table, to use to join a `with` table by these columns.
 // Union of `with` column names that may be prefixed with a `with` table name.
@@ -863,24 +862,15 @@ export const _joinLateral = (
       joinQuery.q,
       'joinedShapes',
       joinedAs,
-      query.q.shape,
+      query.q.selectShape,
     );
   }
 
   const shape = getShapeFromSelect(joinQuery, true);
   setObjectValueImmutable(query.q, 'joinedShapes', joinAs, shape);
 
-  const parsers = getQueryParsers(joinQuery);
-
   if (joinValue) {
     setObjectValueImmutable(query.q, 'valuesJoinedAs', joinAs, joinValueAs);
-
-    const parse = parsers && getValueKey in parsers;
-    if (parse) {
-      const parse = parsers[getValueKey];
-      setParserToQuery(query.q, joinAs, parse);
-      parsers[joinAs] = parse;
-    }
   }
 
   setObjectValueImmutable(
@@ -1788,7 +1778,7 @@ export const addQueryOn = <T extends PickQuerySelectable>(
     'joinedShapes',
     ((joinFrom as unknown as PickQueryQ).q.as ||
       (joinFrom as PickQueryTable).table) as string,
-    (joinFrom as unknown as PickQueryQ).q.shape,
+    (joinFrom as unknown as PickQueryQ).q.selectShape,
   );
 
   return pushQueryOn(cloned, joinFrom, joinTo, ...args) as never;

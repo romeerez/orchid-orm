@@ -40,7 +40,7 @@ describe('map', () => {
       expect(sum).toBe(null);
     });
 
-    it('should ignore null for an aggregate in a sub query', async () => {
+    it('should ignore null for an aggregate in a sub query when not found', async () => {
       await User.insert(userData);
 
       const record = await User.take().select({

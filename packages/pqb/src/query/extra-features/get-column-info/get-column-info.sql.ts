@@ -3,6 +3,7 @@ import { addValue } from '../../../utils';
 import { SingleSql } from '../../sql/sql';
 
 import { getQuerySchema } from '../../basic-features/schema/schema';
+import { ColumnsShape } from 'pqb/index';
 
 export const makeColumnInfoSql = (
   query: ToSQLQuery,
@@ -22,7 +23,7 @@ export const makeColumnInfoSql = (
   if (column) {
     text += ` AND column_name = ${addValue(
       values,
-      query.q.shape[column]?.data.name || column,
+      (query.shape as ColumnsShape)[column]?.data.name || column,
     )}`;
   }
 

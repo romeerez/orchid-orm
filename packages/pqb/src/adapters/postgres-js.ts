@@ -17,6 +17,7 @@ import {
 import { createDbWithAdapter } from 'pqb';
 import { HackySavepointState } from './adapter';
 import { parseInterval } from './driver-adapter-shared';
+import { patchPostgresJsArrayParsers } from './postgres-js-array-parser-patch';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -140,6 +141,8 @@ export const PostgresJsAdapter: DriverAdapter = {
     } else {
       sql = postgres(config);
     }
+
+    patchPostgresJsArrayParsers(sql);
 
     return sql;
   },

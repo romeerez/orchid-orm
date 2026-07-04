@@ -13,7 +13,6 @@ import { getFullColumnTable } from '../query.utils';
 import { ValExpression } from './val-expression';
 import { SelectableOrExpressions } from './expression';
 import { AggregateOptions, makeFnExpression } from './fn-expression';
-import { emptyObject } from '../../utils';
 import { OrExpression, OrExpressionArg } from './or-expression';
 
 import { QueryThen } from '../then/then';
@@ -115,7 +114,7 @@ export class QueryExpressions {
     T['__selectable'][K]['column']['operators'] {
     const q = _clone(this);
 
-    const { shape } = q.q;
+    const { selectShape } = q.q;
     let column: Column.Pick.QueryColumn | undefined;
 
     const index = arg.indexOf('.');
@@ -124,12 +123,12 @@ export class QueryExpressions {
       const table = getFullColumnTable(q, arg, index, as);
       const col = arg.slice(index + 1);
       if (table === as) {
-        column = shape[col];
+        column = selectShape[col];
       } else {
         column = q.q.joinedShapes?.[table][col];
       }
     } else {
-      column = shape[arg];
+      column = selectShape[arg];
     }
 
     return new RefExpression(column || UnknownColumn.instance, q, arg) as never;
@@ -187,7 +186,7 @@ export class QueryExpressions {
   ): SetQueryReturnsFn<T, C> {
     return makeFnExpression(
       this,
-      emptyObject as C,
+      UnknownColumn.instance,
       fn,
       args as never,
       options,

@@ -17,6 +17,7 @@ import {
   anyShape,
   Column,
   ColumnSchemaConfig,
+  ColumnsShape,
   VirtualColumn,
 } from '../../../columns';
 import { isSelectingCount } from '../aggregate/aggregate';
@@ -346,7 +347,7 @@ const processCreateItem = (
   encoders: RecordEncoder,
   createHandlers: CreateHandlers,
 ) => {
-  const { shape } = (q as Query).q;
+  const shape = (q as Query).shape as ColumnsShape;
   for (const key in item) {
     const column = shape[key];
     if (!column) continue;

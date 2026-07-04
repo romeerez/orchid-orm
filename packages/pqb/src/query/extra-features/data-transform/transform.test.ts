@@ -97,6 +97,14 @@ describe('transform', () => {
       userId = await User.insert({ ...userData, age }).get('id');
     });
 
+    it('should transform nested get', async () => {
+      const res = await User.get(() =>
+        User.get('createdAt').transform((val) => ({ val })),
+      );
+
+      expect(res).toEqual({ val: expect.any(Date) });
+    });
+
     it('should load and transform records, with respect to column parsers', async () => {
       const q = User.select('name', 'createdAt').transform((nodes) => ({
         nodes,

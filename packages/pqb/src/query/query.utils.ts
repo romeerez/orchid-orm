@@ -18,7 +18,6 @@ import {
   PickQueryResultReturnType,
 } from './pick-query-types';
 import { _checkIfAliased } from './basic-features/as/as';
-import { getValueKey } from './basic-features/get/get-value-key';
 
 import { getClonedQueryData } from './query-data';
 import { Column } from '../columns';
@@ -213,7 +212,7 @@ export const getFullColumnTable = (
   q: IsQuery,
   column: string,
   index: number,
-  as: string | getValueKey | undefined,
+  as: string | undefined,
 ): string => {
   const table = column.slice(0, index);
   return as && table !== as && _checkIfAliased(q as Query, table, as as string)

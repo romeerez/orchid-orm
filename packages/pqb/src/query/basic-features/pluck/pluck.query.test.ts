@@ -81,7 +81,7 @@ describe('pluck', () => {
         SELECT "pluck"."pluck" "pluck"
         FROM "schema"."user"
         LEFT JOIN LATERAL (
-          SELECT "profile"."bio" "pluck"
+          SELECT array["profile"."bio"] "pluck"
           FROM "schema"."profile"
           WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
         ) "pluck" ON true

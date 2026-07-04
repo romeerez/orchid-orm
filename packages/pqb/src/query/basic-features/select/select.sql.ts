@@ -53,7 +53,7 @@ export const setSqlCtxSelectList = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: {
-    shape: Column.QueryColumns;
+    selectShape: Column.QueryColumns;
     hookSelect?: HookSelect;
     selectCache?: QueryData['selectCache'];
     returnType?: QueryData['returnType'];
@@ -93,10 +93,11 @@ export const selectToSqlList = (
     selectAllShape?: RecordUnknown;
     join?: QueryData['join'];
     hookSelect?: HookSelect;
-    shape: Column.QueryColumns;
+    selectShape: Column.QueryColumns;
     parsers?: ColumnsParsers;
     joinedShapes?: QueryData['joinedShapes'];
     returnType?: QueryData['returnType'];
+    getColumn?: Column;
   },
   quotedAs: string | undefined,
   hookSelect: HookSelect | undefined = query.hookSelect,
@@ -142,8 +143,8 @@ export const selectToSqlList = (
 
             sql = tableColumnToSql(
               ctx,
-              table.q,
-              table.q.shape,
+              query,
+              query.selectShape,
               tableName,
               key,
               quotedAs,
@@ -159,10 +160,10 @@ export const selectToSqlList = (
 
             sql = simpleColumnToSQL(
               ctx,
-              table.q,
-              table.q.shape,
+              query,
+              query.selectShape,
               item,
-              table.q.shape[item],
+              query.selectShape[item],
               quotedAs,
               true,
               item,
@@ -188,11 +189,18 @@ export const selectToSqlList = (
             const value = obj[as];
             if (typeof value === 'object') {
               if (isExpression(value)) {
-                list.push(`${value.toSQL(ctx, quotedAs)} "${as}"`);
+                let sql = value.toSQL(ctx, quotedAs);
+                if (value.q.getColumn?.data.valueToArray) {
+                  sql = `array[${sql}]`;
+                }
+
+                list.push(`${sql} "${as}"`);
+
                 if (jsonList) {
                   jsonList[as] = value.result
                     .value as unknown as Column.Pick.Data;
                 }
+
                 aliases?.push(as);
               } else if (delayedRelationSelect && isRelationQuery(value)) {
                 setMutativeQueriesSelectRelationsSqlState(
@@ -220,7 +228,7 @@ export const selectToSqlList = (
                 columnToSql(
                   ctx,
                   table.q,
-                  table.q.shape,
+                  table.q.selectShape,
                   value as string,
                   quotedAs,
                   true,
@@ -234,7 +242,11 @@ export const selectToSqlList = (
         } else {
           // selecting a single value from expression
           ctx.selectedCount++;
-          const sql = item.toSQL(ctx, quotedAs);
+          let sql = item.toSQL(ctx, quotedAs);
+
+          if (item.q.getColumn?.data.valueToArray) {
+            sql = `array[${sql}]`;
+          }
 
           // `get` column
           if (
@@ -254,7 +266,7 @@ export const selectToSqlList = (
             }
 
             if (key) {
-              const column = (item.q as QueryData).shape[key];
+              const column = (item.q as QueryData).selectShape[key];
               (selectedAs ??= {})[key] = column?.data.name || key;
             }
           }
@@ -287,16 +299,31 @@ export const selectToSqlList = (
           sql = columnToSql(
             ctx,
             table.q,
-            table.q.shape,
+            table.shape,
             select,
+            undefined,
+            true,
+            undefined,
+            undefined,
             undefined,
             true,
           );
         } else {
           quotedTable = quotedAs;
           columnName = select;
-          col = query.shape[select] as Column | undefined;
-          sql = columnToSql(ctx, table.q, query.shape, select, quotedAs, true);
+          col = table.shape[select] as Column | undefined;
+          sql = columnToSql(
+            ctx,
+            table.q,
+            table.shape,
+            select,
+            quotedAs,
+            true,
+            undefined,
+            undefined,
+            undefined,
+            true,
+          );
         }
       } else {
         columnName = column;
@@ -356,7 +383,7 @@ export const selectToSql = (
     selectAllShape?: RecordUnknown;
     join?: QueryData['join'];
     hookSelect?: HookSelect;
-    shape: Column.QueryColumns;
+    selectShape: Column.QueryColumns;
     parsers?: ColumnsParsers;
     joinedShapes?: QueryData['joinedShapes'];
     returnType?: QueryData['returnType'];
@@ -391,7 +418,7 @@ const internalSelectAllSql = (
     join?: QueryData['join'];
     selectAllColumns?: SelectAllColumn[];
     selectAllShape?: RecordUnknown;
-    shape: Column.QueryColumns;
+    selectShape: Column.QueryColumns;
   },
   quotedAs?: string,
   jsonList?: { [K: string]: Column.Pick.Data | undefined },
@@ -404,10 +431,10 @@ const internalSelectAllSql = (
   }
 
   let columnsCount: number | undefined;
-  if (query.shape !== anyShape) {
+  if (query.selectShape !== anyShape) {
     columnsCount = 0;
-    for (const key in query.shape) {
-      if (!(query.shape[key] as Column).data.explicitSelect) {
+    for (const key in query.selectShape) {
+      if (!(query.selectShape[key] as Column).data.explicitSelect) {
         columnsCount++;
       }
     }
@@ -424,7 +451,7 @@ export const selectAllSql = (
     join?: QueryData['join'];
     selectAllColumns?: SelectAllColumn[];
     selectAllShape?: RecordUnknown;
-    shape: Column.QueryColumns;
+    selectShape: Column.QueryColumns;
   },
   quotedAs?: string,
   columnsCount?: number,
@@ -433,12 +460,12 @@ export const selectAllSql = (
   return q.join?.length || q.updateFrom || q.updateMany
     ? q.selectAllColumns?.map((item) =>
         selectAllColumnToSql(item, ctx, quotedAs, true),
-      ) || (isEmptySelect(q.shape, columnsCount) ? [] : [`${quotedAs}.*`])
+      ) || (isEmptySelect(q.selectShape, columnsCount) ? [] : [`${quotedAs}.*`])
     : q.selectAllColumns
       ? q.selectAllColumns.map((item) =>
           selectAllColumnToSql(item, ctx, quotedAs),
         )
-      : isEmptySelect(q.shape, columnsCount)
+      : isEmptySelect(q.selectShape, columnsCount)
         ? []
         : ['*'];
 };

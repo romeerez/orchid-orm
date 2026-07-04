@@ -1,4 +1,4 @@
-import { columnToSql } from '../../sql/column-to-sql';
+import { columnToSqlNotSelect } from '../../sql/column-to-sql';
 import { ToSQLCtx } from '../../sql/to-sql';
 import { QueryData } from '../../query-data';
 import { Expression, isExpression } from '../../expressions/expression';
@@ -66,7 +66,7 @@ const addOrder = (
     }) ${order.dir || 'DESC'}`;
   }
 
-  return `${columnToSql(ctx, data, data.shape, column, quotedAs, undefined, undefined, undefined, true)} ${
+  return `${columnToSqlNotSelect(ctx, data, data.selectShape, column, quotedAs, true)} ${
     dir || 'ASC'
   }`;
 };

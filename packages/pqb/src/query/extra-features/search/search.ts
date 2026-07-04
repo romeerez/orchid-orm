@@ -8,7 +8,7 @@ import {
   saveAliasedShape,
   setQueryObjectValueImmutable,
 } from '../../query.utils';
-import { columnToSql } from '../../sql/column-to-sql';
+import { columnToSqlNotSelect } from '../../sql/column-to-sql';
 import { Operators } from '../../../columns/operators';
 import { Column } from '../../../columns';
 import { OrchidOrmInternalError } from '../../errors';
@@ -200,7 +200,7 @@ class Headline extends Expression<Column.Pick.QueryColumnOfType<string>> {
     const text = params?.text
       ? params.text instanceof Expression
         ? params.text.toSQL(ctx, quotedAs)
-        : columnToSql(ctx, q, q.shape, params.text, quotedAs)
+        : columnToSqlNotSelect(ctx, q, q.selectShape, params.text, quotedAs)
       : getSearchText(ctx, q, source, quotedAs, true);
 
     const options = params?.options

@@ -96,15 +96,15 @@ describe('order', () => {
 
   it('should be able to order by a selected value in a sub-query', () => {
     const q = User.select({
-      count: () => User.count(),
-    }).order('count');
+      avg: () => User.avg('id'),
+    }).order('avg');
 
     expectSql(
       q.toSQL(),
       `
-          SELECT (SELECT count(*) FROM "schema"."user") "count"
+          SELECT (SELECT avg("user"."id") FROM "schema"."user") "avg"
           FROM "schema"."user"
-          ORDER BY "count" ASC
+          ORDER BY "avg" ASC
         `,
     );
   });

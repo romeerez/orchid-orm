@@ -1,5 +1,5 @@
 import { Query } from '../../query';
-import { columnToSql, simpleColumnToSQL } from '../../sql/column-to-sql';
+import { columnToSqlNotSelect } from '../../sql/column-to-sql';
 import { JoinItemArgs, processJoinItem } from '../join/join.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
 import { JoinedShapes, QueryData, QueryScopeData } from '../../query-data';
@@ -11,7 +11,13 @@ import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-
 import { _getQueryOuterAliases, getQueryAs, QueryDataAliases } from '../as/as';
 import { ColumnsParsers } from '../../query-columns/query-column-parsers';
 import { Expression, isExpression } from '../../expressions/expression';
-import { addValue, MaybeArray, RecordUnknown, toArray } from '../../../utils';
+import {
+  addValue,
+  MaybeArray,
+  RecordString,
+  RecordUnknown,
+  toArray,
+} from '../../../utils';
 import { WhereSearchItem } from '../../extra-features/search/search.sql';
 import { joinSubQuery } from '../join/join';
 import { ColumnsShape } from '../../../columns';
@@ -60,11 +66,12 @@ export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 interface QueryDataForWhere extends QueryDataAliases {
   and?: QueryData['and'];
   or?: QueryData['or'];
-  shape: QueryData['shape'];
+  selectShape: QueryData['selectShape'];
   joinedShapes?: QueryData['joinedShapes'];
   scopes?: { [K: string]: QueryScopeData };
   outerAliases?: QueryData['outerAliases'];
   parsers?: ColumnsParsers;
+  valuesJoinedAs?: RecordString;
 }
 
 interface QueryDataWithLanguage extends QueryDataForWhere {
@@ -244,19 +251,19 @@ const processWhere = (
     } else if (key === 'ON') {
       if (Array.isArray(value)) {
         const item = value as WhereJsonPathEqualsItem;
-        const leftColumn = columnToSql(
+        const leftColumn = columnToSqlNotSelect(
           ctx,
           query,
-          query.shape,
+          query.selectShape,
           item[0],
           quotedAs,
         );
 
         const leftPath = item[1];
-        const rightColumn = columnToSql(
+        const rightColumn = columnToSqlNotSelect(
           ctx,
           query,
-          query.shape,
+          query.selectShape,
           item[2],
           quotedAs,
         );
@@ -280,7 +287,7 @@ const processWhere = (
           ? {
               joinedShapes: query.joinedShapes,
               aliases: _getQueryOuterAliases(query),
-              shape: query.shape,
+              selectShape: query.selectShape,
             }
           : query;
 
@@ -331,7 +338,13 @@ const processWhere = (
     ) {
       whereExprOrQuery(ctx, ands, query, key, value, quotedAs);
     } else {
-      const column = columnToSql(ctx, query, query.shape, key, quotedAs);
+      const column = columnToSqlNotSelect(
+        ctx,
+        query,
+        query.selectShape,
+        key,
+        quotedAs,
+      );
       ands.push(
         `${column} ${
           value === null ? 'IS NULL' : `= ${addValue(ctx.values, value)}`
@@ -351,53 +364,44 @@ const whereExprOrQuery = (
 ) => {
   if (isExpression(value)) {
     ands.push(
-      `${columnToSql(ctx, query, query.shape, key, quotedAs)} = ${value.toSQL(
-        ctx,
-        quotedAs,
-      )}`,
-    );
-  } else {
-    let column: Column.Pick.QueryColumn | undefined = query.shape[key];
-    let quotedColumn: string | undefined;
-    if (column) {
-      quotedColumn = simpleColumnToSQL(
+      `${columnToSqlNotSelect(
         ctx,
         query,
-        query.shape,
+        query.selectShape,
         key,
-        column,
         quotedAs,
-      );
-    } else if (!column) {
+      )} = ${value.toSQL(ctx, quotedAs)}`,
+    );
+  } else {
+    let column: Column.Pick.QueryColumn | undefined = query.selectShape[key];
+    if (!column) {
       const index = key.indexOf('.');
-      if (index !== -1) {
+      if (index === -1) {
+        column = query.joinedShapes?.[key]?.value;
+      } else if (index !== -1) {
         const table = key.slice(0, index);
-        const quoted = `"${table}"`;
         const name = key.slice(index + 1);
+        const quoted = `"${table}"`;
 
         column = (
           quotedAs === quoted
-            ? query.shape[name]
+            ? query.selectShape[name]
             : query.joinedShapes?.[table]?.[name]
         ) as typeof column;
-
-        quotedColumn = simpleColumnToSQL(
-          ctx,
-          query,
-          query.shape,
-          name,
-          column,
-          quoted,
-        );
-      } else {
-        column = query.joinedShapes?.[key]?.value;
-        quotedColumn = `"${key}"."${key}"`;
-      }
-
-      if (!column || !quotedColumn) {
-        throw new Error(`Unknown column ${key} provided to condition`);
       }
     }
+
+    if (!column) {
+      throw new Error(`Unknown column ${key} provided to condition`);
+    }
+
+    const quotedColumn = columnToSqlNotSelect(
+      ctx,
+      query,
+      query.selectShape,
+      key,
+      quotedAs,
+    );
 
     if (value instanceof ctx.qb.constructor) {
       const subQuerySql = moveMutativeQueryToCte(ctx, value as SubQueryForSql);
@@ -428,7 +432,7 @@ const whereExprOrQuery = (
 interface OnColumnToSQLQuery {
   joinedShapes?: QueryData['joinedShapes'];
   aliases?: QueryData['aliases'];
-  shape: ColumnsShape;
+  selectShape: ColumnsShape;
   select?: SelectItem[];
 }
 
@@ -437,7 +441,7 @@ const onColumnToSql = (
   query: OnColumnToSQLQuery,
   joinAs: string,
   column: string,
-) => columnToSql(ctx, query, query.shape, column, joinAs);
+) => columnToSqlNotSelect(ctx, query, query.selectShape, column, joinAs);
 
 const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
   return typeof joinItem === 'string' ? joinItem : getQueryAs(joinItem);
@@ -446,7 +450,7 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 const pushIn = (
   ctx: ToSQLCtx,
   query: {
-    shape: ColumnsShape;
+    selectShape: ColumnsShape;
     joinedShapes?: JoinedShapes;
     select?: SelectItem[];
   },
@@ -482,7 +486,9 @@ const pushIn = (
   }
 
   const columnsSql = arg.columns
-    .map((column) => columnToSql(ctx, query, query.shape, column, quotedAs))
+    .map((column) =>
+      columnToSqlNotSelect(ctx, query, query.selectShape, column, quotedAs),
+    )
     .join(', ');
 
   ands.push(`${multiple ? `(${columnsSql})` : columnsSql} IN ${value}`);

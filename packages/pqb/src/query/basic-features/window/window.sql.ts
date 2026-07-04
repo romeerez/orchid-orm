@@ -34,15 +34,25 @@ export const windowToSql = (
         Array.isArray(window.partitionBy)
           ? window.partitionBy
               .map((partitionBy) =>
-                rawOrColumnToSql(ctx, data, data.shape, partitionBy, quotedAs),
+                rawOrColumnToSql(
+                  ctx,
+                  data,
+                  data.selectShape,
+                  partitionBy,
+                  quotedAs,
+                  undefined,
+                  true,
+                ),
               )
               .join(', ')
           : rawOrColumnToSql(
               ctx,
               data,
-              data.shape,
+              data.selectShape,
               window.partitionBy,
               quotedAs,
+              undefined,
+              true,
             )
       }`,
     );

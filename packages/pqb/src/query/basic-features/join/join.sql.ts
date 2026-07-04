@@ -1,4 +1,7 @@
-import { columnToSql, rawOrColumnToSql } from '../../sql/column-to-sql';
+import {
+  columnToSqlNotSelect,
+  rawOrColumnToSql,
+} from '../../sql/column-to-sql';
 import { IsQuery, Query } from '../../query';
 import { whereToSql } from '../where/where.sql';
 import { ToSQLCtx, ToSQLQuery } from '../../sql/to-sql';
@@ -134,7 +137,7 @@ export const processJoinItem = (
   ctx: ToSQLCtx,
   table: ToSQLQuery,
   query: {
-    shape: ColumnsShape;
+    selectShape: ColumnsShape;
     joinedShapes?: JoinedShapes;
     as?: string;
     outerAliases?: RecordString;
@@ -290,7 +293,7 @@ export const processJoinItem = (
           joinedShapes: {
             ...query.joinedShapes,
             ...q.q.joinedShapes,
-            [(table.q.as || table.table) as string]: table.q.shape,
+            [(table.q.as || table.table) as string]: table.q.selectShape,
           },
         },
         joinAs,
@@ -360,7 +363,7 @@ const processArgs = (
   query: {
     joinedShapes?: JoinedShapes;
     select?: SelectItem[];
-    shape: ColumnsShape;
+    selectShape: ColumnsShape;
   },
   joinAs: string,
   joinShape: Column.QueryColumns,
@@ -392,7 +395,7 @@ const getConditionsFor3Or4LengthItem = (
   query: {
     joinedShapes?: JoinedShapes;
     select?: SelectItem[];
-    shape: ColumnsShape;
+    selectShape: ColumnsShape;
   },
   target: string,
   quotedAs: string | undefined,
@@ -410,7 +413,7 @@ const getConditionsFor3Or4LengthItem = (
     joinShape,
     leftColumn,
     target,
-  )} ${op} ${rawOrColumnToSql(ctx, query, query.shape, rightColumn, quotedAs)}`;
+  )} ${op} ${rawOrColumnToSql(ctx, query, query.selectShape, rightColumn, quotedAs)}`;
 };
 
 const getObjectOrRawConditions = (
@@ -418,7 +421,7 @@ const getObjectOrRawConditions = (
   query: {
     joinedShapes?: JoinedShapes;
     select?: SelectItem[];
-    shape: ColumnsShape;
+    selectShape: ColumnsShape;
   },
   data: { [K: string]: string | Expression } | Expression | true,
   quotedAs: string | undefined,
@@ -431,13 +434,13 @@ const getObjectOrRawConditions = (
     return data.toSQL(ctx, quotedAs);
   } else {
     const pairs: string[] = [];
-    const shape = query.shape;
+    const shape = query.selectShape;
 
     for (const key in data) {
       const value = data[key];
 
       pairs.push(
-        `${columnToSql(
+        `${columnToSqlNotSelect(
           ctx,
           query,
           joinShape,

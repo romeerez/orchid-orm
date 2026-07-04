@@ -140,7 +140,7 @@ describe('cte', () => {
       expectSql(
         q.toSQL(),
         `
-          WITH "w"(${Object.keys(User.q.shape)
+          WITH "w"(${Object.keys(User.shape)
             .map((c) => `"${c}"`)
             .join(
               ', ',

@@ -42,6 +42,7 @@ import {
   newMutativeQueriesSelectRelationsSqlState,
   handleInsertAndUpdateSelectRelationsSqlState,
 } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import { ColumnsShape } from '../../../columns';
 
 export type OnConflictTarget =
   | string
@@ -79,7 +80,8 @@ export const makeInsertSql = (
   isSubSql?: boolean,
 ): Sql => {
   let { columns } = query;
-  const { shape, hookCreateSet } = query;
+  const shape = q.shape as ColumnsShape;
+  const { hookCreateSet } = query;
   const QueryClass = ctx.qb.constructor as unknown as Db;
 
   let { insertFrom, queryColumnsCount, values } = query;
@@ -150,6 +152,7 @@ export const makeInsertSql = (
 
   const hasOnConflictWhere = pushOnConflictSql(
     ctx,
+    q,
     query,
     quotedAs,
     columns,
@@ -318,6 +321,7 @@ export const makeInsertSql = (
 
 const pushOnConflictSql = (
   ctx: ToSQLCtx,
+  q: ToSQLQuery,
   query: QueryData,
   quotedAs: string,
   columns: string[],
@@ -326,7 +330,7 @@ const pushOnConflictSql = (
 ): boolean => {
   if (!query.onConflict) return false;
 
-  const { shape } = query;
+  const shape = q.shape as ColumnsShape;
 
   ctx.sql.push('ON CONFLICT');
 

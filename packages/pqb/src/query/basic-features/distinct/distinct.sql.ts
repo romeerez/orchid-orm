@@ -12,7 +12,7 @@ export const pushDistinctSql = (
 
   if (distinct.length) {
     const columns = distinct?.map((item) =>
-      rawOrColumnToSql(ctx, table.q, table.q.shape, item, quotedAs),
+      rawOrColumnToSql(ctx, table.q, table.q.selectShape, item, quotedAs),
     );
     ctx.sql.push(`ON (${columns?.join(', ') || ''})`);
   }

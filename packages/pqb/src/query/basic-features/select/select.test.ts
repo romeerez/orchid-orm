@@ -100,7 +100,10 @@ describe('select', () => {
 
       const Table = Object.create(User);
       Table.q = {
-        shape: { ...Table.shape, virtual: new Virtual(internalSchemaConfig) },
+        selectShape: {
+          ...Table.shape,
+          virtual: new Virtual(internalSchemaConfig),
+        },
       };
 
       const q = Table.select('*');
@@ -776,27 +779,6 @@ describe('select', () => {
         await expect(() =>
           User.select({ as: () => Profile.get('id') }),
         ).rejects.toThrow(NotFoundError);
-      });
-
-      it('should return undefined when sub query with `getOptional` is not found', async () => {
-        await User.insert(userData);
-
-        const res = await User.select({
-          withParsers: () => Profile.getOptional('createdAt'),
-          withoutParsers: () => ProfileNoParsers.getOptional('createdAt'),
-        });
-
-        assertType<
-          typeof res,
-          {
-            withParsers: Date | undefined;
-            withoutParsers: Date | undefined;
-          }[]
-        >();
-
-        expect(res).toEqual([
-          { withParsers: undefined, withoutParsers: undefined },
-        ]);
       });
 
       it('should not throw when not found for aggregations that can return null', async () => {

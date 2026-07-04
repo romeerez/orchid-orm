@@ -10,11 +10,9 @@ import {
   PickQuerySelectable,
 } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
-import {
-  addParserForSelectItem,
-  processSelectAsArg,
-} from '../select/select.utils';
+import { processSelectAsArg } from '../select/select.utils';
 import type { SelectAsFnArg } from '../select/select';
+import { SelectAsValue } from '../select/select.sql';
 
 export interface QueryPluckSelf
   extends PickQuerySelectable, PickQueryRelationsWithData {}
@@ -64,23 +62,23 @@ export class QueryPluck {
     q.q.returnType = 'pluck';
 
     let selected;
-    if (typeof select === 'function') {
-      const item = processSelectAsArg(
-        q as never,
-        q.q.as || q.table,
-        'pluck',
-        select as never,
-      );
-      if (item !== false) {
-        selected = isExpression(item) ? item : { selectAs: { pluck: item } };
-      }
-    } else {
-      selected = addParserForSelectItem(
-        q as never,
-        q.q.as || q.table,
-        'pluck',
-        select,
-      );
+    const selectAs: SelectAsValue = {};
+    const item = processSelectAsArg(
+      q as never,
+      selectAs,
+      q.q.as || q.table,
+      'pluck',
+      select as never,
+      undefined,
+      'value',
+    );
+    if (item !== false) {
+      q.q.getColumn = item;
+
+      selected =
+        typeof selectAs.pluck === 'object' && !isExpression(selectAs.pluck)
+          ? { selectAs }
+          : selectAs.pluck;
     }
 
     q.q.select = selected ? [selected as never] : undefined;

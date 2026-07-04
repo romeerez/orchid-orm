@@ -480,6 +480,8 @@ export namespace Column {
     generated?: Data.Generated;
     // computed and generated columns are readonly
     readonly?: boolean;
+    valueToArray?: boolean;
+    skipValueToArray?: boolean;
   }
 
   export namespace Data {

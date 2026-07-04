@@ -340,7 +340,7 @@ const applyRelation = (
   }
 
   if (data.virtualColumn) {
-    dbTable.shape[relationName] = dbTable.q.shape[relationName] =
+    dbTable.shape[relationName] = dbTable.q.selectShape[relationName] =
       data.virtualColumn;
   }
 

@@ -1,5 +1,20 @@
 # Breaking changes
 
+## orchid-orm 1.74.0
+
+Previously, all `null` values from `getOptional` nested selects were replaced with `undefined`.
+Now if the nested record is not found it's still `undefined`, if found with a `null` value it will return the `null`.
+
+For example, in such query:
+
+```ts
+const post = await db.post.find(postId).select({
+  commentText: (q) => q.comments.find(commentId).getOptional('text'), // text is nullable
+});
+```
+
+`commentText` can be either `null` or `undefined`.
+
 ## orchid-orm 1.73.0, pqb 0.68.0
 
 `belongsTo` now infers omitted `required` from local relation column nullability.

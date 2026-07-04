@@ -140,13 +140,13 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "value"."value" "value"
+          SELECT "v"."v" "v"
           FROM "schema"."user"
           JOIN LATERAL (
-            SELECT "profile"."bio" "value"
+            SELECT array["profile"."bio"] "v"
             FROM "schema"."profile"
             WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
-          ) "value" ON true
+          ) "v" ON true
           LIMIT 1
         `,
       );
@@ -162,13 +162,13 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "value"."value" "value"
+          SELECT "v"."v" "v"
           FROM "schema"."user"
           JOIN LATERAL (
-            SELECT "profile"."bio" "value"
+            SELECT array["profile"."bio"] "v"
             FROM "schema"."profile"
             WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
-          ) "value" ON true
+          ) "v" ON true
           LIMIT 1
         `,
       );
@@ -267,7 +267,7 @@ describe('get', () => {
     });
 
     it('should select optional value query from a callback and return a single value when exists', async () => {
-      await db.user.create({
+      await db.user.insert({
         ...UserData,
         profile: { create: ProfileData },
       });
@@ -285,13 +285,13 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "value"."value" "value"
+          SELECT "v"."v" "v"
           FROM "schema"."user"
           LEFT JOIN LATERAL (
-            SELECT "profile"."created_at" "value"
+            SELECT array["profile"."created_at"] "v"
             FROM "schema"."profile"
             WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
-          ) "value" ON true
+          ) "v" ON true
           LIMIT 1
         `,
       );
@@ -306,18 +306,18 @@ describe('get', () => {
 
       assertType<typeof result, string | null | undefined>();
 
-      expect(result).toBe(null);
+      expect(result).toBe(undefined);
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "value"."value" "value"
+          SELECT "v"."v" "v"
           FROM "schema"."user"
           LEFT JOIN LATERAL (
-            SELECT "profile"."bio" "value"
+            SELECT array["profile"."bio"] "v"
             FROM "schema"."profile"
             WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
-          ) "value" ON true
+          ) "v" ON true
           LIMIT 1
         `,
       );

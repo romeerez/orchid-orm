@@ -516,7 +516,7 @@ export const makeHasAndBelongsToManyMethod = (
       foreignAs,
       {
         ...(baseQuery as Query).q.joinedShapes,
-        [foreignAs]: (joiningQuery as Query).q.shape,
+        [foreignAs]: (joiningQuery as Query).q.selectShape,
       },
     );
   };
@@ -564,7 +564,7 @@ export const makeHasAndBelongsToManyMethod = (
             ...(joiningQuery as Query).q.joinedShapes,
             [((baseQuery as Query).q.as ||
               (baseQuery as Query).table) as string]: (baseQuery as Query).q
-              .shape,
+              .selectShape,
           },
         ),
     ),

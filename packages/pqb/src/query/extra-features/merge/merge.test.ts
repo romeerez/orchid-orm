@@ -13,7 +13,6 @@ import { emptyObject, noop } from '../../../utils';
 import { ComputedColumn } from '../computed/computed';
 import { Expression } from '../../expressions/expression';
 import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
-import { getValueKey } from '../../basic-features/get/get-value-key';
 
 describe('merge queries', () => {
   describe('select', () => {
@@ -321,10 +320,10 @@ describe('merge queries', () => {
       const q1 = query1.q;
       const q2 = query2.q;
 
-      q1.shape = {
+      q1.selectShape = {
         number: t.integer(),
       };
-      q2.shape = {
+      q2.selectShape = {
         string: t.string(),
       };
       q1.wrapInTransaction = false;
@@ -341,8 +340,8 @@ describe('merge queries', () => {
       q2.from = testDb.sql`b`;
       q1.coalesceValue = 'a';
       q2.coalesceValue = 'b';
-      q1.parsers = { [getValueKey]: (x) => x, a: (x) => x };
-      q2.parsers = { [getValueKey]: (x) => x, b: (x) => x };
+      q1.parsers = { a: (x) => x };
+      q2.parsers = { b: (x) => x };
       q1.notFoundDefault = 1;
       q2.notFoundDefault = 2;
       q1.defaults = { a: 1 };
@@ -369,8 +368,8 @@ describe('merge queries', () => {
       q2.distinct = ['name'];
       q1.only = false;
       q2.only = true;
-      q1.joinedShapes = { a: q1.shape };
-      q2.joinedShapes = { b: q2.shape };
+      q1.joinedShapes = { a: q1.selectShape };
+      q2.joinedShapes = { b: q2.selectShape };
       q1.joinedParsers = { a: q1.parsers };
       q2.joinedParsers = { b: q2.parsers };
       q1.joined = { a: db.user };
@@ -437,9 +436,9 @@ describe('merge queries', () => {
       q2.afterDeleteSelect = new Set(['two']);
 
       const { q } = query1.merge(query2);
-      expect(q.shape).toEqual({
-        number: q1.shape.number,
-        string: q2.shape.string,
+      expect(q.selectShape).toEqual({
+        number: q1.selectShape.number,
+        string: q2.selectShape.string,
       });
       expect(q.wrapInTransaction).toBe(true);
       expect(q.throwOnNotFound).toBe(true);

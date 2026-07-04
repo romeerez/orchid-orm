@@ -18,6 +18,7 @@ import {
   anyShape,
   Column,
   ColumnSchemaConfig,
+  ColumnsShape,
   VirtualColumn,
 } from '../../../columns';
 import {
@@ -185,7 +186,7 @@ const _queryUpdateMany = <T extends UpdateSelf>(
   const query = self as unknown as Query;
   throwIfReadOnly(query);
   const { q } = query;
-  const { shape } = q;
+  const shape = query.shape as ColumnsShape;
 
   q.type = 'update';
   setUpdateReturning(q);
@@ -283,7 +284,7 @@ export const _queryUpdate = <T extends UpdateSelf>(
   const set = { ...(arg as RecordUnknown) };
   pushQueryValueImmutable(query, 'updateData', set);
 
-  const { shape } = q;
+  const shape = query.shape as ColumnsShape;
 
   let selectQuery: Query | undefined;
 

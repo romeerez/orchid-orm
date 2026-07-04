@@ -1,7 +1,7 @@
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { Operators, setQueryOperators } from '../../../columns/operators';
 import { getFullColumnTable } from '../../query.utils';
-import { addColumnParserToQuery, Column } from '../../../columns';
+import { Column } from '../../../columns';
 import {
   PickQueryQ,
   PickQueryRelationsWithData,
@@ -18,14 +18,10 @@ import {
   SetQueryReturnsValueOptional,
   SetQueryReturnsValueOrThrow,
 } from '../../query';
-import { getValueKey } from './get-value-key';
-import {
-  addParserForRawExpression,
-  processSelectAsArg,
-  setParserForSelectedString,
-} from '../select/select.utils';
+import { processSelectAsArg } from '../select/select.utils';
 import { getQueryAs } from '../as/as';
 import type { SelectAsFnArg } from '../select/select';
+import { SelectAsValue } from '../select/select.sql';
 
 export interface QueryGetSelf
   extends PickQuerySelectable, PickQueryRelationsWithData {}
@@ -69,7 +65,7 @@ export const _getSelectableColumn = (
   arg: string,
 ): Column.Pick.QueryColumn | undefined => {
   let type: Column.Pick.QueryColumn | undefined = (q as unknown as PickQueryQ).q
-    .shape[arg];
+    .selectShape[arg];
   if (!type) {
     const index = arg.indexOf('.');
     if (index !== -1) {
@@ -105,62 +101,39 @@ const _get = <
 
   q.returnType = returnType;
 
-  let type: Column.Pick.QueryColumn | undefined;
   let value: unknown = arg;
 
-  if (typeof value === 'function') {
-    const item = processSelectAsArg(
-      query as never,
-      getQueryAs(query as never),
-      'value',
-      value as never,
-    );
-    if (item !== false) {
-      value = item;
-    }
+  const selectAs: SelectAsValue = {};
+  let column: Column | undefined;
+  const selected = processSelectAsArg(
+    query as never,
+    selectAs,
+    getQueryAs(query as never),
+    'v',
+    value as never,
+    undefined,
+    returnType,
+  );
+  if (selected !== false) {
+    q.getColumn = column = selected;
+    value = selectAs.v || value;
   }
 
   if (typeof value === 'string') {
-    const joinedAs = q.valuesJoinedAs?.[value];
-
-    type = (
-      joinedAs
-        ? q.joinedShapes?.[joinedAs]?.value
-        : _getSelectableColumn(query as never, value)
-    ) as Column.Pick.QueryColumn | undefined;
-
-    q.getColumn = type;
-
-    const selected = setParserForSelectedString(
-      query as never,
-      joinedAs ? joinedAs + '.' + value : value,
-      getQueryAs(query as never),
-      getValueKey,
-    );
-
-    q.select = selected
-      ? [(q.expr = new SelectItemExpression(query as never, selected, type))]
-      : undefined;
-  } else {
-    if (isExpression(value)) {
-      type = value.result.value as Column.Pick.QueryColumn | undefined;
-      q.getColumn = type;
-      addParserForRawExpression(query as never, getValueKey, value);
-      q.select = [(q.expr = value)];
-    } else {
-      const selected = value as Query;
-      q.getColumn = selected.q.getColumn;
-      if (q.getColumn) {
-        addColumnParserToQuery(q, getValueKey, q.getColumn);
-      }
-
-      q.select = selected ? [{ selectAs: { value: selected } }] : undefined;
-    }
+    value =
+      selectAs.v &&
+      new SelectItemExpression(query as never, selectAs.v as string, column);
   }
+
+  q.select = isExpression(value)
+    ? [(q.expr = value)]
+    : value
+      ? [{ selectAs: { v: value as Query } }]
+      : undefined;
 
   return setQueryOperators(
     query as never,
-    type?.operators || Operators.any,
+    column?.operators || Operators.any,
   ) as never;
 };
 

@@ -34,6 +34,7 @@ export interface ExpressionData extends HasBeforeAndBeforeSet {
   expr?: Expression;
   before?: QueryBeforeHook[];
   dynamicBefore?: boolean;
+  getColumn?: Column;
 }
 
 // Base class for the raw SQL and other classes that can produce SQL
@@ -63,6 +64,7 @@ export abstract class Expression<
         );
       }
     }
+
     return sql;
   }
 

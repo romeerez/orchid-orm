@@ -1,7 +1,20 @@
-import { db, expectSql } from 'test-utils';
+import {
+  db,
+  expectSql,
+  ProfileData,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 
 describe('auto alias tables to prevent conflicts', () => {
-  it('should alias tables in a recurrent select', () => {
+  useTestDatabase();
+
+  it('should alias tables in a recurrent select', async () => {
+    await db.user.insert({
+      ...UserData,
+      profile: { create: ProfileData },
+    });
+
     const q = db.profile
       .select({
         user: (q) =>
@@ -11,9 +24,12 @@ describe('auto alias tables to prevent conflicts', () => {
           }),
       })
       .where({
-        'user.profile': true,
+        'user.profile': null,
         'user.bio': 'bio',
       });
+
+    const res = await q;
+    expect(res).toEqual([{ user: { profile: null, bio: 'bio' } }]);
 
     expectSql(
       q.toSQL(),
@@ -24,7 +40,7 @@ describe('auto alias tables to prevent conflicts', () => {
             SELECT "profile2"."profile" "profile", "profile2"."bio" "bio"
             FROM "schema"."user"
             LEFT JOIN LATERAL (
-              SELECT "profile2"."active" "profile", "profile2"."bio" "bio"
+              SELECT array["profile2"."active"] "profile", array["profile2"."bio"] "bio"
               FROM "schema"."profile" "profile2"
               WHERE "profile2"."user_id" = "user"."id"
                 AND "profile2"."profile_key" = "user"."user_key"
@@ -32,9 +48,9 @@ describe('auto alias tables to prevent conflicts', () => {
             WHERE "user"."id" = "profile"."user_id"
               AND "user"."user_key" = "profile"."profile_key"
           ) "user" ON true
-          WHERE "user"."profile" = $1 AND "user"."bio" = $2
+          WHERE "user"."profile"[1] IS NULL AND "user"."bio"[1] = $1
         `,
-      [true, 'bio'],
+      ['bio'],
     );
   });
 });

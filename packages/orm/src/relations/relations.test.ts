@@ -263,12 +263,12 @@ describe('relations', () => {
         SELECT "bio"."bio" "bio"
         FROM "schema"."user"
         LEFT JOIN LATERAL (
-          SELECT "profile"."bio" "bio"
+          SELECT array["profile"."bio"] "bio"
           FROM "schema"."profile"
           WHERE "profile"."user_id" = "user"."id"
             AND "profile"."profile_key" = "user"."user_key"
         ) "bio" ON true
-        ORDER BY "bio"."bio" DESC
+        ORDER BY "bio"."bio"[1] DESC
       `,
     );
   });

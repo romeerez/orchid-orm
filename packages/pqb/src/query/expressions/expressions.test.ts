@@ -4,10 +4,20 @@ import {
   User,
   userColumnsSql,
 } from '../../test-utils/pqb.test-utils';
-import { assertType, expectSql, sql, testDb } from 'test-utils';
+import {
+  assertType,
+  db,
+  expectSql,
+  sql,
+  testDb,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 import { Expression } from './expression';
 
 describe('expressions', () => {
+  useTestDatabase();
+
   describe('column', () => {
     it('should be available on the base query builder', () => {
       const column = (testDb.column('column') as Expression).toSQL({
@@ -129,10 +139,17 @@ describe('expressions', () => {
 
   describe('val', () => {
     it('should parameterized values', async () => {
-      const q = User.select({
+      await db.user.insert(UserData);
+
+      const q = db.user.select({
         value: (q) => {
           return q
-            .fn('concat', [q.val('one'), 'name', q.val('two'), 'user.password'])
+            .fn('concat', [
+              sql`${q.val('one')}::text`,
+              'Name',
+              sql`${q.val('two')}::text`,
+              'user.Password',
+            ])
             .type((t) => t.string())
             .contains('lala');
         },
@@ -143,32 +160,42 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT concat($1, "user"."name", $2, "user"."password") ILIKE '%' || $3 || '%' "value"
+          SELECT array[concat($1::text, "user"."name", $2::text, "user"."password") ILIKE '%' || $3 || '%'] "value"
           FROM "schema"."user"
         `,
         ['one', 'two', 'lala'],
       );
+
+      const res = await q;
+      expect(res).toEqual([{ value: false }]);
     });
   });
 
   describe('fn', () => {
-    it('should accept raw SQL', () => {
-      const q = User.select({
-        count: (q) =>
-          q
-            .fn('count', [sql`coalesce(one, two)`])
-            .type((t) => t.integer())
-            .gt(sql`2 + 2`),
-      }).take();
+    it('should accept raw SQL', async () => {
+      await db.user.insert(UserData);
+
+      const q = db.user
+        .select({
+          count: (q) =>
+            q
+              .fn('count', [sql`coalesce(age, id)`])
+              .type((t) => t.integer())
+              .gt(sql`2 + 2`),
+        })
+        .take();
 
       assertType<Awaited<typeof q>, { count: boolean }>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT count(coalesce(one, two)) > 2 + 2 "count" FROM "schema"."user" LIMIT 1
+          SELECT array[count(coalesce(age, id)) > 2 + 2] "count" FROM "schema"."user" LIMIT 1
         `,
       );
+
+      const res = await q;
+      expect(res).toEqual({ count: false });
     });
   });
 

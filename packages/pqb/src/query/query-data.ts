@@ -145,7 +145,7 @@ export interface QueryData
     MutativeQueriesSelectRelationsQueryData {
   type: QueryType;
   adapter: Adapter;
-  shape: ColumnsShape;
+  selectShape: ColumnsShape;
   handleResult: HandleResult;
   // When executed in a transaction,
   // the query will be wrapped with a `SAVEPOINT x; *query*; ROLLBACK TO SAVEPOINT x (if fails)`.

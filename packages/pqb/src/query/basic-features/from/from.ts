@@ -121,7 +121,7 @@ export function queryFrom<
   if (typeof arg === 'string') {
     data.as ||= arg;
     const w = data.withShapes?.[arg];
-    data.shape = (w?.shape ?? anyShape) as ColumnsShape;
+    data.selectShape = (w?.shape ?? anyShape) as ColumnsShape;
     data.runtimeComputeds = w?.computeds;
 
     const parsers: ColumnsParsers = {};
@@ -136,7 +136,7 @@ export function queryFrom<
       data.schema = undefined;
     }
   } else if (Array.isArray(arg)) {
-    const shape = { ...data.shape };
+    const shape = { ...data.selectShape };
 
     const joinedParsers: JoinedParsers = {};
 
@@ -165,7 +165,7 @@ export function queryFrom<
   } else {
     const q = prepareSubQueryForSql(self as never, arg as never);
     data.as ||= q.q.as || q.table || 't';
-    data.shape = getShapeFromSelect(q, true) as ColumnsShape;
+    data.selectShape = getShapeFromSelect(q, true) as ColumnsShape;
     data.defaultParsers = getQueryParsers(q as unknown as Query);
     data.batchParsers = q.q.batchParsers;
   }

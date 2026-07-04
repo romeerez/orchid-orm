@@ -1,4 +1,4 @@
-import { columnToSql } from '../../sql/column-to-sql';
+import { columnToSqlNotSelect } from '../../sql/column-to-sql';
 import { SortDir } from '../../basic-features/order/order.sql';
 import { addValue, MaybeArray } from '../../../utils';
 import { Expression } from '../../expressions/expression';
@@ -121,7 +121,13 @@ export const getSearchLang = (
 ): string => {
   return (source.langSQL ??=
     'languageColumn' in source
-      ? columnToSql(ctx, data, data.shape, source.languageColumn, quotedAs)
+      ? columnToSqlNotSelect(
+          ctx,
+          data,
+          data.selectShape,
+          source.languageColumn,
+          quotedAs,
+        )
       : isRawSQL(source.language)
         ? source.language.toSQL(ctx)
         : addValue(ctx.values, source.language || data.language || 'english'));
@@ -139,15 +145,25 @@ export const getSearchText = (
 
   if ('in' in source) {
     if (typeof source.in === 'string') {
-      sql = columnToSql(ctx, data, data.shape, source.in, quotedAs);
+      sql = columnToSqlNotSelect(
+        ctx,
+        data,
+        data.selectShape,
+        source.in,
+        quotedAs,
+      );
     } else if (Array.isArray(source.in)) {
       sql = `concat_ws(' ', ${source.in
-        .map((column) => columnToSql(ctx, data, data.shape, column, quotedAs))
+        .map((column) =>
+          columnToSqlNotSelect(ctx, data, data.selectShape, column, quotedAs),
+        )
         .join(', ')})`;
     } else {
       sql = [];
       for (const key in source.in) {
-        sql.push(columnToSql(ctx, data, data.shape, key, quotedAs));
+        sql.push(
+          columnToSqlNotSelect(ctx, data, data.selectShape, key, quotedAs),
+        );
       }
     }
   } else if ('vector' in source) {
@@ -157,7 +173,13 @@ export const getSearchText = (
       );
     }
 
-    sql = columnToSql(ctx, data, data.shape, source.vector, quotedAs);
+    sql = columnToSqlNotSelect(
+      ctx,
+      data,
+      data.selectShape,
+      source.vector,
+      quotedAs,
+    );
   } else {
     if (typeof source.text === 'string') {
       sql = addValue(ctx.values, source.text);

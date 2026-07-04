@@ -87,7 +87,7 @@ describe('db', () => {
     }));
 
     expect(Table.q.selectAllShape).toEqual({
-      id: Table.q.shape.id,
+      id: Table.shape.id,
     });
   });
 

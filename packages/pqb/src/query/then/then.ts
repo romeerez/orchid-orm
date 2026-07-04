@@ -7,7 +7,6 @@ import {
 import { processComputedResult } from '../extra-features/computed/computed';
 import { Column, ColumnsShape } from '../../columns';
 import { HookPurpose } from '../extra-features/hooks/hooks.sql';
-import { getValueKey } from '../basic-features/get/get-value-key';
 import {
   Adapter,
   AfterCommitHook,
@@ -31,6 +30,7 @@ import {
   ColumnParser,
   ColumnsParsers,
   getQueryParsers,
+  getValueParser,
 } from '../query-columns/query-column-parsers';
 import { _clone } from '../basic-features/clone/clone';
 import { NotFoundError, QueryError } from '../errors';
@@ -351,8 +351,8 @@ const then = async (
     const tempReturnType =
       tableHook?.select ||
       cteHooks?.hasSelect ||
-      (returnType === 'rows' &&
-        (q.q.batchParsers || adapter.driverAdapter.noFieldsForArrays)) ||
+      q.q.batchParsers ||
+      adapter.driverAdapter.noFieldsForArrays ||
       checkIfNeedResultAllForMutativeQueriesSelectRelations(sql)
         ? 'all'
         : returnType;
@@ -486,7 +486,6 @@ const then = async (
       // runAfterQuery is not called because it's only for upsert,
       // while this batch branch is for batch insert
 
-      //
       result = query.handleResult(q, tempReturnType, queryResult!, localSql);
     }
 
@@ -909,7 +908,7 @@ export const handleResult: HandleResult = (
   sql,
   isSubQuery,
 ) => {
-  const parsers = getQueryParsers(q, sql.tableHook?.select);
+  let parsers = getQueryParsers(q, sql.tableHook?.select);
 
   switch (returnType) {
     case 'all': {
@@ -919,8 +918,22 @@ export const handleResult: HandleResult = (
       const { rows } = result;
 
       if (parsers) {
-        for (const row of rows) {
-          parseRecord(parsers, row);
+        if (q.q.returnType === 'value' || q.q.returnType === 'valueOrThrow') {
+          const parser = getValueParser(parsers);
+          if (parser) {
+            const hookSelect = sql.tableHook?.select;
+            for (const row of rows) {
+              for (const key in row) {
+                if (!hookSelect?.has(key)) {
+                  row[key] = parser(row[key]);
+                }
+              }
+            }
+          }
+        } else {
+          for (const row of rows) {
+            parseRecord(parsers, row);
+          }
         }
       }
 
@@ -954,7 +967,7 @@ export const handleResult: HandleResult = (
     case 'pluck': {
       const { rows } = result;
 
-      parsePluck(parsers, isSubQuery, rows);
+      parsePluck(q, parsers, isSubQuery, rows);
 
       return rows;
     }
@@ -1026,14 +1039,40 @@ const parseRows = (
 };
 
 const parsePluck = (
+  query: Query,
   parsers: ColumnsParsers | undefined,
   isSubQuery: true | undefined,
   rows: unknown[],
 ): void => {
-  const pluck = parsers?.pluck;
-  if (pluck) {
+  const valueToArray = (query.q.getColumn as Column.Pick.Data | undefined)?.data
+    ?.valueToArray;
+
+  const parse = parsers?.pluck;
+  if (parse) {
+    if (valueToArray) {
+      for (let i = 0; i < rows.length; i++) {
+        const value = (
+          isSubQuery ? rows[i] : (rows[i] as RecordUnknown)[0]
+        ) as unknown[];
+        rows[i] =
+          value === null
+            ? undefined
+            : value[0] === null
+              ? null
+              : parse(value[0]);
+      }
+    } else {
+      for (let i = 0; i < rows.length; i++) {
+        const value = isSubQuery ? rows[i] : (rows[i] as RecordUnknown)[0];
+        rows[i] = value === null ? value : parse(value);
+      }
+    }
+  } else if (valueToArray) {
     for (let i = 0; i < rows.length; i++) {
-      rows[i] = pluck(isSubQuery ? rows[i] : (rows[i] as RecordUnknown)[0]);
+      const value = (
+        isSubQuery ? rows[i] : (rows[i] as RecordUnknown)[0]
+      ) as unknown[];
+      rows[i] = value === null ? undefined : value[0];
     }
   } else if (!isSubQuery) {
     for (let i = 0; i < rows.length; i++) {
@@ -1043,8 +1082,8 @@ const parsePluck = (
 };
 
 const parseValue = (value: unknown, parsers?: ColumnsParsers): unknown => {
-  const parser = parsers?.[getValueKey];
-  return parser ? parser(value) : value;
+  const parse = getValueParser(parsers);
+  return parse ? parse(value) : value;
 };
 
 export const filterResult = (

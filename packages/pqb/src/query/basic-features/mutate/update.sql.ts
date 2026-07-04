@@ -33,6 +33,7 @@ import {
   restoreValuesJoinedAsForMutativeSelectRelations,
   unsetValuesJoinedAsForMutativeSelectRelations,
 } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import { ColumnsShape } from 'pqb/index';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -102,7 +103,6 @@ const pushUpdateSqlWithoutValuesJoinedAs = (
     updateManyValuesSql = makeUpdateManyValuesSql(
       ctx,
       query,
-      q,
       q.updateMany,
       set,
       usedSetKeys,
@@ -350,7 +350,7 @@ const applySet = (
   quotedAs?: string,
 ) => {
   const QueryClass = ctx.qb.constructor as unknown as Db;
-  const shape = query.q.shape;
+  const shape = query.shape as ColumnsShape;
 
   for (const key in item) {
     if (usedSetKeys.has(key)) {
@@ -397,7 +397,7 @@ const processValue = (
         subQuery as unknown as SubQueryForSql,
       )})`;
     } else if ('op' in value && 'arg' in value) {
-      return `"${query.q.shape[key].data.name || key}" ${
+      return `"${(query.shape as ColumnsShape)[key].data.name || key}" ${
         (value as { op: string }).op
       } ${addValue(ctx.values, (value as { arg: unknown }).arg)}`;
     }
@@ -410,13 +410,12 @@ const processValue = (
 const makeUpdateManyValuesSql = (
   ctx: ToSQLCtx,
   query: ToSQLQuery,
-  q: QueryData,
   updateMany: UpdateManyQueryData,
   set: string[],
   usedSetKeys: Set<string>,
   quotedAs: string,
 ) => {
-  const { shape } = q;
+  const shape = query.shape as ColumnsShape;
 
   const keysSet = new Set<string>();
   const valueRows: string[] = [];

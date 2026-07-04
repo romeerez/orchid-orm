@@ -69,7 +69,7 @@ const floatNullable = new RealColumn(internalSchemaConfig)
   .nullable()
   .parse(parseFloat as never);
 
-const booleanNullable = BooleanColumn.instance.nullable();
+const booleanNullable = BooleanColumn.instanceSkipValueToArray.nullable();
 
 const textNullable = TextColumn.instance.nullable();
 
@@ -82,6 +82,14 @@ const stringAsNumberNullable =
     internalSchemaConfig,
   ).nullable();
 
+intNullable.data.skipValueToArray =
+  floatNullable.data.skipValueToArray =
+  textNullable.data.skipValueToArray =
+  jsonTextNullable.data.skipValueToArray =
+  xmlNullable.data.skipValueToArray =
+  stringAsNumberNullable.data.skipValueToArray =
+    true;
+
 const numericResultColumn = (
   q: unknown,
   arg: PropertyKey | Expression,
@@ -93,12 +101,9 @@ const numericResultColumn = (
       ? _getSelectableColumn(query, arg)
       : (arg as Expression).result.value;
 
-  let column =
-    type instanceof NumberBaseColumn ? floatNullable : stringAsNumberNullable;
-
-  const parse = typeof arg === 'string' && query.q.parsers?.[arg];
-  if (parse) column = column.parse(parse) as typeof column;
-  return column;
+  return type instanceof NumberBaseColumn
+    ? floatNullable
+    : stringAsNumberNullable;
 };
 
 interface OperatorsCount extends OperatorsNumber {
@@ -287,6 +292,7 @@ export class AggregateMethods {
     const q = _queryGetOptional(_clone(this), new RawSql('true'));
     q.q.notFoundDefault = false;
     q.q.coalesceValue = new RawSql('false');
+    q.q.getColumn = BooleanColumn.instanceSkipValueToArray;
     return q as never;
   }
 

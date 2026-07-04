@@ -26,6 +26,18 @@ export class BooleanColumn<Schema extends ColumnSchemaConfig> extends Column {
     return (this._instance ??= new BooleanColumn(internalSchemaConfig));
   }
 
+  private static _instanceSkipValueToArray:
+    | BooleanColumn<DefaultSchemaConfig>
+    | undefined;
+  static get instanceSkipValueToArray() {
+    let instance = this._instanceSkipValueToArray;
+    if (!instance) {
+      instance = this._instanceSkipValueToArray = Object.create(this.instance);
+      instance!.data.skipValueToArray = true;
+    }
+    return instance!;
+  }
+
   constructor(schema: Schema) {
     super(schema, schema.boolean() as never);
     this.data.alias = 'boolean';
