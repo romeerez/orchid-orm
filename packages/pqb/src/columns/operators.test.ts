@@ -718,6 +718,8 @@ describe('operators', () => {
   });
 
   describe('json operators', () => {
+    useTestDatabase();
+
     describe('jsonSet', () => {
       it('should select jsonSet', () => {
         const q = db.user.get('Data').jsonSet('key', 'value');
@@ -977,8 +979,6 @@ describe('operators', () => {
 
     describe('jsonPathQueryFirst', () => {
       describe('using test db', () => {
-        useTestDatabase();
-
         it('should select json property', async () => {
           await db.user.insert({
             ...UserData,
@@ -1056,19 +1056,30 @@ describe('operators', () => {
         );
       });
 
-      it('should be usable in where', () => {
-        const q = db.user.where((q) =>
-          q.get('Data').jsonPathQueryFirst('$.name').equals('name'),
-        );
+      it('should be usable in where', async () => {
+        await db.user.insert({
+          ...UserData,
+          Data: { name: 'name', tags: [] },
+        });
+
+        const q = db.user
+          .where((q) =>
+            q.get('Data').jsonPathQueryFirst('$.name').equals('name'),
+          )
+          .exists();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE jsonb_path_query_first("user"."data", $1) = $2::jsonb
+            SELECT true FROM "schema"."user"
+            WHERE jsonb_path_query_first("user"."data", $1) = $2
+            LIMIT 1
           `,
-          ['$.name', '"name"'],
+          ['$.name', testJsonValue('name')],
         );
+
+        const res = await q;
+        expect(res).toBe(true);
       });
 
       it('should be usable in where with a sub query', () => {
@@ -1129,16 +1140,33 @@ describe('operators', () => {
     });
 
     describe('operators on json', () => {
-      useTestDatabase();
-
       const jsonTable = testDb('user', (t) => ({
         id: t.identity().primaryKey(),
         name: t.text(),
         password: t.text(),
-        data: t.json<string[]>(),
+        data: t.json<unknown>(),
       }));
 
       describe('equals', () => {
+        it('should compare json column with a string value', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: 'foo',
+          });
+
+          const q = jsonTable.where({ data: { equals: 'foo' } }).get('data');
+
+          expectSql(
+            q.toSQL(),
+            `SELECT "user"."data" FROM "schema"."user" WHERE "user"."data" = $1 LIMIT 1`,
+            [testJsonValue('foo')],
+          );
+
+          const res = await q;
+          expect(res).toBe('foo');
+        });
+
         it('should compare json column with array value', async () => {
           await jsonTable.insert({
             name: 'name',
@@ -1161,7 +1189,13 @@ describe('operators', () => {
           expect(res).toHaveLength(1);
         });
 
-        it('should cast param to jsonb', () => {
+        it('should load a boolean', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: { name: 'name' },
+          });
+
           const q = db.user
             .get('Data')
             .jsonPathQueryFirst('$.name')
@@ -1170,12 +1204,16 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT jsonb_path_query_first("user"."data", $1) = $2::jsonb
+                SELECT jsonb_path_query_first("user"."data", $1) = $2
                 FROM "schema"."user"
                 LIMIT 1
               `,
-            ['$.name', '"name"'],
+            ['$.name', testJsonValue('name')],
           );
+
+          const res = await q;
+          assertType<typeof res, boolean>();
+          expect(res).toBe(true);
         });
 
         it('should account for json null and "not set" when comparing with null', () => {
@@ -1219,7 +1257,13 @@ describe('operators', () => {
           expect(res).toHaveLength(0);
         });
 
-        it('should cast param to jsonb', () => {
+        it('should load a boolean', async () => {
+          await jsonTable.insert({
+            name: 'name',
+            password: 'password',
+            data: { name: 'lala' },
+          });
+
           const q = db.user
             .get('Data')
             .jsonPathQueryFirst('$.name')
@@ -1228,12 +1272,16 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT jsonb_path_query_first("user"."data", $1) != $2::jsonb
+                SELECT jsonb_path_query_first("user"."data", $1) != $2
                 FROM "schema"."user"
                 LIMIT 1
               `,
-            ['$.name', '"name"'],
+            ['$.name', testJsonValue('name')],
           );
+
+          const res = await q;
+          assertType<typeof res, boolean>();
+          expect(res).toBe(true);
         });
 
         it('should account for json null and "not set" when comparing with null', () => {

@@ -160,7 +160,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT array[concat($1::text, "user"."name", $2::text, "user"."password") ILIKE '%' || $3 || '%'] "value"
+          SELECT concat($1::text, "user"."name", $2::text, "user"."password") ILIKE '%' || $3 || '%' "value"
           FROM "schema"."user"
         `,
         ['one', 'two', 'lala'],
@@ -190,7 +190,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT array[count(coalesce(age, id)) > 2 + 2] "count" FROM "schema"."user" LIMIT 1
+          SELECT count(coalesce(age, id)) > 2 + 2 "count" FROM "schema"."user" LIMIT 1
         `,
       );
 

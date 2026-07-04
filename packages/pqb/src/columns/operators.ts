@@ -28,6 +28,7 @@ import {
   getValueParser,
   setValueParser,
 } from '../query/query-columns/query-column-parsers';
+import { BooleanColumn } from './column-types/boolean';
 
 // workaround for circular dependencies between columns and sql
 let moveMutativeQueryToCte: MoveMutativeQueryToCte;
@@ -121,6 +122,8 @@ const make = (
       if (getValueParser(q.parsers)) {
         setValueParser(q, undefined);
       }
+
+      q.getColumn = BooleanColumn.instance;
 
       return setQueryOperators(this as never, boolean as never);
     },
@@ -654,7 +657,9 @@ const quoteJsonValue = (
     }
   }
 
-  return addValue(ctx.values, JSON.stringify(arg)) + '::jsonb';
+  return shouldEncodeJson(ctx)
+    ? addValue(ctx.values, JSON.stringify(arg))
+    : addValue(ctx.values, arg);
 };
 
 const serializeJsonValue = (

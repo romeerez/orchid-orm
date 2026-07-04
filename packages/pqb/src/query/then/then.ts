@@ -917,8 +917,19 @@ export const handleResult: HandleResult = (
 
       const { rows } = result;
 
-      if (parsers) {
-        if (q.q.returnType === 'value' || q.q.returnType === 'valueOrThrow') {
+      if (q.q.returnType === 'value' || q.q.returnType === 'valueOrThrow') {
+        if (!rows.length) {
+          if (!q.q.select) {
+            return rows;
+          } else {
+            if (q.q.returnType === 'valueOrThrow') {
+              throw new NotFoundError(q);
+            }
+            return [{ value: q.q.notFoundDefault }];
+          }
+        }
+
+        if (parsers) {
           const parser = getValueParser(parsers);
           if (parser) {
             const hookSelect = sql.tableHook?.select;
@@ -930,10 +941,10 @@ export const handleResult: HandleResult = (
               }
             }
           }
-        } else {
-          for (const row of rows) {
-            parseRecord(parsers, row);
-          }
+        }
+      } else if (parsers) {
+        for (const row of rows) {
+          parseRecord(parsers, row);
         }
       }
 
@@ -1147,9 +1158,12 @@ export const filterResult = (
   return;
 };
 
-const getFirstResultKey = (q: Query, queryResult: QueryResult) => {
+const getFirstResultKey = (
+  q: Query,
+  queryResult: QueryResult,
+): string | undefined => {
   if (q.q.select) {
-    return queryResult.fields[0].name;
+    return queryResult.fields[0] ? queryResult.fields[0].name : 'value';
   } else {
     for (const key in q.q.selectedComputeds) {
       return key;

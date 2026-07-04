@@ -8,7 +8,7 @@ import {
 } from '../code';
 import { columnCode } from '../code';
 import { Operators, OperatorsArray } from '../operators';
-import { setColumnDefaultEncode, setColumnDefaultParse } from '../column.utils';
+import { setColumnDefaultEncode } from '../column.utils';
 import { ArrayMethodsData } from '../column-data-types';
 import { ColumnSchemaConfig, ColumnTypeSchemaArg } from '../column-schema';
 
@@ -67,7 +67,6 @@ export class ArrayColumn<
     // array items cannot be non-nullable, postgres limitation
     item.data.isNullable = true;
 
-    setColumnDefaultParse(this, (input) => parse.call(this as never, input));
     if (defaultEncode) {
       setColumnDefaultEncode(this, defaultEncode);
     }
@@ -112,100 +111,3 @@ export class ArrayColumn<
     return columnCode(this, ctx, key, code);
   }
 }
-
-const parse = function (
-  this: ArrayColumn<
-    ColumnTypeSchemaArg,
-    ArrayColumnValue,
-    unknown,
-    unknown,
-    unknown
-  >,
-  source: string | unknown[],
-) {
-  // in the case it was selected via json agg from a sub-select
-  if (typeof source !== 'string') return source;
-
-  const entries: unknown[] = [];
-  parsePostgresArray(source, entries, this.data.item.data.parseItem);
-  return entries;
-};
-
-/**
- * based on https://github.com/bendrucker/postgres-array/tree/master
- * and slightly optimized
- */
-const parsePostgresArray = (
-  source: string,
-  entries: unknown[],
-  transform?: (input: string) => unknown,
-): number => {
-  let pos = 0;
-
-  if (source[0] === '[') {
-    pos = source.indexOf('=') + 1;
-    if (!pos) pos = source.length;
-  }
-
-  if (source[pos] === '{') pos++;
-
-  let recorded = '';
-  while (pos < source.length) {
-    const character = source[pos++];
-
-    if (character === '{') {
-      const innerEntries: unknown[] = [];
-      entries.push(innerEntries);
-      pos +=
-        parsePostgresArray(source.slice(pos - 1), innerEntries, transform) - 1;
-    } else if (character === '}') {
-      if (recorded) {
-        entries.push(
-          recorded === 'NULL'
-            ? null
-            : transform
-              ? transform(recorded)
-              : recorded,
-        );
-      }
-
-      return pos;
-    } else if (character === '"') {
-      let esc = false;
-      let rec = '';
-      while (pos < source.length) {
-        let char: string;
-        while ((char = source[pos++]) === '\\') {
-          if (!(esc = !esc)) rec += '\\';
-        }
-
-        if (esc) {
-          esc = false;
-        } else if (char === '"') {
-          break;
-        }
-
-        rec += char;
-      }
-
-      entries.push(transform ? transform(rec) : rec);
-      recorded = '';
-    } else if (character === ',') {
-      if (recorded) {
-        entries.push(
-          recorded === 'NULL'
-            ? null
-            : transform
-              ? transform(recorded)
-              : recorded,
-        );
-
-        recorded = '';
-      }
-    } else {
-      recorded += character;
-    }
-  }
-
-  return pos;
-};

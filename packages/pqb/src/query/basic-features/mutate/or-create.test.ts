@@ -42,6 +42,7 @@ const TableWithSoftDelete = testDb(
   },
 );
 
+const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
 
 describe('orCreate', () => {
@@ -131,11 +132,12 @@ describe('orCreate', () => {
 
   // FOR UPDATE only makes sense for SELECT queries
   it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
+    querySpy.mockClear();
     arraysSpy.mockClear();
 
     await User.find(123).orCreate(userData).forUpdate();
 
-    expect(arraysSpy.mock.calls).toEqual([
+    expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
       ['SELECT FROM "schema"."user" WHERE "user"."id" = $1 FOR UPDATE', [123]],
       [
         'WITH "q" AS (' +
@@ -149,11 +151,12 @@ describe('orCreate', () => {
   });
 
   it('should omit soft delete check from the insert part, since it was applied in the selecting sub query', async () => {
+    querySpy.mockClear();
     arraysSpy.mockClear();
 
     await TableWithSoftDelete.find(123).orCreate(userData);
 
-    expect(arraysSpy.mock.calls).toEqual([
+    expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
       [
         'SELECT FROM "schema"."user" WHERE ("user"."id" = $1) AND ("user"."deleted_at" IS NULL)',
         [123],

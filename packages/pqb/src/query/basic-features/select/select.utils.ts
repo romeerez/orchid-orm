@@ -49,7 +49,6 @@ import { _addToHookSelect, _addToHookSelectWithTable } from './hook-select';
 import { SelectAsValue, SelectItem } from './select.sql';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
-
 import { setSelectRelation } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.qb';
 import { _getSelectableColumn } from '../get/get.utils';
 
@@ -374,6 +373,7 @@ const collectNestedSelectBatches = (
 ) => {
   const last = path.length - 1;
   const { key, returnType } = path[0];
+
   for (const row of rows) {
     processNestedSelectPathEntry(batches, path, key, returnType, 0, last, row);
   }

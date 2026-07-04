@@ -1,73 +1,14 @@
 import {
-  assertType,
   expectSql,
   testDb,
   testZodColumnTypes as t,
   useTestDatabase,
 } from 'test-utils';
-import { z } from 'zod/v4';
 
 import { ColumnToCodeCtx } from '../code';
 
 describe('array column', () => {
-  it('should correctly parse various array types', () => {
-    const textArray = t.array(t.text());
-    assertType<typeof textArray.__outputType, string[]>();
-
-    const parse = textArray.data.parse!;
-    expect(parse('{}')).toEqual([]);
-    expect(parse('{1,2,3}')).toEqual(['1', '2', '3']);
-    expect(parse('{a,b,c}')).toEqual(['a', 'b', 'c']);
-    expect(parse('{"\\"\\"\\"","\\\\\\\\\\\\"}')).toEqual(['"""', '\\\\\\']);
-    expect(parse('{NULL,NULL}')).toEqual([null, null]);
-    expect(parse('{{a,b},{c,d}')).toEqual([
-      ['a', 'b'],
-      ['c', 'd'],
-    ]);
-
-    // array is returned as JS array from sub-selects
-    const arr = [1, 2, 3];
-    expect(parse(arr)).toEqual(arr);
-
-    const intArray = t.array(t.integer());
-    assertType<typeof intArray.__outputType, number[]>();
-
-    const parseInt = intArray.data.parse!;
-    expect(parseInt('{1,2,3}')).toEqual([1, 2, 3]);
-    expect(parseInt('{{1,2,3},{4,5,6}}')).toEqual([
-      [1, 2, 3],
-      [4, 5, 6],
-    ]);
-    expect(parseInt('[0:2]={1,2,3}')).toEqual([1, 2, 3]);
-
-    const boolArray = t.array(t.boolean());
-    assertType<typeof boolArray.__outputType, boolean[]>();
-
-    const parseBool = boolArray.data.parse!;
-    expect(parseBool('{{true},{false}}')).toEqual([[true], [false]]);
-
-    const jsonArray = t.array(
-      t.json(
-        z
-          .object({ a: z.number() })
-          .or(z.object({ b: z.boolean() }))
-          .nullable(),
-      ),
-    );
-    assertType<
-      typeof jsonArray.__outputType,
-      ({ a: number } | { b: boolean } | null)[]
-    >();
-
-    const parseJson = jsonArray.data.parse!;
-    expect(parseJson(`{"{\\"a\\":1}","{\\"b\\":true}",null}`)).toEqual([
-      { a: 1 },
-      { b: true },
-      null,
-    ]);
-  });
-
-  it('should have toCode', async () => {
+  it('should have toCode', () => {
     const ctx: ColumnToCodeCtx = {
       t: 't',
       table: 'table',

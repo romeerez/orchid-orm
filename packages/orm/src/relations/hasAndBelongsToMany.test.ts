@@ -1065,7 +1065,11 @@ describe('hasAndBelongsToMany', () => {
           .order('IdOfChat')
           .pluck('IdOfChat');
 
-        const [createUserSqlCall, createChatsSqlCall] = querySpy.mock.calls;
+        const [
+          createUserSqlCall,
+          createChatsSqlCall,
+          maybeCreateChatUserSqlCall,
+        ] = querySpy.mock.calls;
         const createUserSql = {
           text: createUserSqlCall[0],
           values: createUserSqlCall[1],
@@ -1074,7 +1078,8 @@ describe('hasAndBelongsToMany', () => {
           text: createChatsSqlCall[0],
           values: createChatsSqlCall[1],
         };
-        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        const createChatUserSqlCall =
+          arraysSpy.mock.calls[0] || maybeCreateChatUserSqlCall;
         const createChatUserSql = {
           text: createChatUserSqlCall[0],
           values: createChatUserSqlCall[1],
@@ -1218,7 +1223,8 @@ describe('hasAndBelongsToMany', () => {
           text: createChatsSqlCall[0],
           values: createChatsSqlCall[1],
         };
-        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        const createChatUserSqlCall =
+          arraysSpy.mock.calls[0] || querySpy.mock.calls[2];
         const createChatUserSql = {
           text: createChatUserSqlCall[0],
           values: createChatUserSqlCall[1],
@@ -1460,7 +1466,11 @@ describe('hasAndBelongsToMany', () => {
           text: createUserSqlCall[0],
           values: createUserSqlCall[1],
         };
-        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        let createChatUserSqlCall = arraysSpy.mock.calls[0];
+        if (!createChatUserSqlCall) {
+          findChatsSqlCalls.pop();
+          createChatUserSqlCall = findChatsSqlCalls.pop() as never;
+        }
         const createChatUserSql = {
           text: createChatUserSqlCall[0],
           values: createChatUserSqlCall[1],
@@ -1618,7 +1628,11 @@ describe('hasAndBelongsToMany', () => {
           values: createUserSqlCall[1],
         };
 
-        const createChatUserSqlCall = arraysSpy.mock.calls[0];
+        let createChatUserSqlCall = arraysSpy.mock.calls[0];
+        if (!createChatUserSqlCall) {
+          findChatsSqlCalls.pop();
+          createChatUserSqlCall = findChatsSqlCalls.pop() as never;
+        }
         const createChatUserSql = {
           text: createChatUserSqlCall[0],
           values: createChatUserSqlCall[1],

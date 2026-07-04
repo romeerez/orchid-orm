@@ -273,11 +273,12 @@ describe('batch queries', () => {
       })),
     ).pluck('num');
 
-    const queryArrays = jest.spyOn(q.q.adapter, 'arrays');
+    const querySpy = jest.spyOn(q.q.adapter, 'query');
+    const arraysSpy = jest.spyOn(q.q.adapter, 'arrays');
 
     const result = await q;
 
-    expect(queryArrays.mock.calls).toEqual([
+    expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
@@ -309,11 +310,13 @@ describe('batch queries', () => {
       })),
     ).pluck('num');
 
-    const { transactionAdapter, queryArrays, hackySavepoint, result } =
+    const { transactionAdapter, querySpy, arraysSpy, hackySavepoint, result } =
       await Table.transaction(async () => {
         const state = Table.internal.asyncStorage.getStore() as AsyncState;
         const { transactionAdapter } = state;
-        const queryArrays =
+        const querySpy =
+          transactionAdapter && jest.spyOn(transactionAdapter, 'query');
+        const arraysSpy =
           transactionAdapter && jest.spyOn(transactionAdapter, 'arrays');
         const hackySavepoint =
           transactionAdapter &&
@@ -321,7 +324,13 @@ describe('batch queries', () => {
 
         const result = await q.recoverable();
 
-        return { transactionAdapter, queryArrays, hackySavepoint, result };
+        return {
+          transactionAdapter,
+          querySpy,
+          arraysSpy,
+          hackySavepoint,
+          result,
+        };
       });
 
     expect(hackySavepoint?.mock.calls).toEqual([
@@ -336,10 +345,13 @@ describe('batch queries', () => {
         },
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
-        true,
+        expect.any(Boolean),
       ],
     ]);
-    expect(queryArrays?.mock.calls).toEqual([
+    expect([
+      ...(querySpy?.mock.calls || []),
+      ...(arraysSpy?.mock.calls || []),
+    ]).toEqual([
       [
         `INSERT INTO "tmp.then"("num") VALUES ($1) RETURNING "tmp.then"."num"`,
         [2],

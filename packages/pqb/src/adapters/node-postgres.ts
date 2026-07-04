@@ -55,21 +55,13 @@ export interface TypeParsers {
   [K: number]: (input: string) => unknown;
 }
 
-const defaultTypeParsers: TypeParsers = {};
-
-for (const key in types.builtins) {
-  const id = types.builtins[key as keyof typeof types.builtins];
-  defaultTypeParsers[id] = types.getTypeParser(id);
-}
-
-[
-  types.builtins.DATE,
-  types.builtins.TIMESTAMP,
-  types.builtins.TIMESTAMPTZ,
-  types.builtins.CIRCLE,
-].forEach((id) => {
-  delete defaultTypeParsers[id];
-});
+const defaultTypeParsers: TypeParsers = {
+  [types.builtins.DATE]: returnArg,
+  [types.builtins.TIMESTAMP]: returnArg,
+  [types.builtins.TIMESTAMPTZ]: returnArg,
+  [types.builtins.CIRCLE]: returnArg,
+  600: returnArg, // point
+};
 
 export interface AdapterConfig
   extends
@@ -287,8 +279,8 @@ export const NodePostgresAdapter: DriverAdapter = {
 };
 
 const defaultTypesConfig = {
-  getTypeParser(id: number) {
-    return defaultTypeParsers[id] || returnArg;
+  getTypeParser(id: number, format?: 'text' | 'binary') {
+    return defaultTypeParsers[id] || types.getTypeParser(id, format as 'text');
   },
 };
 

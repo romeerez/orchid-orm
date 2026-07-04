@@ -146,7 +146,7 @@ export const testDb = createDbWithAdapter({
 export const { sql } = testDb;
 
 export const zodColumnTypes = makeColumnTypes(
-  zodSchemaConfig(testDefaultSchemaConfig),
+  zodSchemaConfig(testAdapterConfig),
 );
 
 export const testZodColumnTypes = {

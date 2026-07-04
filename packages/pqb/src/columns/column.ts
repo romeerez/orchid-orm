@@ -67,7 +67,7 @@ export namespace Column {
                               | 'not'
                               | 'isDistinctFrom'
                               | 'isNotDistinctFrom'
-                              ? Operator<T | null>
+                              ? Operator<T['__queryType'] | null, T>
                               : T['operators'][K];
                           }
                         : T[K];
@@ -89,11 +89,11 @@ export namespace Column {
     }
 
     // allow `null` in .where({ column: { equals: null } }) and the same for equality-style operators
-    export interface OperatorsNullable<T> {
-      equals: Operator<T | null>;
-      not: Operator<T | null>;
-      isDistinctFrom: Operator<T | null>;
-      isNotDistinctFrom: Operator<T | null>;
+    export interface OperatorsNullable<Column extends Column.Pick.QueryColumn> {
+      equals: Operator<Column['__queryType'] | null, Column>;
+      not: Operator<Column['__queryType'] | null, Column>;
+      isDistinctFrom: Operator<Column['__queryType'] | null, Column>;
+      isNotDistinctFrom: Operator<Column['__queryType'] | null, Column>;
     }
 
     // change the input type of the column
