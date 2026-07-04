@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.36.13
+
+### Patch Changes
+
+- 37f3c7f2: Fix createMigrationChangeFn type (#718)
+- Updated dependencies [52eb904e]
+- Updated dependencies [69fe4742]
+  - pqb@0.69.0
+
 ## 2.36.12
 
 ### Patch Changes

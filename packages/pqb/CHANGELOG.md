@@ -1,5 +1,15 @@
 # pqb
 
+## 0.69.0
+
+### Minor Changes
+
+- 52eb904e: Return null for nested-selected null values, undefined for not found (#722)
+
+### Patch Changes
+
+- 69fe4742: Fix filtering by JSON value (#720)
+
 ## 0.68.1
 
 ### Patch Changes

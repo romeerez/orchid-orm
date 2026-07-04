@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.74.0
+
+### Minor Changes
+
+- 52eb904e: Return null for nested-selected null values, undefined for not found (#722)
+
+### Patch Changes
+
+- Updated dependencies [37f3c7f2]
+- Updated dependencies [52eb904e]
+- Updated dependencies [69fe4742]
+  - rake-db@2.36.13
+  - pqb@0.69.0
+
 ## 1.73.1
 
 ### Patch Changes
