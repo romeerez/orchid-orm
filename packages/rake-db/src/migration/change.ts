@@ -1,7 +1,7 @@
 import { DbMigration } from './migration';
 
-export interface RakeDbChangeFnConfig {
-  columnTypes: unknown;
+export interface RakeDbChangeFnConfig<ColumnTypes> {
+  columnTypes: ColumnTypes;
 }
 
 /**
@@ -14,7 +14,7 @@ export interface MigrationChangeFn<ColumnTypes> {
 }
 
 export const createMigrationChangeFn = <ColumnTypes>(
-  config: RakeDbChangeFnConfig,
+  config: RakeDbChangeFnConfig<ColumnTypes>,
 ): MigrationChangeFn<ColumnTypes> => {
   return (fn) => {
     const change: MigrationChange = { fn: fn as never, config };
@@ -25,7 +25,7 @@ export const createMigrationChangeFn = <ColumnTypes>(
 
 export interface MigrationChange {
   fn: ChangeCallback<unknown>;
-  config: RakeDbChangeFnConfig;
+  config: RakeDbChangeFnConfig<unknown>;
 }
 
 let currentChanges: MigrationChange[] = [];
