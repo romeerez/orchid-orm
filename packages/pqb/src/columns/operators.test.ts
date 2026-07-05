@@ -720,6 +720,13 @@ describe('operators', () => {
   describe('json operators', () => {
     useTestDatabase();
 
+    const jsonTable = testDb('user', (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+      password: t.text(),
+      data: t.json<unknown>(),
+    }));
+
     describe('jsonSet', () => {
       it('should select jsonSet', () => {
         const q = db.user.get('Data').jsonSet('key', 'value');
@@ -978,33 +985,48 @@ describe('operators', () => {
     });
 
     describe('jsonPathQueryFirst', () => {
-      describe('using test db', () => {
-        it('should select json property', async () => {
-          await db.user.insert({
-            ...UserData,
-            Data: { name: new Date().toISOString(), tags: ['one'] },
-          });
+      it('should not throw NotFoundError if the resolved value is null', async () => {
+        await jsonTable.insert({
+          name: 'name',
+          password: 'password',
+          data: { name: null },
+        });
 
-          const q = db.user.get('Data').jsonPathQueryFirst('$.name', {
-            type: (q) => q.date().asDate(),
-          });
+        const res = await jsonTable.take().select({
+          name: (q) =>
+            q.get('data').jsonPathQueryFirst('$.name', {
+              type: (t) => t.string().nullable(),
+            }),
+        });
 
-          expectSql(
-            q.toSQL(),
-            `
+        expect(res).toEqual({ name: null });
+      });
+
+      it('should select json property', async () => {
+        await db.user.insert({
+          ...UserData,
+          Data: { name: new Date().toISOString(), tags: ['one'] },
+        });
+
+        const q = db.user.get('Data').jsonPathQueryFirst('$.name', {
+          type: (q) => q.date().asDate(),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
             SELECT jsonb_path_query_first("user"."data", $1)
             FROM "schema"."user"
             LIMIT 1
           `,
-            ['$.name'],
-          );
+          ['$.name'],
+        );
 
-          const result = await q;
+        const result = await q;
 
-          assertType<typeof result, Date>();
+        assertType<typeof result, Date>();
 
-          expect(result).toBeInstanceOf(Date);
-        });
+        expect(result).toBeInstanceOf(Date);
       });
 
       it('should support `vars`', () => {
@@ -1140,13 +1162,6 @@ describe('operators', () => {
     });
 
     describe('operators on json', () => {
-      const jsonTable = testDb('user', (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-        data: t.json<unknown>(),
-      }));
-
       describe('equals', () => {
         it('should compare json column with a string value', async () => {
           await jsonTable.insert({
