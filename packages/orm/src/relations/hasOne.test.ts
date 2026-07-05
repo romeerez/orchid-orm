@@ -533,9 +533,9 @@ describe('hasOne', () => {
         );
       });
 
-      it('should support join() for inner join', () => {
+      it('should support require() for inner join', () => {
         const q = db.user.as('u').select('Id', {
-          profile: (q) => q.profile.join().select('Id'),
+          profile: (q) => q.profile.require().select('Id'),
         });
 
         expectSql(
@@ -3278,9 +3278,9 @@ describe('hasOne through', () => {
       );
     });
 
-    it('should support join() for inner join', () => {
+    it('should support require() for inner join', () => {
       const q = db.message.as('m').select('Id', {
-        profile: (q) => q.profile.join(),
+        profile: (q) => q.profile.require(),
       });
 
       expectSql(

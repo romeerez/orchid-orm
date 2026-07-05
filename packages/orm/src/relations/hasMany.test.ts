@@ -655,9 +655,9 @@ describe('hasMany', () => {
       );
     });
 
-    it('should support join() for inner join', () => {
+    it('should support require() for inner join', () => {
       const q = db.user.as('u').select('Id', {
-        p: (q) => q.posts.join().select('Id'),
+        p: (q) => q.posts.require().select('Id'),
       });
 
       expectSql(
@@ -4200,9 +4200,9 @@ describe('hasMany through', () => {
         );
       });
 
-      it('should support join() for inner join', () => {
+      it('should support require() for inner join', () => {
         const q = db.profile.as('p').select('Id', {
-          chats: (q) => q.chats.join(),
+          chats: (q) => q.chats.require(),
         });
 
         assertType<Awaited<typeof q>, { Id: number; chats: Chat[] }[]>();
@@ -5273,9 +5273,9 @@ describe('hasMany through', () => {
         );
       });
 
-      it('should support join() for inner join', () => {
+      it('should support require() for inner join', () => {
         const q = db.chat.as('c').select('IdOfChat', {
-          profiles: (q) => q.profiles.join(),
+          profiles: (q) => q.profiles.require(),
         });
 
         expectSql(

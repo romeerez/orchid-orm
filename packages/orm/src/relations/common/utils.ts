@@ -8,7 +8,6 @@ import {
   CreateCtx,
   getQueryAs,
   isQueryReturnsAll,
-  JoinQueryMethod,
   pushQueryOnForOuter,
   RawSql,
   setQueryObjectValueImmutable,
@@ -27,15 +26,6 @@ import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
 import { BaseTableClass, ORMTableInput } from '../../orm-table/base-table';
 import { RelationRefsOptions } from './options';
-
-// INNER JOIN the current relation instead of the default OUTER behavior
-export interface RelJoin extends JoinQueryMethod {
-  <T extends Query>(this: T): T;
-}
-
-export interface HasRelJoin {
-  join: RelJoin;
-}
 
 export interface NestedInsertOneItem {
   create?: NestedInsertOneItemCreate;

@@ -319,10 +319,7 @@ export {
 export { getQueryAs } from './query/basic-features/as/as';
 export { raw } from './query/expressions/raw-sql';
 export { addTopCte, addTopCteSql } from './query/basic-features/cte/cte.sql';
-export {
-  type JoinQueryMethod,
-  pushQueryOnForOuter,
-} from './query/basic-features/join/join';
+export { pushQueryOnForOuter } from './query/basic-features/join/join';
 export {
   type FromArg,
   type FromResult,

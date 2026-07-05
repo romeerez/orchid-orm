@@ -314,7 +314,7 @@ When the `none` query is being used for joins that require match, the host query
 // all the following queries will resolve into empty arrays
 
 await db.user.select({
-  pets: (q) => q.pets.join().none(),
+  pets: (q) => q.pets.require().none(),
 });
 
 await db.user.join((q) => q.pets.none());

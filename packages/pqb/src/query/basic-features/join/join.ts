@@ -457,21 +457,6 @@ export type JoinCallbackArgs<
 > = [cb?: JoinCallback<T, Arg> | true];
 
 /**
- * Type of {@link QueryJoin.join} query method.
- */
-export interface JoinQueryMethod {
-  <
-    T extends PickQuerySelectableResultRelationsWithDataReturnTypeShapeAs,
-    Arg extends JoinFirstArg<T>,
-    Cb extends JoinCallbackArgs<T, Arg>,
-  >(
-    this: T,
-    arg: Arg,
-    ...args: Cb | JoinArgs<T, Arg>
-  ): JoinResultFromArgs<T, Arg, Cb, true, true>;
-}
-
-/**
  * After getting a query from a sub-query callback,
  * join it to the main query in case it's a relation query.
  *

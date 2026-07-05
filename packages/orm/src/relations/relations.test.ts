@@ -273,11 +273,11 @@ describe('relations', () => {
     );
   });
 
-  it('should support join() when selecting relation for an INNER join', () => {
+  it('should support require() when selecting relation for an INNER join', () => {
     const q = db.user.select({
       profile: (q) => {
         // console.log(Object.keys(q.profile.q.joinedShapes));
-        return q.profile.join();
+        return q.profile.require();
       },
     });
 
@@ -497,7 +497,8 @@ describe('relations', () => {
       await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const q = db.user.select({
-        firstPost: (q) => q.posts.join().whereIn('Id', []).select('Id').take(),
+        firstPost: (q) =>
+          q.posts.require().whereIn('Id', []).select('Id').take(),
       });
 
       const res = await q;

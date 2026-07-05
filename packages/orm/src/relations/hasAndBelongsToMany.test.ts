@@ -626,9 +626,9 @@ describe('hasAndBelongsToMany', () => {
       );
     });
 
-    it('should support join() for inner join', () => {
+    it('should support require() for inner join', () => {
       const q = db.user.as('u').select('Id', {
-        chats: (q) => q.chats.join().select('IdOfChat'),
+        chats: (q) => q.chats.require().select('IdOfChat'),
       });
 
       expectSql(

@@ -47,7 +47,6 @@ import {
   getSourceRelation,
   getThroughRelation,
   hasRelationHandleCreate,
-  HasRelJoin,
   joinHasRelation,
   joinHasThrough,
   makeNestedUpdateRelationIds,
@@ -105,8 +104,7 @@ export type HasOneQueryThrough<
       : K extends CreateMethodsNames
         ? never
         : TableQuery[K];
-} & QueryHasWhere &
-  HasRelJoin;
+} & QueryHasWhere;
 
 export type HasOneQuery<
   T extends RelationConfigSelf,
@@ -127,8 +125,7 @@ export type HasOneQuery<
             : K extends CreateManyMethodsNames
               ? never
               : TableQuery[K];
-    } & QueryHasWhere &
-      HasRelJoin
+    } & QueryHasWhere
   : HasOneQueryThrough<Name, TableQuery>;
 
 export interface HasOneInfo<

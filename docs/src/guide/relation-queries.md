@@ -323,18 +323,18 @@ const result: Result = await db.post
 ### inner-joined relation
 
 As described in [join: select relation](/guide/join#select-relation),
-you can set empty `join` on the relation
+you can call `require` on the relation
 if you want to filter out main table records that don't have a matching relation:
 
 ```ts
 // load only those authors who have at least one book that is published after 2000
 const author = await db.author
   .select({
-    books: (q) => q.books.join().where({ yearPublished: { gte: 2000 } }),
+    books: (q) => q.books.require().where({ yearPublished: { gte: 2000 } }),
   })
   .take();
 
-// `join()` guarantees that the `author.books` can not be empty
+// `require()` guarantees that the `author.books` can not be empty
 assert(author.books.length > 0);
 ```
 

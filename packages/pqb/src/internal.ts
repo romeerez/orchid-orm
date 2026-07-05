@@ -291,7 +291,7 @@ export { Expression, isExpression, type TemplateLiteralArgs } from './index';
 export { getQueryAs } from './index';
 export { raw } from './index';
 export { addTopCte, addTopCteSql } from './index';
-export { type JoinQueryMethod, pushQueryOnForOuter } from './index';
+export { pushQueryOnForOuter } from './index';
 export { type FromArg, type FromResult } from './index';
 
 // Merge

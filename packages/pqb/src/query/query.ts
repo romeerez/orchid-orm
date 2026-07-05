@@ -178,6 +178,10 @@ export namespace Query {
   }
 
   export namespace Pick {
+    export interface ReturnType {
+      returnType: QueryReturnType;
+    }
+
     export interface SingleValueResult {
       result: { value: Column.Pick.OutputType };
       returnType: 'value' | 'valueOrThrow';
@@ -264,6 +268,27 @@ export type QueryManyTakeOptional<T extends PickQueryResultReturnType> = {
       ? QueryThenShallowSimplifyOptional<ColumnsShape.Output<T['result']>>
       : T[K];
 };
+
+export type QueryRequire<T extends PickQueryResultReturnType> =
+  T['returnType'] extends QueryReturnTypeAll | 'valueOrThrow' | 'pluck' | 'void'
+    ? T
+    : T['returnType'] extends 'value'
+      ? {
+          [K in keyof T]: K extends 'returnType'
+            ? 'valueOrThrow'
+            : K extends 'then'
+              ? QueryThen<
+                  Exclude<T['result']['value']['__outputType'], undefined>
+                >
+              : T[K];
+        }
+      : {
+          [K in keyof T]: K extends 'returnType'
+            ? 'oneOrThrow'
+            : K extends 'then'
+              ? QueryThenShallowSimplify<ColumnsShape.Output<T['result']>>
+              : T[K];
+        };
 
 export type QueryTake<T extends PickQueryResultReturnType> =
   T['returnType'] extends 'valueOrThrow' | 'pluck' | 'void'

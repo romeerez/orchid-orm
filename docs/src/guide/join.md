@@ -36,27 +36,29 @@ await db.author.select('*', {
 
 Internally, such selects will use `LEFT JOIN LATERAL` to join a relation.
 If you're loading users with profiles (one-to-one relation), and some users don't have a profile, `profile` property will have `NULL` for such users.
-If you want to load only users that have profiles, and filter out the rest, add `.join()` method to the relation without arguments:
+If you want to load only users that have profiles, and filter out the rest, add `.require()` method to the relation:
 
 ```ts
 // load only users who have a profile
 await db.user.select('*', {
-  profile: (q) => q.profile.join(),
+  profile: (q) => q.profile.require(),
 });
 
 // load only users who have a specific profile
 await db.user.select('*', {
-  profile: (q) => q.profile.join().where({ age: { gt: 20 } }),
+  profile: (q) => q.profile.require().where({ age: { gt: 20 } }),
 });
 ```
 
-You can also use this `.join()` method on the one-to-many relations, and records with empty array will be filtered out:
+This changes `LEFT JOIN LATERAL` to `JOIN LATERAL` for the relation select.
+
+You can also use this `.require()` method on the one-to-many relations, and records with empty array will be filtered out:
 
 ```ts
 // posts that have no tags won't be loaded
 // result type is Array<Post & { tags: Tag[] }>
 db.post.select('*', {
-  tags: (q) => q.tags.join(),
+  tags: (q) => q.tags.require(),
 });
 ```
 

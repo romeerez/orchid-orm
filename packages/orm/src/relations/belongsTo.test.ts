@@ -530,24 +530,26 @@ describe('belongsTo', () => {
         );
       });
 
-      it('should support join() for inner join', () => {
-        const q = db.profile.as('p').select('Id', {
-          u: (q) => q.user.join().select('Id'),
+      it('should support require() for inner join', () => {
+        const q = db.user.as('u').select('Id', {
+          p: (q) => q.onePost.require().select('Id'),
         });
+
+        assertType<Awaited<typeof q>, { Id: number; p: { Id: number } }[]>();
 
         expectSql(
           q.toSQL(),
           `
             SELECT
-              "p"."id" "Id",
-              row_to_json("u".*) "u"
-            FROM "schema"."profile" "p"
+              "u"."id" "Id",
+              row_to_json("p".*) "p"
+            FROM "schema"."user" "u"
             JOIN LATERAL (
-              SELECT "user"."id" "Id"
-              FROM "schema"."user"
-              WHERE "user"."id" = "p"."user_id"
-                AND "user"."user_key" = "p"."profile_key"
-            ) "u" ON true
+              SELECT "onePost"."id" "Id"
+              FROM "schema"."post" "onePost"
+              WHERE "onePost"."user_id" = "u"."id"
+                AND "onePost"."title" = "u"."user_key"
+            ) "p" ON true
           `,
         );
       });

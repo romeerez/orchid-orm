@@ -54,7 +54,6 @@ import {
 } from './relations';
 import {
   addAutoForeignKey,
-  HasRelJoin,
   NestedInsertOneItemCreate,
   NestedUpdateOneItem,
   selectCteColumnSql,
@@ -105,8 +104,7 @@ export type BelongsToQuery<T extends Query, Name extends string> = {
       : P extends CreateMethodsNames | DeleteMethodsNames
         ? never
         : T[P];
-} & QueryHasWhere &
-  HasRelJoin;
+} & QueryHasWhere;
 
 export interface BelongsToDataForCreate<
   Name extends string,

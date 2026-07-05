@@ -58,7 +58,6 @@ import {
   addAutoForeignKey,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
-  HasRelJoin,
   NestedInsertManyConnect,
   NestedInsertManyConnectOrCreate,
   NestedInsertManyItems,
@@ -107,8 +106,7 @@ export type HasAndBelongsToManyQuery<
     : K extends '__as'
       ? Name
       : TableQuery[K];
-} & QueryHasWhere &
-  HasRelJoin;
+} & QueryHasWhere;
 
 export interface HasAndBelongsToManyInfo<
   T extends RelationConfigSelf,

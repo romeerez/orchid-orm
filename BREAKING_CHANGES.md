@@ -1,5 +1,22 @@
 # Breaking changes
 
+## orchid-orm 1.75.0
+
+`join()` without arguments on a selected relation was renamed to `require()`.
+It still changes the relation select from `LEFT JOIN LATERAL` to `JOIN LATERAL`, filtering out main table records that don't have a matching relation.
+
+```ts
+// before
+await db.user.select({
+  profile: (q) => q.profile.join(),
+});
+
+// after
+await db.user.select({
+  profile: (q) => q.profile.require(),
+});
+```
+
 ## orchid-orm 1.74.0
 
 Previously, all `null` values from `getOptional` nested selects were replaced with `undefined`.

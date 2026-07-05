@@ -2,6 +2,7 @@ import {
   IsQuery,
   IsSubQuery,
   Query,
+  QueryRequire,
   QueryReturnType,
   QueryTake,
   QueryTakeOptional,
@@ -419,6 +420,35 @@ export class QueryMethods<ColumnTypes> {
   }
 
   /**
+   * For relation selects, `require` changes LEFT JOIN LATERAL to JOIN LATERAL.
+   *
+   * ```ts
+   * // only the records that have `related` will be loaded:
+   * await db.table.select({ related: (q) => q.related.required() });
+   * ```
+   */
+  require<T extends PickQueryResultReturnType>(this: T): QueryRequire<T> {
+    const query = _clone(this);
+    switch (query.q.returnType) {
+      case undefined:
+      case 'all':
+      case 'valueOrThrow':
+      case 'pluck':
+      case 'void':
+        break;
+      case 'value': {
+        query.q.returnType = 'valueOrThrow';
+        break;
+      }
+      default: {
+        query.q.returnType = 'oneOrThrow';
+      }
+    }
+    query.q.innerJoinLateral = true;
+    return query as never;
+  }
+
+  /**
    * Call `toSQL` on a query to get an object with a `text` SQL string and a `values` array of binding values:
    *
    * ```ts
@@ -679,7 +709,7 @@ export class QueryMethods<ColumnTypes> {
    * // all the following queries will resolve into empty arrays
    *
    * await db.user.select({
-   *   pets: (q) => q.pets.join().none(),
+   *   pets: (q) => q.pets.require().none(),
    * });
    *
    * await db.user.join((q) => q.pets.none());

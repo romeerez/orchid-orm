@@ -46,7 +46,6 @@ import {
   getThroughRelation,
   hasRelationHandleCreate,
   hasRelationHandleUpdate,
-  HasRelJoin,
   joinHasRelation,
   joinHasThrough,
   makeNestedUpdateRelationIds,
@@ -86,8 +85,7 @@ export type HasManyQuery<
           : K extends '__as'
             ? Name
             : TableQuery[K];
-    } & QueryHasWhere &
-      HasRelJoin
+    } & QueryHasWhere
   : HasOneQueryThrough<Name, TableQuery>;
 
 export interface HasManyInfo<
