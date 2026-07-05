@@ -764,7 +764,6 @@ describe('queryMethods', () => {
 
   describe('makeHelper', () => {
     it('should make a query helper', () => {
-      //
       const fn = User.makeHelper((q, _: boolean) => q.select('id'));
       const q = fn(User.select('name'), true);
 
@@ -783,6 +782,14 @@ describe('queryMethods', () => {
       const helper = User.makeHelper((q) => q.select('id'));
 
       expect(helper.table).toBe('user');
+    });
+
+    it('should support returning an expression', () => {
+      const helper = User.makeHelper(() => sql<number>`1`);
+
+      const q = User.get((q) => helper(q));
+
+      assertType<Awaited<typeof q>, number>();
     });
   });
 

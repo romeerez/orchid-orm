@@ -789,7 +789,7 @@ export class QueryMethods<ColumnTypes> {
   makeHelper<
     T extends PickQuerySelectableShapeAs,
     Args extends unknown[],
-    Result extends MergeQueryArg,
+    Result extends MergeQueryArg | Expression,
   >(
     this: T,
     fn: (q: T, ...args: Args) => Result,
