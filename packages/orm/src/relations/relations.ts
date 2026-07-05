@@ -146,6 +146,7 @@ export type RelationConfigParams<
 interface ApplyRelationData {
   relationName: string;
   relation: RelationThunk;
+  otherTable: ORMTableInput;
   dbTable: Query;
   otherDbTable: Query;
 }
@@ -191,6 +192,7 @@ export const applyRelations = (
       const data: ApplyRelationData = {
         relationName,
         relation,
+        otherTable: otherTable[1],
         dbTable,
         otherDbTable,
       };
@@ -286,7 +288,13 @@ const delayRelation = (
 const applyRelation = (
   table: ORMTableInput,
   qb: Query,
-  { relationName, relation, dbTable, otherDbTable }: ApplyRelationData,
+  {
+    relationName,
+    relation,
+    otherTable,
+    dbTable,
+    otherDbTable,
+  }: ApplyRelationData,
   delayedRelations: DelayedRelations,
   schema?: QuerySchema,
 ) => {
@@ -327,7 +335,7 @@ const applyRelation = (
   if (data.returns === 'one') {
     const required =
       type === 'belongsTo'
-        ? getBelongsToRequired(table, relation)
+        ? getBelongsToRequired(table, otherTable, relation)
         : relation.options.required;
 
     if (required) {

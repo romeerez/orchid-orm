@@ -2461,12 +2461,27 @@ describe('belongsTo', () => {
       }));
     }
 
+    class SoftDeletedUserTable extends BaseTable {
+      schema = 'schema';
+      readonly table = 'soft_deleted_user';
+      columns = this.setColumns((t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserKey: t.name('user_key').text(),
+        Name: t.name('name').text(),
+        Password: t.name('password').text(),
+        deletedAt: t.timestamp().nullable(),
+      }));
+
+      readonly softDelete = true;
+    }
+
     class ProfileTable extends BaseTable {
       schema = 'schema';
       readonly table = 'profile';
       columns = this.setColumns((t) => ({
         Id: t.name('id').identity().primaryKey(),
         UserId: t.name('user_id').integer(),
+        SoftDeletedUserId: t.name('soft_deleted_user_id').integer(),
         OptionalUserId: t.name('optional_user_id').integer().nullable(),
         ProfileKey: t.name('profile_key').text(),
         OptionalProfileKey: t.name('optional_profile_key').text().nullable(),
@@ -2476,6 +2491,10 @@ describe('belongsTo', () => {
       relations = {
         user: this.belongsTo(() => UserTable, {
           columns: ['UserId'],
+          references: ['Id'],
+        }),
+        softDeletedUser: this.belongsTo(() => SoftDeletedUserTable, {
+          columns: ['SoftDeletedUserId'],
           references: ['Id'],
         }),
         optionalUser: this.belongsTo(() => UserTable, {
@@ -2500,6 +2519,7 @@ describe('belongsTo', () => {
 
     const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,
+      softDeletedUser: SoftDeletedUserTable,
       profile: ProfileTable,
     });
 
@@ -2514,6 +2534,31 @@ describe('belongsTo', () => {
       const result = await q.catch((error) => error);
 
       expect(result).toEqual(expect.any(NotFoundError));
+    });
+
+    it('should infer optional for omitted required when related table has soft delete', () => {
+      const q = db.profile.select({
+        softDeletedUser: (q) => q.softDeletedUser,
+      });
+
+      expect(db.profile.relations.softDeletedUser.query.q.returnType).toBe(
+        'one',
+      );
+
+      assertType<
+        Awaited<typeof q>,
+        {
+          softDeletedUser:
+            | {
+                Id: number;
+                UserKey: string;
+                Name: string;
+                Password: string;
+                deletedAt: Date | null;
+              }
+            | undefined;
+        }[]
+      >();
     });
 
     it('should infer optional for omitted required when any local column is nullable', async () => {

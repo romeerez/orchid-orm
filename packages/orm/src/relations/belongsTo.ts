@@ -83,16 +83,19 @@ export type BelongsToParams<T extends RelationConfigSelf, FK extends string> = {
   [Name in FK]: T['columns']['shape'][Name]['__type'];
 };
 
-export type BelongsToColumnsRequired<
+export type BelongsToDefaultRequired<
   T extends RelationConfigSelf,
-  FK extends string,
-> = {
-  [K in FK]: T['columns']['shape'][K]['data']['isNullable'] extends true
-    ? false
-    : true;
-}[FK] extends true
-  ? true
-  : false;
+  Rel extends BelongsTo,
+> = Rel['related']['softDelete'] extends true | string
+  ? false
+  : {
+        [K in Rel['options']['columns'][number] &
+          string]: T['columns']['shape'][K]['data']['isNullable'] extends true
+          ? false
+          : true;
+      }[Rel['options']['columns'][number] & string] extends true
+    ? true
+    : false;
 
 export type BelongsToQuery<T extends Query, Name extends string> = {
   [P in keyof T]: P extends '__selectable'
@@ -326,10 +329,13 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
 export const getBelongsToRequired = (
   tableConfig: ORMTableInput,
+  relatedTableConfig: ORMTableInput,
   relation: BelongsTo,
 ) => {
   const { required } = relation.options;
   if (typeof required === 'boolean') return required;
+
+  if (relatedTableConfig.softDelete) return false;
 
   return relation.options.columns.every((key) => {
     return !tableConfig.columns.shape[key as string].data.isNullable;

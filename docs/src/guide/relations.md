@@ -64,7 +64,8 @@ export class BookTable extends BaseTable {
 
   relations = {
     author: this.belongsTo(() => AuthorTable, {
-      // authorId is not nullable, so author is required by default.
+      // authorId is not nullable, so author is required by default
+      // unless AuthorTable has softDelete enabled.
       // columns of this table for the connection
       columns: ['authorId'],
       // columns of the related table to connect with
@@ -77,6 +78,7 @@ export class BookTable extends BaseTable {
 For `belongsTo`, `required` is inferred from the `columns` by default.
 When all columns are non-nullable, selected relation results and `queryRelated` return the related record type.
 When any column is nullable, the relation is optional by default.
+If the related table has [softDelete](/guide/soft-delete) enabled, the relation is optional by default even when all columns are non-nullable.
 
 ```ts
 export class BookTable extends BaseTable {
@@ -88,7 +90,8 @@ export class BookTable extends BaseTable {
   }));
 
   relations = {
-    // Required by default because authorId is not nullable.
+    // Required by default because authorId is not nullable
+    // and AuthorTable does not have softDelete enabled.
     author: this.belongsTo(() => AuthorTable, {
       columns: ['authorId'],
       references: ['id'],
@@ -103,7 +106,7 @@ export class BookTable extends BaseTable {
 }
 ```
 
-Composite `belongsTo` relations are required by default only when all `columns` are non-nullable:
+Composite `belongsTo` relations are required by default only when all `columns` are non-nullable and the related table does not have [softDelete](/guide/soft-delete) enabled:
 
 ```ts
 export class OrderTable extends BaseTable {
@@ -117,7 +120,8 @@ export class OrderTable extends BaseTable {
   }));
 
   relations = {
-    // Required: tenantId and accountId are both non-nullable.
+    // Required: tenantId and accountId are both non-nullable,
+    // and AccountTable does not have softDelete enabled.
     account: this.belongsTo(() => AccountTable, {
       columns: ['tenantId', 'accountId'],
       references: ['tenantId', 'id'],

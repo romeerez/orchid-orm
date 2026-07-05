@@ -54,8 +54,8 @@ import {
 import { OrchidORM } from '../orm';
 import {
   BelongsTo,
-  BelongsToColumnsRequired,
   BelongsToDataForCreate,
+  BelongsToDefaultRequired,
   BelongsToInfo,
   BelongsToOptions,
   BelongsToQuery,
@@ -103,7 +103,7 @@ type BelongsToRequired<
   ? Required
   : Rel['options'] extends { on: unknown }
     ? false
-    : BelongsToColumnsRequired<T, Rel['options']['columns'][number] & string>;
+    : BelongsToDefaultRequired<T, Rel>;
 
 type BelongsToRelationInfo<
   T extends RelationConfigSelf,
