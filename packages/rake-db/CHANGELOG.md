@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.36.14
+
+### Patch Changes
+
+- 0767f515: Fix respecting log: false by `migrate` function (#658)
+- Updated dependencies [3a8de4ee]
+- Updated dependencies [95bd76be]
+  - pqb@0.70.0
+
 ## 2.36.13
 
 ### Patch Changes

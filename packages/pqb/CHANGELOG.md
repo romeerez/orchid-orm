@@ -1,5 +1,15 @@
 # pqb
 
+## 0.70.0
+
+### Minor Changes
+
+- 95bd76be: Rename `join()` (the one without arguments) to `require()`: it serves a purpose to require related records to be present (#724)
+
+### Patch Changes
+
+- 3a8de4ee: Add `notExists()`: the opposite of `exists()` (#725)
+
 ## 0.69.0
 
 ### Minor Changes

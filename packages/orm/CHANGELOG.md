@@ -1,5 +1,20 @@
 # orchid-orm
 
+## 1.75.0
+
+### Minor Changes
+
+- 95bd76be: Rename `join()` (the one without arguments) to `require()`: it serves a purpose to require related records to be present (#724)
+
+### Patch Changes
+
+- f48afe4a: `belongsTo` is no longer `required` by default if the relation has soft delete enabled (#420)
+- Updated dependencies [3a8de4ee]
+- Updated dependencies [0767f515]
+- Updated dependencies [95bd76be]
+  - pqb@0.70.0
+  - rake-db@2.36.14
+
 ## 1.74.0
 
 ### Minor Changes
