@@ -963,10 +963,12 @@ const selectFollowing = db.user.makeHelper((q, currentUser: { id: number }) => {
   return q.select({
     following: (q) =>
       q.followers.where({ followerId: currentUser.id }).exists(),
+    notFollowing: (q) =>
+      q.followers.where({ followerId: currentUser.id }).notExists(),
   });
 });
 
-// select some columns and the `following` boolean field from users
+// select some columns and the `following` and `notFollowing` boolean fields from users
 await selectFollowing(db.user.select('id', 'name'), currentUser);
 ```
 

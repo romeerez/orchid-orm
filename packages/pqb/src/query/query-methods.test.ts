@@ -576,24 +576,6 @@ describe('queryMethods', () => {
     });
   });
 
-  describe('exists', () => {
-    it('should discard previous select, select 1 and transform to boolean', async () => {
-      const q = User.all();
-      const query = q.select('id').exists();
-      assertType<Awaited<typeof query>, boolean>();
-
-      expect(await query).toBe(false);
-
-      await User.create(userData);
-
-      expect(await query).toBe(true);
-
-      expectSql(query.toSQL(), 'SELECT true FROM "schema"."user" LIMIT 1');
-
-      expectQueryNotMutated(q);
-    });
-  });
-
   describe('useHelper', () => {
     it('should have type error when applying a function for a wrong table', async () => {
       const modifier = User.makeHelper((q) => q.select('name'));

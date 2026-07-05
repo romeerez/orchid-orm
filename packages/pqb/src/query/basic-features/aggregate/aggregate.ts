@@ -16,7 +16,6 @@ import {
   OperatorsNumber,
   OperatorsText,
 } from '../../../columns/operators';
-import { RawSql } from '../../expressions/raw-sql';
 import {
   BooleanColumn,
   DecimalColumn,
@@ -30,11 +29,7 @@ import {
   XMLColumn,
 } from '../../../columns';
 import { Column } from '../../../columns/column';
-import {
-  _getSelectableColumn,
-  _queryGetOptional,
-  QueryGetSelf,
-} from '../get/get.utils';
+import { _getSelectableColumn } from '../get/get.utils';
 import {
   Expression,
   ExpressionOutput,
@@ -46,7 +41,6 @@ import {
   PickQuerySelectable,
 } from '../../pick-query-types';
 import { emptyArray } from '../../../utils';
-import { _clone } from '../clone/clone';
 import { SearchAggregateMethods } from '../../extra-features/search/search';
 
 // Helper function to check if we're selecting a count on this query.
@@ -277,25 +271,6 @@ export interface AggregateMethods extends SearchAggregateMethods {}
 
 // Query methods to get a single value for an aggregate function
 export class AggregateMethods {
-  /**
-   * Use `exists()` to check if there is at least one record-matching condition.
-   *
-   * It will discard previous `select` statements if any. Returns a boolean.
-   *
-   * ```ts
-   * const exists: boolean = await db.table.where(...conditions).exists();
-   * ```
-   */
-  exists<T extends QueryGetSelf>(
-    this: T,
-  ): SetQueryReturnsColumnOrThrow<T, BooleanQueryColumn> {
-    const q = _queryGetOptional(_clone(this), new RawSql('true'));
-    q.q.notFoundDefault = false;
-    q.q.coalesceValue = new RawSql('false');
-    q.q.getColumn = BooleanColumn.instanceSkipValueToArray;
-    return q as never;
-  }
-
   /**
    * Count records with the `count` function:
    *

@@ -711,3 +711,15 @@ It will discard previous `select` statements if any. Returns a boolean.
 ```ts
 const exists: boolean = await db.table.where(...conditions).exists();
 ```
+
+## notExists
+
+[//]: # 'has JSDoc'
+
+Use `notExists()` to check if there are no matching records.
+
+It will discard previous `select` statements if any. Returns a boolean.
+
+```ts
+const notExists: boolean = await db.table.where(...conditions).notExists();
+```

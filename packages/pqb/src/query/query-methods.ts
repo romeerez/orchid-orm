@@ -107,6 +107,7 @@ import { QueryWindow } from './basic-features/window/window';
 import { QueryWithSchema } from './basic-features/schema/schema';
 import { QueryStorage } from './basic-features/storage/storage';
 import { RelationQueryMaybeSingle } from './relations';
+import { QueryExistsMethods } from './basic-features/exists/exists';
 
 export type GroupArgs<T extends PickQueryResult> = (
   | {
@@ -337,7 +338,8 @@ export interface QueryMethods<ColumnTypes>
     SoftDeleteMethods,
     QueryExpressions,
     QueryWrap,
-    QueryWindow {}
+    QueryWindow,
+    QueryExistsMethods {}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class QueryMethods<ColumnTypes> {
@@ -1089,4 +1091,5 @@ applyMixins(QueryMethods, [
   QueryExpressions,
   QueryWrap,
   QueryWindow,
+  QueryExistsMethods,
 ]);

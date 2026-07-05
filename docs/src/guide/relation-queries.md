@@ -286,17 +286,20 @@ const result: BookResult = await db.book
 ```
 
 Use `exists()` to load a boolean to know whether the related record exists.
+Or `notExists()` for the opposite.
 
 ```ts
 type Result = {
   id: number;
   hasTags: boolean;
   hasSpecificTag: boolean;
+  hasNoTags: boolean;
 };
 
 const result: Result = await db.post.select('id', {
   hasTags: (q) => q.tags.exists(),
   hasSpecificTag: (q) => q.tags.where({ name: 'specific' }).exists(),
+  hasNoTags: (q) => q.tags.notExists(),
 });
 ```
 
