@@ -29,19 +29,26 @@ export interface ColumnDataComputedProp extends ColumnDataSelectSqlProp {
 }
 
 export type ComputedColumnsFromOptions<
-  T extends ComputedOptionsFactory<never, never> | undefined,
+  Shape,
+  Options,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-> = T extends ((...args: any[]) => infer R extends ComputedOptionsConfig)
+> = Options extends { computed: (...args: any) => infer R }
   ? {
-      [K in keyof R]: R[K] extends QueryOrExpression<unknown>
-        ? R[K]['result']['value']
-        : R[K] extends () => {
-              result: { value: infer Value extends Column.Pick.QueryColumn };
-            }
-          ? Value
+      [K in (keyof Shape | keyof R) & string]: K extends keyof Shape
+        ? Shape[K]
+        : K extends keyof R
+          ? R[K] extends QueryOrExpression<unknown>
+            ? R[K]['result']['value']
+            : R[K] extends () => {
+                  result: {
+                    value: infer Value extends Column.Pick.QueryColumn;
+                  };
+                }
+              ? Value
+              : never
           : never;
     }
-  : EmptyObject;
+  : Shape;
 
 export interface ComputedOptionsConfig {
   [K: string]: QueryOrExpression<unknown> | ReturnsQueryOrExpression<unknown>;

@@ -178,7 +178,6 @@ export {
   type QuerySchema,
   type QueryScopes,
   type SelectableFromShape,
-  type ShapeColumnPrimaryKeys,
   type ShapeUniqueColumns,
   type SingleSqlItem,
   type Sql,

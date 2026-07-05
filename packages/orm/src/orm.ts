@@ -26,7 +26,7 @@ import {
   ORMTableInput,
   BaseTableClass,
   TableClasses,
-  TableToDb,
+  TableQueryBuilder,
 } from './orm-table/base-table';
 import { applyRelations } from './relations/relations';
 import {
@@ -57,7 +57,7 @@ interface OrchidORMQueryHelper<
   __result: Result;
 }
 
-export interface OrchidORMTableHelper<T extends Query> {
+interface OrchidORMTableHelper<T extends Query> {
   /**
    * Static table name from the table class.
    */
@@ -73,22 +73,13 @@ export interface OrchidORMTableHelper<T extends Query> {
 
 export type OrchidORMTables<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? OrchidORMTableHelper<
-        TableToDb<R, R['table'], R['readOnly'] extends true ? true : undefined>
-      >
+    ? OrchidORMTableHelper<TableQueryBuilder<R>>
     : never;
 };
 
 export type OrchidORMViews<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? OrchidORMTableHelper<
-        TableToDb<
-          R,
-          R['name'],
-          R['readOnly'] extends false ? undefined : true,
-          R['materialized'] extends true ? true : undefined
-        >
-      >
+    ? OrchidORMTableHelper<TableQueryBuilder<R>>
     : never;
 };
 
@@ -101,18 +92,13 @@ export type OrchidORMBundle<
 
 export type OrchidORMDbTables<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? TableToDb<R, R['table'], R['readOnly'] extends true ? true : undefined>
+    ? TableQueryBuilder<R>
     : never;
 };
 
 export type OrchidORMDbViews<T extends TableClasses = TableClasses> = {
   [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? TableToDb<
-        R,
-        R['name'],
-        R['readOnly'] extends false ? undefined : true,
-        R['materialized'] extends true ? true : undefined
-      >
+    ? TableQueryBuilder<R>
     : never;
 };
 
@@ -382,7 +368,7 @@ const assignTablesToOrm = <T extends TableClasses>(
       adapter,
       qb,
       isTable ? table.table : table.name,
-      table.columns.shape,
+      table.columns.shape as never,
       table.types,
       asyncStorage,
       options,
@@ -397,7 +383,7 @@ const assignTablesToOrm = <T extends TableClasses>(
     dbTable.internal.tableRls = table.rls;
     dbTable.internal.tableGrants = table.grants;
 
-    result[key] = dbTable as OrchidORMDbTables<T>[Extract<keyof T, string>];
+    result[key] = dbTable as never;
   }
 
   return tableInstances;

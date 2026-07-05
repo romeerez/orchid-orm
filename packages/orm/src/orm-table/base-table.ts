@@ -1,7 +1,6 @@
 import {
   Column,
   AfterHook,
-  ComputedColumnsFromOptions,
   ComputedOptionsConfig,
   ComputedOptionsFactory,
   _createDbSqlMethod,
@@ -12,7 +11,6 @@ import {
   DefaultSchemaConfig,
   getColumnTypes,
   makeColumnTypes,
-  MapTableScopesOption,
   parseTableData,
   QueryAfterHook,
   QueryBeforeActionHook,
@@ -20,15 +18,9 @@ import {
   QueryData,
   QueryHooks,
   QueryScopes,
-  ShapeColumnPrimaryKeys,
-  ShapeUniqueColumns,
   TableData,
   TableDataFn,
   TableDataItem,
-  TableDataItemsUniqueColumns,
-  TableDataItemsUniqueColumnTuples,
-  TableDataItemsUniqueConstraints,
-  UniqueConstraints,
   applyMixins,
   ColumnSchemaConfig,
   emptyArray,
@@ -197,40 +189,23 @@ type RelationsDataForCreateOptional<T extends RelationConfigSelf> =
       ? Obj
       : EmptyObject;
 
-// convert table instance type to queryable interface
-// processes relations to a type that's understandable by `pqb`
-// add ORM table specific metadata like `definedAt`, `db`, `getFilePath`
-export interface TableToDb<
-  T extends ORMTableInput,
-  Name extends string | undefined,
-  ReadOnly extends true | undefined,
-  Materialized extends true | undefined = undefined,
->
+// converts table type to a queryable interface
+export interface TableQueryBuilder<T extends ORMTableInput>
   extends
     TableInfo,
     Db<
-      Name,
+      T['table'] extends string ? T['table'] : T['name'],
       T['columns']['shape'],
-      keyof ShapeColumnPrimaryKeys<T['columns']['shape']> extends never
-        ? never
-        : ShapeColumnPrimaryKeys<T['columns']['shape']>,
-      | ShapeUniqueColumns<T['columns']['shape']>
-      | TableDataItemsUniqueColumns<
-          T['columns']['shape'],
-          T['columns']['data']
-        >,
-      TableDataItemsUniqueColumnTuples<
-        T['columns']['shape'],
-        T['columns']['data']
-      >,
-      | UniqueConstraints<T['columns']['shape']>
-      | TableDataItemsUniqueConstraints<T['columns']['data']>,
+      T['columns']['data'],
       T['types'],
-      T['columns']['shape'] & ComputedColumnsFromOptions<T['computed']>,
-      MapTableScopesOption<T>,
-      ColumnsShape.DefaultSelectKeys<T['columns']['shape']>,
-      ReadOnly,
-      Materialized
+      T['table'] extends string
+        ? T['readOnly'] extends true
+          ? true
+          : undefined
+        : T['readOnly'] extends false
+          ? undefined
+          : true,
+      T
     > {
   relations: T extends RelationConfigSelf
     ? {
@@ -428,6 +403,7 @@ export interface BaseTableInstance<ColumnTypes> {
   q: QueryData;
   language?: string;
   filePath: string;
+  materialized?: true;
   /**
    * Keep this table-like definition available at runtime, but exclude it from
    * generated migration DDL reconciliation.

@@ -6,7 +6,7 @@ import {
 } from './belongsTo';
 import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
 import {
-  TableToDb,
+  TableQueryBuilder,
   ORMTableInput,
   TableClass,
   TableInfo,
@@ -111,17 +111,7 @@ export interface RelationData {
 export type RelationTableToQuery<Relation> = Relation extends {
   related: infer R extends ORMTableInput;
 }
-  ? TableToDb<
-      R,
-      R['table'] extends string ? R['table'] : R['name'],
-      R['table'] extends string
-        ? R['readOnly'] extends true
-          ? true
-          : undefined
-        : R['readOnly'] extends false
-          ? undefined
-          : true
-    >
+  ? TableQueryBuilder<R>
   : never;
 
 export interface RelationConfigSelf {

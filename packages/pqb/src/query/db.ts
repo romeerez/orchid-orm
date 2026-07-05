@@ -90,13 +90,18 @@ import { DbRole } from './extra-features/roles/roles';
 import { Rls } from './extra-features/rls/rls.db';
 import { Grant } from './extra-features/grants/grants.db';
 
-export type ShapeColumnPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
-  [K in {
-    [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string
-      ? K
-      : never;
-  }[keyof Shape]]: UniqueQueryTypeOrExpression<Shape[K]['__queryType']>;
-};
+type ShapeHasPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
+  [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string ? K : never;
+}[keyof Shape];
+
+type TablePrimaryKeys<Shape extends Column.QueryColumnsInit> =
+  ShapeHasPrimaryKeys<Shape> extends never
+    ? never
+    : {
+        [K in ShapeHasPrimaryKeys<Shape>]: UniqueQueryTypeOrExpression<
+          Shape[K]['__queryType']
+        >;
+      };
 
 export type ShapeUniqueColumns<Shape extends Column.QueryColumnsInit> = {
   [K in keyof Shape]: Shape[K]['data']['unique'] extends string
@@ -236,16 +241,10 @@ export interface QueryBuilder extends Query.NotReadOnlyQuery {
 export class Db<
   Table extends string | undefined = undefined,
   Shape extends Column.QueryColumnsInit = Column.QueryColumnsInit,
-  PrimaryKeys = never,
-  UniqueColumns = never,
-  UniqueColumnTuples = never,
-  UniqueConstraints = never,
+  Data extends MaybeArray<TableDataItem> = never,
   ColumnTypes = DefaultColumnTypes<ColumnSchemaConfig>,
-  ShapeWithComputed extends Column.QueryColumnsInit = Shape,
-  Scopes extends RecordUnknown | undefined = EmptyObject,
-  DefaultSelect extends keyof Shape = keyof Shape,
   ReadOnly extends true | undefined = undefined,
-  Materialized extends true | undefined = undefined,
+  Options = never,
 >
   extends QueryMethods<ColumnTypes>
   implements Query
@@ -253,9 +252,14 @@ export class Db<
   declare q: QueryData;
   declare __isQuery: true;
   declare __as: Table & string;
-  declare __selectable: SelectableFromShape<ShapeWithComputed, Table>;
+  declare __selectable: SelectableFromShape<
+    ComputedColumnsFromOptions<Shape, Options>,
+    Table
+  >;
   declare __readOnly: ReadOnly;
-  declare __materialized: Materialized;
+  declare __materialized: Options extends { materialized: true }
+    ? true
+    : undefined;
   // declare __subQuery: boolean;
   declare __hasSelect: boolean;
   declare __hasWhere: boolean;
@@ -266,13 +270,13 @@ export class Db<
         : K;
     }[keyof Shape]]: true;
   };
-  declare __scopes: { [K in keyof Scopes]: true };
-  declare __defaultSelect: DefaultSelect;
+  declare __scopes: { [K in keyof MapTableScopesOption<Options>]: true };
+  declare __defaultSelect: ColumnsShape.DefaultSelectKeys<Shape>;
   baseQuery: Query;
   columns: (keyof Shape)[];
   declare __outputType: ColumnsShape.DefaultSelectOutput<Shape>;
   declare __inputType: ColumnsShape.Input<Shape>;
-  declare result: { [K in DefaultSelect]: Shape[K] };
+  declare result: { [K in ColumnsShape.DefaultSelectKeys<Shape>]: Shape[K] };
   declare returnType: undefined;
   declare then: QueryThenShallowSimplifyArr<ColumnsShape.DefaultOutput<Shape>>;
   declare windows: EmptyObject;
@@ -287,34 +291,44 @@ export class Db<
     name: QueryErrorName,
   ) => QueryError<this>;
   internal: QueryInternal<
-    {
-      [K in keyof PrimaryKeys]: (
-        keyof PrimaryKeys extends K ? never : keyof PrimaryKeys
-      ) extends never
-        ? PrimaryKeys[K]
-        : never;
-    }[keyof PrimaryKeys],
-    PrimaryKeys | UniqueColumns,
+    TablePrimaryKeys<Shape> extends never
+      ? never
+      : {
+          [K in keyof TablePrimaryKeys<Shape>]: (
+            keyof TablePrimaryKeys<Shape> extends K
+              ? never
+              : keyof TablePrimaryKeys<Shape>
+          ) extends never
+            ? TablePrimaryKeys<Shape>[K]
+            : never;
+        }[keyof TablePrimaryKeys<Shape>],
+    | TablePrimaryKeys<Shape>
+    | ShapeUniqueColumns<Shape>
+    | TableDataItemsUniqueColumns<Shape, Data>,
     | {
         [K in keyof Shape]: Shape[K]['data']['unique'] extends string
           ? K
           : never;
       }[keyof Shape]
-    | keyof PrimaryKeys,
-    UniqueColumnTuples,
-    UniqueConstraints
+    | keyof TablePrimaryKeys<Shape>,
+    TableDataItemsUniqueColumnTuples<Shape, Data>,
+    UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>
   >;
   declare catch: QueryCatch;
-  shape: ShapeWithComputed;
+  shape: ComputedColumnsFromOptions<Shape, Options>;
 
   constructor(
     public adapterNotInTransaction: Adapter,
     public qb: QueryBuilder,
     public table: Table = undefined as Table,
-    shape: ShapeWithComputed,
+    shape: ComputedColumnsFromOptions<Shape, Options>,
     public columnTypes: ColumnTypes,
     asyncStorage: AsyncLocalStorage<AsyncState>,
-    options: DbTableOptions<ColumnTypes, Table, ShapeWithComputed>,
+    options: DbTableOptions<
+      ColumnTypes,
+      Table,
+      ComputedColumnsFromOptions<Shape, Options>
+    >,
     tableData: TableData = {},
     viewData?: QueryInternal['viewData'],
   ) {
@@ -692,7 +706,7 @@ export interface DbTableConstructor<ColumnTypes> {
     Table extends string,
     Shape extends Column.QueryColumnsInit,
     Data extends MaybeArray<TableDataItem>,
-    Options extends DbTableOptions<ColumnTypes, Table, Shape>,
+    Options extends DbTableOptions<ColumnTypes, Table, Shape> | undefined,
   >(
     table: Table,
     shape?: ((t: ColumnTypes) => Shape) | Shape,
@@ -701,18 +715,10 @@ export interface DbTableConstructor<ColumnTypes> {
   ): Db<
     Table,
     Shape,
-    keyof ShapeColumnPrimaryKeys<Shape> extends never
-      ? never
-      : ShapeColumnPrimaryKeys<Shape>,
-    ShapeUniqueColumns<Shape> | TableDataItemsUniqueColumns<Shape, Data>,
-    TableDataItemsUniqueColumnTuples<Shape, Data>,
-    UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>,
+    Data,
     ColumnTypes,
-    Shape & ComputedColumnsFromOptions<Options['computed']>,
-    MapTableScopesOption<Options>,
-    ColumnsShape.DefaultSelectKeys<Shape>,
-    Options['readOnly'] extends true ? true : undefined,
-    Options['materialized'] extends true ? true : undefined
+    Options extends { readOnly: true } ? true : undefined,
+    Options
   >;
 }
 
@@ -741,17 +747,7 @@ export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
 
 export interface DbResult<ColumnTypes>
   extends
-    Db<
-      undefined,
-      EmptyObject,
-      never,
-      never,
-      never,
-      never,
-      ColumnTypes,
-      never,
-      never
-    >,
+    Db<undefined, EmptyObject, never, ColumnTypes, never, never>,
     DbTableConstructor<ColumnTypes> {
   adapterNotInTransaction: Adapter;
   adapter: Adapter;
@@ -899,9 +895,9 @@ export const createDbWithAdapter = <
       adapter as Adapter,
       qb as never,
       table,
-      typeof shape === 'function'
+      (typeof shape === 'function'
         ? getColumnTypes(ct, shape, nowSQL, options?.language)
-        : shape || (anyShape as never),
+        : shape || (anyShape as never)) as never,
       ct,
       asyncStorage,
       { ...commonOptions, ...options },
@@ -948,7 +944,7 @@ export const _initQueryBuilder = (
     adapter as Adapter,
     undefined as unknown as QueryBuilder,
     undefined,
-    anyShape,
+    anyShape as never,
     columnTypes,
     asyncStorage,
     commonOptions,
