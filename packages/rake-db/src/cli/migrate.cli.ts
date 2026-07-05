@@ -5,7 +5,7 @@ import {
   rollback,
   redo,
 } from '../commands/migrate-or-rollback';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 
 const makeMigrateOrRollback =
   (fn: MigrateFn) =>

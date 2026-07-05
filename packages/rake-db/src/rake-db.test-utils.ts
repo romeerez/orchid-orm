@@ -9,7 +9,7 @@ import {
   toArray,
 } from 'pqb/internal';
 import { join } from 'node:path';
-import { rakeDbConfigDefaults, RakeDbConfig } from './config';
+import { rakeDbConfigDefaults, RakeDbConfig } from './config/config';
 import { testDefaultColumnTypes } from 'test-utils';
 
 let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;

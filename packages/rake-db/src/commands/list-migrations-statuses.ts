@@ -2,7 +2,7 @@ import { RakeDbCtx } from '../common';
 import path from 'node:path';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { pathToFileURL } from 'node:url';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 import { getMigrations } from '../migration/migrations-set';
 import { Adapter, colors } from 'pqb/internal';
 

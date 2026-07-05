@@ -11,8 +11,12 @@ import {
 import {
   incrementIntermediateCaller,
   makeRakeDbConfig,
-} from '../config.public';
-import { RakeDbCliConfigInput, RakeDbCommand, RakeDbConfig } from '../config';
+} from '../config/config.public';
+import {
+  RakeDbCliConfigInput,
+  RakeDbCommand,
+  RakeDbConfig,
+} from '../config/config';
 import {
   createMigrationChangeFn,
   MigrationChangeFn,

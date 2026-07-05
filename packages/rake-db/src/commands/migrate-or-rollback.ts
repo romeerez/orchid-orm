@@ -39,7 +39,7 @@ import {
   RakeDbMigrationId,
   RakeDbRenameMigrationsInput,
   SearchPath,
-} from '../config';
+} from '../config/config';
 import path from 'node:path';
 import {
   getMigrations,
@@ -49,6 +49,8 @@ import {
 } from '../migration/migrations-set';
 import { versionToString } from '../migration/migration.utils';
 import { DbParam, getMaybeTransactionAdapter } from '../utils';
+
+import { handleConfigLogger } from '../config/config-logger';
 
 export interface MigrateFnParams {
   ctx?: RakeDbCtx;
@@ -115,29 +117,6 @@ export const migrateConfigDefaults = {
   migrationId: { serial: 4 },
   migrationsTable: 'schemaMigrations',
   transaction: 'single',
-};
-
-export const handleConfigLogger = (
-  config: QueryLogOptions,
-  db?: DbParam,
-): QueryLogOptions | undefined => {
-  const q = db
-    ? '$qb' in db && db.$qb
-      ? db.$qb.q
-      : 'q' in db
-        ? db.q
-        : undefined
-    : undefined;
-
-  return {
-    log: config.log ?? q?.log,
-    logger:
-      config.log === true
-        ? config.logger || q?.logger || console
-        : config.log === false
-          ? undefined
-          : config.logger || q?.logger,
-  };
 };
 
 /**

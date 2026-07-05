@@ -8,7 +8,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getImportPath, pathToLog } from 'pqb/internal';
 import { getMigrations } from '../migration/migrations-set';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 
 export const writeMigrationFile = async (
   config: RakeDbConfig,

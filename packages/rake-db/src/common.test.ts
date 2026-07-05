@@ -12,8 +12,8 @@ import {
   getStackTrace,
   defaultSchemaConfig,
 } from 'pqb/internal';
-import { RakeDbConfig } from './config';
-import { makeRakeDbConfig, rakeDbCommands } from './config.public';
+import { RakeDbConfig } from './config/config';
+import { makeRakeDbConfig, rakeDbCommands } from './config/config.public';
 import { processMigrateConfig } from './commands/migrate-or-rollback';
 
 describe('common', () => {

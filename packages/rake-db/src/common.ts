@@ -7,7 +7,7 @@ import {
 } from 'pqb/internal';
 import { TableQuery } from './migration/create-table';
 import { MigrationsSet } from './migration/migrations-set';
-import { RakeDbConfig } from './config';
+import { RakeDbConfig } from './config/config';
 
 export const RAKE_DB_LOCK_KEY = '8582141715823621641';
 

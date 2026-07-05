@@ -25,7 +25,7 @@ import {
 } from 'pqb/internal';
 import { quoteSchemaTable } from '../common';
 import { astToGenerateItems } from './ast-to-generate-items';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 import { DbStructure } from './db-structure';
 
 export const astToMigration = (

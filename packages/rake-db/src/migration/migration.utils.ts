@@ -22,7 +22,7 @@ import {
   quoteTable,
   quoteWithSchema,
 } from '../common';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 import { TableQuery } from './create-table';
 
 export const versionToString = (

@@ -1,4 +1,4 @@
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { generateTimeStamp } from './new-migration';

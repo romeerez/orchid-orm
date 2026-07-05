@@ -3,7 +3,7 @@ import {
   RakeDbConfig,
   RakeDbRenameMigrations,
   RakeDbRenameMigrationsMap,
-} from '../config';
+} from '../config/config';
 import { MaybePromise, RecordString } from 'pqb/internal';
 import { pathToFileURL } from 'node:url';
 import { readdir } from 'node:fs/promises';

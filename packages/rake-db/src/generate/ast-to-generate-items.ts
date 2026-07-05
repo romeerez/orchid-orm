@@ -16,7 +16,7 @@ import {
   exhaustive,
 } from 'pqb/internal';
 import { getSchemaAndTableFromName } from '../common';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 
 export interface GenerateItem {
   ast: RakeDbAst;

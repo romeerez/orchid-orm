@@ -50,7 +50,7 @@ import {
   createMaterializedView,
   refreshMaterializedView,
 } from './create-materialized-view';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 import { changeRole, createOrDropRole, renameRole } from './role';
 import {
   changeDefaultPrivileges,

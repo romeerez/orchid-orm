@@ -8,7 +8,7 @@ import {
   RecordString,
   TransactionAdapter,
 } from 'pqb/internal';
-import { RakeDbConfig, RakeDbRenameMigrations } from '../config';
+import { RakeDbConfig, RakeDbRenameMigrations } from '../config/config';
 import { getMigrationVersion } from './migrations-set';
 import {
   renameMigrationVersionsInDb,

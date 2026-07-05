@@ -10,7 +10,7 @@ import {
 import { migrate } from '../commands/migrate-or-rollback';
 import { createMigrationsSchemaAndTable } from '../migration/manage-migrated-versions';
 import { runRecurrentMigrations } from '../commands/recurrent';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 
 export const createDatabaseCommand = (
   adapters: Adapter[],

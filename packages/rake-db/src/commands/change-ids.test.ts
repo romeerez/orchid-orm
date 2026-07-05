@@ -1,6 +1,6 @@
 import { changeIds, fileNamesToChangeMigrationId } from './change-ids';
 import { testConfig } from '../rake-db.test-utils';
-import { RakeDbConfig, RakeDbMigrationId } from '../config';
+import { RakeDbConfig, RakeDbMigrationId } from '../config/config';
 import { getMigrations } from '../migration/migrations-set';
 import { asMock, TestAdapter } from 'test-utils';
 import fs from 'node:fs/promises';

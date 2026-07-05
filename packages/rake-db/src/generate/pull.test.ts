@@ -8,8 +8,8 @@ import {
   AdapterClass,
 } from 'pqb/internal';
 import { asMock, TestAdapter, testDefaultColumnTypes } from 'test-utils';
-import { makeRakeDbConfig } from '../config.public';
-import { RakeDbConfig } from '../config';
+import { makeRakeDbConfig } from '../config/config.public';
+import { RakeDbConfig } from '../config/config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 
 jest.mock('../migration/manage-migrated-versions', () => ({

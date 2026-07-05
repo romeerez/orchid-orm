@@ -33,7 +33,7 @@ import {
   getIndexName,
   getMigrationsSchemaAndTable,
 } from '../migration/migration.utils';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 
 const matchMap: Record<string, undefined | TableData.References.Match> = {
   s: undefined,

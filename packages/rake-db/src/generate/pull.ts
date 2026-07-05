@@ -4,7 +4,7 @@ import { saveMigratedVersion } from '../migration/manage-migrated-versions';
 import { SilentQueries } from '../migration/migration';
 import { astToMigration } from './ast-to-migration';
 import { structureToAst, makeStructureToAstCtx } from './structure-to-ast';
-import { RakeDbConfig } from '../config';
+import { RakeDbConfig } from '../config/config';
 
 export const pullDbStructure = async (
   adapter: Adapter,

@@ -10,8 +10,8 @@ import {
   QueryLogOptions,
   RecordString,
 } from 'pqb/internal';
-import { MigrationItem } from './migration/migrations-set';
-import { migrateConfigDefaults } from './commands/migrate-or-rollback';
+import { MigrationItem } from '../migration/migrations-set';
+import { migrateConfigDefaults } from '../commands/migrate-or-rollback';
 
 export type SearchPath = (() => string) | string;
 

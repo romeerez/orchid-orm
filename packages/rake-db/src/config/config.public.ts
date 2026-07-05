@@ -9,31 +9,31 @@ import {
 } from 'pqb/internal';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getCliParam } from './common';
+import { getCliParam } from '../common';
 import {
-  rakeDbConfigDefaults,
   RakeDbCliConfigInput,
   RakeDbCommand,
   RakeDbCommands,
   RakeDbConfig,
+  rakeDbConfigDefaults,
 } from './config';
 import {
   createDatabaseCommand,
   dropDatabaseCommand,
   resetDatabaseCommand,
-} from './cli/database.cli';
+} from '../cli/database.cli';
 import {
   migrateCommand,
   redoCommand,
   rollbackCommand,
-} from './cli/migrate.cli';
-import { runRecurrentMigrations } from './commands/recurrent';
-import { pullDbStructure } from './generate/pull';
-import { newMigration } from './commands/new-migration';
-import { listMigrationsStatuses } from './commands/list-migrations-statuses';
-import { rebase } from './commands/rebase';
-import { changeIds } from './commands/change-ids';
-import { processMigrateConfig } from './commands/migrate-or-rollback';
+} from '../cli/migrate.cli';
+import { runRecurrentMigrations } from '../commands/recurrent';
+import { pullDbStructure } from '../generate/pull';
+import { newMigration } from '../commands/new-migration';
+import { listMigrationsStatuses } from '../commands/list-migrations-statuses';
+import { rebase } from '../commands/rebase';
+import { changeIds } from '../commands/change-ids';
+import { processMigrateConfig } from '../commands/migrate-or-rollback';
 
 const close = (adapters: Adapter[]) =>
   Promise.all(adapters.map((adapter) => adapter.close()));
