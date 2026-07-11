@@ -13,11 +13,12 @@ import {
   userData,
   UserInsert,
   UserRecord,
-  UserSoftDelete,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
+  db,
   expectSql,
+  MessageData,
   sql,
   testDb,
   useTestDatabase,
@@ -74,16 +75,16 @@ describe('create functions', () => {
 
   describe('create', () => {
     it('should alias returning columns with `as` that matches the nameInDb', () => {
-      const q = User.as('user').create(userData).select('name');
+      const q = db.message.as('message').create(MessageData).select('Text');
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
-          VALUES ($1, $2)
-          RETURNING "user"."name"
+          INSERT INTO "schema"."message"("text", "message_key", "updated_at", "created_at")
+          VALUES ($1, $2, $3, $4)
+          RETURNING "message"."text" "Text"
         `,
-        ['name', 'password'],
+        ['text', 'key', expect.any(Date), expect.any(Date)],
       );
     });
 
@@ -1224,18 +1225,22 @@ describe('create functions', () => {
 
     describe('ignore', () => {
       it('should not append soft delete scope as WHERE', () => {
-        const query = UserSoftDelete.insert({
-          name: userData.name,
-        }).onConflictDoNothing();
+        const query = db.message
+          .insert({
+            MessageKey: 'key',
+            ChatId: 1,
+            Text: userData.name,
+          })
+          .onConflictDoNothing();
 
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name")
-            VALUES ($1)
+            INSERT INTO "schema"."message" AS "Message"("message_key", "chat_id", "text")
+            VALUES ($1, $2, $3)
             ON CONFLICT DO NOTHING
           `,
-          [userData.name],
+          ['key', 1, userData.name],
         );
       });
 

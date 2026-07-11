@@ -5,7 +5,6 @@ import {
   SnakeRecord,
   snakeSelectAll,
   User,
-  UserSoftDelete,
   Message,
   Profile,
   userData,
@@ -1493,15 +1492,15 @@ describe('updateMany', () => {
 
     it('should apply softDelete filter', () => {
       expectSql(
-        UserSoftDelete.updateManyOptional([{ id: 1, name: 'Alice' }]).toSQL(),
+        db.message.updateManyOptional([{ Id: 1, Text: 'text' }]).toSQL(),
         `
-          UPDATE "schema"."user" "User"
-          SET "name" = "v"."name"
-          FROM (VALUES ($1::int4, $2::varchar)) "v"("id", "name")
-          WHERE ("User"."id" = "v"."id")
-            AND ("User"."deleted_at" IS NULL)
+          UPDATE "schema"."message" "Message"
+          SET "updated_at" = now(), "text" = "v"."text"
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "text")
+          WHERE ("Message"."id" = "v"."id")
+            AND ("Message"."deleted_at" IS NULL)
         `,
-        [1, 'Alice'],
+        [1, 'text'],
       );
     });
 

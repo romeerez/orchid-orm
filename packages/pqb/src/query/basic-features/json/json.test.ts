@@ -1,9 +1,10 @@
 import {
   expectQueryNotMutated,
   User,
-  UserSoftDelete,
 } from '../../../test-utils/pqb.test-utils';
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import { assertType, db, expectSql, useTestDatabase } from 'test-utils';
+
+const messageColumnsSql = db.message.q.selectAllColumns!.join(', ');
 
 describe('json methods', () => {
   useTestDatabase();
@@ -53,16 +54,27 @@ describe('json methods', () => {
     });
 
     it('should not duplicate the default scope inside the inner `FROM` and after `AS t`', () => {
-      const q = UserSoftDelete.json();
+      const q = db.message.json();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
+          SELECT COALESCE(json_agg(json_build_object(
+            'Id', t."Id",
+            'MessageKey', t."MessageKey",
+            'ChatId', t."ChatId",
+            'AuthorId', t."AuthorId",
+            'Text', t."Text",
+            'Decimal', t."Decimal"::text,
+            'Active', t."Active",
+            'DeletedAt', t."DeletedAt",
+            'createdAt', t."createdAt",
+            'updatedAt', t."updatedAt"
+          )), '[]')
           FROM (
-            SELECT "id", "name", "active", "deleted_at" "deletedAt"
-            FROM "schema"."user" "User"
-            WHERE ("User"."deleted_at" IS NULL)
+            SELECT ${messageColumnsSql}
+            FROM "schema"."message" "Message"
+            WHERE ("Message"."deleted_at" IS NULL)
           ) "t"
         `,
       );

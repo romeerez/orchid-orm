@@ -1,6 +1,5 @@
 import { isQuery, IsQuery, Query } from '../../query';
 import { JoinArgs, JoinCallback, JoinFirstArg, JoinQueryBuilder } from './join';
-import { pushQueryArrayImmutable } from '../../query.utils';
 import { ColumnsShape } from '../../../columns/columns-shape';
 import { Column } from '../../../columns/column';
 import { getIsJoinSubQuery } from '../../sql/get-is-join-sub-query';
@@ -8,7 +7,6 @@ import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-que
 import { returnArg } from '../../../utils';
 import { RelationJoinQuery } from '../../relations';
 import {
-  PickQueryQ,
   PickQueryRelationQueries,
   PickQueryRelations,
 } from '../../pick-query-types';
@@ -126,28 +124,7 @@ export const processJoinArgs = (
     };
 
     if (q.joinQueryAfterCallback) {
-      let base = q.baseQuery;
-      if (q.q.as) {
-        base = base.as(q.q.as);
-      }
-
-      const { q: query } = q.joinQueryAfterCallback(
-        base,
-        joinTo,
-      ) as unknown as PickQueryQ;
-
-      if (query.and || query.or || query.scopes) {
-        q = _clone(q);
-        if (query.and) {
-          pushQueryArrayImmutable(q, 'and', query.and);
-        }
-        if (query.or) {
-          pushQueryArrayImmutable(q, 'or', query.or);
-        }
-        if (query.scopes) {
-          q.q.scopes = { ...q.q.scopes, ...query.scopes };
-        }
-      }
+      q = q.joinQueryAfterCallback(q, joinTo) as never;
     }
 
     const joinedShapes = {

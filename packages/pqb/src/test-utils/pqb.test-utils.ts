@@ -29,23 +29,6 @@ export const userTableColumnsSql = User.q
   .selectAllColumns!.map((c) => '"User".' + c)
   .join(', ');
 
-export const UserSoftDelete = testDb(
-  'User',
-  (t) => ({
-    id: t.identity().primaryKey(),
-    name: t.string(),
-    active: t.boolean().nullable(),
-    deletedAt: t.timestamp().nullable(),
-  }),
-  undefined,
-  {
-    softDelete: true,
-  },
-);
-
-export const userSoftDeleteColumnsSql =
-  UserSoftDelete.q.selectAllColumns!.join(', ');
-
 export type ProfileRecord = typeof Profile.__outputType;
 export const Profile = testDb('Profile', (t) => ({
   id: t.identity().primaryKey(),

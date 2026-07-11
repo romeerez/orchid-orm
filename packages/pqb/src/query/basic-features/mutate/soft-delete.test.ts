@@ -1,107 +1,147 @@
-import { expectSql, testAdapter, testColumnTypes } from 'test-utils';
-import {
-  UserSoftDelete,
-  userSoftDeleteColumnsSql,
-} from '../../../test-utils/pqb.test-utils';
+import { db, expectSql, testAdapter, testColumnTypes } from 'test-utils';
 import { createDbWithAdapter } from '../../db';
+
+const messageColumnsSql = db.message.q.selectAllColumns!.join(', ');
 
 describe('softDelete', () => {
   it('should throw on empty effective where filter for delete and hardDelete', () => {
-    expect(() => UserSoftDelete.where({}).delete().toSQL()).toThrow(
+    expect(() => db.message.where({}).delete().toSQL()).toThrow(
       'Dangerous update without conditions',
     );
-    expect(() => UserSoftDelete.where({}).hardDelete().toSQL()).toThrow(
+    expect(() => db.message.where({}).hardDelete().toSQL()).toThrow(
       'Dangerous delete without conditions',
     );
   });
 
   it('should have nonDeleted scope enabled by default', () => {
     expectSql(
-      UserSoftDelete.toSQL(),
+      db.message.toSQL(),
       `
-          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user" "User"
-          WHERE ("User"."deleted_at" IS NULL)
+          SELECT ${messageColumnsSql} FROM "schema"."message" "Message"
+          WHERE ("Message"."deleted_at" IS NULL)
         `,
     );
   });
 
   it('should have `includeDeleted` method to query all records', () => {
     expectSql(
-      UserSoftDelete.includeDeleted().toSQL(),
+      db.message.includeDeleted().toSQL(),
+      `SELECT ${messageColumnsSql} FROM "schema"."message" "Message"`,
+    );
+  });
+
+  it('should not apply soft delete filter to a relation join with `includeDeleted`', () => {
+    const q = db.user.select('Id').join((q) => q.messages.includeDeleted());
+
+    expectSql(
+      q.toSQL(),
       `
-          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user" "User"
-        `,
+        SELECT "User"."id" "Id"
+        FROM "schema"."user" "User"
+        JOIN "schema"."message" "messages" ON
+          "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
+      `,
+    );
+  });
+
+  it('should not apply soft delete filter to a selected relation with `includeDeleted`', () => {
+    const q = db.user.select({
+      messages: (q) => q.messages.select('Id').includeDeleted(),
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT COALESCE("messages"."messages", '[]') "messages"
+        FROM "schema"."user" "User"
+        LEFT JOIN LATERAL (
+          SELECT json_agg(row_to_json(t.*)) "messages"
+          FROM (
+            SELECT "messages"."id" "Id"
+            FROM "schema"."message" "messages"
+            WHERE "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
+          ) "t"
+        ) "messages" ON true`,
     );
   });
 
   it('should set deletedAt to current time instead of deleting', () => {
-    const q = UserSoftDelete.all().delete();
+    const q = db.message.all().delete();
     expectSql(
       q.toSQL(),
       `
-        UPDATE "schema"."user" "User"
-           SET "deleted_at" = now()
-         WHERE ("User"."deleted_at" IS NULL)
+        UPDATE "schema"."message" "Message"
+           SET "deleted_at" = now(), "updated_at" = now()
+         WHERE ("Message"."deleted_at" IS NULL)
       `,
     );
   });
 
   it('should respect `nowSql` option', () => {
-    const db = createDbWithAdapter({
+    const customDb = createDbWithAdapter({
       snakeCase: true,
       adapter: testAdapter,
       columnTypes: testColumnTypes,
       nowSQL: 'CURRENT_TIMESTAMP',
     });
 
-    const UserSoftDelete = db(
-      'user',
+    const MessageSoftDelete = customDb(
+      'message',
       (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.string(),
-        active: t.boolean().nullable(),
-        deletedAt: t.timestamp().nullable(),
+        Id: t.name('id').identity().primaryKey(),
+        MessageKey: t.name('message_key').text(),
+        ChatId: t.name('chat_id').integer(),
+        AuthorId: t.name('author_id').integer().nullable(),
+        Text: t.name('text').text(),
+        Decimal: t.name('decimal').decimal().nullable(),
+        Active: t.name('active').boolean().nullable(),
+        DeletedAt: t.name('deleted_at').timestamp().nullable(),
+        createdAt: t.name('created_at').timestamp(),
+        updatedAt: t.name('updated_at').timestamp(),
       }),
       undefined,
       {
         schema: () => 'schema',
-        softDelete: true,
+        softDelete: 'DeletedAt',
       },
     );
 
-    const q = UserSoftDelete.all().delete();
+    const q = MessageSoftDelete.all().delete();
     expectSql(
       q.toSQL(),
       `
-        UPDATE "schema"."user" SET "deleted_at" = CURRENT_TIMESTAMP
-         WHERE ("user"."deleted_at" IS NULL)
+        UPDATE "schema"."message"
+           SET "deleted_at" = CURRENT_TIMESTAMP
+         WHERE ("message"."deleted_at" IS NULL)
       `,
     );
   });
 
   it('should delete records for real with `hardDelete`', () => {
-    const q = UserSoftDelete.all().hardDelete();
+    const q = db.message.all().hardDelete();
     expectSql(
       q.toSQL(),
       `
-        DELETE FROM "schema"."user" "User"
+        DELETE FROM "schema"."message" "Message"
       `,
     );
   });
 
   it('should allow all with an empty effective where filter', () => {
     expectSql(
-      UserSoftDelete.all().where({ id: undefined }).delete().toSQL(),
+      db.message.all().where({ Id: undefined }).delete().toSQL(),
       `
-        UPDATE "schema"."user" "User" SET "deleted_at" = now()
-        WHERE ("User"."deleted_at" IS NULL)
+        UPDATE "schema"."message" "Message" SET "deleted_at" = now(), "updated_at" = now()
+        WHERE ("Message"."deleted_at" IS NULL)
       `,
     );
 
     expectSql(
-      UserSoftDelete.all().where({ id: undefined }).hardDelete().toSQL(),
+      db.message.all().where({ Id: undefined }).hardDelete().toSQL(),
       `
-        DELETE FROM "schema"."user" "User"
+        DELETE FROM "schema"."message" "Message"
       `,
     );
   });

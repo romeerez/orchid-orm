@@ -189,7 +189,7 @@ describe('db', () => {
       { readOnly: true },
     );
 
-    const UserSoftDelete = testDb(
+    const ReadOnlySoftDeleteUser = testDb(
       'user',
       (t) => ({
         id: t.identity().primaryKey(),
@@ -280,9 +280,11 @@ describe('db', () => {
     // @ts-expect-error read-only query cannot truncate
     expect(() => User.truncate()).toThrow(readOnlyError);
     // @ts-expect-error read-only soft-delete query cannot soft delete
-    expect(() => UserSoftDelete.all().delete()).toThrow(readOnlyError);
+    expect(() => ReadOnlySoftDeleteUser.all().delete()).toThrow(readOnlyError);
     // @ts-expect-error read-only soft-delete query cannot hard delete
-    expect(() => UserSoftDelete.all().hardDelete()).toThrow(readOnlyError);
+    expect(() => ReadOnlySoftDeleteUser.all().hardDelete()).toThrow(
+      readOnlyError,
+    );
   });
 
   it('supports table without schema', () => {
