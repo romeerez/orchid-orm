@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.76.1
+
+### Patch Changes
+
+- f82a88e4: Fix scopes being incorrectly applied when joining a relation (includeDeleted() did not work) (#728)
+
 ## 1.76.0
 
 ### Minor Changes
