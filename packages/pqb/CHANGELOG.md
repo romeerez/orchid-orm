@@ -1,5 +1,11 @@
 # pqb
 
+## 0.71.0
+
+### Minor Changes
+
+- 076fb491: Add `nameInDb` for table and view database relation names, and derive table names from `snakeCase` by default when it is enabled (#401)
+
 ## 0.70.0
 
 ### Minor Changes
