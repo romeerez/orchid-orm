@@ -19,9 +19,7 @@ export type ColumnSchemaGetterColumns<T extends ColumnSchemaGetterTableClass> =
 
 export interface ColumnTypeSchemaArg {
   __schemaType: unknown;
-  nullable<T extends Column.Pick.ForNullable>(
-    this: T,
-  ): Column.Modifiers.Nullable<T, unknown, unknown, unknown>;
+  nullable: unknown;
   encode: unknown;
   parse: unknown;
   parseNull: unknown;

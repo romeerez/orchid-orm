@@ -1468,7 +1468,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable(
-    'reallyLongTableNameConsistingOfSeveralWords',
+    'really_long_table_name_consisting_of_several_words',
     {
       noPrimaryKey: true,
     },
@@ -1498,7 +1498,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ create table',
-      )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 index, 1 exclude, no primary key)`,
+      )} really_long_table_name_consisting_of_several_words (2 columns, 1 index, 1 exclude, no primary key)`,
     );
   });
 });

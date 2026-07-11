@@ -2,7 +2,7 @@ import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
 import { expectSql, testDb } from 'test-utils';
 import { RecordUnknown } from '../utils';
-import { quoteTableWithSchema } from '../query/sql/sql';
+import { quoteTableWithSchemaAndAlias } from '../query/sql/sql';
 import {
   QueryResult,
   QueryResultRow,
@@ -12,7 +12,7 @@ import {
 export type UserRecord = typeof User.__outputType;
 export type UserInsert = typeof User.__inputType;
 export type UserDataType = { name: string; tags: string[] };
-export const User = testDb('user', (t) => ({
+export const User = testDb('User', (t) => ({
   id: t.identity().primaryKey(),
   name: t.text().unique(),
   password: t.text().select(false),
@@ -26,11 +26,11 @@ export const User = testDb('user', (t) => ({
 export const userColumnsSql = User.q.selectAllColumns!.join(', ');
 
 export const userTableColumnsSql = User.q
-  .selectAllColumns!.map((c) => '"user".' + c)
+  .selectAllColumns!.map((c) => '"User".' + c)
   .join(', ');
 
 export const UserSoftDelete = testDb(
-  'user',
+  'User',
   (t) => ({
     id: t.identity().primaryKey(),
     name: t.string(),
@@ -47,7 +47,7 @@ export const userSoftDeleteColumnsSql =
   UserSoftDelete.q.selectAllColumns!.join(', ');
 
 export type ProfileRecord = typeof Profile.__outputType;
-export const Profile = testDb('profile', (t) => ({
+export const Profile = testDb('Profile', (t) => ({
   id: t.identity().primaryKey(),
   userId: t.integer().foreignKey('user', 'id'),
   bio: t.text().nullable(),
@@ -57,10 +57,10 @@ export const Profile = testDb('profile', (t) => ({
 export const profileColumnsSql = Profile.q.selectAllColumns!.join(', ');
 
 export const profileTableColumnsSql = Profile.q
-  .selectAllColumns!.map((c) => '"profile".' + c)
+  .selectAllColumns!.map((c) => '"Profile".' + c)
   .join(', ');
 
-export const Chat = testDb('chat', (t) => ({
+export const Chat = testDb('Chat', (t) => ({
   idOfChat: t.identity().primaryKey(),
   title: t.text(),
   ...t.timestamps(),
@@ -77,11 +77,14 @@ export const UniqueTable = testDb(
     fourthColumn: t.integer(),
   }),
   (t) => t.unique(['thirdColumn', 'fourthColumn']),
+  {
+    nameInDb: 'uniqueTable',
+  },
 );
 
 export type MessageRecord = typeof Message.__outputType;
 export const Message = testDb(
-  'message',
+  'Message',
   (t) => ({
     id: t.identity().primaryKey(),
     chatId: t.integer().foreignKey('chat', 'id'),
@@ -96,13 +99,13 @@ export const Message = testDb(
 export const messageColumnsSql = Message.q.selectAllColumns!.join(', ');
 
 export const messageTableColumnsSql = Message.q
-  .selectAllColumns!.map((c) => '"message".' + c)
+  .selectAllColumns!.map((c) => '"Message".' + c)
   .join(', ');
 
 export type SnakeRecord = typeof Snake.__outputType;
 export type SnakeData = { name: string; tags: string[] };
 export const Snake = testDb(
-  'snake',
+  'Snake',
   (t) => ({
     snakeId: t.identity().primaryKey(),
     snakeName: t.text().unique(),
@@ -126,10 +129,10 @@ const snakeAllColumns = [
 ];
 export const snakeSelectAll = snakeAllColumns.join(', ');
 export const snakeSelectAllWithTable = snakeAllColumns
-  .map((item) => `"snake".${item}`)
+  .map((item) => `"Snake".${item}`)
   .join(', ');
 
-export const Post = testDb('post', (t) => ({
+export const Post = testDb('Post', (t) => ({
   id: t.identity().primaryKey(),
   title: t.text(),
   body: t.text(),
@@ -139,19 +142,22 @@ export const Post = testDb('post', (t) => ({
 
 export const postColumnsSql = Post.q.selectAllColumns!.join(', ');
 
-export const Tag = testDb('tag', (t) => ({
+export const Tag = testDb('Tag', (t) => ({
   tag: t.text().primaryKey(),
 }));
 
-export const Product = testDb('product', (t) => ({
+export const Product = testDb('Product', (t) => ({
   id: t.identity().primaryKey(),
   camelCase: t.text().nullable(),
   priceAmount: t.decimal(),
 }));
 
 export const expectQueryNotMutated = (q: Query) => {
-  const select = q.table === 'user' ? userColumnsSql : '*';
-  expectSql(q.toSQL(), `SELECT ${select} FROM ${quoteTableWithSchema(q)}`);
+  const select = q.table === 'User' ? userColumnsSql : '*';
+  expectSql(
+    q.toSQL(),
+    `SELECT ${select} FROM ${quoteTableWithSchemaAndAlias(q)}`,
+  );
 };
 
 export const insert = async <T extends RecordUnknown & { id: number }>(

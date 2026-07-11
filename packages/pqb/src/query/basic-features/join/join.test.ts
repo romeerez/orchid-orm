@@ -24,6 +24,12 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { isQueryNone } from '../../extra-features/none/none';
+import { quoteTableWithSchemaAndAlias } from '../../sql/sql';
+
+const quotedUser = quoteTableWithSchemaAndAlias(User);
+const quotedMessage = quoteTableWithSchemaAndAlias(Message);
+const quotedSnake = quoteTableWithSchemaAndAlias(Snake);
+const quotedProfile = quoteTableWithSchemaAndAlias(db.profile);
 
 const insertMessage = async () => {
   const userId = await User.get('id').insert(userData);
@@ -33,10 +39,10 @@ const insertMessage = async () => {
 
 it('should not accept wrong column as join arg', () => {
   // @ts-expect-error wrong message column
-  User.join(Message, 'message.wrong', 'user.id');
+  User.join(Message, 'Message.wrong', 'User.id');
 
   // @ts-expect-error wrong user column
-  User.join(Message, 'message.id', 'user.wrong');
+  User.join(Message, 'Message.id', 'User.wrong');
 });
 
 describe('using db', () => {
@@ -45,16 +51,16 @@ describe('using db', () => {
   it('should ignore duplicated joins', async () => {
     await insertMessage();
 
-    const q = User.join(Message, 'message.authorId', 'user.id')
-      .join(Message, 'message.authorId', 'user.id')
-      .select('message.updatedAt');
+    const q = User.join(Message, 'Message.authorId', 'User.id')
+      .join(Message, 'Message.authorId', 'User.id')
+      .select('Message.updatedAt');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "message"."updated_at" "updatedAt"
-        FROM "schema"."user"
-        JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+        SELECT "Message"."updated_at" "updatedAt"
+        FROM ${quotedUser}
+        JOIN ${quotedMessage} ON "Message"."author_id" = "User"."id"
       `,
     );
 
@@ -76,11 +82,11 @@ describe('using db', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "firstJoinName"."messagesCount" FROM "schema"."user"
+        SELECT "firstJoinName"."messagesCount" FROM ${quotedUser}
         LEFT JOIN LATERAL (
           SELECT count(*) "firstJoinName", count(*) "messagesCount"
           FROM "schema"."message" "messages"
-          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+          WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "firstJoinName" ON true
         LIMIT 1
@@ -96,11 +102,11 @@ describe('join', () => {
   testJoin({
     method: 'join',
     joinTo: User,
-    pkey: 'user.id',
+    pkey: 'User.id',
     joinTarget: Message,
     fkey: 'authorId',
     text: 'text',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "schema"."user"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM ${quotedUser}`,
   });
 });
 
@@ -108,11 +114,11 @@ describe('join table with named columns', () => {
   testJoin({
     method: 'join',
     joinTo: User,
-    pkey: 'user.name',
+    pkey: 'User.name',
     joinTarget: Snake,
     fkey: 'tailLength',
     text: 'snakeName',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM "schema"."user"`,
+    selectFrom: `SELECT ${userTableColumnsSql} FROM ${quotedUser}`,
   });
 });
 
@@ -120,11 +126,11 @@ describe('join to table with named columns', () => {
   testJoin({
     method: 'join',
     joinTo: Snake,
-    pkey: 'snake.snakeName',
+    pkey: 'Snake.snakeName',
     joinTarget: User,
     fkey: 'name',
     text: 'name',
-    selectFrom: `SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"`,
+    selectFrom: `SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}`,
   });
 });
 
@@ -152,16 +158,16 @@ describe('join callback with query builder', () => {
     const q = User.all();
 
     const expectedSql = `
-      SELECT ${userTableColumnsSql} FROM "schema"."user"
-      JOIN "schema"."message"
-        ON "message"."author_id" = "user"."id"
-        OR "message"."text" = "user"."name"
+      SELECT ${userTableColumnsSql} FROM ${quotedUser}
+      JOIN ${quotedMessage}
+        ON "Message"."author_id" = "User"."id"
+        OR "Message"."text" = "User"."name"
     `;
 
     expectSql(
       q
         .join(Message, (q) =>
-          q.on('message.authorId', 'user.id').orOn('message.text', 'user.name'),
+          q.on('Message.authorId', 'User.id').orOn('Message.text', 'User.name'),
         )
         .toSQL(),
       expectedSql,
@@ -171,8 +177,8 @@ describe('join callback with query builder', () => {
       q
         .join(Message, (q) =>
           q
-            .on('message.authorId', '=', 'user.id')
-            .orOn('message.text', '=', 'user.name'),
+            .on('Message.authorId', '=', 'User.id')
+            .orOn('Message.text', '=', 'User.name'),
         )
         .toSQL(),
       expectedSql,
@@ -183,17 +189,17 @@ describe('join callback with query builder', () => {
 
   it('should have .on and .onOr properly working for named columns', () => {
     const expectedSql = `
-      SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"
-      JOIN "schema"."user"
-        ON "user"."name" = "snake"."snake_name"
-        OR "user"."id" = "snake"."tail_length"
+      SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}
+      JOIN ${quotedUser}
+        ON "User"."name" = "Snake"."snake_name"
+        OR "User"."id" = "Snake"."tail_length"
     `;
 
     expectSql(
       Snake.join(User, (q) =>
         q
-          .on('user.name', 'snake.snakeName')
-          .orOn('user.id', 'snake.tailLength'),
+          .on('User.name', 'Snake.snakeName')
+          .orOn('User.id', 'Snake.tailLength'),
       ).toSQL(),
       expectedSql,
     );
@@ -201,8 +207,8 @@ describe('join callback with query builder', () => {
     expectSql(
       Snake.join(User, (q) =>
         q
-          .on('user.name', '=', 'snake.snakeName')
-          .orOn('user.id', '=', 'snake.tailLength'),
+          .on('User.name', '=', 'Snake.snakeName')
+          .orOn('User.id', '=', 'Snake.tailLength'),
       ).toSQL(),
       expectedSql,
     );
@@ -210,17 +216,17 @@ describe('join callback with query builder', () => {
 
   it('should have .on and .onOr properly working when joining table with named columns', () => {
     const reverseSql = `
-      SELECT ${userTableColumnsSql} FROM "schema"."user"
-      JOIN "schema"."snake"
-        ON "snake"."snake_name" = "user"."name"
-        OR "snake"."tail_length" = "user"."id"
+      SELECT ${userTableColumnsSql} FROM ${quotedUser}
+      JOIN ${quotedSnake}
+        ON "Snake"."snake_name" = "User"."name"
+        OR "Snake"."tail_length" = "User"."id"
     `;
 
     expectSql(
       User.join(Snake, (q) =>
         q
-          .on('snake.snakeName', 'user.name')
-          .orOn('snake.tailLength', 'user.id'),
+          .on('Snake.snakeName', 'User.name')
+          .orOn('Snake.tailLength', 'User.id'),
       ).toSQL(),
       reverseSql,
     );
@@ -228,8 +234,8 @@ describe('join callback with query builder', () => {
     expectSql(
       User.join(Snake, (q) =>
         q
-          .on('snake.snakeName', '=', 'user.name')
-          .orOn('snake.tailLength', '=', 'user.id'),
+          .on('Snake.snakeName', '=', 'User.name')
+          .orOn('Snake.tailLength', '=', 'User.id'),
       ).toSQL(),
       reverseSql,
     );
@@ -238,12 +244,12 @@ describe('join callback with query builder', () => {
   it('should have .onJsonPathEquals method', () => {
     expectSql(
       User.join(User.as('otherUser'), (q) =>
-        q.onJsonPathEquals('otherUser.data', '$.name', 'user.data', '$.name'),
+        q.onJsonPathEquals('otherUser.data', '$.name', 'User.data', '$.name'),
       ).toSQL(),
       `
-        SELECT ${userTableColumnsSql} FROM "schema"."user"
+        SELECT ${userTableColumnsSql} FROM ${quotedUser}
         JOIN "schema"."user" "otherUser"
-          ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("user"."data", $2)
+          ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("User"."data", $2)
       `,
       ['$.name', '$.name'],
     );
@@ -255,14 +261,14 @@ describe('join callback with query builder', () => {
         q.onJsonPathEquals(
           'otherSnake.snakeData',
           '$.name',
-          'snake.snakeData',
+          'Snake.snakeData',
           '$.name',
         ),
       ).toSQL(),
       `
-        SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"
+        SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}
         JOIN "schema"."snake" "otherSnake"
-          ON jsonb_path_query_first("otherSnake"."snake_data", $1) = jsonb_path_query_first("snake"."snake_data", $2)
+          ON jsonb_path_query_first("otherSnake"."snake_data", $1) = jsonb_path_query_first("Snake"."snake_data", $2)
       `,
       ['$.name', '$.name'],
     );
@@ -270,47 +276,47 @@ describe('join callback with query builder', () => {
 
   describe('where methods', () => {
     describe('using main table columns', () => {
-      const sql = `SELECT ${userTableColumnsSql} FROM "schema"."user" JOIN "schema"."message" ON `;
-      const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" JOIN "schema"."user" ON `;
+      const sql = `SELECT ${userTableColumnsSql} FROM ${quotedUser} JOIN ${quotedMessage} ON `;
+      const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake} JOIN ${quotedUser} ON `;
 
       it('should use main table column in .where', () => {
-        const q = User.join(Message, (q) => q.where({ 'user.name': 'name' }));
+        const q = User.join(Message, (q) => q.where({ 'User.name': 'name' }));
 
-        expectSql(q.toSQL(), sql + `"user"."name" = $1`, ['name']);
+        expectSql(q.toSQL(), sql + `"User"."name" = $1`, ['name']);
       });
 
       it('should support named column of main table in .where', () => {
         const q = Snake.join(User, (q) =>
-          q.where({ 'snake.snakeName': 'name' }),
+          q.where({ 'Snake.snakeName': 'name' }),
         );
 
-        expectSql(q.toSQL(), snakeSql + `"snake"."snake_name" = $1`, ['name']);
+        expectSql(q.toSQL(), snakeSql + `"Snake"."snake_name" = $1`, ['name']);
       });
 
       it('should use main table column in .whereNot', () => {
         const q = User.join(Message, (q) =>
-          q.whereNot({ 'user.name': 'name' }),
+          q.whereNot({ 'User.name': 'name' }),
         );
 
-        expectSql(q.toSQL(), sql + `NOT "user"."name" = $1`, ['name']);
+        expectSql(q.toSQL(), sql + `NOT "User"."name" = $1`, ['name']);
       });
 
       it('should use named main table column in .whereNot', () => {
         const q = Snake.join(User, (q) =>
-          q.whereNot({ 'snake.snakeName': 'name' }),
+          q.whereNot({ 'Snake.snakeName': 'name' }),
         );
 
-        expectSql(q.toSQL(), snakeSql + `NOT "snake"."snake_name" = $1`, [
+        expectSql(q.toSQL(), snakeSql + `NOT "Snake"."snake_name" = $1`, [
           'name',
         ]);
       });
 
       it('should use main table column in .or', () => {
         const q = User.join(Message, (q) =>
-          q.orWhere({ 'user.name': 'name' }, { 'user.age': 20 }),
+          q.orWhere({ 'User.name': 'name' }, { 'User.age': 20 }),
         );
 
-        expectSql(q.toSQL(), sql + `"user"."name" = $1 OR "user"."age" = $2`, [
+        expectSql(q.toSQL(), sql + `"User"."name" = $1 OR "User"."age" = $2`, [
           'name',
           20,
         ]);
@@ -318,24 +324,24 @@ describe('join callback with query builder', () => {
 
       it('should use named main table column in .or', () => {
         const q = Snake.join(User, (q) =>
-          q.orWhere({ 'snake.snakeName': 'name' }, { 'snake.tailLength': 20 }),
+          q.orWhere({ 'Snake.snakeName': 'name' }, { 'Snake.tailLength': 20 }),
         );
 
         expectSql(
           q.toSQL(),
-          snakeSql + `"snake"."snake_name" = $1 OR "snake"."tail_length" = $2`,
+          snakeSql + `"Snake"."snake_name" = $1 OR "Snake"."tail_length" = $2`,
           ['name', 20],
         );
       });
 
       it('should use main table column in .orWhereNot', () => {
         const q = User.join(Message, (q) =>
-          q.orWhereNot({ 'user.name': 'name' }, { 'user.age': 20 }),
+          q.orWhereNot({ 'User.name': 'name' }, { 'User.age': 20 }),
         );
 
         expectSql(
           q.toSQL(),
-          sql + `NOT "user"."name" = $1 OR NOT "user"."age" = $2`,
+          sql + `NOT "User"."name" = $1 OR NOT "User"."age" = $2`,
           ['name', 20],
         );
       });
@@ -343,43 +349,43 @@ describe('join callback with query builder', () => {
       it('should use named main table column in .orWhereNot', () => {
         const q = Snake.join(User, (q) =>
           q.orWhereNot(
-            { 'snake.snakeName': 'name' },
-            { 'snake.tailLength': 20 },
+            { 'Snake.snakeName': 'name' },
+            { 'Snake.tailLength': 20 },
           ),
         );
 
         expectSql(
           q.toSQL(),
           snakeSql +
-            `NOT "snake"."snake_name" = $1 OR NOT "snake"."tail_length" = $2`,
+            `NOT "Snake"."snake_name" = $1 OR NOT "Snake"."tail_length" = $2`,
           ['name', 20],
         );
       });
 
       it('should use main table column in .whereIn', () => {
-        const q = User.join(Message, (q) => q.whereIn('user.name', ['name']));
+        const q = User.join(Message, (q) => q.whereIn('User.name', ['name']));
 
-        expectSql(q.toSQL(), sql + `"user"."name" IN ($1)`, ['name']);
+        expectSql(q.toSQL(), sql + `"User"."name" IN ($1)`, ['name']);
       });
 
       it('should use named main table column in .whereIn', () => {
         const q = Snake.join(User, (q) =>
-          q.whereIn('snake.snakeName', ['name']),
+          q.whereIn('Snake.snakeName', ['name']),
         );
 
-        expectSql(q.toSQL(), snakeSql + `"snake"."snake_name" IN ($1)`, [
+        expectSql(q.toSQL(), snakeSql + `"Snake"."snake_name" IN ($1)`, [
           'name',
         ]);
       });
 
       it('should use main table column in .orWhereIn', () => {
         const q = User.join(Message, (q) =>
-          q.where({ 'user.age': 20 }).orWhereIn('user.name', ['name']),
+          q.where({ 'User.age': 20 }).orWhereIn('User.name', ['name']),
         );
 
         expectSql(
           q.toSQL(),
-          sql + `"user"."age" = $1 OR "user"."name" IN ($2)`,
+          sql + `"User"."age" = $1 OR "User"."name" IN ($2)`,
           [20, 'name'],
         );
       });
@@ -387,44 +393,44 @@ describe('join callback with query builder', () => {
       it('should use named main table column in .orWhereIn', () => {
         const q = Snake.join(User, (q) =>
           q
-            .where({ 'snake.tailLength': 20 })
-            .orWhereIn('snake.snakeName', ['name']),
+            .where({ 'Snake.tailLength': 20 })
+            .orWhereIn('Snake.snakeName', ['name']),
         );
 
         expectSql(
           q.toSQL(),
           snakeSql +
-            `"snake"."tail_length" = $1 OR "snake"."snake_name" IN ($2)`,
+            `"Snake"."tail_length" = $1 OR "Snake"."snake_name" IN ($2)`,
           [20, 'name'],
         );
       });
 
       it('should use main table column in .whereNotIn', () => {
         const q = User.join(Message, (q) =>
-          q.whereNotIn('user.name', ['name']),
+          q.whereNotIn('User.name', ['name']),
         );
 
-        expectSql(q.toSQL(), sql + `NOT "user"."name" IN ($1)`, ['name']);
+        expectSql(q.toSQL(), sql + `NOT "User"."name" IN ($1)`, ['name']);
       });
 
       it('should use named main table column in .whereNotIn', () => {
         const q = Snake.join(User, (q) =>
-          q.whereNotIn('snake.snakeName', ['name']),
+          q.whereNotIn('Snake.snakeName', ['name']),
         );
 
-        expectSql(q.toSQL(), snakeSql + `NOT "snake"."snake_name" IN ($1)`, [
+        expectSql(q.toSQL(), snakeSql + `NOT "Snake"."snake_name" IN ($1)`, [
           'name',
         ]);
       });
 
       it('should use main table column in .orWhereNotIn', () => {
         const q = User.join(Message, (q) =>
-          q.where({ 'user.age': 20 }).orWhereNotIn('user.name', ['name']),
+          q.where({ 'User.age': 20 }).orWhereNotIn('User.name', ['name']),
         );
 
         expectSql(
           q.toSQL(),
-          sql + `"user"."age" = $1 OR NOT "user"."name" IN ($2)`,
+          sql + `"User"."age" = $1 OR NOT "User"."name" IN ($2)`,
           [20, 'name'],
         );
       });
@@ -432,14 +438,14 @@ describe('join callback with query builder', () => {
       it('should use named main table column in .orWhereNotIn', () => {
         const q = Snake.join(User, (q) =>
           q
-            .where({ 'snake.tailLength': 20 })
-            .orWhereNotIn('snake.snakeName', ['name']),
+            .where({ 'Snake.tailLength': 20 })
+            .orWhereNotIn('Snake.snakeName', ['name']),
         );
 
         expectSql(
           q.toSQL(),
           snakeSql +
-            `"snake"."tail_length" = $1 OR NOT "snake"."snake_name" IN ($2)`,
+            `"Snake"."tail_length" = $1 OR NOT "Snake"."snake_name" IN ($2)`,
           [20, 'name'],
         );
       });
@@ -472,7 +478,7 @@ describe('join callback with query builder', () => {
             SELECT
               "t"."Bio" "bio",
               "t"."UserId" "userId"
-            FROM "schema"."user"
+            FROM ${quotedUser}
             JOIN
               (
                 SELECT
@@ -481,7 +487,7 @@ describe('join callback with query builder', () => {
                 FROM "schema"."profile" "t"
                 WHERE "t"."bio" = $1
               ) "t"
-              ON "t"."UserId" = "user"."id"
+              ON "t"."UserId" = "User"."id"
             WHERE "t"."UserId" = $2
           `,
           ['bio', 1],
@@ -491,10 +497,10 @@ describe('join callback with query builder', () => {
 
     testWhere(
       (cb) => db.profile.join(db.user, cb as never).toSQL(),
-      `SELECT ${ProfileSelectAllWithTable} FROM "schema"."profile" JOIN "schema"."user" ON`,
+      `SELECT ${ProfileSelectAllWithTable} FROM ${quotedProfile} JOIN ${quotedUser} ON`,
       {
         model: db.user,
-        pkey: 'user.Id',
+        pkey: 'User.Id',
         nullable: 'Picture',
         text: 'Name',
       },
@@ -502,19 +508,19 @@ describe('join callback with query builder', () => {
 
     testWhereExists({
       joinTo: db.user,
-      pkey: 'user.Id',
+      pkey: 'User.Id',
       joinTarget: db.profile,
       fkey: 'UserId',
       text: 'Bio',
-      selectFrom: `SELECT ${UserSelectAll} FROM "schema"."user"`,
+      selectFrom: `SELECT ${UserSelectAll} FROM ${quotedUser}`,
     });
 
     testWhere(
       (cb) => db.user.join(db.profile, cb as never).toSQL(),
-      `SELECT ${UserSelectAllWithTable} FROM "schema"."user" JOIN "schema"."profile" ON`,
+      `SELECT ${UserSelectAllWithTable} FROM ${quotedUser} JOIN ${quotedProfile} ON`,
       {
         model: db.profile,
-        pkey: 'profile.UserId',
+        pkey: 'Profile.UserId',
         nullable: 'Bio',
         text: 'Bio',
       },
@@ -522,18 +528,18 @@ describe('join callback with query builder', () => {
 
     testWhereExists({
       joinTo: db.profile,
-      pkey: 'profile.UserId',
+      pkey: 'Profile.UserId',
       joinTarget: db.user,
       fkey: 'Id',
       text: 'Name',
-      selectFrom: `SELECT ${ProfileSelectAll} FROM "schema"."profile"`,
+      selectFrom: `SELECT ${ProfileSelectAll} FROM ${quotedProfile}`,
     });
   });
 
   // for https://github.com/romeerez/orchid-orm/issues/247
   it('should have a proper table type in the callback', () => {
     db.user.join(db.message, (q) => {
-      assertType<typeof q.table, 'message'>();
+      assertType<typeof q.table, 'Message'>();
       return q;
     });
   });
@@ -571,8 +577,8 @@ describe('join callback with query builder', () => {
         q.toSQL(),
         `
           SELECT ${UserSelectAllWithTable}
-          FROM "schema"."user"
-          LEFT JOIN "schema"."message" ON ((false)) AND ("message"."deleted_at" IS NULL)`,
+          FROM ${quotedUser}
+          LEFT JOIN ${quotedMessage} ON ((false)) AND ("Message"."deleted_at" IS NULL)`,
       );
     });
 
@@ -585,8 +591,8 @@ describe('join callback with query builder', () => {
         q.toSQL(),
         `
           SELECT ${UserSelectAllWithTable}
-          FROM "schema"."user"
-          LEFT JOIN "schema"."message" ON (false) AND ("message"."deleted_at" IS NULL)
+          FROM ${quotedUser}
+          LEFT JOIN ${quotedMessage} ON (false) AND ("Message"."deleted_at" IS NULL)
         `,
       );
     });
@@ -598,11 +604,11 @@ describe('implicit lateral joins', () => {
 
   it(`should disallow selecting joined columns that weren't selected inside join`, () => {
     db.user
-      .join(db.message, (q) => q.on('AuthorId', 'user.Id').select('Text'))
-      .select('message.Text')
+      .join(db.message, (q) => q.on('AuthorId', 'User.Id').select('Text'))
+      .select('Message.Text')
       .select(
         // @ts-expect-error the column is not selected inside join
-        'message.Id',
+        'Message.Id',
       );
   });
 
@@ -612,24 +618,24 @@ describe('implicit lateral joins', () => {
     const q = db.user
       .join(db.message, (q) =>
         q
-          .on('message.AuthorId', 'user.Id')
+          .on('Message.AuthorId', 'User.Id')
           .where({ Text: messageData.text })
           .limit(5),
       )
-      .select('message.updatedAt');
+      .select('Message.updatedAt');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "message"."updated_at" "updatedAt"
-        FROM "schema"."user"
+        SELECT "Message"."updated_at" "updatedAt"
+        FROM ${quotedUser}
         JOIN LATERAL (
-          SELECT "message".*
-          FROM "schema"."message"
-          WHERE ("message"."author_id" = "user"."id" AND "message"."text" = $1)
-            AND ("message"."deleted_at" IS NULL)
+          SELECT "Message".*
+          FROM ${quotedMessage}
+          WHERE ("Message"."author_id" = "User"."id" AND "Message"."text" = $1)
+            AND ("Message"."deleted_at" IS NULL)
           LIMIT $2
-        ) "message" ON true
+        ) "Message" ON true
       `,
       [messageData.text, 5],
     );
@@ -645,26 +651,26 @@ describe('implicit lateral joins', () => {
         () => db.message.limit(5),
         (q) =>
           q
-            .on('message.Id', 'user.Id')
+            .on('Message.Id', 'User.Id')
             .where({ Text: 'text' })
             .limit(5)
             .offset(10),
       )
-      .select('message.AuthorId');
+      .select('Message.AuthorId');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "message"."author_id" "AuthorId"
-        FROM "schema"."user"
+        SELECT "Message"."author_id" "AuthorId"
+        FROM ${quotedUser}
         JOIN LATERAL (
-          SELECT "message".*
-          FROM "schema"."message"
-          WHERE ("message"."id" = "user"."id" AND "message"."text" = $1)
-            AND ("message"."deleted_at" IS NULL)
+          SELECT "Message".*
+          FROM ${quotedMessage}
+          WHERE ("Message"."id" = "User"."id" AND "Message"."text" = $1)
+            AND ("Message"."deleted_at" IS NULL)
           LIMIT $2
           OFFSET $3
-        ) "message" ON true
+        ) "Message" ON true
       `,
       ['text', 5, 10],
     );
@@ -673,18 +679,18 @@ describe('implicit lateral joins', () => {
   it('should work when joining with statement', () => {
     const q = db.user
       .with('p', db.profile)
-      .join('p', (q) => q.on('UserId', 'user.Id').limit(5).offset(10));
+      .join('p', (q) => q.on('UserId', 'User.Id').limit(5).offset(10));
 
     expectSql(
       q.toSQL(),
       `
-        WITH "p" AS (SELECT ${ProfileSelectAll} FROM "schema"."profile")
+        WITH "p" AS (SELECT ${ProfileSelectAll} FROM ${quotedProfile})
         SELECT ${UserSelectAllWithTable}
-        FROM "schema"."user"
+        FROM ${quotedUser}
         JOIN LATERAL (
           SELECT *
           FROM "p"
-          WHERE "p"."UserId" = "user"."id"
+          WHERE "p"."UserId" = "User"."id"
           LIMIT $1
           OFFSET $2
         ) "p" ON true
@@ -695,24 +701,24 @@ describe('implicit lateral joins', () => {
 
   it('should not resolve column names inside join closure if nothing was selected explicitly', () => {
     const q = db.user
-      .join(db.profile, (q) => q.on('profile.UserId', 'user.Id').limit(1))
+      .join(db.profile, (q) => q.on('Profile.UserId', 'User.Id').limit(1))
       .where({
-        'profile.Bio': 'bio',
+        'Profile.Bio': 'bio',
       })
-      .select('profile.Bio');
+      .select('Profile.Bio');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "profile"."bio" "Bio"
-        FROM "schema"."user"
+        SELECT "Profile"."bio" "Bio"
+        FROM ${quotedUser}
         JOIN LATERAL (
-          SELECT "profile".*
-          FROM "schema"."profile"
-          WHERE "profile"."user_id" = "user"."id"
+          SELECT "Profile".*
+          FROM ${quotedProfile}
+          WHERE "Profile"."user_id" = "User"."id"
           LIMIT $1
-        ) "profile" ON true
-        WHERE "profile"."bio" = $2
+        ) "Profile" ON true
+        WHERE "Profile"."bio" = $2
       `,
       [1, 'bio'],
     );
@@ -721,24 +727,24 @@ describe('implicit lateral joins', () => {
   it('should use resolved column names outside of join closure when names are resolved inside', () => {
     const q = db.user
       .join(db.profile, (q) =>
-        q.on('profile.UserId', 'user.Id').select('profile.Bio'),
+        q.on('Profile.UserId', 'User.Id').select('Profile.Bio'),
       )
       .where({
-        'profile.Bio': 'bio',
+        'Profile.Bio': 'bio',
       })
-      .select('profile.Bio');
+      .select('Profile.Bio');
 
     expectSql(
       q.toSQL(),
       `
-        SELECT "profile"."Bio"
-        FROM "schema"."user"
+        SELECT "Profile"."Bio"
+        FROM ${quotedUser}
         JOIN LATERAL (
-          SELECT "profile"."bio" "Bio"
-          FROM "schema"."profile"
-          WHERE "profile"."user_id" = "user"."id"
-        ) "profile" ON true
-        WHERE "profile"."Bio" = $1
+          SELECT "Profile"."bio" "Bio"
+          FROM ${quotedProfile}
+          WHERE "Profile"."user_id" = "User"."id"
+        ) "Profile" ON true
+        WHERE "Profile"."Bio" = $1
       `,
       ['bio'],
     );
@@ -780,8 +786,8 @@ describe('joinData', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id", "data"."f" "foo", "data"."b" "bar"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id", "data"."f" "foo", "data"."b" "bar"
+        FROM ${quotedUser}
         JOIN (VALUES ($1::int4, $2::timestamptz), ($3::int4, $4::timestamptz)) "data"("f", "b") ON true
         WHERE "data"."f" >= $5
       `,
@@ -803,11 +809,11 @@ describe('adding relations of relations to the context', () => {
       q.toSQL(),
       `
         SELECT "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
+        FROM ${quotedUser}
         JOIN "schema"."message" "m"
           ON (
-            "m"."author_id" = "user"."id"
-            AND "m"."message_key" = "user"."user_key"
+            "m"."author_id" = "User"."id"
+            AND "m"."message_key" = "User"."user_key"
           ) AND ("m"."deleted_at" IS NULL)
         JOIN "schema"."chat"
           ON "chat"."id_of_chat" = "m"."chat_id"
@@ -818,8 +824,8 @@ describe('adding relations of relations to the context', () => {
 
   it('should work for a 1st arg query object', () => {
     const q = db.user
-      .join(db.message, 'message.AuthorId', 'user.Id')
-      .join('message.chat')
+      .join(db.message, 'Message.AuthorId', 'User.Id')
+      .join('Message.chat')
       .select('chat.IdOfChat');
 
     assertType<Awaited<typeof q>, { IdOfChat: number }[]>();
@@ -828,13 +834,13 @@ describe('adding relations of relations to the context', () => {
       q.toSQL(),
       `
         SELECT "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
-        JOIN "schema"."message"
-          ON "message"."author_id" = "user"."id"
-         AND ("message"."deleted_at" IS NULL)
+        FROM ${quotedUser}
+        JOIN ${quotedMessage}
+          ON "Message"."author_id" = "User"."id"
+         AND ("Message"."deleted_at" IS NULL)
         JOIN "schema"."chat"
-          ON "chat"."id_of_chat" = "message"."chat_id"
-         AND "chat"."chat_key" = "message"."message_key"
+          ON "chat"."id_of_chat" = "Message"."chat_id"
+         AND "chat"."chat_key" = "Message"."message_key"
       `,
     );
   });
@@ -851,11 +857,11 @@ describe('adding relations of relations to the context', () => {
       q.toSQL(),
       `
         SELECT "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
+        FROM ${quotedUser}
         JOIN "schema"."message" "messages"
           ON (
-            "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+            "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
           ) AND ("messages"."deleted_at" IS NULL)
         JOIN "schema"."chat"
           ON "chat"."id_of_chat" = "messages"."chat_id"
@@ -876,11 +882,11 @@ describe('adding relations of relations to the context', () => {
       q.toSQL(),
       `
         SELECT "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
+        FROM ${quotedUser}
         JOIN "schema"."message" "messages"
           ON (
-            "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+            "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
           ) AND ("messages"."deleted_at" IS NULL)
         JOIN "schema"."chat"
           ON "chat"."id_of_chat" = "messages"."chat_id"
@@ -901,11 +907,11 @@ describe('adding relations of relations to the context', () => {
       q.toSQL(),
       `
         SELECT "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
+        FROM ${quotedUser}
         JOIN "schema"."message" "messages"
           ON (
-            "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+            "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
           ) AND ("messages"."deleted_at" IS NULL)
         JOIN "schema"."chat"
           ON "chat"."id_of_chat" = "messages"."chat_id"
@@ -925,12 +931,12 @@ describe('adding relations of relations to the context', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id", "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id", "chat"."id_of_chat" "IdOfChat"
+        FROM ${quotedUser}
         RIGHT JOIN "schema"."message" "messages"
           ON (
-            "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+            "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
           ) AND ("messages"."deleted_at" IS NULL)
         RIGHT JOIN "schema"."chat"
           ON "chat"."id_of_chat" = "messages"."chat_id"
@@ -950,12 +956,12 @@ describe('adding relations of relations to the context', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id", "chat"."id_of_chat" "IdOfChat"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id", "chat"."id_of_chat" "IdOfChat"
+        FROM ${quotedUser}
         LEFT JOIN "schema"."message" "messages"
           ON (
-            "messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key"
+            "messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key"
           ) AND ("messages"."deleted_at" IS NULL)
         LEFT JOIN "schema"."chat"
           ON "chat"."id_of_chat" = "messages"."chat_id"

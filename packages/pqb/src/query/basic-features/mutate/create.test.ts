@@ -53,7 +53,7 @@ const TableWithReadOnly = testDb(
 );
 
 const RuntimeDefaultTable = testDb(
-  'user',
+  'User',
   (t) => ({
     id: t.serial().primaryKey(),
     name: t.text().default(() => 'runtime text'),
@@ -73,6 +73,20 @@ describe('create functions', () => {
   });
 
   describe('create', () => {
+    it('should alias returning columns with `as` that matches the nameInDb', () => {
+      const q = User.as('user').create(userData).select('name');
+
+      expectSql(
+        q.toSQL(),
+        `
+          INSERT INTO "schema"."user"("name", "password")
+          VALUES ($1, $2)
+          RETURNING "user"."name"
+        `,
+        ['name', 'password'],
+      );
+    });
+
     it('should not allow using appReadOnly columns', () => {
       expect(() =>
         // @ts-expect-error value is readOnly
@@ -92,7 +106,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ($1, 'password')
           RETURNING ${userColumnsSql}
         `,
@@ -116,8 +130,8 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
-          VALUES ($1, "user"."name")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
+          VALUES ($1, "User"."name")
           RETURNING ${userColumnsSql}
         `,
         [userData.name],
@@ -133,8 +147,8 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password", "age")
-          VALUES ($1, $2, (SELECT avg("user"."age") FROM "schema"."user"))
+          INSERT INTO "schema"."user" AS "User"("name", "password", "age")
+          VALUES ($1, $2, (SELECT avg("User"."age") FROM "schema"."user" "User"))
           RETURNING ${userColumnsSql}
         `,
         [userData.name, userData.password],
@@ -157,14 +171,14 @@ describe('create functions', () => {
         q.toSQL(),
         `
           WITH "a" AS (
-            INSERT INTO "schema"."user"("name", "password") VALUES ($1, $2)
-            RETURNING "user"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($1, $2)
+            RETURNING "User"."name"
           ), "b" AS (
-            INSERT INTO "schema"."user"("name", "password") VALUES (
+            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES (
               (SELECT "a"."name" FROM "a" LIMIT 1),
               $3
             )
-            RETURNING "user"."id"
+            RETURNING "User"."id"
           )
           SELECT * FROM "b"
         `,
@@ -179,7 +193,7 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password")
+        INSERT INTO "schema"."user" AS "User"("name", "password")
         VALUES ($1, $2)
         RETURNING ${userColumnsSql}
       `,
@@ -203,7 +217,7 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."snake"("snake_name", "tail_length")
+          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
           VALUES ($1, $2)
           RETURNING ${snakeSelectAll}
         `,
@@ -226,9 +240,9 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password")
+        INSERT INTO "schema"."user" AS "User"("name", "password")
         VALUES ($1, $2)
-        RETURNING "user"."id"
+        RETURNING "User"."id"
       `,
         ['name', 'password'],
       );
@@ -246,9 +260,9 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."snake"("snake_name", "tail_length")
+          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
           VALUES ($1, $2)
-          RETURNING "snake"."snake_name"
+          RETURNING "Snake"."snake_name"
         `,
         [snakeData.snakeName, snakeData.tailLength],
       );
@@ -266,9 +280,9 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password")
+        INSERT INTO "schema"."user" AS "User"("name", "password")
         VALUES ($1, $2)
-        RETURNING "user"."id", "user"."name"
+        RETURNING "User"."id", "User"."name"
       `,
         ['name', 'password'],
       );
@@ -296,9 +310,9 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."snake"("snake_name", "tail_length")
+          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
           VALUES ($1, $2)
-          RETURNING "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
+          RETURNING "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
         `,
         [snakeData.snakeName, snakeData.tailLength],
       );
@@ -319,7 +333,7 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password")
+        INSERT INTO "schema"."user" AS "User"("name", "password")
         VALUES ($1, $2)
       `,
         ['name', 'password'],
@@ -344,7 +358,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ($1, $2)
           RETURNING ${userColumnsSql}
         `,
@@ -362,7 +376,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ($1, $2)
           RETURNING ${userColumnsSql}
         `,
@@ -378,7 +392,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("password", "name")
+          INSERT INTO "schema"."user" AS "User"("password", "name")
           VALUES ($1, $2)
           RETURNING *
         `,
@@ -395,8 +409,8 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
-          VALUES ((SELECT "user"."name" FROM "schema"."user" LIMIT 1), $1)
+          INSERT INTO "schema"."user" AS "User"("name", "password")
+          VALUES ((SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1), $1)
           RETURNING ${userColumnsSql}
         `,
         ['password'],
@@ -413,11 +427,11 @@ describe('create functions', () => {
         q.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
-            RETURNING "user"."name"
+            RETURNING "User"."name"
           )
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ((SELECT "q"."name" FROM "q"), $3)
           RETURNING ${userColumnsSql}
         `,
@@ -495,17 +509,17 @@ describe('create functions', () => {
         q.toSQL(),
         `
           WITH "created1" AS (
-            INSERT INTO "schema"."user"("name", "password") VALUES ($1, $2) RETURNING "user"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($1, $2) RETURNING "User"."name"
           ),
           "created2" AS (
-            INSERT INTO "schema"."user"("name", "password") VALUES ($3, $4) RETURNING "user"."password"
+            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($3, $4) RETURNING "User"."password"
           )
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES (
             (SELECT "created1"."name" FROM "created1" LIMIT 1),
             (SELECT "created2"."password" FROM "created2" LIMIT 1)
           )
-          RETURNING "user"."name", "user"."password"
+          RETURNING "User"."name", "User"."password"
         `,
         ['user 1', 'password 1', 'user 2', 'password 2'],
       );
@@ -569,7 +583,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password", "data")
+          INSERT INTO "schema"."user" AS "User"("name", "password", "data")
           VALUES ($1, $2, '{"key":"value"}')
         `,
         ['name', 'password'],
@@ -582,7 +596,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password", "data")
+          INSERT INTO "schema"."user" AS "User"("name", "password", "data")
           VALUES ($1, $2, $3)
         `,
         ['name', 'password', null],
@@ -595,7 +609,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ($1, $2)
         `,
         ['name', 'password'],
@@ -638,7 +652,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ($1, 'password'), ('name', $2)
           RETURNING ${userColumnsSql}
         `,
@@ -671,7 +685,7 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password", "picture")
+        INSERT INTO "schema"."user" AS "User"("name", "password", "picture")
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
@@ -708,11 +722,11 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password", "picture")
+        INSERT INTO "schema"."user" AS "User"("name", "password", "picture")
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
-        RETURNING "user"."id", "user"."name"
+        RETURNING "User"."id", "User"."name"
       `,
         ['name', 'password', null, 'name', 'password'],
       );
@@ -758,7 +772,7 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user"("name", "password", "picture")
+        INSERT INTO "schema"."user" AS "User"("name", "password", "picture")
         VALUES
           ($1, $2, $3),
           ($4, $5, DEFAULT)
@@ -795,7 +809,7 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("password", "name")
+          INSERT INTO "schema"."user" AS "User"("password", "name")
           VALUES ($1, $2), ($3, $4)
           RETURNING *
         `,
@@ -820,7 +834,7 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES ($1, $2), ($3, $4)
           RETURNING ${userColumnsSql}
         `,
@@ -839,8 +853,8 @@ describe('create functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user"("name", "password")
-          VALUES ((SELECT "user"."name" FROM "schema"."user" LIMIT 1), $1)
+          INSERT INTO "schema"."user" AS "User"("name", "password")
+          VALUES ((SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1), $1)
           RETURNING ${userColumnsSql}
         `,
         ['password'],
@@ -861,15 +875,15 @@ describe('create functions', () => {
         q.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
-            RETURNING "user"."name"
+            RETURNING "User"."name"
           ), "q2" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($4, $5)
-            RETURNING "user"."name"
+            RETURNING "User"."name"
           )
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES
             ((SELECT "q"."name" FROM "q"), $3),
             ((SELECT "q2"."name" FROM "q2"), $6)
@@ -954,15 +968,15 @@ describe('create functions', () => {
         expect(sql).toEqual({
           batch: [
             {
-              text: `INSERT INTO "schema"."tag"("tag") VALUES ($1), ($2), ($3), ($4), ($5)`,
+              text: `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($1), ($2), ($3), ($4), ($5)`,
               values: ['0', '1', '2', '3', '4'],
             },
             {
-              text: `INSERT INTO "schema"."tag"("tag") VALUES ($1), ($2), ($3), ($4), ($5)`,
+              text: `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($1), ($2), ($3), ($4), ($5)`,
               values: ['5', '6', '7', '8', '9'],
             },
             {
-              text: `INSERT INTO "schema"."tag"("tag") VALUES ($1), ($2)`,
+              text: `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($1), ($2)`,
               values: ['10', '11'],
             },
           ],
@@ -978,7 +992,7 @@ describe('create functions', () => {
 
         const sql = q.toSQL();
         const insert = (i: number) =>
-          `INSERT INTO "schema"."tag"("tag") VALUES ($${i}) RETURNING "tag"."tag"`;
+          `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($${i}) RETURNING "Tag"."tag"`;
         expect(sql).toEqual({
           batch: [
             {
@@ -988,7 +1002,7 @@ describe('create functions', () => {
                 )}), "q3" AS (${insert(3)}), "q4" AS (${insert(
                   4,
                 )}), "q5" AS (${insert(5)}) ` +
-                'INSERT INTO "schema"."tag"("tag") VALUES ' +
+                'INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ' +
                 '((SELECT "q"."tag" FROM "q")), ((SELECT "q2"."tag" FROM "q2")), ((SELECT "q3"."tag" FROM "q3")), ' +
                 '((SELECT "q4"."tag" FROM "q4")), ((SELECT "q5"."tag" FROM "q5"))',
               values: ['0', '1', '2', '3', '4'],
@@ -996,7 +1010,7 @@ describe('create functions', () => {
             {
               text: `WITH "q" AS (${insert(
                 1,
-              )}) INSERT INTO "schema"."tag"("tag") VALUES ((SELECT "q"."tag" FROM "q"))`,
+              )}) INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ((SELECT "q"."tag" FROM "q"))`,
               values: ['5'],
             },
           ],
@@ -1050,12 +1064,12 @@ describe('create functions', () => {
         q.toSQL(),
         `
           WITH "created1" AS (
-            INSERT INTO "schema"."user"("name", "password") VALUES ($1, $2) RETURNING "user"."name", "user"."password"
+            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($1, $2) RETURNING "User"."name", "User"."password"
           ),
           "created2" AS (
-            INSERT INTO "schema"."user"("name", "password") VALUES ($3, $4) RETURNING "user"."name", "user"."password"
+            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($3, $4) RETURNING "User"."name", "User"."password"
           )
-          INSERT INTO "schema"."user"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "password")
           VALUES (
             (SELECT "created1"."name" FROM "created1" LIMIT 1),
             (SELECT "created2"."password" FROM "created2" LIMIT 1)
@@ -1063,7 +1077,7 @@ describe('create functions', () => {
             (SELECT "created2"."name" FROM "created2" LIMIT 1),
             (SELECT "created1"."password" FROM "created1" LIMIT 1)
           )
-          RETURNING "user"."name", "user"."password"
+          RETURNING "User"."name", "User"."password"
         `,
         ['user 1', 'password 1', 'user 2', 'password 2'],
       );
@@ -1166,12 +1180,12 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($2, $3)
             ON CONFLICT ("name")
             DO UPDATE SET "password" = excluded."password"
-            WHERE "user"."name" = $1
-            RETURNING "user"."id"
+            WHERE "User"."name" = $1
+            RETURNING "User"."id"
           `,
         ['where name', 'name', 'password'],
       );
@@ -1217,7 +1231,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name")
+            INSERT INTO "schema"."user" AS "User"("name")
             VALUES ($1)
             ON CONFLICT DO NOTHING
           `,
@@ -1232,7 +1246,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
             ON CONFLICT DO NOTHING
           `,
@@ -1249,7 +1263,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
             ON CONFLICT ("id") DO NOTHING
           `,
@@ -1267,7 +1281,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."snake"("snake_name", "tail_length")
+            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
             VALUES ($1, $2)
             ON CONFLICT ("snake_name") DO NOTHING
           `,
@@ -1307,7 +1321,7 @@ describe('create functions', () => {
 
       it('should accept multiple named columns', () => {
         const table = testDb(
-          'snake',
+          'Snake',
           (t) => ({
             snakeName: t.name('snake_name').text(),
             tailLength: t.name('tail_length').integer(),
@@ -1326,7 +1340,7 @@ describe('create functions', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."snake"("snake_name", "tail_length")
+            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
             VALUES ($1, $2)
             ON CONFLICT ("snake_name", "tail_length") DO NOTHING
           `,
@@ -1345,7 +1359,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
             ON CONFLICT raw query DO NOTHING
           `,
@@ -1406,7 +1420,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($2, $3)
             ON CONFLICT ("name")
             DO UPDATE SET "name" = $1
@@ -1426,7 +1440,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."snake"("snake_name", "tail_length")
+            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
             VALUES ($2, $3)
             ON CONFLICT ("snake_name")
             DO UPDATE SET "snake_name" = $1
@@ -1449,7 +1463,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($2, $3)
             ON CONFLICT on conflict raw
             DO UPDATE SET "name" = $1
@@ -1468,7 +1482,7 @@ describe('create functions', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
             ON CONFLICT ("name")
             DO UPDATE SET "password" = excluded."password"
@@ -1516,7 +1530,7 @@ describe('create functions', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."user"("name")
+            INSERT INTO "schema"."user" AS "User"("name")
             VALUES ($1)
             ON CONFLICT ("name")
             DO UPDATE SET "name" = excluded."name"
@@ -1537,7 +1551,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
             ON CONFLICT ("name")
             DO UPDATE SET "name" = excluded."name"
@@ -1557,7 +1571,7 @@ describe('create functions', () => {
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."snake"("snake_name", "tail_length")
+            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
             VALUES ($1, $2)
             ON CONFLICT ("snake_name")
             DO UPDATE SET "snake_name" = excluded."snake_name"
@@ -1602,7 +1616,7 @@ describe('create functions', () => {
 
       it('should accept multiple named columns', () => {
         const table = testDb(
-          'snake',
+          'Snake',
           (t) => ({
             snakeName: t.name('snake_name').text(),
             tailLength: t.name('tail_length').integer(),
@@ -1622,7 +1636,7 @@ describe('create functions', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."snake"("snake_name", "tail_length")
+            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
             VALUES ($1, $2)
             ON CONFLICT ("snake_name", "tail_length")
             DO UPDATE SET
@@ -1674,7 +1688,7 @@ describe('create functions', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."user"("password", "name")
+            INSERT INTO "schema"."user" AS "User"("password", "name")
             VALUES ($1, $2)
             ON CONFLICT ("id")
             DO UPDATE SET "password" = excluded."password"

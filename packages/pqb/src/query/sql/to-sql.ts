@@ -178,7 +178,6 @@ export const toSql: ToSql = (
     if (type === 'insert') {
       result = makeInsertSql(ctx, table, query, `"${tableName}"`, isSubSql);
     } else {
-      // insert does not support aliasing the target table, while update and delete support it
       const quotedAs = `"${query.as || tableName}"`;
 
       if (type === 'update') {

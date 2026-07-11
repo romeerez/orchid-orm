@@ -704,7 +704,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
 
   nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): Column.Modifiers.Nullable<
+  ): Column.Modifiers.NullableWithSchema<
     T,
     ZodNullable<T['inputSchema']>,
     T['nullSchema'] extends ZodTypeAny
@@ -1125,9 +1125,9 @@ type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
       ? never
       : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
       ? ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
-      : undefined extends ColumnSchemaGetterColumns<T>[K]['data']['default']
-        ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
-        : ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+      : ColumnSchemaGetterColumns<T>[K]['data']['default'] extends true
+        ? ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
+        : ColumnSchemaGetterColumns<T>[K]['inputSchema'];
   },
   core.$strict
 >;

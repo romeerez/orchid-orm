@@ -31,12 +31,12 @@ describe('transaction', () => {
       expect(transactionSpy).toHaveBeenCalledTimes(1);
       expect(querySpy.mock.calls.map((call) => call[0])).toEqual([
         line(`
-          INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4, $5)
           RETURNING ${UserSelectAll}
         `),
         line(`
-          INSERT INTO "schema"."profile"("bio", "profile_key", "updated_at", "created_at")
+          INSERT INTO "schema"."profile" AS "Profile"("bio", "profile_key", "updated_at", "created_at")
           VALUES ($1, $2, $3, $4)
           RETURNING ${ProfileSelectAll}
         `),

@@ -33,6 +33,10 @@ import { MaybeArray, noop } from '../utils';
 import { AdapterSchemaConfigOptions } from '../adapters/adapter';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
+  nullable<T extends Column.Pick.ForNullable>(
+    this: T,
+  ): Column.Modifiers.Nullable<T>;
+
   parse<T extends Column.Pick.ForParse, Output>(
     this: T,
     fn: (input: T['__type']) => Output,

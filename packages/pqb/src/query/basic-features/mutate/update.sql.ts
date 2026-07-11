@@ -15,7 +15,12 @@ import { JoinItemArgs, processJoinItem } from '../join/join.sql';
 import { moveMutativeQueryToCte, setFreeTopCteAs } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { pushLimitSQL } from '../limit-offset/limit-offset.sql';
-import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
+import {
+  getQueryRelationAliasForAs,
+  makeSql,
+  quoteTableWithSchema,
+  Sql,
+} from '../../sql/sql';
 import {
   addValue,
   emptyObject,
@@ -64,8 +69,9 @@ const pushUpdateSqlWithoutValuesJoinedAs = (
   quotedAs: string,
   isSubSql?: boolean,
 ): Sql => {
-  const quotedTable = `"${query.table || (q.from as string)}"`;
   const from = quoteTableWithSchema(query);
+  const alias = getQueryRelationAliasForAs(query, q.as);
+  quotedAs = alias || quotedAs;
 
   const set: string[] = [];
 
@@ -125,8 +131,8 @@ const pushUpdateSqlWithoutValuesJoinedAs = (
   } else {
     ctx.sql.push(`UPDATE ${from}`);
 
-    if (quotedTable !== quotedAs) {
-      ctx.sql.push(quotedAs);
+    if (alias) {
+      ctx.sql.push(alias);
     }
 
     ctx.sql.push('SET', set.join(', '));
@@ -193,6 +199,11 @@ const pushSelectForEmptySet = (
   );
 
   let fromSql = `FROM ${from}`;
+
+  const alias = getQueryRelationAliasForAs(query, q.as);
+  if (alias) {
+    fromSql += ` ${alias}`;
+  }
 
   if (updateManyValuesSql) {
     fromSql += `, ${updateManyValuesSql}`;

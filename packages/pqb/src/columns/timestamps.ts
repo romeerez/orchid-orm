@@ -1,13 +1,13 @@
 import { pushOrNewArrayToObjectImmutable, RecordUnknown } from '../utils';
 import { Column, getDefaultNowFn } from './column';
-import { RawSql, RawSqlBase } from '../query/expressions/raw-sql';
+import { RawSql } from '../query/expressions/raw-sql';
 
 // Column types returned by `...t.timestamps()` and variations.
 export interface Timestamps<T extends Column.Pick.Data> {
   // Timestamp column with a `now()` default
-  createdAt: Column.Modifiers.Default<T, RawSqlBase>;
+  createdAt: Column.Modifiers.HasDefault<T>;
   // Timestamp column with a `now()` default, and it's being updated on every record update.
-  updatedAt: Column.Modifiers.Default<T, RawSqlBase>;
+  updatedAt: Column.Modifiers.HasDefault<T>;
 }
 
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.
@@ -75,7 +75,7 @@ const makeTimestamps = <T extends Column.Pick.Data>(timestamp: () => T) => {
   return {
     createdAt,
     updatedAt,
-  } as Timestamps<T>;
+  } as never;
 };
 
 export const timestampHelpers: TimestampHelpers = {

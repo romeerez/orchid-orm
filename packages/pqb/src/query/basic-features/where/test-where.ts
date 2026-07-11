@@ -2,7 +2,12 @@ import { Query } from '../../query';
 import { expectSql, testDb } from 'test-utils';
 import { userColumnsSql } from '../../../test-utils/pqb.test-utils';
 import { Column } from '../../../columns/column';
-import { getSqlText, quoteTableWithSchema, Sql } from '../../sql/sql';
+import {
+  getSqlText,
+  quoteTableWithSchema,
+  quoteTableWithSchemaAndAlias,
+  Sql,
+} from '../../sql/sql';
 
 export const columnSqlForTest = ({ shape, table }: Query, key: string) => {
   const index = key.indexOf('.');
@@ -46,7 +51,7 @@ export const testWhere = (
     text: string;
   },
 ) => {
-  const schemaTable = quoteTableWithSchema(model);
+  const schemaTable = quoteTableWithSchemaAndAlias(model);
 
   const [pkeySql, pkeyAs] = columnSqlForTest(columnsOf, pkey);
   const [nullableSql] = columnSqlForTest(columnsOf, nullable);
@@ -108,7 +113,7 @@ export const testWhere = (
         buildSql((q) => q.where({ [pkey]: { in: columnsOf.select(pkey) } })),
         `
           ${startSql}
-          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
             columnsOf,
           )})
         `,
@@ -225,7 +230,7 @@ export const testWhere = (
         ],
         `
           ${startSql}
-          NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+          NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
             columnsOf,
           )})
         `,
@@ -557,7 +562,7 @@ export const testWhere = (
         ],
         `
           ${startSql}
-          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
             columnsOf,
           )})
         `,
@@ -582,10 +587,10 @@ export const testWhere = (
         ],
         `
           ${startSql}
-          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+          ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
             columnsOf,
           )})
-            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
         `,
@@ -686,7 +691,7 @@ export const testWhere = (
           `
             ${startSql}
             (${pkeySql}, ${textSql})
-               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
                  columnsOf,
                )})
           `,
@@ -845,7 +850,7 @@ export const testWhere = (
         `
           ${startSql}
           (${pkeySql} = $1
-             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
                columnsOf,
              )}))
         `,
@@ -859,7 +864,7 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} = $1
-             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
                columnsOf,
              )})
         `,
@@ -883,10 +888,10 @@ export const testWhere = (
         `
           ${startSql}
           (${pkeySql} = $1
-             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
                columnsOf,
              )})
-            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )}))
         `,
@@ -903,10 +908,10 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} = $1
-             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+             OR ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
                columnsOf,
              )})
-            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
         `,
@@ -1017,7 +1022,7 @@ export const testWhere = (
             ${startSql}
             (${pkeySql} = $1
                OR (${pkeySql}, ${textSql})
-               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
                  columnsOf,
                )}))
           `,
@@ -1034,7 +1039,7 @@ export const testWhere = (
             ${startSql}
             ${pkeySql} = $1
                OR (${pkeySql}, ${textSql})
-               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
                  columnsOf,
                )})
           `,
@@ -1153,7 +1158,7 @@ export const testWhere = (
         ],
         `
           ${startSql}
-          NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+          NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
             columnsOf,
           )})
         `,
@@ -1181,10 +1186,10 @@ export const testWhere = (
         `
           ${startSql}
           NOT (
-            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
-            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
           )
@@ -1271,7 +1276,7 @@ export const testWhere = (
           `
             ${startSql}
             NOT (${pkeySql}, ${textSql})
-               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
+               IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
                  columnsOf,
                )})
           `,
@@ -1455,7 +1460,7 @@ export const testWhere = (
         `
           ${startSql}
           (${pkeySql} = $1
-             OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+             OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
                columnsOf,
              )}))
         `,
@@ -1471,7 +1476,7 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} = $1
-             OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+             OR NOT ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
                columnsOf,
              )})
         `,
@@ -1497,10 +1502,10 @@ export const testWhere = (
         `
           ${startSql}
           (${pkeySql} = $1 OR NOT (
-            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
-            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )}))
           )
@@ -1518,10 +1523,10 @@ export const testWhere = (
         `
           ${startSql}
           ${pkeySql} = $1 OR NOT (
-            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchema(
+            ${pkeySql} IN (SELECT ${pkeySql}${pkeyAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
-            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchema(
+            AND ${textSql} IN (SELECT ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
               columnsOf,
             )})
           )
@@ -1639,7 +1644,7 @@ export const testWhere = (
               ${startSql}
               (${pkeySql} = $1
                  OR NOT (${pkeySql}, ${textSql})
-                   IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
+                   IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
                      columnsOf,
                    )}))
             `,
@@ -1656,7 +1661,7 @@ export const testWhere = (
             ${startSql}
             ${pkeySql} = $1
                OR NOT (${pkeySql}, ${textSql})
-                 IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchema(
+                 IN (SELECT ${pkeySql}${pkeyAs}, ${textSql}${textAs} FROM ${quoteTableWithSchemaAndAlias(
                    columnsOf,
                  )})
           `,
@@ -1760,8 +1765,8 @@ export const testWhereExistsCase = ({
   fkey,
   text,
   selectFrom = `SELECT ${
-    joinTo.table === 'user' ? userColumnsSql : '*'
-  } FROM ${quoteTableWithSchema(joinTo)}`,
+    joinTo.table === 'User' ? userColumnsSql : '*'
+  } FROM ${quoteTableWithSchemaAndAlias(joinTo)}`,
   where,
   or,
   values = [],
@@ -1781,10 +1786,11 @@ export const testWhereExistsCase = ({
   const join = method as unknown as 'join';
   const initialSql = getSqlText(joinTo.toSQL());
 
-  const schemaTable = quoteTableWithSchema(joinTo);
+  const schemaTable = quoteTableWithSchemaAndAlias(joinTo);
   const [pkeySql] = columnSqlForTest(joinTo, pkey);
 
-  const joinSchemaTable = quoteTableWithSchema(joinTarget);
+  const joinSchemaTable = quoteTableWithSchemaAndAlias(joinTarget);
+  const joinSchemaTableAs = `${quoteTableWithSchema(joinTarget)} "as"`;
   const [fkeySql, , fkeyColumn] = columnSqlForTest(columnsOf, fkey);
   const [textSql] = columnSqlForTest(columnsOf, text);
 
@@ -1824,7 +1830,7 @@ export const testWhereExistsCase = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, pkey).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableAs}`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1840,7 +1846,7 @@ export const testWhereExistsCase = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableAs}`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1864,7 +1870,7 @@ export const testWhereExistsCase = ({
         testDb.sql({ raw: `${asFkeySql}` }),
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableAs}`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1890,7 +1896,7 @@ export const testWhereExistsCase = ({
         '=',
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableAs}`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1906,7 +1912,7 @@ export const testWhereExistsCase = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableAs}`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1926,7 +1932,7 @@ export const testWhereExistsCase = ({
       joinTo[join](joinTarget.as('as'), {
         [fkey]: testDb.sql({ raw: `${pkeySql}` }),
       }).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableAs}`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -1948,7 +1954,7 @@ export const testWhereExistsCase = ({
         joinTarget.as('as'),
         testDb.sql({ raw: `"${fkeySql}" = ${schemaTable}.${pkey}` }),
       ).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `"${fkeySql}" = ${schemaTable}.${pkey}`),
+      sql(`${joinSchemaTableAs}`, `"${fkeySql}" = ${schemaTable}.${pkey}`),
       values,
     );
 
@@ -1996,7 +2002,7 @@ export const testWhereExistsCase = ({
           q.toSQL(),
           makeSql({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM ${schemaTable}`,
-            target: `${joinSchemaTable} "as"`,
+            target: `${joinSchemaTableAs}`,
             conditions: `"as"."one" = ${pkeySql} AND "as"."${fkeyColumn}" = $${
               values.length + (or ? 2 : 1)
             }`,

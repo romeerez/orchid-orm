@@ -428,7 +428,7 @@ describe('column type', () => {
           'Id',
           'userId',
         )
-          .select('*', { user: 'user.*' })
+          .select('*', { user: 'User.*' })
           .take();
 
         expect(result.user.createdAt).toBeInstanceOf(Date);

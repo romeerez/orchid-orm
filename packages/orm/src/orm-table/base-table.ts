@@ -41,6 +41,7 @@ import {
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
+  RelationToTableInput,
   RelationTableToQuery,
 } from '../relations/relations';
 import { OrchidORM } from '../orm';
@@ -89,35 +90,46 @@ export interface Table extends Query, TableInfo {}
 type BelongsToRequired<
   T extends RelationConfigSelf,
   Rel extends BelongsTo,
+  Related,
 > = Rel['options'] extends {
   required: infer Required extends boolean;
 }
   ? Required
   : Rel['options'] extends { on: unknown }
     ? false
-    : BelongsToDefaultRequired<T, Rel>;
+    : BelongsToDefaultRequired<T, Rel, Related>;
 
 type BelongsToRelationInfo<
+  TC extends TableClasses,
+  VC extends TableClasses,
   T extends RelationConfigSelf,
   Name extends string,
   Rel extends BelongsTo,
-> = BelongsToInfo<
-  T,
-  Rel['options']['columns'][number] & string,
-  BelongsToRequired<T, Rel>,
-  BelongsToQuery<RelationTableToQuery<Rel>, Name>
->;
+> =
+  RelationToTableInput<TC, VC, Rel> extends infer Related extends ORMTableInput
+    ? BelongsToInfo<
+        T,
+        Rel['options']['columns'][number] & string,
+        BelongsToRequired<T, Rel, Related>,
+        BelongsToQuery<TableQueryBuilder<TC, VC, Related>, Name>
+      >
+    : never;
 
 type BelongsToCreateData<
+  TC extends TableClasses,
+  VC extends TableClasses,
   T extends RelationConfigSelf,
   Name extends string,
   Rel extends BelongsTo,
-> = BelongsToDataForCreate<
-  Name,
-  Rel['options']['columns'][number] & string,
-  BelongsToRequired<T, Rel>,
-  BelongsToQuery<RelationTableToQuery<Rel>, Name>
->;
+> =
+  RelationToTableInput<TC, VC, Rel> extends infer Related extends ORMTableInput
+    ? BelongsToDataForCreate<
+        Name,
+        Rel['options']['columns'][number] & string,
+        BelongsToRequired<T, Rel, Related>,
+        BelongsToQuery<TableQueryBuilder<TC, VC, Related>, Name>
+      >
+    : never;
 
 type BelongsToCreateDataColumns<T extends RelationConfigSelf> = {
   [K in keyof T['relations']]: T['relations'][K] extends BelongsTo
@@ -126,17 +138,21 @@ type BelongsToCreateDataColumns<T extends RelationConfigSelf> = {
 }[keyof T['relations']];
 
 type BelongsToCreateDataForColumn<
+  TC extends TableClasses,
+  VC extends TableClasses,
   T extends RelationConfigSelf,
   Column extends string,
 > = {
   [K in keyof T['relations']]: T['relations'][K] extends BelongsTo
     ? Column extends T['relations'][K]['options']['columns'][number]
-      ? BelongsToCreateData<T, K & string, T['relations'][K]>
+      ? BelongsToCreateData<TC, VC, T, K & string, T['relations'][K]>
       : never
     : never;
 }[keyof T['relations']];
 
 type RelationDataForCreate<
+  TC extends TableClasses,
+  VC extends TableClasses,
   T extends RelationConfigSelf,
   Name extends keyof T['relations'] & string,
 > = T['relations'][Name] extends HasOne
@@ -144,14 +160,18 @@ type RelationDataForCreate<
       T,
       Name,
       T['relations'][Name],
-      HasOneQuery<T, Name, RelationTableToQuery<T['relations'][Name]>>
+      HasOneQuery<T, Name, RelationTableToQuery<TC, VC, T['relations'][Name]>>
     >['dataForCreate']
   : T['relations'][Name] extends HasMany
     ? HasManyInfo<
         T,
         Name,
         T['relations'][Name],
-        HasManyQuery<T, Name, RelationTableToQuery<T['relations'][Name]>>
+        HasManyQuery<
+          T,
+          Name,
+          RelationTableToQuery<TC, VC, T['relations'][Name]>
+        >
       >['dataForCreate']
     : T['relations'][Name] extends HasAndBelongsToMany
       ? HasAndBelongsToManyInfo<
@@ -160,7 +180,7 @@ type RelationDataForCreate<
           T['relations'][Name]['options']['columns'][number] & string,
           HasAndBelongsToManyQuery<
             Name,
-            RelationTableToQuery<T['relations'][Name]>
+            RelationTableToQuery<TC, VC, T['relations'][Name]>
           >
         >['dataForCreate']
       : never;
@@ -171,26 +191,40 @@ type RelationDataForCreateOptionalNames<T extends RelationConfigSelf> = {
     : K;
 }[keyof T['relations'] & string];
 
-type BelongsToRelationsDataForCreate<T extends RelationConfigSelf> = {
+type BelongsToRelationsDataForCreate<
+  TC extends TableClasses,
+  VC extends TableClasses,
+  T extends RelationConfigSelf,
+> = {
   [Column in BelongsToCreateDataColumns<T>]: BelongsToCreateDataForColumn<
+    TC,
+    VC,
     T,
     Column
   >;
 };
 
-type RelationsDataForCreateOptional<T extends RelationConfigSelf> =
+type RelationsDataForCreateOptional<
+  TC extends TableClasses,
+  VC extends TableClasses,
+  T extends RelationConfigSelf,
+> =
   RelationDataForCreateOptionalNames<T> extends never
     ? EmptyObject
     : {
           [K in RelationDataForCreateOptionalNames<T>]: (
-            u: RelationDataForCreate<T, K>,
+            u: RelationDataForCreate<TC, VC, T, K>,
           ) => void;
         }[RelationDataForCreateOptionalNames<T>] extends (u: infer Obj) => void
       ? Obj
       : EmptyObject;
 
 // converts table type to a queryable interface
-export interface TableQueryBuilder<T extends ORMTableInput>
+export interface TableQueryBuilder<
+  TC extends TableClasses,
+  VC extends TableClasses,
+  T extends ORMTableInput,
+>
   extends
     TableInfo,
     Db<
@@ -211,20 +245,28 @@ export interface TableQueryBuilder<T extends ORMTableInput>
     ? {
         [K in keyof T['relations'] &
           string]: T['relations'][K] extends BelongsTo
-          ? BelongsToRelationInfo<T, K, T['relations'][K]>
+          ? BelongsToRelationInfo<TC, VC, T, K, T['relations'][K]>
           : T['relations'][K] extends HasOne
             ? HasOneInfo<
                 T,
                 K,
                 T['relations'][K],
-                HasOneQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+                HasOneQuery<
+                  T,
+                  K,
+                  RelationTableToQuery<TC, VC, T['relations'][K]>
+                >
               >
             : T['relations'][K] extends HasMany
               ? HasManyInfo<
                   T,
                   K,
                   T['relations'][K],
-                  HasManyQuery<T, K, RelationTableToQuery<T['relations'][K]>>
+                  HasManyQuery<
+                    T,
+                    K,
+                    RelationTableToQuery<TC, VC, T['relations'][K]>
+                  >
                 >
               : T['relations'][K] extends HasAndBelongsToMany
                 ? HasAndBelongsToManyInfo<
@@ -233,17 +275,17 @@ export interface TableQueryBuilder<T extends ORMTableInput>
                     T['relations'][K]['options']['columns'][number] & string,
                     HasAndBelongsToManyQuery<
                       K,
-                      RelationTableToQuery<T['relations'][K]>
+                      RelationTableToQuery<TC, VC, T['relations'][K]>
                     >
                   >
                 : never;
       }
     : EmptyObject;
   relationsDataForCreate: T extends RelationConfigSelf
-    ? BelongsToRelationsDataForCreate<T>
+    ? BelongsToRelationsDataForCreate<TC, VC, T>
     : EmptyObject;
   relationsDataForCreateOptional: T extends RelationConfigSelf
-    ? RelationsDataForCreateOptional<T>
+    ? RelationsDataForCreateOptional<TC, VC, T>
     : EmptyObject;
 }
 
@@ -268,9 +310,12 @@ export interface PickORMTableInputColumnsAndComputed
 // type of table instance created by a table class
 // is used only in `orchidORM` constructor to accept proper classes
 export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
+  id?: string;
   autoForeignKeys?: TableData.References.BaseOptions | boolean;
   // database schema containing this table
   schema?: QuerySchema;
+  // database relation name
+  nameInDb?: string;
   // column types defined in base table to use in `setColumns`
   types: unknown;
   // path to file where the table is defined
@@ -395,6 +440,10 @@ export interface SetColumnsResult<
 
 export interface BaseTableInstance<ColumnTypes> {
   table?: string;
+  /**
+   * Database relation name used in SQL and migration generation.
+   */
+  nameInDb?: string;
   columns: { shape: Column.Shape.QueryInit; data: MaybeArray<TableDataItem> };
   schema?: QuerySchema;
   noPrimaryKey?: boolean;
@@ -540,7 +589,11 @@ export interface BaseTableInstance<ColumnTypes> {
     options: Options,
   ): {
     type: 'belongsTo';
-    related: Related;
+    id: Related['id'] extends string
+      ? Related['id']
+      : Related['table'] extends string
+        ? Related['table']
+        : Related['name'];
     options: Options;
   };
 
@@ -556,7 +609,11 @@ export interface BaseTableInstance<ColumnTypes> {
     options: Options,
   ): {
     type: 'hasOne';
-    related: Related;
+    id: Related['id'] extends string
+      ? Related['id']
+      : Related['table'] extends string
+        ? Related['table']
+        : Related['name'];
     options: Options;
   };
 
@@ -572,7 +629,11 @@ export interface BaseTableInstance<ColumnTypes> {
     options: Options,
   ): {
     type: 'hasMany';
-    related: Related;
+    id: Related['id'] extends string
+      ? Related['id']
+      : Related['table'] extends string
+        ? Related['table']
+        : Related['name'];
     options: Options;
   };
 
@@ -586,7 +647,11 @@ export interface BaseTableInstance<ColumnTypes> {
     options: Options,
   ): {
     type: 'hasAndBelongsToMany';
-    related: Related;
+    id: Related['id'] extends string
+      ? Related['id']
+      : Related['table'] extends string
+        ? Related['table']
+        : Related['name'];
     options: Options;
   };
 
@@ -807,6 +872,10 @@ export function createBaseTable<
       let instance = instances.get(this);
       if (!instance) {
         instance = new this();
+        const name = instance.table || instance.name;
+        if (instance.nameInDb === undefined && name) {
+          instance.nameInDb = instance.snakeCase ? toSnakeCase(name) : name;
+        }
         instances.set(this, instance);
       }
 
@@ -815,6 +884,7 @@ export function createBaseTable<
 
     table!: string;
     name!: string;
+    nameInDb?: string;
     query?: Query;
     sql!: string | RawSqlBase;
     columns = defaultColumns;

@@ -215,6 +215,40 @@ change(async (db) => {
     );
   });
 
+  it('should match code table aliases by their database names', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('user_profile', (t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        await db.createTable('app_users', (t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      },
+      tables: [
+        class UserProfileTable extends BaseTable {
+          table = 'UserProfile';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+        },
+        class UserTable extends BaseTable {
+          table = 'User';
+          nameInDb = 'app_users';
+          columns = this.setColumns((t) => ({
+            id: t.identity().primaryKey(),
+          }));
+        },
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it(
     'should create table with customly named timestamps, ignore virtual column, add table comment, add noPrimaryKey option, ' +
       'add composite primary key, index, constraint',

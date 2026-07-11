@@ -75,6 +75,72 @@ const rows = await db.$views.monthlySales
   .order({ total: 'DESC' });
 ```
 
+## nameInDb
+
+`name` is the query-facing view alias.
+It is used for `$views` query typing and qualified column names, and by default it is also the database view name.
+
+Set `nameInDb` when the view has a different name in the database:
+
+```ts
+export class ActiveUserView extends BaseTable.View {
+  readonly name = 'activeUser';
+  readonly nameInDb = 'active_users';
+
+  columns = this.setColumns((t) => ({
+    id: t.integer(),
+    firstName: t.text(),
+  }));
+
+  sql = sql`SELECT id, "firstName" FROM "user" WHERE active = true`;
+}
+
+await db.$views.activeUser.select('activeUser.firstName');
+// SELECT "activeUser"."firstName" FROM "active_users" "activeUser"
+```
+
+When `snakeCase` is enabled on the base table and `nameInDb` is not set, Orchid derives the database view name from `name`:
+
+```ts
+export const BaseTable = createBaseTable({
+  snakeCase: true,
+});
+
+export class ActiveUserView extends BaseTable.View {
+  readonly name = 'activeUser';
+
+  columns = this.setColumns((t) => ({
+    id: t.integer(),
+    firstName: t.text(),
+  }));
+
+  sql = sql`SELECT id, first_name FROM "user" WHERE active = true`;
+}
+
+await db.$views.activeUser.select('activeUser.firstName');
+// SELECT "activeUser"."first_name" FROM "active_user" "activeUser"
+```
+
+Materialized views support `nameInDb` in the same way:
+
+```ts
+export class MonthlySalesMaterializedView extends BaseTable.MaterializedView {
+  readonly name = 'monthlySales';
+  readonly nameInDb = 'sales_by_month';
+
+  columns = this.setColumns((t) => ({
+    userId: t.integer(),
+    total: t.decimal(),
+  }));
+
+  sql = sql`SELECT "userId", sum(total) AS total FROM sale GROUP BY "userId"`;
+}
+```
+
+An explicit `nameInDb` is used as-is and is not changed by `snakeCase`.
+Use the existing `schema` property for schema qualification; `nameInDb` is only the view or materialized view name inside that schema.
+Generated migrations use `nameInDb` for `CREATE VIEW` and `CREATE MATERIALIZED VIEW`, while runtime queries keep using `name` as the query alias.
+
 For split ORM setup, pass both tables and views to `bundleOrchidORM`:
 
 ```ts

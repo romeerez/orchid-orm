@@ -1,5 +1,9 @@
 import { Query } from '../../query';
-import { getSqlText, quoteTableWithSchema } from '../../sql/sql';
+import {
+  getSqlText,
+  quoteTableWithSchema,
+  quoteTableWithSchemaAndAlias,
+} from '../../sql/sql';
 import { columnSqlForTest } from '../where/test-where';
 import { expectSql, testDb } from 'test-utils';
 
@@ -11,7 +15,7 @@ export const testJoin = ({
   columnsOf = joinTarget,
   fkey,
   text,
-  selectFrom = `SELECT * FROM ${quoteTableWithSchema(joinTo)}`,
+  selectFrom = `SELECT * FROM ${quoteTableWithSchemaAndAlias(joinTo)}`,
   or,
   values = [],
 }: {
@@ -29,10 +33,11 @@ export const testJoin = ({
   const join = method as unknown as 'join';
   const initialSql = getSqlText(joinTo.toSQL());
 
-  const schemaTable = quoteTableWithSchema(joinTo);
+  const schemaTable = quoteTableWithSchemaAndAlias(joinTo);
   const [pkeySql] = columnSqlForTest(joinTo, pkey);
 
-  const joinSchemaTable = quoteTableWithSchema(joinTarget);
+  const joinSchemaTable = quoteTableWithSchemaAndAlias(joinTarget);
+  const joinSchemaTableNoAlias = quoteTableWithSchema(joinTarget);
   const [fkeySql, , fkeyColumn] = columnSqlForTest(columnsOf, fkey);
   const [textSql, , textColumn] = columnSqlForTest(columnsOf, text);
 
@@ -68,7 +73,7 @@ export const testJoin = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, pkey).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableNoAlias} "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -84,7 +89,7 @@ export const testJoin = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), fkey, '=', pkey).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableNoAlias} "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -108,7 +113,7 @@ export const testJoin = ({
         testDb.sql({ raw: `${asFkeySql}` }),
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableNoAlias} "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -134,7 +139,7 @@ export const testJoin = ({
         '=',
         testDb.sql({ raw: `${pkeySql}` }),
       ).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableNoAlias} "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -150,7 +155,7 @@ export const testJoin = ({
 
     expectSql(
       joinTo[join](joinTarget.as('as'), { [fkey]: pkey }).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableNoAlias} "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -170,7 +175,7 @@ export const testJoin = ({
       joinTo[join](joinTarget.as('as'), {
         [fkey]: testDb.sql({ raw: `${pkeySql}` }),
       }).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `${asFkeySql} = ${pkeySql}`),
+      sql(`${joinSchemaTableNoAlias} "as"`, `${asFkeySql} = ${pkeySql}`),
       values,
     );
 
@@ -192,7 +197,10 @@ export const testJoin = ({
         joinTarget.as('as'),
         testDb.sql({ raw: `"${fkeySql}" = ${schemaTable}.${pkey}` }),
       ).toSQL(),
-      sql(`${joinSchemaTable} "as"`, `"${fkeySql}" = ${schemaTable}.${pkey}`),
+      sql(
+        `${joinSchemaTableNoAlias} "as"`,
+        `"${fkeySql}" = ${schemaTable}.${pkey}`,
+      ),
       values,
     );
 
@@ -242,7 +250,7 @@ export const testJoin = ({
             select: `SELECT "as"."one" "id", "as"."two" "text" FROM ${schemaTable}`,
             target: `(
                 SELECT "as"."${fkeyColumn}" "one", "as"."${textColumn}" "two"
-                FROM ${joinSchemaTable} "as"
+                FROM ${joinSchemaTableNoAlias} "as"
                 WHERE "as"."${fkeyColumn}" = $${values.length + (or ? 2 : 1)}
               ) "as"`,
             conditions: `"as"."one" = ${pkeySql}`,

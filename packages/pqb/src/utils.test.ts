@@ -4,6 +4,7 @@ import {
   pushOrNewArray,
   quoteObjectKey,
   singleQuote,
+  toSnakeCase,
 } from './utils';
 import url from 'url';
 import { assertType } from 'test-utils';
@@ -50,6 +51,14 @@ describe('utils', () => {
 
     it('should change key to camelCase when needed', () => {
       expect(quoteObjectKey('a_b_c', true)).toBe(`aBC`);
+    });
+  });
+
+  describe('toSnakeCase', () => {
+    it('should not prefix the first capital letter with underscore', () => {
+      expect(toSnakeCase('User')).toBe('user');
+      expect(toSnakeCase('SnakeName')).toBe('snake_name');
+      expect(toSnakeCase('defaultName')).toBe('default_name');
     });
   });
 

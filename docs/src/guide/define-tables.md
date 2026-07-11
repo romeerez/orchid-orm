@@ -115,6 +115,52 @@ All table files must be linked into `orchidORM` instance, as was shown above in 
 When trying OrchidORM on an existing project that already has a database with tables,
 you can run a command to generate code for tables and a migration for it by running [db pull](/guide/migration-commands#pull).
 
+## nameInDb
+
+`table` is the query-facing table alias.
+It is used for the TypeScript query API, including qualified column names such as `'user.firstName'`.
+By default, it is also used as the database table name.
+
+Set `nameInDb` when the table has a different name in the database:
+
+```ts
+export class UserTable extends BaseTable {
+  readonly table = 'user';
+  readonly nameInDb = 'app_users';
+
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    firstName: t.text(),
+  }));
+}
+
+await db.user.select('user.firstName');
+// SELECT "user"."firstName" FROM "app_users" "user"
+```
+
+When `snakeCase` is enabled and `nameInDb` is not set, Orchid derives the database table name from `table`:
+
+```ts
+export const BaseTable = createBaseTable({
+  snakeCase: true,
+});
+
+export class UserProfileTable extends BaseTable {
+  readonly table = 'userProfile';
+
+  columns = this.setColumns((t) => ({
+    id: t.identity().primaryKey(),
+    firstName: t.text(),
+  }));
+}
+
+await db.userProfile.select('userProfile.firstName');
+// SELECT "userProfile"."first_name" FROM "user_profile" "userProfile"
+```
+
+An explicit `nameInDb` is used as-is and is not changed by `snakeCase`.
+Use the existing [`schema`](#table-db-schema) property for schema qualification; `nameInDb` is only the relation name inside that schema.
+
 ## init
 
 A table can define an `init` method. It is called when a DB-aware ORM instance is created:

@@ -1,4 +1,4 @@
-import { IdentityColumn, IntegerColumn } from './column-types/number';
+import { IntegerColumn } from './column-types/number';
 import {
   BitColumn,
   BitVaryingColumn,
@@ -68,7 +68,7 @@ export interface DefaultColumnTypes<
   doublePrecision: SchemaConfig['doublePrecision'];
   identity(
     options?: TableData.Identity,
-  ): IdentityColumn<ReturnType<SchemaConfig['integer']>>;
+  ): Column.Modifiers.HasDefault<ReturnType<SchemaConfig['integer']>>;
   smallSerial: SchemaConfig['smallSerial'];
   serial: SchemaConfig['serial'];
   bigSerial: SchemaConfig['bigSerial'];

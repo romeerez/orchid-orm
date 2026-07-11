@@ -117,7 +117,7 @@ describe('view', () => {
       query.toSQL(),
       `
         SELECT "monthlySales"."user_id" "userId", "monthlySales"."month"
-        FROM "analytics"."monthlySales"
+        FROM "analytics"."monthly_sales" "monthlySales"
         WHERE "monthlySales"."user_id" = $1
       `,
       [1],
@@ -198,7 +198,7 @@ describe('view', () => {
       local.$views.activeUser.select('id').toSQL(),
       `
         SELECT "activeUser"."id"
-        FROM "activeUser"
+        FROM "active_user" "activeUser"
       `,
     );
   });
@@ -303,7 +303,7 @@ describe('view', () => {
       expectSql(
         local.$views.activeUser.scope('positiveId').toSQL(),
         `
-          SELECT * FROM "activeUser"
+          SELECT * FROM "active_user" "activeUser"
           WHERE ("activeUser"."active" = $1)
             AND ("activeUser"."id" > $2)
         `,
@@ -364,7 +364,7 @@ describe('view', () => {
           SELECT (upper("activeUser"."name")) "sqlComputed",
             "activeUser"."name",
             "activeUser"."active"
-          FROM "schema"."activeUser"
+          FROM "schema"."active_user" "activeUser"
         `,
       );
 
@@ -582,10 +582,10 @@ describe('view', () => {
           .toSQL(),
         `
           SELECT row_to_json("activeUser".*) "activeUser"
-          FROM "missingUser"
+          FROM "missing_user" "missingUser"
           LEFT JOIN LATERAL (
             SELECT "activeUser"."id"
-            FROM "activeUser"
+            FROM "active_user" "activeUser"
             WHERE "activeUser"."id" = "missingUser"."id"
           ) "activeUser" ON true
         `,
@@ -595,9 +595,9 @@ describe('view', () => {
         local.missingUser.chain('activeUser').select('id').toSQL(),
         `
           SELECT "activeUser"."id"
-          FROM "activeUser"
+          FROM "active_user" "activeUser"
           WHERE EXISTS (
-            SELECT 1 FROM "missingUser"
+            SELECT 1 FROM "missing_user" "missingUser"
             WHERE "missingUser"."id" = "activeUser"."id"
           )
         `,
@@ -656,7 +656,7 @@ describe('view', () => {
           FROM "user"
           LEFT JOIN LATERAL (
             SELECT "activeUser"."id"
-            FROM "activeUser"
+            FROM "active_user" "activeUser"
             WHERE "activeUser"."id" = "user"."id"
           ) "activeUser" ON true
         `,
@@ -668,7 +668,7 @@ describe('view', () => {
           SELECT "user"."id"
           FROM "user"
           WHERE EXISTS (
-            SELECT 1 FROM "activeUser"
+            SELECT 1 FROM "active_user" "activeUser"
             WHERE "activeUser"."id" = "user"."id"
           )
         `,
@@ -691,6 +691,7 @@ describe('view', () => {
     }
 
     class LocalWritableActiveUserView extends BaseTable.View {
+      readonly id = 'writableActiveUser';
       readonly name = 'activeUser';
       readonly readOnly = false;
       columns = this.setColumns((t) => ({
@@ -752,9 +753,9 @@ describe('view', () => {
         query.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."activeUser"("name", "password")
+            INSERT INTO "schema"."active_user" AS "writableActiveUser"("name", "password")
             VALUES ($1, $2)
-            RETURNING "activeUser"."id"
+            RETURNING "writableActiveUser"."id"
           )
           INSERT INTO "schema"."profile"("bio", "writable_active_user_id")
           VALUES ($3, (SELECT "q"."id" FROM "q"))
@@ -798,7 +799,7 @@ describe('view', () => {
             FROM "schema"."profile"
             WHERE "profile"."id" = $1
           ), "q2" AS (
-            UPDATE "schema"."activeUser" "writableActiveUser"
+            UPDATE "schema"."active_user" "writableActiveUser"
             SET "name" = $2
             WHERE "writableActiveUser"."id" IN (
               SELECT "q"."writableActiveUserId" FROM "q"
@@ -847,7 +848,7 @@ describe('view', () => {
             )
             RETURNING "profile"."writable_active_user_id" "writableActiveUserId"
           ), "q3" AS (
-            DELETE FROM "schema"."activeUser" "writableActiveUser"
+            DELETE FROM "schema"."active_user" "writableActiveUser"
             WHERE "writableActiveUser"."id" IN (
               SELECT "q"."writableActiveUserId" FROM "q"
             )

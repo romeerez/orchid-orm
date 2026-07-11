@@ -225,7 +225,7 @@ describe('then', () => {
   it('should throw when there is no `.catch`', async () => {
     // @ts-expect-error wrong column
     expect(User.select('wrong').then(noop)).rejects.toThrow(
-      'column user.wrong does not exist',
+      'column User.wrong does not exist',
     );
   });
 
@@ -235,7 +235,7 @@ describe('then', () => {
     // @ts-expect-error wrong column
     await User.select('wrong').then(noop, (err) => (error = err));
 
-    expect(error?.message).toEqual('column user.wrong does not exist');
+    expect(error?.message).toEqual('column User.wrong does not exist');
   });
 });
 

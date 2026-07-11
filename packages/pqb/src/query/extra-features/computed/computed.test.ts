@@ -16,7 +16,7 @@ import { Query } from '../../query';
 import { NotFoundError } from '../../errors';
 
 const User = testDb(
-  'user',
+  'User',
   (t) => ({
     id: t.identity().primaryKey(),
     name: t.text(),
@@ -94,10 +94,10 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT
-              "user"."name", ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
+              "User"."name", ("User"."name" || ' ' || "User"."user_key") "nameAndKey",
               (1::decimal) "decimal",
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
-            FROM "schema"."user"
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') "depSql"
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
         );
@@ -120,20 +120,20 @@ describe('computed', () => {
       it('should select computed column with dot', async () => {
         const q = User.select(
           'name',
-          'user.nameAndKey',
-          'user.decimal',
-          'user.depSql',
+          'User.nameAndKey',
+          'User.decimal',
+          'User.depSql',
         ).take();
 
         expectSql(
           q.toSQL(),
           `
             SELECT
-              "user"."name",
-              ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
+              "User"."name",
+              ("User"."name" || ' ' || "User"."user_key") "nameAndKey",
               (1::decimal) "decimal",
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
-            FROM "schema"."user"
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') "depSql"
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
         );
@@ -164,11 +164,11 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT
-              "user"."name",
-              ("user"."name" || ' ' || "user"."user_key") "as",
+              "User"."name",
+              ("User"."name" || ' ' || "User"."user_key") "as",
               (1::decimal) "dec",
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
-            FROM "schema"."user"
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') "dep"
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
         );
@@ -190,20 +190,20 @@ describe('computed', () => {
 
       it('should select computed column with alias and dot', async () => {
         const q = User.select('name', {
-          as: 'user.nameAndKey',
-          dec: 'user.decimal',
-          dep: 'user.depSql',
+          as: 'User.nameAndKey',
+          dec: 'User.decimal',
+          dep: 'User.depSql',
         }).take();
 
         expectSql(
           q.toSQL(),
           `
             SELECT
-              "user"."name",
-              ("user"."name" || ' ' || "user"."user_key") "as",
+              "User"."name",
+              ("User"."name" || ' ' || "User"."user_key") "as",
               (1::decimal) "dec",
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
-            FROM "schema"."user"
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') "dep"
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
         );
@@ -225,18 +225,18 @@ describe('computed', () => {
 
       it('should select joined computed column', async () => {
         const q = Profile.join(User, 'id', 'userId')
-          .select('user.nameAndKey', 'user.decimal', 'user.depSql')
+          .select('User.nameAndKey', 'User.decimal', 'User.depSql')
           .take();
 
         expectSql(
           q.toSQL(),
           `
             SELECT
-              ("user"."name" || ' ' || "user"."user_key") "nameAndKey",
+              ("User"."name" || ' ' || "User"."user_key") "nameAndKey",
               (1::decimal) "decimal",
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') "depSql"
-            FROM "schema"."profile"
-            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') "depSql"
+            FROM "schema"."profile" "Profile"
+            JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
           `,
         );
@@ -254,9 +254,9 @@ describe('computed', () => {
       it('should select joined computed column with alias', async () => {
         const q = Profile.join(User, 'id', 'userId')
           .select({
-            as: 'user.nameAndKey',
-            dec: 'user.decimal',
-            dep: 'user.depSql',
+            as: 'User.nameAndKey',
+            dec: 'User.decimal',
+            dep: 'User.depSql',
           })
           .take();
 
@@ -264,11 +264,11 @@ describe('computed', () => {
           q.toSQL(),
           `
             SELECT
-              ("user"."name" || ' ' || "user"."user_key") "as",
+              ("User"."name" || ' ' || "User"."user_key") "as",
               (1::decimal) "dec",
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') "dep"
-            FROM "schema"."profile"
-            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') "dep"
+            FROM "schema"."profile" "Profile"
+            JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
           `,
         );
@@ -292,11 +292,11 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "schema"."user"
+            SELECT ${userColumnsSql} FROM "schema"."user" "User"
             WHERE
-              ("user"."name" || ' ' || "user"."user_key") = $1 AND
+              ("User"."name" || ' ' || "User"."user_key") = $1 AND
               (1::decimal) = $2 AND
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') = $3
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') = $3
           `,
           ['value', 1, 'dep'],
         );
@@ -311,9 +311,9 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "schema"."user"
+            SELECT ${userColumnsSql} FROM "schema"."user" "User"
             WHERE (1::decimal) > $1
-              AND ("user"."name" || ' ' || "user"."user_key" || 'dep') ILIKE '%' || $2
+              AND ("User"."name" || ' ' || "User"."user_key" || 'dep') ILIKE '%' || $2
           `,
           [0, 'dep'],
         );
@@ -321,16 +321,16 @@ describe('computed', () => {
 
       it('should support where operators with dot', () => {
         const q = User.where({
-          'user.decimal': { gt: 0 },
-          'user.depSql': { endsWith: 'dep' },
+          'User.decimal': { gt: 0 },
+          'User.depSql': { endsWith: 'dep' },
         });
 
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "schema"."user"
+            SELECT ${userColumnsSql} FROM "schema"."user" "User"
             WHERE (1::decimal) > $1
-              AND ("user"."name" || ' ' || "user"."user_key" || 'dep') ILIKE '%' || $2
+              AND ("User"."name" || ' ' || "User"."user_key" || 'dep') ILIKE '%' || $2
           `,
           [0, 'dep'],
         );
@@ -344,11 +344,11 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "schema"."user"
+            SELECT ${userColumnsSql} FROM "schema"."user" "User"
             ORDER BY
-              ("user"."name" || ' ' || "user"."user_key") ASC,
+              ("User"."name" || ' ' || "User"."user_key") ASC,
               (1::decimal) ASC,
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') ASC
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') ASC
           `,
         );
       });
@@ -363,11 +363,11 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${userColumnsSql} FROM "schema"."user"
+            SELECT ${userColumnsSql} FROM "schema"."user" "User"
             ORDER BY
-              ("user"."name" || ' ' || "user"."user_key") DESC,
+              ("User"."name" || ' ' || "User"."user_key") DESC,
               (1::decimal) DESC,
-              ("user"."name" || ' ' || "user"."user_key" || 'dep') DESC
+              ("User"."name" || ' ' || "User"."user_key" || 'dep') DESC
           `,
         );
       });
@@ -415,7 +415,7 @@ describe('computed', () => {
 
           expectSql(
             q.toSQL(),
-            `SELECT "user"."id", "user"."name" FROM "schema"."user" LIMIT 1`,
+            `SELECT "User"."id", "User"."name" FROM "schema"."user" "User" LIMIT 1`,
           );
 
           const res = await q;
@@ -433,7 +433,7 @@ describe('computed', () => {
 
           expectSql(
             q.toSQL(),
-            `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+            `SELECT "User"."id", "User"."name" FROM "schema"."user" "User"`,
           );
 
           const res = await q;
@@ -451,7 +451,7 @@ describe('computed', () => {
 
           expectSql(
             q.toSQL(),
-            `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+            `SELECT "User"."id", "User"."name" FROM "schema"."user" "User"`,
           );
 
           const res = await q;
@@ -472,7 +472,7 @@ describe('computed', () => {
 
           expectSql(
             q.toSQL(),
-            `SELECT "user"."name" "n", "user"."id" FROM "schema"."user"`,
+            `SELECT "User"."name" "n", "User"."id" FROM "schema"."user" "User"`,
           );
 
           const result = await q;
@@ -485,7 +485,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
+          `SELECT "User"."name", "User"."password", "User"."id" FROM "schema"."user" "User" LIMIT 1`,
         );
 
         const res = await q;
@@ -507,7 +507,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
+          `SELECT "User"."name", "User"."password", "User"."id" FROM "schema"."user" "User" LIMIT 1`,
         );
 
         const res = await q;
@@ -528,12 +528,12 @@ describe('computed', () => {
         const q = User.select(
           'name',
           'password',
-          'user.runtimeComputed',
+          'User.runtimeComputed',
         ).take();
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
+          `SELECT "User"."name", "User"."password", "User"."id" FROM "schema"."user" "User" LIMIT 1`,
         );
 
         const res = await q;
@@ -557,7 +557,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
+          `SELECT "User"."name", "User"."password", "User"."id" FROM "schema"."user" "User" LIMIT 1`,
         );
 
         const res = await q;
@@ -576,12 +576,12 @@ describe('computed', () => {
 
       it('should select computed column with alias and dot', async () => {
         const q = User.select('name', 'password', {
-          as: 'user.runtimeComputed',
+          as: 'User.runtimeComputed',
         }).take();
 
         expectSql(
           q.toSQL(),
-          `SELECT "user"."name", "user"."password", "user"."id" FROM "schema"."user" LIMIT 1`,
+          `SELECT "User"."name", "User"."password", "User"."id" FROM "schema"."user" "User" LIMIT 1`,
         );
 
         const res = await q;
@@ -605,7 +605,7 @@ describe('computed', () => {
 
         expectSql(
           q.toSQL(),
-          `SELECT true "id", "user"."id" "id2", "user"."name" FROM "schema"."user" LIMIT 1`,
+          `SELECT true "id", "User"."id" "id2", "User"."name" FROM "schema"."user" "User" LIMIT 1`,
         );
 
         const res = await q;
@@ -620,15 +620,15 @@ describe('computed', () => {
 
       it('should select joined computed column', async () => {
         const q = Profile.join(User, 'id', 'userId')
-          .select('id', 'user.name', 'user.password', 'user.runtimeComputed')
+          .select('id', 'User.name', 'User.password', 'User.runtimeComputed')
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."id", "user"."name", "user"."password", "user"."id" "id2"
-            FROM "schema"."profile"
-            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
+            SELECT "Profile"."id", "User"."name", "User"."password", "User"."id" "id2"
+            FROM "schema"."profile" "Profile"
+            JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
           `,
         );
@@ -655,15 +655,15 @@ describe('computed', () => {
 
       it('should select joined computed column when selecting all from the main table', async () => {
         const q = Profile.join(User, 'id', 'userId')
-          .select('*', 'user.name', 'user.password', 'user.runtimeComputed')
+          .select('*', 'User.name', 'User.password', 'User.runtimeComputed')
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileTableColumnsSql}, "user"."name", "user"."password", "user"."id" "id2"
-            FROM "schema"."profile"
-            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
+            SELECT ${profileTableColumnsSql}, "User"."name", "User"."password", "User"."id" "id2"
+            FROM "schema"."profile" "Profile"
+            JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
           `,
         );
@@ -689,15 +689,15 @@ describe('computed', () => {
 
       it('should select joined computed column with alias', async () => {
         const q = Profile.join(User, 'id', 'userId')
-          .select('user.name', { as: 'user.runtimeComputed' })
+          .select('User.name', { as: 'User.runtimeComputed' })
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."name", "user"."id"
-            FROM "schema"."profile"
-            JOIN "schema"."user" ON "user"."id" = "profile"."user_id"
+            SELECT "User"."name", "User"."id"
+            FROM "schema"."profile" "Profile"
+            JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
           `,
         );
@@ -715,24 +715,16 @@ describe('computed', () => {
       it('should select a computed column from a joined relation', async () => {
         const q = (Profile as Query)
           .join('user')
-          .select('user.runtimeComputed', 'user.updatedAt');
+          .select('User.runtimeComputed', 'User.updatedAt');
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."updated_at" "updatedAt", "user"."id", "user"."name"
-            FROM "schema"."profile"
+            SELECT "User"."runtimeComputed", "User"."updatedAt"
+            FROM "schema"."profile" "Profile"
             JOIN "schema"."user" ON ("profile"."user_id" = "user"."id")
           `,
         );
-
-        const res = await q;
-        expect(res).toEqual([
-          {
-            runtimeComputed: `${userId} ${userData.name}`,
-            updatedAt: expect.any(Date),
-          },
-        ]);
       });
 
       it('should select a computed from a joined sub-query', async () => {
@@ -740,17 +732,17 @@ describe('computed', () => {
           User.select('id', 'runtimeComputed', 'updatedAt'),
           'id',
           'userId',
-        ).select('user.runtimeComputed', 'user.updatedAt');
+        ).select('User.runtimeComputed', 'User.updatedAt');
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."updatedAt", "user"."id", "user"."name"
-            FROM "schema"."profile"
+            SELECT "User"."updatedAt", "User"."id", "User"."name"
+            FROM "schema"."profile" "Profile"
             JOIN (
-              SELECT "user"."id", "user"."updated_at" "updatedAt", "user"."name"
-              FROM "schema"."user"
-            ) "user" ON "user"."id" = "profile"."user_id"
+              SELECT "User"."id", "User"."updated_at" "updatedAt", "User"."name"
+              FROM "schema"."user" "User"
+            ) "User" ON "User"."id" = "Profile"."user_id"
           `,
         );
 
@@ -772,19 +764,19 @@ describe('computed', () => {
       it('should select a computed from a lateral join', async () => {
         const q = Profile.joinLateral(
           User.select('id', 'runtimeComputed'),
-          (q) => q.on('user.id', 'profile.userId'),
-        ).select('user.id', 'user.runtimeComputed');
+          (q) => q.on('User.id', 'Profile.userId'),
+        ).select('User.id', 'User.runtimeComputed');
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "user"."id", "user"."name"
-            FROM "schema"."profile"
+            SELECT "User"."id", "User"."name"
+            FROM "schema"."profile" "Profile"
             JOIN LATERAL (
-              SELECT "user"."id", "user"."name"
-              FROM "schema"."user"
-              WHERE "user"."id" = "profile"."user_id"
-            ) "user" ON true
+              SELECT "User"."id", "User"."name"
+              FROM "schema"."user" "User"
+              WHERE "User"."id" = "Profile"."user_id"
+            ) "User" ON true
           `,
         );
 
@@ -804,8 +796,8 @@ describe('computed', () => {
           q.toSQL(),
           `
             WITH "u" AS (
-              SELECT "user"."id", "user"."name"
-              FROM "schema"."user"
+              SELECT "User"."id", "User"."name"
+              FROM "schema"."user" "User"
             )
             SELECT "u"."id", "u"."name" FROM "u"
           `,
@@ -829,12 +821,12 @@ describe('computed', () => {
           q.toSQL(),
           `
             WITH "u" AS (
-              SELECT "user"."id", "user"."name"
-              FROM "schema"."user"
+              SELECT "User"."id", "User"."name"
+              FROM "schema"."user" "User"
             )
             SELECT "u"."id", "u"."name"
-            FROM "schema"."profile"
-            JOIN "u" ON "u"."id" = "profile"."user_id"
+            FROM "schema"."profile" "Profile"
+            JOIN "u" ON "u"."id" = "Profile"."user_id"
           `,
         );
 
@@ -1113,7 +1105,7 @@ describe('computed', () => {
 
       it('should not support joined computed column', () => {
         // @ts-expect-error computed column should not be allowed
-        Profile.join(User, 'userId', 'user.id').order('user.runtimeComputed');
+        Profile.join(User, 'userId', 'User.id').order('User.runtimeComputed');
       });
     });
 
@@ -1128,9 +1120,9 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
-            RETURNING "user"."id", "user"."name"
+            RETURNING "User"."id", "User"."name"
           `,
           [userData.name, userData.password],
         );
@@ -1157,10 +1149,10 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET "name" = $1
-            WHERE "user"."id" = $2
-            RETURNING "user"."id", "user"."name"
+            WHERE "User"."id" = $2
+            RETURNING "User"."id", "User"."name"
           `,
           ['new name', userId],
         );
@@ -1187,10 +1179,10 @@ describe('computed', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET "name" = $1
-            WHERE "user"."id" = $2
-            RETURNING "user"."id", "user"."name"
+            WHERE "User"."id" = $2
+            RETURNING "User"."id", "User"."name"
           `,
           ['new name', userId],
         );

@@ -70,10 +70,11 @@ const users = await User.select('id', 'name') // only known columns are allowed
 // users array has a proper type of Array<{ id: number, name: string }>
 ```
 
-The optional third argument is for table options:
+The optional fourth argument is for table options.
+Pass `undefined` as the third argument when you do not need composite primary keys, indexes, or other table metadata:
 
 ```ts
-const Table = db('table', (t) => ({ ...columns }), {
+const Table = db('table', (t) => ({ ...columns }), undefined, {
   // provide this value if the table belongs to a specific database schema:
   schema: 'customTableSchema',
   // override `log` option of `createDb`:
@@ -83,3 +84,46 @@ const Table = db('table', (t) => ({ ...columns }), {
   snakeCase: true, // override snakeCase
 })
 ```
+
+## table name in db
+
+The table name passed as the first `db` argument is the query-facing table alias.
+It is used for query typing and qualified column names.
+By default, it is also used as the database table name.
+
+When `snakeCase` is enabled and `nameInDb` is not set, Orchid derives the database table name from the alias:
+
+```ts
+const db = createDb({
+  databaseURL: process.env.DATABASE_URL,
+  snakeCase: true,
+});
+
+const UserProfile = db('userProfile', (t) => ({
+  id: t.identity().primaryKey(),
+  firstName: t.text(),
+}));
+
+await UserProfile.select('userProfile.firstName');
+// SELECT "userProfile"."first_name" FROM "user_profile" "userProfile"
+```
+
+Set `nameInDb` when the physical table has a different name:
+
+```ts
+const User = db(
+  'user',
+  (t) => ({
+    id: t.identity().primaryKey(),
+    firstName: t.text(),
+  }),
+  undefined,
+  { nameInDb: 'app_users' },
+);
+
+await User.select('user.firstName');
+// SELECT "user"."firstName" FROM "app_users" "user"
+```
+
+An explicit `nameInDb` is used as-is and is not changed by `snakeCase`.
+Use the existing `schema` table option for schema qualification; `nameInDb` is only the relation name inside that schema.

@@ -21,7 +21,10 @@ describe('merge queries', () => {
 
       assertType<Awaited<typeof q>, { Id: number }[]>();
 
-      expectSql(q.toSQL(), `SELECT "user"."id" "Id" FROM "schema"."user"`);
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."id" "Id" FROM "schema"."user" "User"`,
+      );
     });
 
     it('should merge selects when both have it', () => {
@@ -31,7 +34,7 @@ describe('merge queries', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."id" "Id", "user"."name" "Name" FROM "schema"."user"`,
+        `SELECT "User"."id" "Id", "User"."name" "Name" FROM "schema"."user" "User"`,
       );
     });
   });
@@ -52,7 +55,7 @@ describe('merge queries', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${UserSelectAll} FROM "schema"."user" LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" LIMIT 1`,
       );
     });
 
@@ -62,7 +65,10 @@ describe('merge queries', () => {
       assertType<typeof q.returnType, 'all'>();
       assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
-      expectSql(q.toSQL(), `SELECT ${UserSelectAll} FROM "schema"."user"`);
+      expectSql(
+        q.toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
+      );
     });
   });
 
@@ -74,7 +80,7 @@ describe('merge queries', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${UserSelectAll} FROM "schema"."user" WHERE "user"."id" = $1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."id" = $1`,
         [1],
       );
     });
@@ -89,8 +95,8 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" = $1 AND "user"."name" = $2 AND "user"."id" = $3
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" = $1 AND "User"."name" = $2 AND "User"."id" = $3
         `,
         [1, 'name', 2],
       );
@@ -108,9 +114,9 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAllWithTable} FROM "schema"."user"
-          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
-           AND ("message"."deleted_at" IS NULL)
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
+           AND ("Message"."deleted_at" IS NULL)
         `,
       );
     });
@@ -125,9 +131,9 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAllWithTable} FROM "schema"."user"
-          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
-           AND ("message"."deleted_at" IS NULL)
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
+           AND ("Message"."deleted_at" IS NULL)
         `,
       );
     });
@@ -146,10 +152,10 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAllWithTable} FROM "schema"."user"
-          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
-           AND ("message"."deleted_at" IS NULL)
-          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
+           AND ("Message"."deleted_at" IS NULL)
+          JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
       );
     });
@@ -170,8 +176,8 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WINDOW "w" AS (PARTITION BY "user"."id")
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WINDOW "w" AS (PARTITION BY "User"."id")
         `,
       );
     });
@@ -190,8 +196,8 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WINDOW "w" AS (PARTITION BY "user"."id")
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WINDOW "w" AS (PARTITION BY "User"."id")
         `,
       );
     });
@@ -216,9 +222,9 @@ describe('merge queries', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WINDOW "a" AS (PARTITION BY "user"."id"),
-                 "b" AS (PARTITION BY "user"."name")
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WINDOW "a" AS (PARTITION BY "User"."id"),
+                 "b" AS (PARTITION BY "User"."name")
         `,
       );
     });
@@ -244,9 +250,9 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "withAlias" AS (
-            SELECT "user"."id" "Id" FROM "schema"."user"
+            SELECT "User"."id" "Id" FROM "schema"."user" "User"
           )
-          SELECT ${UserSelectAll} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
         `,
       );
     });
@@ -270,9 +276,9 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "withAlias" AS (
-            SELECT "user"."id" "Id" FROM "schema"."user"
+            SELECT "User"."id" "Id" FROM "schema"."user" "User"
           )
-          SELECT ${UserSelectAll} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
         `,
       );
     });
@@ -303,11 +309,11 @@ describe('merge queries', () => {
         q.toSQL(),
         `
           WITH "a" AS (
-            SELECT "user"."id" "Id" FROM "schema"."user"
+            SELECT "User"."id" "Id" FROM "schema"."user" "User"
           ), "b" AS (
-            SELECT "user"."name" "Name" FROM "schema"."user"
+            SELECT "User"."name" "Name" FROM "schema"."user" "User"
           )
-          SELECT ${UserSelectAll} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
         `,
       );
     });

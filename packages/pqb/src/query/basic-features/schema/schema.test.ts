@@ -7,7 +7,7 @@ describe('withSchema', () => {
 
     expectSql(
       q.toSQL(),
-      `SELECT "user"."id" FROM "test-schema"."user" LIMIT 1`,
+      `SELECT "User"."id" FROM "test-schema"."user" "User" LIMIT 1`,
     );
   });
 
@@ -19,9 +19,9 @@ describe('withSchema', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id"
-        FROM "schema"."user"
-        JOIN "test-schema"."profile" ON "profile"."user_id" = "user"."id"
+        SELECT "User"."id"
+        FROM "schema"."user" "User"
+        JOIN "test-schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         LIMIT 1
       `,
     );

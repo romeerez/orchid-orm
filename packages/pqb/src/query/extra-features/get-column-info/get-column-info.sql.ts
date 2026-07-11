@@ -15,7 +15,7 @@ export const makeColumnInfoSql = (
 
   let text = `SELECT * FROM information_schema.columns WHERE table_name = ${addValue(
     values,
-    query.table,
+    query.q.nameInDb || query.table,
   )} AND table_catalog = current_database() AND table_schema = ${
     schema ? addValue(values, schema) : 'current_schema()'
   }`;

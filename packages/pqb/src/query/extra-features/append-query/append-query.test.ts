@@ -20,9 +20,9 @@ describe('append-query', () => {
           SELECT "main"."name" "Name" FROM "schema"."user" "main"
           WHERE "main"."name" = $1
         ), "q2" AS (
-          SELECT "user"."age" "Age"
-          FROM "schema"."user"
-          WHERE "user"."name" = "main"."Name"
+          SELECT "User"."age" "Age"
+          FROM "schema"."user" "User"
+          WHERE "User"."name" = "main"."Name"
         )
         SELECT * FROM q
       `,
@@ -63,11 +63,11 @@ describe('append-query', () => {
       q.toSQL(),
       `
         WITH q AS (
-          SELECT "user"."id" "one" FROM "schema"."user"
+          SELECT "User"."id" "one" FROM "schema"."user" "User"
         ), "q2" AS (
-          SELECT "user"."id" "two" FROM "schema"."user"
+          SELECT "User"."id" "two" FROM "schema"."user" "User"
         ), "q3" AS (
-          SELECT "user"."id" "three" FROM "schema"."user"
+          SELECT "User"."id" "three" FROM "schema"."user" "User"
         )
         SELECT * FROM q
       `,
@@ -98,11 +98,11 @@ describe('append-query', () => {
       q.toSQL(),
       `
         WITH "user" AS (
-          INSERT INTO "schema"."user"("name", "user_key", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
           VALUES ($1, $2, $3)
           RETURNING NULL
         ), "q" AS (
-          SELECT "user"."id" FROM "schema"."user" LIMIT 1
+          SELECT "User"."id" FROM "schema"."user" "User" LIMIT 1
         )
         SELECT FROM "user"
       `,

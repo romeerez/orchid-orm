@@ -71,41 +71,37 @@ interface OrchidORMTableHelper<T extends Query> {
   ): OrchidORMQueryHelper<T, Args, Result>;
 }
 
-export type OrchidORMTables<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? OrchidORMTableHelper<TableQueryBuilder<R>>
-    : never;
-};
-
-export type OrchidORMViews<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? OrchidORMTableHelper<TableQueryBuilder<R>>
+export type OrchidORMTables<
+  TC extends TableClasses = TableClasses,
+  VC extends TableClasses = TableClasses,
+> = {
+  [K in keyof TC]: TC[K] extends { new (): infer R extends ORMTableInput }
+    ? OrchidORMTableHelper<TableQueryBuilder<TC, VC, R>>
     : never;
 };
 
 export type OrchidORMBundle<
-  T extends TableClasses = TableClasses,
-  V extends TableClasses = TableClasses,
-> = OrchidORMTables<T> & {
-  $views: OrchidORMViews<V>;
+  TC extends TableClasses = TableClasses,
+  VC extends TableClasses = TableClasses,
+> = OrchidORMTables<TC> & {
+  $views: OrchidORMTables<VC, TC>;
 };
 
-export type OrchidORMDbTables<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? TableQueryBuilder<R>
-    : never;
-};
-
-export type OrchidORMDbViews<T extends TableClasses = TableClasses> = {
-  [K in keyof T]: T[K] extends { new (): infer R extends ORMTableInput }
-    ? TableQueryBuilder<R>
+export type OrchidORMDbTables<
+  TC extends TableClasses = TableClasses,
+  VC extends TableClasses = TableClasses,
+> = {
+  [K in keyof TC]: TC[K] extends { new (): infer R extends ORMTableInput }
+    ? TableQueryBuilder<TC, VC, R>
     : never;
 };
 
 export type OrchidORM<
-  T extends TableClasses = TableClasses,
-  V extends TableClasses = TableClasses,
-> = OrchidORMDbTables<T> & { $views: OrchidORMDbViews<V> } & OrchidORMMethods;
+  TC extends TableClasses = TableClasses,
+  VC extends TableClasses = TableClasses,
+> = OrchidORMDbTables<TC, VC> & {
+  $views: OrchidORMDbTables<VC, TC>;
+} & OrchidORMMethods;
 
 /**
  * Identity helper for table row-level security configuration.
@@ -347,6 +343,7 @@ const assignTablesToOrm = <T extends TableClasses>(
       >,
       softDelete: table.softDelete,
       snakeCase: (table as { snakeCase?: boolean }).snakeCase,
+      nameInDb: table.nameInDb,
       comment: table.comment,
       readOnly: isTable
         ? table.readOnly
@@ -417,7 +414,7 @@ export const bundleOrchidORM = <
   views?: V;
 }): OrchidORMBundle<T, V> => {
   const result = {} as OrchidORMBundle<T, V>;
-  const bundledViews = {} as OrchidORMViews<V>;
+  const bundledViews = {} as OrchidORMTables<V>;
   const hasViews = Object.keys(views).length > 0;
 
   Object.defineProperty(result, '$views', {
@@ -602,7 +599,7 @@ const privateOrchidORMWithAdapter = <
     $withOptions: qb.withOptions.bind(qb),
   } as unknown as OrchidORM<T, V>;
 
-  result.$views = {} as OrchidORMDbViews<V>;
+  result.$views = {} as never;
 
   const tableInstances = assignTablesToOrm(
     true,
@@ -631,13 +628,13 @@ const privateOrchidORMWithAdapter = <
     const tableDbNames = Object.values(tableInstances).map((table) => {
       const s =
         typeof table.schema === 'function' ? table.schema() : table.schema;
-      return `${s ? s + '.' : ''}${table.table}`;
+      return `${s ? s + '.' : ''}${table.nameInDb}`;
     });
 
     for (const key in views) {
       const view = viewInstances[key];
       const s = typeof view.schema === 'function' ? view.schema() : view.schema;
-      const name = `${s ? s + '.' : ''}${view.name}`;
+      const name = `${s ? s + '.' : ''}${view.nameInDb}`;
       if (tableDbNames.includes(name)) {
         throw new Error(
           `Cannot configure both a table and a view for database relation ${name}`,

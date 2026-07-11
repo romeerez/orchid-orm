@@ -125,6 +125,44 @@ change(async (db) => {
     );
   });
 
+  it('should match code view aliases by their database names', async () => {
+    class ActiveAliasView extends BaseTable.View {
+      name = 'ActiveAlias';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+      }));
+      sql = BaseTable.sql`SELECT id FROM "source"`;
+    }
+
+    class ExplicitAliasView extends BaseTable.View {
+      name = 'ExplicitAlias';
+      nameInDb = 'explicit_view';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+      }));
+      sql = BaseTable.sql`SELECT id FROM "source"`;
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+        await db.createView('active_alias', 'SELECT id FROM "source"');
+        await db.createView('explicit_view', 'SELECT id FROM "source"');
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      views: [ActiveAliasView, ExplicitAliasView],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should create view with query assigned in init', async () => {
     class InitQueryView extends BaseTable.View {
       name = 'init_query_view';

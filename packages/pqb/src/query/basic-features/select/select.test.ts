@@ -81,8 +81,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "schema"."user"
-          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+          SELECT ${userTableColumnsSql} FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
         `,
       );
 
@@ -121,8 +121,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAllWithTable} FROM "schema"."snake"
-          JOIN "schema"."message" ON "message"."author_id" = "snake"."tail_length"
+          SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" "Snake"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "Snake"."tail_length"
         `,
       );
 
@@ -138,14 +138,14 @@ describe('select', () => {
 
       const q = User.join(Message, 'authorId', 'id').select(
         '*',
-        'message.text',
+        'Message.text',
       );
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql}, "message"."text" FROM "schema"."user"
-          JOIN "schema"."message" ON "message"."author_id" = "user"."id"
+          SELECT ${userTableColumnsSql}, "Message"."text" FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
         `,
       );
 
@@ -161,7 +161,7 @@ describe('select', () => {
 
       const q = User.select();
 
-      expectSql(q.toSQL(), `SELECT FROM "schema"."user"`);
+      expectSql(q.toSQL(), `SELECT FROM "schema"."user" "User"`);
 
       const users = await q;
       assertType<typeof users, EmptyObject[]>();
@@ -178,7 +178,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "user"."name" FROM "schema"."user"
+          SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
         `,
       );
 
@@ -201,22 +201,22 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
-          FROM "schema"."snake"
+          SELECT "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
+          FROM "schema"."snake" "Snake"
         `,
       );
     });
 
     it('should select table.column', () => {
       const q = User.all();
-      const query = q.select('user.id', 'user.name');
+      const query = q.select('User.id', 'User.name');
 
       assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "user"."name" FROM "schema"."user"
+          SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
         `,
       );
 
@@ -229,7 +229,7 @@ describe('select', () => {
     });
 
     it('should select named columns with table', () => {
-      const q = Snake.select('snake.snakeName', 'snake.tailLength');
+      const q = Snake.select('Snake.snakeName', 'Snake.tailLength');
 
       assertType<
         Awaited<typeof q>,
@@ -239,8 +239,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength"
-          FROM "schema"."snake"
+          SELECT "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
+          FROM "schema"."snake" "Snake"
         `,
       );
     });
@@ -248,16 +248,16 @@ describe('select', () => {
     it('should select joined columns', () => {
       const q = User.all();
       const query = q
-        .join(Profile, 'profile.userId', '=', 'user.id')
-        .select('user.id', 'profile.userId');
+        .join(Profile, 'Profile.userId', '=', 'User.id')
+        .select('User.id', 'Profile.userId');
 
       assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "profile"."user_id" "userId" FROM "schema"."user"
-          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
+          SELECT "User"."id", "Profile"."user_id" "userId" FROM "schema"."user" "User"
+          JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
       );
 
@@ -270,9 +270,9 @@ describe('select', () => {
     });
 
     it('should select left joined columns as optional', () => {
-      const q = User.leftJoin(Profile, 'profile.userId', 'user.id').select(
-        'user.id',
-        'profile.userId',
+      const q = User.leftJoin(Profile, 'Profile.userId', 'User.id').select(
+        'User.id',
+        'Profile.userId',
       );
 
       assertType<Awaited<typeof q>, { id: number; userId: number | null }[]>();
@@ -280,16 +280,16 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "profile"."user_id" "userId" FROM "schema"."user"
-          LEFT JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
+          SELECT "User"."id", "Profile"."user_id" "userId" FROM "schema"."user" "User"
+          LEFT JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
       );
     });
 
     it('should select named joined columns', () => {
       const q = User.join(Snake, 'tailLength', 'id').select(
-        'user.id',
-        'snake.snakeName',
+        'User.id',
+        'Snake.snakeName',
       );
 
       assertType<Awaited<typeof q>, { id: number; snakeName: string }[]>();
@@ -297,9 +297,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "snake"."snake_name" "snakeName"
-          FROM "schema"."user"
-          JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id"
+          SELECT "User"."id", "Snake"."snake_name" "snakeName"
+          FROM "schema"."user" "User"
+          JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
         `,
       );
     });
@@ -307,16 +307,16 @@ describe('select', () => {
     it('should select joined columns with alias', () => {
       const q = User.all();
       const query = q
-        .join(Profile.as('p'), 'p.userId', '=', 'user.id')
-        .select('user.id', 'p.userId');
+        .join(Profile.as('p'), 'p.userId', '=', 'User.id')
+        .select('User.id', 'p.userId');
 
       assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id", "p"."user_id" "userId" FROM "schema"."user"
-          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "User"."id", "p"."user_id" "userId" FROM "schema"."user" "User"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -330,7 +330,7 @@ describe('select', () => {
 
     it('should select named joined columns with alias', () => {
       const q = User.join(Snake.as('s'), 'tailLength', 'id').select(
-        'user.id',
+        'User.id',
         's.snakeName',
       );
 
@@ -339,9 +339,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "s"."snake_name" "snakeName"
-          FROM "schema"."user"
-          JOIN "schema"."snake" "s" ON "s"."tail_length" = "user"."id"
+          SELECT "User"."id", "s"."snake_name" "snakeName"
+          FROM "schema"."user" "User"
+          JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
         `,
       );
     });
@@ -379,7 +379,7 @@ describe('select', () => {
       });
 
       it('should parse columns of the table, selected by column name and table name', async () => {
-        const q = User.select('user.createdAt');
+        const q = User.select('User.createdAt');
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
@@ -390,12 +390,12 @@ describe('select', () => {
         expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
         expect((await q.take()).createdAt).toEqual(expect.any(Date));
         expect((await q.rows())[0][0]).toEqual(expect.any(Date));
-        expect(await q.get('user.createdAt')).toEqual(expect.any(Date));
+        expect(await q.get('User.createdAt')).toEqual(expect.any(Date));
       });
 
       it('should parse columns of joined table', async () => {
-        const q = Profile.join(User, 'user.id', '=', 'profile.userId').select(
-          'user.createdAt',
+        const q = Profile.join(User, 'User.id', '=', 'Profile.userId').select(
+          'User.createdAt',
         );
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
@@ -407,7 +407,7 @@ describe('select', () => {
         expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
         expect((await q.take()).createdAt).toEqual(expect.any(Date));
         expect((await q.rows())[0][0]).toEqual(expect.any(Date));
-        expect(await q.get('user.createdAt')).toEqual(expect.any(Date));
+        expect(await q.get('User.createdAt')).toEqual(expect.any(Date));
       });
     });
 
@@ -429,8 +429,8 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" "aliasedId", "user"."name" "aliasedName"
-          FROM "schema"."user"
+          SELECT "User"."id" "aliasedId", "User"."name" "aliasedName"
+          FROM "schema"."user" "User"
         `,
       );
       expectQueryNotMutated(q);
@@ -444,8 +444,8 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "name", "snake"."tail_length" "length"
-          FROM "schema"."snake"
+          SELECT "Snake"."snake_name" "name", "Snake"."tail_length" "length"
+          FROM "schema"."snake" "Snake"
         `,
       );
     });
@@ -454,8 +454,8 @@ describe('select', () => {
       const q = User.all();
 
       const query = q.select({
-        aliasedId: 'user.id',
-        aliasedName: 'user.name',
+        aliasedId: 'User.id',
+        aliasedName: 'User.name',
       });
 
       assertType<
@@ -471,8 +471,8 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" "aliasedId", "user"."name" "aliasedName"
-          FROM "schema"."user"
+          SELECT "User"."id" "aliasedId", "User"."name" "aliasedName"
+          FROM "schema"."user" "User"
         `,
       );
       expectQueryNotMutated(q);
@@ -480,8 +480,8 @@ describe('select', () => {
 
     it('should select named columns with table with aliases', async () => {
       const q = Snake.select({
-        name: 'snake.snakeName',
-        length: 'snake.tailLength',
+        name: 'Snake.snakeName',
+        length: 'Snake.tailLength',
       });
 
       assertType<Awaited<typeof q>, { name: string; length: number }[]>();
@@ -489,17 +489,17 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "name", "snake"."tail_length" "length"
-          FROM "schema"."snake"
+          SELECT "Snake"."snake_name" "name", "Snake"."tail_length" "length"
+          FROM "schema"."snake" "Snake"
         `,
       );
     });
 
     it('should select joined columns', () => {
       const q = User.all();
-      const query = q.join(Profile, 'profile.userId', '=', 'user.id').select({
-        aliasedId: 'user.id',
-        aliasedUserId: 'profile.userId',
+      const query = q.join(Profile, 'Profile.userId', '=', 'User.id').select({
+        aliasedId: 'User.id',
+        aliasedUserId: 'Profile.userId',
       });
 
       assertType<
@@ -515,9 +515,9 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" "aliasedId", "profile"."user_id" "aliasedUserId"
-          FROM "schema"."user"
-          JOIN "schema"."profile" ON "profile"."user_id" = "user"."id"
+          SELECT "User"."id" "aliasedId", "Profile"."user_id" "aliasedUserId"
+          FROM "schema"."user" "User"
+          JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -525,8 +525,8 @@ describe('select', () => {
 
     it('should select named joined columns with aliases', () => {
       const q = User.join(Snake, 'tailLength', 'id').select({
-        userId: 'user.id',
-        length: 'snake.tailLength',
+        userId: 'User.id',
+        length: 'Snake.tailLength',
       });
 
       assertType<Awaited<typeof q>, { userId: number; length: number }[]>();
@@ -534,17 +534,17 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" "userId", "snake"."tail_length" "length"
-          FROM "schema"."user"
-          JOIN "schema"."snake" ON "snake"."tail_length" = "user"."id"
+          SELECT "User"."id" "userId", "Snake"."tail_length" "length"
+          FROM "schema"."user" "User"
+          JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
         `,
       );
     });
 
     it('should select joined columns with alias', () => {
       const q = User.all();
-      const query = q.join(Profile.as('p'), 'p.userId', '=', 'user.id').select({
-        aliasedId: 'user.id',
+      const query = q.join(Profile.as('p'), 'p.userId', '=', 'User.id').select({
+        aliasedId: 'User.id',
         aliasedUserId: 'p.userId',
       });
 
@@ -561,9 +561,9 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT "user"."id" "aliasedId", "p"."user_id" "aliasedUserId"
-          FROM "schema"."user"
-          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "User"."id" "aliasedId", "p"."user_id" "aliasedUserId"
+          FROM "schema"."user" "User"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
       expectQueryNotMutated(q);
@@ -571,7 +571,7 @@ describe('select', () => {
 
     it('should select named joined columns with aliases from aliased join', () => {
       const q = User.join(Snake.as('s'), 'tailLength', 'id').select({
-        userId: 'user.id',
+        userId: 'User.id',
         length: 's.tailLength',
       });
 
@@ -580,9 +580,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" "userId", "s"."tail_length" "length"
-          FROM "schema"."user"
-          JOIN "schema"."snake" "s" ON "s"."tail_length" = "user"."id"
+          SELECT "User"."id" "userId", "s"."tail_length" "length"
+          FROM "schema"."user" "User"
+          JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
         `,
       );
     });
@@ -596,7 +596,7 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT 1 "one" FROM "schema"."user"
+          SELECT 1 "one" FROM "schema"."user" "User"
         `,
       );
       expectQueryNotMutated(q);
@@ -644,7 +644,7 @@ describe('select', () => {
         expectSql(
           query.toSQL(),
           `
-            SELECT 1 "one" FROM "schema"."user"
+            SELECT 1 "one" FROM "schema"."user" "User"
           `,
         );
       });
@@ -665,9 +665,9 @@ describe('select', () => {
             SELECT
               (
                 SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-                FROM (SELECT "user"."id" FROM "schema"."user") "t"
+                FROM (SELECT "User"."id" FROM "schema"."user" "User") "t"
               ) "subquery"
-            FROM "schema"."user"
+            FROM "schema"."user" "User"
           `,
         );
 
@@ -687,10 +687,10 @@ describe('select', () => {
                 SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
                 FROM (
                   SELECT ${snakeSelectAll}
-                  FROM "schema"."snake"
+                  FROM "schema"."snake" "Snake"
                 ) "t"
               ) "subquery"
-            FROM "schema"."snake"
+            FROM "schema"."snake" "Snake"
           `,
         );
       });
@@ -806,7 +806,7 @@ describe('select', () => {
     it('should select joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
+      const q = User.join(Profile.as('p'), 'p.userId', 'User.id')
         .select('p.*')
         .where({
           'p.bio': profileData.bio,
@@ -816,8 +816,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "p"
-          FROM "schema"."user"
-          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user" "User"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -843,7 +843,7 @@ describe('select', () => {
     it('should select joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.join(Profile.as('p'), 'p.userId', 'user.id')
+      const q = User.join(Profile.as('p'), 'p.userId', 'User.id')
         .select({
           profile: 'p.*',
         })
@@ -855,8 +855,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "profile"
-          FROM "schema"."user"
-          JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user" "User"
+          JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
           WHERE "p"."bio" = $1
         `,
         [profileData.bio],
@@ -886,14 +886,14 @@ describe('select', () => {
         price: t.decimal().selectSql((column) => sql`trim_scale(${column})`),
       }));
 
-      const q = User.join(Product.as('p'), 'p.userId', 'user.id').select('p.*');
+      const q = User.join(Product.as('p'), 'p.userId', 'User.id').select('p.*');
 
       expectSql(
         q.toSQL(),
         `
           SELECT CASE WHEN to_jsonb("p") IS NULL THEN NULL ELSE json_build_object('id', "p"."id", 'userId', "p"."user_id", 'price', trim_scale("p"."price")::text) END "p"
-          FROM "schema"."user"
-          JOIN "schema"."product" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user" "User"
+          JOIN "schema"."product" "p" ON "p"."user_id" = "User"."id"
         `,
       );
     });
@@ -901,7 +901,7 @@ describe('select', () => {
     it('should select left joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'User.id').select(
         'p.*',
       );
 
@@ -909,8 +909,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "p"
-          FROM "schema"."user"
-          LEFT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user" "User"
+          LEFT JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -934,7 +934,7 @@ describe('select', () => {
     it('should select left joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'user.id').select({
+      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'User.id').select({
         profile: 'p.*',
       });
 
@@ -942,8 +942,8 @@ describe('select', () => {
         q.toSQL(),
         `
           SELECT ${profileJsonBuildObjectSql} "profile"
-          FROM "schema"."user"
-          LEFT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          FROM "schema"."user" "User"
+          LEFT JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -967,7 +967,7 @@ describe('select', () => {
     it('should select right joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'User.id').select(
         'name',
         'p.*',
       );
@@ -975,9 +975,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
-          FROM "schema"."user"
-          RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "User"."name", ${profileJsonBuildObjectSql} "p"
+          FROM "schema"."user" "User"
+          RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -1002,7 +1002,7 @@ describe('select', () => {
     it('should select right joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'User.id').select(
         'name',
         { profile: 'p.*' },
       );
@@ -1010,9 +1010,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "schema"."user"
-          RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "User"."name", ${profileJsonBuildObjectSql} "profile"
+          FROM "schema"."user" "User"
+          RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -1040,7 +1040,7 @@ describe('select', () => {
     it('should select full joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'User.id').select(
         'name',
         'p.*',
       );
@@ -1048,9 +1048,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "p"
-          FROM "schema"."user"
-          FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "User"."name", ${profileJsonBuildObjectSql} "p"
+          FROM "schema"."user" "User"
+          FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -1078,7 +1078,7 @@ describe('select', () => {
     it('should select full joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'user.id').select(
+      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'User.id').select(
         'name',
         { profile: 'p.*' },
       );
@@ -1086,9 +1086,9 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name", ${profileJsonBuildObjectSql} "profile"
-          FROM "schema"."user"
-          FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "user"."id"
+          SELECT "User"."name", ${profileJsonBuildObjectSql} "profile"
+          FROM "schema"."user" "User"
+          FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
@@ -1139,7 +1139,10 @@ describe('select', () => {
         Object.keys(User.q.selectAllShape),
       );
 
-      expectSql(query.toSQL(), `SELECT ${userColumnsSql} FROM "schema"."user"`);
+      expectSql(
+        query.toSQL(),
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User"`,
+      );
     });
 
     it('should select all named columns', () => {
@@ -1150,7 +1153,7 @@ describe('select', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "schema"."snake"
+          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
         `,
       );
     });
@@ -1177,7 +1180,7 @@ describe('select', () => {
 
     it('should parse columns of the table, selected by column name and table name', async () => {
       const q = User.select({
-        date: 'user.createdAt',
+        date: 'User.createdAt',
       });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
@@ -1192,8 +1195,8 @@ describe('select', () => {
     });
 
     it('should parse columns of joined table', async () => {
-      const q = Profile.join(User, 'user.id', '=', 'profile.userId').select({
-        date: 'user.createdAt',
+      const q = Profile.join(User, 'User.id', '=', 'Profile.userId').select({
+        date: 'User.createdAt',
       });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
@@ -1299,8 +1302,8 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)
-            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "schema"."product" LIMIT 1) "t"
-          ) "product" FROM "schema"."user" LIMIT 1`,
+            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "schema"."product" "Product" LIMIT 1) "t"
+          ) "product" FROM "schema"."user" "User" LIMIT 1`,
         );
       });
 
@@ -1313,8 +1316,8 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
-            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "schema"."product") "t"
-          ) "products" FROM "schema"."user" LIMIT 1`,
+            FROM (SELECT "id", "camel_case" "camelCase", "price_amount" "priceAmount" FROM "schema"."product" "Product") "t"
+          ) "products" FROM "schema"."user" "User" LIMIT 1`,
         );
       });
 
@@ -1327,8 +1330,8 @@ describe('select', () => {
           q.toSQL(),
           `SELECT (
             SELECT COALESCE(json_agg(json_build_object('id', t."id", 'camelCase', t."camelCase", 'priceAmount', t."priceAmount"::text)), '[]')
-            FROM (SELECT "product"."id", "product"."camel_case" "camelCase", "product"."price_amount" "priceAmount" FROM "schema"."product") "t"
-          ) "products" FROM "schema"."user" LIMIT 1`,
+            FROM (SELECT "Product"."id", "Product"."camel_case" "camelCase", "Product"."price_amount" "priceAmount" FROM "schema"."product" "Product") "t"
+          ) "products" FROM "schema"."user" "User" LIMIT 1`,
         );
       });
     });

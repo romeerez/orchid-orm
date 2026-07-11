@@ -126,6 +126,43 @@ change(async (db) => {
   ${green('+ add foreign key')} on (custom_name) to some(iD)`);
   });
 
+  it('should match foreign keys to table classes by their database names', async () => {
+    class AccountTable extends BaseTable {
+      table = 'Account';
+      nameInDb = 'app_accounts';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+      }));
+    }
+
+    class AccountEventTable extends BaseTable {
+      table = 'AccountEvent';
+      columns = this.setColumns((t) => ({
+        id: t.identity().primaryKey(),
+        accountId: t.integer().foreignKey(() => AccountTable, 'id'),
+      }));
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('app_accounts', (t) => ({
+          id: t.identity().primaryKey(),
+        }));
+
+        await db.createTable('account_event', (t) => ({
+          id: t.identity().primaryKey(),
+          accountId: t.integer().foreignKey('app_accounts', 'id'),
+        }));
+      },
+      tables: [AccountTable, AccountEventTable],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should create a self-referencing column foreign key', async () => {
     class Table extends BaseTable {
       table = 'table';
@@ -1112,7 +1149,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable(
-    'reallyLongTableNameConsistingOfSeveralWords',
+    'really_long_table_name_consisting_of_several_words',
     {
       noPrimaryKey: true,
     },
@@ -1133,7 +1170,7 @@ change(async (db) => {
     assert.report(
       `${green(
         '+ create table',
-      )} reallyLongTableNameConsistingOfSeveralWords (2 columns, 1 foreign key, no primary key)`,
+      )} really_long_table_name_consisting_of_several_words (2 columns, 1 foreign key, no primary key)`,
     );
   });
 

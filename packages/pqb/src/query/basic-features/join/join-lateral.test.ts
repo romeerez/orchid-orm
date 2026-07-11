@@ -21,17 +21,17 @@ describe('joinLateral', () => {
   useTestDatabase();
 
   it('should ignore duplicated joins', () => {
-    const q = User.joinLateral(Message, (q) => q.on('authorId', 'user.id'));
+    const q = User.joinLateral(Message, (q) => q.on('authorId', 'User.id'));
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userTableColumnsSql} FROM "schema"."user"
+        SELECT ${userTableColumnsSql} FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT ${messageColumnsSql}
-          FROM "schema"."message"
-          WHERE "message"."author_id" = "user"."id"
-        ) "message" ON true
+          FROM "schema"."message" "Message"
+          WHERE "Message"."author_id" = "User"."id"
+        ) "Message" ON true
       `,
     );
   });
@@ -42,8 +42,8 @@ describe('joinLateral', () => {
     const q = User.joinLateral(Message.as('m'), (q) =>
       q
         .select('text', 'createdAt')
-        .where({ text: messageData.text, 'user.name': userData.name })
-        .on('authorId', 'user.id')
+        .where({ text: messageData.text, 'User.name': userData.name })
+        .on('authorId', 'User.id')
         .order({ createdAt: 'DESC' }),
     )
       .select('id', 'm.createdAt')
@@ -54,14 +54,14 @@ describe('joinLateral', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id", "m"."createdAt"
-        FROM "schema"."user"
+        SELECT "User"."id", "m"."createdAt"
+        FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT "m"."text", "m"."created_at" "createdAt"
           FROM "schema"."message" "m"
           WHERE "m"."text" = $1
-            AND "user"."name" = $2
-            AND "m"."author_id" = "user"."id"
+            AND "User"."name" = $2
+            AND "m"."author_id" = "User"."id"
           ORDER BY "m"."created_at" DESC
         ) "m" ON true
         WHERE "m"."text" = $3
@@ -82,7 +82,7 @@ describe('joinLateral', () => {
     await insertUserAndMessage();
 
     const q = User.joinLateral(Message.as('m'), (q) =>
-      q.on('authorId', 'user.id').order({ createdAt: 'DESC' }),
+      q.on('authorId', 'User.id').order({ createdAt: 'DESC' }),
     ).select('id', 'm.*');
 
     assertType<Awaited<typeof q>, { id: number; m: MessageRecord }[]>();
@@ -90,12 +90,12 @@ describe('joinLateral', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id", row_to_json("m".*) "m"
-        FROM "schema"."user"
+        SELECT "User"."id", row_to_json("m".*) "m"
+        FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT ${messageColumnsSql}
           FROM "schema"."message" "m"
-          WHERE "m"."author_id" = "user"."id"
+          WHERE "m"."author_id" = "User"."id"
           ORDER BY "m"."created_at" DESC
         ) "m" ON true
       `,
@@ -129,8 +129,8 @@ describe('joinLateral', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id", "m"."text"
-        FROM "schema"."user"
+        SELECT "User"."id", "m"."text"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT ${messageColumnsSql}
           FROM "schema"."message" "m"
@@ -153,8 +153,8 @@ describe('joinLateral', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id", row_to_json("m".*) "m"
-        FROM "schema"."user"
+        SELECT "User"."id", row_to_json("m".*) "m"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT ${messageColumnsSql}
           FROM "schema"."message" "m"

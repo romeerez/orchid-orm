@@ -14,6 +14,7 @@ import { _getQueryAliasOrName, getQueryAs } from '../as/as';
 import { addValue, RecordString, RecordUnknown } from '../../../utils';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
+  getQueryRelationAliasForAs,
   quoteFromWithSchema,
   quoteTableWithSchema,
   requireTableOrStringFrom,
@@ -171,17 +172,14 @@ export const processJoinItem = (
       r?: Query;
     };
 
-    const tableName = (
-      typeof j.q.from === 'string' ? j.q.from : j.table
-    ) as string;
-
-    const joinTable = requireTableOrStringFrom(j);
+    const joinTable = j.q.nameInDb || requireTableOrStringFrom(j);
     target = quoteFromWithSchema(getQuerySchema(j), joinTable);
 
     const as = j.q.as as string;
     const joinAs = `"${as}"`;
-    if (as !== tableName) {
-      target += ` ${joinAs}`;
+    const alias = getQueryRelationAliasForAs(j, as);
+    if (alias) {
+      target += ` ${alias}`;
     }
 
     if (r && s) {
@@ -323,18 +321,18 @@ const getArgQueryTarget = (
   let joinAs = quotedFrom || `"${first.table}"`;
 
   const qAs = joinQuery.as ? `"${joinQuery.as}"` : undefined;
-  const addAs = qAs && qAs !== joinAs;
+  const aliasToAdd = getQueryRelationAliasForAs(first, joinQuery.as);
 
   if (joinSubQuery) {
     return {
       target: subJoinToSql(ctx, first, joinAs, lateral, qAs, cloned),
-      joinAs: addAs ? qAs : joinAs,
+      joinAs: qAs || joinAs,
     };
   } else {
     let target = quotedFrom || quoteTableWithSchema(first);
-    if (addAs) {
-      joinAs = qAs;
-      target += ` ${qAs}`;
+    if (aliasToAdd) {
+      joinAs = aliasToAdd;
+      target += ` ${aliasToAdd}`;
     }
     return { target, joinAs };
   }

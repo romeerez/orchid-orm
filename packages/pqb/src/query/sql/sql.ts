@@ -92,8 +92,32 @@ export const requireTableOrStringFrom = (query: ToSQLQuery): string => {
   return table;
 };
 
+export const getQueryRelationAlias = (query: ToSQLQuery): string | undefined =>
+  query.table && query.q.nameInDb && query.table !== query.q.nameInDb
+    ? `"${query.table}"`
+    : undefined;
+
+export const getQueryRelationAliasForAs = (
+  query: ToSQLQuery,
+  as: string | undefined,
+): string | undefined => {
+  if (!as) return getQueryRelationAlias(query);
+
+  const nameInDb = query.q.nameInDb || requireTableOrStringFrom(query);
+  return nameInDb && as !== nameInDb ? `"${as}"` : undefined;
+};
+
 export const quoteTableWithSchema = (query: ToSQLQuery): string =>
-  quoteFromWithSchema(getQuerySchema(query), requireTableOrStringFrom(query));
+  quoteFromWithSchema(
+    getQuerySchema(query),
+    query.q.nameInDb || requireTableOrStringFrom(query),
+  );
+
+export const quoteTableWithSchemaAndAlias = (query: ToSQLQuery): string => {
+  const table = quoteTableWithSchema(query);
+  const alias = getQueryRelationAlias(query);
+  return alias ? `${table} ${alias}` : table;
+};
 
 export const quoteFromWithSchema = (
   schema: QuerySchema | undefined,

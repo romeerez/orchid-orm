@@ -2,7 +2,7 @@ import { change } from '../db-script';
 
 change(async (db) => {
   await db.createView(
-    'schema.activeUser',
+    'schema.active_user',
     `
       SELECT "user".*
       FROM "schema"."user"
@@ -11,7 +11,7 @@ change(async (db) => {
   );
 
   await db.createView(
-    'schema.activeUserWithProfile',
+    'schema.active_user_with_profile',
     `
       SELECT "user".*, p.bio
       FROM "schema"."user"

@@ -88,7 +88,7 @@ describe('createRepo', () => {
         q.toSQL(),
         `
           SELECT "someTable"."id", "someTable"."name"
-          FROM "someTable"
+          FROM "some_table" "someTable"
           WHERE "someTable"."id" = $1
           LIMIT 1
         `,
@@ -112,10 +112,10 @@ describe('createRepo', () => {
           SELECT
             "otherTable"."id",
             row_to_json("some".*) "some"
-          FROM "otherTable"
+          FROM "other_table" "otherTable"
           LEFT JOIN LATERAL (
             SELECT "some"."id", "some"."name"
-            FROM "someTable" "some"
+            FROM "some_table" "some"
             WHERE "some"."id" = $1
               AND "some"."id" = "otherTable"."some_id"
           ) "some" ON true

@@ -138,14 +138,19 @@ describe('orCreate', () => {
     await User.find(123).orCreate(userData).forUpdate();
 
     expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
-      ['SELECT FROM "schema"."user" WHERE "user"."id" = $1 FOR UPDATE', [123]],
+      [
+        'SELECT FROM "schema"."user" "User" WHERE "User"."id" = $1 FOR UPDATE',
+        [123],
+        undefined,
+      ],
       [
         'WITH "q" AS (' +
-          'SELECT FROM "schema"."user" WHERE "user"."id" = $1 FOR UPDATE' +
+          'SELECT FROM "schema"."user" "User" WHERE "User"."id" = $1 FOR UPDATE' +
           '), "q2" AS (' +
-          'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user" AS "User"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
+        undefined,
       ],
     ]);
   });
@@ -168,6 +173,7 @@ describe('orCreate', () => {
           'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
+        undefined,
       ],
     ]);
   });

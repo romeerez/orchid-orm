@@ -85,16 +85,26 @@ export type BelongsToParams<T extends RelationConfigSelf, FK extends string> = {
 export type BelongsToDefaultRequired<
   T extends RelationConfigSelf,
   Rel extends BelongsTo,
-> = Rel['related']['softDelete'] extends true | string
+  Related,
+> = Related extends { softDelete: true }
   ? false
-  : {
-        [K in Rel['options']['columns'][number] &
-          string]: T['columns']['shape'][K]['data']['isNullable'] extends true
-          ? false
-          : true;
-      }[Rel['options']['columns'][number] & string] extends true
+  : BelongsToDefaultRequiredFromColumns<T, Rel>;
+
+type BelongsToDefaultRequiredFromColumns<
+  T extends RelationConfigSelf,
+  Rel extends BelongsTo,
+> =
+  BelongsToColumnRequired<
+    T['columns']['shape'][Rel['options']['columns'][number] & string]
+  > extends true
     ? true
     : false;
+
+type BelongsToColumnRequired<Column> = Column extends {
+  data: { isNullable: true };
+}
+  ? false
+  : true;
 
 export type BelongsToQuery<T extends Query, Name extends string> = {
   [P in keyof T]: P extends '__selectable'

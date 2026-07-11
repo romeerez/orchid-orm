@@ -76,6 +76,52 @@ change(async (db) => {
     );
   });
 
+  it('should match code materialized view aliases by their database names', async () => {
+    class MonthlySaleView extends BaseTable.MaterializedView {
+      name = 'MonthlySale';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+      }));
+      sql = BaseTable.sql`SELECT id FROM "source"`;
+    }
+
+    class ExplicitSaleView extends BaseTable.MaterializedView {
+      name = 'ExplicitSale';
+      nameInDb = 'sales_by_month';
+      columns = this.setColumns((t) => ({
+        id: t.integer(),
+      }));
+      sql = BaseTable.sql`SELECT id FROM "source"`;
+    }
+
+    await arrange({
+      async prepareDb(db) {
+        await createSourceTable(db);
+        await db.createMaterializedView(
+          'monthly_sale',
+          { columns: ['id'] },
+          'SELECT id FROM "source"',
+        );
+        await db.createMaterializedView(
+          'sales_by_month',
+          { columns: ['id'] },
+          'SELECT id FROM "source"',
+        );
+      },
+      dbOptions: {
+        generatorIgnore: {
+          tables: ['source'],
+        },
+      },
+      views: [MonthlySaleView, ExplicitSaleView],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should create materialized view with query assigned in init', async () => {
     class InitQueryMaterializedView extends BaseTable.MaterializedView {
       name = 'init_query_materialized_view';

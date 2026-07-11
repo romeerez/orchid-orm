@@ -17,7 +17,7 @@ const t = testDefaultColumnTypes;
 describe('operators', () => {
   it('should ignore undefined values', () => {
     const q = db.user.where({ Name: { equals: undefined } });
-    expectSql(q.toSQL(), `SELECT ${UserSelectAll} FROM "schema"."user"`);
+    expectSql(q.toSQL(), `SELECT ${UserSelectAll} FROM "schema"."user" "User"`);
   });
 
   it('should use the cached values for a sub-query if query sql was cached', () => {
@@ -32,8 +32,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { equals: 'name' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" = $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" = $1
         `,
         ['name'],
       );
@@ -45,8 +45,8 @@ describe('operators', () => {
           .where({ Name: { equals: db.user.select('Name').take() } })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" = (SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" = (SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -55,8 +55,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { equals: testDb.sql`'name'` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" = 'name'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" = 'name'
         `,
       );
     });
@@ -71,8 +71,8 @@ describe('operators', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" IS DISTINCT FROM $1
-          FROM "schema"."user"
+          SELECT "User"."name" IS DISTINCT FROM $1
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
         ['name'],
@@ -85,8 +85,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { not: 'name' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" <> $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" <> $1
         `,
         ['name'],
       );
@@ -96,8 +96,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { not: db.user.select('Name').take() } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" <> (SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" <> (SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -106,8 +106,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { not: testDb.sql`'name'` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" <> 'name'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" <> 'name'
         `,
       );
     });
@@ -118,8 +118,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { isDistinctFrom: 'name' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IS DISTINCT FROM $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IS DISTINCT FROM $1
         `,
         ['name'],
       );
@@ -129,8 +129,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Picture: { isDistinctFrom: null } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."picture" IS DISTINCT FROM $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."picture" IS DISTINCT FROM $1
         `,
         [null],
       );
@@ -142,8 +142,8 @@ describe('operators', () => {
           .where({ Name: { isDistinctFrom: db.user.select('Name').take() } })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IS DISTINCT FROM (SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IS DISTINCT FROM (SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -152,8 +152,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { isDistinctFrom: testDb.sql`'name'` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IS DISTINCT FROM 'name'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IS DISTINCT FROM 'name'
         `,
       );
     });
@@ -165,8 +165,8 @@ describe('operators', () => {
           db.user.whereNot({ Name: { isDistinctFrom: 'name' } }).toSQL(),
         ],
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE NOT "user"."name" IS DISTINCT FROM $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE NOT "User"."name" IS DISTINCT FROM $1
         `,
         ['name'],
       );
@@ -178,8 +178,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { isNotDistinctFrom: 'name' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IS NOT DISTINCT FROM $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IS NOT DISTINCT FROM $1
         `,
         ['name'],
       );
@@ -189,8 +189,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Picture: { isNotDistinctFrom: null } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."picture" IS NOT DISTINCT FROM $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."picture" IS NOT DISTINCT FROM $1
         `,
         [null],
       );
@@ -204,8 +204,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IS NOT DISTINCT FROM (SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IS NOT DISTINCT FROM (SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -216,8 +216,8 @@ describe('operators', () => {
           .where({ Name: { isNotDistinctFrom: testDb.sql`'name'` } })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IS NOT DISTINCT FROM 'name'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IS NOT DISTINCT FROM 'name'
         `,
       );
     });
@@ -228,8 +228,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { in: ['a', 'b'] } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IN ($1, $2)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IN ($1, $2)
         `,
         ['a', 'b'],
       );
@@ -239,8 +239,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { in: db.user.select('Name') } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IN (SELECT "user"."name" "Name" FROM "schema"."user")
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IN (SELECT "User"."name" "Name" FROM "schema"."user" "User")
         `,
       );
     });
@@ -249,8 +249,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { in: testDb.sql`('a', 'b')` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" IN ('a', 'b')
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" IN ('a', 'b')
         `,
       );
     });
@@ -259,7 +259,7 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { in: [] } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE false
         `,
       );
@@ -271,8 +271,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { notIn: ['a', 'b'] } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE NOT "user"."name" IN ($1, $2)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE NOT "User"."name" IN ($1, $2)
         `,
         ['a', 'b'],
       );
@@ -282,8 +282,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { notIn: db.user.select('Name') } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE NOT "user"."name" IN (SELECT "user"."name" "Name" FROM "schema"."user")
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE NOT "User"."name" IN (SELECT "User"."name" "Name" FROM "schema"."user" "User")
         `,
       );
     });
@@ -292,8 +292,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { notIn: testDb.sql`('a', 'b')` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE NOT "user"."name" IN ('a', 'b')
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE NOT "User"."name" IN ('a', 'b')
         `,
       );
     });
@@ -302,7 +302,7 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { notIn: [] } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE true
         `,
       );
@@ -314,8 +314,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { lt: 5 } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" < $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" < $1
         `,
         [5],
       );
@@ -325,8 +325,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { lt: db.user.select('Id').take() } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" < (SELECT "user"."id" "Id" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" < (SELECT "User"."id" "Id" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -335,8 +335,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { lt: testDb.sql`5` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" < 5
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" < 5
         `,
       );
     });
@@ -347,8 +347,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { lte: 5 } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" <= $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" <= $1
         `,
         [5],
       );
@@ -358,8 +358,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { lte: db.user.select('Id').take() } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" <= (SELECT "user"."id" "Id" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" <= (SELECT "User"."id" "Id" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -368,8 +368,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { lte: testDb.sql`5` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" <= 5
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" <= 5
         `,
       );
     });
@@ -380,8 +380,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { gt: 5 } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" > $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" > $1
         `,
         [5],
       );
@@ -391,8 +391,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { gt: db.user.select('Id').take() } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" > (SELECT "user"."id" "Id" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" > (SELECT "User"."id" "Id" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -401,8 +401,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { gt: testDb.sql`5` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" > 5
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" > 5
         `,
       );
     });
@@ -413,8 +413,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { gte: 5 } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" >= $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" >= $1
         `,
         [5],
       );
@@ -424,8 +424,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { gte: db.user.select('Id').take() } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" >= (SELECT "user"."id" "Id" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" >= (SELECT "User"."id" "Id" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -434,8 +434,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { gte: testDb.sql`5` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" >= 5
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" >= 5
         `,
       );
     });
@@ -446,8 +446,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { contains: 'ko%' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE '%' || $1 || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE '%' || $1 || '%'
         `,
         ['ko\\%'],
       );
@@ -459,8 +459,8 @@ describe('operators', () => {
           .where({ Name: { contains: db.user.select('Name').take() } })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE '%' || replace(replace((SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE '%' || replace(replace((SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -469,8 +469,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { contains: testDb.sql`'ko'` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE '%' || 'ko' || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE '%' || 'ko' || '%'
         `,
       );
     });
@@ -481,8 +481,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { containsSensitive: 'ko%' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE '%' || $1 || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE '%' || $1 || '%'
         `,
         ['ko\\%'],
       );
@@ -496,8 +496,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE '%' || replace(replace((SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE '%' || replace(replace((SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -508,8 +508,8 @@ describe('operators', () => {
           .where({ Name: { containsSensitive: testDb.sql`'ko'` } })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE '%' || 'ko' || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE '%' || 'ko' || '%'
         `,
       );
     });
@@ -520,8 +520,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { startsWith: 'ko%' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE $1 || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE $1 || '%'
         `,
         ['ko\\%'],
       );
@@ -535,8 +535,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE replace(replace((SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE replace(replace((SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -545,8 +545,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { startsWith: testDb.sql`'ko'` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE 'ko' || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE 'ko' || '%'
         `,
       );
     });
@@ -557,8 +557,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { startsWithSensitive: 'ko%' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE $1 || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE $1 || '%'
         `,
         ['ko\\%'],
       );
@@ -572,8 +572,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE replace(replace((SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE replace(replace((SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1), '%', '\\\\%'), '_', '\\\\_') || '%'
         `,
       );
     });
@@ -586,8 +586,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE 'ko' || '%'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE 'ko' || '%'
         `,
       );
     });
@@ -598,8 +598,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { endsWith: 'ko%' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE '%' || $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE '%' || $1
         `,
         ['ko\\%'],
       );
@@ -613,8 +613,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE '%' || replace(replace((SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_')
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE '%' || replace(replace((SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1), '%', '\\\\%'), '_', '\\\\_')
         `,
       );
     });
@@ -623,8 +623,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { endsWith: testDb.sql`'ko'` } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" ILIKE '%' || 'ko'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" ILIKE '%' || 'ko'
         `,
       );
     });
@@ -635,8 +635,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Name: { endsWithSensitive: 'ko%' } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE '%' || $1
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE '%' || $1
         `,
         ['ko\\%'],
       );
@@ -650,8 +650,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE '%' || replace(replace((SELECT "user"."name" "Name" FROM "schema"."user" LIMIT 1), '%', '\\\\%'), '_', '\\\\_')
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE '%' || replace(replace((SELECT "User"."name" "Name" FROM "schema"."user" "User" LIMIT 1), '%', '\\\\%'), '_', '\\\\_')
         `,
       );
     });
@@ -662,8 +662,8 @@ describe('operators', () => {
           .where({ Name: { endsWithSensitive: testDb.sql`'ko'` } })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."name" LIKE '%' || 'ko'
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."name" LIKE '%' || 'ko'
         `,
       );
     });
@@ -674,8 +674,8 @@ describe('operators', () => {
       expectSql(
         db.user.where({ Id: { between: [1, 10] } }).toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" BETWEEN $1 AND $2
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" BETWEEN $1 AND $2
         `,
         [1, 10],
       );
@@ -694,10 +694,10 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id"
-          BETWEEN (SELECT "user"."id" "Id" FROM "schema"."user" LIMIT 1)
-              AND (SELECT "user"."id" "Id" FROM "schema"."user" LIMIT 1)
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id"
+          BETWEEN (SELECT "User"."id" "Id" FROM "schema"."user" "User" LIMIT 1)
+              AND (SELECT "User"."id" "Id" FROM "schema"."user" "User" LIMIT 1)
         `,
       );
     });
@@ -710,8 +710,8 @@ describe('operators', () => {
           })
           .toSQL(),
         `
-          SELECT ${UserSelectAll} FROM "schema"."user"
-          WHERE "user"."id" BETWEEN 1 AND 10
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE "User"."id" BETWEEN 1 AND 10
         `,
       );
     });
@@ -736,8 +736,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_set("user"."data", $1, $2)
-            FROM "schema"."user"
+            SELECT jsonb_set("User"."data", $1, $2)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -752,8 +752,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_set("user"."data", $1, to_jsonb(sql))
-            FROM "schema"."user"
+            SELECT jsonb_set("User"."data", $1, to_jsonb(sql))
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{name}'],
@@ -768,11 +768,11 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET
-              "data" = jsonb_set("user"."data", $1, $2),
+              "data" = jsonb_set("User"."data", $1, $2),
               "updated_at" = now()
-            WHERE "user"."id" = $3
+            WHERE "User"."id" = $3
           `,
           ['{key}', '"value"', 1],
         );
@@ -816,8 +816,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_set("user"."data", $1, $2, false)
-            FROM "schema"."user"
+            SELECT jsonb_set("User"."data", $1, $2, false)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -832,8 +832,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_set("user"."data", $1, to_jsonb(sql), false)
-            FROM "schema"."user"
+            SELECT jsonb_set("User"."data", $1, to_jsonb(sql), false)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{name}'],
@@ -848,11 +848,11 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET
-              "data" = jsonb_set("user"."data", $1, $2, false),
+              "data" = jsonb_set("User"."data", $1, $2, false),
               "updated_at" = now()
-            WHERE "user"."id" = $3
+            WHERE "User"."id" = $3
           `,
           ['{key}', '"value"', 1],
         );
@@ -868,8 +868,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_insert("user"."data", $1, $2)
-            FROM "schema"."user"
+            SELECT jsonb_insert("User"."data", $1, $2)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -884,8 +884,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_insert("user"."data", $1, to_jsonb(sql))
-            FROM "schema"."user"
+            SELECT jsonb_insert("User"."data", $1, to_jsonb(sql))
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{name}'],
@@ -900,11 +900,11 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET
-              "data" = jsonb_insert("user"."data", $1, $2),
+              "data" = jsonb_insert("User"."data", $1, $2),
               "updated_at" = now()
-            WHERE "user"."id" = $3
+            WHERE "User"."id" = $3
           `,
           ['{key}', '"value"', 1],
         );
@@ -920,8 +920,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_insert("user"."data", $1, $2, true)
-            FROM "schema"."user"
+            SELECT jsonb_insert("User"."data", $1, $2, true)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{key}', '"value"'],
@@ -937,11 +937,11 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET
-              "data" = jsonb_insert("user"."data", $1, $2, true),
+              "data" = jsonb_insert("User"."data", $1, $2, true),
               "updated_at" = now()
-            WHERE "user"."id" = $3
+            WHERE "User"."id" = $3
           `,
           ['{key}', '"value"', 1],
         );
@@ -957,8 +957,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ("user"."data" #- $1)
-            FROM "schema"."user"
+            SELECT ("User"."data" #- $1)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{key}'],
@@ -973,11 +973,11 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET
-              "data" = ("user"."data" #- $1),
+              "data" = ("User"."data" #- $1),
               "updated_at" = now()
-            WHERE "user"."id" = $2
+            WHERE "User"."id" = $2
           `,
           ['{key}', 1],
         );
@@ -1015,8 +1015,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1)
-            FROM "schema"."user"
+            SELECT jsonb_path_query_first("User"."data", $1)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['$.name'],
@@ -1037,8 +1037,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1, $2)
-            FROM "schema"."user"
+            SELECT jsonb_path_query_first("User"."data", $1, $2)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['$.name', '{"key":"value"}'],
@@ -1053,8 +1053,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1, NULL, true)
-            FROM "schema"."user"
+            SELECT jsonb_path_query_first("User"."data", $1, NULL, true)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['$.name'],
@@ -1070,8 +1070,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT jsonb_path_query_first("user"."data", $1, $2, true)
-            FROM "schema"."user"
+            SELECT jsonb_path_query_first("User"."data", $1, $2, true)
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['$.name', '{"key":"value"}'],
@@ -1093,8 +1093,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT true FROM "schema"."user"
-            WHERE jsonb_path_query_first("user"."data", $1) = $2
+            SELECT true FROM "schema"."user" "User"
+            WHERE jsonb_path_query_first("User"."data", $1) = $2
             LIMIT 1
           `,
           ['$.name', testJsonValue('name')],
@@ -1115,9 +1115,9 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE jsonb_path_query_first("user"."data", $1) = to_jsonb((
-              SELECT "user"."name" FROM "schema"."user" LIMIT 1
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
+            WHERE jsonb_path_query_first("User"."data", $1) = to_jsonb((
+              SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1
             ))
           `,
           ['$.name'],
@@ -1135,8 +1135,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE jsonb_path_query_first("user"."data", $1) = to_jsonb('name')
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
+            WHERE jsonb_path_query_first("User"."data", $1) = to_jsonb('name')
           `,
           ['$.name'],
         );
@@ -1153,8 +1153,8 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE jsonb_path_query_first("user"."data", $1)::text ILIKE '%' || $2 || '%'
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
+            WHERE jsonb_path_query_first("User"."data", $1)::text ILIKE '%' || $2 || '%'
           `,
           ['$.name', 'string'],
         );
@@ -1219,8 +1219,8 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT jsonb_path_query_first("user"."data", $1) = $2
-                FROM "schema"."user"
+                SELECT jsonb_path_query_first("User"."data", $1) = $2
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name', testJsonValue('name')],
@@ -1240,8 +1240,8 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT nullif(jsonb_path_query_first("user"."data", $1), 'null'::jsonb) IS NULL
-                FROM "schema"."user"
+                SELECT nullif(jsonb_path_query_first("User"."data", $1), 'null'::jsonb) IS NULL
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name'],
@@ -1287,8 +1287,8 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT jsonb_path_query_first("user"."data", $1) != $2
-                FROM "schema"."user"
+                SELECT jsonb_path_query_first("User"."data", $1) != $2
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name', testJsonValue('name')],
@@ -1305,8 +1305,8 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT nullif(jsonb_path_query_first("user"."data", $1), 'null'::jsonb) IS NOT NULL
-                FROM "schema"."user"
+                SELECT nullif(jsonb_path_query_first("User"."data", $1), 'null'::jsonb) IS NOT NULL
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name'],
@@ -1381,8 +1381,8 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT jsonb_path_query_first("user"."data", $1) IN ($2)
-                FROM "schema"."user"
+                SELECT jsonb_path_query_first("User"."data", $1) IN ($2)
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name', testJsonValue('name')],
@@ -1399,7 +1399,7 @@ describe('operators', () => {
             q.toSQL(),
             `
                 SELECT false
-                FROM "schema"."user"
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name'],
@@ -1448,8 +1448,8 @@ describe('operators', () => {
           expectSql(
             q.toSQL(),
             `
-                SELECT NOT jsonb_path_query_first("user"."data", $1) IN ($2)
-                FROM "schema"."user"
+                SELECT NOT jsonb_path_query_first("User"."data", $1) IN ($2)
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name', testJsonValue('name')],
@@ -1466,7 +1466,7 @@ describe('operators', () => {
             q.toSQL(),
             `
                 SELECT true
-                FROM "schema"."user"
+                FROM "schema"."user" "User"
                 LIMIT 1
               `,
             ['$.name'],
@@ -1495,7 +1495,7 @@ describe('operators', () => {
                 jsonb_insert(
                   jsonb_set(
                     jsonb_set(
-                      "user"."data",
+                      "User"."data",
                       $1,
                       $2
                     ),
@@ -1511,7 +1511,7 @@ describe('operators', () => {
                 true
               ) #- $9
             )
-            FROM "schema"."user"
+            FROM "schema"."user" "User"
             LIMIT 1
           `,
           ['{a}', '1', '{b}', '2', '{c}', '3', '{d}', '4', '{e}'],
@@ -1533,13 +1533,13 @@ describe('operators', () => {
         expectSql(
           q.toSQL(),
           `
-            UPDATE "schema"."user"
+            UPDATE "schema"."user" "User"
             SET "data" = (
               jsonb_insert(
                 jsonb_insert(
                   jsonb_set(
                     jsonb_set(
-                      "user"."data",
+                      "User"."data",
                       $1,
                       $2
                     ),
@@ -1555,7 +1555,7 @@ describe('operators', () => {
                 true
               ) #- $9
             ), "updated_at" = now()
-            WHERE "user"."id" = $10
+            WHERE "User"."id" = $10
           `,
           ['{a}', '1', '{b}', '2', '{c}', '3', '{d}', '4', '{e}', 1],
         );
@@ -1571,8 +1571,8 @@ describe('operators', () => {
         expectSql(
           db.user.where({ Data: { [method]: { a: 'b' } } }).toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE "user"."data" ${sql} $1
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
+            WHERE "User"."data" ${sql} $1
           `,
           [JSON.stringify({ a: 'b' })],
         );
@@ -1586,8 +1586,8 @@ describe('operators', () => {
             })
             .toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE "user"."data" ${sql} (SELECT "user"."data" "Data" FROM "schema"."user" LIMIT 1)
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
+            WHERE "User"."data" ${sql} (SELECT "User"."data" "Data" FROM "schema"."user" "User" LIMIT 1)
           `,
         );
       });
@@ -1600,8 +1600,8 @@ describe('operators', () => {
             })
             .toSQL(),
           `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE "user"."data" ${sql} '{"a":"b"}'
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
+            WHERE "User"."data" ${sql} '{"a":"b"}'
           `,
         );
       });
@@ -1616,7 +1616,7 @@ describe('operators', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${UserSelectAll} FROM "schema"."user" WHERE "user"."created_at" > $1
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."created_at" > $1
         `,
         [now],
       );
@@ -1629,7 +1629,7 @@ describe('operators', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${UserSelectAll} FROM "schema"."user" WHERE "user"."created_at" > $1
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."created_at" > $1
         `,
         [now],
       );

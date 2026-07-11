@@ -52,7 +52,7 @@ describe('createFrom functions', () => {
 
   describe('createOneFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
-      const sub = Chat.find(1).select({ key: 'title', value: 'chat.idOfChat' });
+      const sub = Chat.find(1).select({ key: 'title', value: 'Chat.idOfChat' });
 
       expect(() => TableWithReadOnly.createOneFrom(sub)).toThrow(
         'Trying to insert a readonly column',
@@ -79,10 +79,10 @@ describe('createFrom functions', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."message"("chat_id")
-          SELECT "chat"."id_of_chat" "chatId"
-          FROM "schema"."chat"
-          WHERE "chat"."id_of_chat" = $1
+          INSERT INTO "schema"."message" AS "Message"("chat_id")
+          SELECT "Chat"."id_of_chat" "chatId"
+          FROM "schema"."chat" "Chat"
+          WHERE "Chat"."id_of_chat" = $1
           LIMIT 1
           RETURNING ${messageColumnsSql}
         `,
@@ -103,10 +103,10 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."message"("chat_id", "author_id", "text")
-          SELECT "chat"."id_of_chat" "chatId", $1, 'text'
-          FROM "schema"."chat"
-          WHERE "chat"."id_of_chat" = $2
+          INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
+          SELECT "Chat"."id_of_chat" "chatId", $1, 'text'
+          FROM "schema"."chat" "Chat"
+          WHERE "Chat"."id_of_chat" = $2
           LIMIT 1
           RETURNING ${messageColumnsSql}
         `,
@@ -149,10 +149,10 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."snake"("snake_name", "tail_length")
-          SELECT "user"."name" "snakeName", $1
-          FROM "schema"."user"
-          WHERE "user"."id" = $2
+          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
+          SELECT "User"."name" "snakeName", $1
+          FROM "schema"."user" "User"
+          WHERE "User"."id" = $2
           LIMIT 1
           RETURNING ${snakeSelectAll}
         `,
@@ -172,9 +172,9 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           INSERT INTO "schema"."user"("password", "id", "name")
-          SELECT "user"."password", $1, $2
-          FROM "schema"."user"
-          WHERE "user"."id" = $3
+          SELECT "User"."password", $1, $2
+          FROM "schema"."user" "User"
+          WHERE "User"."id" = $3
           LIMIT 1
           RETURNING *
         `,
@@ -225,14 +225,14 @@ describe('createFrom functions', () => {
         query.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
-            RETURNING "user"."id"
+            RETURNING "User"."id"
           )
-          INSERT INTO "schema"."message"("chat_id", "author_id", "text")
-          SELECT "chat"."id_of_chat" "chatId", (SELECT "q"."id" FROM "q"), 'text'
-          FROM "schema"."chat"
-          WHERE "chat"."id_of_chat" = $3
+          INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
+          SELECT "Chat"."id_of_chat" "chatId", (SELECT "q"."id" FROM "q"), 'text'
+          FROM "schema"."chat" "Chat"
+          WHERE "Chat"."id_of_chat" = $3
           LIMIT 1
           RETURNING ${messageColumnsSql}
         `,
@@ -256,16 +256,16 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           WITH "user" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
-            RETURNING "user"."id", "user"."name"
+            RETURNING "User"."id", "User"."name"
           )
-          INSERT INTO "schema"."message"("chat_id", "author_id", "text")
-          SELECT "chat"."id_of_chat" "chatId", (SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)
-          FROM "schema"."chat"
-          WHERE "chat"."id_of_chat" = $3
+          INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
+          SELECT "Chat"."id_of_chat" "chatId", (SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)
+          FROM "schema"."chat" "Chat"
+          WHERE "Chat"."id_of_chat" = $3
           LIMIT 1
-          RETURNING "message"."chat_id" "chatId", "message"."author_id" "authorId", "message"."text"
+          RETURNING "Message"."chat_id" "chatId", "Message"."author_id" "authorId", "Message"."text"
         `,
         [userData.name, userData.password, idOfChat],
       );
@@ -332,7 +332,7 @@ describe('createFrom functions', () => {
 
   describe('createManyFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
-      const sub = Chat.find(1).select({ key: 'title', value: 'chat.idOfChat' });
+      const sub = Chat.find(1).select({ key: 'title', value: 'Chat.idOfChat' });
 
       expect(() => TableWithReadOnly.createManyFrom(sub, [])).toThrow(
         'Trying to insert a readonly column',
@@ -372,15 +372,15 @@ describe('createFrom functions', () => {
         query.toSQL(),
         `
           WITH "q" AS (
-            SELECT "chat"."id_of_chat" "chatId"
-            FROM "schema"."chat"
-            WHERE "chat"."id_of_chat" = $1
+            SELECT "Chat"."id_of_chat" "chatId"
+            FROM "schema"."chat" "Chat"
+            WHERE "Chat"."id_of_chat" = $1
             LIMIT 1
           ), q2 AS (
-            INSERT INTO "schema"."message"("chat_id", "author_id", "text")
+            INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
             SELECT "q"."chatId", v."author_id"::int4, v."text"::text
             FROM "q", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
-            RETURNING "message"."text"
+            RETURNING "Message"."text"
           )
           SELECT *, NULL FROM q2
           UNION ALL SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
@@ -442,15 +442,15 @@ describe('createFrom functions', () => {
         query.toSQL(),
         `
           WITH "q" AS (
-            SELECT "user"."name" "snakeName"
-            FROM "schema"."user"
-            WHERE "user"."id" = $1
+            SELECT "User"."name" "snakeName"
+            FROM "schema"."user" "User"
+            WHERE "User"."id" = $1
             LIMIT 1
           ), q2 AS (
-            INSERT INTO "schema"."snake"("snake_name", "tail_length")
+            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
             SELECT "q"."snakeName", v."tail_length"::int4
             FROM "q", (VALUES ($2), ($3)) v("tail_length")
-            RETURNING "snake"."snake_name" "snakeName"
+            RETURNING "Snake"."snake_name" "snakeName"
           )
           SELECT *, NULL FROM q2
           UNION ALL
@@ -477,9 +477,9 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           WITH "q" AS (
-            SELECT "user"."password"
-            FROM "schema"."user"
-            WHERE "user"."id" = $1
+            SELECT "User"."password"
+            FROM "schema"."user" "User"
+            WHERE "User"."id" = $1
             LIMIT 1
           ), q2 AS (
             INSERT INTO "schema"."user"("password", "id", "name")
@@ -530,15 +530,15 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           WITH "q" AS (
-            SELECT "user"."name"
-            FROM "schema"."user"
-            WHERE "user"."id" = $1
+            SELECT "User"."name"
+            FROM "schema"."user" "User"
+            WHERE "User"."id" = $1
             LIMIT 1
           ), q2 AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             SELECT "q"."name", v."password"::text
             FROM "q", (VALUES ($2), ($3)) v("password")
-            RETURNING "user"."name"
+            RETURNING "User"."name"
           )
           SELECT *, NULL FROM q2
           UNION ALL
@@ -577,26 +577,26 @@ describe('createFrom functions', () => {
         query.toSQL(),
         `
           WITH "q" AS (
-            SELECT "chat"."id_of_chat" "chatId"
-            FROM "schema"."chat"
-            WHERE "chat"."id_of_chat" = $1
+            SELECT "Chat"."id_of_chat" "chatId"
+            FROM "schema"."chat" "Chat"
+            WHERE "Chat"."id_of_chat" = $1
             LIMIT 1
           ), "q2" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($2, $3)
-            RETURNING "user"."id"
+            RETURNING "User"."id"
           ), "q3" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($4, $5)
-            RETURNING "user"."id"
+            RETURNING "User"."id"
           ), q4 AS (
-            INSERT INTO "schema"."message"("chat_id", "author_id", "text")
+            INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
             SELECT
               "q"."chatId",
               v."author_id"::int4,
               v."text"::text
             FROM "q", (VALUES ((SELECT "q2"."id" FROM "q2"), 'text 1'), ((SELECT "q3"."id" FROM "q3"), 'text 2')) v("author_id", "text")
-            RETURNING "message"."text"
+            RETURNING "Message"."text"
           )
           SELECT *, NULL FROM q4
           UNION ALL
@@ -628,22 +628,22 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           WITH "user" AS (
-            INSERT INTO "schema"."user"("name", "password")
+            INSERT INTO "schema"."user" AS "User"("name", "password")
             VALUES ($1, $2)
-            RETURNING "user"."id", "user"."name"
+            RETURNING "User"."id", "User"."name"
           ), "q" AS (
-            SELECT "chat"."id_of_chat" "chatId"
-            FROM "schema"."chat"
-            WHERE "chat"."id_of_chat" = $3
+            SELECT "Chat"."id_of_chat" "chatId"
+            FROM "schema"."chat" "Chat"
+            WHERE "Chat"."id_of_chat" = $3
             LIMIT 1
           ), q2 AS (
-            INSERT INTO "schema"."message"("chat_id", "author_id", "text")
+            INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
             SELECT "q"."chatId", v."author_id"::int4, v."text"::text
             FROM "q", (VALUES
               ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)),
               ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1))
             ) v("author_id", "text")
-            RETURNING "message"."chat_id" "chatId", "message"."author_id" "authorId", "message"."text"
+            RETURNING "Message"."chat_id" "chatId", "Message"."author_id" "authorId", "Message"."text"
           )
           SELECT *, NULL FROM q2
           UNION ALL
@@ -738,7 +738,7 @@ describe('createFrom functions', () => {
     it('should not allow using appReadOnly columns from select', () => {
       const sub = Chat.where({ title: 'title' }).select({
         key: 'title',
-        value: 'chat.idOfChat',
+        value: 'Chat.idOfChat',
       });
 
       expect(() => TableWithReadOnly.createForEachFrom(sub)).toThrow(
@@ -755,10 +755,10 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."message"("chat_id")
-          SELECT "chat"."id_of_chat" "chatId"
-          FROM "schema"."chat"
-          WHERE "chat"."title" = $1
+          INSERT INTO "schema"."message" AS "Message"("chat_id")
+          SELECT "Chat"."id_of_chat" "chatId"
+          FROM "schema"."chat" "Chat"
+          WHERE "Chat"."title" = $1
           RETURNING ${messageColumnsSql}
         `,
         ['title'],
@@ -774,10 +774,10 @@ describe('createFrom functions', () => {
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."snake"("snake_name")
-          SELECT "user"."name" "snakeName"
-          FROM "schema"."user"
-          WHERE "user"."name" = $1
+          INSERT INTO "schema"."snake" AS "Snake"("snake_name")
+          SELECT "User"."name" "snakeName"
+          FROM "schema"."user" "User"
+          WHERE "User"."name" = $1
           RETURNING ${snakeSelectAll}
         `,
         ['name'],

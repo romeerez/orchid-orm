@@ -886,7 +886,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
 
   nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): Column.Modifiers.Nullable<
+  ): Column.Modifiers.NullableWithSchema<
     T,
     NullableSchema<T['inputSchema']>,
     T['nullSchema'] extends BaseSchema
@@ -1216,9 +1216,9 @@ type CreateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
     ? never
     : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
     ? OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
-    : undefined extends ColumnSchemaGetterColumns<T>[K]['data']['default']
-      ? ColumnSchemaGetterColumns<T>[K]['inputSchema']
-      : OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+    : ColumnSchemaGetterColumns<T>[K]['data']['default'] extends true
+      ? OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
+      : ColumnSchemaGetterColumns<T>[K]['inputSchema'];
 }>;
 
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{

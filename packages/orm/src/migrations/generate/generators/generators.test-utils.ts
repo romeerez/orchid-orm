@@ -173,6 +173,7 @@ const table = <Shape extends Column.Shape.QueryInit>(
   return class Table extends BaseTable {
     schema = options?.schema;
     table = options?.name ?? 'table';
+    nameInDb = options?.name ?? 'table';
     noPrimaryKey = options?.noPrimaryKey ?? true;
     columns = columns
       ? this.setColumns(columns, dataFn)

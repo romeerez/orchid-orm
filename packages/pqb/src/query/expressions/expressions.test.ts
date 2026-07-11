@@ -33,7 +33,7 @@ describe('expressions', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name" || ' ' || "user"."password" FROM "schema"."user" LIMIT 1`,
+        `SELECT "User"."name" || ' ' || "User"."password" FROM "schema"."user" "User" LIMIT 1`,
       );
     });
 
@@ -48,7 +48,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "schema"."user"
+          SELECT ("User"."id" = $1) OR ("User"."name" = $2) "alias" FROM "schema"."user" "User"
         `,
         [1, 'name'],
       );
@@ -67,12 +67,12 @@ describe('expressions', () => {
     });
 
     it('should reference selectable columns', () => {
-      const q = User.join(Post, 'post.title', 'user.id').select({
+      const q = User.join(Post, 'Post.title', 'User.id').select({
         alias: (q) =>
           User.as('u')
             .where({
-              id: q.ref('user.id'),
-              name: q.ref('post.title'),
+              id: q.ref('User.id'),
+              name: q.ref('Post.title'),
             })
             .select('id')
             .take(),
@@ -86,13 +86,13 @@ describe('expressions', () => {
             FROM (
               SELECT "u"."id"
               FROM "schema"."user" "u"
-              WHERE "u"."id" = "user"."id"
-                AND "u"."name" = "post"."title"
+              WHERE "u"."id" = "User"."id"
+                AND "u"."name" = "Post"."title"
               LIMIT 1
             ) "t"
           ) "alias"
-          FROM "schema"."user"
-          JOIN "schema"."post" ON "post"."title" = "user"."id"
+          FROM "schema"."user" "User"
+          JOIN "schema"."post" "Post" ON "Post"."title" = "User"."id"
         `,
       );
     });
@@ -107,7 +107,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ("user"."id" = $1) OR ("user"."name" = $2) "alias" FROM "schema"."user"
+          SELECT ("User"."id" = $1) OR ("User"."name" = $2) "alias" FROM "schema"."user" "User"
         `,
         [1, 'name'],
       );
@@ -128,10 +128,10 @@ describe('expressions', () => {
             (
               SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
               FROM (
-                SELECT "user"."id" FROM "schema"."user" WHERE "user"."name" = "profile"."bio"
+                SELECT "User"."id" FROM "schema"."user" "User" WHERE "User"."name" = "Profile"."bio"
               ) "t"
             ) "sub"
-          FROM (SELECT "profile"."bio" FROM "schema"."profile") "profile"
+          FROM (SELECT "Profile"."bio" FROM "schema"."profile" "Profile") "Profile"
         `,
       );
     });
@@ -148,7 +148,7 @@ describe('expressions', () => {
               sql`${q.val('one')}::text`,
               'Name',
               sql`${q.val('two')}::text`,
-              'user.Password',
+              'User.Password',
             ])
             .type((t) => t.string())
             .contains('lala');
@@ -160,8 +160,8 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT concat($1::text, "user"."name", $2::text, "user"."password") ILIKE '%' || $3 || '%' "value"
-          FROM "schema"."user"
+          SELECT concat($1::text, "User"."name", $2::text, "User"."password") ILIKE '%' || $3 || '%' "value"
+          FROM "schema"."user" "User"
         `,
         ['one', 'two', 'lala'],
       );
@@ -190,7 +190,7 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(coalesce(age, id)) > 2 + 2 "count" FROM "schema"."user" LIMIT 1
+          SELECT count(coalesce(age, id)) > 2 + 2 "count" FROM "schema"."user" "User" LIMIT 1
         `,
       );
 
@@ -208,11 +208,11 @@ describe('expressions', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
           WHERE ((
-            (SELECT "user"."active" FROM "schema"."user" WHERE "user"."id" = $1 LIMIT 1)
+            (SELECT "User"."active" FROM "schema"."user" "User" WHERE "User"."id" = $1 LIMIT 1)
             OR
-            "user"."age" > $2
+            "User"."age" > $2
           ) = $3)
         `,
         [1, 123, false],

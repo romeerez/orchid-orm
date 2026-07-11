@@ -21,7 +21,7 @@ describe('exists methods', () => {
 
       expect(await q).toBe(true);
 
-      expectSql(q.toSQL(), 'SELECT true FROM "schema"."user" LIMIT 1');
+      expectSql(q.toSQL(), 'SELECT true FROM "schema"."user" "User" LIMIT 1');
     });
 
     it('should coalesce value in sub-select', async () => {
@@ -33,12 +33,12 @@ describe('exists methods', () => {
         q.toSQL(),
         `
           SELECT COALESCE("hasProfile"."hasProfile", false) "hasProfile"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LEFT JOIN LATERAL (
             SELECT true "hasProfile"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id"
-              AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
           ) "hasProfile" ON true
         `,
       );
@@ -57,7 +57,7 @@ describe('exists methods', () => {
 
       expect(await q).toBe(false);
 
-      expectSql(q.toSQL(), 'SELECT false FROM "schema"."user" LIMIT 1');
+      expectSql(q.toSQL(), 'SELECT false FROM "schema"."user" "User" LIMIT 1');
     });
 
     it('should coalesce value in sub-select', async () => {
@@ -69,12 +69,12 @@ describe('exists methods', () => {
         q.toSQL(),
         `
           SELECT COALESCE("hasProfile"."hasProfile", true) "hasProfile"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LEFT JOIN LATERAL (
             SELECT false "hasProfile"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id"
-              AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
           ) "hasProfile" ON true
         `,
       );

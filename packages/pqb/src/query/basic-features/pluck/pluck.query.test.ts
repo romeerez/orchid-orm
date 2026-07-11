@@ -49,9 +49,9 @@ describe('pluck', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT coalesce("user"."age", 20) + 1
-        FROM "schema"."user"
-        ORDER BY "user"."id" ASC
+        SELECT coalesce("User"."age", 20) + 1
+        FROM "schema"."user" "User"
+        ORDER BY "User"."id" ASC
       `,
     );
   });
@@ -79,13 +79,13 @@ describe('pluck', () => {
       q.toSQL(),
       `
         SELECT "pluck"."pluck" "pluck"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT array["profile"."bio"] "pluck"
           FROM "schema"."profile"
-          WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
         ) "pluck" ON true
-        WHERE "user"."name" = $1
+        WHERE "User"."name" = $1
       `,
       ['relation user'],
     );

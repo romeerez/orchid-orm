@@ -1,14 +1,4 @@
-import {
-  chatSelectAll,
-  messageSelectAll,
-  postSelectAll,
-  postTagSelectAll,
-  postTagSelectTableAll,
-  userJsonBuildObject,
-  userSelectAliasedAs,
-  useTestORM,
-  userSelectAs,
-} from '../test-utils/orm.test-utils';
+import { useTestORM } from '../test-utils/orm.test-utils';
 import {
   db,
   Post,
@@ -24,7 +14,6 @@ import {
   ProfileData,
   UserData,
   UserSelectAll,
-  ProfileSelectAll,
 } from 'test-utils';
 
 const activeUserData = { ...UserData, Active: true };
@@ -45,32 +34,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("users"."users", '[]') "users"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(${userJsonBuildObject('t')}) "users"
-            FROM (
-              SELECT ${userSelectAliasedAs('t')}
-              FROM (
-                SELECT ${userSelectAs(
-                  'sender',
-                )}, row_number() OVER (PARTITION BY "sender"."id") "r"
-                FROM "schema"."user" "sender"
-                JOIN "schema"."message" "messages"
-                  ON (
-                    "messages"."chat_id" = "chat"."id_of_chat"
-                      AND "messages"."message_key" = "chat"."chat_key"
-                      AND "messages"."author_id" = "sender"."id"
-                      AND "messages"."message_key" = "sender"."user_key"
-                  ) AND (
-                    "messages"."deleted_at" IS NULL
-                  )
-                ORDER BY "messages"."created_at" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "users" ON true`,
+        `SELECT COALESCE("users"."users", '[]') "users" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(json_build_object('Id', t."Id", 'Name', t."Name", 'UserKey', t."UserKey", 'Picture', t."Picture", 'Data', t."Data", 'Age', t."Age"::text, 'Active', t."Active", 'Balance', t."Balance"::text, 'createdAt', t."createdAt", 'updatedAt', t."updatedAt")) "users" FROM (SELECT "t"."Id", "t"."Name", "t"."UserKey", "t"."Picture", "t"."Data", "t"."Age", "t"."Active", "t"."Balance", "t"."createdAt", "t"."updatedAt" FROM (SELECT "sender"."id" "Id", "sender"."name" "Name", "sender"."user_key" "UserKey", "sender"."picture" "Picture", "sender"."data" "Data", "sender"."age" "Age", "sender"."active" "Active", "sender"."balance" "Balance", "sender"."created_at" "createdAt", "sender"."updated_at" "updatedAt", row_number() OVER (PARTITION BY "sender"."id") "r" FROM "schema"."user" "sender" JOIN "schema"."message" "messages" ON ("messages"."chat_id" = "Chat"."id_of_chat" AND "messages"."message_key" = "Chat"."chat_key" AND "messages"."author_id" = "sender"."id" AND "messages"."message_key" = "sender"."user_key") AND ("messages"."deleted_at" IS NULL) ORDER BY "messages"."created_at" ASC) "t" WHERE (r = 1)) "t") "users" ON true`,
       );
     });
 
@@ -81,28 +45,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("users"."users", '[]') "users"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(${userJsonBuildObject('t')}) "users"
-            FROM (
-              SELECT ${UserSelectAll}
-              FROM "schema"."user" "sender"
-              WHERE EXISTS (
-                SELECT 1
-                FROM "schema"."message" "messages"
-                WHERE (
-                  "messages"."chat_id" = "chat"."id_of_chat"
-                    AND "messages"."message_key" = "chat"."chat_key"
-                    AND "messages"."author_id" = "sender"."id"
-                    AND "messages"."message_key" = "sender"."user_key"
-                ) AND (
-                  "messages"."deleted_at" IS NULL
-                )
-              )
-            ) "t"
-          ) "users" ON true`,
+        `SELECT COALESCE("users"."users", '[]') "users" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(json_build_object('Id', t."Id", 'Name', t."Name", 'UserKey', t."UserKey", 'Picture', t."Picture", 'Data', t."Data", 'Age', t."Age"::text, 'Active', t."Active", 'Balance', t."Balance"::text, 'createdAt', t."createdAt", 'updatedAt', t."updatedAt")) "users" FROM (SELECT "id" "Id", "name" "Name", "user_key" "UserKey", "picture" "Picture", "data" "Data", "age" "Age", "active" "Active", "balance" "Balance", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."user" "sender" WHERE EXISTS (SELECT 1 FROM "schema"."message" "messages" WHERE ("messages"."chat_id" = "Chat"."id_of_chat" AND "messages"."message_key" = "Chat"."chat_key" AND "messages"."author_id" = "sender"."id" AND "messages"."message_key" = "sender"."user_key") AND ("messages"."deleted_at" IS NULL))) "t") "users" ON true`,
       );
     });
 
@@ -113,25 +56,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT "users"."users" "users"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT sum("sender"."age") "users"
-            FROM "schema"."user" "sender"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "schema"."message" "messages"
-              WHERE (
-                "messages"."chat_id" = "chat"."id_of_chat"
-                  AND "messages"."message_key" = "chat"."chat_key"
-                  AND "messages"."author_id" = "sender"."id"
-                  AND "messages"."message_key" = "sender"."user_key"
-              ) AND (
-                "messages"."deleted_at" IS NULL
-              )
-            )
-          ) "users" ON true`,
+        `SELECT "users"."users" "users" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT sum("sender"."age") "users" FROM "schema"."user" "sender" WHERE EXISTS (SELECT 1 FROM "schema"."message" "messages" WHERE ("messages"."chat_id" = "Chat"."id_of_chat" AND "messages"."message_key" = "Chat"."chat_key" AND "messages"."author_id" = "sender"."id" AND "messages"."message_key" = "sender"."user_key") AND ("messages"."deleted_at" IS NULL))) "users" ON true`,
       );
     });
   });
@@ -157,16 +82,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE EXISTS (
-                SELECT 1 FROM "schema"."profile"
-                WHERE "profile"."bio" = $1
-                  AND "profile"."user_id" = "user"."id"
-                  AND "profile"."profile_key" = "user"."user_key"
-              )
-              AND "user"."name" = $2
-          `,
+        `SELECT "id" "Id", "name" "Name", "user_key" "UserKey", "picture" "Picture", "data" "Data", "age" "Age", "active" "Active", "balance" "Balance", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."user" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $1 AND "Profile"."user_id" = "user"."id" AND "Profile"."profile_key" = "user"."user_key") AND "user"."name" = $2`,
         ['bio', 'name'],
       );
 
@@ -198,17 +114,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${UserSelectAll} FROM "schema"."user"
-            WHERE EXISTS (
-              SELECT 1 FROM "schema"."profile"
-              WHERE "profile"."bio" = $1
-                AND "profile"."user_id" = "user"."id"
-                AND "profile"."profile_key" = "user"."user_key"
-            )
-              AND "user"."name" = $2
-            LIMIT $3
-          `,
+        `SELECT "id" "Id", "name" "Name", "user_key" "UserKey", "picture" "Picture", "data" "Data", "age" "Age", "active" "Active", "balance" "Balance", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."user" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $1 AND "Profile"."user_id" = "user"."id" AND "Profile"."profile_key" = "user"."user_key") AND "user"."name" = $2 LIMIT $3`,
         ['bio', 'name', 3],
       );
 
@@ -239,17 +145,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${UserSelectAll} FROM "schema"."user" "activeUser"
-            WHERE "activeUser"."active" = $1
-              AND EXISTS (
-                SELECT 1 FROM "schema"."profile"
-                WHERE "profile"."bio" = $2
-                  AND "profile"."user_id" = "activeUser"."id"
-                  AND "profile"."profile_key" = "activeUser"."user_key"
-              )
-              AND "activeUser"."name" = $3
-          `,
+        `SELECT "id" "Id", "name" "Name", "user_key" "UserKey", "picture" "Picture", "data" "Data", "age" "Age", "active" "Active", "balance" "Balance", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."user" "activeUser" WHERE "activeUser"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $2 AND "Profile"."user_id" = "activeUser"."id" AND "Profile"."profile_key" = "activeUser"."user_key") AND "activeUser"."name" = $3`,
         [true, 'bio', 'name'],
       );
 
@@ -273,27 +169,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT ${UserSelectAll}
-            FROM "schema"."user"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "schema"."post"
-                WHERE
-                  EXISTS (
-                    SELECT 1
-                    FROM "schema"."postTag"
-                    WHERE "postTag"."tag" = $1
-                      AND "postTag"."post_id" = "post"."id"
-                  )
-                  AND "post"."body" = $2
-                  AND "post"."user_id" = "user"."id"
-                  AND "post"."title" = "user"."user_key"
-              )
-              AND "user"."name" = $3
-            LIMIT $4
-          `,
+        `SELECT "id" "Id", "name" "Name", "user_key" "UserKey", "picture" "Picture", "data" "Data", "age" "Age", "active" "Active", "balance" "Balance", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."user" WHERE EXISTS (SELECT 1 FROM "schema"."post" WHERE EXISTS (SELECT 1 FROM "schema"."postTag" WHERE "postTag"."tag" = $1 AND "postTag"."post_id" = "post"."id") AND "Post"."body" = $2 AND "post"."user_id" = "user"."id" AND "post"."title" = "user"."user_key") AND "user"."name" = $3 LIMIT $4`,
         ['tag', 'body', 'name', 3],
       );
     });
@@ -417,44 +293,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT COALESCE("users"."users", '[]') "users"
-            FROM "schema"."chat"
-            LEFT JOIN LATERAL (
-              SELECT
-                json_agg(json_build_object(
-                  'r', t."r",
-                  't', t."t",
-                  'd', t."d"::text
-                )) "users"
-              FROM (
-                SELECT "t"."r", "t"."t", "t"."d"
-                FROM (
-                  SELECT
-                    "sender"."name" "r",
-                    "messages"."text" "t",
-                    "messages"."decimal" "d",
-                    row_number() OVER (PARTITION BY "sender"."id") "r2"
-                  FROM "schema"."user" "sender"
-                  JOIN "schema"."message" "messages" ON (
-                    "messages"."active" IS NULL AND
-                    "messages"."chat_id" = "chat"."id_of_chat" AND
-                    "messages"."message_key" = "chat"."chat_key" AND
-                    "messages"."author_id" = "sender"."id" AND
-                    "messages"."message_key" = "sender"."user_key"
-                  ) AND (
-                    "messages"."deleted_at" IS NULL
-                  )
-                  WHERE "messages"."message_key" = $1 AND "sender"."name" <> $2
-                  ORDER BY "messages"."text" ASC, "sender"."name" ASC, "messages"."created_at" DESC
-                ) "t"
-                WHERE (r2 = 1)
-                LIMIT $3
-                OFFSET $4
-              ) "t"
-            ) "users" ON true
-            LIMIT 1
-          `,
+        `SELECT COALESCE("users"."users", '[]') "users" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(json_build_object('r', t."r", 't', t."t", 'd', t."d"::text)) "users" FROM (SELECT "t"."r", "t"."t", "t"."d" FROM (SELECT "sender"."name" "r", "messages"."text" "t", "messages"."decimal" "d", row_number() OVER (PARTITION BY "sender"."id") "r2" FROM "schema"."user" "sender" JOIN "schema"."message" "messages" ON ("messages"."active" IS NULL AND "messages"."chat_id" = "Chat"."id_of_chat" AND "messages"."message_key" = "Chat"."chat_key" AND "messages"."author_id" = "sender"."id" AND "messages"."message_key" = "sender"."user_key") AND ("messages"."deleted_at" IS NULL) WHERE "messages"."message_key" = $1 AND "sender"."name" <> $2 ORDER BY "messages"."text" ASC, "sender"."name" ASC, "messages"."created_at" DESC) "t" WHERE (r2 = 1) LIMIT $3 OFFSET $4) "t") "users" ON true LIMIT 1`,
         [MessageData.MessageKey, UserData.Name, 2, 1],
       );
 
@@ -771,16 +610,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile"
-            WHERE EXISTS (
-                SELECT 1 FROM "schema"."user"
-                WHERE "user"."name" = $1
-                  AND "user"."id" = "profile"."user_id"
-              AND "user"."user_key" = "profile"."profile_key"
-              )
-              AND "profile"."bio" = $2
-          `,
+        `SELECT "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."profile" WHERE EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND "User"."id" = "profile"."user_id" AND "User"."user_key" = "profile"."profile_key") AND "profile"."bio" = $2`,
         ['name', 'bio'],
       );
     });
@@ -793,17 +623,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfile"
-            WHERE "activeProfile"."active" = $1
-              AND EXISTS (
-                SELECT 1 FROM "schema"."user"
-                WHERE "user"."name" = $2
-                  AND "user"."id" = "activeProfile"."user_id"
-              AND "user"."user_key" = "activeProfile"."profile_key"
-              )
-              AND "activeProfile"."bio" = $3
-          `,
+        `SELECT "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."profile" "activeProfile" WHERE "activeProfile"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $2 AND "User"."id" = "activeProfile"."user_id" AND "User"."user_key" = "activeProfile"."profile_key") AND "activeProfile"."bio" = $3`,
         [true, 'name', 'bio'],
       );
     });
@@ -820,26 +640,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT ${postTagSelectAll}
-            FROM "schema"."postTag" "onePostTag"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "schema"."post"  "onePost"
-                WHERE
-                  EXISTS (
-                    SELECT 1
-                    FROM "schema"."user"
-                    WHERE "user"."name" = $1
-                      AND "user"."id" = "onePost"."user_id"
-                      AND "user"."user_key" = "onePost"."title"
-                  )
-                  AND "onePost"."body" = $2
-                  AND "onePost"."id" = "onePostTag"."post_id"
-              )
-              AND "onePostTag"."tag" = $3
-          `,
+        `SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "onePostTag" WHERE EXISTS (SELECT 1 FROM "schema"."post" "onePost" WHERE EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND "User"."id" = "onePost"."user_id" AND "User"."user_key" = "onePost"."title") AND "onePost"."body" = $2 AND "onePost"."id" = "onePostTag"."post_id") AND "onePostTag"."tag" = $3`,
         ['name', 'body', 'tag'],
       );
     });
@@ -856,26 +657,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT ${postTagSelectAll}
-            FROM "schema"."postTag" "activeOnePostTag"
-            WHERE "activeOnePostTag"."active" = $1
-              AND EXISTS (
-                SELECT 1
-                FROM "schema"."post"  "activeOnePost"
-                WHERE "activeOnePost"."active" = $2
-                  AND EXISTS (
-                    SELECT 1
-                    FROM "schema"."user"
-                    WHERE "user"."name" = $3
-                      AND "user"."id" = "activeOnePost"."user_id"
-                      AND "user"."user_key" = "activeOnePost"."title"
-                  )
-                  AND "activeOnePost"."body" = $4
-                  AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
-              )
-              AND "activeOnePostTag"."tag" = $5
-          `,
+        `SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "activeOnePostTag" WHERE "activeOnePostTag"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."post" "activeOnePost" WHERE "activeOnePost"."active" = $2 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $3 AND "User"."id" = "activeOnePost"."user_id" AND "User"."user_key" = "activeOnePost"."title") AND "activeOnePost"."body" = $4 AND "activeOnePost"."id" = "activeOnePostTag"."post_id") AND "activeOnePostTag"."tag" = $5`,
         [true, true, 'name', 'body', 'tag'],
       );
     });
@@ -888,14 +670,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-            INSERT INTO "schema"."profile"("user_id", "profile_key", "bio")
-            SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1
-            FROM "schema"."user"
-            WHERE "user"."id" = $2
-            LIMIT 1
-            RETURNING ${ProfileSelectAll}
-          `,
+          `INSERT INTO "schema"."profile"("user_id", "profile_key", "bio") SELECT "User"."id" "UserId", "User"."user_key" "ProfileKey", $1 FROM "schema"."user" "User" WHERE "User"."id" = $2 LIMIT 1 RETURNING "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt"`,
           ['bio', 1],
         );
       });
@@ -907,14 +682,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-              INSERT INTO "schema"."profile"("user_id", "profile_key", "active", "bio")
-              SELECT "user"."id" "UserId", "user"."user_key" "ProfileKey", $1, $2
-              FROM "schema"."user"
-              WHERE "user"."id" = $3
-              LIMIT 1
-              RETURNING ${ProfileSelectAll}
-            `,
+          `INSERT INTO "schema"."profile" AS "activeProfile"("user_id", "profile_key", "active", "bio") SELECT "User"."id" "UserId", "User"."user_key" "ProfileKey", $1, $2 FROM "schema"."user" "User" WHERE "User"."id" = $3 LIMIT 1 RETURNING "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt"`,
           [true, 'bio', 1],
         );
       });
@@ -960,16 +728,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-              DELETE FROM "schema"."profile"
-              WHERE EXISTS (
-                  SELECT 1 FROM "schema"."user"
-                  WHERE "user"."name" = $1
-                    AND "user"."id" = "profile"."user_id"
-                AND "user"."user_key" = "profile"."profile_key"
-                )
-                AND "profile"."bio" = $2
-            `,
+          `DELETE FROM "schema"."profile" WHERE EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND "User"."id" = "profile"."user_id" AND "User"."user_key" = "profile"."profile_key") AND "profile"."bio" = $2`,
           ['name', 'bio'],
         );
       });
@@ -983,17 +742,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-              DELETE FROM "schema"."profile"  "activeProfile"
-              WHERE "activeProfile"."active" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"
-                  WHERE "user"."name" = $2
-                    AND "user"."id" = "activeProfile"."user_id"
-                AND "user"."user_key" = "activeProfile"."profile_key"
-                )
-                AND "activeProfile"."bio" = $3
-            `,
+          `DELETE FROM "schema"."profile" "activeProfile" WHERE "activeProfile"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $2 AND "User"."id" = "activeProfile"."user_id" AND "User"."user_key" = "activeProfile"."profile_key") AND "activeProfile"."bio" = $3`,
           [true, 'name', 'bio'],
         );
       });
@@ -1050,30 +799,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT COALESCE("item"."item", '[]') "item"
-            FROM "schema"."user"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) "item"
-              FROM (
-                SELECT "t"."Tag", "t"."Body"
-                FROM (
-                  SELECT
-                    "onePostTag"."tag" "Tag",
-                    "posts"."body" "Body",
-                    row_number() OVER (PARTITION BY "onePostTag"."post_id", "onePostTag"."tag") "r"
-                  FROM "schema"."postTag" "onePostTag"
-                  JOIN "schema"."post" "posts"
-                    ON "posts"."user_id" = "user"."id"
-                   AND "posts"."title" = "user"."user_key"
-                   AND "posts"."id" = "onePostTag"."post_id"
-                  ORDER BY "posts"."body" ASC, "onePostTag"."tag" ASC
-                ) "t"
-                WHERE (r = 1)
-              ) "t"
-            ) "item" ON true
-            LIMIT 1
-          `,
+        `SELECT COALESCE("item"."item", '[]') "item" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "item" FROM (SELECT "t"."Tag", "t"."Body" FROM (SELECT "onePostTag"."tag" "Tag", "posts"."body" "Body", row_number() OVER (PARTITION BY "onePostTag"."post_id", "onePostTag"."tag") "r" FROM "schema"."postTag" "onePostTag" JOIN "schema"."post" "posts" ON "posts"."user_id" = "User"."id" AND "posts"."title" = "User"."user_key" AND "posts"."id" = "onePostTag"."post_id" ORDER BY "posts"."body" ASC, "onePostTag"."tag" ASC) "t" WHERE (r = 1)) "t") "item" ON true LIMIT 1`,
       );
 
       const result = await q;
@@ -1120,20 +846,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT row_to_json("item".*) "item"
-            FROM "schema"."user"
-            LEFT JOIN LATERAL (
-              SELECT "onePostTag"."tag" "Tag", "onePost"."body" "Body"
-              FROM "schema"."postTag" "onePostTag"
-              JOIN "schema"."post" "onePost"
-                ON "onePost"."user_id" = "user"."id"
-               AND "onePost"."title" = "user"."user_key"
-               AND "onePost"."id" = "onePostTag"."post_id"
-              ORDER BY "onePost"."id" ASC
-            ) "item" ON true
-            LIMIT 1
-          `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT "onePostTag"."tag" "Tag", "onePost"."body" "Body" FROM "schema"."postTag" "onePostTag" JOIN "schema"."post" "onePost" ON "onePost"."user_id" = "User"."id" AND "onePost"."title" = "User"."user_key" AND "onePost"."id" = "onePostTag"."post_id" ORDER BY "onePost"."id" ASC) "item" ON true LIMIT 1`,
       );
 
       const result = await q;
@@ -1176,22 +889,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."user"
-          LEFT JOIN LATERAL (
-            SELECT "onePostTag"."tag" "Tag"
-            FROM "schema"."postTag" "onePostTag"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "schema"."post" "onePost"
-              WHERE "onePost"."user_id" = "user"."id"
-                AND "onePost"."title" = "user"."user_key"
-                AND "onePost"."id" = "onePostTag"."post_id"
-            )
-          ) "item" ON true
-          LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT "onePostTag"."tag" "Tag" FROM "schema"."postTag" "onePostTag" WHERE EXISTS (SELECT 1 FROM "schema"."post" "onePost" WHERE "onePost"."user_id" = "User"."id" AND "onePost"."title" = "User"."user_key" AND "onePost"."id" = "onePostTag"."post_id")) "item" ON true LIMIT 1`,
       );
 
       const result = await q;
@@ -1234,22 +932,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT row_to_json("item".*) "item"
-            FROM "schema"."user"
-            LEFT JOIN LATERAL (
-              SELECT ${postTagSelectTableAll('activeOnePostTag')}
-              FROM "schema"."postTag" "activeOnePostTag"
-              JOIN "schema"."post" "activeOnePost"
-                ON "activeOnePost"."active" = $1
-               AND "activeOnePost"."user_id" = "user"."id"
-               AND "activeOnePost"."title" = "user"."user_key"
-               AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
-              WHERE "activeOnePostTag"."active" = $2
-              ORDER BY "activeOnePost"."id" ASC
-            ) "item" ON true
-            LIMIT 1
-          `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT "activeOnePostTag"."post_id" "PostId", "activeOnePostTag"."tag" "Tag", "activeOnePostTag"."active" "Active" FROM "schema"."postTag" "activeOnePostTag" JOIN "schema"."post" "activeOnePost" ON "activeOnePost"."active" = $1 AND "activeOnePost"."user_id" = "User"."id" AND "activeOnePost"."title" = "User"."user_key" AND "activeOnePost"."id" = "activeOnePostTag"."post_id" WHERE "activeOnePostTag"."active" = $2 ORDER BY "activeOnePost"."id" ASC) "item" ON true LIMIT 1`,
         [true, true],
       );
 
@@ -1292,24 +975,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT row_to_json("item".*) "item"
-            FROM "schema"."user"
-            LEFT JOIN LATERAL (
-              SELECT ${postTagSelectAll}
-              FROM "schema"."postTag" "activeOnePostTag"
-              WHERE "activeOnePostTag"."active" = $1
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."post" "activeOnePost"
-                  WHERE "activeOnePost"."active" = $2
-                    AND "activeOnePost"."user_id" = "user"."id"
-                    AND "activeOnePost"."title" = "user"."user_key"
-                    AND "activeOnePost"."id" = "activeOnePostTag"."post_id"
-                )
-            ) "item" ON true
-            LIMIT 1
-          `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "activeOnePostTag" WHERE "activeOnePostTag"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."post" "activeOnePost" WHERE "activeOnePost"."active" = $2 AND "activeOnePost"."user_id" = "User"."id" AND "activeOnePost"."title" = "User"."user_key" AND "activeOnePost"."id" = "activeOnePostTag"."post_id")) "item" ON true LIMIT 1`,
         [true, true],
       );
 
@@ -1332,22 +998,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          SELECT ${ProfileSelectAll} FROM "schema"."profile"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."message"
-              WHERE ("message"."text" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "sender"
-                  WHERE "profile"."user_id" = "sender"."id"
-                    AND "profile"."profile_key" = "sender"."user_key"
-                    AND "sender"."id" = "message"."author_id"
-                    AND "sender"."user_key" = "message"."message_key"
-                ))
-                AND ("message"."deleted_at" IS NULL)
-            )
-            AND "profile"."bio" = $2
-        `,
+        `SELECT "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."profile" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profile"."user_id" = "sender"."id" AND "profile"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "profile"."bio" = $2`,
         ['text', 'bio'],
       );
     });
@@ -1360,24 +1011,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfile"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."message"
-              WHERE ("message"."text" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "activeSender"
-                  WHERE "activeProfile"."active" = $2
-                    AND "activeProfile"."user_id" = "activeSender"."id"
-                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                    AND "activeSender"."active" = $3
-                    AND "activeSender"."id" = "message"."author_id"
-                    AND "activeSender"."user_key" = "message"."message_key"
-                ))
-                AND ("message"."deleted_at" IS NULL)
-            )
-            AND "activeProfile"."bio" = $4
-        `,
+        `SELECT "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."profile" "activeProfile" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $2 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $3 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "activeProfile"."bio" = $4`,
         ['text', true, true, 'bio'],
       );
     });
@@ -1394,40 +1028,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT ${postSelectAll}
-          FROM "schema"."post" "onePost"
-          WHERE
-            EXISTS (
-              SELECT 1
-              FROM "schema"."profile"
-              WHERE
-                EXISTS (
-                  SELECT 1
-                  FROM "schema"."message"
-                  WHERE ("message"."text" = $1
-                    AND EXISTS (
-                      SELECT 1
-                      FROM "schema"."user"  "sender"
-                      WHERE "profile"."user_id" = "sender"."id"
-                        AND "profile"."profile_key" = "sender"."user_key"
-                        AND "sender"."id" = "message"."author_id"
-                        AND "sender"."user_key" = "message"."message_key"
-                    ))
-                    AND ("message"."deleted_at" IS NULL)
-                )
-                AND "profile"."bio" = $2
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."user"
-                  WHERE "onePost"."user_id" = "user"."id"
-                    AND "onePost"."title" = "user"."user_key"
-                    AND "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
-                )
-            )
-            AND "onePost"."body" = $3
-        `,
+        `SELECT "id" "Id", "user_id" "UserId", "user_id_no_fkey" "UserIdNoFkey", "active" "Active", "body" "Body", "title" "Title", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."post" "onePost" WHERE EXISTS (SELECT 1 FROM "schema"."profile" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profile"."user_id" = "sender"."id" AND "profile"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "Profile"."bio" = $2 AND EXISTS (SELECT 1 FROM "schema"."user" WHERE "onePost"."user_id" = "user"."id" AND "onePost"."title" = "user"."user_key" AND "user"."id" = "profile"."user_id" AND "user"."user_key" = "profile"."profile_key")) AND "onePost"."body" = $3`,
         ['text', 'bio', 'body'],
       );
     });
@@ -1444,44 +1045,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT ${postSelectAll}
-          FROM "schema"."post" "activeOnePost"
-          WHERE
-            EXISTS (
-              SELECT 1
-              FROM "schema"."profile"  "activeProfile"
-              WHERE
-                EXISTS (
-                  SELECT 1
-                  FROM "schema"."message"
-                  WHERE ("message"."text" = $1
-                    AND EXISTS (
-                      SELECT 1
-                      FROM "schema"."user"  "activeSender"
-                      WHERE "activeProfile"."active" = $2
-                        AND "activeProfile"."user_id" = "activeSender"."id"
-                        AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                        AND "activeSender"."active" = $3
-                        AND "activeSender"."id" = "message"."author_id"
-                        AND "activeSender"."user_key" = "message"."message_key"
-                    ))
-                    AND ("message"."deleted_at" IS NULL)
-                )
-                AND "activeProfile"."bio" = $4
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."user"  "activeUser"
-                  WHERE "activeOnePost"."active" = $5
-                    AND "activeOnePost"."user_id" = "activeUser"."id"
-                    AND "activeOnePost"."title" = "activeUser"."user_key"
-                    AND "activeUser"."active" = $6
-                    AND "activeUser"."id" = "activeProfile"."user_id"
-                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
-                )
-            )
-            AND "activeOnePost"."body" = $7
-        `,
+        `SELECT "id" "Id", "user_id" "UserId", "user_id_no_fkey" "UserIdNoFkey", "active" "Active", "body" "Body", "title" "Title", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."post" "activeOnePost" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "activeProfile" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $2 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $3 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "activeProfile"."bio" = $4 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeOnePost"."active" = $5 AND "activeOnePost"."user_id" = "activeUser"."id" AND "activeOnePost"."title" = "activeUser"."user_key" AND "activeUser"."active" = $6 AND "activeUser"."id" = "activeProfile"."user_id" AND "activeUser"."user_key" = "activeProfile"."profile_key")) AND "activeOnePost"."body" = $7`,
         ['text', true, true, 'bio', true, true, 'body'],
       );
     });
@@ -1500,22 +1064,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          DELETE FROM "schema"."profile"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."message"
-              WHERE ("message"."text" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "sender"
-                  WHERE "profile"."user_id" = "sender"."id"
-                    AND "profile"."profile_key" = "sender"."user_key"
-                    AND "sender"."id" = "message"."author_id"
-                    AND "sender"."user_key" = "message"."message_key"
-                ))
-                AND ("message"."deleted_at" IS NULL)
-            )
-            AND "profile"."bio" = $2
-        `,
+        `DELETE FROM "schema"."profile" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profile"."user_id" = "sender"."id" AND "profile"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "profile"."bio" = $2`,
         ['text', 'bio'],
       );
     });
@@ -1529,24 +1078,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          DELETE FROM "schema"."profile"  "activeProfile"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."message"
-              WHERE ("message"."text" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "activeSender"
-                  WHERE "activeProfile"."active" = $2
-                    AND "activeProfile"."user_id" = "activeSender"."id"
-                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                    AND "activeSender"."active" = $3
-                    AND "activeSender"."id" = "message"."author_id"
-                    AND "activeSender"."user_key" = "message"."message_key"
-                ))
-                AND ("message"."deleted_at" IS NULL)
-            )
-            AND "activeProfile"."bio" = $4
-        `,
+        `DELETE FROM "schema"."profile" "activeProfile" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $2 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $3 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "activeProfile"."bio" = $4`,
         ['text', true, true, 'bio'],
       );
     });
@@ -1598,30 +1130,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("tags"."tags", '[]') "tags"
-          FROM "schema"."user"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "tags"
-            FROM (
-              SELECT "t"."Tag", "t"."Body"
-              FROM (
-                SELECT
-                  "onePostTag"."tag" "Tag",
-                  "posts"."body" "Body",
-                  row_number() OVER (PARTITION BY "onePostTag"."post_id", "onePostTag"."tag") "r"
-                FROM "schema"."postTag" "onePostTag"
-                JOIN "schema"."post" "posts"
-                  ON "posts"."user_id" = "user"."id"
-                 AND "posts"."title" = "user"."user_key"
-                 AND "posts"."id" = "onePostTag"."post_id"
-                ORDER BY "posts"."body" ASC, "onePostTag"."tag" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "tags" ON true
-          LIMIT 1
-        `,
+        `SELECT COALESCE("tags"."tags", '[]') "tags" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "tags" FROM (SELECT "t"."Tag", "t"."Body" FROM (SELECT "onePostTag"."tag" "Tag", "posts"."body" "Body", row_number() OVER (PARTITION BY "onePostTag"."post_id", "onePostTag"."tag") "r" FROM "schema"."postTag" "onePostTag" JOIN "schema"."post" "posts" ON "posts"."user_id" = "User"."id" AND "posts"."title" = "User"."user_key" AND "posts"."id" = "onePostTag"."post_id" ORDER BY "posts"."body" ASC, "onePostTag"."tag" ASC) "t" WHERE (r = 1)) "t") "tags" ON true LIMIT 1`,
       );
 
       const result = await q;
@@ -1658,30 +1167,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT "onePost"."body" "Body"
-            FROM "schema"."post" "onePost"
-            JOIN "schema"."profile" ON EXISTS (
-                SELECT 1 FROM "schema"."user"  "sender"
-                WHERE "profile"."user_id" = "sender"."id"
-                  AND "profile"."profile_key" = "sender"."user_key"
-                  AND "sender"."id" = "message"."author_id"
-                  AND "sender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "schema"."user"
-                WHERE "onePost"."user_id" = "user"."id"
-                  AND "onePost"."title" = "user"."user_key"
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-            ORDER BY "profile"."id" ASC
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-          LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT "onePost"."body" "Body" FROM "schema"."post" "onePost" JOIN "schema"."profile" ON EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profile"."user_id" = "sender"."id" AND "profile"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" WHERE "onePost"."user_id" = "user"."id" AND "onePost"."title" = "user"."user_key" AND "user"."id" = "profile"."user_id" AND "user"."user_key" = "profile"."profile_key") ORDER BY "profile"."id" ASC) "item" ON true WHERE ("Message"."deleted_at" IS NULL) LIMIT 1`,
       );
 
       const result = await q;
@@ -1712,33 +1198,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT "onePost"."body" "Body"
-            FROM "schema"."post" "onePost"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "schema"."profile"
-              WHERE EXISTS (
-                SELECT 1 FROM "schema"."user" "sender"
-                WHERE "profile"."user_id" = "sender"."id"
-                  AND "profile"."profile_key" = "sender"."user_key"
-                  AND "sender"."id" = "message"."author_id"
-                  AND "sender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "schema"."user"
-                WHERE "onePost"."user_id" = "user"."id"
-                  AND "onePost"."title" = "user"."user_key"
-                  AND "user"."id" = "profile"."user_id"
-                  AND "user"."user_key" = "profile"."profile_key"
-              )
-            )
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-            LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT "onePost"."body" "Body" FROM "schema"."post" "onePost" WHERE EXISTS (SELECT 1 FROM "schema"."profile" WHERE EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profile"."user_id" = "sender"."id" AND "profile"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" WHERE "onePost"."user_id" = "user"."id" AND "onePost"."title" = "user"."user_key" AND "user"."id" = "profile"."user_id" AND "user"."user_key" = "profile"."profile_key"))) "item" ON true WHERE ("Message"."deleted_at" IS NULL) LIMIT 1`,
       );
 
       const result = await q;
@@ -1774,34 +1234,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT "activeOnePost"."body" "Body"
-            FROM "schema"."post" "activeOnePost"
-            JOIN "schema"."profile" "activeProfile" ON EXISTS (
-                SELECT 1 FROM "schema"."user"  "activeSender"
-                WHERE "activeProfile"."active" = $1
-                  AND "activeProfile"."user_id" = "activeSender"."id"
-                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                  AND "activeSender"."active" = $2
-                  AND "activeSender"."id" = "message"."author_id"
-                  AND "activeSender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "schema"."user" "activeUser"
-                WHERE "activeOnePost"."active" = $3
-                  AND "activeOnePost"."user_id" = "activeUser"."id"
-                  AND "activeOnePost"."title" = "activeUser"."user_key"
-                  AND "activeUser"."active" = $4
-                  AND "activeUser"."id" = "activeProfile"."user_id"
-                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
-              )
-              ORDER BY "activeProfile"."id" ASC
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-          LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT "activeOnePost"."body" "Body" FROM "schema"."post" "activeOnePost" JOIN "schema"."profile" "activeProfile" ON EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $1 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $2 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeOnePost"."active" = $3 AND "activeOnePost"."user_id" = "activeUser"."id" AND "activeOnePost"."title" = "activeUser"."user_key" AND "activeUser"."active" = $4 AND "activeUser"."id" = "activeProfile"."user_id" AND "activeUser"."user_key" = "activeProfile"."profile_key") ORDER BY "activeProfile"."id" ASC) "item" ON true WHERE ("Message"."deleted_at" IS NULL) LIMIT 1`,
         [true, true, true, true],
       );
 
@@ -1834,37 +1267,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT "activeOnePost"."body" "Body"
-            FROM "schema"."post" "activeOnePost"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "schema"."profile" "activeProfile"
-              WHERE EXISTS (
-                SELECT 1 FROM "schema"."user"  "activeSender"
-                WHERE "activeProfile"."active" = $1
-                  AND "activeProfile"."user_id" = "activeSender"."id"
-                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                  AND "activeSender"."active" = $2
-                  AND "activeSender"."id" = "message"."author_id"
-                  AND "activeSender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "schema"."user" "activeUser"
-                WHERE "activeOnePost"."active" = $3
-                  AND "activeOnePost"."user_id" = "activeUser"."id"
-                  AND "activeOnePost"."title" = "activeUser"."user_key"
-                  AND "activeUser"."active" = $4
-                  AND "activeUser"."id" = "activeProfile"."user_id"
-                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
-              )
-            )
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-          LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT "activeOnePost"."body" "Body" FROM "schema"."post" "activeOnePost" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "activeProfile" WHERE EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $1 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $2 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeOnePost"."active" = $3 AND "activeOnePost"."user_id" = "activeUser"."id" AND "activeOnePost"."title" = "activeUser"."user_key" AND "activeUser"."active" = $4 AND "activeUser"."id" = "activeProfile"."user_id" AND "activeUser"."user_key" = "activeProfile"."profile_key"))) "item" ON true WHERE ("Message"."deleted_at" IS NULL) LIMIT 1`,
         [true, true, true, true],
       );
 
@@ -1901,35 +1304,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT "activeOnePost"."body" "Body"
-            FROM "schema"."post" "activeOnePost"
-            JOIN "schema"."profile" "activeProfile" ON
-              EXISTS (
-                SELECT 1 FROM "schema"."user"  "activeSender"
-                WHERE "activeProfile"."active" = $1
-                  AND "activeProfile"."user_id" = "activeSender"."id"
-                  AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                  AND "activeSender"."active" = $2
-                  AND "activeSender"."id" = "message"."author_id"
-                  AND "activeSender"."user_key" = "message"."message_key"
-              ) AND EXISTS (
-                SELECT 1 FROM "schema"."user"  "activeUser"
-                WHERE "activeOnePost"."active" = $3
-                  AND "activeOnePost"."user_id" = "activeUser"."id"
-                  AND "activeOnePost"."title" = "activeUser"."user_key"
-                  AND "activeUser"."active" = $4
-                  AND "activeUser"."id" = "activeProfile"."user_id"
-                  AND "activeUser"."user_key" = "activeProfile"."profile_key"
-              )
-              ORDER BY "activeProfile"."id" ASC
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-          LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT "activeOnePost"."body" "Body" FROM "schema"."post" "activeOnePost" JOIN "schema"."profile" "activeProfile" ON EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $1 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $2 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeOnePost"."active" = $3 AND "activeOnePost"."user_id" = "activeUser"."id" AND "activeOnePost"."title" = "activeUser"."user_key" AND "activeUser"."active" = $4 AND "activeUser"."id" = "activeProfile"."user_id" AND "activeUser"."user_key" = "activeProfile"."profile_key") ORDER BY "activeProfile"."id" ASC) "item" ON true WHERE ("Message"."deleted_at" IS NULL) LIMIT 1`,
         [true, true, true, true],
       );
 
@@ -1962,37 +1337,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT row_to_json("item".*) "item"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT "activeOnePost"."body" "Body"
-            FROM "schema"."post" "activeOnePost"
-            WHERE EXISTS (
-              SELECT 1
-              FROM "schema"."profile" "activeProfile"
-              WHERE EXISTS (
-                  SELECT 1 FROM "schema"."user"  "activeSender"
-                  WHERE "activeProfile"."active" = $1
-                    AND "activeProfile"."user_id" = "activeSender"."id"
-                    AND "activeProfile"."profile_key" = "activeSender"."user_key"
-                    AND "activeSender"."active" = $2
-                    AND "activeSender"."id" = "message"."author_id"
-                    AND "activeSender"."user_key" = "message"."message_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "activeUser"
-                  WHERE "activeOnePost"."active" = $3
-                    AND "activeOnePost"."user_id" = "activeUser"."id"
-                    AND "activeOnePost"."title" = "activeUser"."user_key"
-                    AND "activeUser"."active" = $4
-                    AND "activeUser"."id" = "activeProfile"."user_id"
-                    AND "activeUser"."user_key" = "activeProfile"."profile_key"
-                )
-            )
-          ) "item" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-          LIMIT 1
-        `,
+        `SELECT row_to_json("item".*) "item" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT "activeOnePost"."body" "Body" FROM "schema"."post" "activeOnePost" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "activeProfile" WHERE EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfile"."active" = $1 AND "activeProfile"."user_id" = "activeSender"."id" AND "activeProfile"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $2 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeOnePost"."active" = $3 AND "activeOnePost"."user_id" = "activeUser"."id" AND "activeOnePost"."title" = "activeUser"."user_key" AND "activeUser"."active" = $4 AND "activeUser"."id" = "activeProfile"."user_id" AND "activeUser"."user_key" = "activeProfile"."profile_key"))) "item" ON true WHERE ("Message"."deleted_at" IS NULL) LIMIT 1`,
         [true, true, true, true],
       );
 
@@ -2014,19 +1359,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          SELECT ${messageSelectAll} FROM "schema"."message" "messages"
-          WHERE (
-            EXISTS (
-              SELECT 1 FROM "schema"."user"
-              WHERE "user"."name" = $1
-                AND "user"."id" = "messages"."author_id"
-                AND "user"."user_key" = "messages"."message_key"
-            )
-            AND "messages"."text" = $2)
-            AND ("messages"."deleted_at" IS NULL)
-          LIMIT $3
-        `,
+        `SELECT "id" "Id", "message_key" "MessageKey", "chat_id" "ChatId", "author_id" "AuthorId", "text" "Text", "decimal" "Decimal", "active" "Active", "deleted_at" "DeletedAt", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."message" "messages" WHERE (EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND "User"."id" = "messages"."author_id" AND "User"."user_key" = "messages"."message_key") AND "messages"."text" = $2) AND ("messages"."deleted_at" IS NULL) LIMIT $3`,
         ['name', 'text', 1],
       );
     });
@@ -2039,18 +1372,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          SELECT ${messageSelectAll} FROM "schema"."message" "activeMessages"
-          WHERE ("activeMessages"."active" = $1
-            AND EXISTS (
-              SELECT 1 FROM "schema"."user"
-              WHERE "user"."name" = $2
-                AND "user"."id" = "activeMessages"."author_id"
-                AND "user"."user_key" = "activeMessages"."message_key"
-            )
-            AND "activeMessages"."text" = $3)
-            AND ("activeMessages"."deleted_at" IS NULL)
-        `,
+        `SELECT "id" "Id", "message_key" "MessageKey", "chat_id" "ChatId", "author_id" "AuthorId", "text" "Text", "decimal" "Decimal", "active" "Active", "deleted_at" "DeletedAt", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."message" "activeMessages" WHERE ("activeMessages"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $2 AND "User"."id" = "activeMessages"."author_id" AND "User"."user_key" = "activeMessages"."message_key") AND "activeMessages"."text" = $3) AND ("activeMessages"."deleted_at" IS NULL)`,
         [true, 'name', 'text'],
       );
     });
@@ -2067,26 +1389,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-        SELECT ${postTagSelectAll}
-        FROM "schema"."postTag" "postTags"
-        WHERE
-          EXISTS (
-            SELECT 1
-            FROM "schema"."post"  "posts"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "schema"."user"
-                WHERE "user"."name" = $1
-                  AND "user"."id" = "posts"."user_id"
-                  AND "user"."user_key" = "posts"."title"
-              )
-              AND "posts"."body" = $2
-              AND "posts"."id" = "postTags"."post_id"
-          )
-          AND "postTags"."tag" = $3
-      `,
+        `SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "postTags" WHERE EXISTS (SELECT 1 FROM "schema"."post" "posts" WHERE EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND "User"."id" = "posts"."user_id" AND "User"."user_key" = "posts"."title") AND "posts"."body" = $2 AND "posts"."id" = "postTags"."post_id") AND "postTags"."tag" = $3`,
         ['name', 'body', 'tag'],
       );
     });
@@ -2103,26 +1406,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-        SELECT ${postTagSelectAll}
-        FROM "schema"."postTag" "activePostTags"
-        WHERE "activePostTags"."active" = $1
-          AND EXISTS (
-            SELECT 1
-            FROM "schema"."post"  "activePosts"
-            WHERE "activePosts"."active" = $2
-              AND EXISTS (
-                SELECT 1
-                FROM "schema"."user"
-                WHERE "user"."name" = $3
-                  AND "user"."id" = "activePosts"."user_id"
-                  AND "user"."user_key" = "activePosts"."title"
-              )
-              AND "activePosts"."body" = $4
-              AND "activePosts"."id" = "activePostTags"."post_id"
-          )
-          AND "activePostTags"."tag" = $5
-      `,
+        `SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "activePostTags" WHERE "activePostTags"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."post" "activePosts" WHERE "activePosts"."active" = $2 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $3 AND "User"."id" = "activePosts"."user_id" AND "User"."user_key" = "activePosts"."title") AND "activePosts"."body" = $4 AND "activePosts"."id" = "activePostTags"."post_id") AND "activePostTags"."tag" = $5`,
         [true, true, 'name', 'body', 'tag'],
       );
     });
@@ -2135,14 +1419,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-            INSERT INTO "schema"."message"("chat_id", "message_key", "text")
-            SELECT "chat"."id_of_chat" "ChatId", "chat"."chat_key" "MessageKey", $1
-            FROM "schema"."chat"
-            WHERE "chat"."id_of_chat" = $2
-            LIMIT 1
-            RETURNING ${messageSelectAll}
-          `,
+          `INSERT INTO "schema"."message" AS "messages"("chat_id", "message_key", "text") SELECT "Chat"."id_of_chat" "ChatId", "Chat"."chat_key" "MessageKey", $1 FROM "schema"."chat" "Chat" WHERE "Chat"."id_of_chat" = $2 LIMIT 1 RETURNING "id" "Id", "message_key" "MessageKey", "chat_id" "ChatId", "author_id" "AuthorId", "text" "Text", "decimal" "Decimal", "active" "Active", "deleted_at" "DeletedAt", "created_at" "createdAt", "updated_at" "updatedAt"`,
           ['text', 1],
         );
       });
@@ -2154,14 +1431,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-            INSERT INTO "schema"."message"("chat_id", "message_key", "active", "text")
-            SELECT "chat"."id_of_chat" "ChatId", "chat"."chat_key" "MessageKey", $1, $2
-            FROM "schema"."chat"
-            WHERE "chat"."id_of_chat" = $3
-            LIMIT 1
-            RETURNING ${messageSelectAll}
-          `,
+          `INSERT INTO "schema"."message" AS "activeMessages"("chat_id", "message_key", "active", "text") SELECT "Chat"."id_of_chat" "ChatId", "Chat"."chat_key" "MessageKey", $1, $2 FROM "schema"."chat" "Chat" WHERE "Chat"."id_of_chat" = $3 LIMIT 1 RETURNING "id" "Id", "message_key" "MessageKey", "chat_id" "ChatId", "author_id" "AuthorId", "text" "Text", "decimal" "Decimal", "active" "Active", "deleted_at" "DeletedAt", "created_at" "createdAt", "updated_at" "updatedAt"`,
           [true, 'text', 1],
         );
       });
@@ -2235,16 +1505,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          DELETE FROM "schema"."message"  "messages"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."chat"
-              WHERE "chat"."title" = $1
-                AND "chat"."id_of_chat" = "messages"."chat_id"
-                AND "chat"."chat_key" = "messages"."message_key"
-            )
-            AND "messages"."text" = $2
-        `,
+        `DELETE FROM "schema"."message" "messages" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND "Chat"."id_of_chat" = "messages"."chat_id" AND "Chat"."chat_key" = "messages"."message_key") AND "messages"."text" = $2`,
         ['title', 'text'],
       );
     });
@@ -2283,30 +1544,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."user"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "t"."Tag", "t"."Body"
-              FROM (
-                SELECT
-                  "postTags"."tag" "Tag",
-                  "posts"."body" "Body",
-                  row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r"
-                FROM "schema"."postTag" "postTags"
-                JOIN "schema"."post" "posts"
-                  ON "posts"."user_id" = "user"."id"
-                 AND "posts"."title" = "user"."user_key"
-                 AND "posts"."id" = "postTags"."post_id"
-                ORDER BY "posts"."id" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "items" ON true
-          LIMIT 1
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Tag", "t"."Body" FROM (SELECT "postTags"."tag" "Tag", "posts"."body" "Body", row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r" FROM "schema"."postTag" "postTags" JOIN "schema"."post" "posts" ON "posts"."user_id" = "User"."id" AND "posts"."title" = "User"."user_key" AND "posts"."id" = "postTags"."post_id" ORDER BY "posts"."id" ASC) "t" WHERE (r = 1)) "t") "items" ON true LIMIT 1`,
       );
 
       const result = await q;
@@ -2348,25 +1586,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."user"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "postTags"."tag" "Tag"
-              FROM "schema"."postTag" "postTags"
-              WHERE EXISTS (
-                SELECT 1
-                FROM "schema"."post" "posts"
-                WHERE "posts"."user_id" = "user"."id"
-                  AND "posts"."title" = "user"."user_key"
-                  AND "posts"."id" = "postTags"."post_id"
-              )
-            ) "t"
-          ) "items" ON true
-          LIMIT 1
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "postTags"."tag" "Tag" FROM "schema"."postTag" "postTags" WHERE EXISTS (SELECT 1 FROM "schema"."post" "posts" WHERE "posts"."user_id" = "User"."id" AND "posts"."title" = "User"."user_key" AND "posts"."id" = "postTags"."post_id")) "t") "items" ON true LIMIT 1`,
       );
 
       const result = await q;
@@ -2412,32 +1632,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."user"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "t"."Tag", "t"."Body"
-              FROM (
-                SELECT
-                  "activePostTags"."tag" "Tag",
-                  "activePosts"."body" "Body",
-                  row_number() OVER (PARTITION BY "activePostTags"."post_id", "activePostTags"."tag") "r"
-                FROM "schema"."postTag" "activePostTags"
-                JOIN "schema"."post" "activePosts"
-                  ON "activePosts"."active" = $1
-                 AND "activePosts"."user_id" = "user"."id"
-                 AND "activePosts"."title" = "user"."user_key"
-                 AND "activePosts"."id" = "activePostTags"."post_id"
-                WHERE "activePostTags"."active" = $2
-                ORDER BY "activePosts"."id" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "items" ON true
-          LIMIT 1
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Tag", "t"."Body" FROM (SELECT "activePostTags"."tag" "Tag", "activePosts"."body" "Body", row_number() OVER (PARTITION BY "activePostTags"."post_id", "activePostTags"."tag") "r" FROM "schema"."postTag" "activePostTags" JOIN "schema"."post" "activePosts" ON "activePosts"."active" = $1 AND "activePosts"."user_id" = "User"."id" AND "activePosts"."title" = "User"."user_key" AND "activePosts"."id" = "activePostTags"."post_id" WHERE "activePostTags"."active" = $2 ORDER BY "activePosts"."id" ASC) "t" WHERE (r = 1)) "t") "items" ON true LIMIT 1`,
         [true, true],
       );
 
@@ -2480,27 +1675,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."user"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "activePostTags"."tag" "Tag"
-              FROM "schema"."postTag" "activePostTags"
-              WHERE "activePostTags"."active" = $1
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."post" "activePosts"
-                  WHERE "activePosts"."active" = $2
-                    AND "activePosts"."user_id" = "user"."id"
-                    AND "activePosts"."title" = "user"."user_key"
-                    AND "activePosts"."id" = "activePostTags"."post_id"
-                )
-            ) "t"
-          ) "items" ON true
-          LIMIT 1
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "activePostTags"."tag" "Tag" FROM "schema"."postTag" "activePostTags" WHERE "activePostTags"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."post" "activePosts" WHERE "activePosts"."active" = $2 AND "activePosts"."user_id" = "User"."id" AND "activePosts"."title" = "User"."user_key" AND "activePosts"."id" = "activePostTags"."post_id")) "t") "items" ON true LIMIT 1`,
         [true, true],
       );
 
@@ -2523,26 +1698,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${chatSelectAll} FROM "schema"."chat" "chats"
-            WHERE EXISTS (
-              SELECT 1 FROM "schema"."profile"
-              WHERE "profile"."bio" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"
-                  WHERE EXISTS (
-                      SELECT 1 FROM "schema"."chatUser"
-                      WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chats"."chat_key"
-                        AND "chatUser"."user_id" = "user"."id"
-                        AND "chatUser"."user_key" = "user"."user_key"
-                    )
-                    AND "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
-                )
-            )
-            AND "chats"."title" = $2
-          `,
+        `SELECT "id_of_chat" "IdOfChat", "chat_key" "ChatKey", "title" "Title", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."chat" "chats" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" WHERE EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "chats"."id_of_chat" AND "chatUser"."chat_key" = "chats"."chat_key" AND "chatUser"."user_id" = "user"."id" AND "chatUser"."user_key" = "user"."user_key") AND "user"."id" = "Profile"."user_id" AND "user"."user_key" = "Profile"."profile_key")) AND "chats"."title" = $2`,
         ['bio', 'title'],
       );
     });
@@ -2555,28 +1711,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${chatSelectAll} FROM "schema"."chat" "activeChats"
-            WHERE EXISTS (
-              SELECT 1 FROM "schema"."profile"
-              WHERE "profile"."bio" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "activeUser"
-                  WHERE "activeChats"."active" = $2
-                    AND EXISTS (
-                      SELECT 1 FROM "schema"."chatUser"
-                      WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
-                        AND "chatUser"."chat_key" = "activeChats"."chat_key"
-                        AND "chatUser"."user_id" = "activeUser"."id"
-                        AND "chatUser"."user_key" = "activeUser"."user_key"
-                    )
-                    AND "activeUser"."active" = $3
-                    AND "activeUser"."id" = "profile"."user_id"
-                    AND "activeUser"."user_key" = "profile"."profile_key"
-                )
-            )
-            AND "activeChats"."title" = $4
-          `,
+        `SELECT "id_of_chat" "IdOfChat", "chat_key" "ChatKey", "title" "Title", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."chat" "activeChats" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeChats"."active" = $2 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat" AND "chatUser"."chat_key" = "activeChats"."chat_key" AND "chatUser"."user_id" = "activeUser"."id" AND "chatUser"."user_key" = "activeUser"."user_key") AND "activeUser"."active" = $3 AND "activeUser"."id" = "Profile"."user_id" AND "activeUser"."user_key" = "Profile"."profile_key")) AND "activeChats"."title" = $4`,
         ['bio', true, true, 'title'],
       );
     });
@@ -2593,40 +1728,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT ${postSelectAll}
-            FROM "schema"."post" "posts"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "schema"."profile"  "profiles"
-                WHERE
-                  EXISTS (
-                    SELECT 1
-                    FROM "schema"."message"
-                    WHERE ("message"."text" = $1
-                      AND EXISTS (
-                        SELECT 1
-                        FROM "schema"."user"  "sender"
-                        WHERE "profiles"."user_id" = "sender"."id"
-                          AND "profiles"."profile_key" = "sender"."user_key"
-                          AND "sender"."id" = "message"."author_id"
-                          AND "sender"."user_key" = "message"."message_key"
-                      ))
-                      AND ("message"."deleted_at" IS NULL)
-                  )
-                  AND "profiles"."bio" = $2
-                  AND EXISTS (
-                    SELECT 1
-                    FROM "schema"."user"
-                    WHERE "posts"."user_id" = "user"."id"
-                      AND "posts"."title" = "user"."user_key"
-                      AND "user"."id" = "profiles"."user_id"
-                      AND "user"."user_key" = "profiles"."profile_key"
-                  )
-              )
-              AND "posts"."body" = $3
-          `,
+        `SELECT "id" "Id", "user_id" "UserId", "user_id_no_fkey" "UserIdNoFkey", "active" "Active", "body" "Body", "title" "Title", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."post" "posts" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "profiles" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profiles"."user_id" = "sender"."id" AND "profiles"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "profiles"."bio" = $2 AND EXISTS (SELECT 1 FROM "schema"."user" WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key" AND "user"."id" = "profiles"."user_id" AND "user"."user_key" = "profiles"."profile_key")) AND "posts"."body" = $3`,
         ['text', 'bio', 'body'],
       );
     });
@@ -2643,44 +1745,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT ${postSelectAll}
-            FROM "schema"."post" "activePosts"
-            WHERE
-              EXISTS (
-                SELECT 1
-                FROM "schema"."profile"  "activeProfiles"
-                WHERE
-                  EXISTS (
-                    SELECT 1
-                    FROM "schema"."message"
-                    WHERE ("message"."text" = $1
-                      AND EXISTS (
-                        SELECT 1
-                        FROM "schema"."user"  "activeSender"
-                        WHERE "activeProfiles"."active" = $2
-                          AND "activeProfiles"."user_id" = "activeSender"."id"
-                          AND "activeProfiles"."profile_key" = "activeSender"."user_key"
-                          AND "activeSender"."active" = $3
-                          AND "activeSender"."id" = "message"."author_id"
-                          AND "activeSender"."user_key" = "message"."message_key")
-                      )
-                        AND ("message"."deleted_at" IS NULL)
-                  )
-                  AND "activeProfiles"."bio" = $4
-                  AND EXISTS (
-                    SELECT 1
-                    FROM "schema"."user"  "activeUser"
-                    WHERE "activePosts"."active" = $5
-                      AND "activePosts"."user_id" = "activeUser"."id"
-                      AND "activePosts"."title" = "activeUser"."user_key"
-                      AND "activeUser"."active" = $6
-                      AND "activeUser"."id" = "activeProfiles"."user_id"
-                      AND "activeUser"."user_key" = "activeProfiles"."profile_key"
-                  )
-              )
-              AND "activePosts"."body" = $7
-          `,
+        `SELECT "id" "Id", "user_id" "UserId", "user_id_no_fkey" "UserIdNoFkey", "active" "Active", "body" "Body", "title" "Title", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."post" "activePosts" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "activeProfiles" WHERE EXISTS (SELECT 1 FROM "schema"."message" "Message" WHERE ("Message"."text" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfiles"."active" = $2 AND "activeProfiles"."user_id" = "activeSender"."id" AND "activeProfiles"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $3 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key")) AND ("Message"."deleted_at" IS NULL)) AND "activeProfiles"."bio" = $4 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activePosts"."active" = $5 AND "activePosts"."user_id" = "activeUser"."id" AND "activePosts"."title" = "activeUser"."user_key" AND "activeUser"."active" = $6 AND "activeUser"."id" = "activeProfiles"."user_id" AND "activeUser"."user_key" = "activeProfiles"."profile_key")) AND "activePosts"."body" = $7`,
         ['text', true, true, 'bio', true, true, 'body'],
       );
     });
@@ -2704,26 +1769,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-              DELETE FROM "schema"."chat"  "chats"
-              WHERE EXISTS (
-                  SELECT 1 FROM "schema"."profile"
-                  WHERE "profile"."bio" = $1
-                    AND EXISTS (
-                      SELECT 1 FROM "schema"."user"
-                      WHERE EXISTS (
-                          SELECT 1 FROM "schema"."chatUser"
-                          WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                            AND "chatUser"."chat_key" = "chats"."chat_key"
-                            AND "chatUser"."user_id" = "user"."id"
-                            AND "chatUser"."user_key" = "user"."user_key"
-                        )
-                        AND "user"."id" = "profile"."user_id"
-                        AND "user"."user_key" = "profile"."profile_key"
-                    )
-                )
-                AND "chats"."title" = $2
-            `,
+          `DELETE FROM "schema"."chat" "chats" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" WHERE EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "chats"."id_of_chat" AND "chatUser"."chat_key" = "chats"."chat_key" AND "chatUser"."user_id" = "user"."id" AND "chatUser"."user_key" = "user"."user_key") AND "user"."id" = "Profile"."user_id" AND "user"."user_key" = "Profile"."profile_key")) AND "chats"."title" = $2`,
           ['bio', 'title'],
         );
       });
@@ -2737,28 +1783,7 @@ describe('relations chain', () => {
 
         expectSql(
           query.toSQL(),
-          `
-              DELETE FROM "schema"."chat"  "activeChats"
-              WHERE EXISTS (
-                  SELECT 1 FROM "schema"."profile"
-                  WHERE "profile"."bio" = $1
-                    AND EXISTS (
-                      SELECT 1 FROM "schema"."user"  "activeUser"
-                      WHERE "activeChats"."active" = $2
-                        AND EXISTS (
-                          SELECT 1 FROM "schema"."chatUser"
-                          WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
-                            AND "chatUser"."chat_key" = "activeChats"."chat_key"
-                            AND "chatUser"."user_id" = "activeUser"."id"
-                            AND "chatUser"."user_key" = "activeUser"."user_key"
-                        )
-                        AND "activeUser"."active" = $3
-                        AND "activeUser"."id" = "profile"."user_id"
-                        AND "activeUser"."user_key" = "profile"."profile_key"
-                    )
-                )
-                AND "activeChats"."title" = $4
-            `,
+          `DELETE FROM "schema"."chat" "activeChats" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "Profile" WHERE "Profile"."bio" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activeChats"."active" = $2 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat" AND "chatUser"."chat_key" = "activeChats"."chat_key" AND "chatUser"."user_id" = "activeUser"."id" AND "chatUser"."user_key" = "activeUser"."user_key") AND "activeUser"."active" = $3 AND "activeUser"."id" = "Profile"."user_id" AND "activeUser"."user_key" = "Profile"."profile_key")) AND "activeChats"."title" = $4`,
           ['bio', true, true, 'title'],
         );
       });
@@ -2774,26 +1799,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile" "profiles"
-            WHERE EXISTS (
-              SELECT 1 FROM "schema"."chat"
-              WHERE "chat"."title" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "users"
-                  WHERE "profiles"."user_id" = "users"."id"
-                    AND "profiles"."profile_key" = "users"."user_key"
-                    AND EXISTS (
-                      SELECT 1 FROM "schema"."chatUser"
-                      WHERE "chatUser"."user_id" = "users"."id"
-                        AND "chatUser"."user_key" = "users"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                      AND "chatUser"."chat_key" = "chat"."chat_key"
-                    )
-                )
-            )
-            AND "profiles"."bio" = $2
-          `,
+        `SELECT "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."profile" "profiles" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "users" WHERE "profiles"."user_id" = "users"."id" AND "profiles"."profile_key" = "users"."user_key" AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "users"."id" AND "chatUser"."user_key" = "users"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key"))) AND "profiles"."bio" = $2`,
         ['title', 'bio'],
       );
     });
@@ -2806,28 +1812,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile" "activeProfiles"
-            WHERE EXISTS (
-              SELECT 1 FROM "schema"."chat"
-              WHERE "chat"."title" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."user"  "activeUsers"
-                  WHERE "activeProfiles"."active" = $2
-                    AND "activeProfiles"."user_id" = "activeUsers"."id"
-                    AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
-                    AND "activeUsers"."active" = $3
-                    AND EXISTS (
-                      SELECT 1 FROM "schema"."chatUser"
-                      WHERE "chatUser"."user_id" = "activeUsers"."id"
-                        AND "chatUser"."user_key" = "activeUsers"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                    )
-                )
-            )
-            AND "activeProfiles"."bio" = $4
-          `,
+        `SELECT "id" "Id", "profile_key" "ProfileKey", "user_id" "UserId", "bio" "Bio", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."profile" "activeProfiles" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUsers" WHERE "activeProfiles"."active" = $2 AND "activeProfiles"."user_id" = "activeUsers"."id" AND "activeProfiles"."profile_key" = "activeUsers"."user_key" AND "activeUsers"."active" = $3 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "activeUsers"."id" AND "chatUser"."user_key" = "activeUsers"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key"))) AND "activeProfiles"."bio" = $4`,
         ['title', true, true, 'bio'],
       );
     });
@@ -2850,26 +1835,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            DELETE FROM "schema"."profile"  "profiles"
-            WHERE EXISTS (
-                SELECT 1 FROM "schema"."chat"
-                WHERE "chat"."title" = $1
-                  AND EXISTS (
-                    SELECT 1 FROM "schema"."user"  "users"
-                    WHERE "profiles"."user_id" = "users"."id"
-                      AND "profiles"."profile_key" = "users"."user_key"
-                      AND EXISTS (
-                        SELECT 1 FROM "schema"."chatUser"
-                        WHERE "chatUser"."user_id" = "users"."id"
-                          AND "chatUser"."user_key" = "users"."user_key"
-                          AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                      )
-                  )
-              )
-              AND "profiles"."bio" = $2
-          `,
+        `DELETE FROM "schema"."profile" "profiles" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "users" WHERE "profiles"."user_id" = "users"."id" AND "profiles"."profile_key" = "users"."user_key" AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "users"."id" AND "chatUser"."user_key" = "users"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key"))) AND "profiles"."bio" = $2`,
         ['title', 'bio'],
       );
     });
@@ -2883,28 +1849,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-            DELETE FROM "schema"."profile"  "activeProfiles"
-            WHERE EXISTS (
-                SELECT 1 FROM "schema"."chat"
-                WHERE "chat"."title" = $1
-                  AND EXISTS (
-                    SELECT 1 FROM "schema"."user"  "activeUsers"
-                    WHERE "activeProfiles"."active" = $2
-                      AND "activeProfiles"."user_id" = "activeUsers"."id"
-                      AND "activeProfiles"."profile_key" = "activeUsers"."user_key"
-                      AND "activeUsers"."active" = $3
-                      AND EXISTS (
-                        SELECT 1 FROM "schema"."chatUser"
-                        WHERE "chatUser"."user_id" = "activeUsers"."id"
-                          AND "chatUser"."user_key" = "activeUsers"."user_key"
-                          AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                      )
-                  )
-              )
-              AND "activeProfiles"."bio" = $4
-          `,
+        `DELETE FROM "schema"."profile" "activeProfiles" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUsers" WHERE "activeProfiles"."active" = $2 AND "activeProfiles"."user_id" = "activeUsers"."id" AND "activeProfiles"."profile_key" = "activeUsers"."user_key" AND "activeUsers"."active" = $3 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "activeUsers"."id" AND "chatUser"."user_key" = "activeUsers"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key"))) AND "activeProfiles"."bio" = $4`,
         ['title', true, true, 'bio'],
       );
     });
@@ -2925,40 +1870,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "t"."Body", "t"."Bio"
-              FROM (
-                SELECT
-                  "posts"."body" "Body",
-                  "profiles"."bio" "Bio",
-                  row_number() OVER (PARTITION BY "posts"."id") "r"
-                FROM "schema"."post" "posts"
-                JOIN "schema"."profile" "profiles"
-                  ON EXISTS (
-                    SELECT 1 FROM "schema"."user"  "sender"
-                    WHERE "profiles"."user_id" = "sender"."id"
-                      AND "profiles"."profile_key" = "sender"."user_key"
-                      AND "sender"."id" = "message"."author_id"
-                      AND "sender"."user_key" = "message"."message_key"
-                  ) AND EXISTS (
-                    SELECT 1 FROM "schema"."user"
-                    WHERE "posts"."user_id" = "user"."id"
-                      AND "posts"."title" = "user"."user_key"
-                      AND "user"."id" = "profiles"."user_id"
-                      AND "user"."user_key" = "profiles"."profile_key"
-                  )
-                ORDER BY "profiles"."id" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "items" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-          `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Body", "t"."Bio" FROM (SELECT "posts"."body" "Body", "profiles"."bio" "Bio", row_number() OVER (PARTITION BY "posts"."id") "r" FROM "schema"."post" "posts" JOIN "schema"."profile" "profiles" ON EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profiles"."user_id" = "sender"."id" AND "profiles"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key" AND "user"."id" = "profiles"."user_id" AND "user"."user_key" = "profiles"."profile_key") ORDER BY "profiles"."id" ASC) "t" WHERE (r = 1)) "t") "items" ON true WHERE ("Message"."deleted_at" IS NULL)`,
       );
     });
 
@@ -2971,35 +1883,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."message"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "posts"."body" "Body"
-              FROM "schema"."post" "posts"
-              WHERE EXISTS (
-                SELECT 1
-                FROM "schema"."profile" "profiles"
-                WHERE EXISTS (
-                  SELECT 1 FROM "schema"."user"  "sender"
-                  WHERE "profiles"."user_id" = "sender"."id"
-                    AND "profiles"."profile_key" = "sender"."user_key"
-                    AND "sender"."id" = "message"."author_id"
-                    AND "sender"."user_key" = "message"."message_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "schema"."user"
-                  WHERE "posts"."user_id" = "user"."id"
-                    AND "posts"."title" = "user"."user_key"
-                    AND "user"."id" = "profiles"."user_id"
-                    AND "user"."user_key" = "profiles"."profile_key"
-                )
-              )
-            ) "t"
-          ) "items" ON true
-          WHERE ("message"."deleted_at" IS NULL)
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "posts"."body" "Body" FROM "schema"."post" "posts" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "profiles" WHERE EXISTS (SELECT 1 FROM "schema"."user" "sender" WHERE "profiles"."user_id" = "sender"."id" AND "profiles"."profile_key" = "sender"."user_key" AND "sender"."id" = "Message"."author_id" AND "sender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key" AND "user"."id" = "profiles"."user_id" AND "user"."user_key" = "profiles"."profile_key"))) "t") "items" ON true WHERE ("Message"."deleted_at" IS NULL)`,
       );
     });
 
@@ -3019,44 +1903,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT COALESCE("items"."items", '[]') "items"
-            FROM "schema"."message"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) "items"
-              FROM (
-                SELECT "t"."Body", "t"."Bio"
-                FROM (
-                  SELECT
-                    "activePosts"."body" "Body",
-                    "activeProfiles"."bio" "Bio",
-                    row_number() OVER (PARTITION BY "activePosts"."id") "r"
-                  FROM "schema"."post" "activePosts"
-                  JOIN "schema"."profile" "activeProfiles"
-                    ON EXISTS (
-                      SELECT 1 FROM "schema"."user"  "activeSender"
-                      WHERE "activeProfiles"."active" = $1
-                        AND "activeProfiles"."user_id" = "activeSender"."id"
-                        AND "activeProfiles"."profile_key" = "activeSender"."user_key"
-                        AND "activeSender"."active" = $2
-                        AND "activeSender"."id" = "message"."author_id"
-                        AND "activeSender"."user_key" = "message"."message_key"
-                    ) AND EXISTS (
-                      SELECT 1 FROM "schema"."user"  "activeUser"
-                      WHERE "activePosts"."active" = $3
-                        AND "activePosts"."user_id" = "activeUser"."id"
-                        AND "activePosts"."title" = "activeUser"."user_key"
-                        AND "activeUser"."active" = $4
-                        AND "activeUser"."id" = "activeProfiles"."user_id"
-                        AND "activeUser"."user_key" = "activeProfiles"."profile_key"
-                    )
-                  ORDER BY "activeProfiles"."id" ASC
-                ) "t"
-                WHERE (r = 1)
-              ) "t"
-            ) "items" ON true
-            WHERE ("message"."deleted_at" IS NULL)
-          `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Body", "t"."Bio" FROM (SELECT "activePosts"."body" "Body", "activeProfiles"."bio" "Bio", row_number() OVER (PARTITION BY "activePosts"."id") "r" FROM "schema"."post" "activePosts" JOIN "schema"."profile" "activeProfiles" ON EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfiles"."active" = $1 AND "activeProfiles"."user_id" = "activeSender"."id" AND "activeProfiles"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $2 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activePosts"."active" = $3 AND "activePosts"."user_id" = "activeUser"."id" AND "activePosts"."title" = "activeUser"."user_key" AND "activeUser"."active" = $4 AND "activeUser"."id" = "activeProfiles"."user_id" AND "activeUser"."user_key" = "activeProfiles"."profile_key") ORDER BY "activeProfiles"."id" ASC) "t" WHERE (r = 1)) "t") "items" ON true WHERE ("Message"."deleted_at" IS NULL)`,
         [true, true, true, true],
       );
     });
@@ -3070,39 +1917,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-            SELECT COALESCE("items"."items", '[]') "items"
-            FROM "schema"."message"
-            LEFT JOIN LATERAL (
-              SELECT json_agg(row_to_json(t.*)) "items"
-              FROM (
-                SELECT "activePosts"."body" "Body"
-                FROM "schema"."post" "activePosts"
-                WHERE EXISTS (
-                  SELECT 1
-                  FROM "schema"."profile" "activeProfiles"
-                  WHERE EXISTS (
-                    SELECT 1 FROM "schema"."user"  "activeSender"
-                    WHERE "activeProfiles"."active" = $1
-                      AND "activeProfiles"."user_id" = "activeSender"."id"
-                      AND "activeProfiles"."profile_key" = "activeSender"."user_key"
-                      AND "activeSender"."active" = $2
-                      AND "activeSender"."id" = "message"."author_id"
-                      AND "activeSender"."user_key" = "message"."message_key"
-                  ) AND EXISTS (
-                    SELECT 1 FROM "schema"."user"  "activeUser"
-                    WHERE "activePosts"."active" = $3
-                      AND "activePosts"."user_id" = "activeUser"."id"
-                      AND "activePosts"."title" = "activeUser"."user_key"
-                      AND "activeUser"."active" = $4
-                      AND "activeUser"."id" = "activeProfiles"."user_id"
-                      AND "activeUser"."user_key" = "activeProfiles"."profile_key"
-                  )
-                )
-              ) "t"
-            ) "items" ON true
-            WHERE ("message"."deleted_at" IS NULL)
-          `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."message" "Message" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "activePosts"."body" "Body" FROM "schema"."post" "activePosts" WHERE EXISTS (SELECT 1 FROM "schema"."profile" "activeProfiles" WHERE EXISTS (SELECT 1 FROM "schema"."user" "activeSender" WHERE "activeProfiles"."active" = $1 AND "activeProfiles"."user_id" = "activeSender"."id" AND "activeProfiles"."profile_key" = "activeSender"."user_key" AND "activeSender"."active" = $2 AND "activeSender"."id" = "Message"."author_id" AND "activeSender"."user_key" = "Message"."message_key") AND EXISTS (SELECT 1 FROM "schema"."user" "activeUser" WHERE "activePosts"."active" = $3 AND "activePosts"."user_id" = "activeUser"."id" AND "activePosts"."title" = "activeUser"."user_key" AND "activeUser"."active" = $4 AND "activeUser"."id" = "activeProfiles"."user_id" AND "activeUser"."user_key" = "activeProfiles"."profile_key"))) "t") "items" ON true WHERE ("Message"."deleted_at" IS NULL)`,
         [true, true, true, true],
       );
     });
@@ -3117,21 +1932,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          SELECT ${chatSelectAll} FROM "schema"."chat" "chats"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."user"
-              WHERE "user"."name" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."chatUser"
-                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                    AND "chatUser"."user_key" = "user"."user_key"
-                )
-            )
-            AND "chats"."title" = $2
-        `,
+        `SELECT "id_of_chat" "IdOfChat", "chat_key" "ChatKey", "title" "Title", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."chat" "chats" WHERE EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "chats"."id_of_chat" AND "chatUser"."chat_key" = "chats"."chat_key" AND "chatUser"."user_id" = "User"."id" AND "chatUser"."user_key" = "User"."user_key")) AND "chats"."title" = $2`,
         ['Name', 'title'],
       );
     });
@@ -3144,22 +1945,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          SELECT ${chatSelectAll} FROM "schema"."chat" "activeChats"
-          WHERE "activeChats"."active" = $1
-            AND EXISTS (
-              SELECT 1 FROM "schema"."user"
-                WHERE "user"."name" = $2
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."chatUser"
-                  WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "activeChats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                    AND "chatUser"."user_key" = "user"."user_key"
-                )
-            )
-            AND "activeChats"."title" = $3
-        `,
+        `SELECT "id_of_chat" "IdOfChat", "chat_key" "ChatKey", "title" "Title", "active" "Active", "created_at" "createdAt", "updated_at" "updatedAt" FROM "schema"."chat" "activeChats" WHERE "activeChats"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $2 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat" AND "chatUser"."chat_key" = "activeChats"."chat_key" AND "chatUser"."user_id" = "User"."id" AND "chatUser"."user_key" = "User"."user_key")) AND "activeChats"."title" = $3`,
         [true, 'Name', 'title'],
       );
     });
@@ -3176,38 +1962,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT ${postTagSelectAll}
-          FROM "schema"."postTag" "postTags"
-          WHERE
-            EXISTS (
-              SELECT 1
-              FROM "schema"."user"  "users"
-              WHERE
-                EXISTS (
-                  SELECT 1
-                  FROM "schema"."chat"
-                  WHERE "chat"."title" = $1
-                    AND EXISTS (
-                      SELECT 1
-                      FROM "schema"."chatUser"
-                      WHERE "chatUser"."user_id" = "users"."id"
-                        AND "chatUser"."user_key" = "users"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                    )
-                )
-                AND "users"."name" = $2
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."post"
-                  WHERE "post"."id" = "postTags"."post_id"
-                    AND "post"."user_id" = "users"."id"
-                    AND "post"."title" = "users"."user_key"
-                )
-            )
-            AND "postTags"."tag" = $3
-        `,
+        `SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "postTags" WHERE EXISTS (SELECT 1 FROM "schema"."user" "users" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "users"."id" AND "chatUser"."user_key" = "users"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key")) AND "users"."name" = $2 AND EXISTS (SELECT 1 FROM "schema"."post" WHERE "post"."id" = "postTags"."post_id" AND "post"."user_id" = "users"."id" AND "post"."title" = "users"."user_key")) AND "postTags"."tag" = $3`,
         ['title', 'name', 'tag'],
       );
     });
@@ -3224,38 +1979,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT ${postTagSelectAll}
-          FROM "schema"."postTag" "activePostTags"
-          WHERE "activePostTags"."active" = $1
-            AND EXISTS (
-              SELECT 1
-              FROM "schema"."user"  "activeUsers"
-              WHERE "activeUsers"."active" = $2
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."chat"
-                  WHERE "chat"."title" = $3
-                    AND EXISTS (
-                      SELECT 1
-                      FROM "schema"."chatUser"
-                      WHERE "chatUser"."user_id" = "activeUsers"."id"
-                        AND "chatUser"."user_key" = "activeUsers"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                    )
-                )
-                AND "activeUsers"."name" = $4
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."post"
-                  WHERE "post"."id" = "activePostTags"."post_id"
-                    AND "post"."user_id" = "activeUsers"."id"
-                    AND "post"."title" = "activeUsers"."user_key"
-                )
-            )
-            AND "activePostTags"."tag" = $5
-        `,
+        `SELECT "post_id" "PostId", "tag" "Tag", "active" "Active" FROM "schema"."postTag" "activePostTags" WHERE "activePostTags"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUsers" WHERE "activeUsers"."active" = $2 AND EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $3 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "activeUsers"."id" AND "chatUser"."user_key" = "activeUsers"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key")) AND "activeUsers"."name" = $4 AND EXISTS (SELECT 1 FROM "schema"."post" WHERE "post"."id" = "activePostTags"."post_id" AND "post"."user_id" = "activeUsers"."id" AND "post"."title" = "activeUsers"."user_key")) AND "activePostTags"."tag" = $5`,
         [true, true, 'title', 'name', 'tag'],
       );
     });
@@ -3347,21 +2071,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          DELETE FROM "schema"."chat"  "chats"
-          WHERE EXISTS (
-              SELECT 1 FROM "schema"."user"
-              WHERE "user"."name" = $1
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."chatUser"
-                  WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                    AND "chatUser"."user_key" = "user"."user_key"
-                )
-            )
-            AND "chats"."title" = $2
-        `,
+        `DELETE FROM "schema"."chat" "chats" WHERE EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $1 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "chats"."id_of_chat" AND "chatUser"."chat_key" = "chats"."chat_key" AND "chatUser"."user_id" = "User"."id" AND "chatUser"."user_key" = "User"."user_key")) AND "chats"."title" = $2`,
         ['Name', 'title'],
       );
     });
@@ -3375,22 +2085,7 @@ describe('relations chain', () => {
 
       expectSql(
         query.toSQL(),
-        `
-          DELETE FROM "schema"."chat"  "activeChats"
-          WHERE "activeChats"."active" = $1
-            AND EXISTS (
-              SELECT 1 FROM "schema"."user"
-              WHERE "user"."name" = $2
-                AND EXISTS (
-                  SELECT 1 FROM "schema"."chatUser"
-                  WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat"
-                    AND "chatUser"."chat_key" = "activeChats"."chat_key"
-                    AND "chatUser"."user_id" = "user"."id"
-                    AND "chatUser"."user_key" = "user"."user_key"
-                )
-            )
-            AND "activeChats"."title" = $3
-        `,
+        `DELETE FROM "schema"."chat" "activeChats" WHERE "activeChats"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "User" WHERE "User"."name" = $2 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."chat_id" = "activeChats"."id_of_chat" AND "chatUser"."chat_key" = "activeChats"."chat_key" AND "chatUser"."user_id" = "User"."id" AND "chatUser"."user_key" = "User"."user_key")) AND "activeChats"."title" = $3`,
         [true, 'Name', 'title'],
       );
     });
@@ -3411,38 +2106,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "t"."Tag", "t"."Name"
-              FROM (
-                SELECT
-                  "postTags"."tag" "Tag",
-                  "users"."name" "Name",
-                  row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r"
-                FROM "schema"."postTag" "postTags"
-                JOIN "schema"."user" "users"
-                  ON EXISTS (
-                    SELECT 1 FROM "schema"."chatUser"
-                    WHERE "chatUser"."user_id" = "users"."id"
-                      AND "chatUser"."user_key" = "users"."user_key"
-                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                      AND "chatUser"."chat_key" = "chat"."chat_key"
-                  ) AND EXISTS (
-                    SELECT 1 FROM "schema"."post"
-                    WHERE "post"."id" = "postTags"."post_id"
-                      AND "post"."user_id" = "users"."id"
-                      AND "post"."title" = "users"."user_key"
-                  )
-                ORDER BY "users"."id" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "items" ON true
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Tag", "t"."Name" FROM (SELECT "postTags"."tag" "Tag", "users"."name" "Name", row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r" FROM "schema"."postTag" "postTags" JOIN "schema"."user" "users" ON EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "users"."id" AND "chatUser"."user_key" = "users"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key") AND EXISTS (SELECT 1 FROM "schema"."post" WHERE "post"."id" = "postTags"."post_id" AND "post"."user_id" = "users"."id" AND "post"."title" = "users"."user_key") ORDER BY "users"."id" ASC) "t" WHERE (r = 1)) "t") "items" ON true`,
       );
     });
 
@@ -3455,33 +2119,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "postTags"."tag" "Tag"
-              FROM "schema"."postTag" "postTags"
-              WHERE EXISTS (
-                SELECT 1
-                FROM "schema"."user" "users"
-                WHERE EXISTS (
-                  SELECT 1 FROM "schema"."chatUser"
-                  WHERE "chatUser"."user_id" = "users"."id"
-                    AND "chatUser"."user_key" = "users"."user_key"
-                    AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chat"."chat_key"
-                ) AND EXISTS (
-                  SELECT 1 FROM "schema"."post"
-                  WHERE "post"."id" = "postTags"."post_id"
-                    AND "post"."user_id" = "users"."id"
-                    AND "post"."title" = "users"."user_key"
-                )
-              )
-            ) "t"
-          ) "items" ON true
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "postTags"."tag" "Tag" FROM "schema"."postTag" "postTags" WHERE EXISTS (SELECT 1 FROM "schema"."user" "users" WHERE EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "users"."id" AND "chatUser"."user_key" = "users"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key") AND EXISTS (SELECT 1 FROM "schema"."post" WHERE "post"."id" = "postTags"."post_id" AND "post"."user_id" = "users"."id" AND "post"."title" = "users"."user_key"))) "t") "items" ON true`,
       );
     });
 
@@ -3501,40 +2139,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "t"."Tag", "t"."Name"
-              FROM (
-                SELECT
-                  "activePostTags"."tag" "Tag",
-                  "activeUsers"."name" "Name",
-                  row_number() OVER (PARTITION BY "activePostTags"."post_id", "activePostTags"."tag") "r"
-                FROM "schema"."postTag" "activePostTags"
-                JOIN "schema"."user" "activeUsers"
-                  ON "activeUsers"."active" = $1
-                    AND EXISTS (
-                      SELECT 1 FROM "schema"."chatUser"
-                      WHERE "chatUser"."user_id" = "activeUsers"."id"
-                        AND "chatUser"."user_key" = "activeUsers"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
-                    ) AND EXISTS (
-                      SELECT 1 FROM "schema"."post"
-                      WHERE "post"."id" = "activePostTags"."post_id"
-                        AND "post"."user_id" = "activeUsers"."id"
-                        AND "post"."title" = "activeUsers"."user_key"
-                    )
-                WHERE "activePostTags"."active" = $2
-                ORDER BY "activeUsers"."id" ASC
-              ) "t"
-              WHERE (r = 1)
-            ) "t"
-          ) "items" ON true
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Tag", "t"."Name" FROM (SELECT "activePostTags"."tag" "Tag", "activeUsers"."name" "Name", row_number() OVER (PARTITION BY "activePostTags"."post_id", "activePostTags"."tag") "r" FROM "schema"."postTag" "activePostTags" JOIN "schema"."user" "activeUsers" ON "activeUsers"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "activeUsers"."id" AND "chatUser"."user_key" = "activeUsers"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key") AND EXISTS (SELECT 1 FROM "schema"."post" WHERE "post"."id" = "activePostTags"."post_id" AND "post"."user_id" = "activeUsers"."id" AND "post"."title" = "activeUsers"."user_key") WHERE "activePostTags"."active" = $2 ORDER BY "activeUsers"."id" ASC) "t" WHERE (r = 1)) "t") "items" ON true`,
         [true, true],
       );
     });
@@ -3548,35 +2153,7 @@ describe('relations chain', () => {
 
       expectSql(
         q.toSQL(),
-        `
-          SELECT COALESCE("items"."items", '[]') "items"
-          FROM "schema"."chat"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "items"
-            FROM (
-              SELECT "activePostTags"."tag" "Tag"
-              FROM "schema"."postTag" "activePostTags"
-              WHERE "activePostTags"."active" = $1
-                AND EXISTS (
-                  SELECT 1
-                  FROM "schema"."user" "activeUsers"
-                  WHERE "activeUsers"."active" = $2
-                    AND EXISTS (
-                    SELECT 1 FROM "schema"."chatUser"
-                    WHERE "chatUser"."user_id" = "activeUsers"."id"
-                      AND "chatUser"."user_key" = "activeUsers"."user_key"
-                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                      AND "chatUser"."chat_key" = "chat"."chat_key"
-                  ) AND EXISTS (
-                    SELECT 1 FROM "schema"."post"
-                    WHERE "post"."id" = "activePostTags"."post_id"
-                      AND "post"."user_id" = "activeUsers"."id"
-                      AND "post"."title" = "activeUsers"."user_key"
-                  )
-                )
-            ) "t"
-          ) "items" ON true
-        `,
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."chat" "Chat" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "activePostTags"."tag" "Tag" FROM "schema"."postTag" "activePostTags" WHERE "activePostTags"."active" = $1 AND EXISTS (SELECT 1 FROM "schema"."user" "activeUsers" WHERE "activeUsers"."active" = $2 AND EXISTS (SELECT 1 FROM "schema"."chatUser" WHERE "chatUser"."user_id" = "activeUsers"."id" AND "chatUser"."user_key" = "activeUsers"."user_key" AND "chatUser"."chat_id" = "Chat"."id_of_chat" AND "chatUser"."chat_key" = "Chat"."chat_key") AND EXISTS (SELECT 1 FROM "schema"."post" WHERE "post"."id" = "activePostTags"."post_id" AND "post"."user_id" = "activeUsers"."id" AND "post"."title" = "activeUsers"."user_key"))) "t") "items" ON true`,
         [true, true],
       );
     });

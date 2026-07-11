@@ -851,7 +851,13 @@ export const _joinLateral = (
     );
   }
 
-  const shape = getShapeFromSelect(joinQuery, true);
+  const shape =
+    (joinQuery.table &&
+      (joinQuery.q.joinedShapes?.[joinQuery.table] as
+        | Column.QueryColumns
+        | undefined)) ||
+    (joinQuery.q.joinedShapes?.[joinAs] as Column.QueryColumns | undefined) ||
+    getShapeFromSelect(joinQuery, true);
   setObjectValueImmutable(query.q, 'joinedShapes', joinAs, shape);
 
   if (joinValue) {

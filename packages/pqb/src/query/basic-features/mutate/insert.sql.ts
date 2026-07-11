@@ -19,7 +19,12 @@ import {
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { moveQueryToCte } from '../cte/move-mutative-query-to-cte-base.sql';
 import { isRelationQuery } from '../../relations';
-import { quoteTableWithSchema, SingleSqlItem, Sql } from '../../sql/sql';
+import {
+  getQueryRelationAliasForAs,
+  quoteTableWithSchema,
+  SingleSqlItem,
+  Sql,
+} from '../../sql/sql';
 import {
   addValue,
   emptyArray,
@@ -59,6 +64,7 @@ interface InsertSqlState {
   q: ToSQLQuery;
   query: QueryData;
   quotedAs: string;
+  returningQuotedAs: string;
   isSubSql?: boolean;
   relationSelectState?: MutativeQueriesSelectRelationsSqlState;
   returningPos: number;
@@ -136,17 +142,21 @@ export const makeInsertSql = (
 
   // `insertWith` queries are applied only once, need to ignore if `ctx.hasNonSelect` is changed below.
   const hasNonSelect = ctx.hasNonSelect;
+  const returningQuotedAs = query.as ? `"${query.as}"` : quotedAs;
+  const insertAlias = getQueryRelationAliasForAs(q, query.as);
+  quotedAs = insertAlias || quotedAs;
 
   const sqlState: InsertSqlState = {
     ctx,
     q,
     query,
     quotedAs,
+    returningQuotedAs,
     isSubSql,
     returningPos: 0,
     insertSql: `INSERT INTO ${quoteTableWithSchema(q)}${
-      quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''
-    }`,
+      insertAlias ? ` AS ${insertAlias}` : ''
+    }${quotedColumns.length ? '(' + quotedColumns.join(', ') + ')' : ''}`,
   };
   ctx.sql.push(null as never, null as never);
 
@@ -431,7 +441,7 @@ const applySqlState = (
     ctx,
     sqlState.q,
     sqlState.query,
-    sqlState.quotedAs,
+    sqlState.returningQuotedAs,
     sqlState.relationSelectState,
     'Create',
     undefined,

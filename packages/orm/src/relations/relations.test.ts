@@ -41,18 +41,18 @@ describe('relations', () => {
         SELECT
           row_to_json("profile".*) "profile",
           COALESCE("messages"."messages", '[]') "messages"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT ${ProfileSelectAll} FROM "schema"."profile"
           WHERE "profile"."bio" = $1
-            AND "profile"."user_id" = "user"."id"
-            AND "profile"."profile_key" = "user"."user_key"
+            AND "profile"."user_id" = "User"."id"
+            AND "profile"."profile_key" = "User"."user_key"
         ) "profile" ON true
         LEFT JOIN LATERAL (
           SELECT json_agg(${messageJSONBuildObject('t')}) "messages"
           FROM (
             SELECT ${messageSelectAll} FROM "schema"."message" "messages"
-            WHERE ("messages"."text" = $2 AND "messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            WHERE ("messages"."text" = $2 AND "messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "t"
         ) "messages" ON true
@@ -94,13 +94,13 @@ describe('relations', () => {
         SELECT
           COALESCE("ids"."ids", '[]') "ids",
           COALESCE("dates"."dates", '[]') "dates"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT json_agg("t"."Id") "ids"
           FROM (
             SELECT "messages"."id" "Id"
             FROM "schema"."message" "messages"
-            WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "t"
         ) "ids" ON true
@@ -109,7 +109,7 @@ describe('relations', () => {
           FROM (
             SELECT "messages"."created_at" "createdAt"
             FROM "schema"."message" "messages"
-            WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+            WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           ) "t"
         ) "dates" ON true
@@ -166,9 +166,9 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT
-          "message"."created_at" "createdAt",
+          "Message"."created_at" "createdAt",
           row_to_json("chatUser".*) "chatUser"
-        FROM "schema"."message"
+        FROM "schema"."message" "Message"
         LEFT JOIN LATERAL (
           SELECT
             "sender"."created_at" "createdAt",
@@ -182,10 +182,10 @@ describe('relations', () => {
               AND "p"."user_id" = "sender"."id"
               AND "p"."profile_key" = "sender"."user_key"
           ) "userProfile" ON true
-          WHERE "sender"."id" = "message"."author_id"
-            AND "sender"."user_key" = "message"."message_key"
+          WHERE "sender"."id" = "Message"."author_id"
+            AND "sender"."user_key" = "Message"."message_key"
         ) "chatUser" ON true
-        WHERE ("message"."deleted_at" IS NULL)
+        WHERE ("Message"."deleted_at" IS NULL)
       `,
       ['bio'],
     );
@@ -205,7 +205,7 @@ describe('relations', () => {
   });
 
   it('should load nested relations with the same name and properly differentiate them', () => {
-    const q = db.category.select({
+    const q = db.category.as('category').select({
       category: (q) => q.category,
     });
 
@@ -236,11 +236,11 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "messagesCount"."messagesCount" "messagesCount"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT count(*) "messagesCount"
           FROM "schema"."message" "messages"
-          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+          WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "messagesCount" ON true
         ORDER BY "messagesCount"."messagesCount" DESC
@@ -261,12 +261,12 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "bio"."bio" "bio"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT array["profile"."bio"] "bio"
           FROM "schema"."profile"
-          WHERE "profile"."user_id" = "user"."id"
-            AND "profile"."profile_key" = "user"."user_key"
+          WHERE "profile"."user_id" = "User"."id"
+            AND "profile"."profile_key" = "User"."user_key"
         ) "bio" ON true
         ORDER BY "bio"."bio"[1] DESC
       `,
@@ -287,12 +287,12 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT row_to_json("profile".*) "profile"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT ${ProfileSelectAll}
           FROM "schema"."profile"
-          WHERE "profile"."user_id" = "user"."id"
-            AND "profile"."profile_key" = "user"."user_key"
+          WHERE "profile"."user_id" = "User"."id"
+            AND "profile"."profile_key" = "User"."user_key"
         ) "profile" ON true
       `,
     );
@@ -310,7 +310,7 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT count(*)
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         WHERE (
           SELECT count(*) > $1
           FROM "schema"."post" "posts"
@@ -321,8 +321,8 @@ describe('relations', () => {
               AND "postTags"."post_id" = "posts"."id"
             LIMIT 1
           )
-          AND "posts"."user_id" = "user"."id"
-          AND "posts"."title" = "user"."user_key"
+          AND "posts"."user_id" = "User"."id"
+          AND "posts"."title" = "User"."user_key"
         )
       `,
       [3, 'tag'],
@@ -335,11 +335,11 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id"
+        FROM "schema"."user" "User"
         JOIN "schema"."post" "posts"
-          ON "posts"."user_id" = "user"."id"
-         AND "posts"."title" = "user"."user_key"
+          ON "posts"."user_id" = "User"."id"
+         AND "posts"."title" = "User"."user_key"
       `,
     );
   });
@@ -353,12 +353,12 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id"
+        FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT "message".*
           FROM "schema"."message" "messages"
-          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+          WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
             AND ("messages"."deleted_at" IS NULL)
           LIMIT $1
         ) "messages" ON true
@@ -377,12 +377,12 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id"
+        FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT "messages"."text" "Text"
           FROM "schema"."message" "messages"
-          WHERE ("messages"."author_id" = "user"."id" AND "messages"."message_key" = "user"."user_key")
+          WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         ) "messages" ON true
         WHERE "messages"."Text" = $1
@@ -403,11 +403,11 @@ describe('relations', () => {
       q.toSQL(),
       `
         SELECT "postsCount"."postsCount" "postsCount"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT count(*) "postsCount"
           FROM "schema"."post" "posts"
-          WHERE "posts"."user_id" = "user"."id" AND "posts"."title" = "user"."user_key"
+          WHERE "posts"."user_id" = "User"."id" AND "posts"."title" = "User"."user_key"
         ) "postsCount" ON true
         WHERE "postsCount"."postsCount" > $1
         ORDER BY "postsCount"."postsCount" DESC
@@ -422,11 +422,11 @@ describe('relations', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT "user"."id" "Id"
-        FROM "schema"."user"
+        SELECT "User"."id" "Id"
+        FROM "schema"."user" "User"
         JOIN "schema"."profile"  "p"
-          ON "p"."user_id" = "user"."id"
-         AND "p"."profile_key" = "user"."user_key"
+          ON "p"."user_id" = "User"."id"
+         AND "p"."profile_key" = "User"."user_key"
       `,
     );
   });
@@ -524,7 +524,7 @@ describe('relations', () => {
 
   describe('makeHelper', () => {
     it('should fit into `makeHelper` function', async () => {
-      const fn = db.post.makeHelper((q) => q.select('post.Title'));
+      const fn = db.post.makeHelper((q) => q.select('Post.Title'));
 
       const q = db.user.select({
         posts: (q) => fn(q.posts.select('posts.Id')),
@@ -539,14 +539,14 @@ describe('relations', () => {
         q.toSQL(),
         `
         SELECT COALESCE("posts"."posts", '[]') "posts"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT json_agg(row_to_json(t.*)) "posts"
           FROM (
             SELECT "posts"."id" "Id", "posts"."title" "Title"
             FROM "schema"."post" "posts"
-            WHERE "posts"."user_id" = "user"."id"
-              AND "posts"."title" = "user"."user_key"
+            WHERE "posts"."user_id" = "User"."id"
+              AND "posts"."title" = "User"."user_key"
           ) "t"
         ) "posts" ON true
       `,

@@ -27,7 +27,7 @@ import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { valibotSchemaConfig } from 'orchid-orm-valibot';
 
 export const BaseTable = createBaseTable({
-  // set to true if columns in database are in snake_case
+  // set to true if tables and columns in database are in snake_case
   snakeCase: true,
 
   // optional, but recommended: derive and use validation schemas from your tables
@@ -98,7 +98,7 @@ export class UserTable extends BaseTable {
 
 ## snakeCase
 
-By default, all column names are expected to be named in camelCase.
+By default, table names and column names are expected to match the names used in TypeScript.
 
 If only some columns are named in snake_case, you can use `name` method to indicate it:
 
@@ -119,7 +119,11 @@ class Table extends BaseTable {
 const records = await table.select('camelCase', 'snakeCase');
 ```
 
-Set `snakeCase` to `true` if you want all columns to be translated automatically into a snake_case.
+Set `snakeCase` to `true` if you want table names and column names to be translated automatically into snake_case.
+
+For tables and views, `snakeCase` changes the default database relation name stored as `nameInDb`.
+The `table` property on tables and the `name` property on views remain query-facing aliases.
+Set [`nameInDb`](/guide/define-tables#nameindb) explicitly when the database table name should not be derived from the alias.
 
 Column name can still be overridden with a `name` method.
 
@@ -130,8 +134,9 @@ export const BaseTable = createBaseTable({
   snakeCase: true,
 });
 
-class Table extends BaseTable {
-  readonly table = 'table';
+class Profile extends BaseTable {
+  // SQL uses the "user_profile" table name in db, while queries use userProfile as the alias.
+  readonly table = 'userProfile';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     // camelCase column requires an explicit name
@@ -142,7 +147,7 @@ class Table extends BaseTable {
 }
 
 // result is the same as before
-const records = await table.select('camelCase', 'snakeCase');
+const records = await db.profile.select('camelCase', 'snakeCase');
 ```
 
 ## autoForeignKeys

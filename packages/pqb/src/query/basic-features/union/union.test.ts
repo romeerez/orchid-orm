@@ -20,23 +20,23 @@ describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
       q.toSQL(),
       `
       (
-        SELECT ${userColumnsSql} FROM "schema"."user" ORDER BY "user"."id" ASC LIMIT $1 OFFSET $2
+        SELECT ${userColumnsSql} FROM "schema"."user" "User" ORDER BY "User"."id" ASC LIMIT $1 OFFSET $2
       )
       ${UNION}
       (
-        SELECT ${userColumnsSql} FROM "schema"."user" ORDER BY "user"."name" ASC LIMIT $3 OFFSET $4
+        SELECT ${userColumnsSql} FROM "schema"."user" "User" ORDER BY "User"."name" ASC LIMIT $3 OFFSET $4
       )
       ${UNION} (
         custom sql 1
       )
       ${UNION} ALL
       (
-        SELECT ${userColumnsSql} FROM "schema"."user" ORDER BY "user"."age" ASC LIMIT $5 OFFSET $6
+        SELECT ${userColumnsSql} FROM "schema"."user" "User" ORDER BY "User"."age" ASC LIMIT $5 OFFSET $6
       )
       ${UNION} ALL (
         custom sql 2
       )
-      ORDER BY "user"."active" ASC LIMIT $7 OFFSET $8
+      ORDER BY "User"."active" ASC LIMIT $7 OFFSET $8
     `,
       [1, 1, 2, 2, 3, 3, 4, 4],
     );

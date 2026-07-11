@@ -513,7 +513,8 @@ const getActualItems = async (
     }
 
     const schema = getQuerySchema(table);
-    const name = concatSchemaAndName({ schema, name: table.table });
+    const tableName = getQueryNameInDb(table);
+    const name = concatSchemaAndName({ schema, name: tableName });
     if (tableNames.has(name)) {
       throw new Error(`Table ${name} is defined more than once`);
     }
@@ -523,7 +524,7 @@ const getActualItems = async (
     if (schema) codeItems.schemas.add(schema);
 
     codeItems.tables.push({
-      table: table.table as string,
+      table: tableName,
       shape: table.shape,
       internal: {
         ...table.internal,
@@ -557,10 +558,11 @@ const getActualItems = async (
     for (const key in views) {
       const view = views[key];
       const schema = getQuerySchema(view);
+      const viewName = getQueryNameInDb(view);
       if (schema) codeItems.schemas.add(schema);
 
       codeItems.views.push({
-        name: view.table as string,
+        name: viewName,
         shape: view.shape as ColumnsShape,
         internal: view.internal,
         q: {
@@ -625,6 +627,10 @@ const getActualItems = async (
   }
 
   return codeItems;
+};
+
+const getQueryNameInDb = (query: Query): string => {
+  return query.q.nameInDb || (query.table as string);
 };
 
 const processCodeItemShape = (

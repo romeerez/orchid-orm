@@ -11,6 +11,10 @@ Treat every rule in this file as mandatory for every change in that directory.
 - Query builder methods, which are mixed into the `QueryMethods` interface, should be kept in files with the `.query` suffix.
 - SQL string composition should be kept in files with the `.sql` suffix.
 
+## Table sources
+
+- When writing a table source for `FROM` or `JOIN`, use `getQueryRelationAlias` or `getQueryRelationAliasForAs` to decide whether to add an alias.
+
 ## Use feature folders for capabilities
 
 When a task explicitly mentions a capability, treat that as a mandatory checkpoint to decide whether the change belongs in a feature folder.

@@ -176,7 +176,7 @@ describe('belongsTo', () => {
             SELECT ${ProfileSelectAll} FROM "schema"."profile" "p"
             WHERE EXISTS (
               SELECT 1 FROM "schema"."user"
-              WHERE "user"."name" = $1
+              WHERE "User"."name" = $1
                 AND "user"."id" = "p"."user_id"
                 AND "user"."user_key" = "p"."profile_key"
             )
@@ -415,14 +415,14 @@ describe('belongsTo', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."bio" "Bio", ${userRowToJSON('u')} "u"
-            FROM "schema"."profile"
+            SELECT "Profile"."bio" "Bio", ${userRowToJSON('u')} "u"
+            FROM "schema"."profile" "Profile"
             JOIN LATERAL (
               SELECT ${UserSelectAll}
               FROM "schema"."user" "u"
               WHERE "u"."name" = $1
-                AND "u"."id" = "profile"."user_id"
-                AND "u"."user_key" = "profile"."profile_key"
+                AND "u"."id" = "Profile"."user_id"
+                AND "u"."user_key" = "Profile"."profile_key"
             ) "u" ON true
             WHERE "u"."Name" = $2
           `,
@@ -444,15 +444,15 @@ describe('belongsTo', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."bio" "Bio", ${userRowToJSON('u')} "u"
-            FROM "schema"."profile"
+            SELECT "Profile"."bio" "Bio", ${userRowToJSON('u')} "u"
+            FROM "schema"."profile" "Profile"
             JOIN LATERAL (
               SELECT ${UserSelectAll}
               FROM "schema"."user" "u"
               WHERE "u"."active" = $1
                 AND "u"."name" = $2
-                AND "u"."id" = "profile"."user_id"
-                AND "u"."user_key" = "profile"."profile_key"
+                AND "u"."id" = "Profile"."user_id"
+                AND "u"."user_key" = "Profile"."profile_key"
             ) "u" ON true
             WHERE "u"."Name" = $3
           `,
@@ -605,7 +605,7 @@ describe('belongsTo', () => {
       });
 
       it('should support recurring select', () => {
-        const q = db.profile.select({
+        const q = db.profile.as('profile').select({
           user: (q) =>
             q.user.select({
               profile: (q) =>
@@ -647,7 +647,7 @@ describe('belongsTo', () => {
       });
 
       it('should support recurring select using `on`', () => {
-        const q = db.profile.select({
+        const q = db.profile.as('profile').select({
           activeUser: (q) =>
             q.activeUser.select({
               profile: (q) =>
@@ -933,12 +933,12 @@ describe('belongsTo', () => {
           q.toSQL(),
           `
             WITH "user" AS (
-              INSERT INTO "schema"."user"("name", "user_key", "password", "updated_at", "created_at")
+              INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
               VALUES ($1, $2, $3, $4, $5)
               RETURNING ${UserSelectAll}
             ),
             "profile" AS (
-              INSERT INTO "schema"."profile"("bio", "profile_key", "updated_at", "created_at", "user_id")
+              INSERT INTO "schema"."profile" AS "Profile"("bio", "profile_key", "updated_at", "created_at", "user_id")
               VALUES (
                 $6, $7, $8, $9,
                 (
@@ -2667,12 +2667,12 @@ describe('belongsTo', () => {
     expectSql(
       q.toSQL(),
       `
-        SELECT ${ProfileSelectAll} FROM "schema"."profile" WHERE (
+        SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile" WHERE (
           SELECT count(*) = $1
           FROM "schema"."user"
           WHERE "user"."name" IN ($2, $3)
-            AND "user"."id" = "profile"."user_id"
-            AND "user"."user_key" = "profile"."profile_key"
+            AND "user"."id" = "Profile"."user_id"
+            AND "user"."user_key" = "Profile"."profile_key"
         )
       `,
       [1, 'a', 'b'],

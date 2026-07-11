@@ -95,6 +95,134 @@ describe('baseTable', () => {
     expect(orm.table.q.language).toBe('Ukrainian');
   });
 
+  describe('nameInDb', () => {
+    it('should use an explicit database name for a table alias', () => {
+      class UserTable extends BaseTable {
+        readonly table = 'User';
+        readonly nameInDb = 'app_users';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      }
+
+      const { user } = orchidORMWithAdapter(
+        { adapter: testAdapter },
+        { user: UserTable },
+      );
+
+      expect(user.table).toBe('User');
+      expect(user.q.nameInDb).toBe('app_users');
+      expectSql(
+        user.select('id').toSQL(),
+        'SELECT "User"."id" FROM "app_users" "User"',
+      );
+    });
+
+    it('should derive a database table name from a snake-case table alias', () => {
+      const BaseTable = createBaseTable({ snakeCase: true });
+
+      class UserProfileTable extends BaseTable {
+        readonly table = 'UserProfile';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      }
+
+      const { userProfile } = orchidORMWithAdapter(
+        { adapter: testAdapter },
+        { userProfile: UserProfileTable },
+      );
+
+      expect(userProfile.table).toBe('UserProfile');
+      expect(userProfile.q.nameInDb).toBe('user_profile');
+      expectSql(
+        userProfile.select('id').toSQL(),
+        'SELECT "UserProfile"."id" FROM "user_profile" "UserProfile"',
+      );
+    });
+
+    it('should resolve database names for regular and materialized views', () => {
+      const BaseTable = createBaseTable({ snakeCase: true });
+
+      class ActiveUserView extends BaseTable.View {
+        readonly name = 'ActiveUser';
+        sql = 'SELECT 1 id';
+        columns = this.setColumns((t) => ({
+          id: t.integer(),
+        }));
+      }
+
+      class MonthlySaleView extends BaseTable.MaterializedView {
+        readonly name = 'MonthlySale';
+        readonly nameInDb = 'sales_by_month';
+        sql = 'SELECT 1 id';
+        columns = this.setColumns((t) => ({
+          id: t.integer(),
+        }));
+      }
+
+      const db = orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          views: {
+            activeUser: ActiveUserView,
+            monthlySale: MonthlySaleView,
+          },
+        },
+        {},
+      );
+
+      expect(db.$views.activeUser.table).toBe('ActiveUser');
+      expect(db.$views.activeUser.q.nameInDb).toBe('active_user');
+      expectSql(
+        db.$views.activeUser.select('id').toSQL(),
+        'SELECT "ActiveUser"."id" FROM "active_user" "ActiveUser"',
+      );
+
+      expect(db.$views.monthlySale.table).toBe('MonthlySale');
+      expect(db.$views.monthlySale.q.nameInDb).toBe('sales_by_month');
+      expectSql(
+        db.$views.monthlySale.select('id').toSQL(),
+        'SELECT "MonthlySale"."id" FROM "sales_by_month" "MonthlySale"',
+      );
+    });
+
+    it('should reject duplicate database names across aliases', () => {
+      class UserTable extends BaseTable {
+        readonly table = 'User';
+        readonly nameInDb = 'app_users';
+        columns = this.setColumns((t) => ({
+          id: t.identity().primaryKey(),
+        }));
+      }
+
+      class AppUserView extends BaseTable.View {
+        readonly name = 'AppUser';
+        readonly nameInDb = 'app_users';
+        sql = 'SELECT 1 id';
+        columns = this.setColumns((t) => ({
+          id: t.integer(),
+        }));
+      }
+
+      expect(() =>
+        orchidORMWithAdapter(
+          {
+            adapter: testAdapter,
+            views: {
+              appUser: AppUserView,
+            },
+          },
+          {
+            user: UserTable,
+          },
+        ),
+      ).toThrow(
+        'Cannot configure both a table and a view for database relation app_users',
+      );
+    });
+  });
+
   it('should have `columnTypes`', () => {
     expect(BaseTable.columnTypes).toBe(testColumnTypes);
   });
@@ -754,17 +882,17 @@ describe('baseTable', () => {
         q.toSQL(),
         `
           WITH "cte" AS (
-            SELECT "user"."id" "Id", "user"."name" "Name"
-            FROM "schema"."user"
+            SELECT "User"."id" "Id", "User"."name" "Name"
+            FROM "schema"."user" "User"
           )
           SELECT row_to_json("rel".*) "rel"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LEFT JOIN LATERAL (
             SELECT "profile"."id" "Id", "cte"."Name"
             FROM "schema"."profile"
             JOIN "cte" ON "cte"."Id" = "profile"."id"
-            WHERE "profile"."user_id" = "user"."id"
-              AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
           ) "rel" ON true
         `,
       );

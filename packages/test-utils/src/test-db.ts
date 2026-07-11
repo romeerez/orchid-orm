@@ -19,7 +19,7 @@ export const BaseTable = createBaseTable({
 
 export type UserDefaultSelect = DefaultSelect<UserTable>;
 export class UserTable extends BaseTable {
-  readonly table = 'user';
+  readonly table = 'User';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     Name: t.name('name').text(),
@@ -158,7 +158,7 @@ export class UserTable extends BaseTable {
 }
 
 export class TaskTable extends BaseTable {
-  readonly table = 'task';
+  readonly table = 'Task';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     UserId: t.name('user_id').integer().nullable(),
@@ -170,7 +170,7 @@ export class TaskTable extends BaseTable {
 
 export type Profile = DefaultSelect<ProfileTable>;
 export class ProfileTable extends BaseTable {
-  readonly table = 'profile';
+  readonly table = 'Profile';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     ProfileKey: t.name('profile_key').text(),
@@ -250,6 +250,7 @@ export class ProfileTable extends BaseTable {
 
 class ProfilePicTable extends BaseTable {
   readonly table = 'profilePic';
+  readonly nameInDb = 'profilePic';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     ProfilePicKey: t.name('profile_pic_key').text(),
@@ -272,7 +273,7 @@ class ProfilePicTable extends BaseTable {
 
 export type Chat = DefaultSelect<ChatTable>;
 export class ChatTable extends BaseTable {
-  readonly table = 'chat';
+  readonly table = 'Chat';
   columns = this.setColumns((t) => ({
     // a different id name to better test has and belongs to many
     IdOfChat: t.name('id_of_chat').identity().primaryKey(),
@@ -333,7 +334,7 @@ export class ChatTable extends BaseTable {
 
 export type Message = DefaultSelect<MessageTable>;
 export class MessageTable extends BaseTable {
-  readonly table = 'message';
+  readonly table = 'Message';
 
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
@@ -415,7 +416,7 @@ export class MessageTable extends BaseTable {
 
 export type Post = DefaultSelect<PostTable>;
 export class PostTable extends BaseTable {
-  readonly table = 'post';
+  readonly table = 'Post';
   columns = this.setColumns((t) => ({
     Id: t.name('id').identity().primaryKey(),
     UserId: t
@@ -485,6 +486,7 @@ export class PostTable extends BaseTable {
 export type PostTag = DefaultSelect<PostTagTable>;
 export class PostTagTable extends BaseTable {
   readonly table = 'postTag';
+  readonly nameInDb = 'postTag';
   columns = this.setColumns(
     (t) => ({
       PostId: t
@@ -523,7 +525,7 @@ export class PostTagTable extends BaseTable {
 
 export type Tag = DefaultSelect<TagTable>;
 export class TagTable extends BaseTable {
-  readonly table = 'tag';
+  readonly table = 'Tag';
   columns = this.setColumns((t) => ({
     Tag: t.name('tag').text().primaryKey(),
   }));
@@ -538,6 +540,7 @@ export class TagTable extends BaseTable {
 
 export class ActiveUserView extends BaseTable.View {
   readonly name = 'activeUser';
+  readonly nameInDb = 'activeUser';
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
     name: t.text(),
@@ -600,6 +603,7 @@ export class ActiveUserView extends BaseTable.View {
 
 export class WritableActiveUserView extends BaseTable.View {
   readonly name = 'activeUser';
+  readonly nameInDb = 'activeUser';
   readonly readOnly = false;
   columns = this.setColumns((t) => ({
     id: t.identity().primaryKey(),
@@ -657,7 +661,7 @@ export class ActiveUserWithProfileView extends BaseTable.View {
 }
 
 class CategoryTable extends BaseTable {
-  readonly table = 'category';
+  readonly table = 'Category';
   columns = this.setColumns((t) => ({
     categoryName: t.text().primaryKey(),
     parentName: t.text().nullable(),
@@ -748,7 +752,7 @@ const selectAllAs = (as: string, table: PickQueryQ) =>
   `"${as}".${table.q.selectAllColumns!.join(`, "${as}".`)}`;
 
 export const UserSelectAll = db.user.q.selectAllColumns!.join(', ');
-export const UserSelectAllWithTable = selectAllAs('user', db.user);
+export const UserSelectAllWithTable = selectAllAs('User', db.user);
 
 export const ProfileSelectAll = db.profile.q.selectAllColumns!.join(', ');
-export const ProfileSelectAllWithTable = selectAllAs('profile', db.profile);
+export const ProfileSelectAllWithTable = selectAllAs('Profile', db.profile);

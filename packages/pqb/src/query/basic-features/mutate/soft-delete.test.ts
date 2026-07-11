@@ -19,8 +19,8 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.toSQL(),
       `
-          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user"
-          WHERE ("user"."deleted_at" IS NULL)
+          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user" "User"
+          WHERE ("User"."deleted_at" IS NULL)
         `,
     );
   });
@@ -29,7 +29,7 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.includeDeleted().toSQL(),
       `
-          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user"
+          SELECT ${userSoftDeleteColumnsSql} FROM "schema"."user" "User"
         `,
     );
   });
@@ -39,9 +39,9 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "schema"."user"
+        UPDATE "schema"."user" "User"
            SET "deleted_at" = now()
-         WHERE ("user"."deleted_at" IS NULL)
+         WHERE ("User"."deleted_at" IS NULL)
       `,
     );
   });
@@ -73,8 +73,7 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        UPDATE "schema"."user"
-           SET "deleted_at" = CURRENT_TIMESTAMP
+        UPDATE "schema"."user" SET "deleted_at" = CURRENT_TIMESTAMP
          WHERE ("user"."deleted_at" IS NULL)
       `,
     );
@@ -85,7 +84,7 @@ describe('softDelete', () => {
     expectSql(
       q.toSQL(),
       `
-        DELETE FROM "schema"."user"
+        DELETE FROM "schema"."user" "User"
       `,
     );
   });
@@ -94,15 +93,15 @@ describe('softDelete', () => {
     expectSql(
       UserSoftDelete.all().where({ id: undefined }).delete().toSQL(),
       `
-        UPDATE "schema"."user" SET "deleted_at" = now()
-        WHERE ("user"."deleted_at" IS NULL)
+        UPDATE "schema"."user" "User" SET "deleted_at" = now()
+        WHERE ("User"."deleted_at" IS NULL)
       `,
     );
 
     expectSql(
       UserSoftDelete.all().where({ id: undefined }).hardDelete().toSQL(),
       `
-        DELETE FROM "schema"."user"
+        DELETE FROM "schema"."user" "User"
       `,
     );
   });

@@ -211,14 +211,14 @@ describe('upsert', () => {
 
     expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
       [
-        'UPDATE "schema"."user" SET "updated_at" = now() WHERE "user"."id" = $1',
+        'UPDATE "schema"."user" "User" SET "updated_at" = now() WHERE "User"."id" = $1',
         [123],
       ],
       [
         'WITH "q" AS (' +
-          'UPDATE "schema"."user" SET "updated_at" = now() WHERE "user"."id" = $1 RETURNING NULL' +
+          'UPDATE "schema"."user" "User" SET "updated_at" = now() WHERE "User"."id" = $1 RETURNING NULL' +
           '), "q2" AS (' +
-          'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user" AS "User"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
         [123, ...Object.values(userData)],
       ],

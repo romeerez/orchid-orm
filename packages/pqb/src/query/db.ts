@@ -89,6 +89,7 @@ import { AsyncState } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
 import { Rls } from './extra-features/rls/rls.db';
 import { Grant } from './extra-features/grants/grants.db';
+import { getTableNameInDb } from './basic-features/table-name-in-db/table-name-in-db';
 
 type ShapeHasPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string ? K : never;
@@ -219,6 +220,10 @@ export interface DbTableOptions<
    */
   generatorIgnore?: true | undefined;
   /**
+   * Database relation name. The public `table` name remains a query alias.
+   */
+  nameInDb?: string;
+  /**
    * Computed SQL or JS columns definitions
    */
   computed?: ComputedOptionsFactory<ColumnTypes, Shape>;
@@ -265,9 +270,7 @@ export class Db<
   declare __hasWhere: boolean;
   declare __defaults: {
     [K in {
-      [K in keyof Shape]: unknown extends Shape[K]['data']['default']
-        ? never
-        : K;
+      [K in keyof Shape]: Shape[K]['data']['default'] extends true ? K : never;
     }[keyof Shape]]: true;
   };
   declare __scopes: { [K in keyof MapTableScopesOption<Options>]: true };
@@ -442,6 +445,7 @@ export class Db<
     this.q = {
       adapter: adapterNotInTransaction,
       selectShape: shape as Column.QueryColumnsInit,
+      nameInDb: getTableNameInDb(table, options.nameInDb, snakeCase),
       handleResult,
       logger,
       log: logParamToLogObject(logger, options.log),

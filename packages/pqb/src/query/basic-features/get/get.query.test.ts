@@ -32,8 +32,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id"
-          FROM "schema"."user"
+          SELECT "User"."id"
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
       );
@@ -52,8 +52,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" > $1
-          FROM "schema"."user"
+          SELECT "User"."id" > $1
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
         [0],
@@ -74,8 +74,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name"
-          FROM "schema"."snake"
+          SELECT "Snake"."snake_name"
+          FROM "schema"."snake" "Snake"
           LIMIT 1
         `,
       );
@@ -93,7 +93,7 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT count(*)::int FROM "schema"."user" LIMIT 1
+          SELECT count(*)::int FROM "schema"."user" "User" LIMIT 1
         `,
       );
     });
@@ -114,8 +114,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."age" + 1
-          FROM "schema"."user"
+          SELECT "User"."age" + 1
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
       );
@@ -141,11 +141,11 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "v"."v" "v"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           JOIN LATERAL (
             SELECT array["profile"."bio"] "v"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
           ) "v" ON true
           LIMIT 1
         `,
@@ -163,11 +163,11 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "v"."v" "v"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           JOIN LATERAL (
             SELECT array["profile"."bio"] "v"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
           ) "v" ON true
           LIMIT 1
         `,
@@ -194,8 +194,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id"
-          FROM "schema"."user"
+          SELECT "User"."id"
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
       );
@@ -215,8 +215,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name"
-          FROM "schema"."snake"
+          SELECT "Snake"."snake_name"
+          FROM "schema"."snake" "Snake"
           LIMIT 1
         `,
       );
@@ -237,7 +237,7 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT count(*)::int
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
       );
@@ -259,8 +259,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."age" + 1
-          FROM "schema"."user"
+          SELECT "User"."age" + 1
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
       );
@@ -286,11 +286,11 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "v"."v" "v"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LEFT JOIN LATERAL (
             SELECT array["profile"."created_at"] "v"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
           ) "v" ON true
           LIMIT 1
         `,
@@ -312,11 +312,11 @@ describe('get', () => {
         q.toSQL(),
         `
           SELECT "v"."v" "v"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LEFT JOIN LATERAL (
             SELECT array["profile"."bio"] "v"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
           ) "v" ON true
           LIMIT 1
         `,
@@ -335,8 +335,8 @@ describe('get', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id"
-          FROM "schema"."user"
+          SELECT "User"."id"
+          FROM "schema"."user" "User"
           LIMIT 1
         `,
       );

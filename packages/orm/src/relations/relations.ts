@@ -10,6 +10,7 @@ import {
   ORMTableInput,
   TableClass,
   TableInfo,
+  TableClasses,
 } from '../orm-table/base-table';
 import {
   _queryTake,
@@ -89,7 +90,7 @@ export type RelationToOneDataForCreateSameQuery<
 
 export interface RelationThunkBase {
   type: string;
-  related: ORMTableInput;
+  id: string;
   options: unknown;
 }
 
@@ -108,11 +109,63 @@ export interface RelationData {
   modifyRelatedQuery?: RelationConfigBase['modifyRelatedQuery'];
 }
 
-export type RelationTableToQuery<Relation> = Relation extends {
-  related: infer R extends ORMTableInput;
-}
-  ? TableQueryBuilder<R>
-  : never;
+type TableClassInstances<T extends TableClasses> = InstanceType<T[keyof T]>;
+
+type RelationToTableInputById<Tables, Id extends string> = Extract<
+  Tables,
+  { id: Id }
+>;
+
+type RelationToTableInputByKey<
+  T extends TableClasses,
+  Id extends string,
+> = Id extends keyof T ? InstanceType<T[Id]> : never;
+
+type RelationToTableInputByName<Tables, Id extends string> = Extract<
+  Tables,
+  { table: Id } | { name: Id }
+>;
+
+type RelationToTableInputByKeyOrName<
+  T extends TableClasses,
+  Id extends string,
+> = Id extends keyof T
+  ? RelationToTableInputByKey<T, Id>
+  : RelationToTableInputByName<TableClassInstances<T>, Id>;
+
+type RelationToTableInputFromClasses<
+  T extends TableClasses,
+  Id extends string,
+> =
+  RelationToTableInputById<TableClassInstances<T>, Id> extends infer Result
+    ? [Result] extends [never]
+      ? RelationToTableInputByKeyOrName<T, Id>
+      : Result
+    : never;
+
+export type RelationToTableInput<
+  TC extends TableClasses,
+  VC extends TableClasses,
+  Rel extends RelationThunkBase,
+> =
+  RelationToTableInputFromClasses<TC, Rel['id']> extends infer Result
+    ? [Result] extends [never]
+      ? RelationToTableInputFromClasses<VC, Rel['id']> extends infer Result
+        ? [Result] extends [never]
+          ? false
+          : Result
+        : never
+      : Result
+    : never;
+
+export type RelationTableToQuery<
+  TC extends TableClasses,
+  VC extends TableClasses,
+  Rel extends RelationThunkBase,
+> =
+  RelationToTableInput<TC, VC, Rel> extends infer Result extends ORMTableInput
+    ? TableQueryBuilder<TC, VC, Result>
+    : never;
 
 export interface RelationConfigSelf {
   columns: { shape: Column.Shape.QueryInit };

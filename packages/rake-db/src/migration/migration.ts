@@ -12,7 +12,6 @@ import {
   TableDataFn,
   TableDataItem,
   Adapter,
-  ColumnSchemaConfig,
   emptyObject,
   MaybeArray,
   QueryLogObject,
@@ -93,7 +92,7 @@ export type TableOptions = {
 export type MigrationColumnTypes<CT> = Omit<CT, 'enum'> & {
   enum: (
     name: string,
-  ) => EnumColumn<ColumnSchemaConfig, unknown, readonly string[]>;
+  ) => EnumColumn<DefaultSchemaConfig, unknown, readonly string[]>;
 };
 
 // Create table callback

@@ -15,11 +15,11 @@ describe('sql', () => {
     const values: unknown[] = [];
 
     expect(sql.toSQL({ values })).toBe(
-      `SELECT "user"."id" FROM "schema"."user" WHERE "user"."name" = $1`,
+      `SELECT "User"."id" FROM "schema"."user" "User" WHERE "User"."name" = $1`,
     );
     expect(values).toEqual(['name']);
     expect(sql).toMatchObject({
-      _sql: 'SELECT "user"."id" FROM "schema"."user" WHERE "user"."name" = $queryValue1',
+      _sql: 'SELECT "User"."id" FROM "schema"."user" "User" WHERE "User"."name" = $queryValue1',
       _values: { queryValue1: 'name' },
     });
   });
@@ -60,7 +60,7 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (simple sql)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (simple sql)`,
     );
   });
 
@@ -83,7 +83,7 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("name" = $1)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("name" = $1)`,
       ['value'],
     );
   });
@@ -124,7 +124,7 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (simple sql)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (simple sql)`,
     );
   });
 
@@ -147,7 +147,7 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("name" = $1)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("name" = $1)`,
       ['value'],
     );
   });
@@ -162,7 +162,7 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (one $1 two $2 three $3 four)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
@@ -180,7 +180,7 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (one $1 two $2 three $3 four)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
@@ -201,27 +201,27 @@ describe('sql', () => {
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (value = $2 AND $1)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (value = $2 AND $1)`,
       [true, 'value'],
     );
   });
 
   it('should quote columns with tables', () => {
     const sql = User.sql<boolean>({ raw: '$$column' }).values({
-      column: 'user.name',
+      column: 'User.name',
     });
 
     expect(sql).toMatchObject({
       _sql: '$$column',
       _values: {
-        column: 'user.name',
+        column: 'User.name',
       },
       columnTypes: User.columnTypes,
     });
 
     expectSql(
       User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("user"."name")`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("User"."name")`,
     );
   });
 
@@ -237,7 +237,7 @@ describe('sql', () => {
 
     expectSql(
       query.toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
+      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
       [1, true],
     );
   });
@@ -261,7 +261,7 @@ describe('sql', () => {
   it('should handle column and ref expressions', () => {
     const q = User.select({
       value: (q) =>
-        sql<string>`${q.column('name')} || ' ' || ${q.ref('user.password')}`,
+        sql<string>`${q.column('name')} || ' ' || ${q.ref('User.password')}`,
     });
 
     assertType<Awaited<typeof q>, { value: string }[]>();
@@ -269,8 +269,8 @@ describe('sql', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT "user"."name" || ' ' || "user"."password" "value"
-          FROM "schema"."user"
+          SELECT "User"."name" || ' ' || "User"."password" "value"
+          FROM "schema"."user" "User"
         `,
     );
   });
@@ -301,9 +301,11 @@ describe('sql', () => {
 
     const q = User.get(testDb.sql`${new CustomExpression()}`);
 
-    expectSql(q.toSQL(), `SELECT hello, "user"! FROM "schema"."user" LIMIT 1`, [
-      'value',
-    ]);
+    expectSql(
+      q.toSQL(),
+      `SELECT hello, "User"! FROM "schema"."user" "User" LIMIT 1`,
+      ['value'],
+    );
   });
 
   describe('sql.ref', () => {
@@ -344,7 +346,7 @@ describe('sql', () => {
         value: () => sql<string>`${sql.ref(column)}`,
       });
 
-      expectSql(q.toSQL(), `SELECT "name" "value" FROM "schema"."user"`);
+      expectSql(q.toSQL(), `SELECT "name" "value" FROM "schema"."user" "User"`);
     });
   });
 
@@ -354,7 +356,7 @@ describe('sql', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (ARRAY[$1, $2, $3])`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (ARRAY[$1, $2, $3])`,
         [1, 2, 3],
       );
     });
@@ -362,12 +364,12 @@ describe('sql', () => {
     it('should render expression items without parameterizing them', () => {
       const q = User.whereSql`${sql.join([
         sql.ref('name'),
-        sql.ref('user.age'),
+        sql.ref('User.age'),
       ])}`;
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ("name", "user"."age")`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("name", "User"."age")`,
       );
     });
 
@@ -379,7 +381,7 @@ describe('sql', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE ($1$2 || lower($3)$4 || "age"$5 || $6)`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ($1$2 || lower($3)$4 || "age"$5 || $6)`,
         [1, 'separator', 'NAME', 'separator', 'separator', 4],
       );
     });
@@ -389,13 +391,13 @@ describe('sql', () => {
 
       expectSql(
         User.whereSql`ARRAY[${sql.join(items)}]`.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (ARRAY[$1, $2])`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (ARRAY[$1, $2])`,
         [1, 2],
       );
 
       expectSql(
         User.whereSql`IN (${sql.join([])})`.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (IN ())`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (IN ())`,
       );
     });
 
@@ -411,7 +413,7 @@ describe('sql', () => {
       assertType<Awaited<typeof q>, { value: string }[]>();
       expectSql(
         q.toSQL(),
-        `SELECT concat("user"."name" || ' ' || "user"."age") "value" FROM "schema"."user"`,
+        `SELECT concat("User"."name" || ' ' || "User"."age") "value" FROM "schema"."user" "User"`,
       );
     });
   });

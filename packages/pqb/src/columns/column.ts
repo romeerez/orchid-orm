@@ -35,8 +35,34 @@ export namespace Column {
       };
     };
 
+    export type Nullable<T extends Column.Pick.ForNullable> = {
+      [K in keyof T]: K extends '__type'
+        ? T['__type'] | null
+        : K extends '__inputType'
+          ? T['__inputType'] | null
+          : K extends '__outputType'
+            ?
+                | T['__outputType']
+                | (unknown extends T['__nullType'] ? null : T['__nullType'])
+            : K extends '__queryType'
+              ? T['__queryType'] | null
+              : K extends 'data'
+                ? T['data'] & DataNullable
+                : K extends 'operators'
+                  ? {
+                      [K in keyof T['operators']]: K extends
+                        | 'equals'
+                        | 'not'
+                        | 'isDistinctFrom'
+                        | 'isNotDistinctFrom'
+                        ? Operator<T['__queryType'] | null, T>
+                        : T['operators'][K];
+                    }
+                  : T[K];
+    };
+
     // marks the column as a nullable, adds `null` type to `type` and `__inputType`
-    export type Nullable<
+    export type NullableWithSchema<
       T extends Column.Pick.ForNullable,
       InputSchema,
       OutputSchema,
@@ -141,21 +167,10 @@ export namespace Column {
               : T[K];
     };
 
-    type DefaultData<T extends Column.Data, Value> = {
-      [K in keyof T]: K extends 'default'
-        ? Value extends null
-          ? never
-          : Value
-        : K extends 'optional'
-          ? true
-          : T[K];
-    };
-
     // adds default type to the column
     // removes the default if the Value is null
-    export type Default<T extends Column.Pick.Data, Value> = {
-      [K in keyof T]: K extends 'data' ? DefaultData<T['data'], Value> : T[K];
-    };
+    export type HasDefault<T extends Column.Pick.Data> = T &
+      Column.Data.Default;
 
     type DefaultSelectData<T extends Column.Data, Value> = {
       [K in keyof T]: K extends 'explicitSelect'
@@ -317,6 +332,7 @@ export namespace Column {
     export interface TableParamInstance {
       schema?: string;
       table: string;
+      nameInDb?: string;
       columns: PickQueryShape;
     }
 
@@ -485,6 +501,13 @@ export namespace Column {
   }
 
   export namespace Data {
+    export interface Default {
+      data: {
+        default: true;
+        optional: true;
+      };
+    }
+
     export interface Check {
       sql: RawSqlBase;
       name?: string;
@@ -534,7 +557,7 @@ export function makeColumnNullable<
   c.inputSchema = inputSchema;
   c.outputSchema = outputSchema;
   c.querySchema = querySchema;
-  return c as unknown as Column.Modifiers.Nullable<
+  return c as unknown as Column.Modifiers.NullableWithSchema<
     T,
     InputSchema,
     OutputSchema,
@@ -739,11 +762,8 @@ export abstract class Column {
       | null
       | RawSqlBase
       | (() => T['__inputType']),
-  >(this: T, value: Value): Column.Modifiers.Default<T, Value> {
-    return setColumnData(this, 'default', value) as Column.Modifiers.Default<
-      T,
-      Value
-    >;
+  >(this: T, value: Value): Column.Modifiers.HasDefault<T> {
+    return setColumnData(this, 'default', value) as never;
   }
 
   /**
@@ -753,8 +773,8 @@ export abstract class Column {
    */
   hasDefault<T extends Column.Pick.Data>(
     this: T,
-  ): Column.Modifiers.Default<T, RawSqlBase> {
-    return this as Column.Modifiers.Default<T, RawSqlBase>;
+  ): Column.Modifiers.HasDefault<T> {
+    return this as never;
   }
 
   /**

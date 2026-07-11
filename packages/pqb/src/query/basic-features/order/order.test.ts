@@ -14,8 +14,8 @@ describe('order', () => {
     expectSql(
       q.order('id', 'name').toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          ORDER BY "user"."id" ASC, "user"."name" ASC
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          ORDER BY "User"."id" ASC, "User"."name" ASC
         `,
     );
 
@@ -28,8 +28,8 @@ describe('order', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT ${snakeSelectAll} FROM "schema"."snake"
-          ORDER BY "snake"."snake_name" ASC, "snake"."tail_length" ASC
+          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
+          ORDER BY "Snake"."snake_name" ASC, "Snake"."tail_length" ASC
         `,
     );
   });
@@ -40,8 +40,8 @@ describe('order', () => {
     expectSql(
       q.order({ id: 'ASC', name: 'DESC' }).toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          ORDER BY "user"."id" ASC, "user"."name" DESC
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          ORDER BY "User"."id" ASC, "User"."name" DESC
         `,
     );
 
@@ -53,8 +53,8 @@ describe('order', () => {
         })
         .toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          ORDER BY "user"."id" ASC NULLS FIRST, "user"."name" DESC NULLS LAST
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          ORDER BY "User"."id" ASC NULLS FIRST, "User"."name" DESC NULLS LAST
         `,
     );
 
@@ -65,8 +65,8 @@ describe('order', () => {
     expectSql(
       Snake.order({ snakeName: 'ASC', tailLength: 'DESC' }).toSQL(),
       `
-          SELECT ${snakeSelectAll} FROM "schema"."snake"
-          ORDER BY "snake"."snake_name" ASC, "snake"."tail_length" DESC
+          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
+          ORDER BY "Snake"."snake_name" ASC, "Snake"."tail_length" DESC
         `,
     );
 
@@ -76,8 +76,8 @@ describe('order', () => {
         tailLength: 'DESC NULLS LAST',
       }).toSQL(),
       `
-          SELECT ${snakeSelectAll} FROM "schema"."snake"
-          ORDER BY "snake"."snake_name" ASC NULLS FIRST, "snake"."tail_length" DESC NULLS LAST
+          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
+          ORDER BY "Snake"."snake_name" ASC NULLS FIRST, "Snake"."tail_length" DESC NULLS LAST
         `,
     );
   });
@@ -87,7 +87,7 @@ describe('order', () => {
     expectSql(
       q.order(testDb.sql`id ASC NULLS FIRST`).toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "schema"."user"
+        SELECT ${userColumnsSql} FROM "schema"."user" "User"
         ORDER BY id ASC NULLS FIRST
       `,
     );
@@ -102,8 +102,8 @@ describe('order', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT (SELECT avg("user"."id") FROM "schema"."user") "avg"
-          FROM "schema"."user"
+          SELECT (SELECT avg("User"."id") FROM "schema"."user" "User") "avg"
+          FROM "schema"."user" "User"
           ORDER BY "avg" ASC
         `,
     );
@@ -130,7 +130,7 @@ describe('order', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT "user"."id" "name" FROM "schema"."user"
+          SELECT "User"."id" "name" FROM "schema"."user" "User"
           ORDER BY "name" ASC
         `,
     );
@@ -147,12 +147,12 @@ describe('order', () => {
       q.toSQL(),
       `
           SELECT row_to_json("profile".*) "profile"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           LEFT JOIN LATERAL (
             SELECT "profile"."bio" "Bio"
             FROM "schema"."profile"
-            WHERE "profile"."user_id" = "user"."id"
-              AND "profile"."profile_key" = "user"."user_key"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
           ) "profile" ON true
           ORDER BY "profile"."Bio" ASC
         `,
@@ -167,7 +167,7 @@ describe('orderSql', () => {
     expectSql(
       q.orderSql`id ASC NULLS FIRST`.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "schema"."user"
+        SELECT ${userColumnsSql} FROM "schema"."user" "User"
         ORDER BY id ASC NULLS FIRST
       `,
     );

@@ -12,14 +12,13 @@ import { TableData } from '../../tableData';
 import { BaseNumberData } from '../column-data-types';
 import { ColumnSchemaConfig } from '../column-schema';
 import { joinTruthy } from '../../utils';
-import { Expression } from '../../query/expressions/expression';
 
 export interface NumberColumnData extends BaseNumberData, Column.Data {
   identity?: TableData.Identity;
 }
 
 export interface SerialColumnData extends NumberColumnData {
-  default: Expression;
+  default: true;
 }
 
 export abstract class NumberBaseColumn<
@@ -145,9 +144,6 @@ const intToCode = (
   return columnCode(column, ctx, key, code);
 };
 
-export type IdentityColumn<T extends Column.Pick.Data> =
-  Column.Modifiers.Default<T, Expression>;
-
 // signed two-byte integer
 export class SmallIntColumn<
   Schema extends ColumnSchemaConfig,
@@ -168,8 +164,8 @@ export class SmallIntColumn<
   identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
-  ): IdentityColumn<T> {
-    return setColumnData(this, 'identity', options) as IdentityColumn<T>;
+  ): Column.Modifiers.HasDefault<T> {
+    return setColumnData(this, 'identity', options) as never;
   }
 }
 
@@ -193,8 +189,8 @@ export class IntegerColumn<
   identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
-  ): IdentityColumn<T> {
-    return setColumnData(this, 'identity', options) as IdentityColumn<T>;
+  ): Column.Modifiers.HasDefault<T> {
+    return setColumnData(this, 'identity', options) as never;
   }
 }
 
@@ -217,8 +213,8 @@ export class BigIntColumn<
   identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
-  ): IdentityColumn<T> {
-    return setColumnData(this, 'identity', options) as IdentityColumn<T>;
+  ): Column.Modifiers.HasDefault<T> {
+    return setColumnData(this, 'identity', options) as never;
   }
 }
 

@@ -20,6 +20,7 @@ import {
   RelationConfigBase,
   PickQuerySelectableRelations,
   UpdateSelf,
+  ColumnSchemaConfig,
 } from 'pqb/internal';
 import { Query } from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
@@ -320,7 +321,7 @@ export const addAutoForeignKey = (
   // non-snake-cased
   originalForeignKeys?: string[],
 ) => {
-  const toTable = to.table as string;
+  const toTable = to.q.nameInDb || (to.table as string);
 
   let fkeyOptions =
     options.foreignKey !== undefined
@@ -344,8 +345,13 @@ export const addAutoForeignKey = (
           fkeyTable = fkey.fnOrTable;
           fkeyColumn = getColumnKeyFromDbName(to, fkeyColumn);
         } else {
-          fkeyTable = (fkey.fnOrTable() as unknown as BaseTableClass<any, any>) // eslint-disable-line @typescript-eslint/no-explicit-any
-            .instance().table as string;
+          const instance = (
+            fkey.fnOrTable() as unknown as BaseTableClass<
+              ColumnSchemaConfig,
+              unknown
+            >
+          ).instance();
+          fkeyTable = instance.nameInDb || (instance.table as string);
         }
 
         if (toTable === fkeyTable && pkey === fkeyColumn) return;
@@ -361,19 +367,31 @@ export const addAutoForeignKey = (
     for (const { references: refs } of constraints) {
       if (!refs) continue;
 
+      let sameForeignTable = false;
+      if (typeof refs.fnOrTable === 'string') {
+        sameForeignTable =
+          refs.fnOrTable === toTable &&
+          refs.foreignColumns.every(
+            (column, i) =>
+              getColumnKeyFromDbName(to, column) === sortedPkeys[i],
+          );
+      } else {
+        const instance = (
+          refs.fnOrTable as unknown as () => BaseTableClass<
+            ColumnSchemaConfig,
+            unknown
+          >
+        )().instance();
+        sameForeignTable =
+          (instance.nameInDb || instance.table) === toTable &&
+          refs.foreignColumns.every((column, i) => column === sortedPkeys[i]);
+      }
+
       if (
         refs.columns.length === sortedFkeys.length &&
         refs.columns.every((column, i) => column === sortedFkeys[i]) &&
         refs.foreignColumns.length === sortedPkeys.length &&
-        (typeof refs.fnOrTable === 'string'
-          ? refs.fnOrTable === toTable &&
-            refs.foreignColumns.every(
-              (column, i) =>
-                getColumnKeyFromDbName(to, column) === sortedPkeys[i],
-            )
-          : (refs.fnOrTable as unknown as () => BaseTableClass<any, any>)() // eslint-disable-line @typescript-eslint/no-explicit-any
-              .instance().table === toTable &&
-            refs.foreignColumns.every((column, i) => column === sortedPkeys[i]))
+        sameForeignTable
       )
         return;
     }

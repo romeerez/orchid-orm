@@ -184,7 +184,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."message"("author_id", "message_key", "chat_id", "text")
+          INSERT INTO "schema"."message" AS "messages"("author_id", "message_key", "chat_id", "text")
           VALUES ($1, $2, $3, $4)
         `,
         [1, 'key', 2, 'text'],
@@ -201,7 +201,7 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."message"("active", "author_id", "message_key", "chat_id", "text")
+          INSERT INTO "schema"."message" AS "activeMessages"("active", "author_id", "message_key", "chat_id", "text")
           VALUES ($1, $2, $3, $4, $5)
         `,
         [true, 1, 'key', 2, 'text'],
@@ -213,11 +213,11 @@ describe('hasMany', () => {
     expectSql(
       db.user.whereExists('messages').toSQL(),
       `
-        SELECT ${UserSelectAll} FROM "schema"."user"
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
         WHERE EXISTS (
           SELECT 1 FROM "schema"."message" "messages"
-          WHERE ("messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key")
+          WHERE ("messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key")
             AND ("messages"."deleted_at" IS NULL)
         )
       `,
@@ -264,12 +264,12 @@ describe('hasMany', () => {
     expectSql(
       db.user.whereExists('activeMessages').toSQL(),
       `
-        SELECT ${UserSelectAll} FROM "schema"."user"
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
         WHERE EXISTS (
           SELECT 1 FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."active" = $1
-            AND "activeMessages"."author_id" = "user"."id"
-            AND "activeMessages"."message_key" = "user"."user_key")
+            AND "activeMessages"."author_id" = "User"."id"
+            AND "activeMessages"."message_key" = "User"."user_key")
             AND ("activeMessages"."deleted_at" IS NULL)
         )
       `,
@@ -327,12 +327,12 @@ describe('hasMany', () => {
       q.toSQL(),
       `
         SELECT ${UserSelectAll}
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         WHERE (
           SELECT true
           FROM "schema"."message" "messages"
-          WHERE ("messages"."author_id" = "user"."id"
-            AND "messages"."message_key" = "user"."user_key")
+          WHERE ("messages"."author_id" = "User"."id"
+            AND "messages"."message_key" = "User"."user_key")
             AND ("messages"."deleted_at" IS NULL)
           LIMIT 1
         )
@@ -347,13 +347,13 @@ describe('hasMany', () => {
       q.toSQL(),
       `
         SELECT ${UserSelectAll}
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         WHERE (
           SELECT true
           FROM "schema"."message" "activeMessages"
           WHERE ("activeMessages"."active" = $1
-            AND "activeMessages"."author_id" = "user"."id"
-            AND "activeMessages"."message_key" = "user"."user_key")
+            AND "activeMessages"."author_id" = "User"."id"
+            AND "activeMessages"."message_key" = "User"."user_key")
             AND ("activeMessages"."deleted_at" IS NULL)
           LIMIT 1
         )
@@ -493,14 +493,14 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" "Name", ${messageRowToJSON('m')} "message"
-          FROM "schema"."user"
+          SELECT "User"."name" "Name", ${messageRowToJSON('m')} "message"
+          FROM "schema"."user" "User"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
             FROM "schema"."message" "m"
             WHERE ("m"."text" = $1
-              AND "m"."author_id" = "user"."id"
-              AND "m"."message_key" = "user"."user_key")
+              AND "m"."author_id" = "User"."id"
+              AND "m"."message_key" = "User"."user_key")
               AND ("m"."deleted_at" IS NULL)
           ) "m" ON true
           WHERE "m"."Text" = $2
@@ -520,15 +520,15 @@ describe('hasMany', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."name" "Name", ${messageRowToJSON('m')} "message"
-          FROM "schema"."user"
+          SELECT "User"."name" "Name", ${messageRowToJSON('m')} "message"
+          FROM "schema"."user" "User"
           JOIN LATERAL (
             SELECT ${messageSelectAll}
             FROM "schema"."message" "m"
             WHERE ("m"."active" = $1
               AND "m"."text" = $2
-              AND "m"."author_id" = "user"."id"
-              AND "m"."message_key" = "user"."user_key")
+              AND "m"."author_id" = "User"."id"
+              AND "m"."message_key" = "User"."user_key")
               AND ("m"."deleted_at" IS NULL)
           ) "m" ON true
           WHERE "m"."Text" = $3
@@ -3435,12 +3435,12 @@ describe('hasMany', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
+          SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (
             SELECT count(*) = $1
             FROM "schema"."message" "messages"
             WHERE ("messages"."text" IN ($2, $3)
-              AND "messages"."author_id" = "user"."id"
-              AND "messages"."message_key" = "user"."user_key")
+              AND "messages"."author_id" = "User"."id"
+              AND "messages"."message_key" = "User"."user_key")
               AND ("messages"."deleted_at" IS NULL)
           )
         `,
@@ -3456,13 +3456,13 @@ describe('hasMany', () => {
     expectSql(
       q.toSQL(),
       `
-          SELECT ${UserSelectAll} FROM "schema"."user" WHERE (
+          SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (
             SELECT count(*) = $1
             FROM "schema"."message" "activeMessages"
             WHERE ("activeMessages"."active" = $2
               AND "activeMessages"."text" IN ($3, $4)
-              AND "activeMessages"."author_id" = "user"."id"
-              AND "activeMessages"."message_key" = "user"."user_key")
+              AND "activeMessages"."author_id" = "User"."id"
+              AND "activeMessages"."message_key" = "User"."user_key")
               AND ("activeMessages"."deleted_at" IS NULL)
           )
         `,
@@ -3646,8 +3646,8 @@ describe('hasMany through', () => {
                   AND "chatUser"."user_id" = "user"."id"
                   AND "chatUser"."user_key" = "user"."user_key"
               )
-              AND "user"."id" = $1
-              AND "user"."user_key" = $2
+              AND "User"."id" = $1
+              AND "User"."user_key" = $2
             )
           `,
           [1, 'key'],
@@ -3717,7 +3717,7 @@ describe('hasMany through', () => {
         expectSql(
           db.profile.whereExists('chats').toSQL(),
           `
-          SELECT ${ProfileSelectAll} FROM "schema"."profile"
+          SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile"
           WHERE EXISTS (
             SELECT 1 FROM "schema"."chat"  "chats"
             WHERE EXISTS (
@@ -3729,8 +3729,8 @@ describe('hasMany through', () => {
                     AND "chatUser"."user_id" = "user"."id"
                 AND "chatUser"."user_key" = "user"."user_key"
                 )
-                AND "user"."id" = "profile"."user_id"
-                AND "user"."user_key" = "profile"."profile_key"
+                AND "user"."id" = "Profile"."user_id"
+                AND "user"."user_key" = "Profile"."profile_key"
             )
           )
         `,
@@ -3795,7 +3795,7 @@ describe('hasMany through', () => {
         expectSql(
           db.profile.whereExists('activeChats').toSQL(),
           `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile"
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile"
             WHERE EXISTS (
               SELECT 1 FROM "schema"."chat"  "activeChats"
               WHERE EXISTS (
@@ -3809,8 +3809,8 @@ describe('hasMany through', () => {
                       AND "chatUser"."user_key" = "activeUser"."user_key"
                   )
                   AND "activeUser"."active" = $2
-                  AND "activeUser"."id" = "profile"."user_id"
-                  AND "activeUser"."user_key" = "profile"."profile_key"
+                  AND "activeUser"."id" = "Profile"."user_id"
+                  AND "activeUser"."user_key" = "Profile"."profile_key"
               )
             )
           `,
@@ -4050,8 +4050,8 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
-            FROM "schema"."profile"
+            SELECT "Profile"."bio" "Bio", row_to_json("c".*) "chat"
+            FROM "schema"."profile" "Profile"
             JOIN LATERAL (
               SELECT ${chatSelectAll}
               FROM "schema"."chat" "c"
@@ -4068,8 +4068,8 @@ describe('hasMany through', () => {
                         AND "chatUser"."user_id" = "user"."id"
                       AND "chatUser"."user_key" = "user"."user_key"
                     )
-                    AND "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
+                    AND "user"."id" = "Profile"."user_id"
+                    AND "user"."user_key" = "Profile"."profile_key"
                 )
             ) "c" ON true
             WHERE "c"."Title" = $2
@@ -4089,8 +4089,8 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "profile"."bio" "Bio", row_to_json("c".*) "chat"
-            FROM "schema"."profile"
+            SELECT "Profile"."bio" "Bio", row_to_json("c".*) "chat"
+            FROM "schema"."profile" "Profile"
             JOIN LATERAL (
               SELECT ${chatSelectAll}
               FROM "schema"."chat" "c"
@@ -4108,8 +4108,8 @@ describe('hasMany through', () => {
                       AND "chatUser"."user_key" = "activeUser"."user_key"
                     )
                     AND "activeUser"."active" = $3
-                    AND "activeUser"."id" = "profile"."user_id"
-                    AND "activeUser"."user_key" = "profile"."profile_key"
+                    AND "activeUser"."id" = "Profile"."user_id"
+                    AND "activeUser"."user_key" = "Profile"."profile_key"
                 )
             ) "c" ON true
             WHERE "c"."Title" = $4
@@ -4473,7 +4473,7 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT COALESCE("chats"."chats", '[]') "chats"
-            FROM "schema"."profile"
+            FROM "schema"."profile" "Profile"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "chats"
               FROM (
@@ -4532,8 +4532,8 @@ describe('hasMany through', () => {
                       AND "chatUser"."chat_key" = "chats"."chat_key"
                       AND "chatUser"."user_id" = "user"."id"
                     AND "chatUser"."user_key" = "user"."user_key"
-                  ) AND "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
+                   ) AND "user"."id" = "Profile"."user_id"
+                     AND "user"."user_key" = "Profile"."profile_key"
                 )
               ) "t"
             ) "chats" ON true
@@ -4641,7 +4641,7 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile" WHERE (
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile" WHERE (
               SELECT count(*) = $1
               FROM "schema"."chat" "chats"
               WHERE "chats"."title" IN ($2, $3)
@@ -4657,8 +4657,8 @@ describe('hasMany through', () => {
                         AND "chatUser"."user_id" = "user"."id"
                       AND "chatUser"."user_key" = "user"."user_key"
                     )
-                    AND "user"."id" = "profile"."user_id"
-                    AND "user"."user_key" = "profile"."profile_key"
+                     AND "user"."id" = "Profile"."user_id"
+                     AND "user"."user_key" = "Profile"."profile_key"
                 )
             )
           `,
@@ -4674,7 +4674,7 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${ProfileSelectAll} FROM "schema"."profile" WHERE (
+            SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile" WHERE (
               SELECT count(*) = $1
               FROM "schema"."chat" "activeChats"
               WHERE "activeChats"."title" IN ($2, $3)
@@ -4691,8 +4691,8 @@ describe('hasMany through', () => {
                         AND "chatUser"."user_key" = "activeUser"."user_key"
                     )
                     AND "activeUser"."active" = $5
-                    AND "activeUser"."id" = "profile"."user_id"
-                    AND "activeUser"."user_key" = "profile"."profile_key"
+                    AND "activeUser"."id" = "Profile"."user_id"
+                    AND "activeUser"."user_key" = "Profile"."profile_key"
                 )
             )
           `,
@@ -4792,7 +4792,7 @@ describe('hasMany through', () => {
         expectSql(
           db.chat.whereExists('profiles').toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "schema"."chat"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "Chat"
             WHERE EXISTS (
               SELECT 1 FROM "schema"."profile"  "profiles"
               WHERE EXISTS (
@@ -4803,8 +4803,8 @@ describe('hasMany through', () => {
                     SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "users"."id"
                       AND "chatUser"."user_key" = "users"."user_key"
-                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chat"."chat_key"
+                       AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                     AND "chatUser"."chat_key" = "Chat"."chat_key"
                   )
               )
             )
@@ -4870,7 +4870,7 @@ describe('hasMany through', () => {
         expectSql(
           db.chat.whereExists('activeProfiles').toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "schema"."chat"
+            SELECT ${chatSelectAll} FROM "schema"."chat" "Chat"
             WHERE EXISTS (
               SELECT 1 FROM "schema"."profile"  "activeProfiles"
               WHERE EXISTS (
@@ -4883,8 +4883,8 @@ describe('hasMany through', () => {
                     SELECT 1 FROM "schema"."chatUser"
                     WHERE "chatUser"."user_id" = "activeUsers"."id"
                       AND "chatUser"."user_key" = "activeUsers"."user_key"
-                      AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                    AND "chatUser"."chat_key" = "chat"."chat_key"
+                       AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                     AND "chatUser"."chat_key" = "Chat"."chat_key"
                   )
               )
             )
@@ -5118,8 +5118,8 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
-            FROM "schema"."chat"
+            SELECT "Chat"."title" "Title", row_to_json("p".*) "profile"
+            FROM "schema"."chat" "Chat"
             JOIN LATERAL (
               SELECT ${ProfileSelectAll}
               FROM "schema"."profile" "p"
@@ -5134,8 +5134,8 @@ describe('hasMany through', () => {
                       FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                      AND "chatUser"."chat_key" = "chat"."chat_key"
+                         AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                       AND "chatUser"."chat_key" = "Chat"."chat_key"
                     )
                 )
             ) "p" ON true
@@ -5156,8 +5156,8 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT "chat"."title" "Title", row_to_json("p".*) "profile"
-            FROM "schema"."chat"
+            SELECT "Chat"."title" "Title", row_to_json("p".*) "profile"
+            FROM "schema"."chat" "Chat"
             JOIN LATERAL (
               SELECT ${ProfileSelectAll}
               FROM "schema"."profile" "p"
@@ -5174,8 +5174,8 @@ describe('hasMany through', () => {
                       FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                      AND "chatUser"."chat_key" = "chat"."chat_key"
+                         AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                       AND "chatUser"."chat_key" = "Chat"."chat_key"
                     )
                 )
             ) "p" ON true
@@ -5565,7 +5565,7 @@ describe('hasMany through', () => {
           q.toSQL(),
           `
             SELECT COALESCE("profiles"."profiles", '[]') "profiles"
-            FROM "schema"."chat"
+            FROM "schema"."chat" "Chat"
             LEFT JOIN LATERAL (
               SELECT json_agg(row_to_json(t.*)) "profiles"
               FROM (
@@ -5624,8 +5624,8 @@ describe('hasMany through', () => {
                       FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                         AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                         AND "chatUser"."chat_key" = "Chat"."chat_key"
                     )
                 )
               ) "t"
@@ -5735,7 +5735,7 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "schema"."chat" WHERE (
+            SELECT ${chatSelectAll} FROM "schema"."chat" "Chat" WHERE (
               SELECT count(*) = $1
               FROM "schema"."profile" "profiles"
               WHERE "profiles"."bio" IN ($2, $3)
@@ -5749,8 +5749,8 @@ describe('hasMany through', () => {
                       FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "users"."id"
                         AND "chatUser"."user_key" = "users"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                         AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                         AND "chatUser"."chat_key" = "Chat"."chat_key"
                     )
                 )
             )
@@ -5767,7 +5767,7 @@ describe('hasMany through', () => {
         expectSql(
           q.toSQL(),
           `
-            SELECT ${chatSelectAll} FROM "schema"."chat" WHERE (
+            SELECT ${chatSelectAll} FROM "schema"."chat" "Chat" WHERE (
               SELECT count(*) = $1
               FROM "schema"."profile" "activeProfiles"
               WHERE "activeProfiles"."bio" IN ($2, $3)
@@ -5783,8 +5783,8 @@ describe('hasMany through', () => {
                       FROM "schema"."chatUser"
                       WHERE "chatUser"."user_id" = "activeUsers"."id"
                         AND "chatUser"."user_key" = "activeUsers"."user_key"
-                        AND "chatUser"."chat_id" = "chat"."id_of_chat"
-                        AND "chatUser"."chat_key" = "chat"."chat_key"
+                         AND "chatUser"."chat_id" = "Chat"."id_of_chat"
+                         AND "chatUser"."chat_key" = "Chat"."chat_key"
                     )
                 )
             )

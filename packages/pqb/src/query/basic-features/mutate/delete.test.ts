@@ -37,7 +37,7 @@ describe('delete', () => {
     expectSql(
       User.all().where({ id: undefined }).delete().toSQL(),
       `
-        DELETE FROM "schema"."user"
+        DELETE FROM "schema"."user" "User"
       `,
     );
   });
@@ -50,8 +50,8 @@ describe('delete', () => {
     expectSql(
       query.toSQL(),
       `
-        DELETE FROM "schema"."user" WHERE "user"."id" = $1
-        RETURNING "user"."id"
+        DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1
+        RETURNING "User"."id"
       `,
       [id],
     );
@@ -69,8 +69,8 @@ describe('delete', () => {
     expectSql(
       query.toSQL(),
       `
-        DELETE FROM "schema"."snake" WHERE "snake"."snake_name" = $1
-        RETURNING "snake"."snake_name"
+        DELETE FROM "schema"."snake" "Snake" WHERE "Snake"."snake_name" = $1
+        RETURNING "Snake"."snake_name"
       `,
       ['name'],
     );
@@ -88,7 +88,7 @@ describe('delete', () => {
     const query = q.where({ id: { gte: 1 } }).delete();
     expectSql(
       query.toSQL(),
-      'DELETE FROM "schema"."user" WHERE "user"."id" >= $1',
+      'DELETE FROM "schema"."user" "User" WHERE "User"."id" >= $1',
       [1],
     );
 
@@ -106,7 +106,7 @@ describe('delete', () => {
     const query = q.selectAll().where({ id: 1 }).delete();
     expectSql(
       query.toSQL(),
-      `DELETE FROM "schema"."user" WHERE "user"."id" = $1 RETURNING ${userColumnsSql}`,
+      `DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING ${userColumnsSql}`,
       [1],
     );
 
@@ -150,7 +150,7 @@ describe('delete', () => {
     expectSql(
       query.toSQL(),
       `
-        DELETE FROM "schema"."snake"
+        DELETE FROM "schema"."snake" "Snake"
         RETURNING ${snakeSelectAll}
       `,
     );
@@ -162,7 +162,7 @@ describe('delete', () => {
     const query = q.select('id', 'name').where({ id: 1 }).delete();
     expectSql(
       query.toSQL(),
-      `DELETE FROM "schema"."user" WHERE "user"."id" = $1 RETURNING "user"."id", "user"."name"`,
+      `DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING "User"."id", "User"."name"`,
       [1],
     );
 
@@ -208,10 +208,10 @@ describe('delete', () => {
     expectSql(
       query.toSQL(),
       `
-        DELETE FROM "schema"."snake"
+        DELETE FROM "schema"."snake" "Snake"
         RETURNING
-          "snake"."snake_name" "snakeName",
-          "snake"."tail_length" "tailLength"
+          "Snake"."snake_name" "snakeName",
+          "Snake"."tail_length" "tailLength"
       `,
     );
   });
@@ -228,9 +228,9 @@ describe('delete', () => {
     expectSql(
       query.toSQL(),
       `
-        DELETE FROM "schema"."user"
-        USING "schema"."profile"
-        WHERE "user"."id" = $1 AND "profile"."user_id" = "user"."id"
+        DELETE FROM "schema"."user" "User"
+        USING "schema"."profile" "Profile"
+        WHERE "User"."id" = $1 AND "Profile"."user_id" = "User"."id"
         RETURNING ${userTableColumnsSql}
       `,
       [1],
@@ -254,11 +254,11 @@ describe('delete', () => {
       q.toSQL(),
       `
         WITH "a" AS (
-          DELETE FROM "schema"."user" WHERE "user"."id" = $1 RETURNING "user"."name"
+          DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING "User"."name"
         ), "b" AS (
-          DELETE FROM "schema"."user"
-          WHERE "user"."name" IN (SELECT "a"."name" FROM "a")
-          RETURNING "user"."id"
+          DELETE FROM "schema"."user" "User"
+          WHERE "User"."name" IN (SELECT "a"."name" FROM "a")
+          RETURNING "User"."id"
         )
         (SELECT *, NULL FROM "b")
         UNION ALL
@@ -272,7 +272,7 @@ describe('delete', () => {
   it('should throw when deleting after joining a complex query (limit in this case)', () => {
     expect(() =>
       User.where({ id: 1 })
-        .join(Profile, (q) => q.on('userId', 'user.id').limit(5))
+        .join(Profile, (q) => q.on('userId', 'User.id').limit(5))
         .delete(),
     ).toThrow('Cannot join a complex query in delete');
   });
@@ -281,7 +281,7 @@ describe('delete', () => {
     expect(() =>
       User.where({ id: 1 })
         .delete()
-        .join(Profile, (q) => q.on('userId', 'user.id').limit(5)),
+        .join(Profile, (q) => q.on('userId', 'User.id').limit(5)),
     ).toThrow('Cannot join a complex query in delete');
   });
 

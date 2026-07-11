@@ -27,19 +27,19 @@ const makeOptions = (
       options: { columns: ['id', 'name'] },
       sql: `WITH "w"${
         sqlColumns ? sqlColumns : `("id", "name")`
-      } AS (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
+      } AS (SELECT ${select} FROM "schema"."user" "User") SELECT * FROM "w"`,
     },
     {
       options: { recursive: true },
-      sql: `WITH RECURSIVE "w"${sqlColumns} AS (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
+      sql: `WITH RECURSIVE "w"${sqlColumns} AS (SELECT ${select} FROM "schema"."user" "User") SELECT * FROM "w"`,
     },
     {
       options: { materialized: true },
-      sql: `WITH "w"${sqlColumns} AS MATERIALIZED (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
+      sql: `WITH "w"${sqlColumns} AS MATERIALIZED (SELECT ${select} FROM "schema"."user" "User") SELECT * FROM "w"`,
     },
     {
       options: { notMaterialized: true },
-      sql: `WITH "w"${sqlColumns} AS NOT MATERIALIZED (SELECT ${select} FROM "schema"."user") SELECT * FROM "w"`,
+      sql: `WITH "w"${sqlColumns} AS NOT MATERIALIZED (SELECT ${select} FROM "schema"."user" "User") SELECT * FROM "w"`,
     },
   ];
 };
@@ -59,7 +59,7 @@ describe('cte', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT "user"."id" "i", "user"."updated_at" "u" FROM "schema"."user") SELECT * FROM "w"
+        WITH "w" AS (SELECT "User"."id" "i", "User"."updated_at" "u" FROM "schema"."user" "User") SELECT * FROM "w"
       `,
     );
 
@@ -92,16 +92,16 @@ describe('cte', () => {
   });
 
   it('should work with join', () => {
-    const q = User.with('w', User).join('w', 'id', 'user.id').select('w.id');
+    const q = User.with('w', User).join('w', 'id', 'User.id').select('w.id');
 
     assertType<Awaited<typeof q>, { id: number }[]>();
 
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT ${userColumnsSql} FROM "schema"."user")
-        SELECT "w"."id" FROM "schema"."user"
-        JOIN "w" ON "w"."id" = "user"."id"
+        WITH "w" AS (SELECT ${userColumnsSql} FROM "schema"."user" "User")
+        SELECT "w"."id" FROM "schema"."user" "User"
+        JOIN "w" ON "w"."id" = "User"."id"
       `,
     );
   });
@@ -109,7 +109,7 @@ describe('cte', () => {
   it('should work with join lateral', () => {
     const q = db.user
       .with('w', db.profile)
-      .joinLateral('w', (q) => q.on('UserId', 'user.Id').where({ Bio: 'bio' }))
+      .joinLateral('w', (q) => q.on('UserId', 'User.Id').where({ Bio: 'bio' }))
       .select('Name', 'w.*');
 
     assertType<Awaited<typeof q>, { Name: string; w: Profile }[]>();
@@ -117,13 +117,13 @@ describe('cte', () => {
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT ${ProfileSelectAll} FROM "schema"."profile")
-        SELECT "user"."name" "Name", row_to_json("w".*) "w"
-        FROM "schema"."user"
+        WITH "w" AS (SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile")
+        SELECT "User"."name" "Name", row_to_json("w".*) "w"
+        FROM "schema"."user" "User"
         JOIN LATERAL (
           SELECT *
           FROM "w"
-          WHERE "w"."UserId" = "user"."id"
+          WHERE "w"."UserId" = "User"."id"
             AND "w"."Bio" = $1
         ) "w" ON true
       `,
@@ -144,7 +144,7 @@ describe('cte', () => {
             .map((c) => `"${c}"`)
             .join(
               ', ',
-            )}) AS (SELECT ${userColumnsSql} FROM "schema"."user") SELECT * FROM "w"
+            )}) AS (SELECT ${userColumnsSql} FROM "schema"."user" "User") SELECT * FROM "w"
         `,
       );
     });
@@ -172,8 +172,8 @@ describe('cte', () => {
       q.toSQL(),
       `
         WITH "a" AS (
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          WHERE "user"."id" = $1
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          WHERE "User"."id" = $1
         ), "b" AS (
           SELECT * FROM "a"
           WHERE "a"."name" = $2
@@ -230,7 +230,7 @@ describe('withRecursive', () => {
         q
           .from(db.profile)
           .select('Id', 'UserId')
-          .join('rec', 'rec.Id', 'profile.UserId'),
+          .join('rec', 'rec.Id', 'Profile.UserId'),
       )
       .from('rec');
 
@@ -239,16 +239,16 @@ describe('withRecursive', () => {
       `
         WITH RECURSIVE "rec" AS (
           (
-            SELECT "profile"."id" "Id", "profile"."user_id" "UserId"
-            FROM "schema"."profile"
-            WHERE "profile"."id" = $1
+            SELECT "Profile"."id" "Id", "Profile"."user_id" "UserId"
+            FROM "schema"."profile" "Profile"
+            WHERE "Profile"."id" = $1
             LIMIT 1
           )  
           UNION ALL
           (
-            SELECT "profile"."Id", "profile"."UserId"
-            FROM (SELECT ${ProfileSelectAll} FROM "schema"."profile") "profile"
-            JOIN "rec" ON "rec"."Id" = "profile"."UserId"
+            SELECT "Profile"."Id", "Profile"."UserId"
+            FROM (SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile") "Profile"
+            JOIN "rec" ON "rec"."Id" = "Profile"."UserId"
           )
         )
         SELECT * FROM "rec"
@@ -294,7 +294,7 @@ describe('withSql', () => {
           id: t.integer(),
           name: t.text(),
         }),
-        () => sql`SELECT * FROM "schema"."user"`,
+        () => sql`SELECT * FROM "schema"."user" "User"`,
       ).from('w');
 
       expectSql(q.toSQL(), s);
@@ -315,7 +315,7 @@ describe('withSql', () => {
       `
         WITH "test"("id") AS (select 1 as id)
         SELECT "test"."id"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         JOIN "test" ON true
       `,
     );

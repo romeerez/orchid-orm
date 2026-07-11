@@ -6,7 +6,12 @@ import { QueryData } from '../../query-data';
 import { Query } from '../../query';
 import { isRelationQuery } from '../../relations';
 import { OrchidOrmInternalError } from '../../errors';
-import { makeSql, quoteTableWithSchema, Sql } from '../../sql/sql';
+import {
+  getQueryRelationAliasForAs,
+  makeSql,
+  quoteTableWithSchema,
+  Sql,
+} from '../../sql/sql';
 import {
   handleDeleteSelectRelationsSqlState,
   newMutativeQueriesSelectRelationsSqlState,
@@ -23,8 +28,9 @@ export const pushDeleteSql = (
   const from = quoteTableWithSchema(query);
   ctx.sql.push(`DELETE FROM ${from}`);
 
-  if (q.as && query.table !== q.as) {
-    ctx.sql.push(quotedAs);
+  const alias = getQueryRelationAliasForAs(query, q.as);
+  if (alias) {
+    ctx.sql.push(alias);
   }
 
   const relationSelectState = newMutativeQueriesSelectRelationsSqlState(query);

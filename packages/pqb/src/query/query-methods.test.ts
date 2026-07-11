@@ -30,7 +30,7 @@ describe('queryMethods', () => {
 
       assertType<typeof sql, Sql>();
 
-      expectSql(sql, `SELECT ${userColumnsSql} FROM "schema"."user"`);
+      expectSql(sql, `SELECT ${userColumnsSql} FROM "schema"."user" "User"`);
     });
   });
 
@@ -38,7 +38,7 @@ describe('queryMethods', () => {
     it('should produce correct sql', () => {
       expectSql(
         User.all().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user"`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User"`,
       );
     });
   });
@@ -51,7 +51,7 @@ describe('queryMethods', () => {
 
       expectSql(
         q.take().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" LIMIT 1`,
       );
       expectQueryNotMutated(q);
 
@@ -126,7 +126,7 @@ describe('queryMethods', () => {
 
       expectSql(
         q.takeOptional().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" LIMIT 1`,
       );
       expectQueryNotMutated(q);
 
@@ -248,8 +248,8 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-            SELECT ${userColumnsSql} FROM "schema"."user"
-            WHERE "user"."id" = $1
+            SELECT ${userColumnsSql} FROM "schema"."user" "User"
+            WHERE "User"."id" = $1
             LIMIT 1
         `,
         [1],
@@ -263,8 +263,8 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "schema"."snake"
-          WHERE "snake"."snake_id" = $1
+          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
+          WHERE "Snake"."snake_id" = $1
           LIMIT 1
         `,
         [1],
@@ -280,8 +280,8 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          WHERE "user"."id" = $1 + $2
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          WHERE "User"."id" = $1 + $2
           LIMIT 1
         `,
         [1, 2],
@@ -306,9 +306,9 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-            SELECT ${userColumnsSql} FROM "schema"."user"
-            WHERE "user"."id" = $1
-            LIMIT 1
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          WHERE "User"."id" = $1
+          LIMIT 1
         `,
         [1],
       );
@@ -321,8 +321,8 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT ${snakeSelectAll} FROM "schema"."snake"
-          WHERE "snake"."snake_id" = $1
+          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
+          WHERE "Snake"."snake_id" = $1
           LIMIT 1
         `,
         [1],
@@ -338,8 +338,8 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          WHERE "user"."id" = $1 + $2
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          WHERE "User"."id" = $1 + $2
           LIMIT 1
         `,
         [1, 2],
@@ -356,8 +356,8 @@ describe('queryMethods', () => {
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user"
-          WHERE "user"."id" = $1 + $2
+          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          WHERE "User"."id" = $1 + $2
           LIMIT 1
         `,
         [1, 2],
@@ -376,7 +376,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."name" = $1 LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."name" = $1 LIMIT 1`,
         ['s'],
       );
 
@@ -392,7 +392,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."name" = 'string' LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."name" = 'string' LIMIT 1`,
       );
 
       expectQueryNotMutated(q);
@@ -420,7 +420,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."id" = $1 LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."id" = $1 LIMIT 1`,
         [1],
       );
 
@@ -435,7 +435,7 @@ describe('queryMethods', () => {
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE "user"."id" = 1 LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."id" = 1 LIMIT 1`,
       );
 
       expectQueryNotMutated(q);
@@ -462,7 +462,7 @@ describe('queryMethods', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (sql) LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (sql) LIMIT 1`,
       );
     });
   });
@@ -475,7 +475,7 @@ describe('queryMethods', () => {
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" WHERE (sql) LIMIT 1`,
+        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (sql) LIMIT 1`,
       );
     });
   });
@@ -507,8 +507,8 @@ describe('queryMethods', () => {
       expectSql(
         q.select('id', 'name').group('id', 'name').toSQL(),
         `
-          SELECT "user"."id", "user"."name" FROM "schema"."user"
-          GROUP BY "user"."id", "user"."name"
+          SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
+          GROUP BY "User"."id", "User"."name"
         `,
       );
 
@@ -524,8 +524,8 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "snake"."snake_name" "snakeName", "snake"."tail_length" "tailLength" FROM "schema"."snake"
-          GROUP BY "snake"."snake_name", "snake"."tail_length"
+          SELECT "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength" FROM "schema"."snake" "Snake"
+          GROUP BY "Snake"."snake_name", "Snake"."tail_length"
         `,
       );
     });
@@ -533,7 +533,7 @@ describe('queryMethods', () => {
     it('should group by raw sql', () => {
       const q = User.clone();
       const expectedSql = `
-        SELECT "user"."id", "user"."name" FROM "schema"."user"
+        SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
         GROUP BY id, name
       `;
       expectSql(
@@ -557,7 +557,7 @@ describe('queryMethods', () => {
         q.toSQL(),
         `
           SELECT extract(month from "created_at") "month"
-          FROM "schema"."user"
+          FROM "schema"."user" "User"
           GROUP BY 1
         `,
       );
@@ -569,7 +569,7 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id" "name" FROM "schema"."user"
+          SELECT "User"."id" "name" FROM "schema"."user" "User"
           GROUP BY 1
         `,
       );
@@ -597,9 +597,9 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "user"."name"
-          FROM "schema"."user"
-          WHERE "user"."name" = $1
+          SELECT "User"."id", "User"."name"
+          FROM "schema"."user" "User"
+          WHERE "User"."name" = $1
         `,
         ['name'],
       );
@@ -624,8 +624,8 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "user"."name"
-          FROM "schema"."user"
+          SELECT "User"."id", "User"."name"
+          FROM "schema"."user" "User"
         `,
       );
     });
@@ -639,9 +639,9 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id"
-          FROM "schema"."user"
-          WHERE "user"."id" = $1 AND ("user"."name" = $2)
+          SELECT "User"."id"
+          FROM "schema"."user" "User"
+          WHERE "User"."id" = $1 AND ("User"."name" = $2)
         `,
         [1, 'name'],
       );
@@ -660,9 +660,9 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "user"."name"
-          FROM "schema"."user"
-          WHERE "user"."name" = $1
+          SELECT "User"."id", "User"."name"
+          FROM "schema"."user" "User"
+          WHERE "User"."name" = $1
         `,
         ['name'],
       );
@@ -689,8 +689,8 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id", "user"."name"
-          FROM "schema"."user"
+          SELECT "User"."id", "User"."name"
+          FROM "schema"."user" "User"
         `,
       );
     });
@@ -705,9 +705,9 @@ describe('queryMethods', () => {
       expectSql(
         q.toSQL(),
         `
-          SELECT "user"."id"
-          FROM "schema"."user"
-          WHERE "user"."id" = $1 AND "user"."name" = $2
+          SELECT "User"."id"
+          FROM "schema"."user" "User"
+          WHERE "User"."id" = $1 AND "User"."name" = $2
         `,
         [1, 'name'],
       );
@@ -781,7 +781,7 @@ describe('queryMethods', () => {
     it('should have table property available at runtime', () => {
       const helper = User.makeHelper((q) => q.select('id'));
 
-      expect(helper.table).toBe('user');
+      expect(helper.table).toBe('User');
     });
 
     it('should support returning an expression', () => {
@@ -807,13 +807,13 @@ describe('queryMethods', () => {
     it('should execute callback based on the condition', () => {
       const q1 = User.select('id').if(false, (q) => q.select('name'));
 
-      expectSql(q1.toSQL(), `SELECT "user"."id" FROM "schema"."user"`);
+      expectSql(q1.toSQL(), `SELECT "User"."id" FROM "schema"."user" "User"`);
 
       const q2 = User.select('id').if(true, (q) => q.select('name'));
 
       expectSql(
         q2.toSQL(),
-        `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+        `SELECT "User"."id", "User"."name" FROM "schema"."user" "User"`,
       );
     });
 

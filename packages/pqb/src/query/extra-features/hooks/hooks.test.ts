@@ -437,9 +437,9 @@ describe('hooks', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "schema"."user"
+          UPDATE "schema"."user" "User"
           SET "name" = $1, "updated_at" = now()
-          RETURNING "user"."id", "user"."name", "user"."age", "user"."password"
+          RETURNING "User"."id", "User"."name", "User"."age", "User"."password"
         `,
         ['new name'],
       );
@@ -1007,9 +1007,9 @@ describe('hooks', () => {
       expectSql(
         q.toSQL(),
         `
-          UPDATE "schema"."user" SET "name" = $1, "updated_at" = now()
-          WHERE "user"."id" = $2
-          RETURNING "user"."age", "user"."name"
+          UPDATE "schema"."user" "User" SET "name" = $1, "updated_at" = now()
+          WHERE "User"."id" = $2
+          RETURNING "User"."age", "User"."name"
         `,
         ['updated', 0],
       );
@@ -1087,7 +1087,7 @@ describe('hooks', () => {
 
         const res = await User.updateFrom(
           () => User.as('u').find(id),
-          (q) => q.on('u.id', 'user.id'),
+          (q) => q.on('u.id', 'User.id'),
         )
           .set({
             name: 'new name',

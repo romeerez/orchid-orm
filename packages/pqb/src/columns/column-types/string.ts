@@ -2,7 +2,7 @@ import { Column, getDefaultLanguage, setColumnData } from '../column';
 import { NumberColumnData } from './number';
 import { Code, ColumnToCodeCtx, stringDataToCode } from '../code';
 import { columnCode } from '../code';
-import { RawSql, RawSqlBase } from '../../query/expressions/raw-sql';
+import { RawSql } from '../../query/expressions/raw-sql';
 import { Operators, OperatorsOrdinalText, OperatorsText } from '../operators';
 import { setColumnDefaultParse } from '../column.utils';
 import {
@@ -725,7 +725,7 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column {
     name?: Name,
   ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
   T & {
-    data: { primaryKey: Name; default: RawSqlBase };
+    data: { primaryKey: Name; default: true };
   } {
     const column = super.primaryKey(name);
     if (!column.data.default) column.data.default = uuidDefault;

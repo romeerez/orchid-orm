@@ -254,7 +254,7 @@ export const toPascalCase = (str: string) => {
  * @param str - string to translate
  */
 export const toSnakeCase = (str: string) => {
-  return str.replace(/[A-Z]/g, (a) => `_${a.toLowerCase()}`);
+  return str.replace(/[A-Z]/g, (a, i) => `${i ? '_' : ''}${a.toLowerCase()}`);
 };
 
 /**

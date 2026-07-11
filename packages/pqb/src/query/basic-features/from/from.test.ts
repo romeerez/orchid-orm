@@ -24,15 +24,15 @@ describe('from', () => {
 
     expectSql(
       q.toSQL(),
-      'SELECT "user"."name" FROM (SELECT "user"."name" FROM "schema"."user") "user"',
+      'SELECT "User"."name" FROM (SELECT "User"."name" FROM "schema"."user" "User") "User"',
     );
   });
 
   it('should play nicely with `with` and `join`', () => {
     const q = User.with('w', Profile.select('userId'))
       .from(User)
-      .join('w', 'w.userId', 'user.id')
-      .select('w.userId', 'user.id');
+      .join('w', 'w.userId', 'User.id')
+      .select('w.userId', 'User.id');
 
     assertType<Awaited<typeof q>, { userId: number; id: number }[]>();
 
@@ -40,12 +40,12 @@ describe('from', () => {
       q.toSQL(),
       `
         WITH "w" AS (
-          SELECT "profile"."user_id" "userId"
-          FROM "schema"."profile"
+          SELECT "Profile"."user_id" "userId"
+          FROM "schema"."profile" "Profile"
         )
-        SELECT "w"."userId", "user"."id"
-        FROM (SELECT ${userColumnsSql} FROM "schema"."user") "user"
-        JOIN "w" ON "w"."userId" = "user"."id"
+        SELECT "w"."userId", "User"."id"
+        FROM (SELECT ${userColumnsSql} FROM "schema"."user" "User") "User"
+        JOIN "w" ON "w"."userId" = "User"."id"
       `,
     );
   });
@@ -57,7 +57,7 @@ describe('from', () => {
 
     expectSql(
       q.toSQL(),
-      `SELECT "profile"."bio" FROM (SELECT ${profileColumnsSql} FROM "schema"."profile") "profile"`,
+      `SELECT "Profile"."bio" FROM (SELECT ${profileColumnsSql} FROM "schema"."profile" "Profile") "Profile"`,
     );
   });
 
@@ -84,11 +84,11 @@ describe('from', () => {
         q.toSQL(),
         `SELECT * FROM (
         SELECT
-          "user"."created_at" "createdAt",
-          "user"."name" "alias",
-          (SELECT count(*) FROM "schema"."user") "count"
-        FROM "schema"."user"
-      ) "user" WHERE "user"."alias" ILIKE '%' || $1 || '%'`,
+          "User"."created_at" "createdAt",
+          "User"."name" "alias",
+          (SELECT count(*) FROM "schema"."user" "User") "count"
+        FROM "schema"."user" "User"
+      ) "User" WHERE "User"."alias" ILIKE '%' || $1 || '%'`,
         ['name'],
       );
 
@@ -124,7 +124,7 @@ describe('from multiple', () => {
         User.select('updatedAt'),
         Profile.select('createdAt'),
       ])
-      .select('with1.one', 'with2.two', 'user.updatedAt', 'profile.createdAt');
+      .select('with1.one', 'with2.two', 'User.updatedAt', 'Profile.createdAt');
 
     expectSql(
       q.toSQL(),
@@ -132,12 +132,12 @@ describe('from multiple', () => {
         WITH
           "with1" AS (SELECT '1' "one"),
           "with2" AS (SELECT '2' "two")
-        SELECT "with1"."one", "with2"."two", "user"."updatedAt", "profile"."createdAt"
+        SELECT "with1"."one", "with2"."two", "User"."updatedAt", "Profile"."createdAt"
         FROM
           "with1",
           "with2",
-          (SELECT "user"."updated_at" "updatedAt" FROM "schema"."user") "user",
-          (SELECT "profile"."created_at" "createdAt" FROM "schema"."profile") "profile"
+          (SELECT "User"."updated_at" "updatedAt" FROM "schema"."user" "User") "User",
+          (SELECT "Profile"."created_at" "createdAt" FROM "schema"."profile" "Profile") "Profile"
       `,
     );
 
@@ -195,6 +195,9 @@ describe('only', () => {
   it('should add `ONLY` keyword to `FROM`', () => {
     const q = User.only();
 
-    expectSql(q.toSQL(), `SELECT ${userColumnsSql} FROM ONLY "schema"."user"`);
+    expectSql(
+      q.toSQL(),
+      `SELECT ${userColumnsSql} FROM ONLY "schema"."user" "User"`,
+    );
   });
 });

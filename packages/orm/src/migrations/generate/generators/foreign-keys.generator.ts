@@ -269,8 +269,14 @@ export const fnOrTableToString = (
   fnOrTable: TableData.References['fnOrTable'],
 ) => {
   if (typeof fnOrTable !== 'string') {
-    const { schema, table } = new (fnOrTable())();
-    fnOrTable = concatSchemaAndName({ schema, name: table });
+    const { schema, table, nameInDb } = new (fnOrTable())();
+    const name = nameInDb || table;
+    if (!name) throw new Error('Referenced table is missing table property');
+
+    fnOrTable = concatSchemaAndName({
+      schema,
+      name,
+    });
   }
   return fnOrTable;
 };

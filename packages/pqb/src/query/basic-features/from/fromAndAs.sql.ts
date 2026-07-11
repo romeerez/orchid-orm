@@ -5,7 +5,12 @@ import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-
 import { isExpression } from '../../expressions/expression';
 import { getQueryAs } from '../as/as';
 import { searchSourcesToSql } from '../../extra-features/search/search.sql';
-import { quoteFromWithSchema, quoteTableWithSchema } from '../../sql/sql';
+import {
+  getQueryRelationAliasForAs,
+  quoteFromWithSchema,
+  quoteTableWithSchema,
+  quoteTableWithSchemaAndAlias,
+} from '../../sql/sql';
 import { checkIfASimpleQuery } from '../../sql/check-if-a-simple-query';
 import { getQuerySchema } from '../storage/storage';
 
@@ -56,9 +61,10 @@ const getFrom = (
   }
 
   let sql = quoteTableWithSchema(query);
+  const alias = getQueryRelationAliasForAs(query, data.as);
 
-  if (data.as && query.table !== data.as) {
-    sql += ` ${quotedAs}`;
+  if (alias) {
+    sql += ` ${alias}`;
   }
 
   if (data.only) sql = `ONLY ${sql}`;
@@ -90,7 +96,7 @@ const fromToSql = (
           quotedAs || `"${getQueryAs(from)}"`
         }`;
       } else {
-        sql = quoteTableWithSchema(from);
+        sql = quoteTableWithSchemaAndAlias(from);
       }
 
       fromQuery = from;

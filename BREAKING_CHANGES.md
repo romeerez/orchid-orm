@@ -1,5 +1,21 @@
 # Breaking changes
 
+## orchid-orm 1.76.0, pqb 0.71.0
+
+When `snakeCase` is enabled, table and view aliases are now cast to snake_case for database relation names by default.
+
+Previously, a table with `readonly table = 'userProfile'` queried the `"userProfile"` table unless its database name was configured separately.
+Now it queries `"user_profile"` and aliases it back to `"userProfile"` for the TypeScript query API.
+
+Set `nameInDb` on a table, view, materialized view, or standalone `createDb` table options when you need to keep the previous database relation name:
+
+```ts
+class UserProfileTable extends BaseTable {
+  readonly table = 'userProfile';
+  readonly nameInDb = 'userProfile';
+}
+```
+
 ## orchid-orm 1.75.0
 
 `join()` without arguments on a selected relation was renamed to `require()`.

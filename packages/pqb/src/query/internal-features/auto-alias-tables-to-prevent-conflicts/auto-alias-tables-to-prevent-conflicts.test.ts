@@ -35,18 +35,18 @@ describe('auto alias tables to prevent conflicts', () => {
       q.toSQL(),
       `
           SELECT row_to_json("user".*) "user"
-          FROM "schema"."profile"
+          FROM "schema"."profile" "Profile"
           LEFT JOIN LATERAL (
-            SELECT "profile2"."profile" "profile", "profile2"."bio" "bio"
+            SELECT "profile"."profile" "profile", "profile"."bio" "bio"
             FROM "schema"."user"
             LEFT JOIN LATERAL (
-              SELECT array["profile2"."active"] "profile", array["profile2"."bio"] "bio"
-              FROM "schema"."profile" "profile2"
-              WHERE "profile2"."user_id" = "user"."id"
-                AND "profile2"."profile_key" = "user"."user_key"
-            ) "profile2" ON true
-            WHERE "user"."id" = "profile"."user_id"
-              AND "user"."user_key" = "profile"."profile_key"
+              SELECT array["profile"."active"] "profile", array["profile"."bio"] "bio"
+              FROM "schema"."profile"
+              WHERE "profile"."user_id" = "user"."id"
+                AND "profile"."profile_key" = "user"."user_key"
+            ) "profile" ON true
+            WHERE "user"."id" = "Profile"."user_id"
+              AND "user"."user_key" = "Profile"."profile_key"
           ) "user" ON true
           WHERE "user"."profile"[1] IS NULL AND "user"."bio"[1] = $1
         `,

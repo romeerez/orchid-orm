@@ -146,6 +146,8 @@ export interface QueryData
   type: QueryType;
   adapter: Adapter;
   selectShape: ColumnsShape;
+  // Database relation name used when it differs from the query-facing table alias.
+  nameInDb?: string;
   handleResult: HandleResult;
   // When executed in a transaction,
   // the query will be wrapped with a `SAVEPOINT x; *query*; ROLLBACK TO SAVEPOINT x (if fails)`.

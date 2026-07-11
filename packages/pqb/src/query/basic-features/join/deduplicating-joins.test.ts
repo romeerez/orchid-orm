@@ -32,11 +32,11 @@ describe('deduplicating joins', () => {
       q.toSQL(),
       `
         SELECT "one"."one" "one", "one"."two" "two"
-        FROM "schema"."user"
+        FROM "schema"."user" "User"
         LEFT JOIN LATERAL (
           SELECT array["profile"."active"] "one", array["profile"."bio"] "two"
           FROM "schema"."profile"
-          WHERE "profile"."user_id" = "user"."id" AND "profile"."profile_key" = "user"."user_key"
+          WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
         ) "one" ON true
         WHERE "one"."one"[1] >= $1
           AND "one"."two"[1] ILIKE $2 || '%'
