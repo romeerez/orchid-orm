@@ -2389,6 +2389,13 @@ describe('belongsTo', () => {
         Name: t.name('name').text(),
         Password: t.name('password').text(),
       }));
+
+      relations = {
+        profile: this.hasOne(() => ProfileTable, {
+          columns: ['Id'],
+          references: ['UserId'],
+        }),
+      };
     }
 
     class ProfileTable extends BaseTable {
@@ -2448,6 +2455,28 @@ describe('belongsTo', () => {
           user: undefined,
         },
       ]);
+    });
+
+    it('should return undefined when selecting nested relation of a missing optional relation', async () => {
+      const id = await db.profile
+        .get('Id')
+        .create({ ...ProfileData, UserId: null });
+
+      const result = await db.profile.find(id).select({
+        user: (q) =>
+          q.user.select({
+            profile: (q) => q.profile.select('Bio'),
+          }),
+      });
+
+      assertType<
+        typeof result,
+        {
+          user: { profile: { Bio: string | null } | undefined } | undefined;
+        }
+      >();
+
+      expect(result.user).toBeUndefined();
     });
   });
 

@@ -2573,6 +2573,7 @@ describe('hasOne', () => {
         profile: this.hasOne(() => ProfileTable, {
           columns: ['Id'],
           references: ['UserId'],
+          required: false,
         }),
       };
     }
@@ -2584,6 +2585,14 @@ describe('hasOne', () => {
         Id: t.name('id').identity().primaryKey(),
         UserId: t.name('user_id').integer(),
       }));
+
+      relations = {
+        user: this.belongsTo(() => UserTable, {
+          columns: ['UserId'],
+          references: ['Id'],
+          required: false,
+        }),
+      };
     }
 
     const local = orchidORMWithAdapter(ormParams, {
@@ -2617,6 +2626,26 @@ describe('hasOne', () => {
           profile: undefined,
         },
       ]);
+    });
+
+    it('should return undefined when selecting nested relation of a missing optional relation', async () => {
+      const id = await local.user.get('Id').create(UserData);
+
+      const result = await local.user.find(id).select({
+        profile: (q) =>
+          q.profile.select({
+            user: (q) => q.user.select('Name'),
+          }),
+      });
+
+      assertType<
+        typeof result,
+        {
+          profile: { user: { Name: string } | undefined } | undefined;
+        }
+      >();
+
+      expect(result.profile).toBeUndefined();
     });
   });
 

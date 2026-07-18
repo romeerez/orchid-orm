@@ -1127,6 +1127,32 @@ describe('select', () => {
 
       expect(res).toEqual([{ user: { Age: null } }]);
     });
+
+    it('should select nested relation of a missing optional relation', async () => {
+      const id = await db.profile
+        .get('Id')
+        .create({ ...ProfileData, UserId: null });
+
+      const res = await db.profile.find(id).select({
+        user: (q) =>
+          q.user.select({
+            profile: (q) => q.profile.select('Bio'),
+          }),
+      });
+
+      assertType<
+        typeof res,
+        {
+          user:
+            | {
+                profile: { Bio: string | null };
+              }
+            | undefined;
+        }
+      >();
+
+      expect(res).toEqual({ user: undefined });
+    });
   });
 
   describe('selectAll', () => {

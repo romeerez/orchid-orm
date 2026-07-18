@@ -396,6 +396,9 @@ const processNestedSelectPathEntry = (
       key: thisKey,
     });
   } else {
+    // Optional single relations can be null, don't descend into nested paths.
+    if (!data) return;
+
     const { key, returnType } = path[++i];
     if (!thisReturnType || thisReturnType === 'all') {
       for (const row of data as unknown[]) {
