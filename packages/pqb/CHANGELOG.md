@@ -1,5 +1,12 @@
 # pqb
 
+## 0.71.1
+
+### Patch Changes
+
+- 2bac7b53: Fix a bug in nested selects for optional data (#730)
+- fddef227: Add support for deferrable unique constraints across unique declaration APIs and migration generation (#729)
+
 ## 0.71.0
 
 ### Minor Changes

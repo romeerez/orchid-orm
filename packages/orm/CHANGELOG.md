@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.76.2
+
+### Patch Changes
+
+- 2bac7b53: Fix a bug in nested selects for optional data (#730)
+- fddef227: Add support for deferrable unique constraints across unique declaration APIs and migration generation (#729)
+- Updated dependencies [2bac7b53]
+- Updated dependencies [fddef227]
+  - pqb@0.71.1
+  - rake-db@2.36.16
+
 ## 1.76.1
 
 ### Patch Changes

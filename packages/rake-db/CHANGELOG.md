@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.36.16
+
+### Patch Changes
+
+- fddef227: Add support for deferrable unique constraints across unique declaration APIs and migration generation (#729)
+- Updated dependencies [2bac7b53]
+- Updated dependencies [fddef227]
+  - pqb@0.71.1
+
 ## 2.36.15
 
 ### Patch Changes
