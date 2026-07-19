@@ -423,6 +423,11 @@ export const indexesToQuery = (
 ): SingleSql[] => {
   return indexes.map((index) => {
     const { options } = index;
+    const isDeferrableUnique = isActiveUniqueDeferrable(options.deferrable);
+
+    if (isDeferrableUnique && !options.unique) {
+      throw new Error('Only unique indexes can be deferrable');
+    }
 
     const { columns, include, name } = getIndexOrExcludeMainOptions(
       tableName,
@@ -432,25 +437,44 @@ export const indexesToQuery = (
     );
 
     if (!up) {
+      const text = isDeferrableUnique
+        ? `ALTER TABLE ${quoteTable(
+            schema,
+            tableName,
+          )} DROP CONSTRAINT "${name}"`
+        : `DROP INDEX "${name}"`;
+
       return {
-        text: `DROP INDEX "${name}"${
-          options.dropMode ? ` ${options.dropMode}` : ''
-        }`,
+        text: `${text}${options.dropMode ? ` ${options.dropMode}` : ''}`,
       };
+    }
+
+    if (isDeferrableUnique) {
+      validateDeferrableUnique(index);
     }
 
     const values: unknown[] = [];
 
-    const sql: string[] = ['CREATE'];
+    const sql: string[] = isDeferrableUnique
+      ? [
+          `ALTER TABLE ${quoteTable(
+            schema,
+            tableName,
+          )} ADD CONSTRAINT "${name}"`,
+          `UNIQUE${options.nullsNotDistinct ? ' NULLS NOT DISTINCT' : ''}`,
+        ]
+      : ['CREATE'];
 
-    if (options.unique) {
+    if (!isDeferrableUnique && options.unique) {
       sql.push('UNIQUE');
     }
 
-    sql.push(`INDEX "${name}" ON ${quoteTable(schema, tableName)}`);
+    if (!isDeferrableUnique) {
+      sql.push(`INDEX "${name}" ON ${quoteTable(schema, tableName)}`);
+    }
 
     const u = options.using || (options.tsVector && 'GIN');
-    if (u) {
+    if (!isDeferrableUnique && u) {
       sql.push(`USING ${u}`);
     }
 
@@ -462,32 +486,36 @@ export const indexesToQuery = (
           : `'${language || 'english'}'`;
 
     let hasWeight =
-      options.tsVector && columns.some((column) => !!column.weight);
+      !isDeferrableUnique &&
+      options.tsVector &&
+      columns.some((column) => !!column.weight);
 
-    const columnsSql = columns.map((column) => {
-      let sql = [
-        'expression' in column
-          ? `(${column.expression})`
-          : `"${column.column}"`,
-        column.collate &&
-          `COLLATE ${quoteNameFromString(schema, column.collate)}`,
-        column.opclass,
-        column.order,
-      ]
-        .filter((x): x is string => !!x)
-        .join(' ');
+    const columnsSql = isDeferrableUnique
+      ? columns.map(uniqueConstraintColumnToSql)
+      : columns.map((column) => {
+          let sql = [
+            'expression' in column
+              ? `(${column.expression})`
+              : `"${column.column}"`,
+            column.collate &&
+              `COLLATE ${quoteNameFromString(schema, column.collate)}`,
+            column.opclass,
+            column.order,
+          ]
+            .filter((x): x is string => !!x)
+            .join(' ');
 
-      if (hasWeight) {
-        sql = `to_tsvector(${lang}, coalesce(${sql}, ''))`;
+          if (hasWeight) {
+            sql = `to_tsvector(${lang}, coalesce(${sql}, ''))`;
 
-        if (column.weight) {
-          hasWeight = true;
-          sql = `setweight(${sql}, '${column.weight}')`;
-        }
-      }
+            if (column.weight) {
+              hasWeight = true;
+              sql = `setweight(${sql}, '${column.weight}')`;
+            }
+          }
 
-      return sql;
-    });
+          return sql;
+        });
 
     let columnList;
     if (hasWeight) {
@@ -506,7 +534,7 @@ export const indexesToQuery = (
       );
     }
 
-    if (options.nullsNotDistinct) {
+    if (!isDeferrableUnique && options.nullsNotDistinct) {
       sql.push(`NULLS NOT DISTINCT`);
     }
 
@@ -515,10 +543,14 @@ export const indexesToQuery = (
     }
 
     if (options.tablespace) {
-      sql.push(`TABLESPACE ${options.tablespace}`);
+      sql.push(
+        isDeferrableUnique
+          ? `USING INDEX TABLESPACE ${options.tablespace}`
+          : `TABLESPACE ${options.tablespace}`,
+      );
     }
 
-    if (options.where) {
+    if (!isDeferrableUnique && options.where) {
       sql.push(
         `WHERE ${
           isRawSQL(options.where)
@@ -528,8 +560,87 @@ export const indexesToQuery = (
       );
     }
 
+    if (isDeferrableUnique) {
+      sql.push(
+        `DEFERRABLE INITIALLY ${
+          options.deferrable === 'deferred' ? 'DEFERRED' : 'IMMEDIATE'
+        }`,
+      );
+    }
+
     return { text: sql.join(' '), values };
   });
+};
+
+const isActiveUniqueDeferrable = (
+  deferrable: TableData.Index.Options['deferrable'],
+) => deferrable === 'immediate' || deferrable === 'deferred';
+
+const uniqueConstraintColumnToSql = (
+  column: TableData.Index.ColumnOrExpressionOptions,
+) => {
+  if ('expression' in column) {
+    throw new Error(
+      'Deferrable unique constraints do not support expression indexes',
+    );
+  }
+
+  return `"${column.column}"`;
+};
+
+const validateDeferrableUnique = (index: TableData.Index) => {
+  const { options } = index;
+
+  if (options.where) {
+    throw new Error(
+      'Deferrable unique constraints do not support partial indexes',
+    );
+  }
+
+  const unsupportedOption = getUnsupportedDeferrableUniqueIndexOption(options);
+  if (unsupportedOption) {
+    throw new Error(
+      `Deferrable unique constraints do not support index option: ${unsupportedOption}`,
+    );
+  }
+
+  for (const column of index.columns) {
+    if ('expression' in column) {
+      throw new Error(
+        'Deferrable unique constraints do not support expression indexes',
+      );
+    }
+
+    const unsupportedColumnOption =
+      getUnsupportedDeferrableUniqueColumnOption(column);
+    if (unsupportedColumnOption) {
+      throw new Error(
+        `Deferrable unique constraints do not support index column option: ${unsupportedColumnOption}`,
+      );
+    }
+  }
+};
+
+const getUnsupportedDeferrableUniqueIndexOption = (
+  options: TableData.Index.Options,
+): string | undefined => {
+  if (options.using) return 'using';
+  if (options.tsVector) return 'tsVector';
+  if (options.language) return 'language';
+  if (options.languageColumn) return 'languageColumn';
+
+  return undefined;
+};
+
+const getUnsupportedDeferrableUniqueColumnOption = (
+  column: TableData.Index.ColumnOptions,
+): string | undefined => {
+  if (column.collate) return 'collate';
+  if (column.opclass) return 'opclass';
+  if (column.order) return 'order';
+  if (column.weight) return 'weight';
+
+  return undefined;
 };
 
 export const excludesToQuery = (

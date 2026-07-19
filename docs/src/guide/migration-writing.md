@@ -262,7 +262,12 @@ change(async (db) => {
     column10: t.drop(t.index({ name: 'column10Index' })),
 
     // add or drop a unique index on an existing column
-    column11: t.add(t.unique({ name: 'column11Unique' })),
+    column11: t.add(
+      t.unique({
+        name: 'column11Unique',
+        deferrable: 'immediate',
+      }),
+    ),
     column12: t.drop(t.unique({ name: 'column12Unique' })),
 
     // add or drop an EXCLUDE constraint on an existing column
@@ -282,7 +287,12 @@ change(async (db) => {
     ...t.drop(t.index(['foo', 'bar'])),
 
     // add composite unique index:
-    ...t.add(t.unique(['foo', 'bar'])),
+    ...t.add(
+      t.unique(['foo', 'bar'], {
+        name: 'fooBarUnique',
+        deferrable: 'deferred',
+      }),
+    ),
 
     // drop composite unique index:
     ...t.drop(t.unique(['foo', 'bar'])),
@@ -433,8 +443,8 @@ change(async (db) => {
 
     // change unique index
     column12: t.change(
-      t.unique({ name: 'oldUniqueName' }),
-      t.unique({ name: 'newUniqueName' }),
+      t.unique({ name: 'oldUniqueName', deferrable: 'immediate' }),
+      t.unique({ name: 'newUniqueName', deferrable: 'deferred' }),
     ),
 
     // change foreign key without repeating the column type

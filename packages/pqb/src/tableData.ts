@@ -22,7 +22,7 @@ export namespace TableData {
   }
 
   export interface ColumnIndex {
-    options: Index.ColumnArg & Index.Options;
+    options: Index.ColumnOptionsData;
   }
 
   export interface ColumnExclude extends ColumnIndex {
@@ -87,7 +87,12 @@ export namespace TableData {
       weight?: SearchWeight;
     }
 
-    export interface UniqueOptionsArg<Name extends string = string> {
+    /**
+     * Controls when Postgres checks a unique constraint.
+     */
+    export type UniqueDeferrable = false | 'immediate' | 'deferred';
+
+    export interface BaseUniqueOptionsArg<Name extends string = string> {
       name?: Name;
       nullsNotDistinct?: boolean;
       using?: string;
@@ -98,24 +103,65 @@ export namespace TableData {
       dropMode?: DropMode;
     }
 
-    export interface OptionsArg extends UniqueOptionsArg {
-      unique?: boolean;
+    export interface UniqueOptionsArg<
+      Name extends string = string,
+    > extends BaseUniqueOptionsArg<Name> {
+      /**
+       * Makes this unique definition a deferrable Postgres constraint.
+       */
+      deferrable?: UniqueDeferrable;
     }
 
-    export interface TsVectorArg extends OptionsArg, TsVectorOptions {}
+    export interface NonUniqueIndexOptionsArg<
+      Name extends string = string,
+    > extends BaseUniqueOptionsArg<Name> {
+      unique?: false;
+      deferrable?: never;
+    }
+
+    export interface UniqueIndexOptionsArg<
+      Name extends string = string,
+    > extends UniqueOptionsArg<Name> {
+      unique: true;
+    }
+
+    export type OptionsArg<Name extends string = string> =
+      | NonUniqueIndexOptionsArg<Name>
+      | UniqueIndexOptionsArg<Name>;
+
+    export type TsVectorArg = OptionsArg & TsVectorOptions;
 
     // all possible index options, excluding column/expression options
-    export type Options = TsVectorArg;
+    export interface Options extends UniqueOptionsArg, TsVectorOptions {
+      unique?: boolean;
+    }
 
     export interface UniqueColumnArg<Name extends string = string>
       extends ColumnOptions, UniqueOptionsArg<Name> {
       expression?: string;
     }
 
-    // argument of column's index method, may have an expression
-    export interface ColumnArg extends UniqueColumnArg {
-      unique?: boolean;
+    export interface NonUniqueColumnArg<Name extends string = string>
+      extends ColumnOptions, BaseUniqueOptionsArg<Name> {
+      expression?: string;
+      unique?: false;
+      deferrable?: never;
     }
+
+    export interface UniqueIndexColumnArg<
+      Name extends string = string,
+    > extends UniqueColumnArg<Name> {
+      unique: true;
+    }
+
+    export interface ColumnOptionsData extends ColumnOptions, Options {
+      expression?: string;
+    }
+
+    // argument of column's index method, may have an expression
+    export type ColumnArg<Name extends string = string> =
+      | NonUniqueColumnArg<Name>
+      | UniqueIndexColumnArg<Name>;
 
     interface TsVectorOptions {
       // set the language for the tsVector, 'english' is a default
@@ -126,7 +172,7 @@ export namespace TableData {
       tsVector?: boolean;
     }
 
-    export interface TsVectorColumnArg extends ColumnArg, TsVectorOptions {}
+    export type TsVectorColumnArg = ColumnArg & TsVectorOptions;
 
     // for a table index that has an expression in the list
     export interface ExpressionOptions extends ColumnOptions {

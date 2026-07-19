@@ -230,6 +230,66 @@ describe('dbStructure', () => {
     );
   });
 
+  it('should preserve active unique constraint deferrability on indexes', async () => {
+    mockQueryResult({
+      indexes: [
+        dbStructureMockFactory.index({
+          name: 'immediate_key',
+          unique: true,
+          deferrable: 'immediate',
+        }),
+        dbStructureMockFactory.index({
+          name: 'deferred_key',
+          unique: true,
+          deferrable: 'deferred',
+        }),
+        dbStructureMockFactory.index({
+          name: 'not_deferrable_key',
+          unique: true,
+          deferrable: false,
+        }),
+        dbStructureMockFactory.index({
+          name: 'plain_idx',
+          unique: false,
+        }),
+      ],
+    });
+
+    const { indexes } = await introspectDbSchema(adapter);
+
+    expect(indexes).toEqual([
+      dbStructureMockFactory.index({
+        name: 'immediate_key',
+        unique: true,
+        deferrable: 'immediate',
+      }),
+      dbStructureMockFactory.index({
+        name: 'deferred_key',
+        unique: true,
+        deferrable: 'deferred',
+      }),
+      dbStructureMockFactory.index({
+        name: 'not_deferrable_key',
+        unique: true,
+      }),
+      dbStructureMockFactory.index({
+        name: 'plain_idx',
+        unique: false,
+      }),
+    ]);
+  });
+
+  it('should query unique constraint deferrability for indexes', async () => {
+    mockQueryResult({});
+
+    await introspectDbSchema(adapter);
+
+    const sql = asMock(adapter.query).mock.calls[1][0];
+    expect(sql).toContain(`contype = 'u'`);
+    expect(sql).toContain('c.condeferrable');
+    expect(sql).toContain('c.condeferred');
+  });
+
   it('should not load views by default', async () => {
     mockQueryResult({
       views: undefined,

@@ -785,6 +785,56 @@ describe('structureToAst', () => {
         ]);
       });
 
+      it('should preserve active unique constraint deferrability in index options', async () => {
+        structure.tables = [dbStructureMockFactory.tableWithColumns()];
+        structure.indexes = [
+          dbStructureMockFactory.index({
+            name: 'name_key',
+            unique: true,
+            deferrable: 'immediate',
+          }),
+          dbStructureMockFactory.index({
+            name: 'id_name_key',
+            columns: [{ column: 'id' }, { column: 'name' }],
+            unique: true,
+            deferrable: 'deferred',
+          }),
+          dbStructureMockFactory.index({
+            name: 'id_name_idx',
+            columns: [{ column: 'id' }, { column: 'name' }],
+            unique: true,
+            deferrable: false,
+          }),
+        ];
+
+        const [ast] = (await structureToAst(ctx, adapter, config)) as [
+          RakeDbAst.Table,
+        ];
+
+        expect(ast.shape.name.data.indexes?.[0].options).toMatchObject({
+          name: 'name_key',
+          unique: true,
+          deferrable: 'immediate',
+        });
+        expect(ast.indexes).toEqual([
+          {
+            columns: [{ column: 'id' }, { column: 'name' }],
+            options: {
+              name: 'id_name_key',
+              unique: true,
+              deferrable: 'deferred',
+            },
+          },
+          {
+            columns: [{ column: 'id' }, { column: 'name' }],
+            options: {
+              name: 'id_name_idx',
+              unique: true,
+            },
+          },
+        ]);
+      });
+
       it('should ignore standard index name in a composite index', async () => {
         structure.tables = [dbStructureMockFactory.tableWithColumns()];
 

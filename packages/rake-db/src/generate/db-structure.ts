@@ -106,6 +106,8 @@ export namespace DbStructure {
     name: string;
     using: string;
     unique: boolean;
+    /** Deferrability mode when the unique index is backed by a constraint. */
+    deferrable?: false | 'immediate' | 'deferred';
     columns: (({ column: string } | { expression: string }) & {
       collate?: string;
       opclass?: string;
@@ -481,6 +483,10 @@ const indexesSql = `SELECT
   ic.relname "name",
   am.amname AS "using",
   i.indisunique "unique",
+  CASE
+    WHEN c.condeferrable AND c.condeferred THEN 'deferred'
+    WHEN c.condeferrable THEN 'immediate'
+  END AS "deferrable",
   (
     SELECT json_agg(
       (
@@ -577,6 +583,9 @@ JOIN pg_class t ON t.oid = i.indrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
 JOIN pg_class ic ON ic.oid = i.indexrelid
 JOIN pg_am am ON am.oid = ic.relam
+LEFT JOIN pg_constraint c
+  ON c.conindid = ic.oid
+ AND c.contype = 'u'
 LEFT JOIN pg_catalog.pg_class tc ON (ic.reltoastrelid = tc.oid)
 WHERE ${filterSchema('n.nspname')}
   AND NOT i.indisprimary
@@ -1071,6 +1080,8 @@ export async function introspectDbSchema(
 
   for (const index of raw.indexes) {
     nullsToUndefined(index);
+    if (!index.deferrable) index.deferrable = undefined;
+
     for (const column of index.columns) {
       if (!('expression' in column)) continue;
 

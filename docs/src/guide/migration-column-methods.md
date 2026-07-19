@@ -286,6 +286,10 @@ interface IndexOptions {
   name?: string;
   // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
   nullsNotDistinct?: true;
+  // create a unique index
+  unique?: true;
+  // for unique definitions only: DEFERRABLE INITIALLY IMMEDIATE or DEFERRED
+  deferrable?: false | 'immediate' | 'deferred';
   // index algorithm to use such as GIST, GIN
   using?: string;
   // specify collation:
@@ -332,6 +336,8 @@ The second argument is an optional object with index options:
 interface IndexOptions {
   // see the comments above for these options
   name: string;
+  unique?: true;
+  deferrable?: false | 'immediate' | 'deferred';
   using?: string;
   include?: MaybeArray<string>;
   nullsNotDistinct?: true;
@@ -359,6 +365,10 @@ change(async (db) => {
         name: 'indexName',
         ...options,
       }),
+      t.index(['id', 'name'], {
+        unique: true,
+        deferrable: 'immediate',
+      }),
     ],
   );
 });
@@ -369,6 +379,19 @@ change(async (db) => {
 Accepts the same parameters as [index](#index).
 
 Columns marked with `unique` becomes available for filtering with [findBy](/guide/query-methods#findby), and in [onConflict(['column'])](/guide/create#onconflict).
+
+Use `deferrable: 'immediate'` for `DEFERRABLE INITIALLY IMMEDIATE`, or `deferrable: 'deferred'` for `DEFERRABLE INITIALLY DEFERRED`.
+
+Postgres represents a deferrable unique definition as a unique constraint, not as an arbitrary unique index. It supports `nullsNotDistinct`, `include`, `with`, and `tablespace`, but cannot combine active `deferrable` with index-only features.
+
+For a `deferrable` index, the following features are not supported by Postgres:
+
+- `where` partial indexes;
+- expression indexes;
+- `using`, full-text `searchIndex` options, `language`, or `languageColumn`;
+- per-column `collate`, `opclass`, `order`, or search `weight`.
+
+For soft-delete scoped uniqueness, keep the immediate partial unique index with `where`, or use an all-row deferrable unique constraint without `where`.
 
 ### composite unique index
 
@@ -390,6 +413,11 @@ change(async (db) => {
       t.unique(['id', 'name']),
       // with a name and options
       t.unique(['id', 'name'], { name: 'unique_index_name', ...otherOptions }),
+      // deferrable unique constraint
+      t.unique(['id', 'name'], {
+        name: 'unique_constraint_name',
+        deferrable: 'deferred',
+      }),
     ],
   );
 });

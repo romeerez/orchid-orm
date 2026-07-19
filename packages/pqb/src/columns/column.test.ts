@@ -879,6 +879,8 @@ describe('column type', () => {
       expect(
         column
           .index({
+            unique: true,
+            deferrable: 'immediate',
             name: 'name',
             collate: 'collate',
             opclass: 'opclass',
@@ -891,7 +893,7 @@ describe('column type', () => {
           })
           .toCode(columnToCodeCtx, 'key'),
       ).toEqual([
-        't.column().index({',
+        't.column().unique({',
         [
           `name: 'name',`,
           `collate: 'collate',`,
@@ -899,6 +901,7 @@ describe('column type', () => {
           `order: 'order',`,
           `using: 'using',`,
           `include: 'include',`,
+          `deferrable: 'immediate',`,
           `with: 'with',`,
           `tablespace: 'tablespace',`,
           `where: 'where',`,
@@ -950,6 +953,7 @@ describe('column type', () => {
         column
           .unique({
             name: 'name',
+            deferrable: 'deferred',
             collate: 'collate',
             opclass: 'opclass',
             order: 'order',
@@ -969,6 +973,7 @@ describe('column type', () => {
           `order: 'order',`,
           `using: 'using',`,
           `include: 'include',`,
+          `deferrable: 'deferred',`,
           `with: 'with',`,
           `tablespace: 'tablespace',`,
           `where: 'where',`,

@@ -870,6 +870,7 @@ const makeIndexOrExcludeOptions = (
         : undefined,
     using: index.using === 'btree' ? undefined : index.using,
     unique: index.unique || undefined,
+    deferrable: index.deferrable || undefined,
     include: index.include,
     nullsNotDistinct: index.nullsNotDistinct || undefined,
     with: index.with,

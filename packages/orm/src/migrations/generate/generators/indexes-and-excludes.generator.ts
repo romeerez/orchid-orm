@@ -45,6 +45,7 @@ interface ComparableIndex {
   name?: string;
   using?: string;
   unique?: boolean;
+  deferrable?: TableData.Index.Options['deferrable'];
   include?: string[];
   nullsNotDistinct?: boolean;
   tablespace?: string;
@@ -416,6 +417,7 @@ const collectCodeComparableItemsType = (
 const normalizeItem = (item: {
   using?: string;
   unique?: boolean;
+  deferrable?: TableData.Index.Options['deferrable'];
   nullsNotDistinct?: boolean;
   columns: RecordUnknown[];
   exclude?: string[];
@@ -424,6 +426,7 @@ const normalizeItem = (item: {
   if (item.using) item.using = item.using.toLowerCase();
   if (item.using === 'btree') item.using = undefined;
   if (!item.unique) item.unique = undefined;
+  if (!item.deferrable) item.deferrable = undefined;
   if (item.nullsNotDistinct === false) item.nullsNotDistinct = undefined;
   if (item.exclude) {
     for (let i = 0; i < item.columns.length; i++) {

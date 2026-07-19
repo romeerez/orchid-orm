@@ -1615,7 +1615,7 @@ export abstract class Column {
 
   unique<
     T extends Column.Pick.Data,
-    const Options extends TableData.Index.ColumnArg,
+    const Options extends TableData.Index.UniqueColumnArg,
   >(
     this: T,
     ...args: [options?: Options]

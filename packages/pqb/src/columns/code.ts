@@ -367,6 +367,7 @@ export const indexInnerToCode = (index: TableData.Index, t: string): Codes => {
     'name',
     'using',
     'nullsNotDistinct',
+    'deferrable',
     'include',
     'with',
     'tablespace',
@@ -701,6 +702,7 @@ export const columnIndexesToCode = (
             : `[${options.include.map(singleQuote).join(', ')}]`
         },`,
       options.nullsNotDistinct && `nullsNotDistinct: true,`,
+      options.deferrable && `deferrable: ${singleQuote(options.deferrable)},`,
       options.with && `with: ${singleQuote(options.with)},`,
       options.tablespace && `tablespace: ${singleQuote(options.tablespace)},`,
       options.where && `where: ${singleQuote(options.where)},`,

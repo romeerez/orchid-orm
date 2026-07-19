@@ -813,6 +813,255 @@ change(async (db) => {
   ${green('+ add exclude')} on (iD, naMe)`);
   });
 
+  it('should create a deferrable unique constraint', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          listId: t.integer(),
+          position: t.integer(),
+        }));
+      },
+      tables: [
+        table(
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              nullsNotDistinct: true,
+              deferrable: 'deferred',
+            }),
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.unique(['listId', 'position'], {
+        name: 'table_position_key',
+        nullsNotDistinct: true,
+        deferrable: 'deferred',
+      })
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add unique index')} on (listId, position)`);
+  });
+
+  it('should drop a deferrable unique constraint', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              nullsNotDistinct: true,
+              deferrable: 'immediate',
+            }),
+        );
+      },
+      tables: [
+        table((t) => ({
+          listId: t.integer(),
+          position: t.integer(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(
+      t.unique(['list_id', 'position'], {
+        name: 'table_position_key',
+        nullsNotDistinct: true,
+        deferrable: 'immediate',
+      })
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop unique index')} on (list_id, position)`);
+  });
+
+  it('should change a non-deferrable unique index to a deferrable unique constraint', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              nullsNotDistinct: true,
+            }),
+        );
+      },
+      tables: [
+        table(
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              nullsNotDistinct: true,
+              deferrable: 'immediate',
+            }),
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(
+      t.unique(['list_id', 'position'], {
+        name: 'table_position_key',
+        nullsNotDistinct: true,
+      })
+    ),
+    ...t.add(
+      t.unique(['listId', 'position'], {
+        name: 'table_position_key',
+        nullsNotDistinct: true,
+        deferrable: 'immediate',
+      })
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop unique index')} on (list_id, position)
+  ${green('+ add unique index')} on (listId, position)`);
+  });
+
+  it('should change an initially immediate unique constraint to initially deferred', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              deferrable: 'immediate',
+            }),
+        );
+      },
+      tables: [
+        table(
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              deferrable: 'deferred',
+            }),
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(
+      t.unique(['list_id', 'position'], {
+        name: 'table_position_key',
+        deferrable: 'immediate',
+      })
+    ),
+    ...t.add(
+      t.unique(['listId', 'position'], {
+        name: 'table_position_key',
+        deferrable: 'deferred',
+      })
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop unique index')} on (list_id, position)
+  ${green('+ add unique index')} on (listId, position)`);
+  });
+
+  it('should treat deferrable false as a non-deferrable unique index', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+            }),
+        );
+      },
+      tables: [
+        table(
+          (t) => ({
+            listId: t.integer(),
+            position: t.integer(),
+          }),
+          (t) =>
+            t.unique(['listId', 'position'], {
+              name: 'table_position_key',
+              deferrable: false,
+            }),
+        ),
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should rename a composite index and exclude', async () => {
     await arrange({
       async prepareDb(db) {

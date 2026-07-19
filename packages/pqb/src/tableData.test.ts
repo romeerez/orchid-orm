@@ -4,6 +4,84 @@ import { UniqueQueryTypeOrExpression } from './tableData';
 type UniqueString = UniqueQueryTypeOrExpression<string>;
 
 describe('tableData', () => {
+  describe('deferrable unique indexes', () => {
+    it('should store deferrability for unique column and table index definitions', () => {
+      const table = testDb(
+        'table',
+        (t) => ({
+          columnIndex: t.text().index({
+            unique: true,
+            deferrable: 'immediate',
+          }),
+          columnUnique: t.text().unique({ deferrable: 'deferred' }),
+        }),
+        (t) => [
+          t.index(['columnIndex'], {
+            unique: true,
+            deferrable: 'deferred',
+          }),
+          t.unique(['columnUnique'], { deferrable: 'immediate' }),
+        ],
+        { noPrimaryKey: 'ignore' },
+      );
+
+      const indexes = table.internal.tableData.indexes;
+
+      expect(indexes).toEqual([
+        {
+          columns: [{ column: 'columnIndex' }],
+          options: { unique: true, deferrable: 'deferred' },
+        },
+        {
+          columns: [{ column: 'columnUnique' }],
+          options: { deferrable: 'immediate', unique: true },
+        },
+      ]);
+
+      expect(table.shape.columnIndex.data.indexes).toEqual([
+        { options: { unique: true, deferrable: 'immediate' } },
+      ]);
+      expect(table.shape.columnUnique.data.indexes).toEqual([
+        { options: { deferrable: 'deferred', unique: true } },
+      ]);
+    });
+
+    it('should reject deferrability without a unique index type', () => {
+      testDb(
+        'table',
+        (t) => ({
+          id: t.identity().primaryKey(),
+        }),
+        (t) => {
+          t.index(['id'], { unique: true, deferrable: 'immediate' });
+          t.unique(['id'], { deferrable: false });
+
+          // @ts-expect-error deferrability is only available for unique indexes
+          t.index(['id'], { deferrable: 'deferred' });
+          // @ts-expect-error deferrability is not available for non-unique indexes
+          t.index(['id'], { unique: false, deferrable: 'deferred' });
+
+          return [];
+        },
+        { noPrimaryKey: 'ignore' },
+      );
+
+      const column = testDb.columnTypes.text();
+
+      column.index({ unique: true, deferrable: 'immediate' });
+      column.unique({ deferrable: false });
+
+      // @ts-expect-error deferrability is only available for unique indexes
+      column.index({ deferrable: 'deferred' });
+      // @ts-expect-error deferrability is not available for non-unique indexes
+      column.index({ unique: false, deferrable: 'deferred' });
+      // @ts-expect-error boolean true is not a supported deferrability value
+      column.index({ unique: true, deferrable: true });
+      // @ts-expect-error boolean true is not a supported deferrability value
+      column.unique({ deferrable: true });
+    });
+  });
+
   describe('unique columns', () => {
     it('should collect unique columns from columns primary keys', () => {
       const table = testDb('table', (t) => ({

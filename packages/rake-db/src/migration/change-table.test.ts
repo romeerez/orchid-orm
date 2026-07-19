@@ -1012,6 +1012,72 @@ describe('changeTable', () => {
           () => expectSql([`DROP INDEX "addUniqueName" CASCADE`]),
         );
       });
+
+      it('should add and drop standalone deferrable unique constraints', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addUnique: t[action](
+                t.unique({
+                  name: 'addUniqueName',
+                  deferrable: 'deferred',
+                  nullsNotDistinct: true,
+                  dropMode: 'CASCADE',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              toLine(`
+                ALTER TABLE "table"
+                  ADD CONSTRAINT "addUniqueName"
+                  UNIQUE NULLS NOT DISTINCT ("add_unique")
+                  DEFERRABLE INITIALLY DEFERRED
+              `),
+            ]),
+          () =>
+            expectSql([
+              `ALTER TABLE "table" DROP CONSTRAINT "addUniqueName" CASCADE`,
+            ]),
+        );
+      });
+
+      it('should keep deferrable false unique definitions as indexes', async () => {
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              addUnique: t[action](
+                t.unique({
+                  name: 'addUniqueName',
+                  deferrable: false,
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `CREATE UNIQUE INDEX "addUniqueName" ON "table" ("add_unique")`,
+            ]),
+          () => expectSql([`DROP INDEX "addUniqueName"`]),
+        );
+      });
+
+      it('should reject deferrable unique constraints with index-only options', async () => {
+        resetDb(true);
+
+        await expect(
+          db.changeTable('table', (t) => ({
+            addUnique: t.add(
+              t.unique({
+                name: 'addUniqueName',
+                deferrable: 'immediate',
+                where: 'deleted_at IS NULL',
+              }),
+            ),
+          })),
+        ).rejects.toThrow(
+          'Deferrable unique constraints do not support partial indexes',
+        );
+      });
     });
 
     describe('search index', () => {
@@ -2384,6 +2450,46 @@ describe('changeTable', () => {
             expectSql([
               `DROP INDEX "toUnique" RESTRICT`,
               `CREATE UNIQUE INDEX "fromUnique" ON "table" ("col_umn") NULLS NOT DISTINCT`,
+            ]),
+        );
+      });
+
+      it('should change standalone deferrable unique constraint', async () => {
+        await testUpAndDown(
+          () =>
+            db.changeTable('table', (t) => ({
+              colUmn: t.change(
+                t.unique({
+                  name: 'fromUnique',
+                  deferrable: 'immediate',
+                  dropMode: 'CASCADE',
+                }),
+                t.unique({
+                  name: 'toUnique',
+                  deferrable: 'deferred',
+                  dropMode: 'RESTRICT',
+                }),
+              ),
+            })),
+          () =>
+            expectSql([
+              `ALTER TABLE "table" DROP CONSTRAINT "fromUnique" CASCADE`,
+              toLine(`
+                ALTER TABLE "table"
+                  ADD CONSTRAINT "toUnique"
+                  UNIQUE ("col_umn")
+                  DEFERRABLE INITIALLY DEFERRED
+              `),
+            ]),
+          () =>
+            expectSql([
+              `ALTER TABLE "table" DROP CONSTRAINT "toUnique" RESTRICT`,
+              toLine(`
+                ALTER TABLE "table"
+                  ADD CONSTRAINT "fromUnique"
+                  UNIQUE ("col_umn")
+                  DEFERRABLE INITIALLY IMMEDIATE
+              `),
             ]),
         );
       });
