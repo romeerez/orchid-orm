@@ -64,6 +64,7 @@ type MergeQueryResult<
   : Q['result'];
 
 const mergableObjects = new Set([
+  'shape',
   'selectShape',
   'withShapes',
   'defaultParsers',

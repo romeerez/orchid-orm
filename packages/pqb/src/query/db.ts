@@ -444,6 +444,7 @@ export class Db<
 
     this.q = {
       adapter: adapterNotInTransaction,
+      shape: shape as Column.QueryColumnsInit,
       selectShape: shape as Column.QueryColumnsInit,
       nameInDb: getTableNameInDb(table, options.nameInDb, snakeCase),
       handleResult,

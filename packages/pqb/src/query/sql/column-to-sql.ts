@@ -8,6 +8,21 @@ import { Expression, SelectableOrExpression } from '../expressions/expression';
 import { getSelectedColumnData, makeRowToJson } from './sql';
 import { SelectItem } from '../basic-features/select/select.sql';
 
+interface ColumnShapesData {
+  shape?: Column.QueryColumns;
+  selectShape?: Column.QueryColumns;
+}
+
+const getColumnFromShape = (
+  data: ColumnShapesData,
+  shape: Column.QueryColumns,
+  key: string,
+  select?: true,
+) =>
+  !select && shape === data.selectShape
+    ? data.shape?.[key] || shape[key]
+    : shape[key];
+
 // Takes a column name without a dot and the optional column object.
 // Handles computed column, uses column.data.name when set, prefixes regular column with `quotedAs`.
 // Returns quoted key if no column is provided.
@@ -116,6 +131,8 @@ export const tableColumnToSql = (
     parsers?: ColumnsParsers;
     select?: SelectItem[];
     getColumn?: Column;
+    shape?: Column.QueryColumns;
+    selectShape?: Column.QueryColumns;
   },
   shape: Column.QueryColumns,
   table: string,
@@ -148,7 +165,7 @@ export const tableColumnToSql = (
     const quoted = `"${table}"`;
 
     const col = (quoted === quotedAs
-      ? shape[key]
+      ? getColumnFromShape(queryData, shape, key, select)
       : queryData.joinedShapes?.[tableName]?.[key]) as unknown as
       | Column.Pick.Data
       | undefined;
@@ -194,6 +211,8 @@ export const columnToSqlNotSelect = (
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
     select?: SelectItem[];
+    shape?: Column.QueryColumns;
+    selectShape?: Column.QueryColumns;
   },
   shape: Column.QueryColumns,
   column: string,
@@ -221,6 +240,8 @@ export const columnToSql = (
     joinedShapes?: QueryData['joinedShapes'];
     parsers?: ColumnsParsers;
     select?: SelectItem[];
+    shape?: Column.QueryColumns;
+    selectShape?: Column.QueryColumns;
   },
   shape: Column.QueryColumns,
   column: string,
@@ -249,12 +270,14 @@ export const columnToSql = (
     );
   }
 
+  const selectedColumn = getColumnFromShape(data, shape, column, select);
+
   return simpleColumnToSQL(
     ctx,
     data,
     shape,
     column,
-    shape[column],
+    selectedColumn,
     quotedAs,
     select,
     as,
@@ -270,6 +293,8 @@ export const rawOrColumnToSql = (
   data: {
     joinedShapes?: JoinedShapes;
     select?: SelectItem[];
+    shape?: Column.QueryColumns;
+    selectShape?: Column.QueryColumns;
   },
   shape: Column.QueryColumns,
   expr: SelectableOrExpression,

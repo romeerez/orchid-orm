@@ -66,6 +66,7 @@ export type WhereOnJoinItem = { table?: string; q: { as?: string } } | string;
 interface QueryDataForWhere extends QueryDataAliases {
   and?: QueryData['and'];
   or?: QueryData['or'];
+  shape: QueryData['shape'];
   selectShape: QueryData['selectShape'];
   joinedShapes?: QueryData['joinedShapes'];
   scopes?: { [K: string]: QueryScopeData };
@@ -287,6 +288,7 @@ const processWhere = (
           ? {
               joinedShapes: query.joinedShapes,
               aliases: _getQueryOuterAliases(query),
+              shape: query.shape,
               selectShape: query.selectShape,
             }
           : query;
@@ -373,7 +375,8 @@ const whereExprOrQuery = (
       )} = ${value.toSQL(ctx, quotedAs)}`,
     );
   } else {
-    let column: Column.Pick.QueryColumn | undefined = query.selectShape[key];
+    let column: Column.Pick.QueryColumn | undefined =
+      query.shape[key] || query.selectShape[key];
     if (!column) {
       const index = key.indexOf('.');
       if (index === -1) {
@@ -385,7 +388,7 @@ const whereExprOrQuery = (
 
         column = (
           quotedAs === quoted
-            ? query.selectShape[name]
+            ? query.shape[name] || query.selectShape[name]
             : query.joinedShapes?.[table]?.[name]
         ) as typeof column;
       }
@@ -432,6 +435,7 @@ const whereExprOrQuery = (
 interface OnColumnToSQLQuery {
   joinedShapes?: QueryData['joinedShapes'];
   aliases?: QueryData['aliases'];
+  shape: ColumnsShape;
   selectShape: ColumnsShape;
   select?: SelectItem[];
 }
@@ -450,6 +454,7 @@ const getJoinItemSource = (joinItem: WhereOnJoinItem) => {
 const pushIn = (
   ctx: ToSQLCtx,
   query: {
+    shape: ColumnsShape;
     selectShape: ColumnsShape;
     joinedShapes?: JoinedShapes;
     select?: SelectItem[];

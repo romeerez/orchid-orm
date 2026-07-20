@@ -360,6 +360,45 @@ describe('select', () => {
       expect(res.updatedAt).toBe(true);
     });
 
+    it('should use table column metadata in where when a named select has the same name', async () => {
+      await User.create(userData);
+
+      const q = User.findByOptional({ name: userData.name }).select({
+        name: (q) => q.get('name').transform((name) => name ?? undefined),
+      });
+
+      assertType<Awaited<typeof q>, { name: string | undefined } | undefined>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT array["User"."name"] "name" FROM "schema"."user" "User"
+          WHERE "User"."name" = $1
+          LIMIT 1
+        `,
+        [userData.name],
+      );
+
+      expect(await q).toEqual({ name: userData.name });
+    });
+
+    it('should use table column metadata in join and qualified order when a named select has the same name', () => {
+      const q = User.join(Snake, 'snakeName', 'name')
+        .select({
+          name: (q) => q.get('name').transform((name) => name ?? undefined),
+        })
+        .order('User.name');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT array["User"."name"] "name" FROM "schema"."user" "User"
+          JOIN "schema"."snake" "Snake" ON "Snake"."snake_name" = "User"."name"
+          ORDER BY "User"."name" ASC
+        `,
+      );
+    });
+
     describe('loading records', () => {
       beforeEach(insertUserAndProfile);
 
