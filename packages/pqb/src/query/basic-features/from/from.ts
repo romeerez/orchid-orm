@@ -121,7 +121,9 @@ export function queryFrom<
   if (typeof arg === 'string') {
     data.as ||= arg;
     const w = data.withShapes?.[arg];
-    data.selectShape = (w?.shape ?? anyShape) as ColumnsShape;
+    const shape = (w?.shape ?? anyShape) as ColumnsShape;
+    data.shape = shape;
+    data.selectShape = shape;
     data.runtimeComputeds = w?.computeds;
 
     const parsers: ColumnsParsers = {};
@@ -165,7 +167,9 @@ export function queryFrom<
   } else {
     const q = prepareSubQueryForSql(self as never, arg as never);
     data.as ||= q.q.as || q.table || 't';
-    data.selectShape = getShapeFromSelect(q, true) as ColumnsShape;
+    const shape = getShapeFromSelect(q, true) as ColumnsShape;
+    data.shape = shape;
+    data.selectShape = shape;
     data.defaultParsers = getQueryParsers(q as unknown as Query);
     data.batchParsers = q.q.batchParsers;
   }

@@ -155,6 +155,7 @@ export class FnExpression<
         {
           and: options.filter ? ([options.filter] as WhereItem[]) : undefined,
           or: options.filterOr?.map((item) => [item]) as WhereItem[][],
+          shape: q.shape,
           selectShape: q.selectShape,
           joinedShapes: q.joinedShapes,
         },

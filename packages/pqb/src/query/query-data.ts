@@ -145,6 +145,8 @@ export interface QueryData
     MutativeQueriesSelectRelationsQueryData {
   type: QueryType;
   adapter: Adapter;
+  // Columns exposed by the query source, without columns added by select.
+  shape: ColumnsShape;
   selectShape: ColumnsShape;
   // Database relation name used when it differs from the query-facing table alias.
   nameInDb?: string;

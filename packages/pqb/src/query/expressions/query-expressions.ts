@@ -114,7 +114,7 @@ export class QueryExpressions {
     T['__selectable'][K]['column']['operators'] {
     const q = _clone(this);
 
-    const { selectShape } = q.q;
+    const { shape, selectShape } = q.q;
     let column: Column.Pick.QueryColumn | undefined;
 
     const index = arg.indexOf('.');
@@ -123,12 +123,12 @@ export class QueryExpressions {
       const table = getFullColumnTable(q, arg, index, as);
       const col = arg.slice(index + 1);
       if (table === as) {
-        column = selectShape[col];
+        column = shape[col] || selectShape[col];
       } else {
         column = q.q.joinedShapes?.[table][col];
       }
     } else {
-      column = selectShape[arg];
+      column = shape[arg] || selectShape[arg];
     }
 
     return new RefExpression(column || UnknownColumn.instance, q, arg) as never;
