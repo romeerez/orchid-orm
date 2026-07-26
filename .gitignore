@@ -38,3 +38,5 @@ node_modules/
 
 # OS X temporary files
 .DS_Store
+
+tmp/

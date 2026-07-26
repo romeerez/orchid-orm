@@ -1,6 +1,7 @@
 import {
   assertType,
   db,
+  expectSql,
   ProfileData,
   UserData,
   useTestDatabase,
@@ -8,6 +9,17 @@ import {
 
 describe('select-sub-query value', () => {
   useTestDatabase();
+
+  it('should not wrap the value for "not found vs found null" discrimination when the value is a column of same table because "not found" makes no sense here', () => {
+    const q = db.user.select({
+      Age: (q) => q.get('Age'),
+    });
+
+    expectSql(
+      q.toSQL(),
+      `SELECT "User"."age" "Age" FROM "schema"."user" "User"`,
+    );
+  });
 
   it('get: should return undefined when record is not found', async () => {
     await db.user.insert(UserData);

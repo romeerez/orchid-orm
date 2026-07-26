@@ -491,12 +491,12 @@ export const processSelectAsArg = <T extends SelectSelf>(
     if (isExpression(value)) {
       column = value.result.value as Column;
     } else {
-      if (
-        isRelationQuery(value) &&
-        // `subQuery = 1` case is when callback returns the same query as it gets,
-        // for example `q => q.get('name')`.
-        (value as unknown as Query).q.subQuery !== 1
-      ) {
+      // `subQuery = 1` case is when callback returns the same query as it gets,
+      // for example `q => q.get('name')`.
+      const isSelfReferencingQuery =
+        (value as unknown as Query).q.subQuery === 1;
+
+      if (isRelationQuery(value) && !isSelfReferencingQuery) {
         joinQuery = true;
         setSelectRelation(query.q);
 
@@ -568,12 +568,20 @@ export const processSelectAsArg = <T extends SelectSelf>(
       } else if (
         !value.q.type &&
         (value.q.returnType === 'value' ||
-          value.q.returnType === 'valueOrThrow')
+          value.q.returnType === 'valueOrThrow') &&
+        !isSelfReferencingQuery
       ) {
         const column = Object.create(
           value.q.getColumn || UnknownColumn.instance,
         );
-        column.data = { ...column.data, name: undefined, valueToArray: true };
+        column.data = { ...column.data, valueToArray: true };
+
+        if (joinQuery) {
+          // `name: undefined` for the case when the select implicitly joins, aliases the selected columns,
+          // `where` uses the joined columns in conditions, and in this case `where` needs to use joined columns aliases - not their real db names.
+          column.data.name = undefined;
+        }
+
         value.q.getColumn = column;
         if (value.q.expr) {
           value.q.expr.q.getColumn = column;
@@ -581,7 +589,7 @@ export const processSelectAsArg = <T extends SelectSelf>(
       }
 
       if (
-        outerReturnType === 'value' &&
+        (outerReturnType === 'value' || isSelfReferencingQuery) &&
         value.q.returnType === 'valueOrThrow'
       ) {
         value.q.returnType = 'value';
