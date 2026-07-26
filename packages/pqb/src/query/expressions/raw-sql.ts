@@ -3,6 +3,7 @@ import {
   Expression,
   ExpressionData,
   ExpressionTypeMethod,
+  isExpression,
   isTemplateLiteralArgs,
   RawSQLValues,
   SQLArgs,
@@ -44,7 +45,7 @@ export const templateLiteralToSQL = (
     sql += parts[i];
 
     const value = template[i + 1];
-    if (value instanceof Expression) {
+    if (isExpression(value)) {
       sql += value.toSQL(ctx, quotedAs);
     } else {
       values.push(value);
@@ -56,7 +57,9 @@ export const templateLiteralToSQL = (
   return sql + parts[i];
 };
 
-export interface RawSqlBase extends Expression {
+export interface RawSqlBase<
+  T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,
+> extends Expression<T> {
   _sql: string | TemplateLiteralArgs;
   _values?: RawSQLValues;
 }
@@ -67,7 +70,7 @@ export interface RawSql<
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ColumnTypes,
 >
-  extends Expression<T>, RawSqlBase, ExpressionTypeMethod {}
+  extends Expression<T>, RawSqlBase<T>, ExpressionTypeMethod {}
 
 export class RawSql<
   T extends Column.Pick.QueryColumn = Column.Pick.QueryColumn,

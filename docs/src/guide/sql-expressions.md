@@ -4,6 +4,28 @@ description: SQL expressions with sql tagged template, sql.ref, column reference
 
 # SQL expressions
 
+## transform
+
+All SQL expressions support the same [transform](/guide/query-methods.html#transform)
+method as queries.
+
+Use it to transform a selected expression value right after it is loaded:
+
+```ts
+const posts = await db.post.join('author').select({
+  authorName: (q) =>
+    sql<string>`coalesce(${q.ref('author.name')}, '')`.transform((name) =>
+      name.trim(),
+    ),
+  title: (q) => q.column('title').transform((title) => title.toUpperCase()),
+  byActiveAuthor: (q) =>
+    q
+      .ref('author.active')
+      .equals(true)
+      .transform((active) => !active),
+});
+```
+
 ## sql
 
 [//]: # 'has JSDoc'

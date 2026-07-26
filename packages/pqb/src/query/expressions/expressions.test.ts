@@ -53,6 +53,49 @@ describe('expressions', () => {
         [1, 'name'],
       );
     });
+
+    it('should transform a value loaded from the main query table', async () => {
+      const Age = 20;
+      await db.user.insert({ ...UserData, Age });
+
+      const q = db.user.select({
+        Age: (q) => q.column('Age').transform((value) => String(value ?? 0)),
+      });
+
+      assertType<Awaited<typeof q>, { Age: string }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."age" "Age" FROM "schema"."user" "User"`,
+      );
+
+      const res = await q;
+      expect(res).toEqual([{ Age: `${Age}` }]);
+    });
+
+    it('should transform a value after applying an operator', async () => {
+      const Age = 21;
+      await db.user.insert({ ...UserData, Age });
+
+      const q = db.user.select({
+        isNotGreater: (q) =>
+          q
+            .column('Age')
+            .gt(20)
+            .transform((value) => !value),
+      });
+
+      assertType<Awaited<typeof q>, { isNotGreater: boolean }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."age" > $1 "isNotGreater" FROM "schema"."user" "User"`,
+        [20],
+      );
+
+      const res = await q;
+      expect(res).toEqual([{ isNotGreater: false }]);
+    });
   });
 
   describe('ref', () => {
@@ -134,6 +177,25 @@ describe('expressions', () => {
           FROM (SELECT "Profile"."bio" FROM "schema"."profile" "Profile") "Profile"
         `,
       );
+    });
+
+    it('should transform a value loaded from the main query table', async () => {
+      const Age = 20;
+      await db.user.insert({ ...UserData, Age });
+
+      const q = db.user.select({
+        Age: (q) => q.ref('Age').transform((value) => String(value ?? 0)),
+      });
+
+      assertType<Awaited<typeof q>, { Age: string }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."age" "Age" FROM "schema"."user" "User"`,
+      );
+
+      const res = await q;
+      expect(res).toEqual([{ Age: `${Age}` }]);
     });
   });
 

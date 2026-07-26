@@ -14,6 +14,7 @@ import {
   Expression,
   ExpressionData,
   ExpressionTypeMethod,
+  isExpression,
   SelectableOrExpression,
 } from './expression';
 import { addValue, emptyObject, toArray } from '../../utils';
@@ -110,7 +111,7 @@ export class FnExpression<
         .map((arg) => {
           if (typeof arg === 'string') {
             return arg === '*' ? '*' : fnArgToSql(ctx, q, arg, quotedAs);
-          } else if (arg instanceof Expression) {
+          } else if (isExpression(arg)) {
             return arg.toSQL(ctx, quotedAs);
           } else if ('pairs' in (arg as FnExpressionArgsPairs<Query>)) {
             const args: string[] = [];

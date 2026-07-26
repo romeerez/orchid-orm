@@ -1,4 +1,13 @@
-import { assertType, expectSql, sql, testAdapter, testDb } from 'test-utils';
+import {
+  assertType,
+  db,
+  expectSql,
+  sql,
+  testAdapter,
+  testDb,
+  UserData,
+  useTestDatabase,
+} from 'test-utils';
 import { BooleanColumn, Column } from '../../columns';
 import { createDbWithAdapter } from '../db';
 import { User, userColumnsSql } from '../../test-utils/pqb.test-utils';
@@ -8,6 +17,8 @@ import { ToSQLCtx } from './to-sql';
 import { queryToSql, rawSqlToSql, sqlToRawSql } from './sql';
 
 describe('sql', () => {
+  useTestDatabase();
+
   it('should convert query definition SQL to raw SQL with named values', () => {
     const sql = sqlToRawSql(
       queryToSql(User.select('id').where({ name: 'name' })),
@@ -273,6 +284,21 @@ describe('sql', () => {
           FROM "schema"."user" "User"
         `,
     );
+  });
+
+  it('should transform a selected typed SQL expression', async () => {
+    await db.user.insert(UserData);
+
+    const q = db.user.select({
+      value: () => sql`1`.type((t) => t.integer()).transform((x) => x * 2),
+    });
+
+    assertType<Awaited<typeof q>, { value: number }[]>();
+
+    expectSql(q.toSQL(), `SELECT 1 "value" FROM "schema"."user" "User"`);
+
+    const res = await q;
+    expect(res).toEqual([{ value: 2 }]);
   });
 
   describe('dynamic raw sql', () => {

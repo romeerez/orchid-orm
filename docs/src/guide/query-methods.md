@@ -773,6 +773,8 @@ for transforming individual records consider using [map](#map).
 
 The [hooks](/guide/hooks) that are going to run after the query will receive the query result **before** transformation.
 
+`transform` is also supported for [SQL expressions](/guide/sql-expressions.html#transform).
+
 `avg`, `sum`, and similar aggregation results in `null` when there are no rows, you can use `transform` to return 0 in such a case.
 
 ```ts

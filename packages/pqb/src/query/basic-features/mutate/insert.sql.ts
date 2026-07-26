@@ -687,7 +687,7 @@ const encodeValue = (
   quotedAs?: string,
 ) => {
   if (value && typeof value === 'object') {
-    if (value instanceof Expression) {
+    if (isExpression(value)) {
       return value.toSQL(ctx, quotedAs);
     } else if (value instanceof (QueryClass as never)) {
       return `(${moveMutativeQueryToCte(ctx, value as SubQueryForSql)})`;

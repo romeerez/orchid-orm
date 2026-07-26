@@ -1,10 +1,15 @@
-import { EmptyObject, RecordUnknown } from '../../utils';
+import {
+  EmptyObject,
+  pushOrNewArrayToObjectImmutable,
+  RecordUnknown,
+} from '../../utils';
 import { Column } from '../../columns/column';
 import { OperatorToSQL } from '../../columns/operators';
 import { HasBeforeAndBeforeSet } from '../internal-features/sub-query/sub-query-for-sql';
 import { PickQuerySelectable } from '../pick-query-types';
 import { QueryBeforeHook } from '../query-data';
 import { ToSqlValues } from '../sql/to-sql';
+import type { QueryDataTransform } from '../extra-features/data-transform/transform';
 
 export type SelectableOrExpression<
   T extends PickQuerySelectable = PickQuerySelectable,
@@ -35,6 +40,7 @@ export interface ExpressionData extends HasBeforeAndBeforeSet {
   before?: QueryBeforeHook[];
   dynamicBefore?: boolean;
   getColumn?: Column;
+  transform?: QueryDataTransform[];
 }
 
 // Base class for the raw SQL and other classes that can produce SQL
@@ -66,6 +72,32 @@ export abstract class Expression<
     }
 
     return sql;
+  }
+
+  /**
+   * Transform the expression value after loading it.
+   *
+   * It is meant to transform expressions selected by a query.
+   *
+   * @param fn - function to transform expression value with
+   */
+  transform<
+    Self extends {
+      result: { value: Column.Pick.QueryColumn };
+      q: ExpressionData;
+    },
+    Result,
+  >(
+    this: Self,
+    fn: (
+      input: Self['result']['value']['__type'],
+      queryData: ExpressionData,
+    ) => Result,
+  ): Omit<Self, 'result'> & {
+    result: { value: Column.Pick.QueryColumnOfType<Result> };
+  } {
+    pushOrNewArrayToObjectImmutable(this.q, 'transform', fn);
+    return this as never;
   }
 
   // `makeSQL` should be implemented on subclasses of Expression to return SQL of the expression.
