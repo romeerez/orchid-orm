@@ -360,6 +360,10 @@ export const instantiateDbColumn = (
     );
     arr.data.isNullable = dbColumn.isNullable as true;
     arr.data.arrayDims = dbColumn.arrayDims;
+    // The `column` is the array element, but it carries the array column's default from DB introspection.
+    // Move the default to the array column itself so generated code is `t.array(...).default(...)`.
+    arr.data.default = column.data.default;
+    column.data.default = undefined;
     column = arr;
   }
 

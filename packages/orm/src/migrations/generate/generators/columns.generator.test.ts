@@ -473,6 +473,33 @@ change(async (db) => {
   });
 
   describe('array', () => {
+    it('should add array column with empty default to migration', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, () => ({}));
+        },
+        tables: [
+          table((t) => ({
+            keywords: t.array(t.text()).default([]),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    keywords: t.add(t.array(t.text()).default([])),
+  }));
+});
+`);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${green('+ add column')} keywords text[]`);
+    });
+
     it('should add array column with empty default', async () => {
       await arrange({
         async prepareDb(db) {
@@ -489,6 +516,37 @@ change(async (db) => {
 
       assert.report(`${yellow('~ change table')} table:
   ${green('+ add column')} colUmn int4[]`);
+    });
+
+    it('should add empty default to array column', async () => {
+      await arrange({
+        async prepareDb(db) {
+          await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+            keywords: t.array(t.text()),
+          }));
+        },
+        tables: [
+          table((t) => ({
+            keywords: t.array(t.text()).default([]),
+          })),
+        ],
+      });
+
+      await act();
+
+      assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    keywords: t.change(t.array(t.text()), t.array(t.text()).default([])),
+  }));
+});
+`);
+
+      assert.report(`${yellow('~ change table')} table:
+  ${yellow('~ change column')} keywords:
+    ${yellow('from')}: t.array(t.text())
+      ${yellow('to')}: t.array(t.text()).default([])`);
     });
 
     it('change to array type: prompt if should recreate the column or abort, selecting recreate', async () => {

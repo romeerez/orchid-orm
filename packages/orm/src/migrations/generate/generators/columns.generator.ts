@@ -390,6 +390,8 @@ const compareColumns = async (
 
   const dbData = dbColumn.data as unknown as RecordUnknown;
   const codeData = codeColumn.data as unknown as RecordUnknown;
+  const dbColumnData = maybeArrayDbColumn.data as unknown as RecordUnknown;
+  const codeColumnData = maybeArrayCodeColumn.data as unknown as RecordUnknown;
 
   for (const key of ['isNullable', 'comment']) {
     if (dbData[key] !== codeData[key]) {
@@ -424,15 +426,15 @@ const compareColumns = async (
 
   if (
     !deepCompare(
-      dbData.identity,
-      codeData.identity
+      dbColumnData.identity,
+      codeColumnData.identity
         ? {
             always: false,
             start: 1,
             increment: 1,
             cache: 1,
             cycle: false,
-            ...(codeData.identity ?? {}),
+            ...(codeColumnData.identity ?? {}),
           }
         : undefined,
     )
@@ -441,22 +443,19 @@ const compareColumns = async (
   }
 
   if (
-    !(
-      maybeArrayDbColumn instanceof ArrayColumn &&
-      maybeArrayCodeColumn instanceof ArrayColumn
-    ) &&
-    (dbData.default === undefined) !== (codeData.default === undefined)
+    (dbColumnData.default === undefined) !==
+    (codeColumnData.default === undefined)
   ) {
     const valuesBeforeLen = compareSql.values.length;
     const dbDefault = encodeColumnDefault(
-      dbData.default,
+      dbColumnData.default,
       compareSql.values,
-      dbColumn,
+      maybeArrayDbColumn,
     );
     const codeDefault = encodeColumnDefault(
-      codeData.default,
+      codeColumnData.default,
       compareSql.values,
-      codeColumn,
+      maybeArrayCodeColumn,
     );
 
     compareSql.values.length = valuesBeforeLen;
@@ -465,19 +464,22 @@ const compareColumns = async (
     }
   }
 
-  if (dbData.default !== undefined && codeData.default !== undefined) {
+  if (
+    dbColumnData.default !== undefined &&
+    codeColumnData.default !== undefined
+  ) {
     const valuesBeforeLen = compareSql.values.length;
     const dbDefault = encodeColumnDefault(
-      dbData.default,
+      dbColumnData.default,
       compareSql.values,
-      dbColumn,
+      maybeArrayDbColumn,
     ) as string;
     const dbValues = compareSql.values.slice(valuesBeforeLen);
 
     const codeDefault = encodeColumnDefault(
-      codeData.default,
+      codeColumnData.default,
       compareSql.values,
-      codeColumn,
+      maybeArrayCodeColumn,
     );
     const codeValues = compareSql.values.slice(valuesBeforeLen);
 
