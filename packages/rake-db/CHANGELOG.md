@@ -1,5 +1,14 @@
 # rake-db
 
+## 2.36.17
+
+### Patch Changes
+
+- f55dadd7: Fix array default handling in migrations generator (#732)
+- Updated dependencies [4d9b9266]
+- Updated dependencies [8eac98fc]
+  - pqb@0.71.2
+
 ## 2.36.16
 
 ### Patch Changes

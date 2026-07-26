@@ -1,5 +1,12 @@
 # pqb
 
+## 0.71.2
+
+### Patch Changes
+
+- 4d9b9266: Fix a bug when selecting `select({ col: q => q.get('col') })` and using `where` for this column (#731)
+- 8eac98fc: Support `transform` on expressions such as `sql`, `ref`, `column` - on all such things
+
 ## 0.71.1
 
 ### Patch Changes

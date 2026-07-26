@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.76.3
+
+### Patch Changes
+
+- f55dadd7: Fix array default handling in migrations generator (#732)
+- Updated dependencies [f55dadd7]
+- Updated dependencies [4d9b9266]
+- Updated dependencies [8eac98fc]
+  - rake-db@2.36.17
+  - pqb@0.71.2
+
 ## 1.76.2
 
 ### Patch Changes
