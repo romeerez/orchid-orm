@@ -8,6 +8,7 @@ import {
   assertType,
   db,
   expectSql,
+  ProfileData,
   sql,
   testDb,
   UserData,
@@ -196,6 +197,55 @@ describe('expressions', () => {
 
       const res = await q;
       expect(res).toEqual([{ Age: `${Age}` }]);
+    });
+
+    it('should not apply selected relation parsers to a ref', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const withRelation = db.user.take().select({
+        profile: (q) => q.profile.select('Bio'),
+      });
+
+      const result = await withRelation.select({
+        Id: withRelation.ref('Id'),
+      });
+
+      assertType<
+        typeof result,
+        { profile: { Bio: string | null }; Id: number }
+      >();
+
+      expect(result).toEqual({
+        profile: { Bio: ProfileData.Bio },
+        Id: user.Id,
+      });
+    });
+
+    it('should not apply the source query map to a ref', async () => {
+      const user = await db.user.create(UserData);
+
+      const withMap = db.user
+        .take()
+        .select('Name')
+        .map((user) => ({ ...user, mapped: true }));
+
+      const result = await withMap.select({
+        Id: withMap.ref('Id'),
+      });
+
+      assertType<
+        typeof result,
+        { Name: string; mapped: boolean; Id: number }
+      >();
+
+      expect(result).toEqual({
+        Name: UserData.Name,
+        mapped: true,
+        Id: user.Id,
+      });
     });
   });
 
