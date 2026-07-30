@@ -131,6 +131,12 @@ export class QueryExpressions {
       column = selectShape[arg];
     }
 
+    // A ref is a scalar expression and must not reuse result processing of the source query.
+    q.q.batchParsers = undefined;
+    q.q.transform = undefined;
+    q.q.hookSelect = undefined;
+    q.q.returnType = undefined;
+
     return new RefExpression(column || UnknownColumn.instance, q, arg) as never;
   }
 
