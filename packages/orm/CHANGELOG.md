@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.76.4
+
+### Patch Changes
+
+- 966848d5: Prevent ref expressions from applying result parsers and transforms inherited from their source query (#735)
+- Updated dependencies [966848d5]
+  - pqb@0.71.3
+  - rake-db@2.36.18
+
 ## 1.76.3
 
 ### Patch Changes

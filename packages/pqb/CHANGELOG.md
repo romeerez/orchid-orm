@@ -1,5 +1,11 @@
 # pqb
 
+## 0.71.3
+
+### Patch Changes
+
+- 966848d5: Prevent ref expressions from applying result parsers and transforms inherited from their source query (#735)
+
 ## 0.71.2
 
 ### Patch Changes
