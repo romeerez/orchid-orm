@@ -1,5 +1,11 @@
 # pqb
 
+## 0.72.0
+
+### Minor Changes
+
+- 5fb41dcd: Introducing new function-style table design (#401)
+
 ## 0.71.4
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # orchid-orm-valibot
 
+## 0.5.0
+
+### Minor Changes
+
+- 5fb41dcd: Introducing new function-style table design (#401)
+
+### Patch Changes
+
+- Updated dependencies [5fb41dcd]
+  - pqb@0.72.0
+
 ## 0.4.16
 
 ### Patch Changes

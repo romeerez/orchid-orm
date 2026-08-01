@@ -1,5 +1,16 @@
 # rake-db
 
+## 2.37.0
+
+### Minor Changes
+
+- 5fb41dcd: Introducing new function-style table design (#401)
+
+### Patch Changes
+
+- Updated dependencies [5fb41dcd]
+  - pqb@0.72.0
+
 ## 2.36.19
 
 ### Patch Changes

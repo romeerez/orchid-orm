@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.5.0
+
+### Minor Changes
+
+- 5fb41dcd: Introducing new function-style table design (#401)
+
 ## 0.4.5
 
 ### Patch Changes

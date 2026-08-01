@@ -1,5 +1,17 @@
 # orchid-orm
 
+## 1.77.0
+
+### Minor Changes
+
+- 5fb41dcd: Introducing new function-style table design (#401)
+
+### Patch Changes
+
+- Updated dependencies [5fb41dcd]
+  - rake-db@2.37.0
+  - pqb@0.72.0
+
 ## 1.76.5
 
 ### Patch Changes
