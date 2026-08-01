@@ -1,5 +1,11 @@
 # pqb
 
+## 0.71.4
+
+### Patch Changes
+
+- 76097ede: Fix ordering by a column of selected relation, when relation is selected under the same name as the main table (#737)
+
 ## 0.71.3
 
 ### Patch Changes
