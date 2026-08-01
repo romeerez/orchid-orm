@@ -4,7 +4,7 @@ import {
   QuerySelectable,
   SelectableFromShape,
 } from '../../query';
-import { Column } from '../../../columns/column';
+import { Column, setColumnData } from '../../../columns/column';
 import { ColumnsShape } from '../../../columns';
 import {
   PickQuerySelectableResultRelationsWithDataReturnType,
@@ -851,13 +851,24 @@ export const _joinLateral = (
     );
   }
 
-  const shape =
-    (joinQuery.table &&
-      (joinQuery.q.joinedShapes?.[joinQuery.table] as
-        | Column.QueryColumns
-        | undefined)) ||
-    (joinQuery.q.joinedShapes?.[joinAs] as Column.QueryColumns | undefined) ||
-    getShapeFromSelect(joinQuery, true);
+  const joinedShapeMayHaveNames =
+    (joinQuery.table && joinQuery.q.joinedShapes?.[joinQuery.table]) ||
+    joinQuery.q.joinedShapes?.[joinAs];
+
+  // unname joined shape columns because the columns are aliased inside JOIN LATERAL
+  let joinedShape: Column.QueryColumns | undefined;
+  if (joinedShapeMayHaveNames) {
+    joinedShape = {};
+    for (const key in joinedShapeMayHaveNames) {
+      const column = joinedShapeMayHaveNames[key];
+      joinedShape[key] = column.data.name
+        ? setColumnData(column as never, 'name', undefined as never)
+        : column;
+    }
+  }
+
+  const shape = joinedShape || getShapeFromSelect(joinQuery, true);
+
   setObjectValueImmutable(query.q, 'joinedShapes', joinAs, shape);
 
   if (joinValue) {

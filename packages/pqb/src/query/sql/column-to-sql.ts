@@ -147,11 +147,11 @@ export const tableColumnToSql = (
     const tableName = _getQueryAliasOrName(queryData, table);
     const quoted = `"${table}"`;
 
-    const col = (quoted === quotedAs
-      ? shape[key]
-      : queryData.joinedShapes?.[tableName]?.[key]) as unknown as
-      | Column.Pick.Data
-      | undefined;
+    const joined = queryData.joinedShapes?.[tableName];
+
+    const col = (
+      joined ? joined[key] : quoted === quotedAs ? shape[key] : undefined
+    ) as Column.Pick.Data | undefined;
 
     if (jsonList && as) {
       jsonList[as] = col && getSelectedColumnData(col);

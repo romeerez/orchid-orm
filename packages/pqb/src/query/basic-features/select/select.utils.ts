@@ -723,7 +723,7 @@ export const getShapeFromSelect = (
   isSubQuery?: boolean,
 ): Column.QueryColumns => {
   const query = (q as Query).q;
-  const { selectShape: shape } = query;
+  const { selectShape } = query;
   let select: SelectItem[] | undefined;
 
   if (query.selectedComputeds) {
@@ -743,8 +743,8 @@ export const getShapeFromSelect = (
     } else if (isSubQuery) {
       // when no select, and it is a sub-query, return the table shape with unnamed columns
       result = {};
-      for (const key in shape) {
-        const column = shape[key];
+      for (const key in selectShape) {
+        const column = selectShape[key];
         if (!column.data.explicitSelect) {
           result[key] = column.data.name
             ? setColumnData(column, 'name', undefined)
@@ -752,13 +752,20 @@ export const getShapeFromSelect = (
         }
       }
     } else {
-      result = shape;
+      result = selectShape;
     }
   } else {
     result = {};
     for (const item of select) {
       if (typeof item === 'string') {
-        addColumnToShapeFromSelect(q, item, shape, query, result, isSubQuery);
+        addColumnToShapeFromSelect(
+          q,
+          item,
+          selectShape,
+          query,
+          result,
+          isSubQuery,
+        );
       } else if (isExpression(item)) {
         result.value = item.result.value;
       } else if (item && 'selectAs' in item) {
@@ -768,7 +775,7 @@ export const getShapeFromSelect = (
             addColumnToShapeFromSelect(
               q,
               it,
-              shape,
+              selectShape,
               query,
               result,
               isSubQuery,

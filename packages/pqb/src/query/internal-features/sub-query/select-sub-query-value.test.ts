@@ -10,6 +10,28 @@ import {
 describe('select-sub-query value', () => {
   useTestDatabase();
 
+  it('should support ordering by a selected column from a select aliased in the same way as the main table', async () => {
+    const q = db.category
+      .select({
+        category: (q) => q.category.select('categoryName'),
+      })
+      .order({ 'category.categoryName': 'ASC' });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT row_to_json("category".*) "category"
+        FROM "schema"."category" "Category"
+        LEFT JOIN LATERAL (
+          SELECT "category"."category_name" "categoryName"
+          FROM "schema"."category"
+          WHERE "category"."category_name" = "Category"."parent_name"
+        ) "category" ON true
+        ORDER BY "category"."categoryName" ASC
+      `,
+    );
+  });
+
   it('should not wrap the value for "not found vs found null" discrimination when the value is a column of same table because "not found" makes no sense here', () => {
     const q = db.user.select({
       Age: (q) => q.get('Age'),
