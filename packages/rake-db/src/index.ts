@@ -47,8 +47,14 @@ export {
   dropTable,
 } from './commands/create-or-drop';
 export { rakeDbConfigDefaults } from './config/config';
+export { getTableFactoryConfig } from './config/table-factory-config';
 export { incrementIntermediateCaller } from './config/config.public';
-export type { RakeDbCliConfigInput, RakeDbConfig } from './config/config';
+export type {
+  RakeDbBaseTable,
+  RakeDbCliConfigInput,
+  RakeDbConfig,
+  RakeDbDefineTable,
+} from './config/config';
 export type { MigrateFn } from './commands/migrate-or-rollback';
 export type { RakeDbAst } from './ast';
 export { createMigrationInterface } from './migration/migration';

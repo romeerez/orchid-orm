@@ -2,7 +2,8 @@ import { newToSqlCtx, ToSQLQuery } from '../../sql/to-sql';
 import { escapeString } from '../../../quote';
 import { pushWhereStatementSql } from '../../basic-features/where/where.sql';
 import { quoteTableWithSchema, SingleSql } from '../../sql/sql';
-import { ColumnsShape } from 'pqb/index';
+import { Column } from '../../../columns/column';
+import { ColumnsShape } from '../../../columns/columns-shape';
 
 export type CopyOptions<Column = string> = {
   columns?: Column[];
@@ -26,6 +27,12 @@ export type CopyOptions<Column = string> = {
     }
 );
 
+const columnsSql = (shape: Column.QueryColumns, columns: string[]) => {
+  return columns
+    .map((item) => `"${(shape as ColumnsShape)[item]?.data.name || item}"`)
+    .join(', ');
+};
+
 export const makeCopySql = (
   table: ToSQLQuery,
   copy: CopyOptions,
@@ -36,12 +43,7 @@ export const makeCopySql = (
   const quotedAs = `"${q.as || table.table}"`;
 
   const columns = copy.columns
-    ? `(${copy.columns
-        .map(
-          (item) =>
-            `"${(table.shape as ColumnsShape)[item]?.data.name || item}"`,
-        )
-        .join(', ')})`
+    ? `(${columnsSql(table.shape, copy.columns)})`
     : '';
 
   const target = 'from' in copy ? copy.from : copy.to;
@@ -72,17 +74,15 @@ export const makeCopySql = (
         `FORCE_QUOTE ${
           copy.forceQuote === '*'
             ? '*'
-            : `(${copy.forceQuote.map((x) => `"${x}"`).join(', ')})`
+            : `(${columnsSql(table.shape, copy.forceQuote)})`
         }`,
       );
     if (copy.forceNotNull)
       options.push(
-        `FORCE_NOT_NULL (${copy.forceNotNull.map((x) => `"${x}"`).join(', ')})`,
+        `FORCE_NOT_NULL (${columnsSql(table.shape, copy.forceNotNull)})`,
       );
     if (copy.forceNull)
-      options.push(
-        `FORCE_NULL (${copy.forceNull.map((x) => `"${x}"`).join(', ')})`,
-      );
+      options.push(`FORCE_NULL (${columnsSql(table.shape, copy.forceNull)})`);
     if (copy.encoding) options.push(`ENCODING ${escapeString(copy.encoding)}`);
 
     ctx.sql.push(`WITH (${options.join(', ')})`);

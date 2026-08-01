@@ -30,12 +30,12 @@ const posts = await db.post.join('author').select({
 
 [//]: # 'has JSDoc'
 
-When there is a need to use a piece of raw SQL, use the `sql` exported from the `BaseTable` file, it is also attached to query objects for convenience.
+When there is a need to use a piece of raw SQL, use the `sql` exported from the table factory file, it is also attached to query objects for convenience.
 
 When selecting a custom SQL, specify a resulting type with `<generic>` syntax:
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 const result: { num: number }[] = await db.table.select({
   num: sql<number>`random() * 100`,
@@ -47,7 +47,7 @@ In a situation when you want the result to be parsed, such as when returning a t
 This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 const result: { timestamp: Date }[] = await db.table.select({
   timestamp: sql`now()`.type((t) => t.timestamp()),
@@ -97,7 +97,7 @@ db.table.join(db.otherTable, 'id', 'other.otherId').where`
 SQL can be passed with a simple string, it's important to note that this is not safe to interpolate values in it.
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 // no interpolation is okay
 await db.table.where(sql({ raw: 'column = random() * 100' }));
@@ -114,7 +114,7 @@ To inject values into `sql({ raw: '...' })` SQL strings, denote it with `$` in t
 Use `$$` to provide column or/and table name (`column` or `ref` are preferable). Column names will be quoted so don't quote them manually.
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 // get value from user-provided params
 const { value } = req.params;
@@ -155,7 +155,7 @@ rows[0].one; // is a number
 Summarizing:
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 // simplest form:
 sql`key = ${value}`;
@@ -194,7 +194,7 @@ Plain values are bound as query parameters, while SQL expressions render as SQL.
 Use it for SQL constructs such as `ARRAY[...]`, `IN (...)`, function arguments, or tuple lists.
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 const nicknames = ['johnny', 'john', 'jon'];
 
@@ -244,7 +244,7 @@ await db.user.select({
 Use it when you need to dynamically reference an identifier in raw SQL.
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 const schema = 'my_schema';
 
@@ -286,7 +286,7 @@ await db.table.select({
 and other dynamically defined columns.
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 await db.table.join('otherTable').select({
   // select `("otherTable"."id" = 1 OR "otherTable"."name" = 'name') AS "one"`,

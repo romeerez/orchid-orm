@@ -1,25 +1,23 @@
 import {
-  Chat,
-  chatData,
-  Message,
-  messageColumnsSql,
-  MessageRecord,
-  Profile,
-  profileData,
   Snake,
   SnakeRecord,
   snakeSelectAll,
-  User,
-  userData,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
+  ChatData,
+  db,
   expectSql,
+  MessageColumnsSql,
   sql,
   testDb,
   useTestDatabase,
+  Message,
+  UserData,
 } from 'test-utils';
 import { NotFoundError } from 'pqb';
+
+const Message = db.message.includeDeleted();
 
 const TableWithReadOnly = testDb(
   'table',
@@ -37,9 +35,9 @@ const TableWithReadOnly = testDb(
 const RuntimeDefaultTable = testDb(
   'user',
   (t) => ({
-    id: t.serial().primaryKey(),
-    name: t.text().default(() => 'runtime text'),
-    password: t.text(),
+    Id: t.serial().primaryKey(),
+    Name: t.text().default(() => 'runtime text'),
+    Password: t.text(),
   }),
   undefined,
   {
@@ -52,7 +50,9 @@ describe('createFrom functions', () => {
 
   describe('createOneFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
-      const sub = Chat.find(1).select({ key: 'title', value: 'Chat.idOfChat' });
+      const sub = db.chat
+        .find(1)
+        .select({ key: 'Title', value: 'Chat.IdOfChat' });
 
       expect(() => TableWithReadOnly.createOneFrom(sub)).toThrow(
         'Trying to insert a readonly column',
@@ -60,7 +60,7 @@ describe('createFrom functions', () => {
     });
 
     it('should not allow using appReadOnly columns from values', () => {
-      const sub = Chat.find(1).select({ key: 'title' });
+      const sub = db.chat.find(1).select({ key: 'Title' });
 
       expect(() =>
         TableWithReadOnly.createOneFrom(sub, {
@@ -71,74 +71,74 @@ describe('createFrom functions', () => {
     });
 
     it('should create records without additional data', () => {
-      const sub = Chat.find(1).select({ chatId: 'idOfChat' });
+      const sub = db.chat.find(1).select({ ChatId: 'IdOfChat' });
       const q = Message.createOneFrom(sub);
 
-      assertType<Awaited<typeof q>, MessageRecord>();
+      assertType<Awaited<typeof q>, Message>();
 
       expectSql(
         q.toSQL(),
         `
           INSERT INTO "schema"."message" AS "Message"("chat_id")
-          SELECT "Chat"."id_of_chat" "chatId"
+          SELECT "Chat"."id_of_chat" "ChatId"
           FROM "schema"."chat" "Chat"
           WHERE "Chat"."id_of_chat" = $1
           LIMIT 1
-          RETURNING ${messageColumnsSql}
+          RETURNING ${MessageColumnsSql}
         `,
         [1],
       );
     });
 
     it('should a create record from select with additional data', () => {
-      const chat = Chat.find(1).select({ chatId: 'idOfChat' });
+      const chat = db.chat.find(1).select({ ChatId: 'IdOfChat' });
 
       const query = Message.createOneFrom(chat, {
-        authorId: 1,
-        text: () => sql<string>`'text'`,
+        AuthorId: 1,
+        Text: () => sql<string>`'text'`,
       });
 
-      assertType<Awaited<typeof query>, MessageRecord>();
+      assertType<Awaited<typeof query>, Message>();
 
       expectSql(
         query.toSQL(),
         `
           INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
-          SELECT "Chat"."id_of_chat" "chatId", $1, 'text'
+          SELECT "Chat"."id_of_chat" "ChatId", $1, 'text'
           FROM "schema"."chat" "Chat"
           WHERE "Chat"."id_of_chat" = $2
           LIMIT 1
-          RETURNING ${messageColumnsSql}
+          RETURNING ${MessageColumnsSql}
         `,
         [1, 1],
       );
     });
 
     it('should throw not found when it should', async () => {
-      const user = User.find(0).select({ userId: 'id' });
+      const user = db.user.find(0).select({ UserId: 'Id' });
 
-      const q = Profile.createOneFrom(user, {
-        ...profileData,
-        bio: 'one',
+      const q = db.profile.createOneFrom(user, {
+        Bio: 'one',
+        ProfileKey: 'key',
       });
 
       await expect(q).rejects.toThrow(NotFoundError);
     });
 
     it('should not throw not found when found', async () => {
-      const id = await User.get('id').create(userData);
-      const user = User.find(id).select({ userId: 'id' });
+      const id = await db.user.get('Id').create(UserData);
+      const user = db.user.find(id).select({ UserId: 'Id' });
 
-      const q = Profile.createOneFrom(user, {
-        ...profileData,
-        bio: 'one',
+      const q = db.profile.createOneFrom(user, {
+        Bio: 'one',
+        ProfileKey: 'key',
       });
 
       await q;
     });
 
     it('should a create record from select with named columns', () => {
-      const user = User.find(1).select({ snakeName: 'name' });
+      const user = db.user.find(1).select({ snakeName: 'Name' });
 
       const query = Snake.createOneFrom(user, {
         tailLength: 5,
@@ -162,9 +162,9 @@ describe('createFrom functions', () => {
 
     it('should add runtime defaults', () => {
       const q = RuntimeDefaultTable.createOneFrom(
-        User.find(123).select('password'),
+        db.user.find(123).select('Password'),
         {
-          id: 456,
+          Id: 456,
         },
       );
 
@@ -172,11 +172,11 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           INSERT INTO "schema"."user"("password", "id", "name")
-          SELECT "User"."password", $1, $2
+          SELECT "User"."password" "Password", $1, $2
           FROM "schema"."user" "User"
           WHERE "User"."id" = $3
           LIMIT 1
-          RETURNING *
+          RETURNING "id" "Id", "name" "Name", "password" "Password"
         `,
         [456, 'runtime text', 123],
       );
@@ -186,10 +186,10 @@ describe('createFrom functions', () => {
       expect(() =>
         Message.createOneFrom(
           // @ts-expect-error creating from multiple records is not allowed
-          Chat.where({ id: { in: [1, 2] } }).select({ chatId: 'id' }),
+          db.chat.where({ IdOfChat: { in: [1, 2] } }).select({ ChatId: 'id' }),
           {
-            authorId: 1,
-            text: 'text',
+            AuthorId: 1,
+            Text: 'text',
           },
         ),
       ).toThrow(
@@ -198,95 +198,101 @@ describe('createFrom functions', () => {
     });
 
     it('should support appending select', async () => {
-      const user = await User.create(userData);
+      const user = await db.user.create(UserData);
 
-      const sub = User.find(user.id).select('name');
+      const sub = db.user.find(user.Id).select('Name');
 
-      const result = await User.createOneFrom(sub, {
-        password: 'password',
-      }).select('name');
+      const result = await db.user
+        .createOneFrom(sub, {
+          Password: 'password',
+          UserKey: 'key',
+        })
+        .select('Name');
 
-      assertType<typeof result, { name: string }>();
+      assertType<typeof result, { Name: string }>();
 
-      expect(result).toEqual({ name: userData.name });
+      expect(result).toEqual({ Name: UserData.Name });
     });
 
     it('should a create record from select with additional value returned from an insert sub query', () => {
-      const chat = Chat.find(1).select({ chatId: 'idOfChat' });
+      const chat = db.chat.find(1).select({ ChatId: 'IdOfChat' });
 
       const query = Message.createOneFrom(chat, {
-        authorId: () => User.create(userData).get('id'),
-        text: () => sql<string>`'text'`,
+        AuthorId: () => db.user.create(UserData).get('Id'),
+        Text: () => sql<string>`'text'`,
       });
 
-      assertType<Awaited<typeof query>, MessageRecord>();
+      assertType<Awaited<typeof query>, Message>();
 
       expectSql(
         query.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING "User"."id"
           )
           INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
-          SELECT "Chat"."id_of_chat" "chatId", (SELECT "q"."id" FROM "q"), 'text'
+          SELECT "Chat"."id_of_chat" "ChatId", (SELECT "q"."Id" FROM "q"), 'text'
           FROM "schema"."chat" "Chat"
-          WHERE "Chat"."id_of_chat" = $3
+          WHERE "Chat"."id_of_chat" = $6
           LIMIT 1
-          RETURNING ${messageColumnsSql}
+          RETURNING ${MessageColumnsSql}
         `,
-        ['name', 'password', 1],
+        [...Object.values(UserData), 1],
       );
     });
 
     it('should create from select using values from CTE', async () => {
-      const idOfChat = await Chat.create(chatData).get('idOfChat');
+      const idOfChat = await db.chat.create(ChatData).get('IdOfChat');
 
       const q = Message.with('user', () =>
-        User.create(userData).select('id', 'name'),
+        db.user.create(UserData).select('Id', 'Name'),
       )
-        .createOneFrom(Chat.find(idOfChat).select({ chatId: 'idOfChat' }), {
-          authorId: (q) => q.from('user').get('id'),
-          text: (q) => q.from('user').get('name'),
+        .createOneFrom(db.chat.find(idOfChat).select({ ChatId: 'IdOfChat' }), {
+          AuthorId: (q) => q.from('user').get('Id'),
+          Text: (q) => q.from('user').get('Name'),
         })
-        .select('chatId', 'authorId', 'text');
+        .select('ChatId', 'AuthorId', 'Text');
 
       expectSql(
         q.toSQL(),
         `
           WITH "user" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "User"."id", "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING "User"."id" "Id", "User"."name" "Name"
           )
           INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
-          SELECT "Chat"."id_of_chat" "chatId", (SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)
+          SELECT "Chat"."id_of_chat" "ChatId", (SELECT "user"."Id" FROM "user" LIMIT 1), (SELECT "user"."Name" FROM "user" LIMIT 1)
           FROM "schema"."chat" "Chat"
-          WHERE "Chat"."id_of_chat" = $3
+          WHERE "Chat"."id_of_chat" = $6
           LIMIT 1
-          RETURNING "Message"."chat_id" "chatId", "Message"."author_id" "authorId", "Message"."text"
+          RETURNING "Message"."chat_id" "ChatId", "Message"."author_id" "AuthorId", "Message"."text" "Text"
         `,
-        [userData.name, userData.password, idOfChat],
+        [...Object.values(UserData), idOfChat],
       );
 
       const res = await q;
 
       expect(res).toEqual({
-        chatId: idOfChat,
-        authorId: expect.any(Number),
-        text: userData.name,
+        ChatId: idOfChat,
+        AuthorId: expect.any(Number),
+        Text: UserData.Name,
       });
     });
   });
 
   describe('insertOneFrom', () => {
     it('should return inserted row count by default', async () => {
-      const authorId = await User.get('id').create(userData);
-      const chatId = await Chat.get('idOfChat').create(chatData);
-      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+      const authorId = await db.user.get('Id').create(UserData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const chat = db.chat.find(chatId).select({ ChatId: 'IdOfChat' });
 
-      const q = Message.insertOneFrom(chat, { authorId, text: 'text' });
+      const q = Message.insertOneFrom(chat, {
+        AuthorId: authorId,
+        Text: 'text',
+      });
 
       const result = await q;
 
@@ -296,30 +302,30 @@ describe('createFrom functions', () => {
     });
 
     it('should override selecting multiple with selecting one', async () => {
-      const authorId = await User.get('id').create(userData);
-      const chatId = await Chat.get('idOfChat').create(chatData);
-      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+      const authorId = await db.user.get('Id').create(UserData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const chat = db.chat.find(chatId).select({ ChatId: 'IdOfChat' });
 
-      const q = Message.select('text').insertOneFrom(chat, {
-        authorId,
-        text: 'text',
+      const q = Message.select('Text').insertOneFrom(chat, {
+        AuthorId: authorId,
+        Text: 'text',
       });
 
       const result = await q;
 
-      assertType<Awaited<typeof q>, { text: string }>();
+      assertType<Awaited<typeof q>, { Text: string }>();
 
-      expect(result).toEqual({ text: 'text' });
+      expect(result).toEqual({ Text: 'text' });
     });
 
     it('should override selecting pluck with selecting value', async () => {
-      const authorId = await User.get('id').create(userData);
-      const chatId = await Chat.get('idOfChat').create(chatData);
-      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+      const authorId = await db.user.get('Id').create(UserData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const chat = db.chat.find(chatId).select({ ChatId: 'IdOfChat' });
 
-      const q = Message.pluck('text').insertOneFrom(chat, {
-        authorId,
-        text: 'text',
+      const q = Message.pluck('Text').insertOneFrom(chat, {
+        AuthorId: authorId,
+        Text: 'text',
       });
 
       const result = await q;
@@ -332,7 +338,9 @@ describe('createFrom functions', () => {
 
   describe('createManyFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
-      const sub = Chat.find(1).select({ key: 'title', value: 'Chat.idOfChat' });
+      const sub = db.chat
+        .find(1)
+        .select({ key: 'Title', value: 'Chat.IdOfChat' });
 
       expect(() => TableWithReadOnly.createManyFrom(sub, [])).toThrow(
         'Trying to insert a readonly column',
@@ -340,7 +348,7 @@ describe('createFrom functions', () => {
     });
 
     it('should not allow using appReadOnly columns from values', () => {
-      const sub = Chat.find(1).select({ key: 'title' });
+      const sub = db.chat.find(1).select({ key: 'Title' });
 
       expect(() =>
         TableWithReadOnly.createManyFrom(sub, [
@@ -353,34 +361,34 @@ describe('createFrom functions', () => {
     });
 
     it('should a create record from select with provided data', async () => {
-      const chat = Chat.find(1).select({ chatId: 'idOfChat' });
+      const chat = db.chat.find(1).select({ ChatId: 'IdOfChat' });
 
-      const query = Message.select('text').createManyFrom(chat, [
+      const query = Message.select('Text').createManyFrom(chat, [
         {
-          authorId: 1,
-          text: () => sql<string>`'text 1'`,
+          AuthorId: 1,
+          Text: () => sql<string>`'text 1'`,
         },
         {
-          authorId: 2,
-          text: () => sql<string>`'text 2'`,
+          AuthorId: 2,
+          Text: () => sql<string>`'text 2'`,
         },
       ]);
 
-      assertType<Awaited<typeof query>, { text: string }[]>();
+      assertType<Awaited<typeof query>, { Text: string }[]>();
 
       expectSql(
         query.toSQL(),
         `
           WITH "q" AS (
-            SELECT "Chat"."id_of_chat" "chatId"
+            SELECT "Chat"."id_of_chat" "ChatId"
             FROM "schema"."chat" "Chat"
             WHERE "Chat"."id_of_chat" = $1
             LIMIT 1
           ), q2 AS (
             INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
-            SELECT "q"."chatId", v."author_id"::int4, v."text"::text
+            SELECT "q"."ChatId", v."author_id"::int4, v."text"::text
             FROM "q", (VALUES ($2, 'text 1'), ($3, 'text 2')) v("author_id", "text")
-            RETURNING "Message"."text"
+            RETURNING "Message"."text" "Text"
           )
           SELECT *, NULL FROM q2
           UNION ALL SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
@@ -390,16 +398,16 @@ describe('createFrom functions', () => {
     });
 
     it('should throw not found when it should', async () => {
-      const user = User.find(0).select({ userId: 'id' });
+      const user = db.user.find(0).select({ UserId: 'Id' });
 
-      const q = Profile.createManyFrom(user, [
+      const q = db.profile.createManyFrom(user, [
         {
-          ...profileData,
-          bio: 'one',
+          Bio: 'one',
+          ProfileKey: 'key',
         },
         {
-          ...profileData,
-          bio: 'two',
+          Bio: 'two',
+          ProfileKey: 'key2',
         },
       ]);
 
@@ -407,17 +415,17 @@ describe('createFrom functions', () => {
     });
 
     it('should not throw not found when found', async () => {
-      const id = await User.get('id').create(userData);
-      const user = User.find(id).select({ userId: 'id' });
+      const id = await db.user.get('Id').create(UserData);
+      const user = db.user.find(id).select({ UserId: 'Id' });
 
-      const q = Profile.createManyFrom(user, [
+      const q = db.profile.createManyFrom(user, [
         {
-          ...profileData,
-          bio: 'one',
+          Bio: 'one',
+          ProfileKey: 'key',
         },
         {
-          ...profileData,
-          bio: 'two',
+          Bio: 'two',
+          ProfileKey: 'key2',
         },
       ]);
 
@@ -425,7 +433,7 @@ describe('createFrom functions', () => {
     });
 
     it('should a create record from select with named columns', () => {
-      const user = User.find(1).select({ snakeName: 'name' });
+      const user = db.user.find(1).select({ snakeName: 'Name' });
 
       const query = Snake.select('snakeName').createManyFrom(user, [
         {
@@ -461,14 +469,14 @@ describe('createFrom functions', () => {
     });
 
     it('should add runtime defaults', () => {
-      const q = RuntimeDefaultTable.select('name').createManyFrom(
-        User.find(123).select('password'),
+      const q = RuntimeDefaultTable.select('Name').createManyFrom(
+        db.user.find(123).select('Password'),
         [
           {
-            id: 456,
+            Id: 456,
           },
           {
-            id: 789,
+            Id: 789,
           },
         ],
       );
@@ -477,15 +485,15 @@ describe('createFrom functions', () => {
         q.toSQL(),
         `
           WITH "q" AS (
-            SELECT "User"."password"
+            SELECT "User"."password" "Password"
             FROM "schema"."user" "User"
             WHERE "User"."id" = $1
             LIMIT 1
           ), q2 AS (
             INSERT INTO "schema"."user"("password", "id", "name")
-            SELECT "q"."password", v."id"::int4, v."name"::text
+            SELECT "q"."Password", v."id"::int4, v."name"::text
             FROM "q", (VALUES ($2, $3), ($4, $5)) v("id", "name")
-            RETURNING "user"."name"
+            RETURNING "user"."name" "Name"
           )
           SELECT *, NULL FROM q2
           UNION ALL
@@ -499,15 +507,15 @@ describe('createFrom functions', () => {
       expect(() =>
         Message.createManyFrom(
           // @ts-expect-error creating from multiple records is not allowed
-          Chat.where({ id: { in: [1, 2] } }).select({ chatId: 'id' }),
+          db.chat.where({ IdOfChat: { in: [1, 2] } }).select({ ChatId: 'id' }),
           [
             {
-              authorId: 1,
-              text: 'text',
+              AuthorId: 1,
+              Text: 'text',
             },
             {
-              authorId: 2,
-              text: 'text',
+              AuthorId: 2,
+              Text: 'text',
             },
           ],
         ),
@@ -517,153 +525,155 @@ describe('createFrom functions', () => {
     });
 
     it('should support appending select', async () => {
-      const user = await User.create(userData);
+      const user = await db.user.create(UserData);
 
-      const sub = User.find(user.id).select('name');
+      const sub = db.user.find(user.Id).select('Name');
 
-      const q = User.createManyFrom(sub, [
-        { password: 'one' },
-        { password: 'two' },
-      ]).select('name');
+      const q = db.user
+        .createManyFrom(sub, [
+          { Password: 'one', UserKey: 'key' },
+          { Password: 'two', UserKey: 'key' },
+        ])
+        .select('Name');
 
       expectSql(
         q.toSQL(),
         `
           WITH "q" AS (
-            SELECT "User"."name"
+            SELECT "User"."name" "Name"
             FROM "schema"."user" "User"
             WHERE "User"."id" = $1
             LIMIT 1
           ), q2 AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            SELECT "q"."name", v."password"::text
-            FROM "q", (VALUES ($2), ($3)) v("password")
-            RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "password", "user_key")
+            SELECT "q"."Name", v."password"::text, v."user_key"::text
+            FROM "q", (VALUES ($2, $3), ($4, $5)) v("password", "user_key")
+            RETURNING "User"."name" "Name"
           )
           SELECT *, NULL FROM q2
           UNION ALL
           SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
-        [user.id, 'one', 'two'],
+        [user.Id, 'one', 'key', 'two', 'key'],
       );
 
       const result = await q;
 
-      assertType<typeof result, { name: string }[]>();
+      assertType<typeof result, { Name: string }[]>();
 
       expect(result).toEqual([
-        { name: userData.name },
-        { name: userData.name },
+        { Name: UserData.Name },
+        { Name: UserData.Name },
       ]);
     });
 
     it('should a create record from select with additional value returned from an insert sub query', () => {
-      const chat = Chat.find(1).select({ chatId: 'idOfChat' });
+      const chat = db.chat.find(1).select({ ChatId: 'IdOfChat' });
 
-      const query = Message.select('text').createManyFrom(chat, [
+      const query = Message.select('Text').createManyFrom(chat, [
         {
-          authorId: () => User.create(userData).get('id'),
-          text: () => sql<string>`'text 1'`,
+          AuthorId: () => db.user.create(UserData).get('Id'),
+          Text: () => sql<string>`'text 1'`,
         },
         {
-          authorId: () => User.create(userData).get('id'),
-          text: () => sql<string>`'text 2'`,
+          AuthorId: () => db.user.create(UserData).get('Id'),
+          Text: () => sql<string>`'text 2'`,
         },
       ]);
 
-      assertType<Awaited<typeof query>, { text: string }[]>();
+      assertType<Awaited<typeof query>, { Text: string }[]>();
 
       expectSql(
         query.toSQL(),
         `
           WITH "q" AS (
-            SELECT "Chat"."id_of_chat" "chatId"
+            SELECT "Chat"."id_of_chat" "ChatId"
             FROM "schema"."chat" "Chat"
             WHERE "Chat"."id_of_chat" = $1
             LIMIT 1
           ), "q2" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($2, $3)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
+            VALUES ($2, $3, $4, $5, $6)
             RETURNING "User"."id"
           ), "q3" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($4, $5)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
+            VALUES ($7, $8, $9, $10, $11)
             RETURNING "User"."id"
           ), q4 AS (
             INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
             SELECT
-              "q"."chatId",
+              "q"."ChatId",
               v."author_id"::int4,
               v."text"::text
-            FROM "q", (VALUES ((SELECT "q2"."id" FROM "q2"), 'text 1'), ((SELECT "q3"."id" FROM "q3"), 'text 2')) v("author_id", "text")
-            RETURNING "Message"."text"
+            FROM "q", (VALUES ((SELECT "q2"."Id" FROM "q2"), 'text 1'), ((SELECT "q3"."Id" FROM "q3"), 'text 2')) v("author_id", "text")
+            RETURNING "Message"."text" "Text"
           )
           SELECT *, NULL FROM q4
           UNION ALL
           SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
-        [1, 'name', 'password', 'name', 'password'],
+        [1, ...Object.values(UserData), ...Object.values(UserData)],
       );
     });
 
     it('should create from select using values from CTE', async () => {
-      const idOfChat = await Chat.create(chatData).get('idOfChat');
+      const idOfChat = await db.chat.create(ChatData).get('IdOfChat');
 
       const q = Message.with('user', () =>
-        User.create(userData).select('id', 'name'),
+        db.user.create(UserData).select('Id', 'Name'),
       )
-        .createManyFrom(Chat.find(idOfChat).select({ chatId: 'idOfChat' }), [
+        .createManyFrom(db.chat.find(idOfChat).select({ ChatId: 'IdOfChat' }), [
           {
-            authorId: (q) => q.from('user').get('id'),
-            text: (q) => q.from('user').get('name'),
+            AuthorId: (q) => q.from('user').get('Id'),
+            Text: (q) => q.from('user').get('Name'),
           },
           {
-            authorId: (q) => q.from('user').get('id'),
-            text: (q) => q.from('user').get('name'),
+            AuthorId: (q) => q.from('user').get('Id'),
+            Text: (q) => q.from('user').get('Name'),
           },
         ])
-        .select('chatId', 'authorId', 'text');
+        .select('ChatId', 'AuthorId', 'Text');
 
       expectSql(
         q.toSQL(),
         `
           WITH "user" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "User"."id", "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING "User"."id" "Id", "User"."name" "Name"
           ), "q" AS (
-            SELECT "Chat"."id_of_chat" "chatId"
+            SELECT "Chat"."id_of_chat" "ChatId"
             FROM "schema"."chat" "Chat"
-            WHERE "Chat"."id_of_chat" = $3
+            WHERE "Chat"."id_of_chat" = $6
             LIMIT 1
           ), q2 AS (
             INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
-            SELECT "q"."chatId", v."author_id"::int4, v."text"::text
+            SELECT "q"."ChatId", v."author_id"::int4, v."text"::text
             FROM "q", (VALUES
-              ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1)),
-              ((SELECT "user"."id" FROM "user" LIMIT 1), (SELECT "user"."name" FROM "user" LIMIT 1))
+              ((SELECT "user"."Id" FROM "user" LIMIT 1), (SELECT "user"."Name" FROM "user" LIMIT 1)),
+              ((SELECT "user"."Id" FROM "user" LIMIT 1), (SELECT "user"."Name" FROM "user" LIMIT 1))
             ) v("author_id", "text")
-            RETURNING "Message"."chat_id" "chatId", "Message"."author_id" "authorId", "Message"."text"
+            RETURNING "Message"."chat_id" "ChatId", "Message"."author_id" "AuthorId", "Message"."text" "Text"
           )
           SELECT *, NULL FROM q2
           UNION ALL
           SELECT NULL, NULL, NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
         `,
-        [userData.name, userData.password, idOfChat],
+        [...Object.values(UserData), idOfChat],
       );
 
       const res = await q;
 
       expect(res).toEqual([
         {
-          chatId: idOfChat,
-          authorId: expect.any(Number),
-          text: userData.name,
+          ChatId: idOfChat,
+          AuthorId: expect.any(Number),
+          Text: UserData.Name,
         },
         {
-          chatId: idOfChat,
-          authorId: expect.any(Number),
-          text: userData.name,
+          ChatId: idOfChat,
+          AuthorId: expect.any(Number),
+          Text: UserData.Name,
         },
       ]);
     });
@@ -671,13 +681,13 @@ describe('createFrom functions', () => {
 
   describe('insertManyFrom', () => {
     it('should return inserted row count by default', async () => {
-      const authorId = await User.get('id').create(userData);
-      const chatId = await Chat.get('idOfChat').create(chatData);
-      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+      const authorId = await db.user.get('Id').create(UserData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const chat = db.chat.find(chatId).select({ ChatId: 'IdOfChat' });
 
       const q = Message.insertManyFrom(chat, [
-        { authorId, text: 'text' },
-        { authorId, text: 'text' },
+        { AuthorId: authorId, Text: 'text' },
+        { AuthorId: authorId, Text: 'text' },
       ]);
 
       const result = await q;
@@ -688,41 +698,41 @@ describe('createFrom functions', () => {
     });
 
     it('should override selecting multiple with selecting one', async () => {
-      const authorId = await User.get('id').create(userData);
-      const chatId = await Chat.get('idOfChat').create(chatData);
-      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+      const authorId = await db.user.get('Id').create(UserData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const chat = db.chat.find(chatId).select({ ChatId: 'IdOfChat' });
 
-      const q = Message.select('text').insertManyFrom(chat, [
+      const q = Message.select('Text').insertManyFrom(chat, [
         {
-          authorId,
-          text: 'text',
+          AuthorId: authorId,
+          Text: 'text',
         },
         {
-          authorId,
-          text: 'text',
+          AuthorId: authorId,
+          Text: 'text',
         },
       ]);
 
       const result = await q;
 
-      assertType<Awaited<typeof q>, { text: string }[]>();
+      assertType<Awaited<typeof q>, { Text: string }[]>();
 
-      expect(result).toEqual([{ text: 'text' }, { text: 'text' }]);
+      expect(result).toEqual([{ Text: 'text' }, { Text: 'text' }]);
     });
 
     it('should override selecting pluck with selecting value', async () => {
-      const authorId = await User.get('id').create(userData);
-      const chatId = await Chat.get('idOfChat').create(chatData);
-      const chat = Chat.find(chatId).select({ chatId: 'idOfChat' });
+      const authorId = await db.user.get('Id').create(UserData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
+      const chat = db.chat.find(chatId).select({ ChatId: 'IdOfChat' });
 
-      const q = Message.pluck('text').insertManyFrom(chat, [
+      const q = Message.pluck('Text').insertManyFrom(chat, [
         {
-          authorId,
-          text: 'text',
+          AuthorId: authorId,
+          Text: 'text',
         },
         {
-          authorId,
-          text: 'text',
+          AuthorId: authorId,
+          Text: 'text',
         },
       ]);
 
@@ -736,9 +746,9 @@ describe('createFrom functions', () => {
 
   describe('createForEachFrom', () => {
     it('should not allow using appReadOnly columns from select', () => {
-      const sub = Chat.where({ title: 'title' }).select({
-        key: 'title',
-        value: 'Chat.idOfChat',
+      const sub = db.chat.where({ Title: 'Title' }).select({
+        key: 'Title',
+        value: 'Chat.IdOfChat',
       });
 
       expect(() => TableWithReadOnly.createForEachFrom(sub)).toThrow(
@@ -747,26 +757,28 @@ describe('createFrom functions', () => {
     });
 
     it('should create records from select', () => {
-      const sub = Chat.where({ title: 'title' }).select({ chatId: 'idOfChat' });
+      const sub = db.chat
+        .where({ Title: 'Title' })
+        .select({ ChatId: 'IdOfChat' });
       const query = Message.createForEachFrom(sub);
 
-      assertType<Awaited<typeof query>, MessageRecord[]>();
+      assertType<Awaited<typeof query>, Message[]>();
 
       expectSql(
         query.toSQL(),
         `
           INSERT INTO "schema"."message" AS "Message"("chat_id")
-          SELECT "Chat"."id_of_chat" "chatId"
+          SELECT "Chat"."id_of_chat" "ChatId"
           FROM "schema"."chat" "Chat"
           WHERE "Chat"."title" = $1
-          RETURNING ${messageColumnsSql}
+          RETURNING ${MessageColumnsSql}
         `,
-        ['title'],
+        ['Title'],
       );
     });
 
     it('should a create record from select with named columns', () => {
-      const sub = User.where({ name: 'name' }).select({ snakeName: 'name' });
+      const sub = db.user.where({ Name: 'name' }).select({ snakeName: 'Name' });
       const query = Snake.createForEachFrom(sub);
 
       assertType<Awaited<typeof query>, SnakeRecord[]>();
@@ -785,25 +797,25 @@ describe('createFrom functions', () => {
     });
 
     it('should support appending select', async () => {
-      const user = await User.create(userData);
+      const user = await db.user.create(UserData);
 
-      const sub = User.where({ id: user.id }).select('name', 'password');
+      const sub = db.user.where({ Id: user.Id }).select('Name', 'Password');
 
-      const result = await User.createForEachFrom(sub).select('name');
+      const result = await db.user.createForEachFrom(sub).select('Name');
 
-      assertType<typeof result, { name: string }[]>();
+      assertType<typeof result, { Name: string }[]>();
 
-      expect(result).toEqual([{ name: userData.name }]);
+      expect(result).toEqual([{ Name: UserData.Name }]);
     });
   });
 
   describe('insertForEachFrom', () => {
     it('should return inserted row count by default', async () => {
-      const chatId = await Chat.get('idOfChat').create(chatData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
 
-      const sub = Chat.find(chatId).select({
-        chatId: 'idOfChat',
-        text: (q) => q.val('title'),
+      const sub = db.chat.find(chatId).select({
+        ChatId: 'IdOfChat',
+        Text: (q) => q.val('Title'),
       });
       const q = Message.insertForEachFrom(sub);
 
@@ -815,31 +827,31 @@ describe('createFrom functions', () => {
     });
 
     it('should override selecting single with selecting multiple', async () => {
-      const chatId = await Chat.get('idOfChat').create(chatData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
 
-      const sub = Chat.find(chatId).select({
-        chatId: 'idOfChat',
-        text: 'title',
+      const sub = db.chat.find(chatId).select({
+        ChatId: 'IdOfChat',
+        Text: 'Title',
       });
 
-      const q = Message.take().select('text').insertForEachFrom(sub);
+      const q = Message.take().select('Text').insertForEachFrom(sub);
 
       const result = await q;
 
-      assertType<Awaited<typeof q>, { text: string }[]>();
+      assertType<Awaited<typeof q>, { Text: string }[]>();
 
-      expect(result).toEqual([{ text: 'title' }]);
+      expect(result).toEqual([{ Text: 'title' }]);
     });
 
     it('should override selecting value with selecting pluck', async () => {
-      const chatId = await Chat.get('idOfChat').create(chatData);
+      const chatId = await db.chat.get('IdOfChat').create(ChatData);
 
-      const sub = Chat.find(chatId).select({
-        chatId: 'idOfChat',
-        text: 'title',
+      const sub = db.chat.find(chatId).select({
+        ChatId: 'IdOfChat',
+        Text: 'Title',
       });
 
-      const q = Message.get('text').insertForEachFrom(sub);
+      const q = Message.get('Text').insertForEachFrom(sub);
 
       const result = await q;
 

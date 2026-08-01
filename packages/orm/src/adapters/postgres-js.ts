@@ -1,5 +1,5 @@
 import {
-  TableClasses,
+  OrmTableThunks,
   OrchidORM,
   OrchidORMBundle,
   OrchidOrmParam,
@@ -15,7 +15,7 @@ import { DbSharedOptions, AdapterClass, EmptyObject } from 'pqb/internal';
 
 export interface PostgresJsOrchidORMOptions
   extends PostgresJsAdapterOptions, DbSharedOptions {
-  views?: TableClasses;
+  views?: OrmTableThunks;
 }
 
 export const Adapter = PostgresJsAdapter;
@@ -23,8 +23,8 @@ export const Adapter = PostgresJsAdapter;
 export const createDb = cdb;
 
 export const makeOrchidOrmDb = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   orm: OrchidORMBundle<T, V>,
   { log, ...options }: OrchidOrmParam<PostgresJsOrchidORMOptions>,
@@ -40,8 +40,8 @@ export const makeOrchidOrmDb = <
 };
 
 export const orchidORM = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   {
     views,

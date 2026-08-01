@@ -11,10 +11,8 @@ export interface RelationRefsOptions<
   on?: ColumnsShape.InputPartial<Shape>;
 }
 
-export interface RelationThroughOptions<
-  Through extends PropertyKey = string,
-  Source extends PropertyKey = string,
-> {
+export interface RelationThroughOptions<Through extends PropertyKey = string> {
   through: Through;
-  source: Source;
+  source: string;
+  on?: ColumnsShape.InputPartial<Column.Shape.QueryInit>;
 }

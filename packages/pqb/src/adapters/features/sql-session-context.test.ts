@@ -1,4 +1,4 @@
-import { BaseTable, TestAdapter, testDbOptions } from 'test-utils';
+import { defineTable, TestAdapter, testDbOptions } from 'test-utils';
 import { OrchidOrmInternalError } from '../../query/errors';
 import {
   SqlSessionState,
@@ -273,12 +273,9 @@ describe('adapter.utils', () => {
 });
 
 describe('storage', () => {
-  class UserTable extends BaseTable {
-    readonly table = 'user';
-    columns = this.setColumns((t) => ({
-      Id: t.name('id').identity().primaryKey(),
-    }));
-  }
+  const UserTable = defineTable('user', (t) => ({
+    Id: t.name('id').identity().primaryKey(),
+  }));
 
   const db = orchidORMWithAdapter(
     {

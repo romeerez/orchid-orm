@@ -12,6 +12,7 @@ trace/
 notes/
 !notes/ # LLM can read this
 changes/archived/
+e2e/
 
 # for measuring and improving performance
 packages/benchmarks/

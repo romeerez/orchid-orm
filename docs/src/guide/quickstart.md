@@ -205,7 +205,7 @@ Consider the created structure:
 │       ├── tables/ - tables are used in the app, define columns and relations here.
 │       │   ├── comment.table.ts
 │       │   └── post.table.ts
-│       ├── base-table.ts - for defining column type overrides.
+│       ├── table-factory.ts - for defining column type overrides.
 │       ├── config.ts - database credentials are exported from here.
 │       ├── db.ts - main file for the ORM, connects all tables into one `db` object.
 │       ├── db-script.ts - script run by `npm run db *command*`.
@@ -244,18 +244,15 @@ npm run db create
 
 By default, `camelCase` naming is used for columns in a database.
 If you prefer to have snake_case in the database (it will be `camelCase` on the app side anyway),
-set `snakeCase: true` option in `src/db/base-table.ts`:
+set `snakeCase: true` option in `src/db/table-factory.ts`:
 
 ```ts
-// src/db/base-table.ts
+// src/db/table-factory.ts
 
-export const BaseTable = createBaseTable({
+export const { defineTable, defineView, sql } = createTableFactory({
   snakeCase: true,
   // ...snip
 });
-
-// to use later for custom raw SQL expressions
-export const { sql } = BaseTable;
 ```
 
 If you chose to create demo tables, there are migrations files in `src/db/migrations`. Run migrations:

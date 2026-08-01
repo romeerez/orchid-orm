@@ -88,6 +88,14 @@ export type CreateData<T extends CreateSelf> =
       CreateDataWithDefaults<T, keyof T['__defaults']>
     : CreateRelationsData<T>;
 
+export type CreateDataOmit<
+  T extends CreateSelf,
+  OmitKeys,
+> = EmptyObject extends T['relations']
+  ? // if no relations, don't load TS with extra calculations
+    CreateDataWithDefaultsOmit<T, keyof T['__defaults'], OmitKeys>
+  : CreateRelationsDataOmit<T, OmitKeys>;
+
 type CreateDataWithDefaults<
   T extends CreateSelf,
   Defaults extends PropertyKey,
@@ -101,17 +109,32 @@ type CreateDataWithDefaults<
     : never;
 };
 
-type CreateDataWithDefaultsForRelations<
+type CreateDataWithDefaultsOmit<
   T extends CreateSelf,
-  Defaults extends keyof T['__inputType'],
-  OmitFKeys extends PropertyKey,
+  Defaults extends PropertyKey,
+  OmitKeys,
 > = {
-  [K in keyof T['__inputType'] as K extends Defaults | OmitFKeys
+  [K in keyof T['__inputType'] as K extends Defaults | OmitKeys
     ? never
-    : K]: K extends Defaults | OmitFKeys ? never : CreateColumn<T, K>;
+    : K]: K extends Defaults ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults as K extends OmitFKeys ? never : K]?: CreateColumn<T, K>;
+  [K in Defaults as K extends OmitKeys
+    ? never
+    : K]?: K extends keyof T['__inputType'] ? CreateColumn<T, K> : never;
 };
+
+// Foreign key columns marked as writable via `makeColumnWritable`, which
+// should not be omitted from `create` data.
+type WritableForeignKeys<
+  T extends CreateSelf,
+  AllFKeys extends PropertyKey,
+> = AllFKeys extends infer K
+  ? K extends keyof T['shape']
+    ? T['shape'][K] extends { data: { makeColumnWritable: true } }
+      ? K
+      : never
+    : never
+  : never;
 
 // Type of available variants to provide for a specific column when creating
 export type CreateColumn<
@@ -122,10 +145,35 @@ export type CreateColumn<
 // Combine data of the table with data that can be set for relations
 export type CreateRelationsData<T extends CreateSelf> =
   // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
-  CreateDataWithDefaultsForRelations<
+  CreateDataWithDefaultsOmit<
     T,
     keyof T['__defaults'],
-    T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
+    Exclude<
+      T['relations'][keyof T['relations']]['omitForeignKeyInCreate'],
+      WritableForeignKeys<
+        T,
+        T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
+      >
+    >
+  > &
+    // Intersect create data per foreign key column, while same-column
+    // belongsTo relations stay in a shared union.
+    CreateRelationsDataOmittingFKeys<T, T['relationsDataForCreate']> &
+    T['relationsDataForCreateOptional'];
+
+export type CreateRelationsDataOmit<T extends CreateSelf, OmitKeys> =
+  // Data except `belongsTo` foreignKeys: { name: string, fooId: number } -> { name: string }
+  CreateDataWithDefaultsOmit<
+    T,
+    keyof T['__defaults'],
+    | Exclude<
+        T['relations'][keyof T['relations']]['omitForeignKeyInCreate'],
+        WritableForeignKeys<
+          T,
+          T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
+        >
+      >
+    | OmitKeys
   > &
     // Intersect create data per foreign key column, while same-column
     // belongsTo relations stay in a shared union.
@@ -887,31 +935,26 @@ export class QueryCreate {
    * A primary key or a unique index for a **single** column can be fined on a column:
    *
    * ```ts
-   * export class MyTable extends BaseTable {
-   *   columns = this.setColumns((t) => ({
-   *     pkey: t.uuid().primaryKey(),
-   *     unique: t.string().unique(),
-   *   }));
-   * }
+   * export const MyTable = defineTable('myTable', (t) => ({
+   *   pkey: t.uuid().primaryKey(),
+   *   unique: t.string().unique(),
+   * }));
    * ```
    *
    * But for composite primary keys or indexes (having multiple columns), define it in a separate function:
    *
    * ```ts
-   * export class MyTable extends BaseTable {
-   *   columns = this.setColumns(
-   *     (t) => ({
-   *       one: t.integer(),
-   *       two: t.string(),
-   *       three: t.boolean(),
-   *     }),
-   *     (t) => [t.primaryKey(['one', 'two']), t.unique(['two', 'three'])],
-   *   );
-   * }
+   * export const MyTable = defineTable('myTable', (t) => ({
+   *   one: t.integer(),
+   *   two: t.string(),
+   *   three: t.boolean(),
+   * }))
+   *   .primaryKey(['one', 'two'])
+   *   .unique(['two', 'three']);
    * ```
    * :::
    *
-   * You can use the `sql` function exported from your `BaseTable` file in onConflict.
+   * You can use the `sql` function exported from your table factory file in onConflict.
    * It can be useful to specify a condition when you have a partial index:
    *
    * ```ts

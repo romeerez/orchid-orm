@@ -1,4 +1,4 @@
-import { Column } from './column';
+import { Column, getForeignKeyTableInstance } from './column';
 import {
   emptyArray,
   emptyObject,
@@ -34,6 +34,8 @@ export interface ColumnToCodeCtx {
   currentSchema: string;
   migration?: boolean;
   snakeCase?: boolean;
+  sql?: string;
+  isSqlUsed?: boolean;
 }
 
 /**
@@ -87,11 +89,11 @@ export const codeToString = (
  * @param value - column default
  */
 export const columnDefaultArgumentToCode = (
-  t: string,
+  ctx: string | ColumnToCodeCtx,
   value: unknown,
 ): string => {
   if (typeof value === 'object' && value && isRawSQL(value)) {
-    return rawSqlToCode(value, t);
+    return rawSqlToCode(value, ctx);
   } else if (typeof value === 'function') {
     return value.toString();
   } else if (typeof value === 'string') {
@@ -551,8 +553,9 @@ export const constraintToCode = (
   t: string,
   m?: boolean,
   prefix?: string,
+  ctx?: ColumnToCodeCtx,
 ): Codes => {
-  const code = constraintInnerToCode(item, t, m);
+  const code = constraintInnerToCode(item, t, m, ctx);
   if (prefix) code[0] = prefix + code[0];
   const last = code[code.length - 1];
   if (typeof last === 'string' && !last.endsWith(','))
@@ -564,6 +567,7 @@ export const constraintInnerToCode = (
   item: TableData.Constraint,
   t: string,
   m?: boolean,
+  ctx?: ColumnToCodeCtx,
 ): Codes => {
   if (item.references) {
     return [
@@ -574,7 +578,7 @@ export const constraintInnerToCode = (
   }
 
   return [
-    `${t}.check(${rawSqlToCode(item.check as TableData.Check, t)}${
+    `${t}.check(${rawSqlToCode(item.check as TableData.Check, ctx ?? t)}${
       item.name ? `, ${singleQuote(item.name)}` : ''
     })`,
   ];
@@ -595,7 +599,7 @@ export const referencesArgsToCode = (
   args.push(`${singleQuoteArray(columns)},`);
 
   if (m && typeof fnOrTable !== 'string') {
-    const { schema, table } = new (fnOrTable())();
+    const { schema, table } = getForeignKeyTableInstance(fnOrTable());
     fnOrTable = schema ? `${schema}.${table}` : table;
   }
 
@@ -649,7 +653,7 @@ export const foreignKeyArgumentToCode = (
   const code: Code = [];
 
   if (migration && typeof fnOrTable !== 'string') {
-    const { schema, table } = new (fnOrTable())();
+    const { schema, table } = getForeignKeyTableInstance(fnOrTable());
     fnOrTable = schema ? `${schema}.${table}` : table;
   }
 
@@ -761,7 +765,7 @@ export const columnCheckToCode = (
   return checks
     .map(
       ({ sql, name }) =>
-        `.check(${rawSqlToCode(sql, ctx.t)}${name ? `, '${name}'` : ''})`,
+        `.check(${rawSqlToCode(sql, ctx)}${name ? `, '${name}'` : ''})`,
     )
     .join('');
 };
@@ -860,7 +864,7 @@ export const columnCode = (
   ) {
     addCode(
       code,
-      `.default(${columnDefaultArgumentToCode(ctx.t, data.default)})`,
+      `.default(${columnDefaultArgumentToCode(ctx, data.default)})`,
     );
   }
 

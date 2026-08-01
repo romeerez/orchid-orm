@@ -1,24 +1,36 @@
-import { useTestORM } from '../test-utils/orm.test-utils';
+import {
+  DefaultSelect,
+  Insertable,
+  Queryable,
+  Selectable,
+  Updatable,
+} from './legacy-table';
 import {
   assertType,
   db,
+  defineTable,
+  defineView,
   expectSql,
   ProfileData,
   sql,
   testAdapter,
+  testOrchidORMWithAdapter,
+  useTestDatabase,
   UserData,
+  zodSchemaConfig,
 } from 'test-utils';
+import { createTableFactory } from './table';
+import { z } from 'zod/v4';
 import {
   bundleOrchidORM,
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
-  setGrants,
 } from '../orm';
-import { BaseTable } from 'test-utils';
+import { QueryHelperResult } from 'pqb';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 
 describe('view', () => {
-  useTestORM();
+  useTestDatabase();
 
   it('should be queryable just as normal table', async () => {
     await db.user.createMany([
@@ -42,58 +54,222 @@ describe('view', () => {
     expect(count).toBe(1);
   });
 
-  it('should expose first-class views under $views with read-only default', () => {
-    const query = db.$views.activeUser.select('id', 'name').where({ id: 1 });
+  it('should support basic regular view', () => {
+    const { defineView, sql } = createTableFactory();
+    const ActiveUserView = defineView(
+      'activeUser',
+      { sql: sql`SELECT "id", "name" FROM "user" WHERE "active" = true` },
+      (t) => ({
+        id: t.integer(),
+        name: t.text(),
+      }),
+    );
+    const UserNameView = defineView('userName', (t) => ({
+      id: t.integer(),
+      name: t.text(),
+    }));
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { activeUser: ActiveUserView, userName: UserNameView },
+      },
+      {},
+    );
+
+    const query = db.$views.activeUser.select('id', 'name');
+    const noOptionsQuery = db.$views.userName.select('id', 'name');
 
     assertType<typeof db.$views.activeUser.__readOnly, true>();
+    assertType<typeof db.$views.userName.__readOnly, true>();
     assertType<Awaited<typeof query>, { id: number; name: string }[]>();
+    assertType<
+      Awaited<typeof noOptionsQuery>,
+      { id: number; name: string }[]
+    >();
+    assertType<typeof ActiveUserView.data.name, 'activeUser'>();
+    assertType<typeof ActiveUserView.data.table, undefined>();
 
     expectSql(
       query.toSQL(),
       `
         SELECT "activeUser"."id", "activeUser"."name"
-        FROM "schema"."activeUser"
-        WHERE "activeUser"."id" = $1
+        FROM "activeUser"
       `,
-      [1],
+    );
+    expectSql(
+      noOptionsQuery.toSQL(),
+      `
+        SELECT "userName"."id", "userName"."name"
+        FROM "userName"
+      `,
+    );
+  });
+
+  it('should support view in bundleOrchidORM', () => {
+    const { defineView } = createTableFactory();
+    const ActiveUserView = defineView('activeUser', (t) => ({
+      id: t.integer(),
+      name: t.text(),
+    }));
+    const orm = bundleOrchidORM({ views: { activeUser: ActiveUserView } });
+    const helper = orm.$views.activeUser.makeHelper((q) =>
+      q.select('id', 'name'),
     );
 
+    assertType<
+      Awaited<QueryHelperResult<typeof helper>>,
+      { id: number; name: string }[]
+    >();
+
+    const db = makeOrchidOrmDbWithAdapter(orm, {
+      adapter: testAdapter,
+    });
+
+    expectSql(
+      db.$views.activeUser.useHelper(helper).toSQL(),
+      `
+        SELECT "activeUser"."id", "activeUser"."name" FROM "activeUser"
+      `,
+    );
+  });
+
+  it('should support view in makeOrchidOrmDbWithAdapter', () => {
+    const { defineView } = createTableFactory();
+    const ActiveUserView = defineView('activeUser', (t) => ({
+      id: t.integer(),
+      name: t.text(),
+    }));
+    const orm = bundleOrchidORM({ views: { activeUser: ActiveUserView } });
+    const db = makeOrchidOrmDbWithAdapter(orm, { adapter: testAdapter });
+    const query = db.$views.activeUser.select('id', 'name');
+
+    assertType<Awaited<typeof query>, { id: number; name: string }[]>();
+
+    expectSql(
+      db.$views.activeUser.toSQL(),
+      `
+        SELECT * FROM "activeUser"
+      `,
+    );
+  });
+
+  it('should support writable regular view', () => {
+    const { defineView, sql } = createTableFactory();
+    const WritableUserView = defineView(
+      'writableUser',
+      {
+        readOnly: false,
+        sql: sql`SELECT "id", "name" FROM "user"`,
+      },
+      (t) => ({
+        id: t.integer().primaryKey(),
+        name: t.text(),
+      }),
+    );
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { writableUser: WritableUserView },
+      },
+      {},
+    );
+
+    const query = db.$views.writableUser.select('id', 'name');
+
+    // intentionally not awaited, just ensuring there is no TS errors here
+    const createQuery = db.$views.writableUser.create({
+      id: 1,
+      name: 'name',
+    });
+
+    expectSql(
+      createQuery.toSQL(),
+      `
+        INSERT INTO "writableUser"("id", "name") VALUES ($1, $2) RETURNING *
+      `,
+      [1, 'name'],
+    );
+
+    assertType<typeof db.$views.writableUser.__readOnly, undefined>();
+    assertType<Awaited<typeof query>, { id: number; name: string }[]>();
+    assertType<typeof createQuery.__readOnly, undefined>();
+    assertType<Awaited<typeof createQuery>, { id: number; name: string }>();
+  });
+
+  it('should throw when mutating a read-only view', () => {
     expect(() =>
       // @ts-expect-error first-class views are read-only by default
       db.$views.activeUser.create({ id: 1, name: 'name' }),
     ).toThrow(CannotMutateReadOnlyTableError);
   });
 
-  it('should allow writable views when readOnly is false', () => {
-    assertType<typeof db.$views.writableActiveUser.__readOnly, undefined>();
-
-    expect(() =>
-      db.$views.writableActiveUser.create({
-        name: 'name',
-        password: 'pw',
+  it('should support materialized view', () => {
+    const { defineView, sql } = createTableFactory();
+    const MonthlySaleView = defineView(
+      'monthlySale',
+      {
+        materialized: true,
+        withData: false,
+        sql: sql`SELECT "userId", "month", "total" FROM "sale"`,
+      },
+      (t) => ({
+        userId: t.integer(),
+        month: t.date(),
+        total: t.integer(),
       }),
-    ).not.toThrow(CannotMutateReadOnlyTableError);
+    );
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { monthlySale: MonthlySaleView },
+      },
+      {},
+    );
+
+    const query = db.$views.monthlySale.select('userId', 'month');
+
+    assertType<typeof db.$views.monthlySale.__readOnly, true>();
+    assertType<typeof db.$views.monthlySale.__materialized, true>();
+    assertType<
+      Awaited<typeof query>,
+      {
+        userId: number;
+        month: string;
+      }[]
+    >();
+
+    expectSql(
+      query.toSQL(),
+      `
+        SELECT "monthlySale"."userId", "monthlySale"."month"
+        FROM "monthlySale"
+      `,
+    );
   });
 
   it('should expose materialized views under $views as read-only materialized queries', () => {
-    class MonthlySalesView extends BaseTable.MaterializedView {
-      schema = 'analytics';
-      readonly name = 'monthlySales';
-      withData = false;
-      columns = this.setColumns((t) => ({
+    const MonthlySalesView = defineView(
+      'monthlySales',
+      {
+        schema: 'analytics',
+        materialized: true,
+        withData: false,
+        sql: sql`SELECT "userId", "month", "total" FROM "sale"`,
+      },
+      (t) => ({
         userId: t.integer(),
         month: t.date(),
         total: t.decimal(),
-      }));
-      grants = setGrants([
-        {
-          to: 'reader',
-          select: true,
-        },
-      ]);
-
-      sql = BaseTable.sql`SELECT "userId", "month", "total" FROM "sale"`;
-    }
+      }),
+    ).grants([
+      {
+        to: 'reader',
+        privileges: ['SELECT'],
+      },
+    ]);
 
     const local = orchidORMWithAdapter(
       {
@@ -127,7 +303,7 @@ describe('view', () => {
     expect(local.$views.monthlySales.internal.tableGrants).toEqual([
       {
         to: 'reader',
-        select: true,
+        privileges: ['SELECT'],
       },
     ]);
     expect(() =>
@@ -141,20 +317,17 @@ describe('view', () => {
   });
 
   it('should keep materialized views read-only even when readOnly is false', () => {
-    class CannotBeReadOnly extends BaseTable.MaterializedView {
-      // @ts-expect-error materialized views cannot opt into writes
-      readonly readOnly = false;
-    }
-    expect(CannotBeReadOnly);
-
-    class WritableAttemptView extends BaseTable.MaterializedView {
-      readonly name = 'writableAttempt';
-      columns = this.setColumns((t) => ({
+    const WritableAttemptView = defineView(
+      'writableAttempt',
+      {
+        materialized: true,
+        readOnly: false,
+        sql: sql`SELECT id FROM "user"`,
+      },
+      (t) => ({
         id: t.integer(),
-      }));
-
-      sql = BaseTable.sql`SELECT id FROM "user"`;
-    }
+      }),
+    );
 
     const local = orchidORMWithAdapter(
       {
@@ -174,14 +347,13 @@ describe('view', () => {
   });
 
   it('should expose materialized views in split ORM setup', () => {
-    class BundleActiveUserView extends BaseTable.MaterializedView {
-      readonly name = 'activeUser';
-      columns = this.setColumns((t) => ({
+    const BundleActiveUserView = defineView(
+      'activeUser',
+      { materialized: true, sql: sql`SELECT id FROM "user"` },
+      (t) => ({
         id: t.integer(),
-      }));
-
-      sql = BaseTable.sql`SELECT id FROM "user"`;
-    }
+      }),
+    );
 
     const orm = bundleOrchidORM({
       views: {
@@ -203,23 +375,224 @@ describe('view', () => {
     );
   });
 
-  it('should reject duplicate database names across tables and views', () => {
-    class UserTable extends BaseTable.View {
-      schema = 'custom';
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        id: t.integer().primaryKey(),
-      }));
-    }
+  it('should support view type helpers', () => {
+    const { defineView, sql } = createTableFactory();
+    const ActiveUserView = defineView('activeUser', (t) => ({
+      id: t.identity().primaryKey(),
+      visible: t.text().parse(() => true),
+      hidden: t.text().select(false),
+      optional: t.text().default('text'),
+      required: t.boolean(),
+    }));
+    const WritableUserView = defineView(
+      'writableUser',
+      {
+        readOnly: false,
+        sql: sql`SELECT "id", "visible", "hidden", "optional", "required" FROM "user"`,
+      },
+      (t) => ({
+        id: t.identity().primaryKey(),
+        visible: t.text().parse(() => true),
+        hidden: t.text().select(false),
+        optional: t.text().default('text'),
+        required: t.boolean(),
+      }),
+    );
+    const MonthlySaleView = defineView(
+      'monthlySale',
+      {
+        materialized: true,
+        sql: sql`SELECT "id", "visible", "hidden", "optional", "required" FROM "sale"`,
+      },
+      (t) => ({
+        id: t.identity().primaryKey(),
+        visible: t.text().parse(() => true),
+        hidden: t.text().select(false),
+        optional: t.text().default('text'),
+        required: t.boolean(),
+      }),
+    );
 
-    class DuplicateUserView extends BaseTable.View {
-      schema = 'custom';
-      readonly name = 'user';
-      columns = this.setColumns((t) => ({
+    type ExpectedQueryable = {
+      id?: number;
+      visible?: string;
+      hidden?: string;
+      optional?: string;
+      required?: boolean;
+    };
+    type ExpectedDefaultSelect = {
+      id: number;
+      visible: boolean;
+      optional: string;
+      required: boolean;
+    };
+    type ExpectedSelectable = {
+      id: number;
+      visible: boolean;
+      hidden: string;
+      optional: string;
+      required: boolean;
+    };
+    type ExpectedInsertable = {
+      id?: number;
+      visible: string;
+      hidden: string;
+      optional?: string;
+      required: boolean;
+    };
+    type ExpectedUpdatable = {
+      id?: number;
+      visible?: string;
+      hidden?: string;
+      optional?: string;
+      required?: boolean;
+    };
+
+    assertType<Queryable<typeof ActiveUserView>, ExpectedQueryable>();
+    assertType<DefaultSelect<typeof ActiveUserView>, ExpectedDefaultSelect>();
+    assertType<Selectable<typeof ActiveUserView>, ExpectedSelectable>();
+    assertType<Insertable<typeof WritableUserView>, ExpectedInsertable>();
+    assertType<Updatable<typeof WritableUserView>, ExpectedUpdatable>();
+    assertType<Queryable<typeof MonthlySaleView>, ExpectedQueryable>();
+    assertType<DefaultSelect<typeof MonthlySaleView>, ExpectedDefaultSelect>();
+    assertType<Selectable<typeof MonthlySaleView>, ExpectedSelectable>();
+  });
+
+  it('should support validation schema methods on view definitions', () => {
+    const { defineView, sql } = createTableFactory({
+      schemaConfig: zodSchemaConfig,
+    });
+    const TestView = defineView(
+      'testView',
+      {
+        readOnly: false,
+        sql: sql`SELECT "id", "name" FROM "test"`,
+      },
+      (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+      }),
+    );
+
+    const viewInputSchema = TestView.inputSchema();
+    const viewOutputSchema = TestView.outputSchema();
+    const viewQuerySchema = TestView.querySchema();
+    const viewPkeySchema = TestView.pkeySchema();
+    const viewCreateSchema = TestView.createSchema();
+    const viewUpdateSchema = TestView.updateSchema();
+
+    const expected = z.object({ id: z.number(), name: z.string() });
+    const expectedQuery = expected.partial();
+    const expectedPkey = expected.pick({ id: true });
+    const expectedCreate = expected.omit({ id: true });
+    const expectedUpdate = expectedCreate.partial();
+
+    assertType<typeof viewInputSchema, typeof expected>();
+    assertType<typeof viewOutputSchema, typeof expected>();
+    assertType<typeof viewQuerySchema, typeof expectedQuery>();
+    assertType<typeof viewPkeySchema, typeof expectedPkey>();
+    assertType<typeof viewCreateSchema, typeof expectedCreate>();
+    assertType<typeof viewUpdateSchema, typeof expectedUpdate>();
+
+    expect(viewInputSchema.parse({ id: 1, name: 'name' })).toEqual({
+      id: 1,
+      name: 'name',
+    });
+    expect(viewOutputSchema.parse({ id: 1, name: 'name' })).toEqual({
+      id: 1,
+      name: 'name',
+    });
+    expect(viewQuerySchema.parse({ name: 'name' })).toEqual({
+      name: 'name',
+    });
+    expect(viewPkeySchema.parse({ id: 1, name: 'name' })).toEqual({
+      id: 1,
+    });
+    expect(viewCreateSchema.parse({ name: 'name' })).toEqual({
+      name: 'name',
+    });
+    expect(viewUpdateSchema.parse({})).toEqual({});
+
+    expect(() => viewInputSchema.parse({ id: '1', name: 'name' })).toThrow(
+      'Invalid input: expected number, received string',
+    );
+    expect(() => viewQuerySchema.parse({ id: '1' })).toThrow(
+      'Invalid input: expected number, received string',
+    );
+    expect(viewPkeySchema.safeParse({}).success).toBe(false);
+  });
+
+  it('should support view option', () => {
+    const { defineView, sql } = createTableFactory({ snakeCase: true });
+
+    const ActiveUserView = defineView(
+      'activeUser',
+      {
+        schema: 'custom',
+        nameInDb: 'active_user',
+        snakeCase: false,
+        language: 'english',
+        readOnly: false,
+        generatorIgnore: true,
+        sql: sql`SELECT "id", "userName" FROM "user"`,
+        recursive: true,
+        checkOption: 'LOCAL',
+        securityBarrier: true,
+        securityInvoker: true,
+      },
+      (t) => ({
+        id: t.integer().primaryKey(),
+        userName: t.text(),
+      }),
+    );
+
+    const ActiveUserMaterializedView = defineView(
+      'activeUserMaterialized',
+      {
+        schema: 'custom',
+        nameInDb: 'active_user_materialized',
+        snakeCase: true,
+        language: 'simple',
+        readOnly: false,
+        generatorIgnore: true,
+        materialized: true,
+        withData: false,
+        sql: sql`SELECT "id", "user_name" FROM "user"`,
+      },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "user"`;
-    }
+        userName: t.text(),
+      }),
+    );
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: {
+          activeUser: ActiveUserView,
+          activeUserMaterialized: ActiveUserMaterializedView,
+        },
+      },
+      {},
+    );
+
+    assertType<typeof db.$views.activeUser.__readOnly, undefined>();
+    assertType<typeof db.$views.activeUserMaterialized.__readOnly, true>();
+    assertType<typeof db.$views.activeUser.__materialized, undefined>();
+    assertType<typeof db.$views.activeUserMaterialized.__materialized, true>();
+  });
+
+  it('should reject duplicate database names across tables and views', () => {
+    const UserTable = defineTable('user', { schema: 'custom' }, (t) => ({
+      id: t.integer().primaryKey(),
+    }));
+    const DuplicateUserView = defineView(
+      'user',
+      { schema: 'custom', sql: sql`SELECT id FROM "user"` },
+      (t) => ({
+        id: t.integer(),
+      }),
+    );
 
     expect(() =>
       orchidORMWithAdapter(
@@ -239,22 +612,20 @@ describe('view', () => {
   });
 
   it('should reject duplicate database names across tables and materialized views', () => {
-    class UserTable extends BaseTable {
-      schema = 'custom';
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        id: t.integer().primaryKey(),
-      }));
-    }
-
-    class DuplicateUserView extends BaseTable.MaterializedView {
-      schema = 'custom';
-      readonly name = 'user';
-      columns = this.setColumns((t) => ({
+    const UserTable = defineTable('user', { schema: 'custom' }, (t) => ({
+      id: t.integer().primaryKey(),
+    }));
+    const DuplicateUserView = defineView(
+      'user',
+      {
+        schema: 'custom',
+        materialized: true,
+        sql: sql`SELECT id FROM "user"`,
+      },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "user"`;
-    }
+      }),
+    );
 
     expect(() =>
       orchidORMWithAdapter(
@@ -273,602 +644,381 @@ describe('view', () => {
     );
   });
 
-  describe('scopes', () => {
-    class ScopedActiveUserView extends BaseTable.View {
-      readonly name = 'activeUser';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        active: t.boolean(),
-      }));
+  it('should support query-defined view', () => {
+    const { defineTable, defineView } = createTableFactory();
+    const UserTable = defineTable('user', (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+      active: t.boolean(),
+    }));
+    const ActiveUserView = defineView('activeUser', (t) => ({
+      id: t.integer(),
+      name: t.text(),
+    })).query((orm) => orm.user.select('id', 'name').where({ active: true }));
 
-      scopes = this.setScopes({
-        default: (q) => q.where({ active: true }),
-        positiveId: (q) => q.where({ id: { gt: 0 } }),
-      });
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { activeUser: ActiveUserView },
+      },
+      { user: UserTable },
+    );
 
-      sql = BaseTable.sql`SELECT * FROM "schema"."user" WHERE "active"`;
-    }
+    const query = db.$views.activeUser.select('id', 'name');
 
-    const local = orchidORMWithAdapter(
+    expectSql(
+      query.toSQL(),
+      `
+        SELECT "activeUser"."id", "activeUser"."name"
+        FROM "activeUser"
+      `,
+    );
+  });
+
+  it('should require query-defined views to return a query', () => {
+    const { defineView } = createTableFactory();
+
+    defineView('activeUser', (t) => ({
+      id: t.integer(),
+    })).query(
+      // @ts-expect-error query callback must return a Query
+      () => null,
+    );
+  });
+
+  it('should support view computed column chain', () => {
+    const { defineView } = createTableFactory();
+    const UserNameView = defineView('userName', (t) => ({
+      id: t.integer(),
+      firstName: t.text(),
+      lastName: t.text(),
+    })).computed((q) => ({
+      fullName: q.computeAtRuntime(
+        ['firstName', 'lastName'],
+        (record) => `${record.firstName} ${record.lastName}`,
+      ),
+    }));
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { userName: UserNameView },
+      },
+      {},
+    );
+
+    const query = db.$views.userName.get('fullName');
+
+    expectSql(
+      query.toSQL(),
+      `
+        SELECT "userName"."firstName", "userName"."lastName"
+        FROM "userName"
+        LIMIT 1
+      `,
+    );
+  });
+
+  it('should support view scopes chain', () => {
+    const { defineView } = createTableFactory();
+    const ActiveUserView = defineView('activeUser', (t) => ({
+      id: t.integer(),
+      active: t.boolean(),
+    })).scopes({
+      active: (q) => q.where({ active: true }),
+    });
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { activeUser: ActiveUserView },
+      },
+      {},
+    );
+
+    const query = db.$views.activeUser.scope('active');
+
+    expectSql(
+      query.toSQL(),
+      `
+        SELECT *
+        FROM "activeUser"
+        WHERE ("activeUser"."active" = $1)
+      `,
+      [true],
+    );
+  });
+
+  it('should support view soft delete chain', () => {
+    const { defineView } = createTableFactory();
+    const DefaultSoftDeleteView = defineView(
+      'defaultSoftDelete',
+      { readOnly: false },
+      (t) => ({
+        id: t.integer(),
+        name: t.text(),
+        deletedAt: t.timestamp().asDate().nullable(),
+      }),
+    ).softDelete();
+    const CustomSoftDeleteView = defineView(
+      'customSoftDelete',
+      { readOnly: false },
+      (t) => ({
+        id: t.integer(),
+        name: t.text(),
+        archivedAt: t.timestamp().asDate().nullable(),
+      }),
+    ).softDelete('archivedAt');
+
+    const db = testOrchidORMWithAdapter(
       {
         adapter: testAdapter,
         views: {
-          activeUser: ScopedActiveUserView,
+          defaultSoftDelete: DefaultSoftDeleteView,
+          customSoftDelete: CustomSoftDeleteView,
         },
       },
       {},
     );
 
-    it('should have a default scope and be able to use defined scope', () => {
-      expectSql(
-        local.$views.activeUser.scope('positiveId').toSQL(),
-        `
-          SELECT * FROM "active_user" "activeUser"
-          WHERE ("activeUser"."active" = $1)
-            AND ("activeUser"."id" > $2)
-        `,
-        [true, 0],
-      );
-    });
+    const defaultQuery = db.$views.defaultSoftDelete.select(
+      'id',
+      'name',
+      'deletedAt',
+    );
+    const customQuery = db.$views.customSoftDelete.select(
+      'id',
+      'name',
+      'archivedAt',
+    );
+
+    expectSql(
+      defaultQuery.toSQL(),
+      `
+        SELECT "defaultSoftDelete"."id", "defaultSoftDelete"."name", "defaultSoftDelete"."deletedAt"
+        FROM "defaultSoftDelete"
+        WHERE ("defaultSoftDelete"."deletedAt" IS NULL)
+      `,
+    );
+    expectSql(
+      customQuery.toSQL(),
+      `
+        SELECT "customSoftDelete"."id", "customSoftDelete"."name", "customSoftDelete"."archivedAt"
+        FROM "customSoftDelete"
+        WHERE ("customSoftDelete"."archivedAt" IS NULL)
+      `,
+    );
+
+    expectSql(
+      db.$views.defaultSoftDelete.all().hardDelete().toSQL(),
+      `
+        DELETE FROM "defaultSoftDelete"
+      `,
+    );
+    expectSql(
+      db.$views.customSoftDelete.all().hardDelete().toSQL(),
+      `
+        DELETE FROM "customSoftDelete"
+      `,
+    );
   });
 
-  describe('computed', () => {
-    class ComputedActiveUserView extends BaseTable.View {
-      schema = () => 'schema';
-      readonly name = 'activeUser';
-      columns = this.setColumns((t) => ({
+  it('should support view grants chain', () => {
+    const { defineView } = createTableFactory();
+    const ActiveUserView = defineView('activeUser', (t) => ({
+      id: t.integer(),
+      name: t.text(),
+    })).grants([{ to: 'app_user', privileges: ['SELECT'] }]);
+
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { activeUser: ActiveUserView },
+      },
+      {},
+    );
+
+    expect(db.$views.activeUser.internal.tableGrants).toEqual([
+      { to: 'app_user', privileges: ['SELECT'] },
+    ]);
+  });
+
+  it('should support view init hook chain', async () => {
+    const { defineView } = createTableFactory();
+    const UserView = defineView(
+      'user',
+      { schema: 'schema', readOnly: false },
+      (t) => ({
         id: t.identity().primaryKey(),
         name: t.text(),
-        active: t.boolean(),
-      }));
+        password: t.text(),
+      }),
+    ).init((_orm, hooks) => {
+      hooks.beforeCreate(({ set }) => {
+        set({ name: 'overridden' });
+      });
+    });
 
-      computed = this.setComputed((q) => ({
-        sqlComputed: sql<string>`upper(${q.column('name')})`,
-        runtimeComputed: q.computeAtRuntime(
-          ['name', 'active'],
-          (record) => `${record.name}:${record.active}`,
+    const db = testOrchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        views: { user: UserView },
+      },
+      {},
+    );
+
+    const user = await db.$views.user.create({
+      name: 'name',
+      password: 'password',
+    });
+    expect(user.name).toBe('overridden');
+  });
+
+  describe('nameInDb', () => {
+    it('should resolve database relation names for views', () => {
+      const { defineView, sql } = createTableFactory({ snakeCase: true });
+
+      const ActiveUserView = defineView(
+        'ActiveUser',
+        { sql: sql`SELECT "id" FROM "user"` },
+        (t) => ({
+          id: t.integer(),
+        }),
+      );
+      const ExplicitView = defineView(
+        'ExplicitView',
+        { nameInDb: 'custom_views', sql: sql`SELECT "id" FROM "user"` },
+        (t) => ({
+          id: t.integer(),
+        }),
+      );
+
+      const db = testOrchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          views: {
+            activeUser: ActiveUserView,
+            explicit: ExplicitView,
+          },
+        },
+        {},
+      );
+
+      expect(db.$views.activeUser.table).toBe('ActiveUser');
+      expect(db.$views.activeUser.q.nameInDb).toBe('active_user');
+      expect(db.$views.explicit.table).toBe('ExplicitView');
+      expect(db.$views.explicit.q.nameInDb).toBe('custom_views');
+    });
+
+    it('should resolve database relation names for materialized views', () => {
+      const { defineView, sql } = createTableFactory({ snakeCase: true });
+
+      const MonthlySaleView = defineView(
+        'MonthlySale',
+        {
+          materialized: true,
+          withData: false,
+          nameInDb: 'sales_by_month',
+          sql: sql`SELECT "id" FROM "sale"`,
+        },
+        (t) => ({
+          id: t.integer(),
+        }),
+      );
+
+      const db = testOrchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          views: { monthlySale: MonthlySaleView },
+        },
+        {},
+      );
+
+      expect(db.$views.monthlySale.table).toBe('MonthlySale');
+      expect(db.$views.monthlySale.q.nameInDb).toBe('sales_by_month');
+    });
+
+    it('should render SQL with database relation names for views', () => {
+      const { defineView, sql } = createTableFactory({ snakeCase: true });
+
+      const ActiveUserView = defineView(
+        'ActiveUser',
+        { sql: sql`SELECT "id", "name" FROM "user"` },
+        (t) => ({
+          id: t.integer(),
+          name: t.text(),
+        }),
+      );
+
+      const db = testOrchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          views: { activeUser: ActiveUserView },
+        },
+        {},
+      );
+
+      expectSql(
+        db.$views.activeUser.select('id', 'name').toSQL(),
+        `
+          SELECT "ActiveUser"."id", "ActiveUser"."name"
+          FROM "active_user" "ActiveUser"
+        `,
+      );
+    });
+
+    it('should render schema-qualified SQL with database relation names for views', () => {
+      const { defineView, sql } = createTableFactory({ snakeCase: true });
+
+      const ActiveUserView = defineView(
+        'ActiveUser',
+        { schema: 'custom', sql: sql`SELECT "id" FROM "user"` },
+        (t) => ({
+          id: t.integer(),
+        }),
+      );
+
+      const db = testOrchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          views: { activeUser: ActiveUserView },
+        },
+        {},
+      );
+
+      expectSql(
+        db.$views.activeUser.select('id').toSQL(),
+        `
+          SELECT "ActiveUser"."id" FROM "custom"."active_user" "ActiveUser"
+        `,
+      );
+    });
+
+    it('should reject duplicate database names across tables and views', () => {
+      const { defineTable, defineView, sql } = createTableFactory();
+
+      const UserTable = defineTable('user', (t) => ({
+        id: t.identity().primaryKey(),
+      }));
+      const DuplicateUserView = defineView(
+        'DuplicateUser',
+        { nameInDb: 'user', sql: sql`SELECT "id" FROM "user"` },
+        (t) => ({
+          id: t.integer(),
+        }),
+      );
+
+      expect(() =>
+        testOrchidORMWithAdapter(
+          {
+            adapter: testAdapter,
+            views: { duplicateUser: DuplicateUserView },
+          },
+          { user: UserTable },
         ),
-      }));
-
-      sql = BaseTable.sql`SELECT "id", "name" FROM "schema"."user"`;
-    }
-
-    const local = orchidORMWithAdapter(
-      {
-        adapter: testAdapter,
-        views: {
-          activeUser: ComputedActiveUserView,
-        },
-      },
-      {},
-    );
-
-    it('should select computed columns', async () => {
-      await db.user.insert({ ...UserData, Active: true });
-
-      const query = local.$views.activeUser.select(
-        'sqlComputed',
-        'runtimeComputed',
+      ).toThrow(
+        'Cannot configure both a table and a view for database relation user',
       );
-
-      const res = await query;
-
-      assertType<
-        typeof res,
-        { sqlComputed: string; runtimeComputed: string }[]
-      >();
-
-      expectSql(
-        query.toSQL(),
-        `
-          SELECT (upper("activeUser"."name")) "sqlComputed",
-            "activeUser"."name",
-            "activeUser"."active"
-          FROM "schema"."active_user" "activeUser"
-        `,
-      );
-
-      expect(res).toEqual([
-        {
-          sqlComputed: 'NAME',
-          runtimeComputed: 'name:true',
-        },
-      ]);
-    });
-  });
-
-  describe('relations', () => {
-    it('should select belongsTo relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({ rel: (q) => q.user.select('Id') })
-          .toSQL(),
-        `
-          SELECT row_to_json("rel".*) "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT "user"."id" "Id"
-            FROM "schema"."user"
-            WHERE "user"."id" = "activeUser"."id"
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should select hasOne relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({ rel: (q) => q.profile.select('Id') })
-          .toSQL(),
-        `
-          SELECT row_to_json("rel".*) "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT "profile"."id" "Id"
-            FROM "schema"."profile"
-            WHERE "profile"."user_id" = "activeUser"."id"
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should select hasOne through relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({
-            rel: (q) => q.profilePic.select('Id'),
-          })
-          .toSQL(),
-        `
-          SELECT row_to_json("rel".*) "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT "profilePic"."id" "Id"
-            FROM "schema"."profilePic"
-            WHERE EXISTS (
-              SELECT 1 FROM "schema"."profile"
-              WHERE "profilePic"."profile_id" = "profile"."id"
-                AND "profilePic"."profile_pic_key" = "profile"."profile_key"
-                AND "profile"."user_id" = "activeUser"."id"
-            )
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should select hasMany relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({ rel: (q) => q.profiles.select('Id') })
-          .toSQL(),
-        `
-          SELECT COALESCE("rel"."rel", '[]') "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "rel"
-            FROM (
-              SELECT "profiles"."id" "Id"
-              FROM "schema"."profile" "profiles"
-              WHERE "profiles"."user_id" = "activeUser"."id"
-            ) "t"
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should select hasMany through relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({ rel: (q) => q.posts.select('Id') })
-          .toSQL(),
-        `
-          SELECT COALESCE("rel"."rel", '[]') "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "rel"
-            FROM (
-              SELECT "posts"."id" "Id"
-              FROM "schema"."post" "posts"
-              WHERE EXISTS (
-                SELECT 1 FROM "schema"."user"
-                WHERE "posts"."user_id" = "user"."id"
-                  AND "posts"."title" = "user"."user_key"
-                  AND "user"."id" = "activeUser"."id"
-              )
-            ) "t"
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should select hasAndBelongsToMany relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({
-            rel: (q) => q.chats.select('IdOfChat'),
-          })
-          .toSQL(),
-        `
-          SELECT COALESCE("rel"."rel", '[]') "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT json_agg(row_to_json(t.*)) "rel"
-            FROM (
-              SELECT "chats"."id_of_chat" "IdOfChat"
-              FROM "schema"."chat" "chats"
-              WHERE EXISTS (
-                SELECT 1 FROM "schema"."chatUser"
-                WHERE "chatUser"."chat_id" = "chats"."id_of_chat"
-                  AND "chatUser"."user_id" = "activeUser"."id"
-              )
-            ) "t"
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should select view to view relation from a view', () => {
-      expectSql(
-        db.$views.activeUser
-          .select({
-            rel: (q) => q.writableActiveUser.select('id'),
-          })
-          .toSQL(),
-        `
-          SELECT row_to_json("rel".*) "rel"
-          FROM "schema"."activeUser"
-          LEFT JOIN LATERAL (
-            SELECT "writableActiveUser"."id"
-            FROM "schema"."activeUser" "writableActiveUser"
-            WHERE "writableActiveUser"."id" = "activeUser"."id"
-          ) "rel" ON true
-        `,
-      );
-    });
-
-    it('should chain a relation from a view', () => {
-      expectSql(
-        db.$views.activeUser.chain('profile').select('Id').toSQL(),
-        `
-          SELECT "profile"."id" "Id"
-          FROM "schema"."profile"
-          WHERE EXISTS (
-            SELECT 1 FROM "schema"."activeUser"
-            WHERE "activeUser"."id" = "profile"."user_id"
-          )
-        `,
-      );
-    });
-
-    it('should select and chain a relation from a table to a view', () => {
-      class LocalActiveUserView extends BaseTable.View {
-        readonly name = 'activeUser';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-        }));
-
-        sql = BaseTable.sql`SELECT "id" FROM "schema"."user"`;
-      }
-
-      class MissingUserTable extends BaseTable {
-        readonly table = 'missingUser';
-        columns = this.setColumns((t) => ({
-          Id: t.name('id').identity().primaryKey(),
-        }));
-
-        relations = {
-          activeUser: this.hasOne(() => LocalActiveUserView, {
-            columns: ['Id'],
-            references: ['id'],
-          }),
-        };
-      }
-
-      const local = orchidORMWithAdapter(
-        {
-          adapter: testAdapter,
-          views: {
-            activeUser: LocalActiveUserView,
-          },
-        },
-        {
-          missingUser: MissingUserTable,
-        },
-      );
-
-      expectSql(
-        local.missingUser
-          .select({ activeUser: (q) => q.activeUser.select('id') })
-          .toSQL(),
-        `
-          SELECT row_to_json("activeUser".*) "activeUser"
-          FROM "missing_user" "missingUser"
-          LEFT JOIN LATERAL (
-            SELECT "activeUser"."id"
-            FROM "active_user" "activeUser"
-            WHERE "activeUser"."id" = "missingUser"."id"
-          ) "activeUser" ON true
-        `,
-      );
-
-      expectSql(
-        local.missingUser.chain('activeUser').select('id').toSQL(),
-        `
-          SELECT "activeUser"."id"
-          FROM "active_user" "activeUser"
-          WHERE EXISTS (
-            SELECT 1 FROM "missing_user" "missingUser"
-            WHERE "missingUser"."id" = "activeUser"."id"
-          )
-        `,
-      );
-    });
-
-    it('should select and chain relations across materialized views', () => {
-      class LocalUserTable extends BaseTable {
-        readonly table = 'user';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-        }));
-
-        relations = {
-          activeUser: this.hasOne(() => LocalActiveUserView, {
-            columns: ['id'],
-            references: ['id'],
-          }),
-        };
-      }
-
-      class LocalActiveUserView extends BaseTable.MaterializedView {
-        readonly name = 'activeUser';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-        }));
-
-        relations = {
-          user: this.belongsTo(() => LocalUserTable, {
-            columns: ['id'],
-            references: ['id'],
-          }),
-        };
-
-        sql = BaseTable.sql`SELECT "id" FROM "user"`;
-      }
-
-      const local = orchidORMWithAdapter(
-        {
-          adapter: testAdapter,
-          views: {
-            activeUser: LocalActiveUserView,
-          },
-        },
-        {
-          user: LocalUserTable,
-        },
-      );
-
-      expectSql(
-        local.user
-          .select({ activeUser: (q) => q.activeUser.select('id') })
-          .toSQL(),
-        `
-          SELECT row_to_json("activeUser".*) "activeUser"
-          FROM "user"
-          LEFT JOIN LATERAL (
-            SELECT "activeUser"."id"
-            FROM "active_user" "activeUser"
-            WHERE "activeUser"."id" = "user"."id"
-          ) "activeUser" ON true
-        `,
-      );
-
-      expectSql(
-        local.$views.activeUser.chain('user').select('id').toSQL(),
-        `
-          SELECT "user"."id"
-          FROM "user"
-          WHERE EXISTS (
-            SELECT 1 FROM "active_user" "activeUser"
-            WHERE "activeUser"."id" = "user"."id"
-          )
-        `,
-      );
-    });
-  });
-
-  describe('nested writes', () => {
-    const readOnlyError = CannotMutateReadOnlyTableError;
-
-    class LocalActiveUserView extends BaseTable.View {
-      readonly name = 'activeUser';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-      }));
-
-      sql = BaseTable.sql`SELECT "id", "name", "password" FROM "schema"."user"`;
-    }
-
-    class LocalWritableActiveUserView extends BaseTable.View {
-      readonly id = 'writableActiveUser';
-      readonly name = 'activeUser';
-      readonly readOnly = false;
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-      }));
-
-      sql = BaseTable.sql`SELECT "id", "name", "password" FROM "schema"."user"`;
-    }
-
-    class LocalProfileTable extends BaseTable {
-      readonly table = 'profile';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        activeUserId: t.integer().nullable(),
-        writableActiveUserId: t.integer().nullable(),
-        bio: t.text().nullable(),
-      }));
-
-      relations = {
-        writableActiveUser: this.belongsTo(() => LocalWritableActiveUserView, {
-          columns: ['writableActiveUserId'],
-          references: ['id'],
-        }),
-        activeUser: this.belongsTo(() => LocalActiveUserView, {
-          columns: ['activeUserId'],
-          references: ['id'],
-        }),
-      };
-    }
-
-    const local = orchidORMWithAdapter(
-      {
-        adapter: testAdapter,
-        schema: () => 'schema',
-        views: {
-          writableActiveUser: LocalWritableActiveUserView,
-          activeUser: LocalActiveUserView,
-        },
-      },
-      {
-        profile: LocalProfileTable,
-      },
-    );
-
-    it('should support nested create of a writable view from a table', () => {
-      const query = local.profile.create({
-        bio: 'bio',
-        writableActiveUser: {
-          create: {
-            name: 'name',
-            password: 'password',
-          },
-        },
-      });
-
-      expectSql(
-        query.toSQL(),
-        `
-          WITH "q" AS (
-            INSERT INTO "schema"."active_user" AS "writableActiveUser"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "writableActiveUser"."id"
-          )
-          INSERT INTO "schema"."profile"("bio", "writable_active_user_id")
-          VALUES ($3, (SELECT "q"."id" FROM "q"))
-          RETURNING "id", "active_user_id" "activeUserId",
-            "writable_active_user_id" "writableActiveUserId", "bio"
-        `,
-        ['name', 'password', 'bio'],
-      );
-    });
-
-    it('should reject nested create of a read-only view from a table', () => {
-      expect(() =>
-        local.profile.create({
-          bio: 'bio',
-          // @ts-expect-error read-only view relation cannot create
-          activeUser: {
-            create: {
-              name: 'name',
-              password: 'password',
-            },
-          },
-        }),
-      ).toThrow(readOnlyError);
-    });
-
-    it('should support nested update of a writable view from a table', () => {
-      const query = local.profile.find(1).update({
-        writableActiveUser: {
-          update: {
-            name: 'updated',
-          },
-        },
-      });
-
-      expectSql(
-        query.toSQL(),
-        `
-          WITH q AS (
-            SELECT count(*),
-              "profile"."writable_active_user_id" "writableActiveUserId"
-            FROM "schema"."profile"
-            WHERE "profile"."id" = $1
-          ), "q2" AS (
-            UPDATE "schema"."active_user" "writableActiveUser"
-            SET "name" = $2
-            WHERE "writableActiveUser"."id" IN (
-              SELECT "q"."writableActiveUserId" FROM "q"
-            )
-            RETURNING NULL
-          )
-          SELECT * FROM q
-        `,
-        [1, 'updated'],
-      );
-    });
-
-    it('should reject nested update of a read-only view from a table', () => {
-      expect(() =>
-        local.profile.find(1).update({
-          activeUser: {
-            // @ts-expect-error read-only view relation cannot update
-            update: {
-              name: 'updated',
-            },
-          },
-        }),
-      ).toThrow(readOnlyError);
-    });
-
-    it('should support nested delete of a writable view from a table', () => {
-      const query = local.profile.find(1).update({
-        writableActiveUser: {
-          delete: true,
-        },
-      });
-
-      expectSql(
-        query.toSQL(),
-        `
-          WITH "q" AS (
-            SELECT DISTINCT
-              "profile"."writable_active_user_id" "writableActiveUserId"
-            FROM "schema"."profile"
-            WHERE "profile"."id" = $1
-          ), q2 AS (
-            UPDATE "schema"."profile"
-            SET "writable_active_user_id" = $2
-            WHERE "profile"."writable_active_user_id" IN (
-              SELECT "q"."writableActiveUserId" FROM "q"
-            )
-            RETURNING "profile"."writable_active_user_id" "writableActiveUserId"
-          ), "q3" AS (
-            DELETE FROM "schema"."active_user" "writableActiveUser"
-            WHERE "writableActiveUser"."id" IN (
-              SELECT "q"."writableActiveUserId" FROM "q"
-            )
-            RETURNING NULL
-          )
-          SELECT * FROM q2
-        `,
-        [1, null],
-      );
-    });
-
-    it('should reject nested delete of a read-only view from a table', () => {
-      expect(() =>
-        local.profile.find(1).update({
-          activeUser: {
-            // @ts-expect-error read-only view relation cannot delete
-            delete: true,
-          },
-        }),
-      ).toThrow(readOnlyError);
     });
   });
 });

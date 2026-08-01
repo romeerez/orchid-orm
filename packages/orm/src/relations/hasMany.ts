@@ -35,8 +35,12 @@ import {
   RawSql,
   _hookSelectColumns,
   _queryInsertMany,
+  _queryInsertManyFrom,
+  _querySelect,
+  _queryTake,
   _clone,
   _appendQuery,
+  _appendQueryOnUpsertCreate,
   _queryUpsert,
   internalSchemaConfig,
 } from 'pqb/internal';
@@ -60,7 +64,7 @@ import {
 } from './common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from './common/options';
 import { HasOneOptions, HasOneParams, HasOneQueryThrough } from './hasOne';
-import { ORMTableInput } from '../orm-table/base-table';
+import { ORMTableInput } from '../orm-table/legacy-table';
 import { joinQueryChainHOF } from './common/joinQueryChain';
 
 export interface HasMany extends RelationThunkBase {
@@ -100,7 +104,7 @@ export interface HasManyInfo<
   omitForeignKeyInCreate: never;
   dataForCreate: {
     [K in Name]?: Q extends Query.Pick.IsNotReadOnly
-      ? T['relations'][Name]['options'] extends RelationThroughOptions
+      ? Rel['options'] extends RelationThroughOptions
         ? never
         : {
             // create related records
@@ -268,9 +272,70 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
       }
 
       let createAs: string | undefined;
+      let createWhereExists: RawSql | undefined;
+      let createSelectAs: RecordUnknown | undefined;
+      let createAliasedPrimaryKeys: string[] | undefined;
+      let upsertCreateAs: string | undefined;
       let connectAs: string | undefined;
       let connectOrCreateAs: string | undefined;
+
+      // In upsert create, relation FKs point to the parent create CTE.
+      // The CTE alias and selected parent PK aliases are provided by separate callbacks.
+      const setUpsertCreatePlaceholders = () => {
+        if (!upsertCreateAs || !createAliasedPrimaryKeys) return;
+
+        const aliasedPrimaryKeys = createAliasedPrimaryKeys;
+
+        if (createWhereExists) {
+          createWhereExists._sql = `EXISTS (SELECT 1 FROM "${upsertCreateAs}")`;
+        }
+
+        if (createSelectAs) {
+          foreignKeys.forEach((key, keyI) => {
+            ((createSelectAs as RecordUnknown)[key] as RawSql)._sql =
+              selectCteColumnFromManySql(
+                upsertCreateAs as string,
+                aliasedPrimaryKeys[keyI],
+                0,
+                1,
+              );
+          });
+        }
+
+        if (connect) {
+          foreignKeys.forEach((key, keyI) => {
+            const primaryKey = aliasedPrimaryKeys[keyI];
+            for (let i = 0; i < connect.items.length; i++) {
+              (connect.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  upsertCreateAs as string,
+                  primaryKey,
+                  connect.indexes[i],
+                  count,
+                );
+            }
+          });
+        }
+
+        if (connectOrCreate) {
+          foreignKeys.forEach((key, keyI) => {
+            const primaryKey = aliasedPrimaryKeys[keyI];
+            for (let i = 0; i < connectOrCreate.items.length; i++) {
+              (connectOrCreate.items[i][key] as RawSql)._sql =
+                selectCteColumnFromManySql(
+                  upsertCreateAs as string,
+                  primaryKey,
+                  connectOrCreate.indexes[i],
+                  count,
+                );
+            }
+          });
+        }
+      };
+
       _hookSelectColumns(querySelf, primaryKeys, (aliasedPrimaryKeys) => {
+        createAliasedPrimaryKeys = aliasedPrimaryKeys;
+
         foreignKeys.forEach((key, keyI) => {
           const primaryKey = aliasedPrimaryKeys[keyI];
 
@@ -313,29 +378,80 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
             }
           }
         });
+
+        setUpsertCreatePlaceholders();
       });
 
       const { create, connect, connectOrCreate } = nestedCreateItems;
 
       if (create) {
-        const query = _queryInsertMany(
-          _clone(rel) as unknown as CreateSelf,
-          create.items.flat() as never,
-        ) as unknown as Query;
+        let query: Query;
+        if (querySelf.q.type === 'upsert') {
+          createWhereExists = new RawSql('');
+          createSelectAs = {};
+          for (const key of foreignKeys) {
+            createSelectAs[key] = new RawSql('');
+          }
 
-        _appendQuery(querySelf, query, (as) => (createAs = as));
+          const sourceQuery = _queryWhere(
+            _queryTake(_querySelect(_clone(rel.qb), [createSelectAs as never])),
+            [createWhereExists] as never,
+          );
+
+          // Plain INSERT ... VALUES cannot render a WHERE guard, so upsert
+          // nested create uses INSERT ... SELECT FROM a guarded one-row query.
+          query = _queryInsertManyFrom(
+            _clone(rel) as unknown as CreateSelf,
+            sourceQuery as never,
+            create.items.flat() as never,
+          ) as unknown as Query;
+        } else {
+          query = _queryInsertMany(
+            _clone(rel) as unknown as CreateSelf,
+            create.items.flat() as never,
+          ) as unknown as Query;
+        }
+
+        if (querySelf.q.type === 'upsert') {
+          _appendQueryOnUpsertCreate(querySelf, query, (as) => {
+            upsertCreateAs = as;
+            setUpsertCreatePlaceholders();
+          });
+        } else {
+          _appendQuery(querySelf, query, (as) => (createAs = as));
+        }
       }
 
       if (connect) {
         connect.values.forEach((value, i) => {
+          const connectWhereExists =
+            querySelf.q.type === 'upsert' ? new RawSql('') : undefined;
+
           const query = _queryUpdateOrThrow(
             rel.whereOneOf(...(value as never[])) as never,
             connect.items[i] as never,
           ) as Query;
 
+          if (connectWhereExists) {
+            // Only run nested connect when the parent upsert actually created a row.
+            _queryWhere(query, [connectWhereExists] as never);
+          }
+
           query.q.ensureCount = value.length;
 
-          _appendQuery(querySelf, query, (as) => (connectAs = as));
+          const appendQuery =
+            querySelf.q.type === 'upsert'
+              ? _appendQueryOnUpsertCreate
+              : _appendQuery;
+
+          appendQuery(querySelf, query, (as) => {
+            upsertCreateAs = as;
+            setUpsertCreatePlaceholders();
+            connectAs = as;
+            if (connectWhereExists) {
+              connectWhereExists._sql = `EXISTS (SELECT 1 FROM "${as}")`;
+            }
+          });
         });
       }
 
@@ -343,6 +459,21 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
         connectOrCreate.values.forEach((array, i) => {
           const foreignKeyValues = connectOrCreate.items[i];
           for (const value of array as NestedInsertOneItemConnectOrCreate[]) {
+            const connectOrCreateWhereExists =
+              querySelf.q.type === 'upsert' ? new RawSql('') : undefined;
+            const connectOrCreateSelectAs: RecordUnknown = {};
+            if (connectOrCreateWhereExists) {
+              for (const key of foreignKeys) {
+                const value = foreignKeyValues[key] as RawSql;
+                // These RawSql placeholders are selected by the insertFrom
+                // source query, so select parsing needs the target column type.
+                value.result = {
+                  value: rel.qb.shape[key],
+                };
+                connectOrCreateSelectAs[key] = value;
+              }
+            }
+
             const query = _queryUpsert(rel.where(value.where) as never, {
               update: foreignKeyValues,
               create: {
@@ -351,7 +482,58 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
               },
             });
 
-            _appendQuery(querySelf, query, (as) => (connectOrCreateAs = as));
+            if (connectOrCreateWhereExists) {
+              // Guard the update half of child upsert with the parent create CTE.
+              _queryWhere(query, [connectOrCreateWhereExists] as never);
+
+              // The insert half of child upsert ignores the update query WHERE.
+              // Move relation FKs into an insertFrom source that becomes empty
+              // when the parent create CTE is empty.
+              const guardQuery = _queryWhere(
+                _queryTake(
+                  _querySelect(_clone(rel.qb), [{ one: new RawSql('1') }]),
+                ),
+                [connectOrCreateWhereExists] as never,
+              );
+
+              const sourceQuery = _querySelect(
+                (_clone(rel.qb) as Query).from(guardQuery as never),
+                [connectOrCreateSelectAs as never],
+              );
+
+              const q = query.q;
+              const columns = q.columns || [];
+              const foreignKeysSet = new Set(foreignKeys);
+              // FK columns now come from sourceQuery; keep user-provided insert
+              // columns after them so INSERT column order matches SELECT output.
+              q.columns = [
+                ...foreignKeys,
+                ...columns.filter((column) => !foreignKeysSet.has(column)),
+              ];
+              // Drop FK values from VALUES; their values are selected from
+              // sourceQuery, while the remaining row data still comes from VALUES.
+              q.values = q.values.map((row) =>
+                row.filter((_, i) => !foreignKeysSet.has(columns[i])),
+              );
+              // Tells insert SQL how many leading columns are produced by
+              // sourceQuery before appending the remaining VALUES columns.
+              q.queryColumnsCount = foreignKeys.length;
+              q.insertFrom = prepareSubQueryForSql(query, sourceQuery as never);
+            }
+
+            const appendQuery =
+              querySelf.q.type === 'upsert'
+                ? _appendQueryOnUpsertCreate
+                : _appendQuery;
+
+            appendQuery(querySelf, query, (as) => {
+              upsertCreateAs = as;
+              setUpsertCreatePlaceholders();
+              connectOrCreateAs = as;
+              if (connectOrCreateWhereExists) {
+                connectOrCreateWhereExists._sql = `EXISTS (SELECT 1 FROM "${as}")`;
+              }
+            });
           }
         });
       }
@@ -413,7 +595,8 @@ export const makeHasManyMethod = (
   const relPKeys = getPrimaryKeys(query);
 
   if ('through' in relation.options) {
-    const { through, source } = relation.options;
+    const { through, source, on } = relation.options;
+    if (on) _queryWhere(query, [on]);
 
     const throughRelation = getThroughRelation(table, through);
     const sourceRelation = getSourceRelation(throughRelation, source);

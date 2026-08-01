@@ -180,8 +180,8 @@ Create this `change` function using `createMigrationChangeFn`:
 import { createMigrationChangeFn } from 'orchid-orm/migrations';
 
 export const change = createMigrationChangeFn({
-  // optional, to support custom column types defined in your BaseTable in migrations:
-  columnTypes: BaseTable.columnTypes,
+  // optional, to support custom column types defined in your table factory in migrations:
+  columnTypes: defineTable.types,
 });
 ```
 

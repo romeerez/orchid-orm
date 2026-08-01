@@ -1,4 +1,4 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
 import { TableData, colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
@@ -15,7 +15,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('indexes', () => {
-  const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   const columnOptions: TableData.Index.ColumnOptions = {
     collate: 'C',
@@ -72,7 +72,7 @@ describe('indexes', () => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.geography
             .point()
             .nullable()
@@ -97,7 +97,7 @@ describe('indexes', () => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t
             .array(t.integer())
             .nullable()
@@ -135,19 +135,19 @@ describe('indexes', () => {
         },
       },
       tables: [
-        table(
+        defineTable(
+          'inSchemaTable',
+          { schema: 'schema', noPrimaryKey: true, nameInDb: 'inSchemaTable' },
           (t) => ({
             naMe: t.text(),
           }),
-          undefined,
-          { name: 'schema.inSchemaTable' },
         ),
-        table(
+        defineTable(
+          'publicTable',
+          { noPrimaryKey: true, nameInDb: 'publicTable' },
           (t) => ({
             naMe: t.text(),
           }),
-          undefined,
-          { name: 'publicTable' },
         ),
       ],
     });
@@ -165,7 +165,7 @@ describe('indexes', () => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t
             .text()
             .index({
@@ -230,7 +230,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           nUm: t
             .integer()
             .index({ using: 'BtReE' })
@@ -275,7 +275,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t.text(),
         })),
       ],
@@ -323,7 +323,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t
             .text()
             .index({ name: 'to' })
@@ -370,7 +370,7 @@ ${yellow('~ rename constraint')} on table table: exclude_from ${yellow(
         );
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t
             .text()
             .index({
@@ -398,7 +398,7 @@ ${yellow('~ rename constraint')} on table table: exclude_from ${yellow(
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t
             .text()
             .index({ ...indexOptions, unique: false })
@@ -465,31 +465,27 @@ change(async (db) => {
         }));
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.integer(),
-            naMe: t.text(),
-          }),
-          (t) => [
-            t.unique(
-              [
-                'iD',
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                },
-              ],
-              indexOptions,
-            ),
-            t.exclude(
-              [
-                { column: 'iD', with: '=' },
-                { column: 'naMe', with: '=' },
-              ],
-              excludeOptions,
-            ),
-          ],
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer(),
+          naMe: t.text(),
+        }))
+          .unique(
+            [
+              'iD',
+              {
+                column: 'naMe',
+                ...columnOptions,
+              },
+            ],
+            indexOptions,
+          )
+          .exclude(
+            [
+              { column: 'iD', with: '=' },
+              { column: 'naMe', with: '=' },
+            ],
+            excludeOptions,
+          ),
       ],
     });
 
@@ -563,7 +559,7 @@ change(async (db) => {
         );
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.integer(),
           naMe: t.text(),
         })),
@@ -641,35 +637,31 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.integer(),
-            naMe: t.text(),
-          }),
-          (t) => [
-            t.unique(
-              [
-                'iD',
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                },
-              ],
-              indexOptions,
-            ),
-            t.exclude(
-              [
-                { column: 'iD', with: '=' },
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                  with: '=',
-                },
-              ],
-              excludeOptions,
-            ),
-          ],
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer(),
+          naMe: t.text(),
+        }))
+          .unique(
+            [
+              'iD',
+              {
+                column: 'naMe',
+                ...columnOptions,
+              },
+            ],
+            indexOptions,
+          )
+          .exclude(
+            [
+              { column: 'iD', with: '=' },
+              {
+                column: 'naMe',
+                ...columnOptions,
+                with: '=',
+              },
+            ],
+            excludeOptions,
+          ),
       ],
     });
 
@@ -704,35 +696,31 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.integer(),
-            naMe: t.text(),
-          }),
-          (t) => [
-            t.unique(
-              [
-                'iD',
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                },
-              ],
-              indexOptions,
-            ),
-            t.exclude(
-              [
-                { column: 'iD', with: '=' },
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                  with: '=',
-                },
-              ],
-              { ...excludeOptions, include: [] },
-            ),
-          ],
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer(),
+          naMe: t.text(),
+        }))
+          .unique(
+            [
+              'iD',
+              {
+                column: 'naMe',
+                ...columnOptions,
+              },
+            ],
+            indexOptions,
+          )
+          .exclude(
+            [
+              { column: 'iD', with: '=' },
+              {
+                column: 'naMe',
+                ...columnOptions,
+                with: '=',
+              },
+            ],
+            { ...excludeOptions, include: [] },
+          ),
       ],
     });
 
@@ -822,18 +810,14 @@ change(async (db) => {
         }));
       },
       tables: [
-        table(
-          (t) => ({
-            listId: t.integer(),
-            position: t.integer(),
-          }),
-          (t) =>
-            t.unique(['listId', 'position'], {
-              name: 'table_position_key',
-              nullsNotDistinct: true,
-              deferrable: 'deferred',
-            }),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          listId: t.integer(),
+          position: t.integer(),
+        })).unique(['listId', 'position'], {
+          name: 'table_position_key',
+          nullsNotDistinct: true,
+          deferrable: 'deferred',
+        }),
       ],
     });
 
@@ -877,7 +861,7 @@ change(async (db) => {
         );
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           listId: t.integer(),
           position: t.integer(),
         })),
@@ -923,18 +907,14 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            listId: t.integer(),
-            position: t.integer(),
-          }),
-          (t) =>
-            t.unique(['listId', 'position'], {
-              name: 'table_position_key',
-              nullsNotDistinct: true,
-              deferrable: 'immediate',
-            }),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          listId: t.integer(),
+          position: t.integer(),
+        })).unique(['listId', 'position'], {
+          name: 'table_position_key',
+          nullsNotDistinct: true,
+          deferrable: 'immediate',
+        }),
       ],
     });
 
@@ -984,17 +964,13 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            listId: t.integer(),
-            position: t.integer(),
-          }),
-          (t) =>
-            t.unique(['listId', 'position'], {
-              name: 'table_position_key',
-              deferrable: 'deferred',
-            }),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          listId: t.integer(),
+          position: t.integer(),
+        })).unique(['listId', 'position'], {
+          name: 'table_position_key',
+          deferrable: 'deferred',
+        }),
       ],
     });
 
@@ -1042,17 +1018,13 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            listId: t.integer(),
-            position: t.integer(),
-          }),
-          (t) =>
-            t.unique(['listId', 'position'], {
-              name: 'table_position_key',
-              deferrable: false,
-            }),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          listId: t.integer(),
+          position: t.integer(),
+        })).unique(['listId', 'position'], {
+          name: 'table_position_key',
+          deferrable: false,
+        }),
       ],
     });
 
@@ -1088,35 +1060,31 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.integer(),
-            naMe: t.text(),
-          }),
-          (t) => [
-            t.unique(
-              [
-                'iD',
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                },
-              ],
-              { ...indexOptions, name: 'to' },
-            ),
-            t.exclude(
-              [
-                { column: 'iD', with: '=' },
-                {
-                  column: 'naMe',
-                  ...columnOptions,
-                  with: '=',
-                },
-              ],
-              { ...excludeOptions, name: 'exclude_to' },
-            ),
-          ],
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer(),
+          naMe: t.text(),
+        }))
+          .unique(
+            [
+              'iD',
+              {
+                column: 'naMe',
+                ...columnOptions,
+              },
+            ],
+            { ...indexOptions, name: 'to' },
+          )
+          .exclude(
+            [
+              { column: 'iD', with: '=' },
+              {
+                column: 'naMe',
+                ...columnOptions,
+                with: '=',
+              },
+            ],
+            { ...excludeOptions, name: 'exclude_to' },
+          ),
       ],
     });
 
@@ -1145,7 +1113,7 @@ ${yellow('~ rename constraint')} on table table: exclude_from ${yellow(
         await db.createTable('table', { noPrimaryKey: true });
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t.text().index().exclude('='),
         })),
       ],
@@ -1175,7 +1143,7 @@ change(async (db) => {
           naMe: t.text().index().exclude('='),
         }));
       },
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();
@@ -1203,7 +1171,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t.text().index().exclude('='),
         })),
       ],
@@ -1236,7 +1204,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           tO: t.text().index().exclude('='),
         })),
       ],
@@ -1278,7 +1246,7 @@ ${yellow('~ rename constraint')} on table table: table_fr_om_exclude ${yellow(
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t
             .text()
             .index({ nullsNotDistinct: true })
@@ -1322,7 +1290,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.text().index().exclude('='),
         })),
       ],
@@ -1391,43 +1359,39 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.integer(),
-            naMe: t.text(),
-            actIve: t.boolean(),
-          }),
-          (t) => [
-            t.index(
-              [
-                {
-                  expression: `'first'||i_d||na_me||act_ive`,
-                },
-              ],
-              {
-                name: 'first',
-                where: `na_me='first'`,
-              },
-            ),
-            t.index(
-              [
-                {
-                  expression: `'second'||i_d||na_me||act_ive`,
-                },
-              ],
-              {
-                name: 'second',
-                where: `na_me='second'`,
-              },
-            ),
-            t.exclude([
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer(),
+          naMe: t.text(),
+          actIve: t.boolean(),
+        }))
+          .index(
+            [
               {
                 expression: `'first'||i_d||na_me||act_ive`,
-                with: '=',
               },
-            ]),
-          ],
-        ),
+            ],
+            {
+              name: 'first',
+              where: `na_me='first'`,
+            },
+          )
+          .index(
+            [
+              {
+                expression: `'second'||i_d||na_me||act_ive`,
+              },
+            ],
+            {
+              name: 'second',
+              where: `na_me='second'`,
+            },
+          )
+          .exclude([
+            {
+              expression: `'first'||i_d||na_me||act_ive`,
+              with: '=',
+            },
+          ]),
       ],
     });
 
@@ -1454,15 +1418,11 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            colUmn: t.enum('numbers', ['one', 'two', 'three']),
-          }),
-          (t) =>
-            t.unique(['colUmn'], {
-              where: `(col_umn = 'one'::"numbers")`,
-            }),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.enum('numbers', ['one', 'two', 'three']),
+        })).unique(['colUmn'], {
+          where: `(col_umn = 'one'::"numbers")`,
+        }),
       ],
     });
 
@@ -1499,29 +1459,25 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            aA: t.text(),
-            bB: t.text(),
-            cC: t.text(),
-          }),
-          (t) => [
-            t.index(
-              [
-                {
-                  expression: `a_a||c_c||b_b`,
-                },
-              ],
-              { name: 'idx' },
-            ),
-            t.exclude([
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+          cC: t.text(),
+        }))
+          .index(
+            [
               {
                 expression: `a_a||c_c||b_b`,
-                with: '=',
               },
-            ]),
-          ],
-        ),
+            ],
+            { name: 'idx' },
+          )
+          .exclude([
+            {
+              expression: `a_a||c_c||b_b`,
+              with: '=',
+            },
+          ]),
       ],
     });
 
@@ -1601,13 +1557,10 @@ change(async (db) => {
           );
         },
         tables: [
-          table(
-            (t) => ({
-              titLe: t.text(),
-              boDy: t.text(),
-            }),
-            (t) => t.searchIndex(['titLe', 'boDy']),
-          ),
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
+            titLe: t.text(),
+            boDy: t.text(),
+          })).searchIndex(['titLe', 'boDy']),
         ],
       });
 
@@ -1634,17 +1587,13 @@ change(async (db) => {
           );
         },
         tables: [
-          table(
-            (t) => ({
-              titLe: t.text(),
-              boDy: t.text(),
-            }),
-            (t) =>
-              t.searchIndex([
-                { column: 'titLe', weight: 'A' },
-                { column: 'boDy', weight: 'B' },
-              ]),
-          ),
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
+            titLe: t.text(),
+            boDy: t.text(),
+          })).searchIndex([
+            { column: 'titLe', weight: 'A' },
+            { column: 'boDy', weight: 'B' },
+          ]),
         ],
       });
 
@@ -1668,14 +1617,11 @@ change(async (db) => {
           );
         },
         tables: [
-          table(
-            (t) => ({
-              titLe: t.text(),
-              boDy: t.text(),
-              lang: t.type('regconfig'),
-            }),
-            (t) => t.searchIndex(['titLe', 'boDy'], { languageColumn: 'lang' }),
-          ),
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
+            titLe: t.text(),
+            boDy: t.text(),
+            lang: t.type('regconfig'),
+          })).searchIndex(['titLe', 'boDy'], { languageColumn: 'lang' }),
         ],
       });
 
@@ -1688,26 +1634,22 @@ change(async (db) => {
   it('should compact long index and exclude names', async () => {
     await arrange({
       tables: [
-        class Table extends BaseTable {
-          table = 'reallyLongTableNameConsistingOfSeveralWords';
-          noPrimaryKey = true;
-          columns = this.setColumns(
-            (t) => ({
-              longNameForTheFirstColumn: t.integer(),
-              longNameForTheSecondColumn: t.integer(),
-            }),
-            (t) => [
-              t.unique([
-                'longNameForTheFirstColumn',
-                'longNameForTheSecondColumn',
-              ]),
-              t.exclude([
-                { column: 'longNameForTheFirstColumn', with: '=' },
-                { column: 'longNameForTheSecondColumn', with: '=' },
-              ]),
-            ],
-          );
-        },
+        defineTable(
+          'reallyLongTableNameConsistingOfSeveralWords',
+          {
+            nameInDb: 'really_long_table_name_consisting_of_several_words',
+            noPrimaryKey: true,
+          },
+          (t) => ({
+            longNameForTheFirstColumn: t.integer(),
+            longNameForTheSecondColumn: t.integer(),
+          }),
+        )
+          .unique(['longNameForTheFirstColumn', 'longNameForTheSecondColumn'])
+          .exclude([
+            { column: 'longNameForTheFirstColumn', with: '=' },
+            { column: 'longNameForTheSecondColumn', with: '=' },
+          ]),
       ],
     });
 

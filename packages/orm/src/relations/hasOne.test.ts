@@ -11,7 +11,8 @@ import { orchidORMWithAdapter } from '../orm';
 import {
   UserDefaultSelect,
   Profile,
-  BaseTable,
+  defineTable,
+  testOrchidORMWithAdapter,
   db,
   assertType,
   expectSql,
@@ -22,7 +23,7 @@ import {
   UserSelectAll,
   ProfileSelectAll,
 } from 'test-utils';
-import { createBaseTable } from '../orm-table/base-table';
+import { createTableFactory } from '../orm-table/table';
 
 const ormParams = {
   db: db.$qb,
@@ -46,46 +47,30 @@ const useMultiQueryNestedCreate = () => {
 
 describe('hasOne', () => {
   it('should define foreign keys under autoForeignKeys option', () => {
-    const BaseTable = createBaseTable({
+    const { defineTable } = createTableFactory({
       autoForeignKeys: {
         onUpdate: 'CASCADE',
       },
     });
 
-    class UserTable extends BaseTable {
-      table = 'user';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
+    const UserTable = defineTable('user', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    })).relations((user) => ({
+      user: user('Id').hasOne(() => ProfileTable('UserId')),
+      user2: user('Id')
+        .hasOne(() => ProfileTable('UserId2'))
+        .foreignKey(false),
+      user3: user('Id')
+        .hasOne(() => ProfileTable('UserId3'))
+        .foreignKey({ onDelete: 'CASCADE' }),
+    }));
 
-      relations = {
-        user: this.hasOne(() => ProfileTable, {
-          columns: ['Id'],
-          references: ['UserId'],
-        }),
-        user2: this.hasOne(() => ProfileTable, {
-          columns: ['Id'],
-          references: ['UserId2'],
-          foreignKey: false,
-        }),
-        user3: this.hasOne(() => ProfileTable, {
-          columns: ['Id'],
-          references: ['UserId3'],
-          foreignKey: {
-            onDelete: 'CASCADE',
-          },
-        }),
-      };
-    }
-
-    class ProfileTable extends BaseTable {
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        UserId: t.name('user_id').integer(),
-        UserId2: t.name('user_id_2').integer(),
-        UserId3: t.name('user_id_3').integer(),
-      }));
-    }
+    const ProfileTable = defineTable('profile', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      UserId: t.name('user_id').integer(),
+      UserId2: t.name('user_id_2').integer(),
+      UserId3: t.name('user_id_3').integer(),
+    }));
 
     const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,
@@ -1621,6 +1606,98 @@ describe('hasOne', () => {
     });
   });
 
+  describe('upsert', () => {
+    it('should create hasOne record when creating the record', async () => {
+      const user = await db.user
+        .select('Id', 'UserKey')
+        .find(123)
+        .upsert({
+          update: {
+            Name: 'updated',
+          },
+          create: {
+            ...UserData,
+            profile: { create: ProfileData },
+          },
+        });
+
+      const profiles = await db.profile.select('UserId', 'ProfileKey', 'Bio');
+
+      expect(profiles).toEqual([
+        {
+          UserId: user.Id,
+          ProfileKey: user.UserKey,
+          Bio: ProfileData.Bio,
+        },
+      ]);
+    });
+
+    it('should connect hasOne record when creating the record', async () => {
+      await db.profile.create({
+        ...ProfileData,
+        ProfileKey: 'tmp',
+      });
+
+      const user = await db.user
+        .select('Id', 'UserKey')
+        .find(123)
+        .upsert({
+          update: {
+            Name: 'updated',
+          },
+          create: {
+            ...UserData,
+            profile: { connect: { Bio: ProfileData.Bio } },
+          },
+        });
+
+      const profiles = await db.profile.select('UserId', 'ProfileKey', 'Bio');
+
+      expect(profiles).toEqual([
+        {
+          UserId: user.Id,
+          ProfileKey: user.UserKey,
+          Bio: ProfileData.Bio,
+        },
+      ]);
+    });
+
+    it('should connect or create hasOne record when creating the record', async () => {
+      await db.profile.create({
+        ...ProfileData,
+        ProfileKey: 'tmp',
+      });
+
+      const user = await db.user
+        .select('Id', 'UserKey')
+        .find(123)
+        .upsert({
+          update: {
+            Name: 'updated',
+          },
+          create: {
+            ...UserData,
+            profile: {
+              connectOrCreate: {
+                where: { Bio: ProfileData.Bio },
+                create: ProfileData,
+              },
+            },
+          },
+        });
+
+      const profiles = await db.profile.select('UserId', 'ProfileKey', 'Bio');
+
+      expect(profiles).toEqual([
+        {
+          UserId: user.Id,
+          ProfileKey: user.UserKey,
+          Bio: ProfileData.Bio,
+        },
+      ]);
+    });
+  });
+
   describe('update', () => {
     describe('disconnect', () => {
       it('should nullify foreignKey', async () => {
@@ -2558,44 +2635,32 @@ describe('hasOne', () => {
   });
 
   describe('not required hasOne', () => {
-    class UserTable extends BaseTable {
-      schema = () => 'schema';
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        Name: t.name('name').text(),
-        Password: t.name('password').text(),
-        UserKey: t.name('user_key').text().nullable(),
-        ...t.timestamps(),
-      }));
+    const UserTable = defineTable('user', { schema: () => 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      Name: t.name('name').text(),
+      Password: t.name('password').text(),
+      UserKey: t.name('user_key').text().nullable(),
+      ...t.timestamps(),
+    })).relations((user) => ({
+      profile: user('Id')
+        .hasOne(() => ProfileTable('UserId'))
+        .required(false),
+    }));
 
-      relations = {
-        profile: this.hasOne(() => ProfileTable, {
-          columns: ['Id'],
-          references: ['UserId'],
-          required: false,
-        }),
-      };
-    }
-
-    class ProfileTable extends BaseTable {
-      schema = () => 'schema';
-      readonly table = 'profile';
-      columns = this.setColumns((t) => ({
+    const ProfileTable = defineTable(
+      'profile',
+      { schema: () => 'schema' },
+      (t) => ({
         Id: t.name('id').identity().primaryKey(),
         UserId: t.name('user_id').integer(),
-      }));
+      }),
+    ).relations((profile) => ({
+      user: profile('UserId')
+        .belongsTo(() => UserTable('Id'))
+        .required(false),
+    }));
 
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          columns: ['UserId'],
-          references: ['Id'],
-          required: false,
-        }),
-      };
-    }
-
-    const local = orchidORMWithAdapter(ormParams, {
+    const local = testOrchidORMWithAdapter(ormParams, {
       user: UserTable,
       profile: ProfileTable,
     });
@@ -2672,77 +2737,40 @@ describe('hasOne', () => {
 
 describe('hasOne through', () => {
   it('should resolve recursive situation when both tables depends on each other', () => {
-    class Post extends BaseTable {
-      table = 'post';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
+    const PostTable = defineTable('post', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    })).relations((post) => ({
+      postTag: post('Id').hasOne(() => PostTagTable('PostId')),
+      tag: post.hasOne(() => TagTable.through('postTag', 'tag')),
+    }));
+
+    const TagTable = defineTable('tag', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    })).relations((tag) => ({
+      postTag: tag('Id').hasOne(() => PostTagTable('PostId')),
+      post: tag.hasOne(() => PostTable.through('postTag', 'post')),
+    }));
+
+    const PostTagTable = defineTable('postTag', (t) => ({
+      PostId: t
+        .name('postId')
+        .integer()
+        .foreignKey(() => PostTable, 'Id'),
+      TagId: t
+        .name('tagId')
+        .integer()
+        .foreignKey(() => TagTable, 'Id'),
+    }))
+      .primaryKey(['PostId', 'TagId'])
+      .relations((postTag) => ({
+        post: postTag('PostId').belongsTo(() => PostTable('Id')),
+        tag: postTag('TagId').belongsTo(() => TagTable('Id')),
       }));
 
-      relations = {
-        postTag: this.hasOne(() => PostTag, {
-          columns: ['Id'],
-          references: ['PostId'],
-        }),
-
-        tag: this.hasOne(() => Tag, {
-          through: 'postTag',
-          source: 'tag',
-        }),
-      };
-    }
-
-    class Tag extends BaseTable {
-      table = 'tag';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
-
-      relations = {
-        postTag: this.hasOne(() => PostTag, {
-          columns: ['Id'],
-          references: ['PostId'],
-        }),
-
-        post: this.hasOne(() => Post, {
-          through: 'postTag',
-          source: 'post',
-        }),
-      };
-    }
-
-    class PostTag extends BaseTable {
-      table = 'postTag';
-      columns = this.setColumns(
-        (t) => ({
-          PostId: t
-            .name('postId')
-            .integer()
-            .foreignKey(() => Post, 'Id'),
-          TagId: t
-            .name('tagId')
-            .integer()
-            .foreignKey(() => Tag, 'Id'),
-        }),
-        (t) => t.primaryKey(['PostId', 'TagId']),
-      );
-
-      relations = {
-        post: this.belongsTo(() => Post, {
-          references: ['Id'],
-          columns: ['PostId'],
-        }),
-
-        tag: this.belongsTo(() => Tag, {
-          references: ['Id'],
-          columns: ['TagId'],
-        }),
-      };
-    }
-
-    const local = orchidORMWithAdapter(ormParams, {
-      post: Post,
-      tag: Tag,
-      postTag: PostTag,
+    const local = testOrchidORMWithAdapter(ormParams, {
+      post: PostTable,
+      tag: TagTable,
+      postTag: PostTagTable,
     });
 
     expect(Object.keys(local.post.relations)).toEqual(['postTag', 'tag']);
@@ -2750,31 +2778,20 @@ describe('hasOne through', () => {
   });
 
   it('should throw if through relation is not defined', () => {
-    class Post extends BaseTable {
-      table = 'post';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
+    const PostTable = defineTable('post', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    })).relations((post) => ({
+      tag: post.hasOne(() => TagTable.through('postTag', 'tag')),
+    }));
 
-      relations = {
-        tag: this.hasOne(() => Tag, {
-          through: 'postTag',
-          source: 'tag',
-        }),
-      };
-    }
-
-    class Tag extends BaseTable {
-      table = 'tag';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
-    }
+    const TagTable = defineTable('tag', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    }));
 
     expect(() => {
-      orchidORMWithAdapter(ormParams, {
-        post: Post,
-        tag: Tag,
+      testOrchidORMWithAdapter(ormParams, {
+        post: PostTable,
+        tag: TagTable,
       });
     }).toThrow(
       'Cannot define a `tag` relation on `post`: cannot find `postTag` relation required by the `through` option',
@@ -2782,54 +2799,33 @@ describe('hasOne through', () => {
   });
 
   it('should throw if source relation is not defined', () => {
-    class Post extends BaseTable {
-      table = 'post';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
+    const PostTable = defineTable('post', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    })).relations((post) => ({
+      postTag: post('Id').hasOne(() => PostTagTable('PostId')),
+      tag: post.hasOne(() => TagTable.through('postTag', 'tag')),
+    }));
 
-      relations = {
-        postTag: this.hasOne(() => PostTag, {
-          columns: ['Id'],
-          references: ['PostId'],
-        }),
+    const TagTable = defineTable('tag', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    }));
 
-        tag: this.hasOne(() => Tag, {
-          through: 'postTag',
-          source: 'tag',
-        }),
-      };
-    }
-
-    class Tag extends BaseTable {
-      table = 'tag';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
-    }
-
-    class PostTag extends BaseTable {
-      table = 'postTag';
-      columns = this.setColumns(
-        (t) => ({
-          PostId: t
-            .name('postId')
-            .integer()
-            .foreignKey(() => Post, 'Id'),
-          TagId: t
-            .name('tagId')
-            .integer()
-            .foreignKey(() => Tag, 'Id'),
-        }),
-        (t) => t.primaryKey(['PostId', 'TagId']),
-      );
-    }
+    const PostTagTable = defineTable('postTag', (t) => ({
+      PostId: t
+        .name('postId')
+        .integer()
+        .foreignKey(() => PostTable, 'Id'),
+      TagId: t
+        .name('tagId')
+        .integer()
+        .foreignKey(() => TagTable, 'Id'),
+    })).primaryKey(['PostId', 'TagId']);
 
     expect(() => {
-      orchidORMWithAdapter(ormParams, {
-        post: Post,
-        tag: Tag,
-        postTag: PostTag,
+      testOrchidORMWithAdapter(ormParams, {
+        post: PostTable,
+        tag: TagTable,
+        postTag: PostTagTable,
       });
     }).toThrow(
       'Cannot define a `tag` relation on `post`: cannot find `tag` relation in `postTag` required by the `source` option',
@@ -3501,58 +3497,32 @@ describe('hasOne through', () => {
   });
 
   describe('not required hasOne through', () => {
-    class UserTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        Name: t.name('name').text(),
-        Password: t.name('password').text(),
-      }));
+    const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      Name: t.name('name').text(),
+      Password: t.name('password').text(),
+    })).relations((user) => ({
+      profile: user('Id').hasOne(() => ProfileTable('UserId')),
+    }));
 
-      relations = {
-        profile: this.hasOne(() => ProfileTable, {
-          columns: ['Id'],
-          references: ['UserId'],
-        }),
-      };
-    }
+    const ProfileTable = defineTable('profile', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      UserId: t.name('user_id').integer().nullable(),
+    }));
 
-    class ProfileTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'profile';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        UserId: t.name('user_id').integer().nullable(),
-      }));
-    }
+    const MessageTable = defineTable('message', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      ChatId: t.name('chat_id').integer(),
+      AuthorId: t.name('author_id').integer().nullable(),
+      Text: t.name('text').text(),
+      MessageKey: t.name('message_key').string().nullable(),
+      ...t.timestamps(),
+    })).relations((message) => ({
+      user: message('AuthorId').belongsTo(() => UserTable('Id')),
+      profile: message.hasOne(() => ProfileTable.through('user', 'profile')),
+    }));
 
-    class MessageTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'message';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        ChatId: t.name('chat_id').integer(),
-        AuthorId: t.name('author_id').integer().nullable(),
-        Text: t.name('text').text(),
-        MessageKey: t.name('message_key').string().nullable(),
-        ...t.timestamps(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          references: ['Id'],
-          columns: ['AuthorId'],
-        }),
-
-        profile: this.hasOne(() => ProfileTable, {
-          through: 'user',
-          source: 'profile',
-        }),
-      };
-    }
-
-    const local = orchidORMWithAdapter(ormParams, {
+    const local = testOrchidORMWithAdapter(ormParams, {
       user: UserTable,
       profile: ProfileTable,
       message: MessageTable,

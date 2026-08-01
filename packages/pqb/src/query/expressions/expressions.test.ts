@@ -1,10 +1,4 @@
 import {
-  Post,
-  Profile,
-  User,
-  userColumnsSql,
-} from '../../test-utils/pqb.test-utils';
-import {
   assertType,
   db,
   expectSql,
@@ -12,6 +6,7 @@ import {
   sql,
   testDb,
   UserData,
+  UserSelectAll,
   useTestDatabase,
 } from 'test-utils';
 import { Expression } from './expression';
@@ -28,8 +23,8 @@ describe('expressions', () => {
     });
 
     it('should make SQL where given column is prefixed with a table name', () => {
-      const q = User.get(
-        sql`${User.column('name')} || ' ' || ${User.column('password')}`,
+      const q = db.user.get(
+        sql`${db.user.column('Name')} || ' ' || ${db.user.column('Password')}`,
       );
 
       expectSql(
@@ -39,9 +34,9 @@ describe('expressions', () => {
     });
 
     it('should support column operators', () => {
-      const q = User.select({
+      const q = db.user.select({
         alias: (q) =>
-          q.column('id').equals(1).or(q.column('name').equals('name')),
+          q.column('Id').equals(1).or(q.column('Name').equals('name')),
       });
 
       assertType<Awaited<typeof q>, { alias: boolean }[]>();
@@ -111,14 +106,15 @@ describe('expressions', () => {
     });
 
     it('should reference selectable columns', () => {
-      const q = User.join(Post, 'Post.title', 'User.id').select({
+      const q = db.user.join(db.post, 'Post.Title', 'User.Id').select({
         alias: (q) =>
-          User.as('u')
+          db.user
+            .as('u')
             .where({
-              id: q.ref('User.id'),
-              name: q.ref('Post.title'),
+              Id: q.ref('User.Id'),
+              Name: q.ref('Post.Title'),
             })
-            .select('id')
+            .select('Id')
             .take(),
       });
 
@@ -128,7 +124,7 @@ describe('expressions', () => {
           SELECT (
             SELECT row_to_json(t.*)
             FROM (
-              SELECT "u"."id"
+              SELECT "u"."id" "Id"
               FROM "schema"."user" "u"
               WHERE "u"."id" = "User"."id"
                 AND "u"."name" = "Post"."title"
@@ -142,8 +138,8 @@ describe('expressions', () => {
     });
 
     it('should support column operators', () => {
-      const q = User.select({
-        alias: (q) => q.ref('id').equals(1).or(q.ref('name').equals('name')),
+      const q = db.user.select({
+        alias: (q) => q.ref('Id').equals(1).or(q.ref('Name').equals('name')),
       });
 
       assertType<Awaited<typeof q>, { alias: boolean }[]>();
@@ -158,10 +154,10 @@ describe('expressions', () => {
     });
 
     it('should reference columns of a `from` subquery in where', () => {
-      const q = testDb.from(Profile.select('bio')).select({
+      const q = testDb.from(db.profile.select('Bio')).select({
         sub: (q) =>
-          User.select('id').where({
-            name: q.ref('bio'),
+          db.user.select('Id').where({
+            Name: q.ref('Bio'),
           }),
       });
 
@@ -172,10 +168,10 @@ describe('expressions', () => {
             (
               SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
               FROM (
-                SELECT "User"."id" FROM "schema"."user" "User" WHERE "User"."name" = "Profile"."bio"
+                SELECT "User"."id" "Id" FROM "schema"."user" "User" WHERE "User"."name" = "Profile"."Bio"
               ) "t"
             ) "sub"
-          FROM (SELECT "Profile"."bio" FROM "schema"."profile" "Profile") "Profile"
+            FROM (SELECT "Profile"."bio" "Bio" FROM "schema"."profile" "Profile") "Profile"
         `,
       );
     });
@@ -313,14 +309,14 @@ describe('expressions', () => {
 
   describe('or', () => {
     it('should support query and expression', () => {
-      const q = User.where((q) =>
-        q.or(User.find(1).get('active'), q.ref('age').gt(123)).equals(false),
+      const q = db.user.where((q) =>
+        q.or(db.user.find(1).get('Active'), q.ref('Age').gt(123)).equals(false),
       );
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE ((
             (SELECT "User"."active" FROM "schema"."user" "User" WHERE "User"."id" = $1 LIMIT 1)
             OR

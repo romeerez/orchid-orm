@@ -1,7 +1,7 @@
 import { orchidORMWithAdapter } from './orm';
 import { createRepo } from './repo';
 import {
-  BaseTable,
+  defineTable,
   assertType,
   expectSql,
   testAdapter,
@@ -9,50 +9,25 @@ import {
 } from 'test-utils';
 import { QueryReturnType } from 'pqb/internal';
 
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  filePath = 'repo.test.ts';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(),
-  }));
+const SomeTable = defineTable('someTable', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.text(),
+})).relations((some) => ({
+  other: some('id').hasMany(() => OtherTable('someId')),
+}));
 
-  relations = {
-    other: this.hasMany(() => OtherTable, {
-      columns: ['id'],
-      references: ['someId'],
-    }),
-  };
-}
+const OtherTable = defineTable('otherTable', (t) => ({
+  id: t.identity().primaryKey(),
+  someId: t.integer().foreignKey(() => SomeTable, 'id'),
+  anotherId: t.integer().foreignKey(() => AnotherTable, 'id'),
+})).relations((other) => ({
+  some: other('someId').belongsTo(() => SomeTable('id')),
+  another: other('anotherId').belongsTo(() => AnotherTable('id')),
+}));
 
-class OtherTable extends BaseTable {
-  readonly table = 'otherTable';
-  filePath = 'repo.test.ts';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    someId: t.integer().foreignKey(() => SomeTable, 'id'),
-    anotherId: t.integer().foreignKey(() => AnotherTable, 'id'),
-  }));
-
-  relations = {
-    some: this.belongsTo(() => SomeTable, {
-      references: ['id'],
-      columns: ['someId'],
-    }),
-    another: this.belongsTo(() => AnotherTable, {
-      references: ['id'],
-      columns: ['anotherId'],
-    }),
-  };
-}
-
-class AnotherTable extends BaseTable {
-  readonly table = 'another';
-  filePath = 'repo.test.ts';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-  }));
-}
+const AnotherTable = defineTable('another', (t) => ({
+  id: t.identity().primaryKey(),
+}));
 
 const db = orchidORMWithAdapter(
   { ...testDbOptions, adapter: testAdapter },

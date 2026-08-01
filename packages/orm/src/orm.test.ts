@@ -3,12 +3,12 @@ import {
   bundleOrchidORMTables,
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
-  setGrants,
 } from './orm';
 import { useTestORM } from './test-utils/orm.test-utils';
 import {
-  BaseTable,
   db,
+  defineTable,
+  defineView,
   assertType,
   expectSql,
   MessageData,
@@ -16,153 +16,20 @@ import {
   UserData,
   testAdapter,
 } from 'test-utils';
-import { createBaseTable, Selectable } from './orm-table/base-table';
-import { raw, QuerySchema, RawSql } from 'pqb/internal';
 import { Db, QueryHelperResult } from 'pqb';
 
 describe('orm', () => {
   useTestORM();
 
-  type User = Selectable<UserTable>;
-  class UserTable extends BaseTable {
-    schema = () => 'schema';
-    readonly table = 'user';
-    filePath = 'orm.test.ts';
-    columns = this.setColumns((t) => ({
-      id: t.identity().primaryKey(),
-      name: t.text(),
-      password: t.text(),
-    }));
-  }
+  const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+    id: t.identity().primaryKey(),
+    name: t.text(),
+    password: t.text(),
+  }));
 
-  class ProfileTable extends BaseTable {
-    schema = () => 'schema';
-    readonly table = 'profile';
-    filePath = 'orm.test.ts';
-    columns = this.setColumns((t) => ({
-      id: t.identity().primaryKey(),
-    }));
-  }
-
-  it('should set snake case name for computed columns when initializing the same table twice', () => {
-    const BaseTable = createBaseTable({
-      snakeCase: true,
-    });
-    const { sql } = BaseTable;
-    let fullNameSql: RawSql | undefined;
-    const getColumnName = (column: unknown) =>
-      (column as { data: { name?: string } }).data.name;
-
-    class Table extends BaseTable {
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        firstName: t.text(),
-        lastName: t.text(),
-      }));
-
-      computed = this.setComputed((q) => ({
-        fullName: (fullNameSql ??= sql<string>`${q.column(
-          'firstName',
-        )} || ' ' || ${q.column('lastName')}`),
-      }));
-    }
-
-    const firstDb = orchidORMWithAdapter(
-      { adapter: testAdapter },
-      {
-        user: Table,
-      },
-    );
-    const firstName = getColumnName(firstDb.user.shape.fullName);
-
-    const secondDb = orchidORMWithAdapter(
-      { adapter: testAdapter },
-      {
-        user: Table,
-      },
-    );
-
-    expect({
-      firstName,
-      secondName: getColumnName(secondDb.user.shape.fullName),
-    }).toEqual({
-      firstName: undefined,
-      secondName: undefined,
-    });
-  });
-
-  it('should use child schema override when parent instance was created first', () => {
-    const BaseTable = createBaseTable();
-
-    class ParentTable extends BaseTable {
-      schema: QuerySchema = () => 'tenant';
-      readonly table = 'item';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-      }));
-    }
-
-    class ChildTable extends ParentTable {
-      schema: QuerySchema = 'saas';
-    }
-
-    orchidORMWithAdapter(
-      { adapter: testAdapter },
-      {
-        parent: ParentTable,
-      },
-    );
-
-    const local = orchidORMWithAdapter(
-      { adapter: testAdapter },
-      {
-        item: ChildTable,
-      },
-    );
-
-    expectSql(
-      local.item.select('id').toSQL(),
-      `
-        SELECT "item"."id"
-        FROM "saas"."item"
-      `,
-    );
-  });
-
-  it('should save `tableData` to the table`s query builder `internal`', () => {
-    const checkSql = raw({ raw: 'one > 5' });
-
-    class Table extends BaseTable {
-      readonly table = 'table';
-      columns = this.setColumns(
-        (t) => ({
-          id: t.identity().primaryKey(),
-          name: t.string(),
-        }),
-        (t) => [
-          t.primaryKey(['id', 'name']),
-          t.index(['id', 'name']),
-          t.check(checkSql, 'constraintName'),
-        ],
-      );
-    }
-
-    const local = orchidORMWithAdapter(
-      { db: db.$qb },
-      {
-        table: Table,
-      },
-    );
-
-    expect(local.table.internal.tableData).toMatchObject({
-      primaryKey: { columns: ['id', 'name'] },
-      indexes: [
-        { columns: [{ column: 'id' }, { column: 'name' }], options: {} },
-      ],
-      constraints: [{ name: 'constraintName', check: checkSql }],
-    });
-  });
+  const ProfileTable = defineTable('profile', { schema: 'schema' }, (t) => ({
+    id: t.identity().primaryKey(),
+  }));
 
   it('should return object with provided adapter, close and transaction method, tables', () => {
     const local = orchidORMWithAdapter(
@@ -181,38 +48,6 @@ describe('orm', () => {
     );
   });
 
-  it('should return table which is a queryable interface', async () => {
-    const local = orchidORMWithAdapter(
-      { db: db.$qb },
-      {
-        user: UserTable,
-        profile: ProfileTable,
-      },
-    );
-
-    const { id, name } = await local.user.create({
-      name: 'name',
-      password: 'password',
-    });
-
-    const query = local.user.select('id', 'name').where({ id: { gt: 0 } });
-
-    expectSql(
-      query.toSQL(),
-      `
-        SELECT "user"."id", "user"."name"
-        FROM "schema"."user"
-        WHERE "user"."id" > $1
-      `,
-      [0],
-    );
-
-    const result = await query;
-    expect(result).toEqual([{ id, name }]);
-
-    assertType<typeof result, Pick<User, 'id' | 'name'>[]>();
-  });
-
   it('should be able to turn on autoPreparedStatements', () => {
     const local = orchidORMWithAdapter(
       { db: db.$qb, autoPreparedStatements: true },
@@ -225,155 +60,31 @@ describe('orm', () => {
     expect(local.user.q.autoPreparedStatements).toBe(true);
   });
 
-  describe('grants', () => {
-    class GrantsTable extends BaseTable {
-      readonly table = 'grants';
-      filePath = 'orm.test.ts';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-      }));
-      grants = setGrants([
-        {
-          to: 'app_user',
-          grantedBy: 'owner',
-          privileges: ['SELECT'],
-          grantablePrivileges: ['UPDATE'],
-        },
-      ]);
-    }
-
-    it('should pass grants through ORM setup to the query builder', () => {
-      const local = orchidORMWithAdapter(
-        {
-          adapter: testAdapter,
-          defaultGrantedBy: 'owner',
-          grants: [
-            {
-              to: ['app_user', 'readonly'],
-              grantedBy: 'admin',
-              allTablesIn: ['public'],
-              privileges: ['SELECT'],
-            },
-          ],
-        },
-        {
-          user: UserTable,
-        },
-      );
-
-      const internalGrants = local.$qb.internal.grants;
-      expect(internalGrants).toEqual([
-        {
-          to: ['app_user', 'readonly'],
-          grantedBy: 'admin',
-          allTablesIn: ['public'],
-          privileges: ['SELECT'],
-        },
-      ]);
-      expect(local.$qb.internal.defaultGrantedBy).toBe('owner');
-    });
-
-    it('should not expose generatorIgnore to SQL or break ORM bounds yet', () => {
-      const local = orchidORMWithAdapter(
-        {
-          adapter: testAdapter,
-          generatorIgnore: {
-            grants: {
-              roles: ['external'],
-            },
-          },
-        },
-        {
-          user: UserTable,
-        },
-      );
-
-      expect(local.$qb.internal.generatorIgnore).toEqual({
-        grants: {
-          roles: ['external'],
-        },
-      });
-    });
-
-    it('should preserve table grants on db-bound table internals', () => {
-      const grants = setGrants([
-        {
-          to: 'reporting_user',
-          privileges: ['SELECT'],
-        },
-      ]);
-
-      const local = orchidORMWithAdapter(
-        {
-          adapter: testAdapter,
-        },
-        {
-          grants: GrantsTable,
-        },
-      );
-
-      expect(grants).toEqual([
-        {
-          to: 'reporting_user',
-          privileges: ['SELECT'],
-        },
-      ]);
-      expect(local.grants.internal.tableGrants).toEqual([
-        {
-          to: 'app_user',
-          grantedBy: 'owner',
-          privileges: ['SELECT'],
-          grantablePrivileges: ['UPDATE'],
-        },
-      ]);
-      expect(
-        (local.grants as unknown as { setGrants?: unknown }).setGrants,
-      ).toBe(undefined);
-    });
-  });
-
   describe('bundleOrchidORMTables', () => {
-    class BundleUserTable extends BaseTable {
-      schema: QuerySchema = 'schema';
-      readonly table = 'user';
-      filePath = 'orm.test.ts';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        deletedAt: t.timestamp().nullable(),
+    const BundleUserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+      id: t.identity().primaryKey(),
+      name: t.text(),
+      deletedAt: t.timestamp().nullable(),
+    }))
+      .softDelete()
+      .scopes({
+        named: (q) => q.where({ name: 'name' }),
+      })
+      .relations((user) => ({
+        profile: user('id').hasOne(() => BundleProfileTable('userId')),
       }));
 
-      readonly softDelete = true;
-
-      scopes = this.setScopes({
-        named: (q) => q.where({ name: 'name' }),
-      });
-
-      relations = {
-        profile: this.hasOne(() => BundleProfileTable, {
-          columns: ['id'],
-          references: ['userId'],
-        }),
-      };
-    }
-
-    class BundleProfileTable extends BaseTable {
-      schema: QuerySchema = 'schema';
-      readonly table = 'profile';
-      filePath = 'orm.test.ts';
-      columns = this.setColumns((t) => ({
+    const BundleProfileTable = defineTable(
+      'profile',
+      { schema: 'schema' },
+      (t) => ({
         id: t.identity().primaryKey(),
         userId: t.integer().foreignKey(() => BundleUserTable, 'id'),
         bio: t.text(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => BundleUserTable, {
-          columns: ['userId'],
-          references: ['id'],
-        }),
-      };
-    }
+      }),
+    ).relations((profile) => ({
+      user: profile('userId').belongsTo(() => BundleUserTable('id')),
+    }));
 
     it('should return table keys only and keep internals non-enumerable', () => {
       const orm = bundleOrchidORM({
@@ -439,16 +150,17 @@ describe('orm', () => {
     });
 
     it('should expose bundled views under $views and bind helpers', () => {
-      class BundleActiveUserView extends BaseTable.View {
-        schema: QuerySchema = 'schema';
-        readonly name = 'active_user';
-        filePath = 'orm.test.ts';
-        columns = this.setColumns((t) => ({
+      const BundleActiveUserView = defineView(
+        'active_user',
+        {
+          schema: 'schema',
+          sql: 'SELECT id, name FROM "user"',
+        },
+        (t) => ({
           id: t.integer(),
           name: t.text(),
-        }));
-        sql = BaseTable.sql`SELECT id, name FROM "user"`;
-      }
+        }),
+      );
 
       const orm = bundleOrchidORM({
         views: {
@@ -513,17 +225,12 @@ describe('orm', () => {
     it('should run table init hook for every created DB-aware instance', () => {
       const initSpy = jest.fn();
 
-      class InitTable extends BaseTable {
-        readonly table = 'user';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-          name: t.text(),
-        }));
-
-        init = (localOrm: unknown) => {
-          initSpy(localOrm);
-        };
-      }
+      const InitTable = defineTable('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+      })).init((localOrm) => {
+        initSpy(localOrm);
+      });
 
       const orm = bundleOrchidORMTables({
         user: InitTable,

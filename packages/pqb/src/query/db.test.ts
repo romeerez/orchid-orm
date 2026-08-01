@@ -2,7 +2,7 @@ import { User, userData } from '../test-utils/pqb.test-utils';
 import { createDbWithAdapter, Db } from './db';
 import {
   assertType,
-  BaseTable,
+  defineTable,
   testDefaultColumnTypes,
   createTestDb,
   expectSql,
@@ -306,16 +306,11 @@ describe('db', () => {
   });
 
   it('should omit relation columns from `selectAllShape` when not having named columns', () => {
-    class SomeTable extends BaseTable {
-      table = 'some';
-      columns = this.setColumns((t) => ({ id: t.identity().primaryKey() }));
-      relations = {
-        rel: this.belongsTo(() => SomeTable, {
-          columns: ['id'],
-          references: ['id'],
-        }),
-      };
-    }
+    const SomeTable = defineTable('some', (t) => ({
+      id: t.identity().primaryKey(),
+    })).relations((some) => ({
+      rel: some('id').belongsTo(() => SomeTable('id')),
+    }));
 
     const db = orchidORMWithAdapter(
       {

@@ -1,5 +1,5 @@
 import { colors, type Grant } from 'pqb/internal';
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
 import * as verifyMigrationModule from '../verify-migration';
 import { setGrants } from '../../../orm';
 
@@ -27,7 +27,7 @@ jest.mock('../verify-migration', () => {
 const { green, red } = colors;
 
 describe('grants', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   type ArrangeParams = Parameters<typeof arrange>[0];
   type TestDb = Parameters<NonNullable<ArrangeParams['prepareDb']>>[0];
@@ -49,51 +49,60 @@ describe('grants', () => {
   const grantDatabase = 'orchid-orm';
   const grantDiscoveryRole = 'grant_discovery_role';
 
-  const GrantTableBase = table(
+  const GrantTable = defineTable(
+    grantTable,
+    { schema: grantSchema, noPrimaryKey: false },
     (t) => ({
       id: t.serial().primaryKey(),
       type: t.enum(`${grantSchema}.${grantType}`, ['one', 'two']),
     }),
-    undefined,
-    { name: grantTable, schema: grantSchema, noPrimaryKey: false },
   );
-  class GrantTable extends GrantTableBase {}
 
-  const GrantAllTableBase = table(
+  const GrantAllTable = defineTable(
+    grantAllTable,
+    { schema: grantAllSchema, noPrimaryKey: false },
     (t) => ({
       id: t.serial().primaryKey(),
     }),
-    undefined,
-    { name: grantAllTable, schema: grantAllSchema, noPrimaryKey: false },
   );
-  class GrantAllTable extends GrantAllTableBase {}
 
-  const GrantByTableBase = table(
+  const GrantByTable = defineTable(
+    grantByTable,
+    { schema: grantBySchema, noPrimaryKey: false },
     (t) => ({
       id: t.serial().primaryKey(),
     }),
-    undefined,
-    { name: grantByTable, schema: grantBySchema, noPrimaryKey: false },
   );
-  class GrantByTable extends GrantByTableBase {}
 
-  class TableLocalGrantByTable extends GrantByTableBase {
-    grants = setGrants([
+  const TableLocalGrantByTable = defineTable(
+    grantByTable,
+    { schema: grantBySchema, noPrimaryKey: false },
+    (t) => ({
+      id: t.serial().primaryKey(),
+    }),
+  ).grants(
+    setGrants([
       {
         to: grantee,
         privileges: ['SELECT'],
       },
-    ]);
-  }
+    ]),
+  );
 
-  class TableLocalGrantableGrantByTable extends GrantByTableBase {
-    grants = setGrants([
+  const TableLocalGrantableGrantByTable = defineTable(
+    grantByTable,
+    { schema: grantBySchema, noPrimaryKey: false },
+    (t) => ({
+      id: t.serial().primaryKey(),
+    }),
+  ).grants(
+    setGrants([
       {
         to: grantee,
         grantablePrivileges: ['SELECT'],
       },
-    ]);
-  }
+    ]),
+  );
 
   const grantTables = [GrantTable, GrantAllTable];
   const grantByTableName = `${grantBySchema}.${grantByTable}`;
@@ -842,9 +851,20 @@ change(async (db) => {
   });
 
   it('should ignore table-local grants for definition-side generator ignored tables', async () => {
-    class IgnoredTableLocalGrantByTable extends TableLocalGrantByTable {
-      readonly generatorIgnore = true;
-    }
+    const IgnoredTableLocalGrantByTable = defineTable(
+      grantByTable,
+      { schema: grantBySchema, noPrimaryKey: false, generatorIgnore: true },
+      (t) => ({
+        id: t.serial().primaryKey(),
+      }),
+    ).grants(
+      setGrants([
+        {
+          to: grantee,
+          privileges: ['SELECT'],
+        },
+      ]),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -1275,53 +1295,48 @@ change(async (db) => {
       process.env.JEST_WORKER_ID ?? '1'
     }`;
 
-    const ExactTableBase = table(
+    const ExactTable = defineTable(
+      exactTable,
+      { schema: exactSchema, noPrimaryKey: false },
       (t) => ({
         id: t.serial().primaryKey(),
         type: t.enum(`${exactSchema}.${exactType}`, ['one', 'two']),
       }),
-      undefined,
-      { name: exactTable, schema: exactSchema, noPrimaryKey: false },
     );
-    class ExactTable extends ExactTableBase {}
 
-    const RegexTableBase = table(
+    const RegexTable = defineTable(
+      regexTable,
+      { schema: regexSchema, noPrimaryKey: false },
       (t) => ({
         id: t.serial().primaryKey(),
         type: t.enum(`${regexSchema}.${regexType}`, ['one', 'two']),
       }),
-      undefined,
-      { name: regexTable, schema: regexSchema, noPrimaryKey: false },
     );
-    class RegexTable extends RegexTableBase {}
 
-    const KeepTableBase = table(
+    const KeepTable = defineTable(
+      keepTable,
+      { schema: keepSchema, noPrimaryKey: false },
       (t) => ({
         id: t.serial().primaryKey(),
         type: t.enum(`${keepSchema}.${keepType}`, ['one', 'two']),
       }),
-      undefined,
-      { name: keepTable, schema: keepSchema, noPrimaryKey: false },
     );
-    class KeepTable extends KeepTableBase {}
 
-    const AllStringTableBase = table(
+    const AllStringTable = defineTable(
+      allStringTable,
+      { schema: allStringSchema, noPrimaryKey: false },
       (t) => ({
         id: t.serial().primaryKey(),
       }),
-      undefined,
-      { name: allStringTable, schema: allStringSchema, noPrimaryKey: false },
     );
-    class AllStringTable extends AllStringTableBase {}
 
-    const AllRegexTableBase = table(
+    const AllRegexTable = defineTable(
+      allRegexTable,
+      { schema: allRegexSchema, noPrimaryKey: false },
       (t) => ({
         id: t.serial().primaryKey(),
       }),
-      undefined,
-      { name: allRegexTable, schema: allRegexSchema, noPrimaryKey: false },
     );
-    class AllRegexTable extends AllRegexTableBase {}
 
     await arrange({
       async prepareDb(db) {

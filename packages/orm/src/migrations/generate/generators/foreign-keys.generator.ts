@@ -6,7 +6,7 @@ import {
   getConstraintName,
   RakeDbConfig,
 } from 'rake-db';
-import { Column } from 'pqb/internal';
+import { Column, getForeignKeyTableInstance } from 'pqb/internal';
 import { TableData, deepCompare, toSnakeCase } from 'pqb/internal';
 import { ChangeTableData, TableShapes } from './tables.generator';
 import { checkForColumnAddOrDrop } from './generators.utils';
@@ -269,7 +269,7 @@ export const fnOrTableToString = (
   fnOrTable: TableData.References['fnOrTable'],
 ) => {
   if (typeof fnOrTable !== 'string') {
-    const { schema, table, nameInDb } = new (fnOrTable())();
+    const { schema, table, nameInDb } = getForeignKeyTableInstance(fnOrTable());
     const name = nameInDb || table;
     if (!name) throw new Error('Referenced table is missing table property');
 

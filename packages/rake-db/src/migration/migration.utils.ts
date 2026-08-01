@@ -4,6 +4,7 @@ import {
   Column,
   DomainColumn,
   escapeForMigration,
+  getForeignKeyTableInstance,
   isRawSQL,
   RawSqlBase,
   TableData,
@@ -243,7 +244,7 @@ export const getForeignKeyTable = (
     return getSchemaAndTableFromName(schema, fnOrTable);
   }
 
-  const item = new (fnOrTable())();
+  const item = getForeignKeyTableInstance(fnOrTable());
   return [item.schema, item.table];
 };
 

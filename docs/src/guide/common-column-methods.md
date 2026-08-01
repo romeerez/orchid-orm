@@ -18,14 +18,11 @@ or if the primary key is of `UUID` type, [find](/guide/query-methods#find-and-fi
 Using `primaryKey` on a `uuid` column will automatically add a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.uuid().primaryKey(),
-    // optionally, specify a database-level constraint name:
-    id: t.uuid().primaryKey('primary_key_name'),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  id: t.uuid().primaryKey(),
+  // optionally, specify a database-level constraint name:
+  id: t.uuid().primaryKey('primary_key_name'),
+}));
 
 // primary key can be used by `find` later:
 db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
@@ -44,20 +41,17 @@ This function will be called for each creating record. Such a default won't be a
 If the column has an encoding function (json, timestamp columns have it), it will be used to serialize the returned default value.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // values as defaults:
-    int: t.integer().default(123),
-    text: t.text().default('text'),
+export const Table = defineTable('table', (t) => ({
+  // values as defaults:
+  int: t.integer().default(123),
+  text: t.text().default('text'),
 
-    // raw SQL default:
-    timestamp: t.timestamp().default(t.sql`now()`),
+  // raw SQL default:
+  timestamp: t.timestamp().default(t.sql`now()`),
 
-    // runtime default, each new records gets a new random value:
-    random: t.numeric().default(() => Math.random()),
-  }));
-}
+  // runtime default, each new records gets a new random value:
+  random: t.numeric().default(() => Math.random()),
+}));
 ```
 
 ## hasDefault
@@ -69,12 +63,9 @@ Use `hasDefault` to let the column be omitted when creating records.
 It's better to use [default](#default) instead so the value is explicit and serves as a hint.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    column: t.text().hasDefault(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  column: t.text().hasDefault(),
+}));
 ```
 
 ## nullable
@@ -86,12 +77,9 @@ Use `nullable` to mark the column as nullable. By default, all columns are requi
 Nullable columns are optional when creating records.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    name: t.integer().nullable(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  name: t.integer().nullable(),
+}));
 ```
 
 ## identity
@@ -104,15 +92,12 @@ and `identity` is suggested as a preferred autoincrementing type.
 `t.identity()` is a shortcut for `t.integer().identity()`.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    small: t.smallint().identity(),
-    int: t.identity(),
-    alsoInt: t.integer().identity(),
-    big: t.bigint().identity(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  small: t.smallint().identity(),
+  int: t.identity(),
+  alsoInt: t.integer().identity(),
+  big: t.bigint().identity(),
+}));
 ```
 
 Postgres supports identity kind `BY DEFAULT` and `ALWAYS`.
@@ -149,22 +134,17 @@ or in [setOnCreate](#setoncreate), [setOnUpdate](#setonupdate), [setOnSave](#set
 `readOnly` column can be used together with a `default`.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    column: t.string().default(() => 'default value'),
-    another: t.string().nullable().readOnly(),
-  }));
-
-  init(orm: typeof db) {
-    this.beforeSave(({ columns, set }) => {
-      if (columns.include('column')) {
-        set({ another: 'value' });
-      }
-    });
-  }
-}
+export const Table = defineTable('table', (t) => ({
+  id: t.identity().primaryKey(),
+  column: t.string().default(() => 'default value'),
+  another: t.string().nullable().readOnly(),
+})).init((orm: typeof db, hooks) => {
+  hooks.beforeSave(({ columns, set }) => {
+    if (columns.include('column')) {
+      set({ another: 'value' });
+    }
+  });
+});
 
 // later in the code
 db.table.create({ column: 'value' }); // TS error, runtime error
@@ -187,18 +167,15 @@ For this, see an example in [set values before create or update](/guide/hooks.ht
 the same approach is also applicable with `setOnCreate`, `setOnUpdate`, `setOnSave`.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    some: t.number(),
-    column: t
-      .string()
-      .setOnCreate(({ columns }) =>
-        columns.include('some') ? 'value' : undefined,
-      ),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  id: t.identity().primaryKey(),
+  some: t.number(),
+  column: t
+    .string()
+    .setOnCreate(({ columns }) =>
+      columns.include('some') ? 'value' : undefined,
+    ),
+}));
 ```
 
 ## setOnUpdate
@@ -208,18 +185,15 @@ export class Table extends BaseTable {
 Acts like `setOnCreate` but for updating a record.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    some: t.number(),
-    column: t
-      .string()
-      .setOnUpdate(({ columns }) =>
-        columns.include('some') ? 'value' : undefined,
-      ),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  id: t.identity().primaryKey(),
+  some: t.number(),
+  column: t
+    .string()
+    .setOnUpdate(({ columns }) =>
+      columns.include('some') ? 'value' : undefined,
+    ),
+}));
 ```
 
 ## setOnSave
@@ -229,18 +203,15 @@ export class Table extends BaseTable {
 Acts like `setOnCreate` but for both creating and updating a record.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    some: t.number(),
-    column: t
-      .string()
-      .setOnSave(({ columns }) =>
-        columns.include('some') ? 'value' : undefined,
-      ),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  id: t.identity().primaryKey(),
+  some: t.number(),
+  column: t
+    .string()
+    .setOnSave(({ columns }) =>
+      columns.include('some') ? 'value' : undefined,
+    ),
+}));
 ```
 
 ## exclude from default select
@@ -251,14 +222,11 @@ Append `select(false)` to a column to exclude it from the default selection.
 It won't be selected with `selectAll` or `select('*')` as well.
 
 ```ts
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.string(),
-    password: t.string().select(false),
-  }));
-}
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.string(),
+  password: t.string().select(false),
+}));
 
 // only id and name are selected, without password
 const user = await db.user.find(123);
@@ -291,15 +259,12 @@ The column remains a normal writable column for create, update, upsert, filterin
 The callback receives a reference to the physical column, so it can be wrapped without recursively applying `selectSql` again.
 
 ```ts
-import { BaseTable, sql } from './base-table';
+import { defineTable, sql } from './table-factory';
 
-export class AccountTable extends BaseTable {
-  readonly table = 'account';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    balance: t.decimal().selectSql((column) => sql`trim_scale(${column})`),
-  }));
-}
+export const AccountTable = defineTable('account', (t) => ({
+  id: t.identity().primaryKey(),
+  balance: t.decimal().selectSql((column) => sql`trim_scale(${column})`),
+}));
 
 // INSERT INTO "account"("balance") VALUES ($1)
 await db.account.create({ balance: '12.3400' });
@@ -313,15 +278,12 @@ It is selected by default because it is still a real column.
 Use [select(false)](#exclude-from-default-select) together with `selectSql` when the column should be omitted from default selection and wildcard selection.
 
 ```ts
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    email: t
-      .text()
-      .select(false)
-      .selectSql((column) => sql`decrypt_email(${column})`),
-  }));
-}
+export const UserTable = defineTable('user', (t) => ({
+  email: t
+    .text()
+    .select(false)
+    .selectSql((column) => sql`decrypt_email(${column})`),
+}));
 
 // email is omitted from the default selection
 const user = await db.user.take();
@@ -336,16 +298,11 @@ For expressions that depend on sibling columns, use [SQL computed columns](/guid
 When the selected SQL returns a different type, type the expression explicitly:
 
 ```ts
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    encryptedEmail: t
-      .text()
-      .selectSql((column) =>
-        sql`decrypt_email(${column})`.type((t) => t.text()),
-      ),
-  }));
-}
+export const UserTable = defineTable('user', (t) => ({
+  encryptedEmail: t
+    .text()
+    .selectSql((column) => sql`decrypt_email(${column})`.type((t) => t.text())),
+}));
 ```
 
 ## name
@@ -353,12 +310,9 @@ export class UserTable extends BaseTable {
 To specify a real name of column in a database:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    nameInApp: t.name('name_in_database').integer(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  nameInApp: t.name('name_in_database').integer(),
+}));
 ```
 
 ## encode
@@ -379,21 +333,18 @@ For JSON column type you should place `JSON.stringify` in the encode function.
 ```ts
 import { z } from 'zod';
 
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // encode boolean, number, or string to text before saving
-    column: t
-      .string()
-      // when having validation library, the first argument is a validation schema
-      .encode(
-        z.boolean().or(z.number()).or(z.string()),
-        (input: boolean | number | string) => String(input),
-      )
-      // no schema argument otherwise
-      .encode((input: boolean | number | string) => String(input)),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  // encode boolean, number, or string to text before saving
+  column: t
+    .string()
+    // when having validation library, the first argument is a validation schema
+    .encode(
+      z.boolean().or(z.number()).or(z.string()),
+      (input: boolean | number | string) => String(input),
+    )
+    // no schema argument otherwise
+    .encode((input: boolean | number | string) => String(input)),
+}));
 
 // numbers and booleans will be converted to a string:
 await db.table.create({ column: 123 });
@@ -418,22 +369,19 @@ For handling `null` values use [parseNull](#parse-null) instead or in addition.
 import { z } from 'zod';
 import { number, integer } from 'valibot';
 
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    columnZod: t
-      .string()
-      // when having validation library, the first argument is a schema
-      .parse(z.number().int(), (input) => parseInt(input))
-      // no schema argument otherwise
-      .parse((input) => parseInt(input)),
+export const Table = defineTable('table', (t) => ({
+  columnZod: t
+    .string()
+    // when having validation library, the first argument is a schema
+    .parse(z.number().int(), (input) => parseInt(input))
+    // no schema argument otherwise
+    .parse((input) => parseInt(input)),
 
-    columnValibot: t
-      .string()
-      .parse(number([integer()]), (input) => parseInt(input))
-      .parse((input) => parseInt(input)),
-  }));
-}
+  columnValibot: t
+    .string()
+    .parse(number([integer()]), (input) => parseInt(input))
+    .parse((input) => parseInt(input)),
+}));
 
 // column will be parsed to a number
 const value: number = await db.table.get('column');
@@ -448,16 +396,13 @@ Use `parseNull` to specify runtime defaults at selection time.
 The `parseNull` function is only triggered for `nullable` columns.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    column: t
-      .integer()
-      .parse(String) // parse non-nulls to string
-      .parseNull(() => false), // replace nulls with false
-      .nullable(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  column: t
+    .integer()
+    .parse(String) // parse non-nulls to string
+    .parseNull(() => false), // replace nulls with false
+    .nullable(),
+}));
 
 const record = await db.table.take()
 record.column // can be a string or boolean, not null
@@ -467,23 +412,20 @@ If you have a validation library [installed and configured](/guide/columns-valid
 first argument is a schema for validating the output.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    column: t
-      .integer()
-      .parse(z.string(), String) // parse non-nulls to string
-      .parseNull(z.literal(false), () => false), // replace nulls with false
+export const Table = defineTable('table', (t) => ({
+  column: t
+    .integer()
+    .parse(z.string(), String) // parse non-nulls to string
+    .parseNull(z.literal(false), () => false) // replace nulls with false
     .nullable(),
-  }));
-}
+}));
 
-const record = await db.table.take()
-record.column // can be a string or boolean, not null
+const record = await db.table.take();
+record.column; // can be a string or boolean, not null
 
 Table.outputSchema().parse({
   column: false, // the schema expects strings or `false` literals, not nulls
-})
+});
 ```
 
 ## as
@@ -518,12 +460,9 @@ For example, to narrow a `string` type to a union of string literals.
 When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowType` has the following syntax:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    size: t.string().narrowType((t) => t<'small' | 'medium' | 'large'>()),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  size: t.string().narrowType((t) => t<'small' | 'medium' | 'large'>()),
+}));
 
 // size will be typed as 'small' | 'medium' | 'large'
 const size = await db.table.get('size');
@@ -542,12 +481,9 @@ const sizeSchema = z.union([
   z.literal('large'),
 ]);
 
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    size: t.text().narrowType(sizeSchema),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  size: t.text().narrowType(sizeSchema),
+}));
 
 // size will be typed as 'small' | 'medium' | 'large'
 const size = await db.table.get('size');
@@ -564,21 +500,18 @@ Use it when the column's input is different from output.
 When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowAllTypes` has the following syntax:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    size: t.string().narrowAllTypes((t) =>
-      t<{
-        // what types are accepted when creating/updating
-        input: 'small' | 'medium' | 'large';
-        // how types are retured from a database
-        output: 'small' | 'medium' | 'large';
-        // what types the column accepts in `where` and similar
-        query: 'small' | 'medium' | 'large';
-      }>(),
-    ),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  size: t.string().narrowAllTypes((t) =>
+    t<{
+      // what types are accepted when creating/updating
+      input: 'small' | 'medium' | 'large';
+      // how types are retured from a database
+      output: 'small' | 'medium' | 'large';
+      // what types the column accepts in `where` and similar
+      query: 'small' | 'medium' | 'large';
+    }>(),
+  ),
+}));
 
 // size will be typed as 'small' | 'medium' | 'large'
 const size = await db.table.get('size');
@@ -597,16 +530,13 @@ const sizeSchema = z.union([
   z.literal('large'),
 ]);
 
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    size: t.text().narrowAllTypes({
-      input: sizeSchema,
-      output: sizeSchema,
-      query: sizeSchema,
-    }),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  size: t.text().narrowAllTypes({
+    input: sizeSchema,
+    output: sizeSchema,
+    query: sizeSchema,
+  }),
+}));
 
 // size will be typed as 'small' | 'medium' | 'large'
 const size = await db.table.get('size');
@@ -623,25 +553,19 @@ The `timestamps` function is using `timestamp` internally. If `timestamp` is ove
 `updatedAt` adds a hook to refresh its date on every `update` query, unless you set `updatedAt` explicitly when updating a record.
 
 ```ts
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...t.timestamps(),
-  }));
-}
+export const SomeTable = defineTable('someTable', (t) => ({
+  ...t.timestamps(),
+}));
 ```
 
 Customizing columns names is possible in a such way:
 
 ```ts
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    // `created` will be also used to refer to this column in SQL
-    created: t.timestamps().createdAt,
-    updated: t.timestamps().updatedAt,
-  }));
-}
+export const SomeTable = defineTable('someTable', (t) => ({
+  // `created` will be also used to refer to this column in SQL
+  created: t.timestamps().createdAt,
+  updated: t.timestamps().updatedAt,
+}));
 ```
 
 ## timestampsNoTZ
@@ -650,20 +574,17 @@ The same as `timestamps`, but without a time zone.
 
 ## modifyQuery
 
-Specify a callback that can modify a table class.
+Specify a callback that can modify a table query.
 
 When mutating a query in this callback, the changes will be applied to all future queries of this table.
 
 ```ts
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    name: t.string().modifyQuery((table, column) => {
-      // table argument is the query interface of SomeTable
-      // column object contains data with column name and other properties
-    }),
-  }));
-}
+export const SomeTable = defineTable('someTable', (t) => ({
+  name: t.string().modifyQuery((table, column) => {
+    // table argument is the query interface of SomeTable
+    // column object contains data with column name and other properties
+  }),
+}));
 ```
 
 ## methods for migration

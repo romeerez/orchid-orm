@@ -1,5 +1,5 @@
 import {
-  TableClasses,
+  OrmTableThunks,
   OrchidORM,
   OrchidORMBundle,
   OrchidOrmParam,
@@ -12,7 +12,7 @@ export { bunSchemaConfig } from 'pqb/bun';
 
 export interface BunOrchidORMOptions
   extends BunAdapterOptions, DbSharedOptions {
-  views?: TableClasses;
+  views?: OrmTableThunks;
 }
 
 export const Adapter = BunAdapter;
@@ -20,8 +20,8 @@ export const Adapter = BunAdapter;
 export const createDb = cdb;
 
 export const makeOrchidOrmDb = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   orm: OrchidORMBundle<T, V>,
   { log, ...options }: OrchidOrmParam<BunOrchidORMOptions>,
@@ -37,8 +37,8 @@ export const makeOrchidOrmDb = <
 };
 
 export const orchidORM = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   { views, ...options }: OrchidOrmParam<BunOrchidORMOptions & { views?: V }>,
   tables: T,

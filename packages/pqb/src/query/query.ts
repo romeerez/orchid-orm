@@ -434,7 +434,7 @@ export type SetQueryReturnsValueOptional<
   }
 > &
   Omit<T['__selectable'][Arg]['column']['operators'], 'equals' | 'not'> &
-  Column.Modifiers.OperatorsNullable<T['__selectable'][Arg]['column']>;
+  Column.OperatorsNullable<T['__selectable'][Arg]['column']>;
 
 export type SetQueryReturnsColumnOrThrow<
   T,

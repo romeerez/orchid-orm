@@ -2,6 +2,7 @@ import { Column } from '../../../columns/column';
 import {
   createCtx,
   CreateData,
+  CreateDataOmit,
   createSelect,
   CreateSelf,
   handleManyData,
@@ -300,7 +301,10 @@ export class QueryCreateFrom {
   createOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data?: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>,
+    data?: CreateDataOmit<
+      T,
+      Q['result'] extends never ? never : keyof Q['result']
+    >,
   ): CreateRawOrFromResult<T> {
     return _queryCreateOneFrom(_clone(this) as never, query, data as never);
   }
@@ -314,7 +318,10 @@ export class QueryCreateFrom {
   insertOneFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data?: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>,
+    data?: CreateDataOmit<
+      T,
+      Q['result'] extends never ? never : keyof Q['result']
+    >,
   ): InsertRawOrFromResult<T> {
     return _queryInsertOneFrom(_clone(this) as never, query, data as never);
   }
@@ -381,7 +388,10 @@ export class QueryCreateFrom {
   createManyFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>[],
+    data: CreateDataOmit<
+      T,
+      Q['result'] extends never ? never : keyof Q['result']
+    >[],
   ): CreateManyFromResult<T> {
     return _queryCreateManyFrom(_clone(this) as never, query, data as never);
   }
@@ -395,7 +405,10 @@ export class QueryCreateFrom {
   insertManyFrom<T extends CreateSelf, Q extends QueryReturningOne>(
     this: T,
     query: Q,
-    data: Omit<CreateData<T>, Q['result'] extends infer R ? keyof R : never>[],
+    data: CreateDataOmit<
+      T,
+      Q['result'] extends never ? never : keyof Q['result']
+    >[],
   ): InsertManyFromResult<T> {
     return _queryInsertManyFrom(_clone(this) as never, query, data as never);
   }

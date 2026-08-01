@@ -4,45 +4,38 @@ description: Row Level Security status, setup fundamentals, and Orchid-supported
 
 # Row Level Security
 
-Orchid ORM supports declaring table Row Level Security (RLS) flags and policies on table classes, generating migrations from those declarations, and writing RLS migrations manually with `rake-db` methods.
+Orchid ORM supports declaring table Row Level Security (RLS) flags and policies on table definitions, generating migrations from those declarations, and writing RLS migrations manually with `rake-db` methods.
 
 ## Table RLS declaration and defaults
 
-Declare `rls` on a table with `defineRls`:
+Declare `rls` on a table with `.rls(...)`:
 
 ```ts
-import { defineRls } from 'orchid-orm';
-import { BaseTable, sql } from './base-table';
+import { defineTable, sql } from './table-factory';
 
-export class ProjectTable extends BaseTable {
-  readonly table = 'project';
-
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    tenantId: t.uuid(),
-    archivedAt: t.timestamp().nullable(),
-  }));
-
-  rls = defineRls({
-    enable: true,
-    permit: [
-      {
-        name: 'project_select_same_tenant',
-        for: 'SELECT',
-        to: ['app_user', 'app_admin'],
-        using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
-      },
-    ],
-    restrict: [
-      {
-        name: 'project_select_not_archived',
-        for: 'SELECT',
-        to: 'app_user',
-        using: sql`archived_at IS NULL`,
-      },
-    ],
-  });
-}
+export const ProjectTable = defineTable('project', (t) => ({
+  id: t.identity().primaryKey(),
+  tenantId: t.uuid(),
+  archivedAt: t.timestamp().nullable(),
+})).rls({
+  enable: true,
+  permit: [
+    {
+      name: 'project_select_same_tenant',
+      for: 'SELECT',
+      to: ['app_user', 'app_admin'],
+      using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+    },
+  ],
+  restrict: [
+    {
+      name: 'project_select_not_archived',
+      for: 'SELECT',
+      to: 'app_user',
+      using: sql`archived_at IS NULL`,
+    },
+  ],
+});
 ```
 
 Table flags:
@@ -72,14 +65,17 @@ export const db = orchidORM(
 );
 ```
 
-Defaults are applied only to tables that have an explicit `rls = defineRls(...)` declaration.
+Defaults are applied only to tables that have an explicit `.rls(...)` declaration.
 Tables without an `rls` declaration are ignored by the RLS migration generator.
 
 Set `force: false` when table-owner bypass behavior is intentional.
 You can opt out on a single table:
 
 ```ts
-rls = defineRls({
+export const ProjectTable = defineTable('project', (t) => ({
+  id: t.identity().primaryKey(),
+  tenantId: t.uuid(),
+})).rls({
   enable: true,
   force: false,
   permit: [
@@ -116,47 +112,41 @@ export const db = orchidORM(
 `permit` policies map to PostgreSQL `AS PERMISSIVE`, and `restrict` policies map to `AS RESTRICTIVE`.
 `permit` is for policies that can allow access.
 `restrict` can only further limit rows that were already allowed by applicable permissive policies.
-`defineRls` requires `permit` with at least one policy, so omitting `permit`, passing an empty array, or declaring only `restrict` policies is a TypeScript error.
+`.rls(...)` requires `permit` with at least one policy, so omitting `permit`, passing an empty array, or declaring only `restrict` policies is a TypeScript error.
 This guards against accidentally enabling RLS in a default-deny state where no policy can allow access.
 
 ```ts
-export class ProjectTable extends BaseTable {
-  readonly table = 'project';
-
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    tenantId: t.uuid(),
-    archivedAt: t.timestamp().nullable(),
-  }));
-
-  rls = defineRls({
-    enable: true,
-    force: true,
-    permit: [
-      {
-        name: 'project_select_same_tenant',
-        for: 'SELECT',
-        to: ['app_user', 'app_admin'],
-        using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
-      },
-      {
-        name: 'project_insert_same_tenant',
-        for: 'INSERT',
-        to: 'app_user',
-        withCheck: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
-      },
-    ],
-    restrict: [
-      {
-        name: 'project_not_archived',
-        for: 'UPDATE',
-        to: 'app_user',
-        using: sql`archived_at IS NULL`,
-        withCheck: sql`archived_at IS NULL`,
-      },
-    ],
-  });
-}
+export const ProjectTable = defineTable('project', (t) => ({
+  id: t.identity().primaryKey(),
+  tenantId: t.uuid(),
+  archivedAt: t.timestamp().nullable(),
+})).rls({
+  enable: true,
+  force: true,
+  permit: [
+    {
+      name: 'project_select_same_tenant',
+      for: 'SELECT',
+      to: ['app_user', 'app_admin'],
+      using: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+    },
+    {
+      name: 'project_insert_same_tenant',
+      for: 'INSERT',
+      to: 'app_user',
+      withCheck: sql`tenant_id = current_setting('app.tenant_id', true)::uuid`,
+    },
+  ],
+  restrict: [
+    {
+      name: 'project_not_archived',
+      for: 'UPDATE',
+      to: 'app_user',
+      using: sql`archived_at IS NULL`,
+      withCheck: sql`archived_at IS NULL`,
+    },
+  ],
+});
 ```
 
 Policy fields:
@@ -242,10 +232,10 @@ The caveat is extra DB calls around each query to set the request context and th
 
 ## RLS on many-to-many join tables
 
-`hasAndBelongsToMany` is for simple many-to-many relations where the join table exists in the database but does not need its own table class in Orchid.
+`hasAndBelongsToMany` is for simple many-to-many relations where the join table exists in the database but does not need its own table definition in Orchid.
 Because the relation defines that join table implicitly, it is not the right place to declare RLS flags or policies for the join table.
 
-When the join table also needs RLS, define it as a regular table class with its own `rls = defineRls(...)` declaration.
+When the join table also needs RLS, define it as a regular table with its own `.rls(...)` declaration.
 Then model the many-to-many relation with `hasMany` and `through` so the join table stays explicit in application code and migration generation can manage its RLS state.
 
 ## Request-scoped RLS context

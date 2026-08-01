@@ -207,12 +207,9 @@ change(async (db) => {
 In the migration it's different from OrchidORM table code where a callback with a table is expected:
 
 ```ts
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
-  }));
-}
+export const SomeTable = defineTable('someTable', (t) => ({
+  otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
+}));
 ```
 
 Optionally you can pass the third argument to `foreignKey` with options:

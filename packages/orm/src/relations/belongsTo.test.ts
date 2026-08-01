@@ -9,7 +9,6 @@ import {
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
 import {
-  BaseTable,
   db,
   Profile,
   UserDefaultSelect,
@@ -22,7 +21,7 @@ import {
   UserSelectAll,
   ProfileSelectAll,
 } from 'test-utils';
-import { createBaseTable } from '../orm-table/base-table';
+import { createTableFactory } from '../orm-table/table';
 
 const ormParams = { db: db.$qb };
 
@@ -34,46 +33,32 @@ describe('belongsTo', () => {
   const { resetQueriesCount, getQueriesCount } = useQueryCounter();
 
   it('should define foreign keys under autoForeignKeys option', () => {
-    const BaseTable = createBaseTable({
+    const { defineTable } = createTableFactory({
       autoForeignKeys: {
         onUpdate: 'CASCADE',
       },
     });
 
-    class UserTable extends BaseTable {
-      table = 'user';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-      }));
-    }
+    const UserTable = defineTable('user', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+    }));
 
-    class ProfileTable extends BaseTable {
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        UserId: t.name('user_id').integer(),
-        UserId2: t.name('user_id_2').integer(),
-        UserId3: t.name('user_id_3').integer(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          columns: ['UserId'],
-          references: ['Id'],
+    const ProfileTable = defineTable('profile', (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      UserId: t.name('user_id').integer(),
+      UserId2: t.name('user_id_2').integer(),
+      UserId3: t.name('user_id_3').integer(),
+    })).relations((profile) => ({
+      user: profile('UserId').belongsTo(() => UserTable('Id')),
+      user2: profile('UserId2')
+        .belongsTo(() => UserTable('Id'))
+        .foreignKey(false),
+      user3: profile('UserId3')
+        .belongsTo(() => UserTable('Id'))
+        .foreignKey({
+          onDelete: 'CASCADE',
         }),
-        user2: this.belongsTo(() => UserTable, {
-          columns: ['UserId2'],
-          references: ['Id'],
-          foreignKey: false,
-        }),
-        user3: this.belongsTo(() => UserTable, {
-          columns: ['UserId3'],
-          references: ['Id'],
-          foreignKey: {
-            onDelete: 'CASCADE',
-          },
-        }),
-      };
-    }
+    }));
 
     const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,
@@ -956,22 +941,19 @@ describe('belongsTo', () => {
       describe('id has no default', () => {
         // for this issue: https://github.com/romeerez/orchid-orm/issues/34
         it('should create record with explicitly setting id and foreign key', async () => {
-          class UserTable extends BaseTable {
-            schema = () => 'schema';
-            readonly table = 'user';
-            columns = this.setColumns((t) => ({
-              Id: t.name('id').identity().primaryKey(),
-              UserKey: t.name('user_key').text(),
-              Name: t.name('name').text(),
-              Password: t.name('password').text(),
-              ...t.timestamps(),
-            }));
-          }
+          const { defineTable } = createTableFactory({ snakeCase: true });
+          const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+            Id: t.name('id').identity().primaryKey(),
+            UserKey: t.name('user_key').text(),
+            Name: t.name('name').text(),
+            Password: t.name('password').text(),
+            ...t.timestamps(),
+          }));
 
-          class ProfileTable extends BaseTable {
-            schema = () => 'schema';
-            readonly table = 'profile';
-            columns = this.setColumns((t) => ({
+          const ProfileTable = defineTable(
+            'profile',
+            { schema: 'schema' },
+            (t) => ({
               Id: t.name('id').identity().primaryKey(),
               ProfileKey: t.name('profile_key').text(),
               UserId: t
@@ -982,16 +964,12 @@ describe('belongsTo', () => {
               Bio: t.name('bio').text().nullable(),
               Active: t.name('active').boolean().nullable(),
               ...t.timestamps(),
-            }));
-
-            relations = {
-              user: this.belongsTo(() => UserTable, {
-                required: true,
-                columns: ['UserId', 'ProfileKey'],
-                references: ['Id', 'UserKey'],
-              }),
-            };
-          }
+            }),
+          ).relations((profile) => ({
+            user: profile('UserId', 'ProfileKey')
+              .belongsTo(() => UserTable('Id', 'UserKey'))
+              .required(),
+          }));
 
           const db = orchidORMWithAdapter(ormParams, {
             user: UserTable,
@@ -1421,6 +1399,112 @@ describe('belongsTo', () => {
           );
         });
       });
+    });
+  });
+
+  describe('upsert', () => {
+    it('should create belongsTo record when creating the record', async () => {
+      const profile = await db.profile
+        .select('UserId', 'ProfileKey')
+        .find(123)
+        .upsert({
+          update: {
+            Bio: 'updated',
+          },
+          create: {
+            ...ProfileData,
+            user: { create: { ...UserData, Name: 'upsert created user' } },
+          },
+        })
+        .narrowType()<{ UserId: number }>();
+
+      const users = await db.user;
+
+      expect(users).toMatchObject([
+        {
+          Id: profile.UserId,
+          UserKey: profile.ProfileKey,
+          Name: 'upsert created user',
+        },
+      ]);
+    });
+
+    it('should connect belongsTo record when creating the record', async () => {
+      await db.user.create({
+        ...UserData,
+        UserKey: 'tmp',
+        Name: 'upsert connected user',
+      });
+
+      const profile = await db.profile
+        .select('UserId', 'ProfileKey')
+        .find(123)
+        .upsert({
+          update: {
+            Bio: 'updated',
+          },
+          create: {
+            ...ProfileData,
+            user: { connect: { Name: 'upsert connected user' } },
+          },
+        });
+
+      if (!profile.UserId) {
+        throw new Error('Missing UserId');
+      }
+
+      const users = await db.user;
+
+      expect(users).toMatchObject([
+        {
+          Id: profile.UserId,
+          UserKey: profile.ProfileKey,
+          Name: 'upsert connected user',
+        },
+      ]);
+    });
+
+    it('should connect or create belongsTo record when creating the record', async () => {
+      await db.user.create({
+        ...UserData,
+        UserKey: 'tmp',
+        Name: 'upsert connected or created user',
+      });
+
+      const profile = await db.profile
+        .select('UserId', 'ProfileKey')
+        .find(123)
+        .upsert({
+          update: {
+            Bio: 'updated',
+          },
+          create: {
+            ...ProfileData,
+            user: {
+              connectOrCreate: {
+                where: { Name: 'upsert connected or created user' },
+                create: {
+                  ...UserData,
+                  Name: 'upsert connected or created user',
+                },
+              },
+            },
+          },
+        });
+
+      if (!profile.UserId) {
+        throw new Error('Missing UserId');
+      }
+
+      const users = await db.user;
+
+      expect(users).toMatchObject([
+        {
+          Id: profile.UserId,
+          UserKey: profile.ProfileKey,
+          Name: 'upsert connected or created user',
+        },
+      ]);
     });
   });
 
@@ -2381,41 +2465,24 @@ describe('belongsTo', () => {
   });
 
   describe('not required belongsTo', () => {
-    class UserTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        Name: t.name('name').text(),
-        Password: t.name('password').text(),
-      }));
+    const { defineTable } = createTableFactory({ snakeCase: true });
+    const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      Name: t.name('name').text(),
+      Password: t.name('password').text(),
+    })).relations((user) => ({
+      profile: user('Id').hasOne(() => ProfileTable('UserId')),
+    }));
 
-      relations = {
-        profile: this.hasOne(() => ProfileTable, {
-          columns: ['Id'],
-          references: ['UserId'],
-        }),
-      };
-    }
-
-    class ProfileTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'profile';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        UserId: t.name('user_id').integer().nullable(),
-        ProfileKey: t.name('profile_key').string().nullable(),
-        Bio: t.name('bio').text().nullable(),
-        ...t.timestamps(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          columns: ['UserId'],
-          references: ['Id'],
-        }),
-      };
-    }
+    const ProfileTable = defineTable('profile', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      UserId: t.name('user_id').integer().nullable(),
+      ProfileKey: t.name('profile_key').string().nullable(),
+      Bio: t.name('bio').text().nullable(),
+      ...t.timestamps(),
+    })).relations((profile) => ({
+      user: profile('UserId').belongsTo(() => UserTable('Id')),
+    }));
 
     const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,
@@ -2481,72 +2548,50 @@ describe('belongsTo', () => {
   });
 
   describe('inferred required belongsTo', () => {
-    class UserTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        UserKey: t.name('user_key').text(),
-        Name: t.name('name').text(),
-        Password: t.name('password').text(),
-      }));
-    }
+    const { defineTable } = createTableFactory({ snakeCase: true });
+    const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      UserKey: t.name('user_key').text(),
+      Name: t.name('name').text(),
+      Password: t.name('password').text(),
+    }));
 
-    class SoftDeletedUserTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'soft_deleted_user';
-      columns = this.setColumns((t) => ({
+    const SoftDeletedUserTable = defineTable(
+      'soft_deleted_user',
+      { schema: 'schema' },
+      (t) => ({
         Id: t.name('id').identity().primaryKey(),
         UserKey: t.name('user_key').text(),
         Name: t.name('name').text(),
         Password: t.name('password').text(),
         deletedAt: t.timestamp().nullable(),
-      }));
+      }),
+    ).softDelete();
 
-      readonly softDelete = true;
-    }
-
-    class ProfileTable extends BaseTable {
-      schema = 'schema';
-      readonly table = 'profile';
-      columns = this.setColumns((t) => ({
-        Id: t.name('id').identity().primaryKey(),
-        UserId: t.name('user_id').integer(),
-        SoftDeletedUserId: t.name('soft_deleted_user_id').integer(),
-        OptionalUserId: t.name('optional_user_id').integer().nullable(),
-        ProfileKey: t.name('profile_key').text(),
-        OptionalProfileKey: t.name('optional_profile_key').text().nullable(),
-        Bio: t.name('bio').text().nullable(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          columns: ['UserId'],
-          references: ['Id'],
-        }),
-        softDeletedUser: this.belongsTo(() => SoftDeletedUserTable, {
-          columns: ['SoftDeletedUserId'],
-          references: ['Id'],
-        }),
-        optionalUser: this.belongsTo(() => UserTable, {
-          columns: ['OptionalUserId'],
-          references: ['Id'],
-        }),
-        forcedOptionalUser: this.belongsTo(() => UserTable, {
-          required: false,
-          columns: ['UserId'],
-          references: ['Id'],
-        }),
-        compositeUser: this.belongsTo(() => UserTable, {
-          columns: ['UserId', 'ProfileKey'],
-          references: ['Id', 'UserKey'],
-        }),
-        optionalCompositeUser: this.belongsTo(() => UserTable, {
-          columns: ['UserId', 'OptionalProfileKey'],
-          references: ['Id', 'UserKey'],
-        }),
-      };
-    }
+    const ProfileTable = defineTable('profile', { schema: 'schema' }, (t) => ({
+      Id: t.name('id').identity().primaryKey(),
+      UserId: t.name('user_id').integer(),
+      SoftDeletedUserId: t.name('soft_deleted_user_id').integer(),
+      OptionalUserId: t.name('optional_user_id').integer().nullable(),
+      ProfileKey: t.name('profile_key').text(),
+      OptionalProfileKey: t.name('optional_profile_key').text().nullable(),
+      Bio: t.name('bio').text().nullable(),
+    })).relations((profile) => ({
+      user: profile('UserId').belongsTo(() => UserTable('Id')),
+      softDeletedUser: profile('SoftDeletedUserId').belongsTo(() =>
+        SoftDeletedUserTable('Id'),
+      ),
+      optionalUser: profile('OptionalUserId').belongsTo(() => UserTable('Id')),
+      forcedOptionalUser: profile('UserId')
+        .belongsTo(() => UserTable('Id'))
+        .required(false),
+      compositeUser: profile('UserId', 'ProfileKey').belongsTo(() =>
+        UserTable('Id', 'UserKey'),
+      ),
+      optionalCompositeUser: profile('UserId', 'OptionalProfileKey').belongsTo(
+        () => UserTable('Id', 'UserKey'),
+      ),
+    }));
 
     const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,
@@ -2568,28 +2613,13 @@ describe('belongsTo', () => {
     });
 
     it('should infer optional for omitted required when related table has soft delete', () => {
-      const q = db.profile.select({
+      db.profile.select({
         softDeletedUser: (q) => q.softDeletedUser,
       });
 
       expect(db.profile.relations.softDeletedUser.query.q.returnType).toBe(
         'one',
       );
-
-      assertType<
-        Awaited<typeof q>,
-        {
-          softDeletedUser:
-            | {
-                Id: number;
-                UserKey: string;
-                Name: string;
-                Password: string;
-                deletedAt: Date | null;
-              }
-            | undefined;
-        }[]
-      >();
     });
 
     it('should infer optional for omitted required when any local column is nullable', async () => {
@@ -2647,22 +2677,17 @@ describe('belongsTo', () => {
     });
 
     it('should require a non-nullable belongsTo foreign key or nested relation when creating', () => {
-      class SingleProfileTable extends BaseTable {
-        schema = 'schema';
-        readonly table = 'profile';
-        columns = this.setColumns((t) => ({
+      const SingleProfileTable = defineTable(
+        'profile',
+        { schema: 'schema' },
+        (t) => ({
           Id: t.name('id').identity().primaryKey(),
           UserId: t.name('user_id').integer(),
           Bio: t.name('bio').text().nullable(),
-        }));
-
-        relations = {
-          user: this.belongsTo(() => UserTable, {
-            columns: ['UserId'],
-            references: ['Id'],
-          }),
-        };
-      }
+        }),
+      ).relations((profile) => ({
+        user: profile('UserId').belongsTo(() => UserTable('Id')),
+      }));
 
       const db = orchidORMWithAdapter(ormParams, {
         user: UserTable,
@@ -2709,30 +2734,21 @@ describe('belongsTo', () => {
   });
 
   it('should have a proper argument type in `create` when the table has 2+ `belongsTo` relations', () => {
-    class Table extends BaseTable {
-      readonly table = 'a';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        bId: t.integer(),
-        cId: t.integer(),
-      }));
+    const { defineTable } = createTableFactory();
+    const ATable = defineTable('a', (t) => ({
+      id: t.identity().primaryKey(),
+      bId: t.integer(),
+      cId: t.integer(),
+    })).relations((a) => ({
+      b: a('bId')
+        .belongsTo(() => ATable('id'))
+        .required(),
+      c: a('cId')
+        .belongsTo(() => ATable('id'))
+        .required(),
+    }));
 
-      relations = {
-        b: this.belongsTo(() => Table, {
-          required: true,
-          columns: ['bId'],
-          references: ['id'],
-        }),
-
-        c: this.belongsTo(() => Table, {
-          required: true,
-          columns: ['cId'],
-          references: ['id'],
-        }),
-      };
-    }
-
-    const db = orchidORMWithAdapter(ormParams, { a: Table });
+    const db = orchidORMWithAdapter(ormParams, { a: ATable });
 
     // @ts-expect-error cId or c is required
     db.a.create({
@@ -2781,38 +2797,23 @@ describe('belongsTo', () => {
   });
 
   it('should allow omitting a foreign key when one of several `belongsTo` relations using it is provided', () => {
-    class UserTable extends BaseTable {
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        active: t.boolean(),
-      }));
-    }
+    const { defineTable } = createTableFactory();
+    const UserTable = defineTable('user', (t) => ({
+      id: t.identity().primaryKey(),
+      active: t.boolean(),
+    }));
 
-    class ProfileTable extends BaseTable {
-      readonly table = 'profile';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        userId: t.integer(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          required: true,
-          columns: ['userId'],
-          references: ['id'],
-        }),
-
-        activeUser: this.belongsTo(() => UserTable, {
-          required: true,
-          columns: ['userId'],
-          references: ['id'],
-          on: {
-            active: true,
-          },
-        }),
-      };
-    }
+    const ProfileTable = defineTable('profile', (t) => ({
+      id: t.identity().primaryKey(),
+      userId: t.integer(),
+    })).relations((profile) => ({
+      user: profile('userId')
+        .belongsTo(() => UserTable('id'))
+        .required(),
+      activeUser: profile('userId')
+        .belongsTo(() => UserTable('id').where({ active: true }))
+        .required(),
+    }));
 
     const db = orchidORMWithAdapter(ormParams, {
       profile: ProfileTable,

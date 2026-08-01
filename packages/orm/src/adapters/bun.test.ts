@@ -1,6 +1,6 @@
 import { bundleOrchidORMTables } from 'orchid-orm';
 import { makeOrchidOrmDb, orchidORM } from './bun';
-import { RecordUnknown } from 'pqb/index';
+import { RecordUnknown } from 'pqb/internal';
 
 describe('bun', () => {
   beforeAll(() => {

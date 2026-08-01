@@ -156,7 +156,7 @@ const objects: { id: number }[] = await db.table
 Each column may accept a specific value, a raw SQL, or a query that returns a single value.
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 const oneRecord = await db.table.create({
   name: 'John',
@@ -511,32 +511,27 @@ db.table
 A primary key or a unique index for a **single** column can be fined on a column:
 
 ```ts
-export class MyTable extends BaseTable {
-  columns = this.setColumns((t) => ({
-    pkey: t.uuid().primaryKey(),
-    unique: t.string().unique(),
-  }));
-}
+export const MyTable = defineTable('myTable', (t) => ({
+  pkey: t.uuid().primaryKey(),
+  unique: t.string().unique(),
+}));
 ```
 
 But for composite primary keys or indexes (having multiple columns), define it in a separate function:
 
 ```ts
-export class MyTable extends BaseTable {
-  columns = this.setColumns(
-    (t) => ({
-      one: t.integer(),
-      two: t.string(),
-      three: t.boolean(),
-    }),
-    (t) => [t.primaryKey(['one', 'two']), t.unique(['two', 'three'])],
-  );
-}
+export const MyTable = defineTable('myTable', (t) => ({
+  one: t.integer(),
+  two: t.string(),
+  three: t.boolean(),
+}))
+  .primaryKey(['one', 'two'])
+  .unique(['two', 'three']);
 ```
 
 :::
 
-You can use the `sql` function exported from your `BaseTable` file in onConflict.
+You can use the `sql` function exported from your table factory file in onConflict.
 It can be useful to specify a condition when you have a partial index:
 
 ```ts

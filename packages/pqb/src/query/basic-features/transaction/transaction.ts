@@ -98,24 +98,19 @@ export type AfterCommitErrorResult =
  * so later they can be identified when handling after commit errors.
  *
  * ```ts
- * class SomeTable extends BaseTable {
- *   readonly table = 'someTable';
- *   columns = this.setColumns((t) => ({
- *     ...someColumns,
- *   }));
+ * export const SomeTable = defineTable('someTable', (t) => ({
+ *   ...someColumns,
+ * })).init((orm: typeof db, hooks) => {
+ *   // anonymous funciton - has no name
+ *   hooks.afterCreateCommit([], async () => {
+ *     // ...
+ *   });
  *
- *   init(orm: typeof db) {
- *     // anonymous funciton - has no name
- *     this.afterCreateCommit([], async () => {
- *       // ...
- *     });
- *
- *     // named function
- *     this.afterCreateCommit([], function myHook() => {
- *       // ...
- *     });
- *   }
- * }
+ *   // named function
+ *   hooks.afterCreateCommit([], function myHook() {
+ *     // ...
+ *   });
+ * });
  * ```
  */
 export class AfterCommitError extends OrchidOrmError {

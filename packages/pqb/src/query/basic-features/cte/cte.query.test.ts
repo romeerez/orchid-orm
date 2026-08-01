@@ -1,10 +1,4 @@
 import {
-  User,
-  userColumnsSql,
-  userData,
-  UserRecord,
-} from '../../../test-utils/pqb.test-utils';
-import {
   expectSql,
   assertType,
   sql,
@@ -12,6 +6,9 @@ import {
   db,
   Profile,
   ProfileSelectAll,
+  UserData,
+  UserDefaultSelect,
+  UserSelectAll,
 } from 'test-utils';
 import { CteOptions } from './cte.sql';
 
@@ -44,17 +41,17 @@ const makeOptions = (
   ];
 };
 
-const selectedOptions = makeOptions(userColumnsSql);
+const selectedOptions = makeOptions(UserSelectAll);
 
 describe('cte', () => {
   useTestDatabase();
 
   it('should use a query, handle selection, parse values', async () => {
-    const userId = await User.get('id').insert(userData);
+    const userId = await db.user.get('Id').insert(UserData);
 
-    const q = User.with('w', User.select({ i: 'id', u: 'updatedAt' })).from(
-      'w',
-    );
+    const q = db.user
+      .with('w', db.user.select({ i: 'Id', u: 'updatedAt' }))
+      .from('w');
 
     expectSql(
       q.toSQL(),
@@ -71,11 +68,13 @@ describe('cte', () => {
   });
 
   it('should use query builder callback', async () => {
-    await User.insert(userData);
+    await db.user.insert(UserData);
 
-    const q = User.with('w', (q) =>
-      q.select({ one: () => sql`'1'`.type((t) => t.text().parse(parseInt)) }),
-    ).from('w');
+    const q = db.user
+      .with('w', (q) =>
+        q.select({ one: () => sql`'1'`.type((t) => t.text().parse(parseInt)) }),
+      )
+      .from('w');
 
     expectSql(
       q.toSQL(),
@@ -92,16 +91,19 @@ describe('cte', () => {
   });
 
   it('should work with join', () => {
-    const q = User.with('w', User).join('w', 'id', 'User.id').select('w.id');
+    const q = db.user
+      .with('w', db.user)
+      .join('w', 'w.Id', 'User.Id')
+      .select('w.Id');
 
-    assertType<Awaited<typeof q>, { id: number }[]>();
+    assertType<Awaited<typeof q>, { Id: number }[]>();
 
     expectSql(
       q.toSQL(),
       `
-        WITH "w" AS (SELECT ${userColumnsSql} FROM "schema"."user" "User")
-        SELECT "w"."id" FROM "schema"."user" "User"
-        JOIN "w" ON "w"."id" = "User"."id"
+        WITH "w" AS (SELECT ${UserSelectAll} FROM "schema"."user" "User")
+        SELECT "w"."Id" FROM "schema"."user" "User"
+        JOIN "w" ON "w"."Id" = "User"."id"
       `,
     );
   });
@@ -133,27 +135,27 @@ describe('cte', () => {
 
   describe('options', () => {
     it('should support columns: true to list all columns', () => {
-      const q = User.with('w', { columns: true }, User).from('w');
+      const q = db.user.with('w', { columns: true }, db.user).from('w');
 
-      assertType<Awaited<typeof q>, UserRecord[]>();
+      assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
       expectSql(
         q.toSQL(),
         `
-          WITH "w"(${Object.keys(User.shape)
+          WITH "w"(${Object.keys(db.user.shape)
             .map((c) => `"${c}"`)
             .join(
               ', ',
-            )}) AS (SELECT ${userColumnsSql} FROM "schema"."user" "User") SELECT * FROM "w"
+            )}) AS (SELECT ${UserSelectAll} FROM "schema"."user" "User") SELECT * FROM "w"
         `,
       );
     });
 
     it('should support all with options', () => {
       for (const { options: opts, sql } of selectedOptions) {
-        const q = User.with('w', opts, User).from('w');
+        const q = db.user.with('w', opts, db.user).from('w');
 
-        assertType<Awaited<typeof q>, UserRecord[]>();
+        assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
         expectSql(q.toSQL(), sql);
       }
@@ -161,25 +163,26 @@ describe('cte', () => {
   });
 
   it('should allow using one CTE in another', () => {
-    const q = User.with('a', () => User.where({ id: 1 }))
-      .with('b', (q) => q.from('a').where({ name: 'name' }))
+    const q = db.user
+      .with('a', () => db.user.where({ Id: 1 }))
+      .with('b', (q) => q.from('a').where({ Name: 'name' }))
       .from('b')
-      .where({ active: true });
+      .where({ Active: true });
 
-    assertType<Awaited<typeof q>, UserRecord[]>();
+    assertType<Awaited<typeof q>, UserDefaultSelect[]>();
 
     expectSql(
       q.toSQL(),
       `
         WITH "a" AS (
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE "User"."id" = $1
         ), "b" AS (
           SELECT * FROM "a"
-          WHERE "a"."name" = $2
+          WHERE "a"."Name" = $2
         )
         SELECT * FROM "b"
-        WHERE "b"."active" = $3
+        WHERE "b"."Active" = $3
       `,
       [1, 'name', true],
     );
@@ -188,16 +191,17 @@ describe('cte', () => {
 
 describe('withRecursive', () => {
   it('should work with custom sql statements', () => {
-    const q = User.withRecursive(
-      't',
-      { union: 'UNION' },
-      (q) => q.select({ n: () => sql`1`.type((t) => t.integer()) }),
-      (q) =>
-        q
-          .from('t')
-          .select({ n: () => sql<number>`n + 1` })
-          .where({ n: { lt: 100 } }),
-    )
+    const q = db.user
+      .withRecursive(
+        't',
+        { union: 'UNION' },
+        (q) => q.select({ n: () => sql`1`.type((t) => t.integer()) }),
+        (q) =>
+          q
+            .from('t')
+            .select({ n: () => sql<number>`n + 1` })
+            .where({ n: { lt: 100 } }),
+      )
       .from('t')
       .where({ n: { gt: 10 } });
 
@@ -262,14 +266,16 @@ describe('withSql', () => {
   useTestDatabase();
 
   it('should use raw sql', async () => {
-    const q = User.withSql(
-      'w',
-      (t) => ({
-        one: t.text().parse(parseInt),
-        two: t.text(),
-      }),
-      () => sql`(VALUES ('1', 'two'))`,
-    ).from('w');
+    const q = db.user
+      .withSql(
+        'w',
+        (t) => ({
+          one: t.text().parse(parseInt),
+          two: t.text(),
+        }),
+        () => sql`(VALUES ('1', 'two'))`,
+      )
+      .from('w');
 
     expectSql(
       q.toSQL(),
@@ -287,26 +293,29 @@ describe('withSql', () => {
 
   it('should support all with options', () => {
     for (const { options: opts, sql: s } of makeOptions('*', ['id', 'name'])) {
-      const q = User.withSql(
-        'w',
-        opts,
-        (t) => ({
-          id: t.integer(),
-          name: t.text(),
-        }),
-        () => sql`SELECT * FROM "schema"."user" "User"`,
-      ).from('w');
+      const q = db.user
+        .withSql(
+          'w',
+          opts,
+          (t) => ({
+            id: t.integer(),
+            name: t.text(),
+          }),
+          () => sql`SELECT * FROM "schema"."user" "User"`,
+        )
+        .from('w');
 
       expectSql(q.toSQL(), s);
     }
   });
 
   it('should work in join', () => {
-    const q = User.withSql(
-      'test',
-      (t) => ({ id: t.integer() }),
-      () => sql`select 1 as id`,
-    )
+    const q = db.user
+      .withSql(
+        'test',
+        (t) => ({ id: t.integer() }),
+        () => sql`select 1 as id`,
+      )
       .join('test')
       .select('test.id');
 

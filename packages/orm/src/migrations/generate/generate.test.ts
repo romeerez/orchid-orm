@@ -1,5 +1,9 @@
 import { introspectDbSchema } from 'rake-db';
-import { useGeneratorsTestUtils } from './generators/generators.test-utils';
+import {
+  defineTable,
+  sql,
+  useGeneratorsTestUtils,
+} from './generators/generators.test-utils';
 import { asMock } from 'test-utils';
 import { verifyMigration } from './verify-migration';
 import { defineRls } from '../../orm';
@@ -23,8 +27,7 @@ jest.mock('node:fs/promises', () => ({
 }));
 
 describe('generate', () => {
-  const { arrange, act, defaultConfig, BaseTable, table } =
-    useGeneratorsTestUtils();
+  const { arrange, act, defaultConfig } = useGeneratorsTestUtils();
 
   it('should throw if no `dbPath` setting in the config', async () => {
     await arrange({
@@ -47,13 +50,19 @@ describe('generate', () => {
   it('should throw if table`s table is not set', async () => {
     await arrange({
       tables: [
-        class One extends BaseTable {
-          noPrimaryKey = true;
+        {
+          instance: () => ({
+            noPrimaryKey: true,
+            columns: { shape: {}, data: [] },
+            q: {},
+          }),
         },
       ],
     });
 
-    await expect(act()).rejects.toThrow(`Table One is missing table property`);
+    await expect(act()).rejects.toThrow(
+      `Table table0 is missing table property`,
+    );
   });
 
   it('should throw if one db schema does not match the other', async () => {
@@ -78,7 +87,7 @@ describe('generate', () => {
 
   it('should throw when migration verification fails', async () => {
     await arrange({
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     asMock(verifyMigration).mockImplementation(() => false);
@@ -91,21 +100,23 @@ describe('generate', () => {
 
     await arrange({
       tables: [
-        class One extends BaseTable {
-          table = 'one';
-          noPrimaryKey = true;
-          rls = defineRls({
+        defineTable(
+          'one',
+          { noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ).rls(
+          defineRls({
             enable: true,
             permit: [
               {
                 name: 'one_select_policy',
                 for: 'SELECT',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -120,7 +131,7 @@ describe('generate', () => {
     asMock(verifyMigration).mockResolvedValue(undefined);
 
     await arrange({
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();
@@ -137,7 +148,7 @@ describe('generate', () => {
       dbOptions: {
         roles: [{ name: 'name' }],
       },
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();
@@ -157,7 +168,7 @@ describe('generate', () => {
       dbOptions: {
         roles: [{ name: 'name', defaultPrivileges: [] }],
       },
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();

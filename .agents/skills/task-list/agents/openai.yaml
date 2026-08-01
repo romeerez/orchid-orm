@@ -1,0 +1,3 @@
+interface:
+  display_name: "Task List"
+  short_description: "Write Orchid ORM task lists from specs"

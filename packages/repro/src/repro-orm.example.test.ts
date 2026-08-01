@@ -1,39 +1,28 @@
-import { createBaseTable, testTransaction } from 'orchid-orm';
+import { createTableFactory, testTransaction } from 'orchid-orm';
 import { orchidORM } from 'orchid-orm/postgres-js';
 
-// Do the `createBaseTable` as specified in the issue, otherwise default it to:
-const BaseTable = createBaseTable({ snakeCase: true });
+// Do the `createTableFactory` as specified in the issue, otherwise default it to:
+const { defineTable } = createTableFactory({ snakeCase: true });
 
 // Define the tables as specified in the issue,
 // if not specified try to infer the table names, columns, relations, etc. from the issue.
-class UserTable extends BaseTable {
-  readonly table = 'user';
+const UserTable = defineTable('user', (t) => ({
+  id: t.serial().primaryKey(),
+  name: t.varchar(),
+}));
 
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    name: t.varchar(),
+const PostTable = defineTable('post', (t) => ({
+  id: t.serial().primaryKey(),
+  deletedAt: t.timestamp().nullable(),
+  userId: t.integer(),
+  text: t.varchar(),
+}))
+  .softDelete()
+  .relations((main) => ({
+    user: main('userId')
+      .belongsTo(() => UserTable('id'))
+      .required(),
   }));
-}
-
-class PostTable extends BaseTable {
-  readonly table = 'post';
-  readonly softDelete = true;
-
-  columns = this.setColumns((t) => ({
-    id: t.serial().primaryKey(),
-    deletedAt: t.timestamp().nullable(),
-    userId: t.integer(),
-    text: t.varchar(),
-  }));
-
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      required: true,
-      columns: ['userId'],
-      references: ['id'],
-    }),
-  };
-}
 
 const db = orchidORM(
   {

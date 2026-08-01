@@ -357,7 +357,7 @@ const isStandaloneCheckAddOrDropInput = (
 type TableDataForeignKeyArgs =
   | [
       columns: [string, ...string[]],
-      fnOrTable: () => new () => { columns: { shape: unknown } },
+      fnOrTable: () => Column.ForeignKey.TableParam,
       foreignColumns: [PropertyKey, ...PropertyKey[]],
       options?: TableData.References.Options,
     ]
@@ -369,7 +369,7 @@ type TableDataForeignKeyArgs =
     ];
 
 type ColumnForeignKeyArgs = [
-  fnOrTable: string,
+  fnOrTable: string | (() => Column.ForeignKey.TableParam),
   foreignColumn: string,
   options?: TableData.References.Options,
 ];
@@ -545,7 +545,10 @@ export interface TableChangeMethods
   ): ColumnExcludeChangeInput;
   foreignKey<Shape>(
     columns: [string, ...string[]],
-    fnOrTable: () => new () => { columns: { shape: Shape } },
+    fnOrTable: () => Column.ForeignKey.TableParam & {
+      columns?: { shape: Shape };
+      instance?: () => { columns: { shape: Shape } };
+    },
     foreignColumns: [keyof Shape, ...(keyof Shape)[]],
     options?: TableData.References.Options,
   ): NonUniqDataItem;
@@ -570,7 +573,10 @@ export interface TableChangeMethods
 
 function foreignKey<Shape>(
   columns: [string, ...string[]],
-  fnOrTable: () => new () => { columns: { shape: Shape } },
+  fnOrTable: () => Column.ForeignKey.TableParam & {
+    columns?: { shape: Shape };
+    instance?: () => { columns: { shape: Shape } };
+  },
   foreignColumns: [keyof Shape, ...(keyof Shape)[]],
   options?: TableData.References.Options,
 ): NonUniqDataItem;
@@ -581,7 +587,7 @@ function foreignKey(
   options?: TableData.References.Options,
 ): NonUniqDataItem;
 function foreignKey(
-  fnOrTable: string,
+  fnOrTable: string | (() => Column.ForeignKey.TableParam),
   foreignColumn: string,
   options?: TableData.References.Options,
 ): ColumnForeignKeyChangeInput;
@@ -594,7 +600,7 @@ function foreignKey(
     return (
       tableDataMethods.foreignKey as (
         columns: [string, ...string[]],
-        fnOrTable: string | (() => new () => { columns: { shape: unknown } }),
+        fnOrTable: string | (() => Column.ForeignKey.TableParam),
         foreignColumns: [PropertyKey, ...PropertyKey[]],
         options?: TableData.References.Options,
       ) => NonUniqDataItem

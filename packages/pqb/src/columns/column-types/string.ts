@@ -586,7 +586,7 @@ export class TsVectorColumn<Schema extends ColumnSchemaConfig> extends Column {
       | StaticSQLArgs
       | [language: string, columns: TsVectorGeneratedColumns]
       | [columns: TsVectorGeneratedColumns]
-  ): Column.Modifiers.Generated<T> {
+  ): Column.Generated<T> {
     const arg = args[0];
     // early return on StaticSQLArgs case
     if (typeof arg === 'object' && 'raw' in arg) {

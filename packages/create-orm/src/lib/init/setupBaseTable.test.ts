@@ -3,7 +3,7 @@ import { initSteps } from '../init';
 import { resolve } from 'path';
 import { mockFn, testInitConfig } from '../../testUtils';
 
-const baseTablePath = resolve(testInitConfig.dbDirPath, 'base-table.ts');
+const tableFactoryPath = resolve(testInitConfig.dbDirPath, 'table-factory.ts');
 
 const writeFile = mockFn(fs, 'writeFile');
 
@@ -16,32 +16,30 @@ const columnTypesComment = `// Customize column types for all tables.`;
 describe('setupBaseTable', () => {
   beforeEach(jest.resetAllMocks);
 
-  it('should create base table', async () => {
+  it('should create table factory', async () => {
     await initSteps.setupBaseTable(testInitConfig);
 
-    const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
-    expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
+    const call = writeFile.mock.calls.find(([to]) => to === tableFactoryPath);
+    expect(call?.[1]).toBe(`import { createTableFactory } from 'orchid-orm';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, sql } = createTableFactory({
   ${header}
   ${columnTypesComment}
   // columnTypes: (t) => ({
   //   ...t,
   // }),
 });
-
-export const { sql } = BaseTable;
 `);
   });
 
-  it('should create base table with zod schema provider if it is in config', async () => {
+  it('should create table factory with zod schema provider if it is in config', async () => {
     await initSteps.setupBaseTable({ ...testInitConfig, validation: 'zod' });
 
-    const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
-    expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
+    const call = writeFile.mock.calls.find(([to]) => to === tableFactoryPath);
+    expect(call?.[1]).toBe(`import { createTableFactory } from 'orchid-orm';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, sql } = createTableFactory({
   ${header}
   schemaConfig: zodSchemaConfig,
 
@@ -50,22 +48,20 @@ export const BaseTable = createBaseTable({
   //   ...t,
   // }),
 });
-
-export const { sql } = BaseTable;
 `);
   });
 
-  it('should create base table with valibot schema provider if it is in config', async () => {
+  it('should create table factory with valibot schema provider if it is in config', async () => {
     await initSteps.setupBaseTable({
       ...testInitConfig,
       validation: 'valibot',
     });
 
-    const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
-    expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
+    const call = writeFile.mock.calls.find(([to]) => to === tableFactoryPath);
+    expect(call?.[1]).toBe(`import { createTableFactory } from 'orchid-orm';
 import { valibotSchemaConfig } from 'orchid-orm-valibot';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, sql } = createTableFactory({
   ${header}
   schemaConfig: valibotSchemaConfig,
 
@@ -74,22 +70,20 @@ export const BaseTable = createBaseTable({
   //   ...t,
   // }),
 });
-
-export const { sql } = BaseTable;
 `);
   });
 
-  it('should create base table with timestamp as date', async () => {
+  it('should create table factory with timestamp as date', async () => {
     await initSteps.setupBaseTable({
       ...testInitConfig,
       timestamp: 'date',
       validation: 'no',
     });
 
-    const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
-    expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
+    const call = writeFile.mock.calls.find(([to]) => to === tableFactoryPath);
+    expect(call?.[1]).toBe(`import { createTableFactory } from 'orchid-orm';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, sql } = createTableFactory({
   ${header}
   ${columnTypesComment}
   columnTypes: (t) => ({
@@ -98,22 +92,20 @@ export const BaseTable = createBaseTable({
     timestamp: (precision?: number) => t.timestamp(precision).asDate(),
   }),
 });
-
-export const { sql } = BaseTable;
 `);
   });
 
-  it('should create base table with timestamp as number', async () => {
+  it('should create table factory with timestamp as number', async () => {
     await initSteps.setupBaseTable({
       ...testInitConfig,
       timestamp: 'number',
       validation: 'no',
     });
 
-    const call = writeFile.mock.calls.find(([to]) => to === baseTablePath);
-    expect(call?.[1]).toBe(`import { createBaseTable } from 'orchid-orm';
+    const call = writeFile.mock.calls.find(([to]) => to === tableFactoryPath);
+    expect(call?.[1]).toBe(`import { createTableFactory } from 'orchid-orm';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, sql } = createTableFactory({
   ${header}
   ${columnTypesComment}
   columnTypes: (t) => ({
@@ -122,8 +114,6 @@ export const BaseTable = createBaseTable({
     timestamp: (precision?: number) => t.timestamp(precision).asNumber(),
   }),
 });
-
-export const { sql } = BaseTable;
 `);
   });
 });

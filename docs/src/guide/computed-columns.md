@@ -21,25 +21,20 @@ If you need to transform how a stored writable column is read, use [selectSql](/
 In the following example, selecting `fullName` will unwrap into `"firstName" || ' ' || "lastName"` SQL:
 
 ```ts
-import { BaseTable, sql } from './base-table';
+import { defineTable, sql } from './table-factory';
 
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    firstName: t.string(),
-    lastName: t.string(),
-  }));
-
-  computed = this.setComputed((q) => ({
-    fullName: sql`${q.column('firstName')} || ' ' || ${q.column(
-      'lastName',
-    )}`.type((t) => t.string()),
-    randomizedName: sql(
-      () => sql`${Math.random()} ${q.column('firstName')}`,
-    ).type((t) => t.string()),
-  }));
-}
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  firstName: t.string(),
+  lastName: t.string(),
+})).computed((q) => ({
+  fullName: sql`${q.column('firstName')} || ' ' || ${q.column(
+    'lastName',
+  )}`.type((t) => t.string()),
+  randomizedName: sql(
+    () => sql`${Math.random()} ${q.column('firstName')}`,
+  ).type((t) => t.string()),
+}));
 ```
 
 `randomizedName` in the example is defined with ``sql(() => sql`...`)`` syntax that makes it dynamic,
@@ -80,22 +75,21 @@ You can reuse a SQL computed column in a definition of a new SQL computed column
 by defining the new one as a function and referencing the other column by `this.columnName`.
 
 ```ts
-import { BaseTable, sql } from './base-table';
+import { defineTable, sql } from './table-factory';
 
-export class MyTable extends BaseTable {
+export const MyTable = defineTable('myTable', (t) => ({
   // ...snip
-  computed = this.setComputed((q) => ({
-    hello: sql`'hello'`.type((t) => t.string()),
-    // can be "dynamic", the callback is executed for every query.
-    world: sql(() => sql`'world'`.type((t) => t.string())),
-    // reuse `hello` and `world` to define a new SQL computed column:
-    greet() {
-      return sql`${this.hello} || ' ' || ${this.world} || '!'`.type(() =>
-        t.string(),
-      );
-    },
-  }));
-}
+})).computed((q) => ({
+  hello: sql`'hello'`.type((t) => t.string()),
+  // can be "dynamic", the callback is executed for every query.
+  world: sql(() => sql`'world'`.type((t) => t.string())),
+  // reuse `hello` and `world` to define a new SQL computed column:
+  greet() {
+    return sql`${this.hello} || ' ' || ${this.world} || '!'`.type(() =>
+      t.string(),
+    );
+  },
+}));
 ```
 
 ## JS runtime computed
@@ -105,23 +99,18 @@ Define a runtime computed column to compute values after loading results.
 Unlike SQL computed columns, these columns aren't suitable for filtering or ordering records, they only can be used in selects.
 
 ```ts
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    firstName: t.string(),
-    lastName: t.string(),
-  }));
-
-  computed = this.setComputed((q) => ({
-    fullName: q.computeAtRuntime(
-      // define columns that it depends on
-      ['firstName', 'lastName'],
-      // only columns defined above are available in the callback
-      (record) => `${record.firstName} ${record.lastName}`,
-    ),
-  }));
-}
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  firstName: t.string(),
+  lastName: t.string(),
+})).computed((q) => ({
+  fullName: q.computeAtRuntime(
+    // define columns that it depends on
+    ['firstName', 'lastName'],
+    // only columns defined above are available in the callback
+    (record) => `${record.firstName} ${record.lastName}`,
+  ),
+}));
 ```
 
 The runtime computed column is available in all kinds of selections.
@@ -163,41 +152,36 @@ interface WeatherData {
   weatherInfo: SomeStructure;
 }
 
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    country: t.string(),
-    city: t.string(),
-  }));
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  country: t.string(),
+  city: t.string(),
+})).computed((q) => ({
+  weather: q.computeBatchAtRuntime(
+    // define columns that it depends on
+    ['country', 'city'],
+    // load weather data for all users using a single fetch
+    async (users): Promise<(SomeStructure | undefined)[]> => {
+      // to not query the same location twice
+      const uniqueLocations = new Set(
+        users.map((user) => `${user.country} ${user.city}`),
+      );
 
-  computed = this.setComputed((q) => ({
-    weather: q.computeBatchAtRuntime(
-      // define columns that it depends on
-      ['country', 'city'],
-      // load weather data for all users using a single fetch
-      async (users): Promise<(SomeStructure | undefined)[]> => {
-        // to not query the same location twice
-        const uniqueLocations = new Set(
-          users.map((user) => `${user.country} ${user.city}`),
-        );
+      // fetch data for all locations at once
+      const weatherData: WeatherData[] = await fetchWeatherData({
+        location: [...uniqueLocations],
+      });
 
-        // fetch data for all locations at once
-        const weatherData: WeatherData[] = await fetchWeatherData({
-          location: [...uniqueLocations],
-        });
-
-        // return array with weather data for every user
-        return users.map(
-          (user) =>
-            weatherData.find(
-              (wd) => wd.country === user.country && wd.city === user.city,
-            )?.weatherInfo,
-        );
-      },
-    ),
-  }));
-}
+      // return array with weather data for every user
+      return users.map(
+        (user) =>
+          weatherData.find(
+            (wd) => wd.country === user.country && wd.city === user.city,
+          )?.weatherInfo,
+      );
+    },
+  ),
+}));
 ```
 
 `computeBatchAtRuntime` can also take a synchronous function.

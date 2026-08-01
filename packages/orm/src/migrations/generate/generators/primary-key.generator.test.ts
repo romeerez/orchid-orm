@@ -1,4 +1,4 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
 import { colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
@@ -15,7 +15,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('primaryKey', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   it('supports dropping a uuid default', async () => {
     await arrange({
@@ -25,7 +25,7 @@ describe('primaryKey', () => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           id: t.uuid().primaryKey().default(null),
         })),
       ],
@@ -63,19 +63,19 @@ change(async (db) => {
         },
       },
       tables: [
-        table(
+        defineTable(
+          'inSchemaTable',
+          { schema: 'schema', noPrimaryKey: true, nameInDb: 'inSchemaTable' },
           (t) => ({
             iD: t.identity(),
           }),
-          undefined,
-          { name: 'schema.inSchemaTable' },
         ),
-        table(
+        defineTable(
+          'publicTable',
+          { noPrimaryKey: true, nameInDb: 'publicTable' },
           (t) => ({
             iD: t.identity(),
           }),
-          undefined,
-          { name: 'publicTable' },
         ),
       ],
     });
@@ -93,7 +93,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity().primaryKey(),
         })),
       ],
@@ -124,7 +124,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity(),
         })),
       ],
@@ -156,7 +156,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity(),
           kEy: t.text().primaryKey(),
         })),
@@ -191,13 +191,10 @@ change(async (db) => {
         }));
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.identity(),
-            kEy: t.text(),
-          }),
-          (t) => t.primaryKey(['iD', 'kEy'], 'custom'),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.identity(),
+          kEy: t.text(),
+        })).primaryKey(['iD', 'kEy'], 'custom'),
       ],
     });
 
@@ -227,7 +224,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity().primaryKey(),
           kEy: t.text().primaryKey(),
         })),
@@ -265,7 +262,7 @@ change(async (db) => {
         );
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity(),
           kEy: t.text(),
         })),
@@ -304,14 +301,11 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            a: t.identity(),
-            b: t.text(),
-            c: t.integer(),
-          }),
-          (t) => t.primaryKey(['b', 'c']),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.identity(),
+          b: t.text(),
+          c: t.integer(),
+        })).primaryKey(['b', 'c']),
       ],
     });
 
@@ -349,7 +343,7 @@ change(async (db) => {
         );
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           a: t.identity(),
           b: t.text().primaryKey(),
           c: t.integer().primaryKey(),
@@ -390,13 +384,10 @@ change(async (db) => {
         );
       },
       tables: [
-        table(
-          (t) => ({
-            a: t.identity(),
-            b: t.text(),
-          }),
-          (t) => t.primaryKey(['a', 'b'], 'to'),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          a: t.identity(),
+          b: t.text(),
+        })).primaryKey(['a', 'b'], 'to'),
       ],
     });
 
@@ -422,13 +413,9 @@ change(async (db) => {
         await db.createTable('table', { noPrimaryKey: true });
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.identity().primaryKey(),
-          }),
-          undefined,
-          { noPrimaryKey: false },
-        ),
+        defineTable('table', { noPrimaryKey: false }, (t) => ({
+          iD: t.identity().primaryKey(),
+        })),
       ],
     });
 
@@ -456,7 +443,7 @@ change(async (db) => {
           iD: t.identity().primaryKey(),
         }));
       },
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();
@@ -484,7 +471,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity().primaryKey(),
         })),
       ],
@@ -517,7 +504,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.integer(),
         })),
       ],
@@ -550,7 +537,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           tO: t.integer().primaryKey(),
         })),
       ],
@@ -582,7 +569,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.text().primaryKey(),
         })),
       ],

@@ -1,5 +1,14 @@
 # Breaking changes
 
+## orchid-orm 1.77.0
+
+The class-based table design is deprecated in favor of the new table design.
+
+Class-based tables are still supported, and existing code should continue working well with them.
+They will be removed in the future, but not soon, and there are currently no plans for removal dates.
+
+Migration manual: https://orchid-orm.netlify.app//guide/migrate-to-new-table-design.html
+
 ## orchid-orm 1.76.0, pqb 0.71.0
 
 When `snakeCase` is enabled, table and view aliases are now cast to snake_case for database relation names by default.

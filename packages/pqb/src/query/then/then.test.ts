@@ -1,10 +1,10 @@
-import { User, userData, UserRecord } from '../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
   testAdapter,
   testDb,
   UserData,
+  UserDefaultSelect,
   useTestDatabase,
 } from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../sql/sql-constants';
@@ -32,13 +32,15 @@ describe('then', () => {
 
   describe('catch', () => {
     it('should catch error', async () => {
-      const err = await User.select({
-        column: testDb.sql`koko`.type((t) => t.boolean()),
-      }).catch((err) => {
-        expect(err.message).toBe(`column "koko" does not exist`);
-        expect(err.cause.stack).toContain('then.test.ts');
-        return 'err' as const;
-      });
+      const err = await db.user
+        .select({
+          column: testDb.sql`koko`.type((t) => t.boolean()),
+        })
+        .catch((err) => {
+          expect(err.message).toBe(`column "koko" does not exist`);
+          expect(err.cause.stack).toContain('then.test.ts');
+          return 'err' as const;
+        });
 
       assertType<typeof err, { column: boolean }[] | 'err'>();
 
@@ -48,16 +50,16 @@ describe('then', () => {
     it('should not prevent the query from executing', async () => {
       const fn = jest.fn();
 
-      const user = await User.create(userData).catch(fn);
+      const user = await db.user.create(UserData).catch(fn);
 
-      expect(user.name).toBe(userData.name);
+      expect(user.Name).toBe(UserData.Name);
       expect(fn).not.toHaveBeenCalled();
     });
 
     it('should not mutate the query', async () => {
-      await User.catch(() => 'ok');
+      await db.user.catch(() => 'ok');
 
-      expect(User.q.catch).toBe(undefined);
+      expect(db.user.q.catch).toBe(undefined);
     });
 
     it('should catch error in transaction using save-points', async () => {
@@ -65,20 +67,21 @@ describe('then', () => {
         throw new Error('should not be called');
       });
 
-      const res = await testDb
-        .transaction(async () => {
-          const failedThenResult = await User.get('invalid' as 'name')
+      const res = await db
+        .$transaction(async () => {
+          const failedThenResult = await db.user
+            .get('invalid' as 'Name')
             .recoverable()
             .then(() => {
               throw new Error('should not be called');
             })
             .catch(() => 'caught');
 
-          const failedCatchResult = await User.get('invalid' as 'name').catch(
-            () => 'caught',
-          );
+          const failedCatchResult = await db.user
+            .get('invalid' as 'Name')
+            .catch(() => 'caught');
 
-          const subsequentQueryResult = await testDb.query`SELECT 'ok' ok`;
+          const subsequentQueryResult = await db.$query`SELECT 'ok' ok`;
 
           return {
             failedThenResult,
@@ -133,9 +136,10 @@ describe('then', () => {
       const uniqueCatcher = jest.fn();
       const anyCatcher = jest.fn();
 
-      const err = await User.select({
-        column: testDb.sql`koko`.type((t) => t.boolean()),
-      })
+      const err = await db.user
+        .select({
+          column: testDb.sql`koko`.type((t) => t.boolean()),
+        })
         .catchUniqueError((err) => {
           uniqueCatcher(err);
           return 'not returned';
@@ -157,20 +161,22 @@ describe('then', () => {
     });
 
     it('should catch error in transaction using a save-points', async () => {
-      const id = await User.get('id').create(userData);
+      const id = await db.user.get('Id').create(UserData);
 
       const transactionCatch = jest.fn(() => {
         throw new Error('should not be called');
       });
 
-      const res = await testDb
-        .transaction(async () => {
-          const failedResult = await User.create({
-            ...userData,
-            id,
-          }).catchUniqueError(() => 'caught');
+      const res = await db
+        .$transaction(async () => {
+          const failedResult = await db.user
+            .create({
+              ...UserData,
+              Id: id,
+            })
+            .catchUniqueError(() => 'caught');
 
-          const subsequentQueryResult = await testDb.query`SELECT 'ok' ok`;
+          const subsequentQueryResult = await db.$query`SELECT 'ok' ok`;
 
           return {
             failedResult,
@@ -184,7 +190,7 @@ describe('then', () => {
       assertType<
         typeof res,
         {
-          failedResult: string | UserRecord;
+          failedResult: string | UserDefaultSelect;
           subsequentQueryResult: QueryResultRow;
         }
       >();
@@ -199,7 +205,7 @@ describe('then', () => {
   it('should throw NotFoundError with proper stack trace', async () => {
     let error: Error | undefined;
     try {
-      await User.take();
+      await db.user.take();
     } catch (err) {
       error = err as Error;
     }
@@ -211,7 +217,7 @@ describe('then', () => {
   it('should handle .then callback properly', async () => {
     let isThenCalled = false;
 
-    const len = await User.select('id').then((x) => {
+    const len = await db.user.select('Id').then((x) => {
       isThenCalled = true;
       return x.length;
     });
@@ -224,7 +230,7 @@ describe('then', () => {
 
   it('should throw when there is no `.catch`', async () => {
     // @ts-expect-error wrong column
-    expect(User.select('wrong').then(noop)).rejects.toThrow(
+    expect(db.user.select('wrong').then(noop)).rejects.toThrow(
       'column User.wrong does not exist',
     );
   });
@@ -233,7 +239,7 @@ describe('then', () => {
     let error: Error | undefined;
 
     // @ts-expect-error wrong column
-    await User.select('wrong').then(noop, (err) => (error = err));
+    await db.user.select('wrong').then(noop, (err) => (error = err));
 
     expect(error?.message).toEqual('column User.wrong does not exist');
   });

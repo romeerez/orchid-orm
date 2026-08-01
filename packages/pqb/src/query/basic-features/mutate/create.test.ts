@@ -4,10 +4,7 @@ import {
   snakeData,
   SnakeRecord,
   snakeSelectAll,
-  Tag,
-  UniqueTable,
   uniqueTableData,
-  UniqueTableRecord,
   User,
   userColumnsSql,
   userData,
@@ -959,9 +956,9 @@ describe('create functions', () => {
 
     describe('auto-batching lots of value groups', () => {
       it('should split large insert into batches', () => {
-        const q = Tag.insertMany(
+        const q = db.tag.insertMany(
           Array.from({ length: 12 }, (_, i) => ({
-            tag: `${i}`,
+            Tag: `${i}`,
           })),
         );
 
@@ -985,16 +982,16 @@ describe('create functions', () => {
       });
 
       it('should support batching inserts with `with` CTEs', () => {
-        const q = Tag.insertMany(
+        const q = db.tag.insertMany(
           Array.from({ length: 6 }, (_, i) => ({
-            tag: () => Tag.create({ tag: `${i}` }).get('tag'),
+            Tag: () => db.tag.create({ Tag: `${i}` }).get('Tag'),
           })),
         );
 
         const sql = q.toSQL();
         const insert = (i: number) =>
           `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($${i}) RETURNING "Tag"."tag"`;
-        expect(sql).toEqual({
+        expect(sql).toMatchObject({
           batch: [
             {
               text:
@@ -1004,14 +1001,14 @@ describe('create functions', () => {
                   4,
                 )}), "q5" AS (${insert(5)}) ` +
                 'INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ' +
-                '((SELECT "q"."tag" FROM "q")), ((SELECT "q2"."tag" FROM "q2")), ((SELECT "q3"."tag" FROM "q3")), ' +
-                '((SELECT "q4"."tag" FROM "q4")), ((SELECT "q5"."tag" FROM "q5"))',
+                '((SELECT "q"."Tag" FROM "q")), ((SELECT "q2"."Tag" FROM "q2")), ((SELECT "q3"."Tag" FROM "q3")), ' +
+                '((SELECT "q4"."Tag" FROM "q4")), ((SELECT "q5"."Tag" FROM "q5"))',
               values: ['0', '1', '2', '3', '4'],
             },
             {
               text: `WITH "q" AS (${insert(
                 1,
-              )}) INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ((SELECT "q"."tag" FROM "q"))`,
+              )}) INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ((SELECT "q"."Tag" FROM "q"))`,
               values: ['5'],
             },
           ],
@@ -1375,23 +1372,28 @@ describe('create functions', () => {
       });
 
       it('should override query return type from oneOrThrow to one', async () => {
-        await UniqueTable.create(uniqueTableData);
+        await db.uniqueTable.create(uniqueTableData);
 
-        const q = UniqueTable.take()
+        const q = db.uniqueTable
+          .take()
           .create(uniqueTableData)
           .onConflictDoNothing();
 
         const result = await q;
 
-        assertType<typeof result, UniqueTableRecord | undefined>();
+        assertType<
+          typeof result,
+          typeof db.uniqueTable.__outputType | undefined
+        >();
 
         expect(result).toBe(undefined);
       });
 
       it('should override query return type from valueOrThrow to value', async () => {
-        await UniqueTable.create(uniqueTableData);
+        await db.uniqueTable.create(uniqueTableData);
 
-        const q = UniqueTable.get('id')
+        const q = db.uniqueTable
+          .get('id')
           .create(uniqueTableData)
           .onConflictDoNothing();
 

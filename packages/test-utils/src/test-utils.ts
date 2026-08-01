@@ -1,19 +1,17 @@
-import { testTransaction, createDbWithAdapter } from 'pqb';
+import { createDbWithAdapter, testTransaction } from 'pqb';
 import {
   AdapterClass,
-  DriverAdapter,
-  SchemaConfigFnWithOptions,
-} from 'pqb/internal';
-import { Column } from 'pqb/internal';
-import {
-  makeColumnTypes,
+  Column,
   defaultSchemaConfig,
-  QueryData,
+  DriverAdapter,
+  makeColumnTypes,
   MaybeArray,
+  noop,
+  QueryData,
+  SchemaConfigFnWithOptions,
   SingleSqlItem,
   Sql,
   toArray,
-  noop,
 } from 'pqb/internal';
 import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
@@ -29,7 +27,7 @@ import {
 } from 'pqb/postgres-js';
 import { orchidORM as postgresJsOrchidORM } from '../../orm/src/adapters/postgres-js';
 import { rakeDb as postgresJsRakeDb } from '../../rake-db/src/adapters/postgres-js';
-import { createDb as bunCreateDb, BunAdapter, bunSchemaConfig } from 'pqb/bun';
+import { BunAdapter, bunSchemaConfig, createDb as bunCreateDb } from 'pqb/bun';
 import { orchidORM as bunOrchidORM } from '../../orm/src/adapters/bun';
 import { rakeDb as bunsRakeDb } from '../../rake-db/src/adapters/bun';
 
@@ -106,6 +104,7 @@ export const testOrchidORM = driverItems.orchidORM;
 export const testRakeDb = driverItems.rakeDb;
 
 export type TestSchemaConfig = ZodSchemaConfig;
+export { zodSchemaConfig };
 
 export const testDbOptions = {
   databaseURL: process.env.PG_URL,

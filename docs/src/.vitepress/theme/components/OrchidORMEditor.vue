@@ -18,6 +18,7 @@ const props = defineProps(['query', 'tables', 'vimMode']);
 
 fetchTypes({
   pqb: 'https://cdn.jsdelivr.net/npm/pqb@latest/dist/index.d.ts',
+  'pqb/internal': 'https://cdn.jsdelivr.net/npm/pqb@latest/dist/internal.d.ts',
   'orchid-orm':
     'https://cdn.jsdelivr.net/npm/orchid-orm@latest/dist/index.d.ts',
   'orchid-orm/postgres-js':
@@ -26,6 +27,7 @@ fetchTypes({
 
 const fetchLibs = {
   pqb: 'https://cdn.jsdelivr.net/npm/pqb@latest/dist/index.js',
+  'pqb/internal': 'https://cdn.jsdelivr.net/npm/pqb@latest/dist/internal.js',
   'pqb/postgres-js':
     'https://cdn.jsdelivr.net/npm/pqb@latest/dist/postgres-js.js',
   'orchid-orm': 'https://cdn.jsdelivr.net/npm/orchid-orm@latest/dist/index.js',

@@ -72,37 +72,21 @@ All the `join` methods accept the same arguments, but returning type is differen
 For the following examples, imagine you have a `User` table with `id` and `name`, and `Message` table with `id`, `text`, messages belongs to user via `userId` column:
 
 ```ts
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(),
-  }));
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.text(),
+})).relations((user) => ({
+  messages: user('id').hasMany(() => MessageTable('userId')),
+}));
 
-  relations = {
-    messages: this.hasMany(() => MessageTable, {
-      columns: ['id'],
-      references: ['userId'],
-    }),
-  };
-}
-
-export class MessageTable extends BaseTable {
-  readonly table = 'message';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    userId: t.integer(),
-    text: t.text(),
-    ...t.timestamps(),
-  }));
-
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['userId'],
-      references: ['id'],
-    }),
-  };
-}
+export const MessageTable = defineTable('message', (t) => ({
+  id: t.identity().primaryKey(),
+  userId: t.integer(),
+  text: t.text(),
+  ...t.timestamps(),
+})).relations((message) => ({
+  user: message('userId').belongsTo(() => UserTable('id')),
+}));
 ```
 
 `join` is a method for SQL `JOIN`, which is equivalent to `INNER JOIN`, `LEFT INNERT JOIN`.
@@ -305,7 +289,7 @@ Join can accept raw SQL for the `ON` part of join:
 ```ts
 db.user.join(
   db.message,
-  // `sql` can be imported from your `BaseTable` file
+  // `sql` can be imported from your table factory file
   sql`lower("message"."text") = lower("user"."name")`,
 );
 ```

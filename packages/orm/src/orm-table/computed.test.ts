@@ -1,55 +1,40 @@
-import { useTestORM } from '../test-utils/orm.test-utils';
-import { orchidORMWithAdapter } from '../orm';
-import { pick } from 'pqb/internal';
 import {
-  BaseTable,
-  db,
-  sql,
   assertType,
   expectSql,
   ProfileData,
   UserData,
+  testOrchidORMWithAdapter,
 } from 'test-utils';
+import { useTestORM } from '../test-utils/orm.test-utils';
+import { createTableFactory } from './table';
+import { pick } from 'pqb/internal';
 
 describe('computed', () => {
   useTestORM();
 
-  class UserTable extends BaseTable {
-    schema = () => 'schema';
-    readonly table = 'user';
-    columns = this.setColumns((t) => ({
-      Id: t.name('id').identity().primaryKey(),
-      Name: t.name('name').text(),
-      Password: t.name('password').text(),
-      UserKey: t.name('user_key').text().nullable(),
-    }));
+  const { defineTable, sql } = createTableFactory({ snakeCase: true });
 
-    relations = {
-      profile: this.hasOne(() => ProfileTable, {
-        required: true,
-        columns: ['Id', 'UserKey'],
-        references: ['UserId', 'ProfileKey'],
-      }),
+  const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+    Id: t.name('id').identity().primaryKey(),
+    Name: t.name('name').text(),
+    Password: t.name('password').text(),
+    UserKey: t.name('user_key').text().nullable(),
+  })).relations((user) => ({
+    profile: user('Id', 'UserKey')
+      .hasOne(() => ProfileTable('UserId', 'ProfileKey'))
+      .required(),
+    profiles: user('Id', 'UserKey').hasMany(() =>
+      ProfileTable('UserId', 'ProfileKey'),
+    ),
+  }));
 
-      profiles: this.hasMany(() => ProfileTable, {
-        required: true,
-        columns: ['Id', 'UserKey'],
-        references: ['UserId', 'ProfileKey'],
-      }),
-    };
-  }
-
-  class ProfileTable extends BaseTable {
-    schema = () => 'schema';
-    readonly table = 'profile';
-    columns = this.setColumns((t) => ({
-      Id: t.name('id').bigSerial().primaryKey(),
-      Bio: t.name('bio').text(),
-      ProfileKey: t.name('profile_key').text(),
-      UserId: t.name('user_id').bigint().nullable(),
-    }));
-
-    computed = this.setComputed((q) => ({
+  const ProfileTable = defineTable('profile', { schema: 'schema' }, (t) => ({
+    Id: t.name('id').bigSerial().primaryKey(),
+    Bio: t.name('bio').text(),
+    ProfileKey: t.name('profile_key').text(),
+    UserId: t.name('user_id').bigint().nullable(),
+  }))
+    .computed((q) => ({
       sqlComputed: sql<string>`${q.column('Bio')} || ' ' || ${q.column(
         'ProfileKey',
       )}`,
@@ -66,23 +51,17 @@ describe('computed', () => {
       batchComputed: q.computeBatchAtRuntime(['Id', 'Bio'], (records) =>
         Promise.all(records.map((record) => `${record.Id} ${record.Bio}`)),
       ),
+    }))
+    .relations((profile) => ({
+      user: profile('UserId', 'ProfileKey').belongsTo(() =>
+        UserTable('Id', 'UserKey'),
+      ),
     }));
 
-    relations = {
-      user: this.belongsTo(() => UserTable, {
-        columns: ['UserId', 'ProfileKey'],
-        references: ['Id', 'UserKey'],
-      }),
-    };
-  }
-
-  const local = orchidORMWithAdapter(
-    { db: db.$qb },
-    {
-      user: UserTable,
-      profile: ProfileTable,
-    },
-  );
+  const local = testOrchidORMWithAdapter({
+    user: UserTable,
+    profile: ProfileTable,
+  });
 
   let profileId = '';
   beforeAll(async () => {

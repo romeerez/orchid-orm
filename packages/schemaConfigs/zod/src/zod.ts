@@ -558,7 +558,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
     this: T,
     _schema: OutputSchema,
     fn: (input: T['__type']) => Output,
-  ): Column.Modifiers.Parse<T, OutputSchema, Output>;
+  ): Column.Parse<T, OutputSchema, Output>;
 
   parseNull<
     T extends Column.Pick.ForParseNull,
@@ -568,7 +568,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
     this: T,
     _schema: NullSchema,
     fn: () => NullType,
-  ): Column.Modifiers.ParseNull<T, NullSchema, NullType>;
+  ): Column.ParseNull<T, NullSchema, NullType>;
 
   encode<
     T extends Column.Pick.Type,
@@ -578,7 +578,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
     this: T,
     _schema: InputSchema,
     fn: (input: Input) => unknown,
-  ): Column.Modifiers.Encode<T, InputSchema, Input>;
+  ): Column.Encode<T, InputSchema, Input>;
 
   /**
    * @deprecated use narrowType instead
@@ -689,11 +689,11 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
 
   dateAsNumber<T extends Column.Pick.ForParse>(
     this: T,
-  ): Column.Modifiers.Parse<T, ZodNumber, number>;
+  ): Column.Parse<T, ZodNumber, number>;
 
   dateAsDate<T extends Column.Pick.ForParse>(
     this: T,
-  ): Column.Modifiers.Parse<T, ZodDate, Date>;
+  ): Column.Parse<T, ZodDate, Date>;
 
   enum<T extends readonly string[]>(
     dataType: string,
@@ -704,7 +704,7 @@ export interface ZodSchemaConfig extends ColumnSchemaConfig {
 
   nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): Column.Modifiers.NullableWithSchema<
+  ): Column.NullableWithSchema<
     T,
     ZodNullable<T['inputSchema']>,
     T['nullSchema'] extends ZodTypeAny

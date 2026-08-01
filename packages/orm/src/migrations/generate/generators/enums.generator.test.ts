@@ -1,4 +1,4 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
 import { DbMigration } from 'rake-db';
 import { DefaultColumnTypes, DefaultSchemaConfig, colors } from 'pqb/internal';
 
@@ -16,7 +16,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('enums', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   it('should be able to remove enum values when there is a primary key referencing it', async () => {
     await arrange({
@@ -28,7 +28,7 @@ describe('enums', () => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           status: t.enum('status', ['active']).primaryKey(),
         })),
       ],
@@ -62,7 +62,9 @@ change(async (db) => {
         }));
       },
       tables: [
-        table(
+        defineTable(
+          'my_table',
+          { noPrimaryKey: true, nameInDb: 'my_table' },
           (t) => ({
             myEnumCol: t.enum('my_enum', [
               'first',
@@ -72,8 +74,6 @@ change(async (db) => {
               'fifth',
             ]),
           }),
-          undefined,
-          { name: 'my_table' },
         ),
       ],
       selects: [1, 0, 2],
@@ -111,7 +111,7 @@ ${green('+ add values to enum')} my_enum: third_new`,
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           enum: t.enum('enum_name', ['a', 'b']),
           deleted: t
             .timestamp()
@@ -145,7 +145,7 @@ ${yellow('~ change table')} table:
   it('should create a table with enum and a default value', async () => {
     await arrange({
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.enum('numbers', ['one', 'two', 'three']).default('one'),
           numBersArr: t
             .array(t.enum('numbers', ['one', 'two', 'three']))
@@ -190,7 +190,7 @@ ${green('+ create table')} table (2 columns, no primary key)`);
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           language: t.enum('ui_language', ['en', 'nl']).default('en'),
         })),
       ],
@@ -218,7 +218,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           language: t.enum('ui_language', ['en', 'nl']),
         })),
       ],
@@ -247,7 +247,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.text(),
           numBersArr: t.array(t.text()),
         })),
@@ -303,15 +303,11 @@ ${yellow('~ change table')} table:
   it('should create enum when creating a table', async () => {
     await arrange({
       tables: [
-        table(
-          (t) => ({
-            iD: t.identity().primaryKey(),
-            numBers: t.enum('numbers', ['one', 'two', 'three']),
-            numBersArr: t.array(t.enum('numbers', ['one', 'two', 'three'])),
-          }),
-          undefined,
-          { noPrimaryKey: false },
-        ),
+        defineTable('table', { noPrimaryKey: false }, (t) => ({
+          iD: t.identity().primaryKey(),
+          numBers: t.enum('numbers', ['one', 'two', 'three']),
+          numBersArr: t.array(t.enum('numbers', ['one', 'two', 'three'])),
+        })),
       ],
     });
 
@@ -346,7 +342,7 @@ ${green('+ create table')} table (3 columns)`);
           numBersArr: t.array(t.enum('numbers')),
         }));
       },
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();
@@ -384,7 +380,7 @@ ${yellow('~ change table')} table:
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           numBers: t.enum('schema.numbers', ['one', 'two', 'three']),
           numBersArr: t.array(
             t.enum('schema.numbers', ['one', 'two', 'three']),
@@ -420,7 +416,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('to', ['one', 'two', 'three']),
           colUmnArr: t.array(t.enum('to', ['one', 'two', 'three'])),
         })),
@@ -470,7 +466,7 @@ ${yellow('~ change table')} table:
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('to', ['one', 'two', 'three']),
           colUmnArr: t.array(t.enum('to', ['one', 'two', 'three'])),
         })),
@@ -501,7 +497,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('to', ['one', 'two', 'three', 'four']),
           colUmnArr: t.array(t.enum('to', ['one', 'two', 'three', 'four'])),
         })),
@@ -541,7 +537,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('to.enum', ['one', 'two', 'three']),
           colUmnArr: t.array(t.enum('to.enum', ['one', 'two', 'three'])),
         })),
@@ -576,7 +572,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.enum('toSchema.toEnum', ['one', 'two', 'three']),
           colUmnArr: t.array(
             t.enum('toSchema.toEnum', ['one', 'two', 'three']),
@@ -734,7 +730,7 @@ ${yellow('~ rename type')} toSchema.fromEnum ${yellow('=>')} toSchema.toEnum`);
 
   describe('enum values', () => {
     const tableWithEnum = (values: [string, ...string[]]) =>
-      table((t) => ({
+      defineTable('table', { noPrimaryKey: true }, (t) => ({
         numBers: t.enum('numbers', values),
         numBersArr: t.array(t.enum('numbers', values)),
       }));
@@ -829,7 +825,7 @@ ${green('+ add values to enum')} numbers: three, four`,
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           col: t.enum('x', ['one']).nullable(),
         })),
       ],

@@ -5,12 +5,8 @@ import {
   SnakeRecord,
   snakeSelectAll,
   User,
-  Message,
-  Profile,
   userData,
   UserInsert,
-  Product,
-  UniqueTable,
   userColumnsSql,
   userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
@@ -26,10 +22,6 @@ import {
   UserData,
   useTestDatabase,
 } from 'test-utils';
-import { addQueryOn } from '../join/join';
-import { Query } from '../../query';
-import { PickQuerySelectable } from '../../pick-query-types';
-import { RelationConfigBase } from '../../relations';
 
 const TableWithReadOnly = testDb(
   'table',
@@ -730,29 +722,9 @@ describe('update', () => {
   });
 
   describe('update with relation query', () => {
-    const user = Object.assign(Object.create(User), {
-      joinQuery(toQuery: PickQuerySelectable, baseQuery: PickQuerySelectable) {
-        return addQueryOn(toQuery, baseQuery, toQuery, 'id', 'Profile.userId');
-      },
-    });
-    user.baseQuery = user;
-
-    interface Rel extends RelationConfigBase {
-      query: Query;
-    }
-
-    const profile = Object.assign(Profile, {
-      user,
-    }) as unknown as Omit<typeof Profile, 'relations'> & {
-      relations: {
-        user: Rel;
-      };
-      user: Rel;
-    };
-
     it('should update column with a sub query callback', () => {
-      const q = profile.all().update({
-        userId: (q) => q.user.get('id'),
+      const q = db.profile.all().update({
+        UserId: (q) => q.user.get('Id'),
       });
 
       expectSql(
@@ -761,10 +733,7 @@ describe('update', () => {
           UPDATE "schema"."profile" "Profile"
           SET
             "user_id" = (
-              SELECT "User"."id"
-              FROM "schema"."user" "User"
-              WHERE "User"."id" = "Profile"."user_id"
-              LIMIT 1
+              SELECT "user"."id" FROM "schema"."user" WHERE "user"."id" = "Profile"."user_id" AND "user"."user_key" = "Profile"."profile_key"
             ),
             "updated_at" = now()
         `,
@@ -773,27 +742,27 @@ describe('update', () => {
 
     it('should forbid updating a column with a result of relation query that performs update', () => {
       expect(() =>
-        profile.all().update({
+        db.profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          bio: (q) => q.find(1).update({ name: 'new name' }),
+          Bio: (q) => q.find(1).update({ name: 'new name' }),
         }),
       ).toThrow();
     });
 
     it('should forbid updating a column with a result of relation query that performs create', () => {
       expect(() =>
-        profile.all().update({
+        db.profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          bio: (q) => q.create(userData),
+          Bio: (q) => q.create(userData),
         }),
       ).toThrow();
     });
 
     it('should forbid updating a column with a result of relation query that performs delete', () => {
       expect(() =>
-        profile.all().update({
+        db.profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          bio: (q) => q.find(1).delete(),
+          Bio: (q) => q.find(1).delete(),
         }),
       ).toThrow();
     });
@@ -892,7 +861,7 @@ describe('update', () => {
     });
 
     it(`should ${action} decimal column by 1`, () => {
-      const q = Product.all()[action]('priceAmount');
+      const q = db.product.all()[action]('priceAmount');
 
       expectSql(
         q.toSQL(),
@@ -919,7 +888,7 @@ describe('update', () => {
     });
 
     it(`should ${action} decimal column by provided amount`, () => {
-      const q = Product.all()[action]({ priceAmount: '1' });
+      const q = db.product.all()[action]({ priceAmount: '1' });
 
       expectSql(
         q.toSQL(),
@@ -1346,12 +1315,14 @@ describe('updateMany', () => {
 
     it('should support composite primary keys', () => {
       expectSql(
-        UniqueTable.updateManyOptional([
-          { id: 1, one: 'a', thirdColumn: 'x' },
-          { id: 2, one: 'b', thirdColumn: 'y' },
-        ]).toSQL(),
+        db.uniqueTable
+          .updateManyOptional([
+            { id: 1, one: 'a', thirdColumn: 'x' },
+            { id: 2, one: 'b', thirdColumn: 'y' },
+          ])
+          .toSQL(),
         `
-          UPDATE "schema"."uniqueTable"
+          UPDATE "schema"."unique_table" "uniqueTable"
           SET "third_column" = "v"."third_column"
           FROM (VALUES ($1::int4, $2::text, $3::text), ($4, $5, $6)) "v"("id", "one", "third_column")
           WHERE "uniqueTable"."id" = "v"."id" AND "uniqueTable"."one" = "v"."one"
@@ -1403,12 +1374,14 @@ describe('updateMany', () => {
 
     it('should generate updateManyBy with a tuple key', () => {
       expectSql(
-        UniqueTable.updateManyByOptional(
-          ['thirdColumn', 'fourthColumn'],
-          [{ thirdColumn: 'a', fourthColumn: 1, one: 'updated' }],
-        ).toSQL(),
+        db.uniqueTable
+          .updateManyByOptional(
+            ['thirdColumn', 'fourthColumn'],
+            [{ thirdColumn: 'a', fourthColumn: 1, one: 'updated' }],
+          )
+          .toSQL(),
         `
-          UPDATE "schema"."uniqueTable"
+          UPDATE "schema"."unique_table" "uniqueTable"
           SET "one" = "v"."one"
           FROM (VALUES ($1::text, $2::int4, $3::text)) "v"("third_column", "fourth_column", "one")
           WHERE "uniqueTable"."third_column" = "v"."third_column"
@@ -1472,7 +1445,7 @@ describe('updateMany', () => {
 
     it('should support whereExists', () => {
       expectSql(
-        User.whereExists(Message, 'authorId', 'id')
+        User.whereExists(db.message.includeDeleted(), 'AuthorId', 'id')
           .updateManyOptional([{ id: 1, name: 'Alice' }])
           .toSQL(),
         `
@@ -1780,14 +1753,16 @@ describe('updateMany', () => {
 
     it('should encode values with column.data.encode', () => {
       expectSql(
-        Message.updateManyOptional([{ id: 1, meta: { foo: 1 } }]).toSQL(),
+        db.user
+          .updateManyOptional([{ Id: 1, Data: { name: 'a', tags: ['b'] } }])
+          .toSQL(),
         `
-          UPDATE "schema"."message" "Message"
-          SET "updated_at" = now(), "meta" = "v"."meta"
-          FROM (VALUES ($1::int4, $2::jsonb)) "v"("id", "meta")
-          WHERE "Message"."id" = "v"."id"
+          UPDATE "schema"."user" "User"
+          SET "updated_at" = now(), "data" = "v"."data"
+          FROM (VALUES ($1::int4, $2::jsonb)) "v"("id", "data")
+          WHERE "User"."id" = "v"."id"
         `,
-        [1, testJsonValue({ foo: 1 })],
+        [1, testJsonValue({ name: 'a', tags: ['b'] })],
       );
     });
   });

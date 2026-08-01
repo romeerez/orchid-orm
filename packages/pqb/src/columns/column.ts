@@ -13,199 +13,197 @@ import { ColumnTypeSchemaArg } from './column-schema';
 import { Code, ColumnToCodeCtx } from './code';
 
 import { Operator } from './operators';
-import { PickQueryInputType, PickQueryShape } from '../query/pick-query-types';
+import { PickQueryInputType } from '../query/pick-query-types';
 import { QueryHookUtils } from '../query/extra-features/hooks/hooks';
 import type { ColumnDataComputedProp } from '../query';
 import type { SelectSqlColumn } from '../query/extra-features/select-sql/select-sql';
 import type { ColumnRefExpression } from '../query/expressions/column-ref-expression';
+import type { QuerySchema } from '../query/basic-features/schema/schema';
 
 export namespace Column {
-  export namespace Modifiers {
-    // marks the column as a primary, this typing is used in onConflict logic
-    export interface IsPrimaryKey<Name extends string> {
-      data: {
-        primaryKey: Name;
-      };
-    }
-
-    // marks the column as unique, this typing is used in onConflict logic
-    export type IsUnique<Name extends string> = {
-      data: {
-        unique: Name;
-      };
+  // marks the column as a primary, this typing is used in onConflict logic
+  export interface IsPrimaryKey<Name extends string> {
+    data: {
+      primaryKey: Name;
     };
+  }
 
-    export type Nullable<T extends Column.Pick.ForNullable> = {
-      [K in keyof T]: K extends '__type'
-        ? T['__type'] | null
-        : K extends '__inputType'
-          ? T['__inputType'] | null
+  // marks the column as unique, this typing is used in onConflict logic
+  export type IsUnique<Name extends string> = {
+    data: {
+      unique: Name;
+    };
+  };
+
+  export type Nullable<T extends Column.Pick.ForNullable> = {
+    [K in keyof T]: K extends '__type'
+      ? T['__type'] | null
+      : K extends '__inputType'
+        ? T['__inputType'] | null
+        : K extends '__outputType'
+          ?
+              | T['__outputType']
+              | (unknown extends T['__nullType'] ? null : T['__nullType'])
+          : K extends '__queryType'
+            ? T['__queryType'] | null
+            : K extends 'data'
+              ? T['data'] & DataNullable
+              : K extends 'operators'
+                ? {
+                    [K in keyof T['operators']]: K extends
+                      | 'equals'
+                      | 'not'
+                      | 'isDistinctFrom'
+                      | 'isNotDistinctFrom'
+                      ? Operator<T['__queryType'] | null, T>
+                      : T['operators'][K];
+                  }
+                : T[K];
+  };
+
+  // marks the column as a nullable, adds `null` type to `type` and `__inputType`
+  export type NullableWithSchema<
+    T extends Column.Pick.ForNullable,
+    InputSchema,
+    OutputSchema,
+    QuerySchema,
+  > = {
+    [K in keyof T]: K extends '__type'
+      ? T['__type'] | null
+      : K extends '__inputType'
+        ? T['__inputType'] | null
+        : K extends 'inputSchema'
+          ? InputSchema
           : K extends '__outputType'
             ?
                 | T['__outputType']
                 | (unknown extends T['__nullType'] ? null : T['__nullType'])
-            : K extends '__queryType'
-              ? T['__queryType'] | null
-              : K extends 'data'
-                ? T['data'] & DataNullable
-                : K extends 'operators'
-                  ? {
-                      [K in keyof T['operators']]: K extends
-                        | 'equals'
-                        | 'not'
-                        | 'isDistinctFrom'
-                        | 'isNotDistinctFrom'
-                        ? Operator<T['__queryType'] | null, T>
-                        : T['operators'][K];
-                    }
-                  : T[K];
-    };
+            : K extends 'outputSchema'
+              ? OutputSchema
+              : K extends '__queryType'
+                ? T['__queryType'] | null
+                : K extends 'querySchema'
+                  ? QuerySchema
+                  : K extends 'data'
+                    ? T['data'] & DataNullable
+                    : K extends 'operators'
+                      ? {
+                          [K in keyof T['operators']]: K extends
+                            | 'equals'
+                            | 'not'
+                            | 'isDistinctFrom'
+                            | 'isNotDistinctFrom'
+                            ? Operator<T['__queryType'] | null, T>
+                            : T['operators'][K];
+                        }
+                      : T[K];
+  };
 
-    // marks the column as a nullable, adds `null` type to `type` and `__inputType`
-    export type NullableWithSchema<
-      T extends Column.Pick.ForNullable,
-      InputSchema,
-      OutputSchema,
-      QuerySchema,
-    > = {
-      [K in keyof T]: K extends '__type'
-        ? T['__type'] | null
-        : K extends '__inputType'
-          ? T['__inputType'] | null
-          : K extends 'inputSchema'
-            ? InputSchema
-            : K extends '__outputType'
-              ?
-                  | T['__outputType']
-                  | (unknown extends T['__nullType'] ? null : T['__nullType'])
-              : K extends 'outputSchema'
-                ? OutputSchema
-                : K extends '__queryType'
-                  ? T['__queryType'] | null
-                  : K extends 'querySchema'
-                    ? QuerySchema
-                    : K extends 'data'
-                      ? T['data'] & DataNullable
-                      : K extends 'operators'
-                        ? {
-                            [K in keyof T['operators']]: K extends
-                              | 'equals'
-                              | 'not'
-                              | 'isDistinctFrom'
-                              | 'isNotDistinctFrom'
-                              ? Operator<T['__queryType'] | null, T>
-                              : T['operators'][K];
-                          }
-                        : T[K];
-    };
+  export type QueryColumnToNullable<C> = {
+    [K in keyof C]: K extends '__outputType' | '__queryType'
+      ? C[K] | null
+      : C[K];
+  };
 
-    export type QueryColumnToNullable<C> = {
-      [K in keyof C]: K extends '__outputType' | '__queryType'
-        ? C[K] | null
-        : C[K];
-    };
+  export type QueryColumnToOptional<C> = {
+    [K in keyof C]: K extends '__outputType' ? C[K] | undefined : C[K];
+  };
 
-    export type QueryColumnToOptional<C> = {
-      [K in keyof C]: K extends '__outputType' ? C[K] | undefined : C[K];
-    };
+  interface DataNullable {
+    isNullable: true;
+    optional: true;
+  }
 
-    interface DataNullable {
-      isNullable: true;
-      optional: true;
-    }
+  // allow `null` in .where({ column: { equals: null } }) and the same for equality-style operators
+  export interface OperatorsNullable<Column extends Column.Pick.QueryColumn> {
+    equals: Operator<Column['__queryType'] | null, Column>;
+    not: Operator<Column['__queryType'] | null, Column>;
+    isDistinctFrom: Operator<Column['__queryType'] | null, Column>;
+    isNotDistinctFrom: Operator<Column['__queryType'] | null, Column>;
+  }
 
-    // allow `null` in .where({ column: { equals: null } }) and the same for equality-style operators
-    export interface OperatorsNullable<Column extends Column.Pick.QueryColumn> {
-      equals: Operator<Column['__queryType'] | null, Column>;
-      not: Operator<Column['__queryType'] | null, Column>;
-      isDistinctFrom: Operator<Column['__queryType'] | null, Column>;
-      isNotDistinctFrom: Operator<Column['__queryType'] | null, Column>;
-    }
+  // change the input type of the column
+  export type Encode<T, InputSchema, Input> = {
+    [K in keyof T]: K extends '__inputType'
+      ? Input
+      : K extends 'inputSchema'
+        ? InputSchema
+        : T[K];
+  };
 
-    // change the input type of the column
-    export type Encode<T, InputSchema, Input> = {
-      [K in keyof T]: K extends '__inputType'
-        ? Input
-        : K extends 'inputSchema'
-          ? InputSchema
-          : T[K];
-    };
-
-    // change the output type of the column
-    export type Parse<T extends Pick.ForParse, OutputSchema, Output> = {
-      [K in keyof T]: K extends '__outputType'
+  // change the output type of the column
+  export type Parse<T extends Pick.ForParse, OutputSchema, Output> = {
+    [K in keyof T]: K extends '__outputType'
+      ? null extends T['__type']
+        ?
+            | (Output extends null ? never : Output)
+            | (unknown extends T['__nullType'] ? null : T['__nullType'])
+        : Output
+      : K extends 'outputSchema'
         ? null extends T['__type']
-          ?
-              | (Output extends null ? never : Output)
-              | (unknown extends T['__nullType'] ? null : T['__nullType'])
-          : Output
+          ? OutputSchema | T['nullSchema']
+          : OutputSchema
+        : T[K];
+  };
+
+  // change the output type of null value
+  export type ParseNull<
+    T extends Column.Pick.ForParseNull,
+    NullSchema,
+    NullType,
+  > = {
+    [K in keyof T]: K extends '__outputType'
+      ? null extends T['__type']
+        ? Exclude<T['__outputType'], null> | NullType
+        : T['__outputType']
+      : K extends '__nullType'
+        ? NullType
         : K extends 'outputSchema'
           ? null extends T['__type']
-            ? OutputSchema | T['nullSchema']
-            : OutputSchema
-          : T[K];
-    };
+            ? T['outputSchema'] | NullSchema
+            : T['outputSchema']
+          : K extends 'nullSchema'
+            ? NullSchema
+            : T[K];
+  };
 
-    // change the output type of null value
-    export type ParseNull<
-      T extends Column.Pick.ForParseNull,
-      NullSchema,
-      NullType,
-    > = {
-      [K in keyof T]: K extends '__outputType'
-        ? null extends T['__type']
-          ? Exclude<T['__outputType'], null> | NullType
-          : T['__outputType']
-        : K extends '__nullType'
-          ? NullType
-          : K extends 'outputSchema'
-            ? null extends T['__type']
-              ? T['outputSchema'] | NullSchema
-              : T['outputSchema']
-            : K extends 'nullSchema'
-              ? NullSchema
-              : T[K];
-    };
+  // adds default type to the column
+  // removes the default if the Value is null
+  export type HasDefault<T extends Column.Pick.Data> = T & Column.Data.Default;
 
-    // adds default type to the column
-    // removes the default if the Value is null
-    export type HasDefault<T extends Column.Pick.Data> = T &
-      Column.Data.Default;
+  type DefaultSelectData<T extends Column.Data, Value> = {
+    [K in keyof T]: K extends 'explicitSelect'
+      ? Value extends true
+        ? false
+        : true
+      : T[K];
+  };
 
-    type DefaultSelectData<T extends Column.Data, Value> = {
-      [K in keyof T]: K extends 'explicitSelect'
-        ? Value extends true
-          ? false
-          : true
-        : T[K];
-    };
+  // whether to select column by default or with *
+  export type DefaultSelect<
+    T extends Column.Pick.Data,
+    Value extends boolean,
+  > = {
+    [K in keyof T]: K extends 'data'
+      ? DefaultSelectData<T['data'], Value>
+      : T[K];
+  };
 
-    // whether to select column by default or with *
-    export type DefaultSelect<
-      T extends Column.Pick.Data,
-      Value extends boolean,
-    > = {
-      [K in keyof T]: K extends 'data'
-        ? DefaultSelectData<T['data'], Value>
-        : T[K];
-    };
-
-    export interface IsAppReadOnly {
-      data: {
-        appReadOnly: true;
-      };
-    }
-
-    export type Generated<T extends Column.Pick.Data> = {
-      [K in keyof T]: K extends 'data'
-        ? {
-            [K in keyof T['data']]: K extends 'default' ? true : T['data'][K];
-          }
-        : K extends '__inputType'
-          ? never
-          : T[K];
+  export interface IsAppReadOnly {
+    data: {
+      appReadOnly: true;
     };
   }
+
+  export type Generated<T extends Column.Pick.Data> = {
+    [K in keyof T]: K extends 'data'
+      ? {
+          [K in keyof T['data']]: K extends 'default' ? true : T['data'][K];
+        }
+      : K extends '__inputType'
+        ? never
+        : T[K];
+  };
 
   export namespace Pick {
     export interface Data {
@@ -333,17 +331,40 @@ export namespace Column {
       schema?: string;
       table: string;
       nameInDb?: string;
-      columns: PickQueryShape;
+      columns: { shape: unknown };
+    }
+
+    export interface TableParamInstanceInput {
+      schema?: QuerySchema;
+      table?: string;
+      nameInDb?: string;
+      columns: { shape: unknown };
+    }
+
+    export interface TableParamWithInstance {
+      instance(): TableParamInstanceInput;
+    }
+
+    export interface TableParamWithData {
+      data: { columns: unknown };
+      instance(): TableParamInstanceInput;
     }
 
     // minimal table class type to use in the foreign key option
-    export interface TableParam {
-      new (): TableParamInstance;
-    }
+    export type TableParam =
+      | (new () => TableParamInstance)
+      | TableParamWithInstance
+      | TableParamWithData;
 
     // string union of available column names of the table
     export type ColumnNameOfTable<Table extends Column.ForeignKey.TableParam> =
-      Table extends new () => { columns: { shape: infer R } } ? keyof R : never;
+      Table extends { data: { columns: infer R } }
+        ? keyof R
+        : Table extends { instance(): { columns: { shape: infer R } } }
+          ? keyof R
+          : Table extends new () => { columns: { shape: infer R } }
+            ? keyof R
+            : never;
   }
 
   export namespace Error {
@@ -541,6 +562,21 @@ export namespace Column {
     | AsTypeArgWithoutType<Schema>;
 }
 
+export const getForeignKeyTableInstance = (
+  table: Column.ForeignKey.TableParam,
+): Column.ForeignKey.TableParamInstance => {
+  const item = 'instance' in table ? table.instance() : new table();
+
+  if (!item.table)
+    throw new Error('Referenced table is missing table property');
+
+  return {
+    ...item,
+    schema: typeof item.schema === 'function' ? item.schema() : item.schema,
+    table: item.table,
+  };
+};
+
 // change column type and all schemas to nullable
 export function makeColumnNullable<
   T extends Column.Pick.ForNullable,
@@ -557,7 +593,7 @@ export function makeColumnNullable<
   c.inputSchema = inputSchema;
   c.outputSchema = outputSchema;
   c.querySchema = querySchema;
-  return c as unknown as Column.Modifiers.NullableWithSchema<
+  return c as unknown as Column.NullableWithSchema<
     T,
     InputSchema,
     OutputSchema,
@@ -737,20 +773,17 @@ export abstract class Column {
    * Or you can specify a callback that returns a value. This function will be called for each creating record. Such a default won't be applied to a database.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     // values as defaults:
-   *     int: t.integer().default(123),
-   *     text: t.text().default('text'),
+   * export const Table = defineTable('table', (t) => ({
+   *   // values as defaults:
+   *   int: t.integer().default(123),
+   *   text: t.text().default('text'),
    *
-   *     // raw SQL default:
-   *     timestamp: t.timestamp().default(t.sql`now()`),
+   *   // raw SQL default:
+   *   timestamp: t.timestamp().default(t.sql`now()`),
    *
-   *     // runtime default, each new records gets a new random value:
-   *     random: t.numeric().default(() => Math.random()),
-   *   }));
-   * }
+   *   // runtime default, each new records gets a new random value:
+   *   random: t.numeric().default(() => Math.random()),
+   * }));
    * ```
    *
    * @param value - default value or a function returning a value
@@ -762,7 +795,7 @@ export abstract class Column {
       | null
       | RawSqlBase
       | (() => T['__inputType']),
-  >(this: T, value: Value): Column.Modifiers.HasDefault<T> {
+  >(this: T, value: Value): Column.HasDefault<T> {
     return setColumnData(this, 'default', value) as never;
   }
 
@@ -771,9 +804,7 @@ export abstract class Column {
    *
    * It's better to use {@link default} instead so the value is explicit and serves as a hint.
    */
-  hasDefault<T extends Column.Pick.Data>(
-    this: T,
-  ): Column.Modifiers.HasDefault<T> {
+  hasDefault<T extends Column.Pick.Data>(this: T): Column.HasDefault<T> {
     return this as never;
   }
 
@@ -815,12 +846,9 @@ export abstract class Column {
    * Nullable columns are optional when creating records.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     name: t.integer().nullable(),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   name: t.integer().nullable(),
+   * }));
    * ```
    */
   nullable: this['__schema']['nullable'];
@@ -836,21 +864,18 @@ export abstract class Column {
    * ```ts
    * import { z } from 'zod';
    *
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     // encode boolean, number, or string to text before saving
-   *     column: t
-   *       .string()
-   *       // when having validation library, the first argument is a validation schema
-   *       .encode(
-   *         z.boolean().or(z.number()).or(z.string()),
-   *         (input: boolean | number | string) => String(input),
-   *       )
-   *       // no schema argument otherwise
-   *       .encode((input: boolean | number | string) => String(input)),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   // encode boolean, number, or string to text before saving
+   *   column: t
+   *     .string()
+   *     // when having validation library, the first argument is a validation schema
+   *     .encode(
+   *       z.boolean().or(z.number()).or(z.string()),
+   *       (input: boolean | number | string) => String(input),
+   *     )
+   *     // no schema argument otherwise
+   *     .encode((input: boolean | number | string) => String(input)),
+   * }));
    *
    * // numbers and booleans will be converted to a string:
    * await db.table.create({ column: 123 });
@@ -876,22 +901,19 @@ export abstract class Column {
    * import { z } from 'zod';
    * import { number, integer } from 'valibot';
    *
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     columnZod: t
-   *       .string()
-   *       // when having validation library, the first argument is a schema
-   *       .parse(z.number().int(), (input) => parseInt(input))
-   *       // no schema argument otherwise
-   *       .parse((input) => parseInt(input)),
+   * export const Table = defineTable('table', (t) => ({
+   *   columnZod: t
+   *     .string()
+   *     // when having validation library, the first argument is a schema
+   *     .parse(z.number().int(), (input) => parseInt(input))
+   *     // no schema argument otherwise
+   *     .parse((input) => parseInt(input)),
    *
-   *     columnValibot: t
-   *       .string()
-   *       .parse(number([integer()]), (input) => parseInt(input))
-   *       .parse((input) => parseInt(input)),
-   *   }));
-   * }
+   *   columnValibot: t
+   *     .string()
+   *     .parse(number([integer()]), (input) => parseInt(input))
+   *     .parse((input) => parseInt(input)),
+   * }));
    *
    * // column will be parsed to a number
    * const value: number = await db.table.get('column');
@@ -907,16 +929,13 @@ export abstract class Column {
    * The `parseNull` function is only triggered for `nullable` columns.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     column: t
-   *       .integer()
-   *       .parse(String) // parse non-nulls to string
-   *       .parseNull(() => false), // replace nulls with false
-   *       .nullable(),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   column: t
+   *     .integer()
+   *     .parse(String) // parse non-nulls to string
+   *     .parseNull(() => false), // replace nulls with false
+   *     .nullable(),
+   * }));
    *
    * const record = await db.table.take()
    * record.column // can be a string or boolean, not null
@@ -926,23 +945,20 @@ export abstract class Column {
    * first argument is a schema for validating the output.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     column: t
-   *       .integer()
-   *       .parse(z.string(), String) // parse non-nulls to string
-   *       .parseNull(z.literal(false), () => false), // replace nulls with false
+   * export const Table = defineTable('table', (t) => ({
+   *   column: t
+   *     .integer()
+   *     .parse(z.string(), String) // parse non-nulls to string
+   *     .parseNull(z.literal(false), () => false) // replace nulls with false
    *     .nullable(),
-   *   }));
-   * }
+   * }));
    *
-   * const record = await db.table.take()
-   * record.column // can be a string or boolean, not null
+   * const record = await db.table.take();
+   * record.column; // can be a string or boolean, not null
    *
    * Table.outputSchema().parse({
    *   column: false, // the schema expects strings or `false` literals, not nulls
-   * })
+   * });
    * ```
    */
   parseNull: this['__schema']['parseNull'];
@@ -996,12 +1012,9 @@ export abstract class Column {
    * When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowType` has the following syntax:
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     size: t.string().narrowType((t) => t<'small' | 'medium' | 'large'>()),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   size: t.string().narrowType((t) => t<'small' | 'medium' | 'large'>()),
+   * }));
    *
    * // size will be typed as 'small' | 'medium' | 'large'
    * const size = await db.table.get('size');
@@ -1020,12 +1033,9 @@ export abstract class Column {
    *   z.literal('large'),
    * ]);
    *
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     size: t.text().narrowType(sizeSchema),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   size: t.text().narrowType(sizeSchema),
+   * }));
    *
    * // size will be typed as 'small' | 'medium' | 'large'
    * const size = await db.table.get('size');
@@ -1043,21 +1053,18 @@ export abstract class Column {
    * When _not_ integrating with [validation libraries](/guide/columns-validation-methods), `narrowAllTypes` has the following syntax:
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     size: t.string().narrowAllTypes((t) =>
-   *       t<{
-   *         // what types are accepted when creating/updating
-   *         input: 'small' | 'medium' | 'large';
-   *         // how types are retured from a database
-   *         output: 'small' | 'medium' | 'large';
-   *         // what types the column accepts in `where` and similar
-   *         query: 'small' | 'medium' | 'large';
-   *       }>(),
-   *     ),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   size: t.string().narrowAllTypes((t) =>
+   *     t<{
+   *       // what types are accepted when creating/updating
+   *       input: 'small' | 'medium' | 'large';
+   *       // how types are retured from a database
+   *       output: 'small' | 'medium' | 'large';
+   *       // what types the column accepts in `where` and similar
+   *       query: 'small' | 'medium' | 'large';
+   *     }>(),
+   *   ),
+   * }));
    *
    * // size will be typed as 'small' | 'medium' | 'large'
    * const size = await db.table.get('size');
@@ -1076,16 +1083,13 @@ export abstract class Column {
    *   z.literal('large'),
    * ]);
    *
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     size: t.text().narrowAllTypes({
-   *       input: sizeSchema,
-   *       output: sizeSchema,
-   *       query: sizeSchema,
-   *     }),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   size: t.text().narrowAllTypes({
+   *     input: sizeSchema,
+   *     output: sizeSchema,
+   *     query: sizeSchema,
+   *   }),
+   * }));
    *
    * // size will be typed as 'small' | 'medium' | 'large'
    * const size = await db.table.get('size');
@@ -1145,14 +1149,11 @@ export abstract class Column {
    * It won't be selected with `selectAll` or `select('*')` as well.
    *
    * ```ts
-   * export class UserTable extends BaseTable {
-   *   readonly table = 'user';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     name: t.string(),
-   *     password: t.string().select(false),
-   *   }));
-   * }
+   * export const UserTable = defineTable('user', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   name: t.string(),
+   *   password: t.string().select(false),
+   * }));
    *
    * // only id and name are selected, without password
    * const user = await db.user.find(123);
@@ -1178,7 +1179,7 @@ export abstract class Column {
   select<T extends Column.Pick.Data, Value extends boolean>(
     this: T,
     value: Value,
-  ): Column.Modifiers.DefaultSelect<T, Value> {
+  ): Column.DefaultSelect<T, Value> {
     return setColumnData(this, 'explicitSelect', !value) as never;
   }
 
@@ -1203,26 +1204,23 @@ export abstract class Column {
    * `readOnly` column can be used together with a `default`.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     column: t.string().default(() => 'default value'),
-   *     another: t.string().readOnly(),
-   *   }));
-   *
-   *   init(orm: typeof db) {
-   *     this.beforeSave(({ set }) => {
+   * export const Table = defineTable('table', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   column: t.string().default(() => 'default value'),
+   *   another: t.string().nullable().readOnly(),
+   * })).init((orm: typeof db, hooks) => {
+   *   hooks.beforeSave(({ columns, set }) => {
+   *     if (columns.include('column')) {
    *       set({ another: 'value' });
-   *     });
-   *   }
-   * }
+   *     }
+   *   });
+   * });
    *
    * // later in the code
    * db.table.create({ column: 'value' }); // TS error, runtime error
    * ```
    */
-  readOnly<T>(this: T): T & Column.Modifiers.IsAppReadOnly {
+  readOnly<T>(this: T): T & Column.IsAppReadOnly {
     return setColumnData(this as never, 'appReadOnly', true as never) as never;
   }
 
@@ -1233,13 +1231,15 @@ export abstract class Column {
    * If no value or undefined is returned, the hook won't have any effect.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     column: t.string().setOnCreate(() => 'value'),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   some: t.number(),
+   *   column: t
+   *     .string()
+   *     .setOnCreate(({ columns }) =>
+   *       columns.include('some') ? 'value' : undefined,
+   *     ),
+   * }));
    * ```
    */
   setOnCreate<T extends Column.Pick.QueryInit>(
@@ -1256,13 +1256,15 @@ export abstract class Column {
    * If no value or undefined is returned, the hook won't have any effect.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     column: t.string().setOnUpdate(() => 'value'),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   some: t.number(),
+   *   column: t
+   *     .string()
+   *     .setOnUpdate(({ columns }) =>
+   *       columns.include('some') ? 'value' : undefined,
+   *     ),
+   * }));
    * ```
    */
   setOnUpdate<T extends Column.Pick.QueryInit>(
@@ -1279,13 +1281,15 @@ export abstract class Column {
    * If no value or undefined is returned, the hook won't have any effect.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     column: t.string().setOnSave(() => 'value'),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   some: t.number(),
+   *   column: t
+   *     .string()
+   *     .setOnSave(({ columns }) =>
+   *       columns.include('some') ? 'value' : undefined,
+   *     ),
+   * }));
    * ```
    */
   setOnSave<T extends Column.Pick.QueryInit>(
@@ -1304,14 +1308,11 @@ export abstract class Column {
    * Using `primaryKey` on a `uuid` column will automatically add a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
    *
    * ```ts
-   * export class Table extends BaseTable {
-   *   readonly table = 'table';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.uuid().primaryKey(),
-   *     // database-level name can be passed:
-   *     id: t.uuid().primaryKey('primary_key_name'),
-   *   }));
-   * }
+   * export const Table = defineTable('table', (t) => ({
+   *   id: t.uuid().primaryKey(),
+   *   // optionally, specify a database-level constraint name:
+   *   id: t.uuid().primaryKey('primary_key_name'),
+   * }));
    *
    * // primary key can be used by `find` later:
    * db.table.find('97ba9e78-7510-415a-9c03-23d440aec443');
@@ -1322,7 +1323,7 @@ export abstract class Column {
   primaryKey<T extends Column.Pick.Data, Name extends string>(
     this: T,
     name?: Name,
-  ): T & Column.Modifiers.IsPrimaryKey<Name> {
+  ): T & Column.IsPrimaryKey<Name> {
     return setColumnData(this, 'primaryKey', name ?? (true as never)) as never;
   }
 
@@ -1344,12 +1345,9 @@ export abstract class Column {
    * In the migration it's different from OrchidORM table code where a callback with a table is expected:
    *
    * ```ts
-   * export class SomeTable extends BaseTable {
-   *   readonly table = 'someTable';
-   *   columns = this.setColumns((t) => ({
-   *     otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
-   *   }));
-   * }
+   * export const SomeTable = defineTable('someTable', (t) => ({
+   *   otherTableId: t.integer().foreignKey(() => OtherTable, 'id'),
+   * }));
    * ```
    *
    * Optionally you can pass the third argument to `foreignKey` with options:
@@ -1400,10 +1398,10 @@ export abstract class Column {
    * @param column - column in the foreign table to connect with
    * @param options - {@link ForeignKeyOptions}
    */
-  foreignKey<T, Shape>(
+  foreignKey<T, Table extends Column.ForeignKey.TableParam>(
     this: T,
-    fn: () => new () => { columns: { shape: Shape } },
-    column: keyof Shape,
+    fn: () => Table,
+    column: Column.ForeignKey.ColumnNameOfTable<Table>,
     options?: TableData.References.Options,
   ): T;
   foreignKey<T, Table extends string, Column extends string>(
@@ -1619,7 +1617,7 @@ export abstract class Column {
   >(
     this: T,
     ...args: [options?: Options]
-  ): T & Column.Modifiers.IsUnique<Options['name'] & string> {
+  ): T & Column.IsUnique<Options['name'] & string> {
     const a = args as
       | [options?: RecordUnknown]
       | [name: string, options?: RecordUnknown];
@@ -1728,7 +1726,7 @@ export abstract class Column {
   generated<T extends Column.Pick.Data>(
     this: T,
     ...args: StaticSQLArgs
-  ): Column.Modifiers.Generated<T> {
+  ): Column.Generated<T> {
     const sql = raw(...args);
     const column = setColumnData(this, 'generated', {
       toSQL(ctx, quoted) {

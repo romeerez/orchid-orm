@@ -14,12 +14,12 @@ To keep it performant, define a [generated](/guide/migration-column-methods#gene
 
 By default, the search language is English.
 
-You can set a different default language in the `createBaseTable` config:
+You can set a different default language in the `createTableFactory` config:
 
 ```ts
-import { createBaseTable } from 'orchid-orm';
+import { createTableFactory } from 'orchid-orm';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, defineView, sql } = createTableFactory({
   language: 'swedish',
 });
 ```

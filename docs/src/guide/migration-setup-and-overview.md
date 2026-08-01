@@ -71,7 +71,7 @@ src/
     │   │   └── my-function.sql - sql file containing CREATE OR REPLACE
     │   ├── 0001_create-post.ts
     │   └── 0002_create-comment.ts
-    ├── base-table.ts - for defining column type overrides.
+    ├── table-factory.ts - for defining column type overrides.
     ├── config.ts - database credentials are exported from here.
     ├── db.ts - main file for the ORM, connects all tables into one `db` object.
     ├── db-script.ts - script run by `npm run db *command*`.
@@ -119,7 +119,7 @@ import { rakeDb } from 'orchid-orm/migrations/bun'; // when using Orchid ORM
 import { rakeDb } from 'rake-db/bun'; // when using a standalone rake-db
 
 import { config } from './config';
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
 export const change = rakeDb.run(config.database, {
   // relative path to the current file:
@@ -134,8 +134,8 @@ export const change = rakeDb.run(config.database, {
   // Read more about serial vs timestamp below.
   migrationId: 'serial',
 
-  // (when using it with ORM) column type overrides and snakeCase option will be taken from the BaseTable:
-  baseTable: BaseTable,
+  // (when using it with ORM) column type overrides and snakeCase option will be taken from the table factory:
+  defineTable,
   // (when using it for ORM) path to ORM `db` instance, this is needed to automatically generate migrations.
   dbPath: './db',
 
@@ -246,17 +246,17 @@ The second argument is a configuration, here is the type:
 
 ```ts
 type Config = {
-  // (for Orchid ORM) columnTypes and snakeCase can be applied form ORM's BaseTable
-  baseTable?: BaseTable;
+  // (for Orchid ORM) columnTypes and snakeCase can be applied from ORM's table factory
+  defineTable?: DefineTable;
   // (for Orchid ORM) import path to Orchid ORM `db` instance, used for auto-generating migrations.
   dbPath?: string;
   // (for Orchid ORM) change this if ORM instance is exported under a different name than `db`.
   dbExportedAs?: string; // 'db' is the default
 
-  // column types are taken from the provided `baseTable`,
+  // column types are taken from the provided `defineTable`,
   // alternatively they can be set with this option
   columnTypes?: (t) => {
-    // the same columnTypes config as in BaseTable definition
+    // the same columnTypes config as in createTableFactory
   };
 
   // set to true to have all columns named in camelCase in the app, but in snake_case in the db

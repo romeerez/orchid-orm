@@ -1,6 +1,6 @@
 import { codeToString, ColumnToCodeCtx } from '../code';
 import {
-  BaseTable,
+  defineTable,
   db,
   testZodColumnTypes as t,
   useTestDatabase,
@@ -23,14 +23,14 @@ describe('json columns', () => {
     useTestDatabase();
 
     it('should encode and parse jsonb, should not encode and parse json', async () => {
-      class Table extends BaseTable {
-        readonly table = 'test-json-columns';
-        readonly noPrimaryKey = true;
-        columns = this.setColumns((t) => ({
+      const Table = defineTable(
+        'test-json-columns',
+        { noPrimaryKey: true },
+        (t) => ({
           jsonb: t.json(),
           json: t.jsonText(),
-        }));
-      }
+        }),
+      );
 
       const db = orchidORMWithAdapter(ormParams, {
         table: Table,

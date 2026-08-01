@@ -1,6 +1,5 @@
 import {
   expectQueryNotMutated,
-  Profile,
   Snake,
   snakeSelectAll,
   User,
@@ -9,7 +8,7 @@ import {
   UserRecord,
   userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
-import { assertType, expectSql, useTestDatabase } from 'test-utils';
+import { assertType, db, expectSql, useTestDatabase } from 'test-utils';
 
 describe('delete', () => {
   useTestDatabase();
@@ -222,7 +221,7 @@ describe('delete', () => {
     const query = q
       .selectAll()
       .where({ id: 1 })
-      .join(Profile, 'userId', '=', 'id')
+      .join(db.profile, 'UserId', '=', 'id')
       .delete();
 
     expectSql(
@@ -272,7 +271,7 @@ describe('delete', () => {
   it('should throw when deleting after joining a complex query (limit in this case)', () => {
     expect(() =>
       User.where({ id: 1 })
-        .join(Profile, (q) => q.on('userId', 'User.id').limit(5))
+        .join(db.profile, (q) => q.on('UserId', 'User.id').limit(5))
         .delete(),
     ).toThrow('Cannot join a complex query in delete');
   });
@@ -281,7 +280,7 @@ describe('delete', () => {
     expect(() =>
       User.where({ id: 1 })
         .delete()
-        .join(Profile, (q) => q.on('userId', 'User.id').limit(5)),
+        .join(db.profile, (q) => q.on('UserId', 'User.id').limit(5)),
     ).toThrow('Cannot join a complex query in delete');
   });
 

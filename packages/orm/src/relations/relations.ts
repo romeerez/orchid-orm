@@ -10,8 +10,7 @@ import {
   ORMTableInput,
   TableClass,
   TableInfo,
-  TableClasses,
-} from '../orm-table/base-table';
+} from '../orm-table/legacy-table';
 import {
   _queryTake,
   _queryTakeOptional,
@@ -36,6 +35,7 @@ import {
 } from './hasAndBelongsToMany';
 import { getSourceRelation, getThroughRelation } from './common/utils';
 import { Query } from 'pqb';
+import { OrmTableThunks, TableInstance } from '../orm';
 
 // `belongsTo` and `hasOne` relation data available for create. It supports:
 // - `create` to create a related record
@@ -109,48 +109,44 @@ export interface RelationData {
   modifyRelatedQuery?: RelationConfigBase['modifyRelatedQuery'];
 }
 
-type TableClassInstances<T extends TableClasses> = InstanceType<T[keyof T]>;
+type TableInstances<T extends OrmTableThunks> = {
+  [K in keyof T]: TableInstance<T[K]>;
+};
 
-type RelationToTableInputById<Tables, Id extends string> = Extract<
-  Tables,
-  { id: Id }
->;
+type TableClassInstances<T extends OrmTableThunks> = TableInstances<T>[keyof T];
 
-type RelationToTableInputByKey<
-  T extends TableClasses,
-  Id extends string,
-> = Id extends keyof T ? InstanceType<T[Id]> : never;
+type RelationToTableInputById<Tables, Id extends string> = Tables extends {
+  id: Id;
+}
+  ? Tables
+  : never;
 
-type RelationToTableInputByName<Tables, Id extends string> = Extract<
-  Tables,
-  { table: Id } | { name: Id }
->;
-
-type RelationToTableInputByKeyOrName<
-  T extends TableClasses,
-  Id extends string,
-> = Id extends keyof T
-  ? RelationToTableInputByKey<T, Id>
-  : RelationToTableInputByName<TableClassInstances<T>, Id>;
+type RelationToTableInputByName<T extends OrmTableThunks, Id extends string> = {
+  [K in keyof TableInstances<T>]: TableInstances<T>[K] extends
+    | { table: Id }
+    | { name: Id }
+    ? TableInstances<T>[K]
+    : never;
+}[keyof T];
 
 type RelationToTableInputFromClasses<
-  T extends TableClasses,
+  T extends OrmTableThunks,
   Id extends string,
 > =
   RelationToTableInputById<TableClassInstances<T>, Id> extends infer Result
     ? [Result] extends [never]
-      ? RelationToTableInputByKeyOrName<T, Id>
+      ? RelationToTableInputByName<T, Id>
       : Result
     : never;
 
 export type RelationToTableInput<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TT extends OrmTableThunks,
+  VT extends OrmTableThunks,
   Rel extends RelationThunkBase,
 > =
-  RelationToTableInputFromClasses<TC, Rel['id']> extends infer Result
+  RelationToTableInputFromClasses<TT, Rel['id']> extends infer Result
     ? [Result] extends [never]
-      ? RelationToTableInputFromClasses<VC, Rel['id']> extends infer Result
+      ? RelationToTableInputFromClasses<VT, Rel['id']> extends infer Result
         ? [Result] extends [never]
           ? false
           : Result
@@ -159,12 +155,12 @@ export type RelationToTableInput<
     : never;
 
 export type RelationTableToQuery<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TT extends OrmTableThunks,
+  VT extends OrmTableThunks,
   Rel extends RelationThunkBase,
 > =
-  RelationToTableInput<TC, VC, Rel> extends infer Result extends ORMTableInput
-    ? TableQueryBuilder<TC, VC, Result>
+  RelationToTableInput<TT, VT, Rel> extends infer Result extends ORMTableInput
+    ? TableQueryBuilder<TT, VT, Result>
     : never;
 
 export interface RelationConfigSelf {
@@ -217,14 +213,27 @@ export const applyRelations = (
     for (const relationName in table.relations) {
       const relation = table.relations[relationName];
       const otherTableClass = (
-        relation as unknown as { fn(): TableClass }
-      ).fn();
-      const otherTable = tableEntries.find(
-        (pair) => pair[1] instanceof otherTableClass,
-      );
+        relation as unknown as { fn?: () => TableClass }
+      ).fn?.();
+      const otherTable = otherTableClass
+        ? tableEntries.find((pair) => pair[1] instanceof otherTableClass)
+        : // two-pass lookup: prefer id match over name match to avoid
+          // ambiguity when multiple views share the same database name
+          tableEntries.find(([, table]) => {
+            const { id } = relation as never;
+            return table.id === id || table.table === id;
+          }) ||
+          tableEntries.find(([, table]) => {
+            const { id } = relation as never;
+            return table.name === id;
+          });
       if (!otherTable) {
         throw new Error(
-          `Cannot find table class for class ${otherTableClass.name}`,
+          otherTableClass
+            ? `Cannot find table class for class ${otherTableClass.name}`
+            : `Cannot find table for relation target ${
+                (relation as unknown as { id?: string }).id
+              }`,
         );
       }
       const otherTableName = otherTable[0];

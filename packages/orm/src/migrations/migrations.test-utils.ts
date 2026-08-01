@@ -2,10 +2,10 @@ import { RakeDbConfig, rakeDbConfigDefaults } from 'rake-db';
 import { noop, QueryLogger } from 'pqb/internal';
 import path from 'node:path';
 import { join } from 'node:path';
-import { createBaseTable } from '../orm-table/base-table';
+import { createTableFactory } from '../orm-table/table';
 import { testColumnTypes, testDefaultColumnTypes } from 'test-utils';
 
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: testColumnTypes,
 });
 
@@ -18,7 +18,7 @@ export const testConfig: RakeDbConfig & {
   __rakeDbConfig: true,
   transaction: 'single',
   basePath: path.join(__dirname),
-  baseTable: BaseTable,
+  defineTable,
   dbPath: 'src/db/db.ts',
   dbScript: 'dbScript.ts',
   columnTypes: testDefaultColumnTypes,

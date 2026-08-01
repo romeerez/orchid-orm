@@ -237,14 +237,14 @@ const replaceSqlPlaceholders = (sql: string, valuesCount: number): string => {
 
 export class QuerySql<ColumnTypes> {
   /**
-   * @deprecated: use `sql` exported from the `createBaseTable` (see "define a base table" in the docs)
+   * @deprecated: use `sql` exported from the table factory file.
    *
-   * When there is a need to use a piece of raw SQL, use the `sql` exported from the `BaseTable` file, it is also attached to query objects for convenience.
+   * When there is a need to use a piece of raw SQL, use the `sql` exported from the table factory file, it is also attached to query objects for convenience.
    *
    * When selecting a custom SQL, specify a resulting type with `<generic>` syntax:
    *
    * ```ts
-   * import { sql } from './baseTable';
+   * import { sql } from './table-factory';
    *
    * const result: { num: number }[] = await db.table.select({
    *   num: sql<number>`random() * 100`,
@@ -256,7 +256,7 @@ export class QuerySql<ColumnTypes> {
    * This example assumes that the `timestamp` column was overridden with `asDate` as shown in [Override column types](/guide/columns-overview#override-column-types).
    *
    * ```ts
-   * import { sql } from './baseTable';
+   * import { sql } from './table-factory';
    *
    * const result: { timestamp: Date }[] = await db.table.select({
    *   timestamp: sql`now()`.type((t) => t.timestamp()),

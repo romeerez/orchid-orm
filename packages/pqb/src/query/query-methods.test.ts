@@ -1,12 +1,7 @@
 import {
   expectQueryNotMutated,
-  User,
-  Profile,
-  userData,
-  UserRecord,
   Snake,
   snakeSelectAll,
-  userColumnsSql,
 } from '../test-utils/pqb.test-utils';
 import {
   assertType,
@@ -16,6 +11,9 @@ import {
   testAdapter,
   testDb,
   useTestDatabase,
+  UserData,
+  UserDefaultSelect,
+  UserSelectAll,
 } from 'test-utils';
 import { NotFoundError } from './errors';
 import { QueryHelperResult } from './query-methods';
@@ -26,41 +24,41 @@ describe('queryMethods', () => {
 
   describe('toSQL', () => {
     it('generates sql', () => {
-      const sql = User.toSQL();
+      const sql = db.user.toSQL();
 
       assertType<typeof sql, Sql>();
 
-      expectSql(sql, `SELECT ${userColumnsSql} FROM "schema"."user" "User"`);
+      expectSql(sql, `SELECT ${UserSelectAll} FROM "schema"."user" "User"`);
     });
   });
 
   describe('.all', () => {
     it('should produce correct sql', () => {
       expectSql(
-        User.all().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User"`,
+        db.user.all().toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
       );
     });
   });
 
   describe('take', () => {
     it('limits to one and returns only one', async () => {
-      await User.create(userData);
+      await db.user.create(UserData);
 
-      const q = User.all();
+      const q = db.user.all();
 
       expectSql(
         q.take().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" LIMIT 1`,
       );
       expectQueryNotMutated(q);
 
       const expected = await testAdapter
-        .query(`SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`)
+        .query(`SELECT ${UserSelectAll} FROM "schema"."user" LIMIT 1`)
         .then((res) => res.rows[0]);
 
       const user = await q.take();
-      assertType<typeof user, UserRecord>();
+      assertType<typeof user, UserDefaultSelect>();
 
       expect(user).toEqual({
         ...expected,
@@ -70,13 +68,13 @@ describe('queryMethods', () => {
     });
 
     it('should throw if not found', async () => {
-      await expect(() => User.take()).rejects.toThrow(NotFoundError);
+      await expect(() => db.user.take()).rejects.toThrow(NotFoundError);
     });
 
     it('should change value to valueOrThrow', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const q = User.getOptional('id').take();
+      const q = db.user.getOptional('Id').take();
       const result = await q;
 
       assertType<typeof result, number>();
@@ -85,9 +83,9 @@ describe('queryMethods', () => {
     });
 
     it('should leave valueOrThrow as is', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const q = User.get('id').take();
+      const q = db.user.get('Id').take();
       const result = await q;
 
       assertType<typeof result, number>();
@@ -96,20 +94,20 @@ describe('queryMethods', () => {
     });
 
     it('should change rows to oneOrThrow', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const q = User.select('id', 'name').rows().take();
+      const q = db.user.select('Id', 'Name').rows().take();
       const result = await q;
 
-      assertType<typeof result, { id: number; name: string }>();
+      assertType<typeof result, { Id: number; Name: string }>();
 
-      expect(result).toEqual({ id: expect.any(Number), name: 'name' });
+      expect(result).toEqual({ Id: expect.any(Number), Name: 'name' });
     });
 
     it('should leave void as is', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const q = User.select('id', 'name').exec().take();
+      const q = db.user.select('Id', 'Name').exec().take();
       const result = await q;
 
       assertType<typeof result, void>();
@@ -120,22 +118,22 @@ describe('queryMethods', () => {
 
   describe('takeOptional', () => {
     it('limits to one and returns only one', async () => {
-      await User.create(userData);
+      await db.user.create(UserData);
 
-      const q = User.all();
+      const q = db.user.all();
 
       expectSql(
         q.takeOptional().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" LIMIT 1`,
       );
       expectQueryNotMutated(q);
 
       const expected = await testAdapter
-        .query(`SELECT ${userColumnsSql} FROM "schema"."user" LIMIT 1`)
+        .query(`SELECT ${UserSelectAll} FROM "schema"."user" LIMIT 1`)
         .then((res) => res.rows[0]);
 
       const user = await q.takeOptional();
-      assertType<typeof user, UserRecord | undefined>();
+      assertType<typeof user, UserDefaultSelect | undefined>();
 
       expect(user).toEqual({
         ...expected,
@@ -145,15 +143,15 @@ describe('queryMethods', () => {
     });
 
     it('should return undefined if not found', async () => {
-      const user = await User.takeOptional();
+      const user = await db.user.takeOptional();
 
-      assertType<typeof user, UserRecord | undefined>();
+      assertType<typeof user, UserDefaultSelect | undefined>();
 
       expect(user).toBe(undefined);
     });
 
     it('should change valueOrThrow to value', async () => {
-      const q = User.get('id').takeOptional();
+      const q = db.user.get('Id').takeOptional();
       const result = await q;
 
       assertType<typeof result, number | undefined>();
@@ -162,7 +160,7 @@ describe('queryMethods', () => {
     });
 
     it('should leave value as is', async () => {
-      const q = User.getOptional('id').takeOptional();
+      const q = db.user.getOptional('Id').takeOptional();
       const result = await q;
 
       assertType<typeof result, number | undefined>();
@@ -171,16 +169,16 @@ describe('queryMethods', () => {
     });
 
     it('should change rows to one', async () => {
-      const q = User.select('id', 'name').rows().takeOptional();
+      const q = db.user.select('Id', 'Name').rows().takeOptional();
       const result = await q;
 
-      assertType<typeof result, { id: number; name: string } | undefined>();
+      assertType<typeof result, { Id: number; Name: string } | undefined>();
 
       expect(result).toBe(undefined);
     });
 
     it('should leave void as is', async () => {
-      const q = User.select('id', 'name').exec().takeOptional();
+      const q = db.user.select('Id', 'Name').exec().takeOptional();
       const result = await q;
 
       assertType<typeof result, void>();
@@ -191,20 +189,20 @@ describe('queryMethods', () => {
 
   describe('rows', () => {
     it('returns array of rows', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
       const { rows: expected } = await testAdapter.arrays(
         `SELECT "id", "name" FROM "schema"."user"`,
       );
 
-      const received = await User.select('id', 'name').rows();
+      const received = await db.user.select('Id', 'Name').rows();
 
       expect(received).toEqual(expected);
     });
 
     it('should be disabled in a sub-query', () => {
-      const q = User.select({
-        x: () => User.rows(),
+      const q = db.user.select({
+        x: () => db.user.rows(),
       });
 
       assertType<typeof q, 'Invalid return type of x'>();
@@ -213,7 +211,7 @@ describe('queryMethods', () => {
 
   describe('exec', () => {
     it('returns nothing', async () => {
-      const received = await User.exec();
+      const received = await db.user.exec();
 
       expect(received).toEqual(undefined);
     });
@@ -240,15 +238,15 @@ describe('queryMethods', () => {
     });
 
     it('should find one by primary key', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q.find(1);
 
-      assertType<Awaited<typeof query>, UserRecord>();
+      assertType<Awaited<typeof query>, UserDefaultSelect>();
 
       expectSql(
         query.toSQL(),
         `
-            SELECT ${userColumnsSql} FROM "schema"."user" "User"
+            SELECT ${UserSelectAll} FROM "schema"."user" "User"
             WHERE "User"."id" = $1
             LIMIT 1
         `,
@@ -272,15 +270,15 @@ describe('queryMethods', () => {
     });
 
     it('should accept raw sql', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q.find(testDb.sql`$a + $b`.values({ a: 1, b: 2 }));
 
-      assertType<Awaited<typeof query>, UserRecord>();
+      assertType<Awaited<typeof query>, UserDefaultSelect>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE "User"."id" = $1 + $2
           LIMIT 1
         `,
@@ -290,7 +288,7 @@ describe('queryMethods', () => {
     });
 
     it.each([undefined, null])('should throw if %s is passed', (value) => {
-      expect(() => User.find(value as unknown as number)).toThrow(
+      expect(() => db.user.find(value as unknown as number)).toThrow(
         `${value} is not allowed in the find method`,
       );
     });
@@ -298,15 +296,15 @@ describe('queryMethods', () => {
 
   describe('findOptional', () => {
     it('should find optional one by primary key', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q.findOptional(1);
 
-      assertType<Awaited<typeof query>, UserRecord | undefined>();
+      assertType<Awaited<typeof query>, UserDefaultSelect | undefined>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE "User"."id" = $1
           LIMIT 1
         `,
@@ -330,15 +328,15 @@ describe('queryMethods', () => {
     });
 
     it('should accept raw sql', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q.findOptional(testDb.sql`$a + $b`.values({ a: 1, b: 2 }));
 
-      assertType<Awaited<typeof query>, UserRecord | undefined>();
+      assertType<Awaited<typeof query>, UserDefaultSelect | undefined>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE "User"."id" = $1 + $2
           LIMIT 1
         `,
@@ -348,15 +346,15 @@ describe('queryMethods', () => {
     });
 
     it('should accept raw sql with template literal', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q.findOptional(testDb.sql`${1} + ${2}`);
 
-      assertType<Awaited<typeof query>, UserRecord | undefined>();
+      assertType<Awaited<typeof query>, UserDefaultSelect | undefined>();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           WHERE "User"."id" = $1 + $2
           LIMIT 1
         `,
@@ -368,59 +366,15 @@ describe('queryMethods', () => {
 
   describe('findBy', () => {
     it('should be like where but with take', () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      const query = q.findBy({ name: 's' });
+      const query = q.findBy({ Id: 1 });
 
-      assertType<Awaited<typeof query>, UserRecord>();
-
-      expectSql(
-        query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."name" = $1 LIMIT 1`,
-        ['s'],
-      );
-
-      expectQueryNotMutated(q);
-    });
-
-    it('should accept raw', () => {
-      const q = User.all();
-
-      const query = q.findBy({ name: testDb.sql<string>`'string'` });
-
-      assertType<Awaited<typeof query>, UserRecord>();
+      assertType<Awaited<typeof query>, UserDefaultSelect>();
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."name" = 'string' LIMIT 1`,
-      );
-
-      expectQueryNotMutated(q);
-    });
-
-    it('should throw on empty object', () => {
-      expect(() => User.findBy({} as never)).toThrow(
-        'findBy was called with empty object',
-      );
-    });
-
-    it('should throw on undefined', () => {
-      expect(() => User.findBy({ name: undefined as never })).toThrow(
-        'findBy was called with undefined value',
-      );
-    });
-  });
-
-  describe('findByOptional', () => {
-    it('should be an optional `findBy`', () => {
-      const q = User.all();
-      const query = q.findByOptional({ id: 1 });
-
-      assertType<Awaited<typeof query>, UserRecord | undefined>();
-
-      expectSql(
-        query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."id" = $1 LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."id" = $1 LIMIT 1`,
         [1],
       );
 
@@ -428,27 +382,71 @@ describe('queryMethods', () => {
     });
 
     it('should accept raw', () => {
-      const q = User.all();
-      const query = q.findByOptional({ id: testDb.sql<number>`1` });
+      const q = db.user.all();
 
-      assertType<Awaited<typeof query>, UserRecord | undefined>();
+      const query = q.findBy({ Id: testDb.sql<number>`1` });
+
+      assertType<Awaited<typeof query>, UserDefaultSelect>();
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE "User"."id" = 1 LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."id" = 1 LIMIT 1`,
       );
 
       expectQueryNotMutated(q);
     });
 
     it('should throw on empty object', () => {
-      expect(() => User.findByOptional({} as never)).toThrow(
+      expect(() => db.user.findBy({} as never)).toThrow(
+        'findBy was called with empty object',
+      );
+    });
+
+    it('should throw on undefined', () => {
+      expect(() => db.user.findBy({ Id: undefined as never })).toThrow(
+        'findBy was called with undefined value',
+      );
+    });
+  });
+
+  describe('findByOptional', () => {
+    it('should be an optional `findBy`', () => {
+      const q = db.user.all();
+      const query = q.findByOptional({ Id: 1 });
+
+      assertType<Awaited<typeof query>, UserDefaultSelect | undefined>();
+
+      expectSql(
+        query.toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."id" = $1 LIMIT 1`,
+        [1],
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should accept raw', () => {
+      const q = db.user.all();
+      const query = q.findByOptional({ Id: testDb.sql<number>`1` });
+
+      assertType<Awaited<typeof query>, UserDefaultSelect | undefined>();
+
+      expectSql(
+        query.toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE "User"."id" = 1 LIMIT 1`,
+      );
+
+      expectQueryNotMutated(q);
+    });
+
+    it('should throw on empty object', () => {
+      expect(() => db.user.findByOptional({} as never)).toThrow(
         'findByOptional was called with empty object',
       );
     });
 
     it('should throw on undefined', () => {
-      expect(() => User.findByOptional({ name: undefined as never })).toThrow(
+      expect(() => db.user.findByOptional({ Id: undefined as never })).toThrow(
         'findByOptional was called with undefined value',
       );
     });
@@ -456,58 +454,58 @@ describe('queryMethods', () => {
 
   describe('findBySql', () => {
     it('should find one by sql', () => {
-      const q = User.findBySql`sql`;
+      const q = db.user.findBySql`sql`;
 
-      assertType<Awaited<typeof q>, UserRecord>();
+      assertType<Awaited<typeof q>, UserDefaultSelect>();
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (sql) LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (sql) LIMIT 1`,
       );
     });
   });
 
   describe('findBySqlOptional', () => {
     it('should find one optional by sql', () => {
-      const q = User.findBySqlOptional`sql`;
+      const q = db.user.findBySqlOptional`sql`;
 
-      assertType<Awaited<typeof q>, UserRecord | undefined>();
+      assertType<Awaited<typeof q>, UserDefaultSelect | undefined>();
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (sql) LIMIT 1`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (sql) LIMIT 1`,
       );
     });
   });
 
   describe('as', () => {
     it('should set table alias', () => {
-      const q = User.all();
+      const q = db.user.all();
       expectSql(
-        q.select('id').as('as').toSQL(),
-        'SELECT "as"."id" FROM "schema"."user" "as"',
+        q.select('Id').as('as').toSQL(),
+        'SELECT "as"."id" "Id" FROM "schema"."user" "as"',
       );
       expectQueryNotMutated(q);
     });
 
     it('should apply the latest table alias to SQL', () => {
-      const q = User.as('u').select('u.id').as('user').select('user.name');
+      const q = db.user.as('u').select('u.Id').as('user').select('user.Name');
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."id", "user"."name" FROM "schema"."user"`,
+        `SELECT "user"."id" "Id", "user"."name" "Name" FROM "schema"."user"`,
       );
     });
   });
 
   describe('group', () => {
     it('should group by columns', () => {
-      const q = User.all();
+      const q = db.user.all();
 
       expectSql(
-        q.select('id', 'name').group('id', 'name').toSQL(),
+        q.select('Id', 'Name').group('Id', 'Name').toSQL(),
         `
-          SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
+          SELECT "User"."id" "Id", "User"."name" "Name" FROM "schema"."user" "User"
           GROUP BY "User"."id", "User"."name"
         `,
       );
@@ -531,14 +529,14 @@ describe('queryMethods', () => {
     });
 
     it('should group by raw sql', () => {
-      const q = User.clone();
+      const q = db.user.clone();
       const expectedSql = `
-        SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
+        SELECT "User"."id" "Id", "User"."name" "Name" FROM "schema"."user" "User"
         GROUP BY id, name
       `;
       expectSql(
         q
-          .select('id', 'name')
+          .select('Id', 'Name')
           .group(testDb.sql`id`, testDb.sql`name`)
           .toSQL(),
         expectedSql,
@@ -547,9 +545,11 @@ describe('queryMethods', () => {
     });
 
     it('should group by selected value', () => {
-      const q = User.select({
-        month: sql<string>`extract(month from "created_at")`,
-      }).group('month');
+      const q = db.user
+        .select({
+          month: sql<string>`extract(month from "created_at")`,
+        })
+        .group('month');
 
       assertType<Awaited<typeof q>, { month: string }[]>();
 
@@ -564,7 +564,7 @@ describe('queryMethods', () => {
     });
 
     it('should use positional reference when grouping by selected column', () => {
-      const q = User.select({ name: 'id' }).group('name');
+      const q = db.user.select({ name: 'Id' }).group('name');
 
       expectSql(
         q.toSQL(),
@@ -578,26 +578,26 @@ describe('queryMethods', () => {
 
   describe('useHelper', () => {
     it('should have type error when applying a function for a wrong table', async () => {
-      const modifier = User.makeHelper((q) => q.select('name'));
+      const modifier = db.user.makeHelper((q) => q.select('Name'));
 
       // @ts-expect-error wrong table
-      Profile.useHelper(modifier);
+      db.profile.useHelper(modifier);
     });
 
     it('should modify a query by using a helper', () => {
-      const modifier = User.makeHelper((q) =>
-        q.select('name').where({ name: 'name' }),
+      const modifier = db.user.makeHelper((q) =>
+        q.select('Name').where({ Name: 'name' }),
       );
 
-      const q = User.select('id').useHelper(modifier);
+      const q = db.user.select('Id').useHelper(modifier);
 
-      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; Name: string }[]>();
       assertType<typeof q.__hasWhere, true>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "User"."name"
+          SELECT "User"."id" "Id", "User"."name" "Name"
           FROM "schema"."user" "User"
           WHERE "User"."name" = $1
         `,
@@ -606,40 +606,40 @@ describe('queryMethods', () => {
     });
 
     it('should be able to return a union type of query', async () => {
-      const modifier = User.makeHelper((q, param: boolean) => {
+      const modifier = db.user.makeHelper((q, param: boolean) => {
         if (param) {
-          return q.select('name');
+          return q.select('Name');
         } else {
-          return q.select('age');
+          return q.select('Age');
         }
       });
 
-      const q = User.select('id').useHelper(modifier, true);
+      const q = db.user.select('Id').useHelper(modifier, true);
 
       assertType<
         Awaited<typeof q>,
-        ({ id: number; name: string } | { id: number; age: number | null })[]
+        ({ Id: number; Name: string } | { Id: number; Age: string | null })[]
       >();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "User"."name"
+          SELECT "User"."id" "Id", "User"."name" "Name"
           FROM "schema"."user" "User"
         `,
       );
     });
 
     it('should work inside a where function', async () => {
-      const a = User.makeHelper((q) => q.where({ id: 1 }));
-      const b = User.makeHelper((q) => q.where({ name: 'name' }));
+      const a = db.user.makeHelper((q) => q.where({ Id: 1 }));
+      const b = db.user.makeHelper((q) => q.where({ Name: 'name' }));
 
-      const q = a(User.select('id')).where((q) => q.useHelper(b));
+      const q = a(db.user.select('Id')).where((q) => q.useHelper(b));
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id"
+          SELECT "User"."id" "Id"
           FROM "schema"."user" "User"
           WHERE "User"."id" = $1 AND ("User"."name" = $2)
         `,
@@ -650,17 +650,17 @@ describe('queryMethods', () => {
 
   describe('modify', () => {
     it('should modify a query', () => {
-      const q = User.select('id').modify((q) =>
-        q.select('name').where({ name: 'name' }),
-      );
+      const q = db.user
+        .select('Id')
+        .modify((q) => q.select('Name').where({ Name: 'name' }));
 
-      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; Name: string }[]>();
       assertType<typeof q.__hasWhere, true>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "User"."name"
+          SELECT "User"."id" "Id", "User"."name" "Name"
           FROM "schema"."user" "User"
           WHERE "User"."name" = $1
         `,
@@ -671,11 +671,11 @@ describe('queryMethods', () => {
     it('should be able to return a union type of query', async () => {
       const param = true;
 
-      const q = User.select('id').modify((q) => {
+      const q = db.user.select('Id').modify((q) => {
         if (param) {
-          return q.select('name');
+          return q.select('Name');
         } else {
-          return q.select('age');
+          return q.select('Age');
         }
       });
 
@@ -683,29 +683,31 @@ describe('queryMethods', () => {
 
       assertType<
         Awaited<typeof q>,
-        { id: number; name: string }[] | { id: number; age: number | null }[]
+        { Id: number; Name: string }[] | { Id: number; Age: string | null }[]
       >();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "User"."name"
+          SELECT "User"."id" "Id", "User"."name" "Name"
           FROM "schema"."user" "User"
         `,
       );
     });
 
     it('should work inside a where function', async () => {
-      const q = User.select('id').modify((q) =>
-        q
-          .where({ id: 1 })
-          .modify((q) => q.modify((q) => q.where({ name: 'name' }))),
-      );
+      const q = db.user
+        .select('Id')
+        .modify((q) =>
+          q
+            .where({ Id: 1 })
+            .modify((q) => q.modify((q) => q.where({ Name: 'name' }))),
+        );
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id"
+          SELECT "User"."id" "Id"
           FROM "schema"."user" "User"
           WHERE "User"."id" = $1 AND "User"."name" = $2
         `,
@@ -716,29 +718,29 @@ describe('queryMethods', () => {
 
   describe('narrowType', () => {
     it('should narrow the type of selection', () => {
-      const q = User.select('name').narrowType()<{ name: 'name' }>();
+      const q = db.user.select('Name').narrowType()<{ Name: 'name' }>();
 
-      assertType<Awaited<typeof q>, { name: 'name' }[]>();
+      assertType<Awaited<typeof q>, { Name: 'name' }[]>();
     });
 
     it('should fail to narrow if the type does not match', () => {
-      const q = User.select('name').narrowType()<{ id: 1; name: 2 }>();
+      const q = db.user.select('Name').narrowType()<{ Id: 1; Name: 2 }>();
 
       assertType<
         typeof q,
-        | `narrowType() error: provided type does not extend the 'name' column type`
-        | `narrowType() error: provided type does not extend the 'id' column type`
+        | `narrowType() error: provided type does not extend the 'Name' column type`
+        | `narrowType() error: provided type does not extend the 'Id' column type`
       >();
     });
 
     it('should narrow the type of `get`', () => {
-      const q = User.get('name').narrowType()<'name'>();
+      const q = db.user.get('Name').narrowType()<'name'>();
 
       assertType<Awaited<typeof q>, 'name'>();
     });
 
     it('should fail to narrow `get` if the type does not match', () => {
-      const q = User.get('name').narrowType()<1>();
+      const q = db.user.get('Name').narrowType()<1>();
 
       assertType<
         Awaited<typeof q>,
@@ -747,13 +749,13 @@ describe('queryMethods', () => {
     });
 
     it('should narrow the type of `pluck`', () => {
-      const q = User.pluck('name').narrowType()<'name'[]>();
+      const q = db.user.pluck('Name').narrowType()<'name'[]>();
 
       assertType<Awaited<typeof q>, 'name'[]>();
     });
 
     it('should fail to narrow `get` if the type does not match', () => {
-      const q = User.pluck('name').narrowType()<1[]>();
+      const q = db.user.pluck('Name').narrowType()<1[]>();
 
       assertType<
         Awaited<typeof q>,
@@ -764,30 +766,33 @@ describe('queryMethods', () => {
 
   describe('makeHelper', () => {
     it('should make a query helper', () => {
-      const fn = User.makeHelper((q, _: boolean) => q.select('id'));
-      const q = fn(User.select('name'), true);
+      const fn = db.user.makeHelper((q, _: boolean) => q.select('Id'));
+      const q = fn(db.user.select('Name'), true);
 
-      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; Name: string }[]>();
     });
 
     it('QueryHelperResult type should be fine', () => {
-      const helper = User.makeHelper((q, param?: string) =>
-        q.where({ name: param }),
+      const helper = db.user.makeHelper((q, param?: string) =>
+        q.where({ Name: param }),
       );
 
-      assertType<Awaited<QueryHelperResult<typeof helper>>, UserRecord[]>();
+      assertType<
+        Awaited<QueryHelperResult<typeof helper>>,
+        UserDefaultSelect[]
+      >();
     });
 
     it('should have table property available at runtime', () => {
-      const helper = User.makeHelper((q) => q.select('id'));
+      const helper = db.user.makeHelper((q) => q.select('Id'));
 
       expect(helper.table).toBe('User');
     });
 
     it('should support returning an expression', () => {
-      const helper = User.makeHelper(() => sql<number>`1`);
+      const helper = db.user.makeHelper(() => sql<number>`1`);
 
-      const q = User.get((q) => helper(q));
+      const q = db.user.get((q) => helper(q));
 
       assertType<Awaited<typeof q>, number>();
     });
@@ -795,50 +800,53 @@ describe('queryMethods', () => {
 
   describe('narrowType', () => {
     it('should narrow a result type', () => {
-      const q = User.select('id').where({ id: 123 }).narrowType()<{
-        id: 123;
+      const q = db.user.select('Id').where({ Id: 123 }).narrowType()<{
+        Id: 123;
       }>();
 
-      assertType<Awaited<typeof q>, { id: 123 }[]>();
+      assertType<Awaited<typeof q>, { Id: 123 }[]>();
     });
   });
 
   describe('if', () => {
     it('should execute callback based on the condition', () => {
-      const q1 = User.select('id').if(false, (q) => q.select('name'));
+      const q1 = db.user.select('Id').if(false, (q) => q.select('Name'));
 
-      expectSql(q1.toSQL(), `SELECT "User"."id" FROM "schema"."user" "User"`);
+      expectSql(
+        q1.toSQL(),
+        `SELECT "User"."id" "Id" FROM "schema"."user" "User"`,
+      );
 
-      const q2 = User.select('id').if(true, (q) => q.select('name'));
+      const q2 = db.user.select('Id').if(true, (q) => q.select('Name'));
 
       expectSql(
         q2.toSQL(),
-        `SELECT "User"."id", "User"."name" FROM "schema"."user" "User"`,
+        `SELECT "User"."id" "Id", "User"."name" "Name" FROM "schema"."user" "User"`,
       );
     });
 
     it('should add optional selection', () => {
-      const q = User.select('id', 'name').if(true, (q) =>
-        q.select('name', 'password', 'active'),
-      );
+      const q = db.user
+        .select('Id', 'Name')
+        .if(true, (q) => q.select('Name', 'Password', 'Active'));
 
       assertType<
         Awaited<typeof q>,
         {
-          id: number;
-          name: string;
-          password?: string;
-          active?: boolean | null;
+          Id: number;
+          Name: string;
+          Password?: string;
+          Active?: boolean | null;
         }[]
       >();
     });
 
     it('should handle a query returning a plain value', () => {
-      const q = User.get('id').if(true, (q) => q.get('name'));
+      const q = db.user.get('Id').if(true, (q) => q.get('Name'));
 
       assertType<Awaited<typeof q>, number | string>();
 
-      const q2 = q.if(true, (q) => q.get('active'));
+      const q2 = q.if(true, (q) => q.get('Active'));
 
       assertType<Awaited<typeof q2>, number | string | boolean | null>();
     });

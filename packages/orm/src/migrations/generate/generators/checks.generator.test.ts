@@ -1,4 +1,8 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  sql,
+  useGeneratorsTestUtils,
+} from './generators.test-utils';
 import { colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
@@ -15,7 +19,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('checks', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   it('should not be dropped in ignored tables', async () => {
     await arrange({
@@ -26,12 +30,12 @@ describe('checks', () => {
           'schema.inSchemaTable',
           { noPrimaryKey: true },
           (t) => ({
-            colUmn: t.integer().check(t.sql`"col_umn" = 42`),
+            colUmn: t.integer().check(sql`"col_umn" = 42`),
           }),
         );
 
         await db.createTable('publicTable', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.integer().check(t.sql`"col_umn" = 42`),
+          colUmn: t.integer().check(sql`"col_umn" = 42`),
         }));
       },
       dbOptions: {
@@ -41,19 +45,19 @@ describe('checks', () => {
         },
       },
       tables: [
-        table(
+        defineTable(
+          'inSchemaTable',
+          { schema: 'schema', noPrimaryKey: true, nameInDb: 'inSchemaTable' },
           (t) => ({
             colUmn: t.integer(),
           }),
-          undefined,
-          { name: 'schema.inSchemaTable' },
         ),
-        table(
+        defineTable(
+          'publicTable',
+          { noPrimaryKey: true, nameInDb: 'publicTable' },
           (t) => ({
             colUmn: t.integer(),
           }),
-          undefined,
-          { name: 'publicTable' },
         ),
       ],
     });
@@ -71,8 +75,8 @@ describe('checks', () => {
         }));
       },
       tables: [
-        table((t) => ({
-          colUmn: t.integer().check(t.sql`"col_umn" = 42`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.integer().check(sql`"col_umn" = 42`),
         })),
       ],
     });
@@ -98,11 +102,11 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.integer().check(t.sql`"col_umn" = 42`),
+          colUmn: t.integer().check(sql`"col_umn" = 42`),
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.integer(),
         })),
       ],
@@ -129,12 +133,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          iD: t.integer().check(t.sql`i_d != 123`),
+          iD: t.integer().check(sql`i_d != 123`),
         }));
       },
       tables: [
-        table((t) => ({
-          iD: t.integer().check(t.sql`i_d != 123`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().check(sql`i_d != 123`),
         })),
       ],
     });
@@ -148,12 +152,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          iD: t.integer().check(t.sql`i_d = 123`),
+          iD: t.integer().check(sql`i_d = 123`),
         }));
       },
       tables: [
-        table((t) => ({
-          iD: t.integer().check(t.sql`i_d != 123`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().check(sql`i_d != 123`),
         })),
       ],
     });
@@ -187,12 +191,11 @@ change(async (db) => {
         }));
       },
       tables: [
-        table(
-          (t) => ({
-            iD: t.integer(),
-          }),
-          (t) => [t.check(t.sql`"i_d" = 1`), t.check(t.sql`"i_d" = 2`)],
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer(),
+        }))
+          .check(sql`"i_d" = 1`)
+          .check(sql`"i_d" = 2`),
       ],
     });
 
@@ -223,8 +226,8 @@ change(async (db) => {
         await db.createTable('table', { noPrimaryKey: true });
       },
       tables: [
-        table((t) => ({
-          iD: t.integer().check(t.sql`"i_d" = 5`, 'name'),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().check(sql`"i_d" = 5`, 'name'),
         })),
       ],
     });
@@ -248,10 +251,10 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          iD: t.integer().check(t.sql`i_d = 123`),
+          iD: t.integer().check(sql`i_d = 123`),
         }));
       },
-      tables: [table()],
+      tables: [defineTable('table', { noPrimaryKey: true }, () => ({}))],
     });
 
     await act();
@@ -277,8 +280,8 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
-          iD: t.integer().check(t.sql`"i_d" = 5`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().check(sql`"i_d" = 5`),
         })),
       ],
     });
@@ -307,11 +310,11 @@ change(async (db) => {
           iD: t
             .integer()
             .nullable()
-            .check(t.sql`"i_d" = 5`),
+            .check(sql`"i_d" = 5`),
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.integer(),
         })),
       ],
@@ -340,12 +343,12 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          frOm: t.integer().check(t.sql`2 = 2`),
+          frOm: t.integer().check(sql`2 = 2`),
         }));
       },
       tables: [
-        table((t) => ({
-          tO: t.integer().check(t.sql`2 = 2`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          tO: t.integer().check(sql`2 = 2`),
         })),
       ],
       selects: [1],
@@ -373,12 +376,12 @@ change(async (db) => {
           iD: t
             .integer()
             .nullable()
-            .check(t.sql`"i_d" = 5`),
+            .check(sql`"i_d" = 5`),
         }));
       },
       tables: [
-        table((t) => ({
-          iD: t.integer().check(t.sql`"i_d" = 5`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().check(sql`"i_d" = 5`),
         })),
       ],
     });
@@ -404,14 +407,14 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          firstName: t.text().check(t.sql`first_name != ''`),
+          firstName: t.text().check(sql`first_name != ''`),
           lastName: t.text(),
         }));
       },
       tables: [
-        table((t) => ({
-          firstName: t.text().check(t.sql`first_name != ''`),
-          lastName: t.text().check(t.sql`last_name != ''`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t.text().check(sql`first_name != ''`),
+          lastName: t.text().check(sql`last_name != ''`),
         })),
       ],
     });
@@ -437,18 +440,15 @@ change(async (db) => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          firstName: t.text().check(t.sql`first_name != ''`),
+          firstName: t.text().check(sql`first_name != ''`),
           lastName: t.text(),
         }));
       },
       tables: [
-        table(
-          (t) => ({
-            firstName: t.text().check(t.sql`first_name != ''`),
-            lastName: t.text(),
-          }),
-          (t) => t.check(t.sql`first_name != last_name`),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t.text().check(sql`first_name != ''`),
+          lastName: t.text(),
+        })).check(sql`first_name != last_name`),
       ],
     });
 
@@ -478,9 +478,9 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
-          firstName: t.text().check(t.sql`first_name != ''`),
-          lastName: t.text().check(t.sql`last_name != ''`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t.text().check(sql`first_name != ''`),
+          lastName: t.text().check(sql`last_name != ''`),
         })),
       ],
     });
@@ -515,34 +515,30 @@ change(async (db) => {
           (t) => ({
             firstName: t
               .text()
-              .check(t.sql`first_name = 'keep1'`)
-              .check(t.sql`first_name = 'drop1'`)
-              .check(t.sql`first_name = 'drop2'`),
+              .check(sql`first_name = 'keep1'`)
+              .check(sql`first_name = 'drop1'`)
+              .check(sql`first_name = 'drop2'`),
             lastName: t.text(),
           }),
           (t) => [
-            t.check(t.sql`first_name = 'keep2'`),
-            t.check(t.sql`first_name = 'drop3'`),
-            t.check(t.sql`first_name = 'drop4'`),
+            t.check(sql`first_name = 'keep2'`),
+            t.check(sql`first_name = 'drop3'`),
+            t.check(sql`first_name = 'drop4'`),
           ],
         );
       },
       tables: [
-        table(
-          (t) => ({
-            firstName: t
-              .text()
-              .check(t.sql`first_name = 'keep1'`)
-              .check(t.sql`first_name = 'add1'`)
-              .check(t.sql`first_name = 'add2'`),
-            lastName: t.text(),
-          }),
-          (t) => [
-            t.check(t.sql`first_name = 'keep2'`),
-            t.check(t.sql`first_name = 'add3'`),
-            t.check(t.sql`first_name = 'add4'`),
-          ],
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          firstName: t
+            .text()
+            .check(sql`first_name = 'keep1'`)
+            .check(sql`first_name = 'add1'`)
+            .check(sql`first_name = 'add2'`),
+          lastName: t.text(),
+        }))
+          .check(sql`first_name = 'keep2'`)
+          .check(sql`first_name = 'add3'`)
+          .check(sql`first_name = 'add4'`),
       ],
     });
 
@@ -594,17 +590,17 @@ change(async (db) => {
   it('should be able to handle 10 checks at a time', async () => {
     await arrange({
       tables: [
-        table((t) => ({
-          col1: t.text().check(t.sql`col1 = ''`),
-          col2: t.text().check(t.sql`col2 = ''`),
-          col3: t.text().check(t.sql`col3 = ''`),
-          col4: t.text().check(t.sql`col4 = ''`),
-          col5: t.text().check(t.sql`col5 = ''`),
-          col6: t.text().check(t.sql`col6 = ''`),
-          col7: t.text().check(t.sql`col7 = ''`),
-          col8: t.text().check(t.sql`col8 = ''`),
-          col9: t.text().check(t.sql`col9 = ''`),
-          col10: t.text().check(t.sql`col10 = ''`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          col1: t.text().check(sql`col1 = ''`),
+          col2: t.text().check(sql`col2 = ''`),
+          col3: t.text().check(sql`col3 = ''`),
+          col4: t.text().check(sql`col4 = ''`),
+          col5: t.text().check(sql`col5 = ''`),
+          col6: t.text().check(sql`col6 = ''`),
+          col7: t.text().check(sql`col7 = ''`),
+          col8: t.text().check(sql`col8 = ''`),
+          col9: t.text().check(sql`col9 = ''`),
+          col10: t.text().check(sql`col10 = ''`),
         })),
       ],
     });

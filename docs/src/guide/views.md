@@ -1,56 +1,52 @@
 ---
-description: Defining and querying PostgreSQL views with BaseTable.View, BaseTable.MaterializedView, $views, relations, grants, refreshes, and generated migrations.
+description: Defining and querying PostgreSQL views with defineView, $views, relations, grants, refreshes, and generated migrations.
 ---
 
 # Views
 
-Define PostgreSQL regular views with `BaseTable.View` and materialized views with `BaseTable.MaterializedView` when you want a view to be a first-class ORM object.
-Views are configured next to tables, queried through `db.$views`, can participate in relations, and can be included in generated migrations.
+Define PostgreSQL regular views and materialized views with `defineView` when
+you want a view to be a first-class ORM object. Views are configured next to
+tables, queried through `db.$views`, can participate in relations, and can be
+included in generated migrations.
 
 ```ts
-import { orchidORM, setGrants } from 'orchid-orm';
-import { BaseTable, sql } from './base-table';
+import { orchidORM } from 'orchid-orm';
+import { defineView, sql } from './table-factory';
 import { UserTable } from './user.table';
 
-export class MonthlySalesView extends BaseTable.View {
-  schema = 'analytics';
-  readonly name = 'monthly_sales';
-
-  securityInvoker = true;
-  checkOption = 'LOCAL' as const;
-
-  columns = this.setColumns((t) => ({
+export const MonthlySalesView = defineView(
+  'monthly_sales',
+  {
+    schema: 'analytics',
+    securityInvoker: true,
+    checkOption: 'LOCAL',
+    sql: sql`
+      SELECT
+        row_number() over () AS id,
+        "userId",
+        sum(total) AS total
+      FROM sale
+      GROUP BY "userId"
+    `,
+  },
+  (t) => ({
     id: t.integer(),
     userId: t.integer(),
     total: t.decimal(),
-  }));
-
-  sql = sql`
-    SELECT
-      row_number() over () AS id,
-      "userId",
-      sum(total) AS total
-    FROM sale
-    GROUP BY "userId"
-  `;
-
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['userId'],
-      references: ['id'],
-    }),
-  };
-
-  grants = setGrants([
+  }),
+)
+  .relations((monthlySales) => ({
+    user: monthlySales('userId').belongsTo(() => UserTable('id')),
+  }))
+  .grants([
     {
       to: 'reporting_user',
       privileges: ['SELECT'],
     },
   ]);
-}
 ```
 
-Add the view classes to the first `orchidORM` options argument:
+Add the view definitions to the first `orchidORM` options argument:
 
 ```ts
 export const db = orchidORM(
@@ -77,45 +73,45 @@ const rows = await db.$views.monthlySales
 
 ## nameInDb
 
-`name` is the query-facing view alias.
-It is used for `$views` query typing and qualified column names, and by default it is also the database view name.
+The first argument of `defineView` is the query-facing view alias.
+It is used for `$views` query typing and qualified column names, and by default
+it is also the database view name.
 
 Set `nameInDb` when the view has a different name in the database:
 
 ```ts
-export class ActiveUserView extends BaseTable.View {
-  readonly name = 'activeUser';
-  readonly nameInDb = 'active_users';
-
-  columns = this.setColumns((t) => ({
+export const ActiveUserView = defineView(
+  'activeUser',
+  {
+    nameInDb: 'active_users',
+    sql: sql`SELECT id, "firstName" FROM "user" WHERE active = true`,
+  },
+  (t) => ({
     id: t.integer(),
     firstName: t.text(),
-  }));
-
-  sql = sql`SELECT id, "firstName" FROM "user" WHERE active = true`;
-}
+  }),
+);
 
 await db.$views.activeUser.select('activeUser.firstName');
 // SELECT "activeUser"."firstName" FROM "active_users" "activeUser"
 ```
 
-When `snakeCase` is enabled on the base table and `nameInDb` is not set, Orchid derives the database view name from `name`:
+When `snakeCase` is enabled on the table factory and `nameInDb` is not set,
+Orchid derives the database view name from the view alias:
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineView, sql } = createTableFactory({
   snakeCase: true,
 });
 
-export class ActiveUserView extends BaseTable.View {
-  readonly name = 'activeUser';
-
-  columns = this.setColumns((t) => ({
+export const ActiveUserView = defineView(
+  'activeUser',
+  { sql: sql`SELECT id, first_name FROM "user" WHERE active = true` },
+  (t) => ({
     id: t.integer(),
     firstName: t.text(),
-  }));
-
-  sql = sql`SELECT id, first_name FROM "user" WHERE active = true`;
-}
+  }),
+);
 
 await db.$views.activeUser.select('activeUser.firstName');
 // SELECT "activeUser"."first_name" FROM "active_user" "activeUser"
@@ -124,22 +120,25 @@ await db.$views.activeUser.select('activeUser.firstName');
 Materialized views support `nameInDb` in the same way:
 
 ```ts
-export class MonthlySalesMaterializedView extends BaseTable.MaterializedView {
-  readonly name = 'monthlySales';
-  readonly nameInDb = 'sales_by_month';
-
-  columns = this.setColumns((t) => ({
+export const MonthlySalesMaterializedView = defineView(
+  'monthlySales',
+  {
+    materialized: true,
+    nameInDb: 'sales_by_month',
+    sql: sql`SELECT "userId", sum(total) AS total FROM sale GROUP BY "userId"`,
+  },
+  (t) => ({
     userId: t.integer(),
     total: t.decimal(),
-  }));
-
-  sql = sql`SELECT "userId", sum(total) AS total FROM sale GROUP BY "userId"`;
-}
+  }),
+);
 ```
 
 An explicit `nameInDb` is used as-is and is not changed by `snakeCase`.
-Use the existing `schema` property for schema qualification; `nameInDb` is only the view or materialized view name inside that schema.
-Generated migrations use `nameInDb` for `CREATE VIEW` and `CREATE MATERIALIZED VIEW`, while runtime queries keep using `name` as the query alias.
+Use the existing `schema` option for schema qualification; `nameInDb` is only
+the view or materialized view name inside that schema. Generated migrations use
+`nameInDb` for `CREATE VIEW` and `CREATE MATERIALIZED VIEW`, while runtime
+queries keep using the first `defineView` argument as the query alias.
 
 For split ORM setup, pass both tables and views to `bundleOrchidORM`:
 
@@ -158,7 +157,8 @@ export const orm = bundleOrchidORM({
 
 ## read-only by default
 
-First-class views are read-only by default. Read queries are available, but mutation methods are unavailable at the TypeScript level:
+First-class views are read-only by default. Read queries are available, but
+mutation methods are unavailable at the TypeScript level:
 
 ```ts
 await db.$views.monthlySales.select('userId', 'total');
@@ -169,32 +169,27 @@ await db.$views.monthlySales.create({ userId: 1, total: '10' });
 
 ## using query-builder to define views
 
-Use `init(db)` when you want to build the view with the query builder.
-The `db` argument is the configured ORM instance, so it has your tables and views:
+Use `.query(db => ...)` when you want to build the view with the query builder.
+The `db` argument is the configured ORM instance, so it has your tables and
+views:
 
 ```ts
 import { orchidORM } from 'orchid-orm';
-import { BaseTable } from './base-table';
+import { defineView } from './table-factory';
 import { SaleTable } from './sale.table';
 import { UserTable } from './user.table';
 
-export class MonthlySalesView extends BaseTable.View {
-  readonly name = 'monthly_sales';
-
-  columns = this.setColumns((t) => ({
-    userId: t.integer(),
-    total: t.decimal(),
-  }));
-
-  init(db: typeof appDb) {
-    this.query = db.sale
-      .select({
-        userId: 'userId',
-        total: (q) => q.sum('total'),
-      })
-      .group('userId');
-  }
-}
+export const MonthlySalesView = defineView('monthly_sales', (t) => ({
+  userId: t.integer(),
+  total: t.decimal(),
+})).query((db: typeof appDb) =>
+  db.sale
+    .select({
+      userId: 'userId',
+      total: (q) => q.sum('total'),
+    })
+    .group('userId'),
+);
 
 export const appDb = orchidORM(
   {
@@ -210,66 +205,65 @@ export const appDb = orchidORM(
 );
 ```
 
-During `db g`, Orchid compiles `this.query` to SQL and bind values for `createView`.
-It does not execute the query.
-Runtime reads still use `db.$views.<key>`.
+During `db g`, Orchid compiles the query to SQL and bind values for
+`createView`. It does not execute the query. Runtime reads still use
+`db.$views.<key>`.
 
-Set `readonly readOnly = false` only when you are sure PostgreSQL accepts writes for the view, for example for a simple updatable view or a view with suitable triggers.
-Orchid does not validate view updatability at runtime; PostgreSQL remains responsible for accepting or rejecting the mutation.
+Set `readOnly: false` only when you are sure PostgreSQL accepts writes for the
+view, for example for a simple updatable view or a view with suitable triggers.
+Orchid does not validate view updatability at runtime; PostgreSQL remains
+responsible for accepting or rejecting the mutation.
 
 ```ts
-export class ActiveUserView extends BaseTable.View {
-  readonly name = 'active_user';
-  readonly readOnly = false;
-  readonly checkOption = 'CASCADED';
-
-  columns = this.setColumns((t) => ({
+export const ActiveUserView = defineView(
+  'active_user',
+  {
+    readOnly: false,
+    checkOption: 'CASCADED',
+    sql: sql`SELECT id, name, active FROM "user" WHERE active = true`,
+  },
+  (t) => ({
     id: t.integer().primaryKey(),
     name: t.text(),
     active: t.boolean(),
-  }));
-
-  sql = sql`SELECT id, name, active FROM "user" WHERE active = true`;
-}
+  }),
+);
 ```
 
 ## materialized views
 
-Use `BaseTable.MaterializedView` for PostgreSQL materialized views.
-They use the same `views` ORM option and the same `$views` namespace as regular views, but they are always read-only and store stale data until refreshed.
+Use `defineView` with `materialized: true` for PostgreSQL materialized views.
+They use the same `views` ORM option and the same `$views` namespace as regular
+views, but they are always read-only and store stale data until refreshed.
 
 ```ts
 import { orchidORM, refreshMaterializedView } from 'orchid-orm';
-import { BaseTable, sql } from './base-table';
+import { defineView, sql } from './table-factory';
 import { UserTable } from './user.table';
 
-export class MonthlySalesMaterializedView extends BaseTable.MaterializedView {
-  schema = 'analytics';
-  readonly name = 'monthly_sales';
-  withData = false;
-
-  columns = this.setColumns((t) => ({
+export const MonthlySalesMaterializedView = defineView(
+  'monthly_sales',
+  {
+    materialized: true,
+    schema: 'analytics',
+    withData: false,
+    sql: sql`
+      SELECT
+        "userId",
+        date_trunc('month', "createdAt")::date AS month,
+        sum(total) AS total
+      FROM sale
+      GROUP BY "userId", date_trunc('month', "createdAt")::date
+    `,
+  },
+  (t) => ({
     userId: t.integer(),
     month: t.date(),
     total: t.decimal(),
-  }));
-
-  sql = sql`
-    SELECT
-      "userId",
-      date_trunc('month', "createdAt")::date AS month,
-      sum(total) AS total
-    FROM sale
-    GROUP BY "userId", date_trunc('month', "createdAt")::date
-  `;
-
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['userId'],
-      references: ['id'],
-    }),
-  };
-}
+  }),
+).relations((monthlySales) => ({
+  user: monthlySales('userId').belongsTo(() => UserTable('id')),
+}));
 
 export const db = orchidORM(
   {
@@ -294,20 +288,26 @@ await refreshMaterializedView(db.$views.monthlySales, {
 });
 ```
 
-`BaseTable.MaterializedView` supports the table-like view behavior that applies to read-only queryable relations: columns, schema, computed columns, scopes, soft delete, grants, and relations.
-It does not support the regular view write opt-in, so declaring `readOnly = false` is not part of the materialized view API.
+Materialized views support the table-like view behavior that applies to
+read-only queryable relations: columns, schema, computed columns, scopes, soft
+delete, grants, and relations. They do not support the regular view write
+opt-in, so declaring `readOnly: false` is not part of the materialized view API.
 
 `withData` controls generated `CREATE MATERIALIZED VIEW` migrations:
 
 - omit `withData` to let PostgreSQL use its default.
-- set `withData = true` for `WITH DATA`.
-- set `withData = false` for `WITH NO DATA`; PostgreSQL creates the materialized view without loading rows, and it cannot be scanned until refreshed with data.
+- set `withData: true` for `WITH DATA`.
+- set `withData: false` for `WITH NO DATA`; PostgreSQL creates the materialized view without loading rows, and it cannot be scanned until refreshed with data.
 
-Materialized views do not use regular-view options such as `recursive`, `checkOption`, `securityBarrier`, or `securityInvoker`.
-They also do not expose table-only options such as `rls`, `autoForeignKeys`, or table primary-key requirements.
+Materialized views do not use regular-view options such as `recursive`,
+`checkOption`, `securityBarrier`, or `securityInvoker`. They also do not expose
+table-only options such as `rls`, `autoForeignKeys`, or table primary-key
+requirements.
 
-Use `refreshMaterializedView` from `orchid-orm` to refresh a configured materialized view at runtime.
-The helper accepts only materialized view query objects, derives the schema-qualified view name from the query, runs `REFRESH MATERIALIZED VIEW`, and resolves when the refresh completes.
+Use `refreshMaterializedView` from `orchid-orm` to refresh a configured
+materialized view at runtime. The helper accepts only materialized view query
+objects, derives the schema-qualified view name from the query, runs
+`REFRESH MATERIALIZED VIEW`, and resolves when the refresh completes.
 
 ```ts
 await refreshMaterializedView(db.$views.monthlySales);
@@ -332,25 +332,17 @@ For manual migration examples, see [createMaterializedView, dropMaterializedView
 
 ## relations
 
-Views support the same relation declaration methods as tables: `belongsTo`, `hasOne`, `hasMany`, and `hasAndBelongsToMany`.
-Relations can point from a view to a table, from a table to a view, or between views.
+Views support the same relation declaration methods as tables: `belongsTo`,
+`hasOne`, `hasMany`, and `hasAndBelongsToMany`. Relations can point from a view
+to a table, from a table to a view, or between views.
 
 ```ts
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(),
-  }));
-
-  relations = {
-    monthlySales: this.hasMany(() => MonthlySalesView, {
-      columns: ['id'],
-      references: ['userId'],
-    }),
-  };
-}
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.text(),
+})).relations((user) => ({
+  monthlySales: user('id').hasMany(() => MonthlySalesView('userId')),
+}));
 
 const users = await db.user.select('name', {
   monthlySales: (q) => q.monthlySales.select('total'),
@@ -362,15 +354,17 @@ Nested mutations are unavailable for read-only view relations.
 
 ## view options
 
-`BaseTable.View` supports persistent PostgreSQL `CREATE VIEW` options used by generated migrations.
-See the PostgreSQL [`CREATE VIEW`](https://www.postgresql.org/docs/current/sql-createview.html) docs for full database semantics.
+`defineView` supports persistent PostgreSQL `CREATE VIEW` options used by
+generated migrations. See the PostgreSQL
+[`CREATE VIEW`](https://www.postgresql.org/docs/current/sql-createview.html)
+docs for full database semantics.
 
 - `recursive`: creates a recursive view.
 - `checkOption`: `'LOCAL'` or `'CASCADED'`; asks PostgreSQL to reject writes through the view when rows would not satisfy the view condition. `CASCADED` also checks dependent views.
 - `securityBarrier`: enables PostgreSQL's security barrier behavior for views that are used as a security boundary.
-- `securityInvoker`: when `true`, PostgreSQL checks underlying table privileges and row-level security policies as the user querying the view instead of the view owner. This is usually the important option for views over RLS-managed tables. Generated view migrations default it to `true`; set `securityInvoker = false` only when owner-checked behavior is intentional.
+- `securityInvoker`: when `true`, PostgreSQL checks underlying table privileges and row-level security policies as the user querying the view instead of the view owner. This is usually the important option for views over RLS-managed tables. Generated view migrations default it to `true`; set `securityInvoker: false` only when owner-checked behavior is intentional.
 
-`BaseTable.View` does not expose table-only options such as `rls` or `autoForeignKeys`.
+`defineView` does not expose table-only options such as `rls` or `autoForeignKeys`.
 For manual migrations, `createView` also has migration-only options such as `createOrReplace`, `temporary`, `dropIfExists`, and `dropMode`; see [createView, dropView](/guide/migration-writing#createview-dropview).
 
 ## generated migrations
@@ -379,10 +373,10 @@ Views are managed by `db g` only when they are listed in the ORM `views` option.
 If no ORM views are configured, regular database views and materialized views are not loaded or diffed during migration generation.
 
 When views are configured, the migration generator loads both regular and materialized views.
-For regular views, it uses the view class `schema`, `name`, `columns`, `sql` or the `query` assigned in `init(db)`, grants, and supported view options to generate `createView` and `dropView` migrations.
-For materialized views, it uses `schema`, `name`, `columns`, `sql`, grants, `withData`, dependencies, and indexes to generate `createMaterializedView`, `dropMaterializedView`, and related index migrations.
+For regular views, it uses the view definition `schema`, alias, columns, `sql` or `.query(...)`, grants, and supported view options to generate `createView` and `dropView` migrations.
+For materialized views, it uses `schema`, alias, columns, `sql`, grants, `withData`, dependencies, and indexes to generate `createMaterializedView`, `dropMaterializedView`, and related index migrations.
 
-Set `generatorIgnore = true` on a view class when the view should stay queryable in code but its DDL is managed outside Orchid.
+Set `generatorIgnore: true` in view options when the view should stay queryable in code but its DDL is managed outside Orchid.
 This works the same as [`generatorIgnore.views`](/guide/generate-migrations#generatorignore) in ORM config.
 View grants still need [`generatorIgnore.grants`](/guide/generate-migrations#generatorignore).
 There is no separate materialized-view ignore option.

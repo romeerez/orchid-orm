@@ -25,6 +25,8 @@ export function _orCreate<T extends PickQueryHasSelectResultReturnType>(
     q.returnType = 'void';
   }
 
+  q.type = 'upsert';
+
   if (typeof data === 'function') {
     q.upsertInsert = () =>
       mergeData

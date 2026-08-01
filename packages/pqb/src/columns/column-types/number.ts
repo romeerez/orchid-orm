@@ -164,7 +164,7 @@ export class SmallIntColumn<
   identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
-  ): Column.Modifiers.HasDefault<T> {
+  ): Column.HasDefault<T> {
     return setColumnData(this, 'identity', options) as never;
   }
 }
@@ -189,7 +189,7 @@ export class IntegerColumn<
   identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
-  ): Column.Modifiers.HasDefault<T> {
+  ): Column.HasDefault<T> {
     return setColumnData(this, 'identity', options) as never;
   }
 }
@@ -213,7 +213,7 @@ export class BigIntColumn<
   identity<T extends Column.Pick.Data>(
     this: T,
     options: TableData.Identity = {},
-  ): Column.Modifiers.HasDefault<T> {
+  ): Column.HasDefault<T> {
     return setColumnData(this, 'identity', options) as never;
   }
 }

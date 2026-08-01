@@ -2,7 +2,7 @@ import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
-    'schema.chatUser',
+    'schema.chat_user',
     (t) => ({
       userId: t.integer(),
       userKey: t.text(),

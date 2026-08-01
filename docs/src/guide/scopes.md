@@ -9,21 +9,16 @@ Only [where conditions](/guide/where) can be set in a scope.
 If you define a scope with name `default`, it will be applied for all table queries by default.
 
 ```ts
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
-export class SomeTable extends BaseTable {
-  readonly table = 'some';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    hidden: t.boolean(),
-    active: t.boolean(),
-  }));
-
-  scopes = this.setScopes({
-    default: (q) => q.where({ hidden: false }),
-    active: (q) => q.where({ active: true }),
-  });
-}
+export const SomeTable = defineTable('some', (t) => ({
+  id: t.identity().primaryKey(),
+  hidden: t.boolean(),
+  active: t.boolean(),
+})).scopes({
+  default: (q) => q.where({ hidden: false }),
+  active: (q) => q.where({ active: true }),
+});
 
 const db = orchidORM(
   { databaseURL: '...' },

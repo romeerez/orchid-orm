@@ -413,7 +413,10 @@ export interface TableDataMethods<Key extends PropertyKey> {
 
   foreignKey<Shape>(
     columns: [string, ...string[]],
-    fnOrTable: () => new () => { columns: { shape: Shape } },
+    fnOrTable: () => Column.ForeignKey.TableParam & {
+      columns?: { shape: Shape };
+      instance?: () => { columns: { shape: Shape } };
+    },
     foreignColumns: [keyof Shape, ...(keyof Shape)[]],
     options?: TableData.References.Options,
   ): NonUniqDataItem;
@@ -549,7 +552,7 @@ export const tableDataMethods: TableDataMethods<string> = {
   },
   foreignKey(
     columns: [string, ...string[]],
-    fnOrTable: (() => new () => { columns: { shape: unknown } }) | string,
+    fnOrTable: (() => Column.ForeignKey.TableParam) | string,
     foreignColumns: [string, ...string[]],
     options?: TableData.References.Options,
   ) {

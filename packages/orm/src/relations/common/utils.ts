@@ -6,6 +6,7 @@ import {
   _queryWhereIn,
   Column,
   CreateCtx,
+  getForeignKeyTableInstance,
   getQueryAs,
   isQueryReturnsAll,
   pushQueryOnForOuter,
@@ -20,12 +21,11 @@ import {
   RelationConfigBase,
   PickQuerySelectableRelations,
   UpdateSelf,
-  ColumnSchemaConfig,
 } from 'pqb/internal';
 import { Query } from 'pqb';
 import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
 import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
-import { BaseTableClass, ORMTableInput } from '../../orm-table/base-table';
+import { ORMTableInput } from '../../orm-table/legacy-table';
 import { RelationRefsOptions } from './options';
 
 export interface NestedInsertOneItem {
@@ -345,12 +345,7 @@ export const addAutoForeignKey = (
           fkeyTable = fkey.fnOrTable;
           fkeyColumn = getColumnKeyFromDbName(to, fkeyColumn);
         } else {
-          const instance = (
-            fkey.fnOrTable() as unknown as BaseTableClass<
-              ColumnSchemaConfig,
-              unknown
-            >
-          ).instance();
+          const instance = getForeignKeyTableInstance(fkey.fnOrTable());
           fkeyTable = instance.nameInDb || (instance.table as string);
         }
 
@@ -376,12 +371,7 @@ export const addAutoForeignKey = (
               getColumnKeyFromDbName(to, column) === sortedPkeys[i],
           );
       } else {
-        const instance = (
-          refs.fnOrTable as unknown as () => BaseTableClass<
-            ColumnSchemaConfig,
-            unknown
-          >
-        )().instance();
+        const instance = getForeignKeyTableInstance(refs.fnOrTable());
         sameForeignTable =
           (instance.nameInDb || instance.table) === toTable &&
           refs.foreignColumns.every((column, i) => column === sortedPkeys[i]);

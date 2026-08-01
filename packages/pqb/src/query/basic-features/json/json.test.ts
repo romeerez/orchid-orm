@@ -1,7 +1,4 @@
-import {
-  expectQueryNotMutated,
-  User,
-} from '../../../test-utils/pqb.test-utils';
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import { assertType, db, expectSql, useTestDatabase } from 'test-utils';
 
 const messageColumnsSql = db.message.q.selectAllColumns!.join(', ');
@@ -11,8 +8,8 @@ describe('json methods', () => {
 
   describe('json', () => {
     it('wraps a query with json functions', () => {
-      const query = User.all();
-      const q = query.where({ id: 1 }).select('id').json();
+      const query = db.user.all();
+      const q = query.where({ Id: 1 }).select('Id').json();
 
       assertType<Awaited<typeof q>, string | undefined>();
 
@@ -21,7 +18,7 @@ describe('json methods', () => {
         `
           SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
           FROM (
-            SELECT "User"."id" FROM "schema"."user" "User"
+            SELECT "User"."id" "Id" FROM "schema"."user" "User"
             WHERE "User"."id" = $1
           ) "t"
         `,
@@ -32,8 +29,8 @@ describe('json methods', () => {
     });
 
     it('supports `take`', () => {
-      const query = User.all();
-      const q = query.where({ id: 1 }).select('id').take().json();
+      const query = db.user.all();
+      const q = query.where({ Id: 1 }).select('Id').take().json();
 
       assertType<Awaited<typeof q>, string | undefined>();
 
@@ -42,7 +39,7 @@ describe('json methods', () => {
         `
           SELECT row_to_json(t.*)
           FROM (
-            SELECT "User"."id" FROM "schema"."user" "User"
+            SELECT "User"."id" "Id" FROM "schema"."user" "User"
             WHERE "User"."id" = $1
             LIMIT 1
           ) "t"

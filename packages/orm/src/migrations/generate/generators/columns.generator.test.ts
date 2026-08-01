@@ -1,7 +1,10 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  sql,
+  useGeneratorsTestUtils,
+} from './generators.test-utils';
 import { DbMigration } from 'rake-db';
 import { colors, DefaultColumnTypes, DefaultSchemaConfig } from 'pqb/internal';
-import { sql } from 'test-utils';
 
 jest.mock('rake-db', () => {
   return {
@@ -19,7 +22,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('columns', () => {
-  const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   it('should ignore `parse`, `parseNull`, `encode`, `as`', async () => {
     await arrange({
@@ -29,7 +32,7 @@ describe('columns', () => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity(),
           naMe: t
             .text()
@@ -80,8 +83,16 @@ change(async (db) => {
         },
       },
       tables: [
-        table(() => ({}), undefined, { name: 'schema.inSchemaTable' }),
-        table(() => ({}), undefined, { name: 'publicTable' }),
+        defineTable(
+          'inSchemaTable',
+          { schema: 'schema', noPrimaryKey: true, nameInDb: 'inSchemaTable' },
+          () => ({}),
+        ),
+        defineTable(
+          'publicTable',
+          { noPrimaryKey: true, nameInDb: 'publicTable' },
+          () => ({}),
+        ),
       ],
     });
 
@@ -98,7 +109,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity(),
           naMe: t.text(),
         })),
@@ -129,7 +140,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           iD: t.identity(),
         })),
       ],
@@ -158,7 +169,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           naMe: t.text(),
         })),
       ],
@@ -195,7 +206,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           unChanged: t.domain('from.custom').as(t.integer()),
           colUmn: t.domain('to.custom').as(t.varchar()),
         })),
@@ -227,7 +238,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.integer(),
         })),
       ],
@@ -258,7 +269,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.varchar(20).collate('POSIX').compression('lz4'),
         })),
       ],
@@ -289,7 +300,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.decimal(11, 13),
         })),
       ],
@@ -320,7 +331,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.timestamp(5),
         })),
       ],
@@ -355,7 +366,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           valueNotChanged: t.integer().default(1),
           valueChanged: t.integer().default(3),
           ignoreFunction: t.integer().default(() => 1),
@@ -394,7 +405,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.identity({
             increment: 2,
             min: 3,
@@ -449,7 +460,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           colUmn: t.text().comment('to'),
         })),
       ],
@@ -479,7 +490,7 @@ change(async (db) => {
           await db.createTable('table', { noPrimaryKey: true }, () => ({}));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             keywords: t.array(t.text()).default([]),
           })),
         ],
@@ -506,7 +517,7 @@ change(async (db) => {
           await db.createTable('table', { noPrimaryKey: true }, () => ({}));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             colUmn: t.array(t.integer()).default([]),
           })),
         ],
@@ -526,7 +537,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             keywords: t.array(t.text()).default([]),
           })),
         ],
@@ -557,7 +568,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             colUmn: t.array(t.integer()),
           })),
         ],
@@ -589,7 +600,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             colUmn: t.integer(),
           })),
         ],
@@ -609,7 +620,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             column: t.array(t.array(t.decimal(5, 3))),
           })),
         ],
@@ -634,7 +645,7 @@ change(async (db) => {
       await arrange({
         prepareDb,
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             tO: t.integer(),
           })),
         ],
@@ -662,7 +673,7 @@ change(async (db) => {
       await arrange({
         prepareDb,
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             tO: t.integer(),
           })),
         ],
@@ -688,7 +699,7 @@ change(async (db) => {
       await arrange({
         prepareDb,
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             frOm: t.name('t_o').integer(),
           })),
         ],
@@ -719,7 +730,7 @@ change(async (db) => {
         }));
       },
       tables: [
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           tO: t.string(),
         })),
       ],
@@ -746,15 +757,13 @@ change(async (db) => {
   it('should ignore computed columns', async () => {
     await arrange({
       tables: [
-        class UserTable extends BaseTable {
-          readonly table = 'table';
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-            firstName: t.string(),
-            lastName: t.string(),
-          }));
-
-          computed = this.setComputed((q) => ({
+        defineTable('table', { noPrimaryKey: false }, (t) => ({
+          id: t.identity().primaryKey(),
+          firstName: t.string(),
+          lastName: t.string(),
+        })).computed(
+          // oxlint-disable-next-line typescript/no-explicit-any
+          (q: any) => ({
             one: sql`${q.column('firstName')} || ' ' || ${q.column(
               'lastName',
             )}`.type((t) => t.string()),
@@ -762,10 +771,11 @@ change(async (db) => {
               // define columns that it depends on
               ['firstName', 'lastName'],
               // only columns defined above are available in the callback
-              (record) => `${record.firstName} ${record.lastName}`,
+              (record: { firstName: string; lastName: string }) =>
+                `${record.firstName} ${record.lastName}`,
             ),
-          }));
-        },
+          }),
+        ),
       ],
     });
 
@@ -794,7 +804,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             nUm: t.integer(),
             genErated: t.integer().generated`n_um + n_um`,
           })),
@@ -825,7 +835,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             aA: t.text(),
             bB: t.text(),
             tV: t.tsvector().generated('spanish', ['aA', 'bB']),
@@ -858,7 +868,7 @@ change(async (db) => {
           }));
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             aA: t.text(),
             bB: t.text(),
             tV: t.tsvector().generated('spanish', ['aA', 'bB']),
@@ -884,7 +894,7 @@ change(async (db) => {
           },
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             colUmn: t.type('vector(123)'),
           })),
         ],
@@ -927,7 +937,7 @@ change(async (db) => {
           },
         },
         tables: [
-          table((t) => ({
+          defineTable('table', { noPrimaryKey: true }, (t) => ({
             colUmn: t.type('vector(456)'),
           })),
         ],

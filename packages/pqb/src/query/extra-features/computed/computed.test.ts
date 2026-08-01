@@ -1,15 +1,15 @@
 import {
   assertType,
+  db,
   expectSql,
+  Profile,
+  ProfileSelectAllWithTable,
   sql,
   testDb,
   useTestDatabase,
 } from 'test-utils';
 import {
-  Profile,
   profileData,
-  ProfileRecord,
-  profileTableColumnsSql,
   userData as partialUserData,
 } from '../../../test-utils/pqb.test-utils';
 import { Query } from '../../query';
@@ -55,7 +55,7 @@ const depSql = `${nameAndKey}dep`;
 
 const joinQuery = User.as('user').whereSql`"profile"."user_id" = "user"."id"`;
 
-Object.assign(Profile.relations, {
+Object.assign(db.profile.relations, {
   user: {
     query: joinQuery,
     joinQuery: () => joinQuery,
@@ -66,10 +66,14 @@ describe('computed', () => {
   useTestDatabase();
 
   let userId = 0;
-  let profile = {} as ProfileRecord;
+  let profile = {} as Profile;
   beforeAll(async () => {
     userId = await User.get('id').insert(userData);
-    profile = await Profile.create({ ...profileData, userId });
+    profile = await db.profile.create({
+      Bio: profileData.bio,
+      ProfileKey: 'key',
+      UserId: userId,
+    });
   });
 
   describe('sql computed', () => {
@@ -224,7 +228,8 @@ describe('computed', () => {
       });
 
       it('should select joined computed column', async () => {
-        const q = Profile.join(User, 'id', 'userId')
+        const q = db.profile
+          .join(User, 'id', 'UserId')
           .select('User.nameAndKey', 'User.decimal', 'User.depSql')
           .take();
 
@@ -252,7 +257,8 @@ describe('computed', () => {
       });
 
       it('should select joined computed column with alias', async () => {
-        const q = Profile.join(User, 'id', 'userId')
+        const q = db.profile
+          .join(User, 'id', 'UserId')
           .select({
             as: 'User.nameAndKey',
             dec: 'User.decimal',
@@ -619,14 +625,15 @@ describe('computed', () => {
       });
 
       it('should select joined computed column', async () => {
-        const q = Profile.join(User, 'id', 'userId')
-          .select('id', 'User.name', 'User.password', 'User.runtimeComputed')
+        const q = db.profile
+          .join(User, 'id', 'UserId')
+          .select('Id', 'User.name', 'User.password', 'User.runtimeComputed')
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT "Profile"."id", "User"."name", "User"."password", "User"."id" "id2"
+            SELECT "Profile"."id" "Id", "User"."name", "User"."password", "User"."id"
             FROM "schema"."profile" "Profile"
             JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
@@ -638,7 +645,7 @@ describe('computed', () => {
         assertType<
           typeof res,
           {
-            id: number;
+            Id: number;
             name: string;
             password: string;
             runtimeComputed: string;
@@ -646,7 +653,7 @@ describe('computed', () => {
         >();
 
         expect(res).toEqual({
-          id: profile.id,
+          Id: profile.Id,
           name: userData.name,
           password: userData.password,
           runtimeComputed: `${userId} ${userData.name}`,
@@ -654,14 +661,15 @@ describe('computed', () => {
       });
 
       it('should select joined computed column when selecting all from the main table', async () => {
-        const q = Profile.join(User, 'id', 'userId')
+        const q = db.profile
+          .join(User, 'id', 'UserId')
           .select('*', 'User.name', 'User.password', 'User.runtimeComputed')
           .take();
 
         expectSql(
           q.toSQL(),
           `
-            SELECT ${profileTableColumnsSql}, "User"."name", "User"."password", "User"."id" "id2"
+            SELECT ${ProfileSelectAllWithTable}, "User"."name", "User"."password", "User"."id"
             FROM "schema"."profile" "Profile"
             JOIN "schema"."user" "User" ON "User"."id" = "Profile"."user_id"
             LIMIT 1
@@ -672,7 +680,7 @@ describe('computed', () => {
 
         assertType<
           typeof res,
-          ProfileRecord & {
+          Profile & {
             name: string;
             password: string;
             runtimeComputed: string;
@@ -688,7 +696,8 @@ describe('computed', () => {
       });
 
       it('should select joined computed column with alias', async () => {
-        const q = Profile.join(User, 'id', 'userId')
+        const q = db.profile
+          .join(User, 'id', 'UserId')
           .select('User.name', { as: 'User.runtimeComputed' })
           .take();
 
@@ -713,7 +722,7 @@ describe('computed', () => {
       });
 
       it('should select a computed column from a joined relation', async () => {
-        const q = (Profile as Query)
+        const q = (db.profile as Query)
           .join('user')
           .select('User.runtimeComputed', 'User.updatedAt');
 
@@ -728,11 +737,13 @@ describe('computed', () => {
       });
 
       it('should select a computed from a joined sub-query', async () => {
-        const q = Profile.join(
-          User.select('id', 'runtimeComputed', 'updatedAt'),
-          'id',
-          'userId',
-        ).select('User.runtimeComputed', 'User.updatedAt');
+        const q = db.profile
+          .join(
+            User.select('id', 'runtimeComputed', 'updatedAt'),
+            'id',
+            'UserId',
+          )
+          .select('User.runtimeComputed', 'User.updatedAt');
 
         expectSql(
           q.toSQL(),
@@ -762,10 +773,11 @@ describe('computed', () => {
       });
 
       it('should select a computed from a lateral join', async () => {
-        const q = Profile.joinLateral(
-          User.select('id', 'runtimeComputed'),
-          (q) => q.on('User.id', 'Profile.userId'),
-        ).select('User.id', 'User.runtimeComputed');
+        const q = db.profile
+          .joinLateral(User.select('id', 'runtimeComputed'), (q) =>
+            q.on('User.id', 'Profile.UserId'),
+          )
+          .select('User.id', 'User.runtimeComputed');
 
         expectSql(
           q.toSQL(),
@@ -813,8 +825,9 @@ describe('computed', () => {
       });
 
       it('should select a computed column from a joined with statement', async () => {
-        const q = Profile.with('u', () => User.select('id', 'runtimeComputed'))
-          .join('u', 'id', 'userId')
+        const q = db.profile
+          .with('u', () => User.select('id', 'runtimeComputed'))
+          .join('u', 'id', 'UserId')
           .select('u.runtimeComputed');
 
         expectSql(
@@ -1104,8 +1117,12 @@ describe('computed', () => {
       });
 
       it('should not support joined computed column', () => {
-        // @ts-expect-error computed column should not be allowed
-        Profile.join(User, 'userId', 'User.id').order('User.runtimeComputed');
+        db.profile
+          .join(User, (q) => q.on('Profile.UserId', 'User.id'))
+          .order(
+            // @ts-expect-error computed column should not be allowed
+            'User.runtimeComputed',
+          );
       });
     });
 

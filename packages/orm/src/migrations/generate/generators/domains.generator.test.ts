@@ -1,4 +1,8 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  useGeneratorsTestUtils,
+  sql,
+} from './generators.test-utils';
 import { colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
@@ -15,13 +19,13 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('domains', () => {
-  const { arrange, act, assert, table } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   it('should add a domain type and SQL check that uses it in the same migration', async () => {
     await arrange({
       async prepareDb(db) {
         await db.createTable('table', { noPrimaryKey: true }, (t) => ({
-          colUmn: t.text().check(t.sql`col_umn = 'old'`),
+          colUmn: t.text().check(sql`col_umn = 'old'`),
         }));
       },
       dbOptions: {
@@ -31,8 +35,8 @@ describe('domains', () => {
         },
       },
       tables: [
-        table((t) => ({
-          colUmn: t.text().check(t.sql`col_umn::"domain" = 'new'`),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.text().check(sql`col_umn::"domain" = 'new'`),
         })),
       ],
     });
@@ -93,8 +97,8 @@ ${yellow('~ change table')} table:
               .text()
               .nullable()
               .collate('C')
-              .default(t.sql`'default'`)
-              .check(t.sql`value = 'x'`),
+              .default(sql`'default'`)
+              .check(sql`value = 'x'`),
         },
       },
     });
@@ -123,11 +127,17 @@ change(async (db) => {
             .text()
             .nullable()
             .collate('C')
-            .default(t.sql`('a'::text || 'b'::text)`)
-            .check(t.sql`(VALUE = 'ab'::text)`),
+            .default(sql`('a'::text || 'b'::text)`)
+            .check(sql`(VALUE = 'ab'::text)`),
         );
       },
-      tables: [table(undefined, undefined, { schema: () => 'schema' })],
+      tables: [
+        defineTable(
+          'table',
+          { schema: () => 'schema', noPrimaryKey: true },
+          () => ({}),
+        ),
+      ],
     });
 
     await act();
@@ -152,8 +162,8 @@ change(async (db) => {
             .text()
             .nullable()
             .collate('C')
-            .default(t.sql`'a'||'b'`)
-            .check(t.sql`value = 'ab'`),
+            .default(sql`'a'||'b'`)
+            .check(sql`value = 'ab'`),
         );
       },
       dbOptions: {
@@ -163,8 +173,8 @@ change(async (db) => {
               .text()
               .nullable()
               .collate('C')
-              .default(t.sql`'a'||'b'`)
-              .check(t.sql`value = 'ab'`),
+              .default(sql`'a'||'b'`)
+              .check(sql`value = 'ab'`),
         },
       },
     });
@@ -217,8 +227,8 @@ ${green('+ create domain')} schema.domain`);
             .text()
             .nullable()
             .collate('C')
-            .default(t.sql`'a'||'b'`)
-            .check(t.sql`value = 'ab'`),
+            .default(sql`'a'||'b'`)
+            .check(sql`value = 'ab'`),
         );
       },
       dbOptions: {
@@ -228,8 +238,8 @@ ${green('+ create domain')} schema.domain`);
               .text()
               .nullable()
               .collate('C')
-              .default(t.sql`'a'||'c'`)
-              .check(t.sql`value = 'ab'`),
+              .default(sql`'a'||'c'`)
+              .check(sql`value = 'ab'`),
         },
       },
     });

@@ -1,6 +1,10 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  defineView,
+  sql,
+  useGeneratorsTestUtils,
+} from './generators.test-utils';
 import { colors } from 'pqb/internal';
-import { Query } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -17,15 +21,16 @@ jest.mock('node:fs/promises', () => ({
 const { green, red } = colors;
 
 describe('materialized views', () => {
-  const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
-  class SourceTable extends BaseTable {
-    table = 'source';
-    columns = this.setColumns((t) => ({
+  const SourceTable = defineTable(
+    'source',
+    { noPrimaryKey: false, nameInDb: 'source' },
+    (t) => ({
       id: t.identity().primaryKey(),
       active: t.boolean(),
-    }));
-  }
+    }),
+  );
 
   const createSourceTable = async (
     db: Parameters<NonNullable<Parameters<typeof arrange>[0]['prepareDb']>>[0],
@@ -36,15 +41,18 @@ describe('materialized views', () => {
     }));
   };
 
-  class ActiveMaterializedView extends BaseTable.MaterializedView {
-    name = 'active_materialized_view';
-    withData = false;
-    columns = this.setColumns((t) => ({
+  const ActiveMaterializedView = defineView(
+    'active_materialized_view',
+    {
+      materialized: true,
+      withData: false,
+      sql: sql`SELECT id, active FROM "source" WHERE active = true`,
+    },
+    (t) => ({
       id: t.integer(),
       active: t.boolean(),
-    }));
-    sql = BaseTable.sql`SELECT id, active FROM "source" WHERE active = true`;
-  }
+    }),
+  );
 
   it('should create materialized view', async () => {
     await arrange({
@@ -77,22 +85,25 @@ change(async (db) => {
   });
 
   it('should match code materialized view aliases by their database names', async () => {
-    class MonthlySaleView extends BaseTable.MaterializedView {
-      name = 'MonthlySale';
-      columns = this.setColumns((t) => ({
+    const MonthlySaleView = defineView(
+      'MonthlySale',
+      { materialized: true, sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
-    class ExplicitSaleView extends BaseTable.MaterializedView {
-      name = 'ExplicitSale';
-      nameInDb = 'sales_by_month';
-      columns = this.setColumns((t) => ({
+    const ExplicitSaleView = defineView(
+      'ExplicitSale',
+      {
+        materialized: true,
+        nameInDb: 'sales_by_month',
+        sql: sql`SELECT id FROM "source"`,
+      },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -123,18 +134,17 @@ change(async (db) => {
   });
 
   it('should create materialized view with query assigned in init', async () => {
-    class InitQueryMaterializedView extends BaseTable.MaterializedView {
-      name = 'init_query_materialized_view';
-      columns = this.setColumns((t) => ({
+    const InitQueryMaterializedView = defineView(
+      'init_query_materialized_view',
+      { materialized: true },
+      (t) => ({
         id: t.integer(),
         active: t.boolean(),
-      }));
-
-      init(db: { SourceTable: Query }) {
-        this.query = db.SourceTable.select('id', 'active')
-          .whereSql`"source"."active" = true`;
-      }
-    }
+      }),
+    ).query(
+      (db) =>
+        db.table0.select('id', 'active').whereSql`"source"."active" = true`,
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -166,13 +176,13 @@ change(async (db) => {
   });
 
   it('should drop materialized view', async () => {
-    class IgnoredOptInView extends BaseTable.MaterializedView {
-      name = 'ignored_opt_in_materialized_view';
-      columns = this.setColumns((t) => ({
+    const IgnoredOptInView = defineView(
+      'ignored_opt_in_materialized_view',
+      { materialized: true, sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -216,16 +226,19 @@ change(async (db) => {
   });
 
   it('should alter materialized view sql and withData', async () => {
-    class ChangedMaterializedView extends BaseTable.MaterializedView {
-      schema = 'custom';
-      name = 'changed_materialized_view';
-      withData = true;
-      columns = this.setColumns((t) => ({
+    const ChangedMaterializedView = defineView(
+      'changed_materialized_view',
+      {
+        materialized: true,
+        schema: 'custom',
+        withData: true,
+        sql: sql`SELECT id, active FROM "custom"."source" WHERE active = true`,
+      },
+      (t) => ({
         id: t.integer(),
         active: t.boolean(),
-      }));
-      sql = BaseTable.sql`SELECT id, active FROM "custom"."source" WHERE active = true`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -321,18 +334,19 @@ change(async (db) => {
         },
       },
       views: [
-        class ChangedIgnoredMaterializedView
-          extends BaseTable.MaterializedView
-        {
-          name = 'changed_ignored_materialized_view';
-          readonly generatorIgnore = true;
-          withData = true;
-          columns = this.setColumns((t) => ({
+        defineView(
+          'changed_ignored_materialized_view',
+          {
+            materialized: true,
+            generatorIgnore: true,
+            withData: true,
+            sql: sql`SELECT id, active FROM "source" WHERE active = true`,
+          },
+          (t) => ({
             id: t.integer(),
             active: t.boolean(),
-          }));
-          sql = BaseTable.sql`SELECT id, active FROM "source" WHERE active = true`;
-        },
+          }),
+        ),
       ],
     });
 
@@ -343,13 +357,13 @@ change(async (db) => {
   });
 
   it('should ignore materialized views using generatorIgnore.views names', async () => {
-    class IgnoredCodeMaterializedView extends BaseTable.MaterializedView {
-      name = 'ignored_code_materialized_view';
-      columns = this.setColumns((t) => ({
+    const IgnoredCodeMaterializedView = defineView(
+      'ignored_code_materialized_view',
+      { materialized: true, sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -380,13 +394,13 @@ change(async (db) => {
   });
 
   it('should ignore materialized views using generatorIgnore.views regular expressions', async () => {
-    class ExternalCodeMaterializedView extends BaseTable.MaterializedView {
-      name = 'external_code_materialized_view';
-      columns = this.setColumns((t) => ({
+    const ExternalCodeMaterializedView = defineView(
+      'external_code_materialized_view',
+      { materialized: true, sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -414,14 +428,17 @@ change(async (db) => {
   });
 
   it('should ignore materialized views using generatorIgnore.schemas', async () => {
-    class IgnoredSchemaMaterializedView extends BaseTable.MaterializedView {
-      schema = 'ignored_schema';
-      name = 'ignored_schema_materialized_view';
-      columns = this.setColumns((t) => ({
+    const IgnoredSchemaMaterializedView = defineView(
+      'ignored_schema_materialized_view',
+      {
+        materialized: true,
+        schema: 'ignored_schema',
+        sql: sql`SELECT id FROM "ignored_schema"."source"`,
+      },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "ignored_schema"."source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {

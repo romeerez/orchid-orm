@@ -17,6 +17,7 @@ import {
   RakeDbConfig,
   rakeDbConfigDefaults,
 } from './config';
+import { getTableFactoryConfig } from './table-factory-config';
 import {
   createDatabaseCommand,
   dropDatabaseCommand,
@@ -218,6 +219,7 @@ export const makeRakeDbConfig = <ColumnTypes>(
 ): RakeDbConfig<ColumnTypes> => {
   const ic = intermediateCallers;
   intermediateCallers = 0;
+  const tableFactory = getTableFactoryConfig(config);
 
   const result = {
     ...rakeDbConfigDefaults,
@@ -236,9 +238,10 @@ export const makeRakeDbConfig = <ColumnTypes>(
     result.recurrentPath = path.resolve(result.basePath, result.recurrentPath);
   }
 
-  if ('baseTable' in config && config.baseTable) {
-    const { types } = config.baseTable.prototype;
-    result.columnTypes = types || defaultColumnTypes(defaultSchemaConfig());
+  if (tableFactory) {
+    result.columnTypes =
+      tableFactory.columnTypes ||
+      (defaultColumnTypes(defaultSchemaConfig()) as ColumnTypes);
   } else {
     const ct = 'columnTypes' in config && config.columnTypes;
     result.columnTypes = ((typeof ct === 'function'

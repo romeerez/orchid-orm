@@ -1,22 +1,18 @@
-import {
-  Message,
-  User,
-  userColumnsSql,
-} from '../../../test-utils/pqb.test-utils';
-import { expectSql, line } from 'test-utils';
+import { db, expectSql, line, UserSelectAll } from 'test-utils';
 
 describe('clear', () => {
   it('should remove query statements for select', () => {
-    const inner = User.select('id', { as: 'name' });
+    const inner = db.user.all();
 
-    const query = User.select('id', { as: 'name' })
-      .with('withAlias', User.all())
-      .where({ id: 1 })
-      .orWhere({ id: 2 })
+    const query = db.user
+      .select('*')
+      .with('withAlias', db.user.all())
+      .where({ Id: 1 })
+      .orWhere({ Id: 2 })
+      .join(db.message, 'AuthorId', 'Id')
+      .group('Id')
+      .order('Id')
       .union(inner)
-      .join(Message, 'authorId', 'id')
-      .group('id')
-      .order('id')
       .having((q) => q.count().equals(1))
       .limit(10)
       .offset(10);
@@ -36,7 +32,7 @@ describe('clear', () => {
           'offset',
         )
         .toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User"`,
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
     );
   });
 
@@ -47,9 +43,10 @@ describe('clear', () => {
     const expectedValues = ['new name'];
 
     expectSql(
-      User.all()
-        .update({ name: 'new name' })
-        .increment('age')
+      db.user
+        .all()
+        .update({ Name: 'new name' })
+        .increment('Age')
         .clear('counters')
         .toSQL(),
       expectedSql,
@@ -57,9 +54,10 @@ describe('clear', () => {
     );
 
     expectSql(
-      User.all()
-        .update({ name: 'new name' })
-        .decrement('age')
+      db.user
+        .all()
+        .update({ Name: 'new name' })
+        .decrement('Age')
         .clear('counters')
         .toSQL(),
       expectedSql,

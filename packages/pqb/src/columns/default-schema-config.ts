@@ -33,24 +33,22 @@ import { MaybeArray, noop } from '../utils';
 import { AdapterSchemaConfigOptions } from '../adapters/adapter';
 
 export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
-  nullable<T extends Column.Pick.ForNullable>(
-    this: T,
-  ): Column.Modifiers.Nullable<T>;
+  nullable<T extends Column.Pick.ForNullable>(this: T): Column.Nullable<T>;
 
   parse<T extends Column.Pick.ForParse, Output>(
     this: T,
     fn: (input: T['__type']) => Output,
-  ): Column.Modifiers.Parse<T, unknown, Output>;
+  ): Column.Parse<T, unknown, Output>;
 
   parseNull<T extends Column.Pick.ForParseNull, Output>(
     this: T,
     fn: () => Output,
-  ): Column.Modifiers.ParseNull<T, unknown, Output>;
+  ): Column.ParseNull<T, unknown, Output>;
 
   encode<T extends Column.Pick.Type, Input>(
     this: T,
     fn: (input: Input) => unknown,
-  ): Column.Modifiers.Encode<T, unknown, Input>;
+  ): Column.Encode<T, unknown, Input>;
 
   /**
    * @deprecated use narrowType instead
@@ -131,10 +129,10 @@ export interface DefaultSchemaConfig extends ColumnSchemaConfig<Column> {
 
   dateAsNumber<T extends Column.Pick.ForParse>(
     this: T,
-  ): Column.Modifiers.Parse<T, unknown, number>;
+  ): Column.Parse<T, unknown, number>;
   dateAsDate<T extends Column.Pick.ForParse>(
     this: T,
-  ): Column.Modifiers.Parse<T, unknown, Date>;
+  ): Column.Parse<T, unknown, Date>;
 
   enum<const T extends readonly [string, ...string[]]>(
     dataType: string,

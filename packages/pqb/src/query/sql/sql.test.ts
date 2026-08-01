@@ -5,12 +5,12 @@ import {
   sql,
   testAdapter,
   testDb,
+  UserSelectAll,
   UserData,
   useTestDatabase,
 } from 'test-utils';
 import { BooleanColumn, Column } from '../../columns';
 import { createDbWithAdapter } from '../db';
-import { User, userColumnsSql } from '../../test-utils/pqb.test-utils';
 import { Expression } from '../expressions/expression';
 import { emptyObject, noop } from '../../utils';
 import { ToSQLCtx } from './to-sql';
@@ -21,23 +21,23 @@ describe('sql', () => {
 
   it('should convert query definition SQL to raw SQL with named values', () => {
     const sql = sqlToRawSql(
-      queryToSql(User.select('id').where({ name: 'name' })),
+      queryToSql(db.user.select('Id').where({ Name: 'name' })),
     );
     const values: unknown[] = [];
 
     expect(sql.toSQL({ values })).toBe(
-      `SELECT "User"."id" FROM "schema"."user" "User" WHERE "User"."name" = $1`,
+      `SELECT "User"."id" "Id" FROM "schema"."user" "User" WHERE "User"."name" = $1`,
     );
     expect(values).toEqual(['name']);
     expect(sql).toMatchObject({
-      _sql: 'SELECT "User"."id" FROM "schema"."user" "User" WHERE "User"."name" = $queryValue1',
+      _sql: 'SELECT "User"."id" "Id" FROM "schema"."user" "User" WHERE "User"."name" = $queryValue1',
       _values: { queryValue1: 'name' },
     });
   });
 
   it('should convert raw SQL to query SQL shape', () => {
     const sql = rawSqlToSql(
-      User.sql({ raw: 'name = $name' }).values({ name: 'name' }),
+      db.user.sql({ raw: 'name = $name' }).values({ name: 'name' }),
     );
 
     expect(sql).toEqual({
@@ -62,26 +62,28 @@ describe('sql', () => {
   });
 
   it('should handle a simple string', () => {
-    const sql = User.sql<boolean>({ raw: 'simple sql' });
+    const sql = db.user.sql<boolean>({ raw: 'simple sql' });
 
     expect(sql).toMatchObject({
       _sql: 'simple sql',
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (simple sql)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (simple sql)`,
     );
   });
 
   it('should handle values, and a simple string', () => {
-    const sql = User.sql<boolean>({
-      raw: '$$_CoLuMn = $VaLuE123',
-    }).values({
-      _CoLuMn: 'name',
-      VaLuE123: 'value',
-    });
+    const sql = db.user
+      .sql<boolean>({
+        raw: '$$_CoLuMn = $VaLuE123',
+      })
+      .values({
+        _CoLuMn: 'name',
+        VaLuE123: 'value',
+      });
 
     expect(sql).toMatchObject({
       _sql: '$$_CoLuMn = $VaLuE123',
@@ -89,18 +91,18 @@ describe('sql', () => {
         _CoLuMn: 'name',
         VaLuE123: 'value',
       },
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("name" = $1)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE ("name" = $1)`,
       ['value'],
     );
   });
 
   it('should handle raw sql and values in single parameter', () => {
-    const sql = User.sql({
+    const sql = db.user.sql({
       raw: 'column = $value',
       values: { value: 'foo' },
     });
@@ -108,41 +110,42 @@ describe('sql', () => {
     expect(sql).toMatchObject({
       _sql: 'column = $value',
       _values: { value: 'foo' },
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
   });
 
   it('should handle values and a template string', () => {
-    const sql = User.sql`value = $value`.values({ value: 'value' });
+    const sql = db.user.sql`value = $value`.values({ value: 'value' });
 
     expect(sql).toMatchObject({
       _sql: [['value = $value']],
       _values: {
         value: 'value',
       },
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
   });
 
   it('should handle a column and a simple string', () => {
-    const sql = User.sql({ raw: 'simple sql' }).type((t) => t.boolean());
+    const sql = db.user.sql({ raw: 'simple sql' }).type((t) => t.boolean());
 
     expect(sql).toMatchObject({
       result: { value: expect.any(BooleanColumn) },
       _sql: 'simple sql',
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (simple sql)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (simple sql)`,
     );
   });
 
   it('should handle a column, values, and a simple string', () => {
-    const sql = User.sql({
-      raw: '$$column = $value',
-    })
+    const sql = db.user
+      .sql({
+        raw: '$$column = $value',
+      })
       .type((t) => t.boolean())
       .values({ column: 'name', value: 'value' });
 
@@ -153,51 +156,52 @@ describe('sql', () => {
         column: 'name',
         value: 'value',
       },
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("name" = $1)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE ("name" = $1)`,
       ['value'],
     );
   });
 
   it('should handle a template literal', () => {
-    const sql = User.sql<boolean>`one ${1} two ${true} three ${'string'} four`;
+    const sql = db.user
+      .sql<boolean>`one ${1} two ${true} three ${'string'} four`;
 
     expect(sql).toMatchObject({
       _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (one $1 two $2 three $3 four)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
 
   it('should handle column and a template literal', () => {
-    const sql = User.sql`one ${1} two ${true} three ${'string'} four`.type(
+    const sql = db.user.sql`one ${1} two ${true} three ${'string'} four`.type(
       (t) => t.boolean(),
     );
 
     expect(sql).toMatchObject({
       result: { value: expect.any(BooleanColumn) },
       _sql: [['one ', ' two ', ' three ', ' four'], 1, true, 'string'],
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (one $1 two $2 three $3 four)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (one $1 two $2 three $3 four)`,
       [1, true, 'string'],
     );
   });
 
   it('should handle column, values, and a template literal', () => {
-    const sql = User.sql`value = $1 AND ${true}`
+    const sql = db.user.sql`value = $1 AND ${true}`
       .type((t) => t.boolean())
       .values({ 1: 'value' });
 
@@ -207,18 +211,18 @@ describe('sql', () => {
       _values: {
         1: 'value',
       },
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (value = $2 AND $1)`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (value = $2 AND $1)`,
       [true, 'value'],
     );
   });
 
   it('should quote columns with tables', () => {
-    const sql = User.sql<boolean>({ raw: '$$column' }).values({
+    const sql = db.user.sql<boolean>({ raw: '$$column' }).values({
       column: 'User.name',
     });
 
@@ -227,52 +231,54 @@ describe('sql', () => {
       _values: {
         column: 'User.name',
       },
-      columnTypes: User.columnTypes,
+      columnTypes: db.user.columnTypes,
     });
 
     expectSql(
-      User.whereSql(sql).toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("User"."name")`,
+      db.user.whereSql(sql).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE ("User"."name")`,
     );
   });
 
   it('should not replace values inside string literals', () => {
-    const query = User.whereSql(
-      User.sql<boolean>({
-        raw: `foo = $foo AND bar = '$bar''$bar' AND baz = $baz`,
-      }).values({
-        foo: 1,
-        baz: true,
-      }),
+    const query = db.user.whereSql(
+      db.user
+        .sql<boolean>({
+          raw: `foo = $foo AND bar = '$bar''$bar' AND baz = $baz`,
+        })
+        .values({
+          foo: 1,
+          baz: true,
+        }),
     );
 
     expectSql(
       query.toSQL(),
-      `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (foo = $1 AND bar = '$bar''$bar' AND baz = $2)`,
       [1, true],
     );
   });
 
   it('should throw when variable in the query is not provided', () => {
-    const q = User.whereSql(
-      User.sql<boolean>({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
+    const q = db.user.whereSql(
+      db.user.sql<boolean>({ raw: `a = $a AND b = $b` }).values({ a: 1 }),
     );
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is not provided');
   });
 
   it('should throw when variable in the object is not used by the query', () => {
-    const q = User.whereSql(
-      User.sql<boolean>({ raw: `a = $a` }).values({ a: 1, b: 'b' }),
+    const q = db.user.whereSql(
+      db.user.sql<boolean>({ raw: `a = $a` }).values({ a: 1, b: 'b' }),
     );
 
     expect(() => q.toSQL()).toThrow('Query variable `b` is unused');
   });
 
   it('should handle column and ref expressions', () => {
-    const q = User.select({
+    const q = db.user.select({
       value: (q) =>
-        sql<string>`${q.column('name')} || ' ' || ${q.ref('User.password')}`,
+        sql<string>`${q.column('Name')} || ' ' || ${q.ref('User.Password')}`,
     });
 
     assertType<Awaited<typeof q>, { value: string }[]>();
@@ -325,7 +331,7 @@ describe('sql', () => {
       }
     }
 
-    const q = User.get(testDb.sql`${new CustomExpression()}`);
+    const q = db.user.get(testDb.sql`${new CustomExpression()}`);
 
     expectSql(
       q.toSQL(),
@@ -368,7 +374,7 @@ describe('sql', () => {
 
     it('should be usable in query builder select', () => {
       const column = 'name';
-      const q = User.select({
+      const q = db.user.select({
         value: () => sql<string>`${sql.ref(column)}`,
       });
 
@@ -378,36 +384,36 @@ describe('sql', () => {
 
   describe('sql.join', () => {
     it('should render a list of values in whereSql', () => {
-      const q = User.whereSql`ARRAY[${sql.join([1, 2, 3])}]`;
+      const q = db.user.whereSql`ARRAY[${sql.join([1, 2, 3])}]`;
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (ARRAY[$1, $2, $3])`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (ARRAY[$1, $2, $3])`,
         [1, 2, 3],
       );
     });
 
     it('should render expression items without parameterizing them', () => {
-      const q = User.whereSql`${sql.join([
+      const q = db.user.whereSql`${sql.join([
         sql.ref('name'),
         sql.ref('User.age'),
       ])}`;
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ("name", "User"."age")`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE ("name", "User"."age")`,
       );
     });
 
     it('should preserve value order with mixed items and separators', () => {
-      const q = User.whereSql`${sql.join(
+      const q = db.user.whereSql`${sql.join(
         [1, sql`lower(${'NAME'})`, sql.ref('age'), 4],
         sql`${'separator'} || `,
       )}`;
 
       expectSql(
         q.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE ($1$2 || lower($3)$4 || "age"$5 || $6)`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE ($1$2 || lower($3)$4 || "age"$5 || $6)`,
         [1, 'separator', 'NAME', 'separator', 'separator', 4],
       );
     });
@@ -416,22 +422,22 @@ describe('sql', () => {
       const items = [1, 2] as const;
 
       expectSql(
-        User.whereSql`ARRAY[${sql.join(items)}]`.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (ARRAY[$1, $2])`,
+        db.user.whereSql`ARRAY[${sql.join(items)}]`.toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (ARRAY[$1, $2])`,
         [1, 2],
       );
 
       expectSql(
-        User.whereSql`IN (${sql.join([])})`.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" WHERE (IN ())`,
+        db.user.whereSql`IN (${sql.join([])})`.toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE (IN ())`,
       );
     });
 
     it('should be usable in query builder select', () => {
-      const q = User.select({
+      const q = db.user.select({
         value: (q) =>
           sql<string>`concat(${sql.join(
-            [q.column('name'), q.column('age')],
+            [q.column('Name'), q.column('Age')],
             sql` || ' ' || `,
           )})`,
       });

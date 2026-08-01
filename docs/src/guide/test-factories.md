@@ -444,18 +444,15 @@ Test factory will prefix unique text columns with sequence, and it will use a se
 Example:
 
 ```ts
-class SomeTable extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    text: t.text(),
-    email: t.string().email().unique(),
-    url: t.varchar(1000).url().unique(),
-    number: t.integer().unique(),
-    greaterThan10: t.integer().gt(10).unique(),
-    greaterThanOrEqualTo10: t.integer().gte(10).unique(),
-  }));
-}
+export const SomeTable = defineTable('table', (t) => ({
+  id: t.identity().primaryKey(),
+  text: t.text(),
+  email: t.string().email().unique(),
+  url: t.varchar(1000).url().unique(),
+  number: t.integer().unique(),
+  greaterThan10: t.integer().gt(10).unique(),
+  greaterThanOrEqualTo10: t.integer().gte(10).unique(),
+}));
 
 const db = createDb(
   {

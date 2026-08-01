@@ -1,55 +1,40 @@
 export const tables = {
   orchid: `import { orchidORM } from 'orchid-orm/postgres-js';
-import { createBaseTable, Insertable, Queryable, Updatable } from 'orchid-orm';
+import { createTableFactory, Insertable, Queryable, Updatable } from 'orchid-orm';
 
-export const BaseTable = createBaseTable();
+const { defineTable } = createTableFactory();
 
-export type PersonFilters = Queryable<PersonTable>
-export type PersonUpdate = Updatable<PersonTable>
-export type PersonNew = Insertable<PersonTable>
-export class PersonTable extends BaseTable {
-  readonly table = 'person';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    firstName: t.string(),
-    gender: t.enum('gender', ['man', 'woman', 'other']).nullable(),
-    lastName: t.string().nullable(),
-    middleName: t.string().nullable(),
-    age: t.integer().nullable(),
-    createdAt: t.timestamps().createdAt,
-    metadata: t.json<{
-      login_at: string;
-      ip: string | null;
-      agent: string | null;
-      plan: 'free' | 'premium';
-    }>().nullable(),
-  }));
+export const PersonTable = defineTable('person', (t) => ({
+  id: t.identity().primaryKey(),
+  firstName: t.string(),
+  gender: t.enum('gender', ['man', 'woman', 'other']).nullable(),
+  lastName: t.string().nullable(),
+  middleName: t.string().nullable(),
+  age: t.integer().nullable(),
+  createdAt: t.timestamps().createdAt,
+  metadata: t.json<{
+    login_at: string;
+    ip: string | null;
+    agent: string | null;
+    plan: 'free' | 'premium';
+  }>().nullable(),
+})).relations((person) => ({
+  pets: person('id').hasMany(() => PetTable('ownerId')),
+}));
 
-  relations = {
-    pets: this.hasMany(() => PetTable, {
-      columns: ['id'],
-      references: ['ownerId']
-    }),
-  }
-}
+export type PersonFilters = Queryable<typeof PersonTable>
+export type PersonUpdate = Updatable<typeof PersonTable>
+export type PersonNew = Insertable<typeof PersonTable>
 
-export class PetTable extends BaseTable {
-  readonly table = 'pet'
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.string(),
-    ownerId: t.integer(),
-    species: t.enum('specie', ['dog', 'cat']),
-    isFavorite: t.boolean(),
-  }))
-  
-  relations = {
-    owner: this.belongsTo(() => PersonTable, {
-      columns: ['ownerId'],
-      references: ['id']
-    }),
-  }
-}
+export const PetTable = defineTable('pet', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.string(),
+  ownerId: t.integer(),
+  species: t.enum('specie', ['dog', 'cat']),
+  isFavorite: t.boolean(),
+})).relations((pet) => ({
+  owner: pet('ownerId').belongsTo(() => PersonTable('id')),
+}));
 
 export const db = orchidORM(
   {

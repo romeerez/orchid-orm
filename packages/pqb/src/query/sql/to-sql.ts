@@ -212,6 +212,7 @@ export const toSql: ToSql = (
           upsertOrCreate as unknown as SubQueryForSql,
           upsertUpdate ? 'update' : null,
         );
+        query.upsertUpdateAsFns?.forEach((fn) => fn(as));
 
         upsertOrCreate.q.or = upsertOrCreate.q.scopes = undefined;
 
@@ -226,6 +227,7 @@ export const toSql: ToSql = (
           upsertOrCreate.q.type = 'upsert';
         }
 
+        upsertOrCreate.q.with = query.upsertCreateWith;
         upsertOrCreate.q.appendQueries = query.upsertCreateAppendQueries;
         upsertOrCreate.q.asFns = query.upsertCreateAsFns;
 

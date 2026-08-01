@@ -14,7 +14,7 @@ change(async (db) => {
 
 change(async (db) => {
   await db.createTable(
-    'schema.postTag',
+    'schema.post_tag',
     (t) => ({
       postId: t.integer().foreignKey('schema.post', 'id'),
       tag: t.text().foreignKey('schema.tag', 'tag'),

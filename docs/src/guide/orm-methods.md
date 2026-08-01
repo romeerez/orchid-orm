@@ -33,7 +33,7 @@ await db.$transaction(async () => {
 Alternatively, provide a raw SQL object created with the `sql` function:
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 // it is NOT safe to interpolate inside a simple string, use `values` to pass the values.
 const result = await db.$query<{ one: number }>(

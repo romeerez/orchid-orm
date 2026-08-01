@@ -1,4 +1,8 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  sql,
+  useGeneratorsTestUtils,
+} from './generators.test-utils';
 import { colors, type RlsPolicy } from 'pqb/internal';
 import { defineRls } from '../../../orm';
 
@@ -17,7 +21,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('rls', () => {
-  const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
   type MigrationDb = Parameters<
     NonNullable<Parameters<typeof arrange>[0]['prepareDb']>
   >[0];
@@ -28,9 +32,14 @@ describe('rls', () => {
         name: 'table_select_policy',
         for: 'SELECT' as const,
         to: 'public',
-        using: BaseTable.sql`id > 0`,
+        using: sql`id > 0`,
       },
     ] satisfies [RlsPolicy.Policy, ...RlsPolicy.Policy[]];
+
+  const rlsTable = (rls: ReturnType<typeof defineRls>) =>
+    defineTable('table', { noPrimaryKey: true }, (t) => ({
+      id: t.identity().primaryKey(),
+    })).rls(rls);
 
   const createTable = async (db: MigrationDb) => {
     await db.createTable('table', (t) => ({
@@ -57,17 +66,12 @@ describe('rls', () => {
         await createTableWithSelectPolicy(db);
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             enable: true,
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -95,17 +99,12 @@ change(async (db) => {
         await db.enableRls('table');
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -127,17 +126,12 @@ change(async (db) => {
         await createTableWithSelectPolicy(db);
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: true,
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -160,17 +154,12 @@ change(async (db) => {
         await db.forceRls('table');
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -193,16 +182,11 @@ change(async (db) => {
         await db.forceRls('table');
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -225,16 +209,11 @@ change(async (db) => {
         },
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -250,12 +229,8 @@ change(async (db) => {
         await createTable(db);
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             enable: true,
             force: true,
             permit: [
@@ -263,11 +238,11 @@ change(async (db) => {
                 name: 'table_select_policy',
                 for: 'SELECT',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -309,17 +284,12 @@ change(async (db) => {
         await db.enableRls('table');
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -360,16 +330,11 @@ change(async (db) => {
         } as never,
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             permit: permit(),
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -402,24 +367,19 @@ change(async (db) => {
         } as never,
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: [
               {
                 name: 'managed_policy',
                 for: 'SELECT',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -435,13 +395,8 @@ change(async (db) => {
         await createTableWithSelectPolicy(db);
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: permit(),
             restrict: [
@@ -449,12 +404,12 @@ change(async (db) => {
                 name: 'table_restrict_policy',
                 for: 'UPDATE',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
-                withCheck: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
+                withCheck: sql`id > 0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -484,20 +439,15 @@ change(async (db) => {
         await createTable(db);
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: [
               {
                 name: 'table_permit_policy',
                 for: 'SELECT',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
               },
             ],
             restrict: [
@@ -505,12 +455,12 @@ change(async (db) => {
                 name: 'table_restrict_policy',
                 for: 'UPDATE',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
-                withCheck: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
+                withCheck: sql`id > 0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -565,18 +515,13 @@ change(async (db) => {
         });
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: permit(),
             restrict: [],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -626,20 +571,15 @@ change(async (db) => {
         });
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: [
               {
                 name: 'table_permit_policy',
                 for: 'SELECT',
                 to: 'public',
-                using: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
               },
             ],
             restrict: [
@@ -647,12 +587,12 @@ change(async (db) => {
                 name: 'table_restrict_policy',
                 for: 'UPDATE',
                 to: 'postgres',
-                using: BaseTable.sql`id > 0`,
-                withCheck: BaseTable.sql`id > 0`,
+                using: sql`id > 0`,
+                withCheck: sql`id > 0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -677,25 +617,20 @@ change(async (db) => {
         });
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: [
               {
                 name: 'table_policy_to',
                 for: 'UPDATE',
                 to: ['role_a', 'role_b'],
-                using: BaseTable.sql`id > 1`,
-                withCheck: BaseTable.sql`id > 1`,
+                using: sql`id > 1`,
+                withCheck: sql`id > 1`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -748,13 +683,8 @@ change(async (db) => {
         });
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: permit(),
             restrict: [
@@ -762,11 +692,11 @@ change(async (db) => {
                 name: 'table_policy',
                 for: 'INSERT',
                 to: ['role_a', 'role_b'],
-                withCheck: BaseTable.sql`id > 1`,
+                withCheck: sql`id > 1`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -811,25 +741,20 @@ change(async (db) => {
         });
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: [
               {
                 name: 'table_policy',
                 for: 'UPDATE',
                 to: 'postgres',
-                using: BaseTable.sql`id>0`,
-                withCheck: BaseTable.sql`id>0`,
+                using: sql`id>0`,
+                withCheck: sql`id>0`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 
@@ -851,24 +776,19 @@ change(async (db) => {
         });
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'table';
-          noPrimaryKey = true;
-          columns = this.setColumns((t) => ({
-            id: t.identity().primaryKey(),
-          }));
-          rls = defineRls({
+        rlsTable(
+          defineRls({
             force: false,
             permit: [
               {
                 name: 'table_policy',
                 for: 'SELECT',
                 to: 'postgres',
-                using: BaseTable.sql`id > 1`,
+                using: sql`id > 1`,
               },
             ],
-          });
-        },
+          }),
+        ),
       ],
     });
 

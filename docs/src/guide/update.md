@@ -44,7 +44,7 @@ or to use a [jsonSet](/guide/advanced-queries#jsonset),
 and [jsonRemove](/guide/advanced-queries#jsonremove) for a JSON column (see `jsonColumn` below).
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 // returns number of updated records by default
 const updatedCount = await db.table

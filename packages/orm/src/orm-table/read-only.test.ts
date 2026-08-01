@@ -1,49 +1,29 @@
 import { orchidORMWithAdapter } from '../orm';
-import { BaseTable, assertType, testAdapter, testDbOptions } from 'test-utils';
+import {
+  defineTable,
+  assertType,
+  testAdapter,
+  testDbOptions,
+} from 'test-utils';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 
-class Table extends BaseTable {
-  readonly table = 'table';
-  filePath = 'read-only.test.ts';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    readOnlyId: t.integer().nullable(),
-  }));
-  relations = {
-    readOnlyBelongsTo: this.belongsTo(() => ReadOnlyTable, {
-      columns: ['readOnlyId'],
-      references: ['id'],
-    }),
-    readOnlyHasOne: this.hasOne(() => ReadOnlyTable, {
-      columns: ['id'],
-      references: ['tableId'],
-    }),
-    readOnlyHasMany: this.hasMany(() => ReadOnlyTable, {
-      columns: ['id'],
-      references: ['tableId'],
-    }),
-    readOnlyHasAndBelongsToMany: this.hasAndBelongsToMany(() => ReadOnlyTable, {
-      columns: ['id'],
-      references: ['tableId'],
-      through: {
-        table: 'tableReadOnly',
-        columns: ['readOnlyId'],
-        references: ['id'],
-      },
-    }),
-  };
-}
+const Table = defineTable('table', (t) => ({
+  id: t.identity().primaryKey(),
+  readOnlyId: t.integer().nullable(),
+})).relations((main) => ({
+  readOnlyBelongsTo: main('readOnlyId').belongsTo(() => ReadOnlyTable('id')),
+  readOnlyHasOne: main('id').hasOne(() => ReadOnlyTable('tableId')),
+  readOnlyHasMany: main('id').hasMany(() => ReadOnlyTable('tableId')),
+  readOnlyHasAndBelongsToMany: main('id')
+    .hasAndBelongsToMany(() => ReadOnlyTable('tableId'))
+    .through('tableReadOnly', 'readOnlyId', 'id'),
+}));
 
-class ReadOnlyTable extends BaseTable {
-  readonly table = 'readOnly';
-  readonly readOnly = true;
-  filePath = 'read-only.test.ts';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    tableId: t.integer().nullable(),
-    name: t.text(),
-  }));
-}
+const ReadOnlyTable = defineTable('readOnly', { readOnly: true }, (t) => ({
+  id: t.identity().primaryKey(),
+  tableId: t.integer().nullable(),
+  name: t.text(),
+}));
 
 const db = orchidORMWithAdapter(
   { ...testDbOptions, adapter: testAdapter },

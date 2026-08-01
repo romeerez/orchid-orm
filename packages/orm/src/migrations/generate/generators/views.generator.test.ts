@@ -1,7 +1,11 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  defineView,
+  sql,
+  useGeneratorsTestUtils,
+} from './generators.test-utils';
 import { setGrants } from '../../../orm';
 import { colors } from 'pqb/internal';
-import { Query } from 'pqb';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -18,15 +22,16 @@ jest.mock('node:fs/promises', () => ({
 const { green, red } = colors;
 
 describe('views', () => {
-  const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
-  class SourceTable extends BaseTable {
-    table = 'source';
-    columns = this.setColumns((t) => ({
+  const SourceTable = defineTable(
+    'source',
+    { noPrimaryKey: false, nameInDb: 'source' },
+    (t) => ({
       id: t.identity().primaryKey(),
       active: t.boolean(),
-    }));
-  }
+    }),
+  );
 
   const createSourceTable = async (
     db: Parameters<NonNullable<Parameters<typeof arrange>[0]['prepareDb']>>[0],
@@ -37,47 +42,52 @@ describe('views', () => {
     }));
   };
 
-  class ActiveView extends BaseTable.View {
-    name = 'active_view';
-    checkOption = 'CASCADED' as const;
-    securityBarrier = true;
-    securityInvoker = false;
-    columns = this.setColumns((t) => ({
+  const ActiveView = defineView(
+    'active_view',
+    {
+      checkOption: 'CASCADED',
+      securityBarrier: true,
+      securityInvoker: false,
+      sql: sql`SELECT id, active FROM "source" WHERE active = true`,
+    },
+    (t) => ({
       id: t.integer(),
       active: t.boolean(),
-    }));
-    sql = BaseTable.sql`SELECT id, active FROM "source" WHERE active = true`;
-  }
+    }),
+  );
 
-  class RecursiveView extends BaseTable.View {
-    name = 'recursive_view';
-    recursive = true;
-    columns = this.setColumns((t) => ({
-      id: t.integer(),
-    }));
-    sql = BaseTable.sql`
+  const RecursiveView = defineView(
+    'recursive_view',
+    {
+      recursive: true,
+      sql: sql`
       WITH RECURSIVE nums(id) AS (
         VALUES (1)
         UNION ALL
         SELECT id + 1 FROM nums WHERE id < 2
       )
       SELECT id FROM nums
-    `;
-  }
-
-  class GrantView extends BaseTable.View {
-    name = 'grant_view';
-    columns = this.setColumns((t) => ({
+    `,
+    },
+    (t) => ({
       id: t.integer(),
-    }));
-    sql = BaseTable.sql`SELECT id FROM "source"`;
-    grants = setGrants([
+    }),
+  );
+
+  const GrantView = defineView(
+    'grant_view',
+    { sql: sql`SELECT id FROM "source"` },
+    (t) => ({
+      id: t.integer(),
+    }),
+  ).grants(
+    setGrants([
       {
         to: 'app-user',
         privileges: ['SELECT'],
       },
-    ]);
-  }
+    ]),
+  );
 
   it('should create view', async () => {
     await arrange({
@@ -126,22 +136,21 @@ change(async (db) => {
   });
 
   it('should match code view aliases by their database names', async () => {
-    class ActiveAliasView extends BaseTable.View {
-      name = 'ActiveAlias';
-      columns = this.setColumns((t) => ({
+    const ActiveAliasView = defineView(
+      'ActiveAlias',
+      { sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
-    class ExplicitAliasView extends BaseTable.View {
-      name = 'ExplicitAlias';
-      nameInDb = 'explicit_view';
-      columns = this.setColumns((t) => ({
+    const ExplicitAliasView = defineView(
+      'ExplicitAlias',
+      { nameInDb: 'explicit_view', sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -164,18 +173,13 @@ change(async (db) => {
   });
 
   it('should create view with query assigned in init', async () => {
-    class InitQueryView extends BaseTable.View {
-      name = 'init_query_view';
-      columns = this.setColumns((t) => ({
-        id: t.integer(),
-        active: t.boolean(),
-      }));
-
-      init(db: { SourceTable: Query }) {
-        this.query = db.SourceTable.select('id', 'active')
-          .whereSql`"source"."active" = true`;
-      }
-    }
+    const InitQueryView = defineView('init_query_view', (t) => ({
+      id: t.integer(),
+      active: t.boolean(),
+    })).query(
+      (db) =>
+        db.table0.select('id', 'active').whereSql`"source"."active" = true`,
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -206,12 +210,12 @@ change(async (db) => {
   });
 
   it('should require sql or query unless view is ignored', async () => {
-    class MissingDefinitionView extends BaseTable.View {
-      name = 'missing_definition_view';
-      columns = this.setColumns((t) => ({
+    const MissingDefinitionView = defineView(
+      'missing_definition_view',
+      (t) => ({
         id: t.integer(),
-      }));
-    }
+      }),
+    );
 
     await arrange({
       views: [MissingDefinitionView],
@@ -223,13 +227,13 @@ change(async (db) => {
   });
 
   it('should allow ignored view without sql or query', async () => {
-    class IgnoredMissingDefinitionView extends BaseTable.View {
-      name = 'ignored_missing_definition_view';
-      readonly generatorIgnore = true;
-      columns = this.setColumns((t) => ({
+    const IgnoredMissingDefinitionView = defineView(
+      'ignored_missing_definition_view',
+      { generatorIgnore: true },
+      (t) => ({
         id: t.integer(),
-      }));
-    }
+      }),
+    );
 
     await arrange({
       views: [IgnoredMissingDefinitionView],
@@ -242,13 +246,13 @@ change(async (db) => {
   });
 
   it('should drop view', async () => {
-    class IgnoredOptInView extends BaseTable.View {
-      name = 'ignored_opt_in_view';
-      columns = this.setColumns((t) => ({
+    const IgnoredOptInView = defineView(
+      'ignored_opt_in_view',
+      { sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -326,35 +330,39 @@ change(async (db) => {
   });
 
   it('should alter all view properties', async () => {
-    class ChangedView extends BaseTable.View {
-      schema = 'custom';
-      name = 'changed_view';
-      checkOption = 'CASCADED' as const;
-      securityBarrier = true;
-      securityInvoker = false;
-      columns = this.setColumns((t) => ({
+    const ChangedView = defineView(
+      'changed_view',
+      {
+        schema: 'custom',
+        checkOption: 'CASCADED',
+        securityBarrier: true,
+        securityInvoker: false,
+        sql: sql`SELECT id, active FROM "custom"."source" WHERE active = true`,
+      },
+      (t) => ({
         id: t.integer(),
         active: t.boolean(),
-      }));
-      sql = BaseTable.sql`SELECT id, active FROM "custom"."source" WHERE active = true`;
-    }
+      }),
+    );
 
-    class RecursiveView extends BaseTable.View {
-      schema = 'custom';
-      name = 'recursive_view';
-      recursive = true;
-      columns = this.setColumns((t) => ({
-        id: t.integer(),
-      }));
-      sql = BaseTable.sql`
+    const RecursiveView = defineView(
+      'recursive_view',
+      {
+        schema: 'custom',
+        recursive: true,
+        sql: sql`
         WITH RECURSIVE nums(id) AS (
           VALUES (1)
           UNION ALL
           SELECT id + 1 FROM nums WHERE id < 2
         )
         SELECT id FROM nums
-      `;
-    }
+      `,
+      },
+      (t) => ({
+        id: t.integer(),
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -484,15 +492,17 @@ change(async (db) => {
         },
       },
       views: [
-        class ChangedIgnoredView extends BaseTable.View {
-          name = 'changed_ignored_view';
-          readonly generatorIgnore = true;
-          columns = this.setColumns((t) => ({
+        defineView(
+          'changed_ignored_view',
+          {
+            generatorIgnore: true,
+            sql: sql`SELECT id, active FROM "source" WHERE active = true`,
+          },
+          (t) => ({
             id: t.integer(),
             active: t.boolean(),
-          }));
-          sql = BaseTable.sql`SELECT id, active FROM "source" WHERE active = true`;
-        },
+          }),
+        ),
       ],
     });
 
@@ -503,9 +513,23 @@ change(async (db) => {
   });
 
   it('should preserve grants for definition-side generator ignored views', async () => {
-    class IgnoredGrantView extends GrantView {
-      readonly generatorIgnore = true;
-    }
+    const IgnoredGrantView = defineView(
+      'grant_view',
+      {
+        generatorIgnore: true,
+        sql: sql`SELECT id FROM "source"`,
+      },
+      (t) => ({
+        id: t.integer(),
+      }),
+    ).grants(
+      setGrants([
+        {
+          to: 'app-user',
+          privileges: ['SELECT'],
+        },
+      ]),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -676,22 +700,23 @@ change(async (db) => {
   });
 
   it('should recreate view when its old table is dropped and new table is created', async () => {
-    class NewSourceTable extends BaseTable {
-      table = 'new_source';
-      columns = this.setColumns((t) => ({
+    const NewSourceTable = defineTable(
+      'new_source',
+      { noPrimaryKey: false, nameInDb: 'new_source' },
+      (t) => ({
         id: t.integer().primaryKey(),
         active: t.boolean(),
-      }));
-    }
+      }),
+    );
 
-    class ChangedSourceView extends BaseTable.View {
-      name = 'changed_source_view';
-      columns = this.setColumns((t) => ({
+    const ChangedSourceView = defineView(
+      'changed_source_view',
+      { sql: sql`SELECT id, active FROM "new_source" WHERE active = true` },
+      (t) => ({
         id: t.integer(),
         active: t.boolean(),
-      }));
-      sql = BaseTable.sql`SELECT id, active FROM "new_source" WHERE active = true`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -750,13 +775,13 @@ change(async (db) => {
   });
 
   it('should ignore views existing in db with generatorIgnore', async () => {
-    class KeptView extends BaseTable.View {
-      name = 'kept_view';
-      columns = this.setColumns((t) => ({
+    const KeptView = defineView(
+      'kept_view',
+      { sql: sql`SELECT id FROM "source"` },
+      (t) => ({
         id: t.integer(),
-      }));
-      sql = BaseTable.sql`SELECT id FROM "source"`;
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {

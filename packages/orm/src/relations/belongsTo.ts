@@ -1,4 +1,4 @@
-import { ORMTableInput } from '../orm-table/base-table';
+import { ORMTableInput } from '../orm-table/legacy-table';
 import { Query } from 'pqb';
 import {
   _queryCreate,
@@ -45,6 +45,11 @@ import {
   _queryInsertMany,
   _hookSelectColumns,
   internalSchemaConfig,
+  _clone,
+  _queryInsertManyFrom,
+  _queryTake,
+  _prependWithOnUpsertCreate,
+  _onUpsertUpdate,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -267,30 +272,63 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
     if (create) {
       const selectPKeys = query.select(...primaryKeys);
 
-      _prependWith(
-        queryForCreate,
-        (as) => {
-          const count = create.items.length;
-          foreignKeys.forEach((foreignKey, i) => {
-            const primaryKey = primaryKeys[i];
-            create.items.forEach((item, i) => {
-              (item[foreignKey] as RawSql)._sql = selectCteColumnFromManySql(
-                as,
-                primaryKey,
-                i,
-                count,
-              );
-            });
+      let createQuery: Query;
+      if (queryForCreate.q.type === 'upsert') {
+        const createWhereNotExists = new RawSql('');
+        _onUpsertUpdate(queryForCreate, (as) => {
+          createWhereNotExists._sql = `NOT EXISTS (SELECT 1 FROM "${as}")`;
+        });
+
+        const sourceQuery = _queryWhere(
+          _queryTake(_querySelect(_clone(query.qb), [{}])),
+          [createWhereNotExists] as never,
+        );
+
+        // Plain INSERT ... VALUES cannot render a WHERE guard, so upsert
+        // nested create uses INSERT ... SELECT FROM a guarded one-row query.
+        createQuery = _queryInsertManyFrom(
+          selectPKeys as unknown as CreateSelf,
+          sourceQuery as never,
+          create.values,
+        ) as unknown as Query;
+      } else {
+        createQuery = _queryInsertMany(
+          selectPKeys as unknown as CreateSelf,
+          create.values,
+        ) as unknown as Query;
+      }
+
+      const setForeignKeys = (as: string) => {
+        const count = create.items.length;
+        foreignKeys.forEach((foreignKey, i) => {
+          const primaryKey = primaryKeys[i];
+          create.items.forEach((item, i) => {
+            (item[foreignKey] as RawSql)._sql = selectCteColumnFromManySql(
+              as,
+              primaryKey,
+              i,
+              count,
+            );
           });
-        },
-        _queryInsertMany(selectPKeys as unknown as CreateSelf, create.values),
-      );
+        });
+      };
+
+      if (queryForCreate.q.type === 'upsert') {
+        _prependWithOnUpsertCreate(queryForCreate, setForeignKeys, createQuery);
+      } else {
+        _prependWith(queryForCreate, setForeignKeys, createQuery);
+      }
     }
 
     if (connect) {
       connect.values.forEach((value, itemI) => {
         const as = getFreeAlias(queryForCreate.q.withShapes, 'q');
-        _prependWith(
+        const prependWith =
+          queryForCreate.q.type === 'upsert'
+            ? _prependWithOnUpsertCreate
+            : _prependWith;
+
+        prependWith(
           queryForCreate,
           as,
           query.select(...primaryKeys).findBy(value),
@@ -314,7 +352,12 @@ class BelongsToVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
 
         const selectPKeys = query.select(...primaryKeys);
 
-        _prependWith(
+        const prependWith =
+          queryForCreate.q.type === 'upsert'
+            ? _prependWithOnUpsertCreate
+            : _prependWith;
+
+        prependWith(
           queryForCreate,
           asFn,
           _orCreate(

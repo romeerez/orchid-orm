@@ -1,6 +1,6 @@
 import {
   assertType,
-  BaseTable,
+  defineTable,
   db,
   PostData,
   sql,
@@ -63,34 +63,22 @@ describe('select relations', () => {
   it('should select a relation when deleting a record', async () => {
     // defining new tables because need to have a **required** relation to provoke the `UNION ALL` that ensures the user exists
 
-    class UserTable extends BaseTable {
-      readonly table = 'user';
+    const UserTable = defineTable('user', (t) => ({
+      id: t.serial().primaryKey(),
+      name: t.text(),
+      password: t.text(),
+    }));
 
-      override columns = this.setColumns((t) => ({
-        id: t.serial().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-      }));
-    }
-
-    class PostTable extends BaseTable {
-      readonly table = 'post';
-
-      override columns = this.setColumns((t) => ({
-        id: t.serial().primaryKey(),
-        userId: t.name('user_id').integer(),
-        title: t.text(),
-        body: t.text(),
-      }));
-
-      relations = {
-        user: this.belongsTo(() => UserTable, {
-          required: true,
-          columns: ['userId'],
-          references: ['id'],
-        }),
-      };
-    }
+    const PostTable = defineTable('post', (t) => ({
+      id: t.serial().primaryKey(),
+      userId: t.name('user_id').integer(),
+      title: t.text(),
+      body: t.text(),
+    })).relations((post) => ({
+      user: post('userId')
+        .belongsTo(() => UserTable('id'))
+        .required(),
+    }));
 
     const db = orchidORMWithAdapter(ormParams, {
       user: UserTable,

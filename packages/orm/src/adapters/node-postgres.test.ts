@@ -1,6 +1,6 @@
 import { bundleOrchidORMTables } from 'orchid-orm';
 import { makeOrchidOrmDb, orchidORM } from './node-postgres';
-import { RecordUnknown } from 'pqb/index';
+import { RecordUnknown } from 'pqb/internal';
 
 describe('node-postgres', () => {
   it('should not pass `log` param to the driver in makeOrchidOrmDb', () => {

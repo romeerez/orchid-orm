@@ -15,6 +15,7 @@ import {
 import { RakeDbConfig } from './config/config';
 import { makeRakeDbConfig, rakeDbCommands } from './config/config.public';
 import { processMigrateConfig } from './commands/migrate-or-rollback';
+import { getTableFactoryConfig } from './config/table-factory-config';
 
 describe('common', () => {
   describe('processRakeDbConfig', () => {
@@ -46,6 +47,89 @@ describe('common', () => {
         commands: rakeDbCommands,
         transaction: 'single',
       });
+    });
+
+    it('should use defineTable as the config table factory source', () => {
+      const defineTable = {
+        types: testDefaultColumnTypes,
+        exportAs: 'defineTable',
+        getFilePath: () => '/path/to/table.ts',
+        snakeCase: true,
+        language: 'Ukrainian',
+        nowSQL: `now() AT TIME ZONE 'UTC'`,
+      };
+
+      const result = makeRakeDbConfig({
+        defineTable,
+        basePath: __dirname,
+        dbScript: 'dbScript.ts',
+        migrationsPath: 'custom-path',
+        import: (path) => import(path),
+      });
+
+      expect(result.columnTypes).toBe(testDefaultColumnTypes);
+      expect(result.snakeCase).toBe(true);
+      expect(result.language).toBe('Ukrainian');
+      expect('tableFactory' in result).toBe(false);
+    });
+
+    it('should normalize table factory metadata without preserving its source kind', () => {
+      const defineTable = {
+        types: testDefaultColumnTypes,
+        exportAs: 'defineTable',
+        getFilePath: () => '/path/to/table.ts',
+        snakeCase: true,
+        language: 'Ukrainian',
+        nowSQL: `now() AT TIME ZONE 'UTC'`,
+      };
+
+      expect(getTableFactoryConfig({ defineTable })).toEqual({
+        columnTypes: testDefaultColumnTypes,
+        exportAs: 'defineTable',
+        getFilePath: defineTable.getFilePath,
+        snakeCase: true,
+        language: 'Ukrainian',
+        nowSQL: `now() AT TIME ZONE 'UTC'`,
+      });
+    });
+
+    it('should reject configs with both baseTable and defineTable', () => {
+      class BaseTable {
+        static exportAs = 'BaseTable';
+        static getFilePath = () => '/path/to/base-table.ts';
+
+        types = testDefaultColumnTypes;
+      }
+
+      expect(() =>
+        makeRakeDbConfig({
+          baseTable: BaseTable,
+          defineTable: {
+            types: testDefaultColumnTypes,
+            exportAs: 'defineTable',
+            getFilePath: () => '/path/to/table.ts',
+          },
+          basePath: __dirname,
+          dbScript: 'dbScript.ts',
+          migrationsPath: 'custom-path',
+          import: (path) => import(path),
+        }),
+      ).toThrow('Configure either baseTable or defineTable, not both');
+    });
+
+    it('should reject malformed defineTable config', () => {
+      expect(() =>
+        makeRakeDbConfig({
+          defineTable: {
+            exportAs: 'defineTable',
+            getFilePath: () => '/path/to/table.ts',
+          },
+          basePath: __dirname,
+          dbScript: 'dbScript.ts',
+          migrationsPath: 'custom-path',
+          import: (path: string) => import(path),
+        } as never),
+      ).toThrow('defineTable is missing types');
     });
 
     it(`should throw when no basePath and can't get it automatically`, () => {
@@ -172,6 +256,26 @@ describe('common', () => {
       const result = processMigrateConfig(config);
 
       expect(result.logger).toBe(customLogger);
+    });
+
+    it('should use defineTable metadata for effective migration config', () => {
+      const defineTable = {
+        types: testDefaultColumnTypes,
+        exportAs: 'defineTable',
+        getFilePath: () => '/path/to/table.ts',
+        snakeCase: true,
+        language: 'Ukrainian',
+        nowSQL: `now() AT TIME ZONE 'UTC'`,
+      };
+
+      const result = processMigrateConfig({
+        ...baseConfig,
+        defineTable,
+      });
+
+      expect(result.snakeCase).toBe(true);
+      expect(result.language).toBe('Ukrainian');
+      expect('tableFactory' in result).toBe(false);
     });
 
     it('should not mutate the original config', () => {

@@ -1,5 +1,4 @@
-import { assertType, testDb } from 'test-utils';
-import { User } from '../../../test-utils/pqb.test-utils';
+import { assertType, db, testDb } from 'test-utils';
 import { Query } from '../../query';
 import { refreshMaterializedView } from './materialized-view.query';
 
@@ -70,7 +69,7 @@ describe('materialized view query', () => {
     query.mockRestore();
 
     // @ts-expect-error regular query is not materialized
-    await expect(() => refreshMaterializedView(User)).rejects.toThrow();
+    await expect(() => refreshMaterializedView(db.user)).rejects.toThrow();
   });
 
   it('rejects concurrent refresh with no data before SQL execution', async () => {

@@ -1,9 +1,5 @@
-import {
-  expectQueryNotMutated,
-  User,
-  userColumnsSql,
-} from '../../../test-utils/pqb.test-utils';
-import { expectSql } from 'test-utils';
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
+import { db, expectSql, UserSelectAll } from 'test-utils';
 
 describe('for', () => {
   describe.each`
@@ -14,46 +10,46 @@ describe('for', () => {
     ${'forKeyShare'}    | ${'KEY SHARE'}
   `('$method', ({ method, sql }) => {
     it(`should set FOR ${sql} expression`, () => {
-      const q = User.all();
+      const q = db.user.all();
       expectSql(
         q[method as 'forUpdate']().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" FOR ${sql}`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" FOR ${sql}`,
       );
       expectQueryNotMutated(q);
     });
 
     it('should accept tables', () => {
-      const q = User.all();
+      const q = db.user.all();
       expectSql(
         q[method as 'forUpdate'](['a', 'b']).toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" FOR ${sql} OF "a", "b"`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" FOR ${sql} OF "a", "b"`,
       );
       expectQueryNotMutated(q);
     });
 
     it('should accept raw sql', () => {
-      const q = User.all();
+      const q = db.user.all();
       expectSql(
-        q[method as 'forUpdate'](User.sql`raw sql`).toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" FOR ${sql} OF raw sql`,
+        q[method as 'forUpdate'](db.user.sql`raw sql`).toSQL(),
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" FOR ${sql} OF raw sql`,
       );
       expectQueryNotMutated(q);
     });
 
     it('should set NO WAIT mode', () => {
-      const q = User.all();
+      const q = db.user.all();
       expectSql(
         q[method as 'forUpdate']().noWait().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" FOR ${sql} NO WAIT`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" FOR ${sql} NO WAIT`,
       );
       expectQueryNotMutated(q);
     });
 
     it('should set SKIP LOCKED mode', () => {
-      const q = User.all();
+      const q = db.user.all();
       expectSql(
         q[method as 'forUpdate']().skipLocked().toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User" FOR ${sql} SKIP LOCKED`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User" FOR ${sql} SKIP LOCKED`,
       );
       expectQueryNotMutated(q);
     });

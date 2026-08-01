@@ -2,14 +2,15 @@ import {
   emulateReturnNoRowsOnce,
   User,
   userData,
-  UserRecord,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
+  PostData,
   sql,
   testDb,
   UserData,
+  UserDefaultSelect,
   useTestDatabase,
 } from 'test-utils';
 import { TransactionAdapterClass } from '../../../adapters/adapter';
@@ -74,60 +75,89 @@ describe('orCreate', () => {
   });
 
   it('should not create record if exists', async () => {
-    const { id } = await User.create(userData);
+    const { Id } = await db.user.create(UserData);
 
-    const user = await User.selectAll()
-      .find(id)
+    const user = await db.user
+      .selectAll()
+      .find(Id)
       .orCreate({
-        ...userData,
-        name: 'created',
+        ...UserData,
+        Name: 'created',
       });
 
-    assertType<typeof user, UserRecord>();
+    assertType<typeof user, UserDefaultSelect>();
 
-    expect(user.name).toBe(userData.name);
+    expect(user.Name).toBe(UserData.Name);
   });
 
   it('should not create record if exists using `get`', async () => {
-    const { id } = await User.create(userData);
+    const { Id } = await db.user.create(UserData);
 
-    const created = await User.get('id')
-      .find(id)
+    const created = await db.user
+      .get('Id')
+      .find(Id)
       .orCreate({
-        ...userData,
-        name: 'created',
+        ...UserData,
+        Name: 'created',
       });
 
     assertType<typeof created, number>();
 
-    expect(created).toBe(id);
+    expect(created).toBe(Id);
   });
 
   it('should create record if not exists, should support sql and sub queries', async () => {
-    const user = await User.selectAll()
+    const { Id: createdId } = await db.user.create({
+      ...UserData,
+      Name: 'created',
+    });
+
+    const user = await db.user
+      .selectAll()
       .find(123)
       .orCreate({
-        ...userData,
-        name: () => User.create({ ...userData, name: 'created' }).get('name'),
-        age: () => sql`28`,
+        ...UserData,
+        Name: () => db.user.get('Name').where({ Id: createdId }),
+        Age: () => sql`28`,
       });
 
-    assertType<typeof user, UserRecord>();
+    assertType<typeof user, UserDefaultSelect>();
 
-    expect(user).toMatchObject({ name: 'created', age: 28 });
+    expect(user).toMatchObject({ Name: 'created', Age: 28 });
   });
 
   it('should create record if not exists with data from a callback', async () => {
-    const user = await User.selectAll()
+    const user = await db.user
+      .selectAll()
       .find(123)
       .orCreate(() => ({
-        ...userData,
-        name: 'created',
+        ...UserData,
+        Name: 'created',
       }));
 
-    assertType<typeof user, UserRecord>();
+    assertType<typeof user, UserDefaultSelect>();
 
-    expect(user.name).toBe('created');
+    expect(user.Name).toBe('created');
+  });
+
+  it('should create hasMany records when creating the record', async () => {
+    const user = await db.user
+      .select('Id', 'UserKey')
+      .find(123)
+      .orCreate({
+        ...UserData,
+        posts: { create: [PostData] },
+      });
+
+    const posts = await db.post.select('UserId', 'Title', 'Body');
+
+    expect(posts).toEqual([
+      {
+        UserId: user.Id,
+        Title: user.UserKey,
+        Body: PostData.Body,
+      },
+    ]);
   });
 
   // FOR UPDATE only makes sense for SELECT queries
@@ -135,7 +165,7 @@ describe('orCreate', () => {
     querySpy.mockClear();
     arraysSpy.mockClear();
 
-    await User.find(123).orCreate(userData).forUpdate();
+    await db.user.find(123).orCreate(UserData).forUpdate();
 
     expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
       [
@@ -147,9 +177,9 @@ describe('orCreate', () => {
         'WITH "q" AS (' +
           'SELECT FROM "schema"."user" "User" WHERE "User"."id" = $1 FOR UPDATE' +
           '), "q2" AS (' +
-          'INSERT INTO "schema"."user" AS "User"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
+          'INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at") SELECT $2, $3, $4, $5, $6 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
-        [123, ...Object.values(userData)],
+        [123, ...Object.values(UserData)],
         undefined,
       ],
     ]);
@@ -159,7 +189,8 @@ describe('orCreate', () => {
     querySpy.mockClear();
     arraysSpy.mockClear();
 
-    await TableWithSoftDelete.find(123).orCreate(userData);
+    const softDeleteData = { name: 'name', password: 'password' };
+    await TableWithSoftDelete.find(123).orCreate(softDeleteData);
 
     expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
       [
@@ -172,7 +203,7 @@ describe('orCreate', () => {
           '), "q2" AS (' +
           'INSERT INTO "schema"."user"("name", "password") SELECT $2, $3 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING NULL' +
           ') SELECT  FROM "q" UNION ALL SELECT  FROM "q2"',
-        [123, ...Object.values(userData)],
+        [123, ...Object.values(softDeleteData)],
         undefined,
       ],
     ]);
@@ -180,17 +211,18 @@ describe('orCreate', () => {
 
   describe('hooks', () => {
     it('should not call after create hooks when not created, should return void by default', async () => {
-      await User.create(userData);
+      const { Id } = await db.user.create(UserData);
 
       const afterCreate = jest.fn();
       const afterCreateCommit = jest.fn();
 
       emulateReturnNoRowsOnce('arrays');
 
-      const res = await User.findBy({ name: 'name' })
-        .orCreate(userData)
-        .afterCreate(['password'], afterCreate)
-        .afterCreateCommit(['age'], afterCreateCommit);
+      const res = await db.user
+        .find(Id)
+        .orCreate(UserData)
+        .afterCreate(['Password'], afterCreate)
+        .afterCreateCommit(['Age'], afterCreateCommit);
 
       assertType<typeof res, void>();
       expect(res).toBe(undefined);
@@ -200,21 +232,22 @@ describe('orCreate', () => {
     });
 
     it('should not call after create hooks when not created, should return only the selected columns', async () => {
-      await User.create(userData);
+      const { Id } = await db.user.create(UserData);
 
       const afterCreate = jest.fn();
       const afterCreateCommit = jest.fn();
 
       emulateReturnNoRowsOnce();
 
-      const res = await User.select('id')
-        .findBy({ name: 'name' })
-        .orCreate(userData)
-        .afterCreate(['password'], afterCreate)
-        .afterCreateCommit(['age'], afterCreateCommit);
+      const res = await db.user
+        .find(Id)
+        .select('Id')
+        .orCreate(UserData)
+        .afterCreate(['Password'], afterCreate)
+        .afterCreateCommit(['Age'], afterCreateCommit);
 
-      assertType<typeof res, { id: number }>();
-      expect(res).toEqual({ id: expect.any(Number) });
+      assertType<typeof res, { Id: number }>();
+      expect(res).toEqual({ Id: expect.any(Number) });
 
       expect(afterCreate).not.toHaveBeenCalled();
       expect(afterCreateCommit).not.toHaveBeenCalled();
@@ -224,16 +257,17 @@ describe('orCreate', () => {
       const afterCreate = jest.fn();
       const afterCreateCommit = jest.fn();
 
-      await User.findBy({ name: 'name' })
-        .orCreate(userData)
-        .afterCreate(['password'], afterCreate)
-        .afterCreateCommit(['age'], afterCreateCommit);
+      await db.user
+        .find(123)
+        .orCreate(UserData)
+        .afterCreate(['Password'], afterCreate)
+        .afterCreateCommit(['Age'], afterCreateCommit);
 
       expect(afterCreate).toHaveBeenCalledWith(
         [
           {
-            password: 'password',
-            age: null,
+            Password: 'password',
+            Age: null,
           },
         ],
         expect.any(Object),
@@ -241,8 +275,8 @@ describe('orCreate', () => {
       expect(afterCreateCommit).toHaveBeenCalledWith(
         [
           {
-            password: 'password',
-            age: null,
+            Password: 'password',
+            Age: null,
           },
         ],
         expect.any(Object),

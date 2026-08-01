@@ -1,5 +1,4 @@
-import { UniqueTable, User } from './test-utils/pqb.test-utils';
-import { testDb, useTestDatabase } from 'test-utils';
+import { testDb, useTestDatabase, db } from 'test-utils';
 import { QueryError } from './query';
 
 describe('errors', () => {
@@ -9,7 +8,9 @@ describe('errors', () => {
     let err: Error | undefined;
 
     try {
-      await User.select({ column: testDb.sql`koko`.type((t) => t.boolean()) });
+      await db.user.select({
+        column: testDb.sql`koko`.type((t) => t.boolean()),
+      });
     } catch (error) {
       err = error as Error;
     }
@@ -18,29 +19,29 @@ describe('errors', () => {
   });
 
   it('should have isUnique and column names map when violating unique error over single column', async () => {
-    await UniqueTable.create({
+    await db.uniqueTable.create({
       one: 'one',
       two: 1,
       thirdColumn: 'three',
       fourthColumn: 1,
     });
 
-    let err: InstanceType<typeof UniqueTable.error> | undefined;
+    let err: InstanceType<typeof db.uniqueTable.error> | undefined;
 
     try {
-      await UniqueTable.create({
+      await db.uniqueTable.create({
         one: 'one',
         two: 2,
         thirdColumn: 'three',
         fourthColumn: 2,
       });
     } catch (error) {
-      if (error instanceof UniqueTable.error) {
+      if (error instanceof db.uniqueTable.error) {
         err = error;
       }
     }
 
-    expect(err?.getQuery()).toBe(UniqueTable);
+    expect(err?.getQuery()).toBe(db.uniqueTable);
     expect(err?.isUnique).toBe(true);
     expect(err?.columns).toEqual({
       one: true,
@@ -48,7 +49,7 @@ describe('errors', () => {
   });
 
   it('should have isUnique and column names map when violating unique error over multiple columns', async () => {
-    await UniqueTable.create({
+    await db.uniqueTable.create({
       one: 'one',
       two: 1,
       thirdColumn: 'three',
@@ -58,7 +59,7 @@ describe('errors', () => {
     let err: QueryError | undefined;
 
     try {
-      await UniqueTable.create({
+      await db.uniqueTable.create({
         one: 'two',
         two: 2,
         thirdColumn: 'three',
@@ -70,7 +71,7 @@ describe('errors', () => {
       }
     }
 
-    expect(err?.getQuery()).toBe(UniqueTable);
+    expect(err?.getQuery()).toBe(db.uniqueTable);
     expect(err?.isUnique).toBe(true);
     expect(err?.columns).toEqual({
       thirdColumn: true,

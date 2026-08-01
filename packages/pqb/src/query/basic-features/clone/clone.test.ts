@@ -1,13 +1,13 @@
-import { User } from '../../../test-utils/pqb.test-utils';
+import { db } from 'test-utils';
 import { assertType } from 'test-utils';
 
 describe('clone', () => {
   it('should return new object with the same data structures', () => {
-    const cloned = User.clone();
-    expect(cloned).not.toBe(User);
-    expect(cloned.table).toBe(User.table);
-    expect(cloned.shape).toBe(User.shape);
+    const cloned = db.user.clone();
+    expect(cloned).not.toBe(db.user);
+    expect(cloned.table).toBe(db.user.table);
+    expect(cloned.shape).toBe(db.user.shape);
 
-    assertType<typeof User, typeof cloned>();
+    assertType<typeof db.user, typeof cloned>();
   });
 });

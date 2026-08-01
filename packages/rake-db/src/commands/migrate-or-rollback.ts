@@ -30,16 +30,18 @@ import {
   saveMigratedVersion,
 } from '../migration/manage-migrated-versions';
 import { RakeDbError } from '../errors';
-import {
+import type {
   ChangeCallback,
   ChangeCommitCallback,
   MigrationCallback,
   ModuleExportsRecord,
   RakeDbBaseTable,
+  RakeDbDefineTable,
   RakeDbMigrationId,
   RakeDbRenameMigrationsInput,
   SearchPath,
 } from '../config/config';
+import { getTableFactoryConfig } from '../config/table-factory-config';
 import path from 'node:path';
 import {
   getMigrations,
@@ -75,6 +77,7 @@ export interface MigrateConfigBase extends QueryLogOptions {
   snakeCase?: boolean;
   language?: string;
   noPrimaryKey?: NoPrimaryKeyOption;
+  defineTable?: RakeDbDefineTable<unknown>;
   baseTable?: RakeDbBaseTable<unknown>;
 }
 
@@ -154,10 +157,10 @@ export const processMigrateConfig = (
     ...handleConfigLogger(config, db),
   };
 
-  if ('baseTable' in config && config.baseTable) {
-    const { snakeCase, language } = config.baseTable.prototype;
-    if (snakeCase) result.snakeCase = true;
-    if (language) result.language = language;
+  const tableFactory = getTableFactoryConfig(config);
+  if (tableFactory) {
+    if (tableFactory.snakeCase) result.snakeCase = true;
+    if (tableFactory.language) result.language = tableFactory.language;
   }
 
   return result;

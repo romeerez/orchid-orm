@@ -177,7 +177,7 @@ Time with time zone is not included because it's discouraged [by Postgres docs](
 `date`, `timestamp`, and `timestampNoTZ` can be customized with methods `asNumber` and `asDate` to parse database values into number and JS Date object respectively.
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     // or use `.asDate()` to work with Date objects
@@ -260,13 +260,10 @@ t.uuid(); // -> string, example: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
 When using it as a primary key, it will automatically get a [gen_random_uuid](https://www.postgresql.org/docs/current/functions-uuid.html) default.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t.uuid().primaryKey(),
-    name: t.text(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  id: t.uuid().primaryKey(),
+  name: t.text(),
+}));
 
 // id is generated in the database
 db.table.create({ name: 'Joe' });
@@ -281,16 +278,13 @@ id: t.uuid().primaryKey().default(null),
 If you'd like to use a different default, `primaryKey` will respect it:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    id: t
-      .uuid()
-      .default(() => makeOwnUUID())
-      .primaryKey(),
-    name: t.text(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  id: t
+    .uuid()
+    .default(() => makeOwnUUID())
+    .primaryKey(),
+  name: t.text(),
+}));
 
 // custom function will be used for the id
 db.table.create({ name: 'Joe' });
@@ -301,18 +295,15 @@ db.table.create({ name: 'Joe' });
 First argument is the name of an enum in the database, the second is an array of possible values:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    enumColumn: t.enum('enumName', ['value1', 'value2', 'value3']),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  enumColumn: t.enum('enumName', ['value1', 'value2', 'value3']),
+}));
 ```
 
-For convenience and to avoid duplication, you can define enum column in `columnTypes` of `BaseTable`, then reuse it in multiple tables:
+For convenience and to avoid duplication, you can define enum column in `columnTypes` of the table factory, then reuse it in multiple tables:
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     orderStatus: () =>
@@ -320,13 +311,10 @@ export const BaseTable = createBaseTable({
   }),
 });
 
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // it still can be chained with common column methods
-    orderStatus: t.orderStatus().nullable(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  // it still can be chained with common column methods
+  orderStatus: t.orderStatus().nullable(),
+}));
 ```
 
 ## json
@@ -334,13 +322,10 @@ export class Table extends BaseTable {
 Postgres supports two types of JSON: `json` is for storing JSON strings as they were saved, and `jsonb` is stored in binary format and allows additional methods.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    json: t.jsonText(),
-    jsonB: t.json(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  json: t.jsonText(),
+  jsonB: t.json(),
+}));
 ```
 
 `t.jsonText()` is a Postgres `json` column.
@@ -350,20 +335,17 @@ When using ORM without a [validation library](/guide/columns-validation-methods)
 Make sure to only save properly validated data.
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    data: t.json<{
-      name: string;
-      description: string | null;
-      tags: string[];
-    }>(),
+export const Table = defineTable('table', (t) => ({
+  data: t.json<{
+    name: string;
+    description: string | null;
+    tags: string[];
+  }>(),
 
-    dataJsonText: t.jsonText<{
-      info: string;
-    }>(),
-  }));
-}
+  dataJsonText: t.jsonText<{
+    info: string;
+  }>(),
+}));
 ```
 
 When a validation library is enabled, `json` and `jsonText` accept a validation schema.
@@ -373,37 +355,34 @@ If the schema is omitted, the type is `unknown`.
 import { z } from 'zod';
 import { object, number, string, optional, array } from 'valibot';
 
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    dataZod: t.json(
-      z.object({
-        age: z.number(),
-        name: z.string(),
-        description: z.string().optional(),
-        tags: z.string().array(),
-      }),
-    ),
-    // or
-    dataValibot: t.json(
-      object({
-        age: number(),
-        name: string(),
-        description: optional(string()),
-        tags: array(string()),
-      }),
-    ),
+export const Table = defineTable('table', (t) => ({
+  dataZod: t.json(
+    z.object({
+      age: z.number(),
+      name: z.string(),
+      description: z.string().optional(),
+      tags: z.string().array(),
+    }),
+  ),
+  // or
+  dataValibot: t.json(
+    object({
+      age: number(),
+      name: string(),
+      description: optional(string()),
+      tags: array(string()),
+    }),
+  ),
 
-    dataText: t.jsonText(
-      z.object({
-        age: z.number(),
-        name: z.string(),
-        description: z.string().optional(),
-        tags: z.string().array(),
-      }),
-    ),
-  }));
-}
+  dataText: t.jsonText(
+    z.object({
+      age: z.number(),
+      name: z.string(),
+      description: z.string().optional(),
+      tags: z.string().array(),
+    }),
+  ),
+}));
 ```
 
 `json` (but not `jsonText`) columns support the following `where` operators:
@@ -431,7 +410,7 @@ await db.post.find(1).update({ data: null });
 To insert or update JSON null, provide SQL for this:
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 // 'null' is in single quotes
 await db.post.create({ data: () => sql`'null'` });

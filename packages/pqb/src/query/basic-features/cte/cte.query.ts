@@ -288,14 +288,11 @@ export class CteQuery {
    * For the first example, consider the employee table, an employee may or may not have a manager.
    *
    * ```ts
-   * class Employee extends BaseTable {
-   *   readonly table = 'employee';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     name: t.string(),
-   *     managerId: t.integer().nullable(),
-   *   }));
-   * }
+   * export const Employee = defineTable('employee', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   name: t.string(),
+   *   managerId: t.integer().nullable(),
+   * }));
    * ```
    *
    * The task is to load all subordinates of the manager with the id 1.

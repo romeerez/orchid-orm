@@ -29,62 +29,6 @@ export const userTableColumnsSql = User.q
   .selectAllColumns!.map((c) => '"User".' + c)
   .join(', ');
 
-export type ProfileRecord = typeof Profile.__outputType;
-export const Profile = testDb('Profile', (t) => ({
-  id: t.identity().primaryKey(),
-  userId: t.integer().foreignKey('user', 'id'),
-  bio: t.text().nullable(),
-  ...t.timestamps(),
-}));
-
-export const profileColumnsSql = Profile.q.selectAllColumns!.join(', ');
-
-export const profileTableColumnsSql = Profile.q
-  .selectAllColumns!.map((c) => '"Profile".' + c)
-  .join(', ');
-
-export const Chat = testDb('Chat', (t) => ({
-  idOfChat: t.identity().primaryKey(),
-  title: t.text(),
-  ...t.timestamps(),
-}));
-
-export type UniqueTableRecord = typeof UniqueTable.__outputType;
-export const UniqueTable = testDb(
-  'uniqueTable',
-  (t) => ({
-    id: t.identity().primaryKey(),
-    one: t.text().unique().primaryKey(),
-    two: t.integer().unique(),
-    thirdColumn: t.text(),
-    fourthColumn: t.integer(),
-  }),
-  (t) => t.unique(['thirdColumn', 'fourthColumn']),
-  {
-    nameInDb: 'uniqueTable',
-  },
-);
-
-export type MessageRecord = typeof Message.__outputType;
-export const Message = testDb(
-  'Message',
-  (t) => ({
-    id: t.identity().primaryKey(),
-    chatId: t.integer().foreignKey('chat', 'id'),
-    authorId: t.integer().foreignKey('user', 'id'),
-    text: t.text(),
-    meta: t.json().nullable(),
-    ...t.timestamps(),
-  }),
-  undefined,
-);
-
-export const messageColumnsSql = Message.q.selectAllColumns!.join(', ');
-
-export const messageTableColumnsSql = Message.q
-  .selectAllColumns!.map((c) => '"Message".' + c)
-  .join(', ');
-
 export type SnakeRecord = typeof Snake.__outputType;
 export type SnakeData = { name: string; tags: string[] };
 export const Snake = testDb(
@@ -115,28 +59,8 @@ export const snakeSelectAllWithTable = snakeAllColumns
   .map((item) => `"Snake".${item}`)
   .join(', ');
 
-export const Post = testDb('Post', (t) => ({
-  id: t.identity().primaryKey(),
-  title: t.text(),
-  body: t.text(),
-  generatedTsVector: t.tsvector().generated(['title', 'text']).searchIndex(),
-  ...t.timestamps(),
-}));
-
-export const postColumnsSql = Post.q.selectAllColumns!.join(', ');
-
-export const Tag = testDb('Tag', (t) => ({
-  tag: t.text().primaryKey(),
-}));
-
-export const Product = testDb('Product', (t) => ({
-  id: t.identity().primaryKey(),
-  camelCase: t.text().nullable(),
-  priceAmount: t.decimal(),
-}));
-
 export const expectQueryNotMutated = (q: Query) => {
-  const select = q.table === 'User' ? userColumnsSql : '*';
+  const select = q.q.selectAllColumns?.join(', ') ?? '*';
   expectSql(
     q.toSQL(),
     `SELECT ${select} FROM ${quoteTableWithSchemaAndAlias(q)}`,
@@ -169,12 +93,9 @@ export const profileData = {
   bio: 'text',
 };
 
-export const chatData = {
-  title: 'title',
-};
-
 export const messageData = {
-  text: 'text',
+  Text: 'text',
+  MessageKey: 'key',
 };
 
 export const snakeData = {

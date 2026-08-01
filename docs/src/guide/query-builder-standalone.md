@@ -9,7 +9,7 @@ If you'd like to use the query builder of OrchidORM as a standalone tool, instal
 As `Orchid ORM` focuses on ORM usage, docs examples mostly demonstrates how to work with ORM-defined tables,
 but everything that's not related to table relations should also work with `pqb` query builder on its own.
 
-It is accepting the same options as `orchidORM` + options of `createBaseTable`:
+It accepts the same options as `orchidORM` + options of `createTableFactory`:
 
 ```ts
 // for porsager/postgres driver:

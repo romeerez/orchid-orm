@@ -1,13 +1,19 @@
-import { User, userData, UserRecord } from '../../../test-utils/pqb.test-utils';
-import { assertType, testDb, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  db,
+  testDb,
+  useTestDatabase,
+  UserData,
+  UserDefaultSelect,
+} from 'test-utils';
 
 describe('transform', () => {
   useTestDatabase();
 
   describe('without data', () => {
     it('should transform a not found record', async () => {
-      const result = await User.findOptional(0).transform((record) => {
-        assertType<typeof record, UserRecord | undefined>();
+      const result = await db.user.findOptional(0).transform((record) => {
+        assertType<typeof record, UserDefaultSelect | undefined>();
         return 123;
       });
 
@@ -17,12 +23,12 @@ describe('transform', () => {
     });
 
     it('should transform a not found record in a sub query', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const record = await User.take().select({
+      const record = await db.user.take().select({
         sub: () =>
-          User.findOptional(0).transform((record) => {
-            assertType<typeof record, UserRecord | undefined>();
+          db.user.findOptional(0).transform((record) => {
+            assertType<typeof record, UserDefaultSelect | undefined>();
             return 123;
           }),
       });
@@ -33,7 +39,7 @@ describe('transform', () => {
     });
 
     it('should transform null for an aggregate', async () => {
-      const sum = await User.sum('age').transform((sum) => {
+      const sum = await db.user.sum('Age').transform((sum) => {
         assertType<typeof sum, string | null>();
         return 0;
       });
@@ -44,11 +50,11 @@ describe('transform', () => {
     });
 
     it('should transform null for an aggregate in a sub query', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const sum = await User.select({
+      const sum = await db.user.select({
         sum: () =>
-          User.sum('age').transform((sum) => {
+          db.user.sum('Age').transform((sum) => {
             assertType<typeof sum, string | null>();
             return 0;
           }),
@@ -61,15 +67,16 @@ describe('transform', () => {
 
     describe('none', () => {
       it('should transform many records with none()', async () => {
-        const res = await User.none().transform((data) => ({ data }));
+        const res = await db.user.none().transform((data) => ({ data }));
 
-        assertType<typeof res, { data: UserRecord[] }>();
+        assertType<typeof res, { data: UserDefaultSelect[] }>();
 
         expect(res).toEqual({ data: [] });
       });
 
       it('should transform single record with none()', async () => {
-        const res = await User.takeOptional()
+        const res = await db.user
+          .takeOptional()
           .none()
           .transform((record) => ({ record: !!record }));
 
@@ -79,7 +86,8 @@ describe('transform', () => {
       });
 
       it('should transform a value with none()', async () => {
-        const res = await User.getOptional('name')
+        const res = await db.user
+          .getOptional('Name')
           .none()
           .transform((value) => ({ value: !!value }));
 
@@ -94,39 +102,40 @@ describe('transform', () => {
     const age = 10;
     let userId: number | undefined;
     beforeAll(async () => {
-      userId = await User.insert({ ...userData, age }).get('id');
+      userId = await db.user.insert({ ...UserData, Age: age }).get('Id');
     });
 
     it('should transform nested get', async () => {
-      const res = await User.get(() =>
-        User.get('createdAt').transform((val) => ({ val })),
+      const res = await db.user.get(() =>
+        db.user.get('createdAt').transform((val) => ({ val })),
       );
 
       expect(res).toEqual({ val: expect.any(Date) });
     });
 
     it('should load and transform records, with respect to column parsers', async () => {
-      const q = User.select('name', 'createdAt').transform((nodes) => ({
+      const q = db.user.select('Name', 'createdAt').transform((nodes) => ({
         nodes,
         cursor: 1,
       }));
 
       assertType<
         Awaited<typeof q>,
-        { nodes: { name: string; createdAt: Date }[]; cursor: number }
+        { nodes: { Name: string; createdAt: Date }[]; cursor: number }
       >();
 
       const res = await q;
       expect(res).toEqual({
-        nodes: [{ name: userData.name, createdAt: expect.any(Date) }],
+        nodes: [{ Name: UserData.Name, createdAt: expect.any(Date) }],
         cursor: 1,
       });
     });
 
     it('should load and transform records from a sub-query, with respect to column parsers', async () => {
-      const q = User.select('id', {
+      const q = db.user.select('Id', {
         users: () =>
-          User.select('name', 'createdAt')
+          db.user
+            .select('Name', 'createdAt')
             .take()
             .transform((nodes) => ({
               nodes,
@@ -137,18 +146,21 @@ describe('transform', () => {
       assertType<
         Awaited<typeof q>,
         {
-          id: number;
-          users: { nodes: { name: string; createdAt: Date }; cursor: number };
+          Id: number;
+          users: {
+            nodes: { Name: string; createdAt: Date };
+            cursor: number;
+          };
         }[]
       >();
 
       const res = await q;
       expect(res).toEqual([
         {
-          id: expect.any(Number),
+          Id: expect.any(Number),
           users: {
             nodes: {
-              name: userData.name,
+              Name: UserData.Name,
               createdAt: expect.any(Date),
             },
             cursor: 1,
@@ -183,7 +195,10 @@ describe('transform', () => {
         Awaited<typeof q>,
         {
           id: number;
-          users: { nodes: { name: string; password: string }; cursor: number };
+          users: {
+            nodes: { name: string; password: string };
+            cursor: number;
+          };
         }[]
       >();
 
@@ -193,8 +208,8 @@ describe('transform', () => {
           id: expect.any(Number),
           users: {
             nodes: {
-              name: userData.name,
-              password: userData.password,
+              name: UserData.Name,
+              password: UserData.Password,
             },
             cursor: 1,
           },
@@ -203,9 +218,11 @@ describe('transform', () => {
     });
 
     it('should transform nested aggregated value', async () => {
-      const res = await User.select({
-        sum: () => User.sum('age'),
-      }).transform((x) => x);
+      const res = await db.user
+        .select({
+          sum: () => db.user.sum('Age'),
+        })
+        .transform((x) => x);
 
       assertType<typeof res, { sum: string | null }[]>();
 
@@ -213,8 +230,8 @@ describe('transform', () => {
     });
 
     it('should transform aggregated value', async () => {
-      const res = await User.select({
-        sum: () => User.sum('age').transform((x) => x),
+      const res = await db.user.select({
+        sum: () => db.user.sum('Age').transform((x) => x),
       });
 
       assertType<typeof res, { sum: string | null }[]>();
@@ -223,13 +240,13 @@ describe('transform', () => {
     });
 
     it('should transform a value loaded from the main query table', async () => {
-      const data = await User.take().select('id', {
-        x: (q) => q.get('id').transform(() => 'bang'),
+      const data = await db.user.take().select('Id', {
+        x: (q) => q.get('Id').transform(() => 'bang'),
       });
 
-      assertType<typeof data, { id: number; x: string }>();
+      assertType<typeof data, { Id: number; x: string }>();
 
-      expect(data).toEqual({ id: userId, x: 'bang' });
+      expect(data).toEqual({ Id: userId, x: 'bang' });
     });
   });
 });

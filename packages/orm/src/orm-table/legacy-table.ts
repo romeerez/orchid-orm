@@ -31,7 +31,6 @@ import {
   IsQuery,
   MaybeArray,
   RecordUnknown,
-  ShallowSimplify,
   toSnakeCase,
   ColumnsShape,
   QuerySchema,
@@ -44,7 +43,7 @@ import {
   RelationToTableInput,
   RelationTableToQuery,
 } from '../relations/relations';
-import { OrchidORM } from '../orm';
+import { OrchidORM, OrmTableThunks } from '../orm';
 import {
   BelongsTo,
   BelongsToDataForCreate,
@@ -67,15 +66,11 @@ import {
 } from '../relations/hasAndBelongsToMany';
 import { HasMany, HasManyInfo, HasManyQuery } from '../relations/hasMany';
 import { Db, Query } from 'pqb';
+import { TableFactoryOptions } from './table.common';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {
   new (): T;
-}
-
-// object with table classes, used on orchidORM() for setting tables
-export interface TableClasses {
-  [K: string]: TableClass;
 }
 
 export interface TableInfo {
@@ -100,8 +95,8 @@ type BelongsToRequired<
     : BelongsToDefaultRequired<T, Rel, Related>;
 
 type BelongsToRelationInfo<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
   T extends RelationConfigSelf,
   Name extends string,
   Rel extends BelongsTo,
@@ -116,8 +111,8 @@ type BelongsToRelationInfo<
     : never;
 
 type BelongsToCreateData<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
   T extends RelationConfigSelf,
   Name extends string,
   Rel extends BelongsTo,
@@ -131,59 +126,65 @@ type BelongsToCreateData<
       >
     : never;
 
-type BelongsToCreateDataColumns<T extends RelationConfigSelf> = {
-  [K in keyof T['relations']]: T['relations'][K] extends BelongsTo
-    ? T['relations'][K]['options']['columns'][number] & string
-    : never;
-}[keyof T['relations']];
-
-type BelongsToCreateDataForColumn<
-  TC extends TableClasses,
-  VC extends TableClasses,
-  T extends RelationConfigSelf,
-  Column extends string,
-> = {
-  [K in keyof T['relations']]: T['relations'][K] extends BelongsTo
-    ? Column extends T['relations'][K]['options']['columns'][number]
-      ? BelongsToCreateData<TC, VC, T, K & string, T['relations'][K]>
-      : never
-    : never;
-}[keyof T['relations']];
-
 type RelationDataForCreate<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
   T extends RelationConfigSelf,
   Name extends keyof T['relations'] & string,
-> = T['relations'][Name] extends HasOne
+  Rel,
+> = Rel extends HasOne
   ? HasOneInfo<
       T,
       Name,
-      T['relations'][Name],
-      HasOneQuery<T, Name, RelationTableToQuery<TC, VC, T['relations'][Name]>>
+      Rel,
+      HasOneQuery<T, Name, RelationTableToQuery<TC, VC, Rel>>
     >['dataForCreate']
-  : T['relations'][Name] extends HasMany
+  : Rel extends HasMany
     ? HasManyInfo<
         T,
         Name,
-        T['relations'][Name],
-        HasManyQuery<
-          T,
-          Name,
-          RelationTableToQuery<TC, VC, T['relations'][Name]>
-        >
+        Rel,
+        HasManyQuery<T, Name, RelationTableToQuery<TC, VC, Rel>>
       >['dataForCreate']
-    : T['relations'][Name] extends HasAndBelongsToMany
+    : Rel extends HasAndBelongsToMany
       ? HasAndBelongsToManyInfo<
           T,
           Name,
-          T['relations'][Name]['options']['columns'][number] & string,
-          HasAndBelongsToManyQuery<
-            Name,
-            RelationTableToQuery<TC, VC, T['relations'][Name]>
-          >
+          Rel['options']['columns'][number] & string,
+          HasAndBelongsToManyQuery<Name, RelationTableToQuery<TC, VC, Rel>>
         >['dataForCreate']
       : never;
+
+type RelationInfoForName<
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
+  T extends RelationConfigSelf,
+  Name extends keyof T['relations'] & string,
+  Rel,
+> = Rel extends BelongsTo
+  ? BelongsToRelationInfo<TC, VC, T, Name, Rel>
+  : Rel extends HasOne
+    ? HasOneInfo<
+        T,
+        Name,
+        Rel,
+        HasOneQuery<T, Name, RelationTableToQuery<TC, VC, Rel>>
+      >
+    : Rel extends HasMany
+      ? HasManyInfo<
+          T,
+          Name,
+          Rel,
+          HasManyQuery<T, Name, RelationTableToQuery<TC, VC, Rel>>
+        >
+      : Rel extends HasAndBelongsToMany
+        ? HasAndBelongsToManyInfo<
+            T,
+            Name,
+            Rel['options']['columns'][number] & string,
+            HasAndBelongsToManyQuery<Name, RelationTableToQuery<TC, VC, Rel>>
+          >
+        : never;
 
 type RelationDataForCreateOptionalNames<T extends RelationConfigSelf> = {
   [K in keyof T['relations'] & string]: T['relations'][K] extends BelongsTo
@@ -191,38 +192,50 @@ type RelationDataForCreateOptionalNames<T extends RelationConfigSelf> = {
     : K;
 }[keyof T['relations'] & string];
 
+type RelationDataForCreateValue<
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
+  T extends RelationConfigSelf,
+  Name extends keyof T['relations'] & string,
+> = RelationDataForCreate<TC, VC, T, Name, T['relations'][Name]>[Name];
+
+type BelongsToRelationCreateData<
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
+  T extends RelationConfigSelf,
+  Name extends keyof T['relations'],
+> = Name extends keyof T['relations'] & string
+  ? T['relations'][Name] extends BelongsTo
+    ? BelongsToCreateData<TC, VC, T, Name, T['relations'][Name]>
+    : never
+  : never;
+
 type BelongsToRelationsDataForCreate<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
   T extends RelationConfigSelf,
 > = {
-  [Column in BelongsToCreateDataColumns<T>]: BelongsToCreateDataForColumn<
-    TC,
-    VC,
-    T,
-    Column
-  >;
+  [K in keyof T['relations'] as T['relations'][K] extends BelongsTo
+    ? T['relations'][K]['options']['columns'][number] & string
+    : never]: BelongsToRelationCreateData<TC, VC, T, K>;
 };
 
 type RelationsDataForCreateOptional<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
   T extends RelationConfigSelf,
-> =
-  RelationDataForCreateOptionalNames<T> extends never
-    ? EmptyObject
-    : {
-          [K in RelationDataForCreateOptionalNames<T>]: (
-            u: RelationDataForCreate<TC, VC, T, K>,
-          ) => void;
-        }[RelationDataForCreateOptionalNames<T>] extends (u: infer Obj) => void
-      ? Obj
-      : EmptyObject;
+  Names extends keyof T['relations'] & string =
+    RelationDataForCreateOptionalNames<T>,
+> = [Names] extends [never]
+  ? EmptyObject
+  : {
+      [K in Names]?: RelationDataForCreateValue<TC, VC, T, K>;
+    };
 
 // converts table type to a queryable interface
 export interface TableQueryBuilder<
-  TC extends TableClasses,
-  VC extends TableClasses,
+  TC extends OrmTableThunks,
+  VC extends OrmTableThunks,
   T extends ORMTableInput,
 >
   extends
@@ -243,42 +256,13 @@ export interface TableQueryBuilder<
     > {
   relations: T extends RelationConfigSelf
     ? {
-        [K in keyof T['relations'] &
-          string]: T['relations'][K] extends BelongsTo
-          ? BelongsToRelationInfo<TC, VC, T, K, T['relations'][K]>
-          : T['relations'][K] extends HasOne
-            ? HasOneInfo<
-                T,
-                K,
-                T['relations'][K],
-                HasOneQuery<
-                  T,
-                  K,
-                  RelationTableToQuery<TC, VC, T['relations'][K]>
-                >
-              >
-            : T['relations'][K] extends HasMany
-              ? HasManyInfo<
-                  T,
-                  K,
-                  T['relations'][K],
-                  HasManyQuery<
-                    T,
-                    K,
-                    RelationTableToQuery<TC, VC, T['relations'][K]>
-                  >
-                >
-              : T['relations'][K] extends HasAndBelongsToMany
-                ? HasAndBelongsToManyInfo<
-                    T,
-                    K,
-                    T['relations'][K]['options']['columns'][number] & string,
-                    HasAndBelongsToManyQuery<
-                      K,
-                      RelationTableToQuery<TC, VC, T['relations'][K]>
-                    >
-                  >
-                : never;
+        [K in keyof T['relations'] & string]: RelationInfoForName<
+          TC,
+          VC,
+          T,
+          K,
+          T['relations'][K]
+        >;
       }
     : EmptyObject;
   relationsDataForCreate: T extends RelationConfigSelf
@@ -316,6 +300,8 @@ export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
   schema?: QuerySchema;
   // database relation name
   nameInDb?: string;
+  // whether query-facing camelCase names are translated to snake_case in SQL
+  snakeCase?: boolean;
   // column types defined in base table to use in `setColumns`
   types: unknown;
   // path to file where the table is defined
@@ -372,46 +358,88 @@ export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
   withData?: boolean;
 }
 
-// Object type that's allowed in `where` and similar methods of the table.
-export type Queryable<T extends PickORMTableInputColumns> = ShallowSimplify<{
-  [K in keyof T['columns']['shape']]?: T['columns']['shape'][K]['__queryType'];
-}>;
+export interface OrmLegacyTableForTypeHelpers {
+  columns: {
+    shape: Column.Shape.QueryInit;
+  };
+  computed?: ComputedOptionsFactory<never, never>;
+}
 
-export type DefaultSelect<T extends PickORMTableInputColumns> = ShallowSimplify<
-  ColumnsShape.DefaultOutput<T['columns']['shape']>
->;
+export interface OrmTableForTypeHelpers {
+  data: {
+    columns: Column.Shape.QueryInit;
+    computed?: ComputedOptionsFactory<never, never>;
+  };
+}
+
+type AnyTableForTypeHelpers =
+  | OrmLegacyTableForTypeHelpers
+  | OrmTableForTypeHelpers;
+
+// Object type that's allowed in `where` and similar methods of the table.
+export type Queryable<T extends AnyTableForTypeHelpers> = T extends
+  | { columns: { shape: infer Shape extends Column.Shape.QueryInit } }
+  | { data: { columns: infer Shape extends Column.Shape.QueryInit } }
+  ? {
+      [K in keyof Shape]?: Shape[K]['__queryType'];
+    }
+  : never;
+
+export type DefaultSelect<T extends AnyTableForTypeHelpers> =
+  T extends OrmTableForTypeHelpers
+    ? ColumnsShape.DefaultOutput<T['data']['columns']>
+    : T extends OrmLegacyTableForTypeHelpers
+      ? ColumnsShape.DefaultOutput<T['columns']['shape']>
+      : never;
+
+type SelectableFromShapeAndComputed<
+  Shape extends Column.Shape.QueryInit,
+  Computed,
+> = Computed extends undefined
+  ? ColumnsShape.Output<Shape>
+  : Computed extends ((t: never) => infer R extends ComputedOptionsConfig)
+    ? ColumnsShape.Output<Shape> & {
+        [K in keyof R]: R[K] extends {
+          result: {
+            value: infer Value extends Column.Pick.QueryColumn;
+          };
+        }
+          ? Value['__outputType']
+          : R[K] extends () => {
+                result: {
+                  value: infer Value extends Column.Pick.QueryColumn;
+                };
+              }
+            ? Value['__outputType']
+            : never;
+      }
+    : ColumnsShape.Output<Shape>;
 
 // Object type of table's record that's returned from database and is parsed.
-export type Selectable<T extends PickORMTableInputColumnsAndComputed> =
-  T['computed'] extends ((t: never) => infer R extends ComputedOptionsConfig)
-    ? ShallowSimplify<
-        ColumnsShape.Output<T['columns']['shape']> & {
-          [K in keyof R]: R[K] extends {
-            result: {
-              value: infer Value extends Column.Pick.QueryColumn;
-            };
-          }
-            ? Value['__outputType']
-            : R[K] extends () => {
-                  result: {
-                    value: infer Value extends Column.Pick.QueryColumn;
-                  };
-                }
-              ? Value['__outputType']
-              : never;
-        }
+export type Selectable<T extends AnyTableForTypeHelpers> =
+  T extends OrmTableForTypeHelpers
+    ? SelectableFromShapeAndComputed<
+        T['data']['columns'],
+        T['data']['computed']
       >
-    : ShallowSimplify<ColumnsShape.Output<T['columns']['shape']>>;
+    : T extends OrmLegacyTableForTypeHelpers
+      ? SelectableFromShapeAndComputed<T['columns']['shape'], T['computed']>
+      : never;
 
 // Object type that conforms `create` method of the table.
-export type Insertable<T extends PickORMTableInputColumns> = ShallowSimplify<
-  ColumnsShape.Input<T['columns']['shape']>
->;
+export type Insertable<T extends AnyTableForTypeHelpers> = T extends
+  | { columns: { shape: infer Shape extends Column.Shape.QueryInit } }
+  | { data: { columns: infer Shape extends Column.Shape.QueryInit } }
+  ? ColumnsShape.Input<Shape>
+  : never;
 
 // Object type that conforms `update` method of the table.
-export type Updatable<T extends PickORMTableInputColumns> = ShallowSimplify<
-  ColumnsShape.InputPartial<T['columns']['shape']>
->;
+export type Updatable<T extends AnyTableForTypeHelpers> =
+  T extends OrmTableForTypeHelpers
+    ? ColumnsShape.InputPartial<T['data']['columns']>
+    : T extends OrmLegacyTableForTypeHelpers
+      ? ColumnsShape.InputPartial<T['columns']['shape']>
+      : never;
 
 // type of before hook function for the table
 type BeforeHookMethod = (cb: QueryBeforeHook) => void;
@@ -601,8 +629,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Columns extends Column.Shape.QueryInit,
     Related extends ORMTableInput,
     Through extends string,
-    Source extends string,
-    Options extends HasOneOptions<Columns, Related, Through, Source>,
+    Options extends HasOneOptions<Columns, Related, Through>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => { new (): Related },
@@ -621,8 +648,7 @@ export interface BaseTableInstance<ColumnTypes> {
     Columns extends Column.Shape.QueryInit,
     Related extends ORMTableInput,
     Through extends string,
-    Source extends string,
-    Options extends HasOneOptions<Columns, Related, Through, Source>,
+    Options extends HasOneOptions<Columns, Related, Through>,
   >(
     this: { columns: { shape: Columns } },
     fn: () => { new (): Related },
@@ -752,34 +778,16 @@ export function createBaseTable<
   exportAs = 'BaseTable',
   language,
   autoForeignKeys,
-}: {
-  schemaConfig?: () => SchemaConfig;
-  // concrete column types or a callback for overriding standard column types
-  // this types will be used in tables to define their columns
-  columnTypes?:
-    | ColumnTypes
-    | ((t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes);
-  // when set to true, all columns will be translated to `snake_case` when querying database
-  snakeCase?: boolean;
-  // if for some unknown reason you see error that file path for a table can't be guessed automatically,
-  // provide it manually via `filePath`
-  filePath?: string;
-  // if `now()` for some reason doesn't suite your timestamps, provide a custom SQL for it
-  nowSQL?: string;
-  // export name of the base table, by default it is BaseTable
-  exportAs?: string;
-  // default language for the full text search
-  language?: string;
-  // automatically create foreign keys for relations
-  autoForeignKeys?: boolean | TableData.References.BaseOptions;
-} = {}): BaseTableClass<SchemaConfig, ColumnTypes> {
+}: TableFactoryOptions<SchemaConfig, ColumnTypes> = {}): BaseTableClass<
+  SchemaConfig,
+  ColumnTypes
+> {
   const schema = schemaConfig();
 
   const columnTypes = (
     typeof columnTypesArg === 'function'
-      ? (
-          columnTypesArg as (t: DefaultColumnTypes<SchemaConfig>) => ColumnTypes
-        )(makeColumnTypes(schema))
+      ? // oxlint-disable-next-line typescript/no-explicit-any
+        (columnTypesArg as any)(makeColumnTypes(schema))
       : columnTypesArg || makeColumnTypes(schema)
   ) as ColumnTypes;
 

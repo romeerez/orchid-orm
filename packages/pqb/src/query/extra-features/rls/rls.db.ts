@@ -31,9 +31,12 @@ export namespace RlsPolicy {
 }
 
 export namespace Rls {
-  export interface TableConfig {
+  export interface TableConfigBase {
     enable?: boolean;
     force?: boolean;
+  }
+
+  export interface TableConfig extends TableConfigBase {
     permit: [RlsPolicy.Policy, ...RlsPolicy.Policy[]];
     restrict?: RlsPolicy.Policy[];
   }

@@ -83,20 +83,20 @@ export interface NonDeletedScope {
  * All queries on such table will filter out deleted records by default.
  *
  * ```ts
- * import { BaseTable } from './baseTable';
+ * import { defineTable } from './table-factory';
  *
- * export class SomeTable extends BaseTable {
- *   readonly table = 'some';
- *   columns = this.setColumns((t) => ({
- *     id: t.identity().primaryKey(),
- *     deletedAt: t.timestamp().nullable(),
- *   }));
- *
+ * export const SomeTable = defineTable('some', (t) => ({
+ *   id: t.identity().primaryKey(),
+ *   deletedAt: t.timestamp().nullable(),
+ * }))
  *   // true is for using `deletedAt` column
- *   readonly softDelete = true;
- *   // or provide a different column name
- *   readonly softDelete = 'myDeletedAt';
- * }
+ *   .softDelete();
+ *
+ * // or provide a different column name
+ * export const OtherTable = defineTable('other', (t) => ({
+ *   id: t.identity().primaryKey(),
+ *   myDeletedAt: t.timestamp().nullable(),
+ * })).softDelete('myDeletedAt');
  *
  * const db = orchidORM(
  *   { databaseURL: '...' },

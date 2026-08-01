@@ -95,6 +95,8 @@ export {
   type DefaultSchemaConfig,
 } from './index';
 
+export { getForeignKeyTableInstance } from './columns/column';
+
 // Operators
 export { Operators } from './index';
 
@@ -166,6 +168,8 @@ export { type UpdateSelf } from './query/basic-features/mutate/update';
 export {
   _appendQuery,
   _appendQueryOnUpsertCreate,
+  _onUpsertUpdate,
+  _prependWithOnUpsertCreate,
   _clone,
   _createDbSqlMethod,
   _hookSelectColumns,
@@ -197,6 +201,8 @@ export {
   isQueryReturnsAll,
   prepareSubQueryForSql,
 } from './index';
+
+export { _queryInsertManyFrom } from './query/basic-features/mutate/create-from';
 
 // Column types (internal access)
 export {
@@ -372,8 +378,11 @@ export {
   addCode,
   codeToString,
   columnsShapeToCode,
+  constraintToCode,
   constraintInnerToCode,
+  excludeToCode,
   excludeInnerToCode,
+  indexToCode,
   indexInnerToCode,
   primaryKeyInnerToCode,
   pushTableDataCode,

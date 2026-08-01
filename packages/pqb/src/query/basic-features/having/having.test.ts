@@ -1,15 +1,14 @@
-import { expectSql } from 'test-utils';
-import { User, userColumnsSql } from '../../../test-utils/pqb.test-utils';
+import { expectSql, db, UserSelectAll } from 'test-utils';
 
 describe('having', () => {
   it('should support simple object as an argument', () => {
-    User.count().equals(5);
-    const q = User.having((q) => q.count().equals(5));
+    db.user.count().equals(5);
+    const q = db.user.having((q) => q.count().equals(5));
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql}
+        SELECT ${UserSelectAll}
         FROM "schema"."user" "User"
         HAVING count(*) = $1
       `,
@@ -18,15 +17,15 @@ describe('having', () => {
   });
 
   it('should handle multiple expressions', () => {
-    const q = User.having(
-      (q) => q.sum('id').gt(5),
-      (q) => q.avg('id').lt(20),
+    const q = db.user.having(
+      (q) => q.sum('Id').gt(5),
+      (q) => q.avg('Id').lt(20),
     );
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql}
+        SELECT ${UserSelectAll}
         FROM "schema"."user" "User"
         HAVING sum("User"."id") > $1 AND avg("User"."id") < $2
       `,
@@ -35,12 +34,12 @@ describe('having', () => {
   });
 
   it('should support `and`', () => {
-    const q = User.having((q) => q.min('id').gt(1).and(q.max('id').lt(10)));
+    const q = db.user.having((q) => q.min('Id').gt(1).and(q.max('Id').lt(10)));
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql}
+        SELECT ${UserSelectAll}
         FROM "schema"."user" "User"
         HAVING min("User"."id") > $1 AND max("User"."id") < $2
       `,
@@ -49,18 +48,18 @@ describe('having', () => {
   });
 
   it('should support `or`', () => {
-    const q = User.having((q) =>
+    const q = db.user.having((q) =>
       q
-        .min('id')
+        .min('Id')
         .gt(1)
-        .and(q.max('id').lt(10))
-        .or(q.sum('id').gte(2).and(q.avg('id').lte(9))),
+        .and(q.max('Id').lt(10))
+        .or(q.sum('Id').gte(2).and(q.avg('Id').lte(9))),
     );
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql}
+        SELECT ${UserSelectAll}
         FROM "schema"."user" "User"
         HAVING (min("User"."id") > $1 AND max("User"."id") < $2)
             OR (sum("User"."id") >= $3 AND avg("User"."id") <= $4)
@@ -72,12 +71,12 @@ describe('having', () => {
 
 describe('havingSql', () => {
   it('should support SQL template literal', () => {
-    const q = User.havingSql`count(*) = ${5}`;
+    const q = db.user.havingSql`count(*) = ${5}`;
 
     expectSql(
       q.toSQL(),
       `
-        SELECT ${userColumnsSql}
+        SELECT ${UserSelectAll}
         FROM "schema"."user" "User"
         HAVING count(*) = $1
       `,

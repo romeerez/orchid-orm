@@ -59,13 +59,10 @@ db.someTable.where({
 Different types of columns support different operations in `where` conditions:
 
 ```ts
-export class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    name: t.string(),
-    age: t.integer(),
-  }));
-}
+export const SomeTable = defineTable('someTable', (t) => ({
+  name: t.string(),
+  age: t.integer(),
+}));
 
 // When querying this table:
 db.someTable.where({
@@ -91,7 +88,7 @@ To make it typed, try [narrowType](/guide/common-column-methods#narrowType), and
 [//]: # 'TODO: explain this better'
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     point: () => t.type('geography(point)'),
@@ -106,7 +103,7 @@ It's possible to define custom columns, they can have a special behavior or a me
 For example, we can add `id` column which would be an alias to `identity().primaryKey()` or `uuid().primaryKey()`:
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     // for autoincementing integer ID:
@@ -122,7 +119,7 @@ If you'd like use the [cuid2](https://github.com/paralleldrive/cuid2) type of ID
 ```ts
 import { createId } from '@paralleldrive/cuid2';
 
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     id() {
@@ -138,13 +135,10 @@ export const BaseTable = createBaseTable({
 And then we can use custom columns on our tables just as well as predefined ones:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // custom column
-    id: t.id(),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  // custom column
+  id: t.id(),
+}));
 ```
 
 ## override parsing/encoding
@@ -160,7 +154,7 @@ Let's consider example of overriding a timestamp input and output type.
 Validations schemas are optional, here is changing input and output type of timestamp when the `schemaConfig` is not set:
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     timestamp() {
@@ -180,7 +174,7 @@ The same when using Zod or Valibot integration, specify validation schemas:
 import { zodSchemaConfig } from 'orchid-orm-zod-schema-to-zod';
 import { z } from 'zod';
 
-export const BaseTableWithZod = createBaseTable({
+export const { defineTable } = createTableFactory({
   // or valibotSchemaConfig from 'orchid-orm-valibot'
   schemaConfig: zodSchemaConfig,
 
@@ -208,7 +202,7 @@ however, for the specific case of overriding timestamp, there are predefined sho
 `timestamp().asDate()` will encode/parse timestamp from and to a `Date` object.
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     // Parse timestamps into `Date` objects:
@@ -231,7 +225,7 @@ because if it's not validated, users are free to submit empty or endless texts.
 You may want to force the `text` type to force min and max parameters for validation:
 
 ```ts
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   columnTypes: (t) => ({
     ...t,
     text: (min: number, max: number) => t.text().min(min).max(max),
@@ -242,11 +236,8 @@ export const BaseTable = createBaseTable({
 With such config, all text columns will require explicit min and max parameters:
 
 ```ts
-export class PostTable extends BaseTable {
-  readonly table = 'post';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    content: t.text(3, 10000),
-  }));
-}
+export const PostTable = defineTable('post', (t) => ({
+  id: t.identity().primaryKey(),
+  content: t.text(3, 10000),
+}));
 ```

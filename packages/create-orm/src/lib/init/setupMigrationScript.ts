@@ -14,12 +14,12 @@ export async function setupMigrationScript(config: InitConfig): Promise<void> {
     filePath,
     `import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
 export const change = rakeDb.run(${
       config.testDatabase ? 'config.allDatabases' : 'config.database'
     }, {
-  baseTable: BaseTable,
+  defineTable,
   dbPath: './db',
   ${migrations},
   commands: {

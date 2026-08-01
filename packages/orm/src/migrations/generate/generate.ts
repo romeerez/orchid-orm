@@ -28,6 +28,7 @@ import {
   migrateAndClose,
   RakeDbAst,
   RakeDbConfig,
+  getTableFactoryConfig,
   writeMigrationFile,
 } from 'rake-db';
 import { EnumItem } from './generators/enums.generator';
@@ -82,7 +83,7 @@ export const generate = async (
   afterPull?: AfterPull,
 ): Promise<void> => {
   let { dbPath } = config;
-  if (!dbPath || !config.baseTable) throw invalidConfig(config);
+  if (!dbPath || !getTableFactoryConfig(config)) throw invalidConfig(config);
   if (!adapters.length) throw new Error(`Database options must not be empty`);
 
   if (!dbPath.endsWith('.ts')) dbPath += '.ts';
@@ -239,7 +240,7 @@ export const generate = async (
 const invalidConfig = (config: RakeDbConfig) =>
   new Error(
     `\`${
-      config.dbPath ? 'baseTable' : 'dbPath'
+      config.dbPath ? 'baseTable` or `defineTable' : 'dbPath'
     }\` setting must be set in the migrations config for the generator to work`,
   );
 

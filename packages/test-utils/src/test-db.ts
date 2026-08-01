@@ -1,177 +1,92 @@
 import {
-  createBaseTable,
+  createTableFactory,
   DefaultSelect,
+  OrchidORM,
+  OrchidOrmParam,
+  OrchidORMSetupOptions,
   orchidORMWithAdapter,
+  OrmTableThunks,
+  Query,
 } from 'orchid-orm';
-import { PickQueryQ } from 'pqb/internal';
-import {
-  now,
-  testAdapter,
-  testColumnTypes,
-  testDefaultSchemaConfig,
-} from './test-utils';
+import { Adapter, PickQueryQ } from 'pqb/internal';
+import { now, testAdapter, testColumnTypes } from './test-utils';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, defineView } = createTableFactory({
   snakeCase: true,
-  schemaConfig: () => testDefaultSchemaConfig,
   columnTypes: testColumnTypes,
 });
 
-export type UserDefaultSelect = DefaultSelect<UserTable>;
-export class UserTable extends BaseTable {
-  readonly table = 'User';
-  columns = this.setColumns((t) => ({
-    Id: t.name('id').identity().primaryKey(),
-    Name: t.name('name').text(),
-    UserKey: t.name('user_key').text(),
-    Password: t.name('password').text().select(false),
-    Picture: t.name('picture').text().nullable(),
-    Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
-    Age: t.name('age').decimal().nullable(),
-    Active: t.name('active').boolean().nullable(),
-    Balance: t.name('balance').decimal().nullable(),
-    ...t.timestamps(),
-  }));
+export type UserDefaultSelect = DefaultSelect<typeof UserTable>;
+export const UserTable = defineTable('User', { nameInDb: 'user' }, (t) => ({
+  Id: t.name('id').identity().primaryKey(),
+  Name: t.name('name').text(),
+  UserKey: t.name('user_key').text(),
+  Password: t.name('password').text().select(false),
+  Picture: t.name('picture').text().nullable(),
+  Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
+  Age: t.name('age').decimal().nullable(),
+  Active: t.name('active').boolean().nullable(),
+  Balance: t.name('balance').decimal().nullable(),
+  ...t.timestamps(),
+})).relations((user) => ({
+  profile: user('Id', 'UserKey')
+    .hasOne(() => ProfileTable('UserId', 'ProfileKey'))
+    .required(),
+  profileNoFkey: user('Id', 'UserKey')
+    .hasOne(() => ProfileTable('UserIdNoFkey', 'ProfileKey'))
+    .required(),
+  activeProfile: user('Id', 'UserKey')
+    .hasOne(() => ProfileTable('UserId', 'ProfileKey').where({ Active: true }))
+    .required(),
+  messages: user('Id', 'UserKey').hasMany(() =>
+    MessageTable('AuthorId', 'MessageKey'),
+  ),
+  activeMessages: user('Id', 'UserKey').hasMany(() =>
+    MessageTable('AuthorId', 'MessageKey').where({ Active: true }),
+  ),
+  chats: user('Id', 'UserKey')
+    .hasAndBelongsToMany(() => ChatTable('IdOfChat', 'ChatKey'))
+    .through('chatUser', ['userId', 'userKey'], ['chatId', 'chatKey']),
+  activeChats: user('Id', 'UserKey')
+    .hasAndBelongsToMany(() =>
+      ChatTable('IdOfChat', 'ChatKey').where({ Active: true }),
+    )
+    .through('chatUser', ['userId', 'userKey'], ['chatId', 'chatKey']),
+  posts: user('Id', 'UserKey').hasMany(() => PostTable('UserId', 'Title')),
+  postsNoFkey: user('Id', 'UserKey').hasMany(() =>
+    PostTable('UserIdNoFkey', 'Title'),
+  ),
+  activePosts: user('Id', 'UserKey').hasMany(() =>
+    PostTable('UserId', 'Title').where({ Active: true }),
+  ),
+  onePost: user('Id', 'UserKey').hasOne(() => PostTable('UserId', 'Title')),
+  activeOnePost: user('Id', 'UserKey').hasOne(() =>
+    PostTable('UserId', 'Title').where({ Active: true }),
+  ),
+  postTags: user('Id', 'UserKey')
+    .hasAndBelongsToMany(() => PostTagTable('PostId'))
+    .through('post', ['userId', 'title'], ['id']),
+  activePostTags: user('Id', 'UserKey')
+    .hasAndBelongsToMany(() => PostTagTable('PostId').where({ Active: true }))
+    .through('post', ['userId', 'title'], ['id']),
+  tasks: user('Id', 'UserKey')
+    .hasAndBelongsToMany(() => TaskTable('Id', 'TaskKey'))
+    .through('user_task', ['userId', 'key'], ['taskId', 'key']),
+}));
 
-  relations = {
-    profile: this.hasOne(() => ProfileTable, {
-      required: true,
-      columns: ['Id', 'UserKey'],
-      references: ['UserId', 'ProfileKey'],
-    }),
+export const TaskTable = defineTable('Task', { nameInDb: 'task' }, (t) => ({
+  Id: t.name('id').identity().primaryKey(),
+  UserId: t.name('user_id').integer().nullable(),
+  TaskKey: t.name('task_key').text().nullable(),
+  Title: t.name('title').text(),
+  Done: t.name('done').boolean().default(false),
+}));
 
-    profileNoFkey: this.hasOne(() => ProfileTable, {
-      required: true,
-      columns: ['Id', 'UserKey'],
-      references: ['UserIdNoFkey', 'ProfileKey'],
-    }),
-
-    activeProfile: this.hasOne(() => ProfileTable, {
-      required: true,
-      columns: ['Id', 'UserKey'],
-      references: ['UserId', 'ProfileKey'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    messages: this.hasMany(() => MessageTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['AuthorId', 'MessageKey'],
-    }),
-
-    activeMessages: this.hasMany(() => MessageTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['AuthorId', 'MessageKey'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    chats: this.hasAndBelongsToMany(() => ChatTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['userId', 'userKey'],
-      through: {
-        table: 'chatUser',
-        columns: ['chatId', 'chatKey'],
-        references: ['IdOfChat', 'ChatKey'],
-      },
-    }),
-
-    activeChats: this.hasAndBelongsToMany(() => ChatTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['userId', 'userKey'],
-      through: {
-        table: 'chatUser',
-        columns: ['chatId', 'chatKey'],
-        references: ['IdOfChat', 'ChatKey'],
-      },
-      on: {
-        Active: true,
-      },
-    }),
-
-    posts: this.hasMany(() => PostTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['UserId', 'Title'],
-    }),
-
-    postsNoFkey: this.hasMany(() => PostTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['UserIdNoFkey', 'Title'],
-    }),
-
-    activePosts: this.hasMany(() => PostTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['UserId', 'Title'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    onePost: this.hasOne(() => PostTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['UserId', 'Title'],
-    }),
-
-    activeOnePost: this.hasOne(() => PostTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['UserId', 'Title'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    postTags: this.hasAndBelongsToMany(() => PostTagTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['userId', 'title'],
-      through: {
-        table: 'post',
-        columns: ['id'],
-        references: ['PostId'],
-      },
-    }),
-
-    activePostTags: this.hasAndBelongsToMany(() => PostTagTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['userId', 'title'],
-      through: {
-        table: 'post',
-        columns: ['id'],
-        references: ['PostId'],
-      },
-      on: {
-        Active: true,
-      },
-    }),
-
-    tasks: this.hasAndBelongsToMany(() => TaskTable, {
-      columns: ['Id', 'UserKey'],
-      references: ['userId', 'key'],
-      through: {
-        table: 'user_task',
-        columns: ['taskId', 'key'],
-        references: ['Id', 'TaskKey'],
-      },
-    }),
-  };
-}
-
-export class TaskTable extends BaseTable {
-  readonly table = 'Task';
-  columns = this.setColumns((t) => ({
-    Id: t.name('id').identity().primaryKey(),
-    UserId: t.name('user_id').integer().nullable(),
-    TaskKey: t.name('task_key').text().nullable(),
-    Title: t.name('title').text(),
-    Done: t.name('done').boolean().default(false),
-  }));
-}
-
-export type Profile = DefaultSelect<ProfileTable>;
-export class ProfileTable extends BaseTable {
-  readonly table = 'Profile';
-  columns = this.setColumns((t) => ({
+export type Profile = DefaultSelect<typeof ProfileTable>;
+export const ProfileTable = defineTable(
+  'Profile',
+  { nameInDb: 'profile' },
+  (t) => ({
     Id: t.name('id').identity().primaryKey(),
     ProfileKey: t.name('profile_key').text(),
     UserId: t
@@ -184,74 +99,36 @@ export class ProfileTable extends BaseTable {
     Bio: t.name('bio').text().nullable(),
     Active: t.name('active').boolean().nullable(),
     ...t.timestamps(),
-  }));
+  }),
+).relations((profile) => ({
+  user: profile('UserId', 'ProfileKey').belongsTo(() =>
+    UserTable('Id', 'UserKey'),
+  ),
+  activeUser: profile('UserId', 'ProfileKey').belongsTo(() =>
+    UserTable('Id', 'UserKey').where({ Active: true }),
+  ),
+  chats: profile.hasMany(() => ChatTable.through('user', 'chats')),
+  activeChats: profile.hasMany(() =>
+    ChatTable.through('activeUser', 'activeChats'),
+  ),
+  messages: profile.hasMany(() => MessageTable.through('user', 'messages')),
+  posts: profile.hasMany(() => PostTable.through('user', 'posts')),
+  activePosts: profile.hasMany(() =>
+    PostTable.through('activeUser', 'activePosts'),
+  ),
+  onePost: profile.hasOne(() => PostTable.through('user', 'onePost')),
+  activeOnePost: profile.hasOne(() =>
+    PostTable.through('activeUser', 'activeOnePost'),
+  ),
+  pic: profile('Id', 'ProfileKey').hasOne(() =>
+    ProfilePicTable('ProfileId', 'ProfilePicKey'),
+  ),
+}));
 
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['UserId', 'ProfileKey'],
-      references: ['Id', 'UserKey'],
-    }),
-
-    activeUser: this.belongsTo(() => UserTable, {
-      columns: ['UserId', 'ProfileKey'],
-      references: ['Id', 'UserKey'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    chats: this.hasMany(() => ChatTable, {
-      through: 'user',
-      source: 'chats',
-    }),
-
-    activeChats: this.hasMany(() => ChatTable, {
-      through: 'activeUser',
-      source: 'activeChats',
-      on: {
-        Active: true,
-      },
-    }),
-
-    messages: this.hasMany(() => MessageTable, {
-      through: 'user',
-      source: 'messages',
-    }),
-
-    posts: this.hasMany(() => PostTable, {
-      through: 'user',
-      source: 'posts',
-    }),
-
-    activePosts: this.hasMany(() => PostTable, {
-      through: 'activeUser',
-      source: 'activePosts',
-      on: {
-        Active: true,
-      },
-    }),
-
-    onePost: this.hasOne(() => PostTable, {
-      through: 'user',
-      source: 'onePost',
-    }),
-
-    activeOnePost: this.hasOne(() => PostTable, {
-      through: 'activeUser',
-      source: 'activeOnePost',
-    }),
-
-    pic: this.hasOne(() => ProfilePicTable, {
-      columns: ['Id', 'ProfileKey'],
-      references: ['ProfileId', 'ProfilePicKey'],
-    }),
-  };
-}
-
-class ProfilePicTable extends BaseTable {
-  readonly table = 'profilePic';
-  readonly nameInDb = 'profilePic';
-  columns = this.setColumns((t) => ({
+const ProfilePicTable = defineTable(
+  'profilePic',
+  { nameInDb: 'profilePic' },
+  (t) => ({
     Id: t.name('id').identity().primaryKey(),
     ProfilePicKey: t.name('profile_pic_key').text(),
     ProfileId: t
@@ -261,82 +138,47 @@ class ProfilePicTable extends BaseTable {
       .foreignKey(() => ProfileTable, 'Id'),
     Url: t.name('url').text(),
     ...t.timestamps(),
-  }));
+  }),
+).relations((profilePic) => ({
+  profile: profilePic('ProfileId', 'ProfilePicKey').belongsTo(() =>
+    ProfileTable('Id', 'ProfileKey'),
+  ),
+}));
 
-  relations = {
-    profile: this.belongsTo(() => ProfileTable, {
-      columns: ['ProfileId', 'ProfilePicKey'],
-      references: ['Id', 'ProfileKey'],
-    }),
-  };
-}
+export type Chat = DefaultSelect<typeof ChatTable>;
+export const ChatTable = defineTable('Chat', { nameInDb: 'chat' }, (t) => ({
+  // a different id name to better test has and belongs to many
+  IdOfChat: t.name('id_of_chat').identity().primaryKey(),
+  ChatKey: t.name('chat_key').text(),
+  Title: t.name('title').text(),
+  Active: t.name('active').boolean().nullable(),
+  ...t.timestamps(),
+})).relations((chat) => ({
+  users: chat('IdOfChat', 'ChatKey')
+    .hasAndBelongsToMany(() => UserTable('Id', 'UserKey'))
+    .through('chatUser', ['chatId', 'chatKey'], ['userId', 'userKey']),
+  activeUsers: chat('IdOfChat', 'ChatKey')
+    .hasAndBelongsToMany(() =>
+      UserTable('Id', 'UserKey').where({ Active: true }),
+    )
+    .through('chatUser', ['chatId', 'chatKey'], ['userId', 'userKey']),
+  profiles: chat.hasMany(() => ProfileTable.through('users', 'profile')),
+  activeProfiles: chat.hasMany(() =>
+    ProfileTable.through('activeUsers', 'activeProfile'),
+  ),
+  messages: chat('IdOfChat', 'ChatKey').hasMany(() =>
+    MessageTable('ChatId', 'MessageKey'),
+  ),
+  activeMessages: chat('IdOfChat', 'ChatKey').hasMany(() =>
+    MessageTable('ChatId', 'MessageKey').where({ Active: true }),
+  ),
+}));
 
-export type Chat = DefaultSelect<ChatTable>;
-export class ChatTable extends BaseTable {
-  readonly table = 'Chat';
-  columns = this.setColumns((t) => ({
-    // a different id name to better test has and belongs to many
-    IdOfChat: t.name('id_of_chat').identity().primaryKey(),
-    ChatKey: t.name('chat_key').text(),
-    Title: t.name('title').text(),
-    Active: t.name('active').boolean().nullable(),
-    ...t.timestamps(),
-  }));
-
-  relations = {
-    users: this.hasAndBelongsToMany(() => UserTable, {
-      columns: ['IdOfChat', 'ChatKey'],
-      references: ['chatId', 'chatKey'],
-      through: {
-        table: 'chatUser',
-        columns: ['userId', 'userKey'],
-        references: ['Id', 'UserKey'],
-      },
-    }),
-
-    activeUsers: this.hasAndBelongsToMany(() => UserTable, {
-      columns: ['IdOfChat', 'ChatKey'],
-      references: ['chatId', 'chatKey'],
-      through: {
-        table: 'chatUser',
-        columns: ['userId', 'userKey'],
-        references: ['Id', 'UserKey'],
-      },
-      on: {
-        Active: true,
-      },
-    }),
-
-    profiles: this.hasMany(() => ProfileTable, {
-      through: 'users',
-      source: 'profile',
-    }),
-
-    activeProfiles: this.hasMany(() => ProfileTable, {
-      through: 'activeUsers',
-      source: 'activeProfile',
-    }),
-
-    messages: this.hasMany(() => MessageTable, {
-      columns: ['IdOfChat', 'ChatKey'],
-      references: ['ChatId', 'MessageKey'],
-    }),
-
-    activeMessages: this.hasMany(() => MessageTable, {
-      columns: ['IdOfChat', 'ChatKey'],
-      references: ['ChatId', 'MessageKey'],
-      on: {
-        Active: true,
-      },
-    }),
-  };
-}
-
-export type Message = DefaultSelect<MessageTable>;
-export class MessageTable extends BaseTable {
-  readonly table = 'Message';
-
-  columns = this.setColumns((t) => ({
+export type Message = DefaultSelect<typeof MessageTable>;
+export const MessageTable = defineTable(
+  'Message',
+  { nameInDb: 'message' },
+  (t) => ({
     Id: t.name('id').identity().primaryKey(),
     MessageKey: t.name('message_key').text(),
     ChatId: t
@@ -353,195 +195,115 @@ export class MessageTable extends BaseTable {
     Active: t.name('active').boolean().nullable(),
     DeletedAt: t.name('deleted_at').timestamp().nullable(),
     ...t.timestamps(),
+  }),
+)
+  .softDelete('DeletedAt')
+  .relations((message) => ({
+    sender: message('AuthorId', 'MessageKey').belongsTo(() =>
+      UserTable('Id', 'UserKey'),
+    ),
+    activeSender: message('AuthorId', 'MessageKey').belongsTo(() =>
+      UserTable('Id', 'UserKey').where({ Active: true }),
+    ),
+    chat: message('ChatId', 'MessageKey').belongsTo(() =>
+      ChatTable('IdOfChat', 'ChatKey'),
+    ),
+    activeChat: message('ChatId', 'MessageKey')
+      .belongsTo(() => ChatTable('IdOfChat', 'ChatKey').where({ Active: true }))
+      .required(false),
+    profile: message
+      .hasOne(() => ProfileTable.through('sender', 'profile'))
+      .required(),
+    activeProfile: message
+      .hasOne(() => ProfileTable.through('activeSender', 'activeProfile'))
+      .required(),
+    profiles: message.hasMany(() => ProfileTable.through('sender', 'profile')),
+    activeProfiles: message.hasMany(() =>
+      ProfileTable.through('activeSender', 'activeProfile'),
+    ),
   }));
 
-  readonly softDelete = 'DeletedAt';
+export type Post = DefaultSelect<typeof PostTable>;
+export const PostTable = defineTable('Post', { nameInDb: 'post' }, (t) => ({
+  Id: t.name('id').identity().primaryKey(),
+  UserId: t
+    .name('user_id')
+    .integer()
+    .nullable()
+    .foreignKey(() => UserTable, 'Id'),
+  UserIdNoFkey: t.name('user_id_no_fkey').integer().nullable(),
+  Active: t.name('active').boolean().nullable(),
+  Body: t.name('body').text(),
+  Title: t.name('title').text(),
+  GeneratedTsVector: t
+    .name('generated_ts_vector')
+    .tsvector()
+    .generated(['title', 'text'])
+    .searchIndex()
+    .select(false),
+  ...t.timestamps(),
+})).relations((post) => ({
+  user: post('UserId', 'Title').belongsTo(() => UserTable('Id', 'UserKey')),
+  activeUser: post('UserId', 'Title').belongsTo(() =>
+    UserTable('Id', 'UserKey').where({ Active: true }),
+  ),
+  postTags: post('Id').hasMany(() => PostTagTable('PostId')),
+  activePostTags: post('Id').hasMany(() =>
+    PostTagTable('PostId').where({ Active: true }),
+  ),
+  onePostTag: post('Id').hasOne(() => PostTagTable('PostId')),
+  activeOnePostTag: post('Id').hasOne(() =>
+    PostTagTable('PostId').where({ Active: true }),
+  ),
+  tags: post.hasMany(() => TagTable.through('postTags', 'tag')),
+  oneTag: post.hasOne(() => TagTable.through('onePostTag', 'tag')),
+}));
 
-  relations = {
-    sender: this.belongsTo(() => UserTable, {
-      columns: ['AuthorId', 'MessageKey'],
-      references: ['Id', 'UserKey'],
-    }),
-
-    activeSender: this.belongsTo(() => UserTable, {
-      columns: ['AuthorId', 'MessageKey'],
-      references: ['Id', 'UserKey'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    chat: this.belongsTo(() => ChatTable, {
-      columns: ['ChatId', 'MessageKey'],
-      references: ['IdOfChat', 'ChatKey'],
-    }),
-
-    activeChat: this.belongsTo(() => ChatTable, {
-      required: false,
-      columns: ['ChatId', 'MessageKey'],
-      references: ['IdOfChat', 'ChatKey'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    profile: this.hasOne(() => ProfileTable, {
-      required: true,
-      through: 'sender',
-      source: 'profile',
-    }),
-
-    activeProfile: this.hasOne(() => ProfileTable, {
-      required: true,
-      through: 'activeSender',
-      source: 'activeProfile',
-      on: {
-        Active: true,
-      },
-    }),
-
-    profiles: this.hasMany(() => ProfileTable, {
-      required: true,
-      through: 'sender',
-      source: 'profile',
-    }),
-
-    activeProfiles: this.hasMany(() => ProfileTable, {
-      required: true,
-      through: 'activeSender',
-      source: 'activeProfile',
-    }),
-  };
-}
-
-export type Post = DefaultSelect<PostTable>;
-export class PostTable extends BaseTable {
-  readonly table = 'Post';
-  columns = this.setColumns((t) => ({
-    Id: t.name('id').identity().primaryKey(),
-    UserId: t
-      .name('user_id')
-      .integer()
-      .nullable()
-      .foreignKey(() => UserTable, 'Id'),
-    UserIdNoFkey: t.name('user_id_no_fkey').integer().nullable(),
-    Active: t.name('active').boolean().nullable(),
-    Body: t.name('body').text(),
-    Title: t.name('title').text(),
-    ...t.timestamps(),
+export type PostTag = DefaultSelect<typeof PostTagTable>;
+export const PostTagTable = defineTable('postTag', (t) => ({
+  PostId: t
+    .name('post_id')
+    .integer()
+    .foreignKey(() => PostTable, 'Id'),
+  Tag: t
+    .name('tag')
+    .text()
+    .foreignKey(() => TagTable, 'Tag'),
+  Active: t.name('active').boolean().nullable(),
+}))
+  .primaryKey(['PostId', 'Tag'])
+  .relations((postTag) => ({
+    post: postTag('PostId').belongsTo(() => PostTable('Id')),
+    activePost: postTag('PostId').belongsTo(() =>
+      PostTable('Id').where({ Active: true }),
+    ),
+    tag: postTag('Tag').belongsTo(() => TagTable('Tag')),
   }));
 
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['UserId', 'Title'],
-      references: ['Id', 'UserKey'],
-    }),
+export type Tag = DefaultSelect<typeof TagTable>;
+export const TagTable = defineTable('Tag', { nameInDb: 'tag' }, (t) => ({
+  Tag: t.name('tag').text().primaryKey(),
+})).relations((tag) => ({
+  postTags: tag('Tag').hasMany(() => PostTagTable('Tag')),
+}));
 
-    activeUser: this.belongsTo(() => UserTable, {
-      columns: ['UserId', 'Title'],
-      references: ['Id', 'UserKey'],
-      on: {
-        Active: true,
-      },
-    }),
+export const Product = defineTable('Product', (t) => ({
+  id: t.identity().primaryKey(),
+  camelCase: t.name('camel_case').text().nullable(),
+  priceAmount: t.name('price_amount').decimal(),
+}));
 
-    postTags: this.hasMany(() => PostTagTable, {
-      columns: ['Id'],
-      references: ['PostId'],
-    }),
-
-    activePostTags: this.hasMany(() => PostTagTable, {
-      columns: ['Id'],
-      references: ['PostId'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    onePostTag: this.hasOne(() => PostTagTable, {
-      columns: ['Id'],
-      references: ['PostId'],
-    }),
-
-    activeOnePostTag: this.hasOne(() => PostTagTable, {
-      columns: ['Id'],
-      references: ['PostId'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    tags: this.hasMany(() => TagTable, {
-      through: 'postTags',
-      source: 'tag',
-    }),
-
-    oneTag: this.hasOne(() => TagTable, {
-      through: 'onePostTag',
-      source: 'tag',
-    }),
-  };
-}
-
-export type PostTag = DefaultSelect<PostTagTable>;
-export class PostTagTable extends BaseTable {
-  readonly table = 'postTag';
-  readonly nameInDb = 'postTag';
-  columns = this.setColumns(
-    (t) => ({
-      PostId: t
-        .name('post_id')
-        .integer()
-        .foreignKey(() => PostTable, 'Id'),
-      Tag: t
-        .name('tag')
-        .text()
-        .foreignKey(() => TagTable, 'Tag'),
-      Active: t.name('active').boolean().nullable(),
-    }),
-    (t) => t.primaryKey(['PostId', 'Tag']),
-  );
-
-  relations = {
-    post: this.belongsTo(() => PostTable, {
-      columns: ['PostId'],
-      references: ['Id'],
-    }),
-
-    activePost: this.belongsTo(() => PostTable, {
-      columns: ['PostId'],
-      references: ['Id'],
-      on: {
-        Active: true,
-      },
-    }),
-
-    tag: this.belongsTo(() => TagTable, {
-      columns: ['Tag'],
-      references: ['Tag'],
-    }),
-  };
-}
-
-export type Tag = DefaultSelect<TagTable>;
-export class TagTable extends BaseTable {
-  readonly table = 'Tag';
-  columns = this.setColumns((t) => ({
-    Tag: t.name('tag').text().primaryKey(),
-  }));
-
-  relations = {
-    postTags: this.hasMany(() => PostTagTable, {
-      columns: ['Tag'],
-      references: ['Tag'],
-    }),
-  };
-}
-
-export class ActiveUserView extends BaseTable.View {
-  readonly name = 'activeUser';
-  readonly nameInDb = 'activeUser';
-  columns = this.setColumns((t) => ({
+export const ActiveUserView = defineView(
+  'activeUser',
+  {
+    nameInDb: 'activeUser',
+    sql: `
+      SELECT "user".*
+      FROM "schema"."user"
+      WHERE "user"."active"
+    `,
+  },
+  (t) => ({
     id: t.identity().primaryKey(),
     name: t.text(),
     password: t.text(),
@@ -550,62 +312,41 @@ export class ActiveUserView extends BaseTable.View {
     age: t.integer().nullable(),
     active: t.boolean(),
     ...t.timestamps(),
-  }));
+  }),
+).relations((activeUser) => ({
+  user: activeUser('id').belongsTo(() => UserTable('Id')),
 
-  sql = `
-    SELECT "user".*
-    FROM "schema"."user"
-    WHERE "user"."active"
-  `;
+  profile: activeUser('id').hasOne(() => ProfileTable('UserId')),
 
-  relations = {
-    user: this.belongsTo(() => UserTable, {
-      columns: ['id'],
-      references: ['Id'],
-    }),
+  profilePic: activeUser.hasOne(() =>
+    ProfilePicTable.through('profile', 'pic'),
+  ),
 
-    profile: this.hasOne(() => ProfileTable, {
-      columns: ['id'],
-      references: ['UserId'],
-    }),
+  profiles: activeUser('id').hasMany(() => ProfileTable('UserId')),
 
-    profilePic: this.hasOne(() => ProfilePicTable, {
-      through: 'profile',
-      source: 'pic',
-    }),
+  posts: activeUser.hasMany(() => PostTable.through('user', 'posts')),
 
-    profiles: this.hasMany(() => ProfileTable, {
-      columns: ['id'],
-      references: ['UserId'],
-    }),
+  chats: activeUser('id')
+    .hasAndBelongsToMany(() => ChatTable('IdOfChat'))
+    .through('chatUser', 'userId', 'chatId'),
 
-    posts: this.hasMany(() => PostTable, {
-      through: 'user',
-      source: 'posts',
-    }),
+  writableActiveUser: activeUser('id').hasOne(() =>
+    WritableActiveUserView('id'),
+  ),
+}));
 
-    chats: this.hasAndBelongsToMany(() => ChatTable, {
-      columns: ['id'],
-      references: ['userId'],
-      through: {
-        table: 'chatUser',
-        columns: ['chatId'],
-        references: ['IdOfChat'],
-      },
-    }),
-
-    writableActiveUser: this.hasOne(() => WritableActiveUserView, {
-      columns: ['id'],
-      references: ['id'],
-    }),
-  };
-}
-
-export class WritableActiveUserView extends BaseTable.View {
-  readonly name = 'activeUser';
-  readonly nameInDb = 'activeUser';
-  readonly readOnly = false;
-  columns = this.setColumns((t) => ({
+export const WritableActiveUserView = defineView(
+  'activeUser',
+  {
+    nameInDb: 'activeUser',
+    readOnly: false,
+    sql: `
+      SELECT "user".*
+      FROM "schema"."user"
+      WHERE "user"."active"
+    `,
+  },
+  (t) => ({
     id: t.identity().primaryKey(),
     name: t.text(),
     password: t.text(),
@@ -617,30 +358,24 @@ export class WritableActiveUserView extends BaseTable.View {
       .readOnly()
       .setOnSave(() => true),
     ...t.timestamps(),
-  }));
+  }),
+).relations((activeUser) => ({
+  profile: activeUser('id').hasOne(() => ProfileTable('UserId')),
 
-  sql = `
-    SELECT "user".*
-    FROM "schema"."user"
-    WHERE "user"."active"
-  `;
+  profiles: activeUser('id').hasMany(() => ProfileTable('UserId')),
+}));
 
-  relations = {
-    profile: this.hasOne(() => ProfileTable, {
-      columns: ['id'],
-      references: ['UserId'],
-    }),
-
-    profiles: this.hasMany(() => ProfileTable, {
-      columns: ['id'],
-      references: ['UserId'],
-    }),
-  };
-}
-
-export class ActiveUserWithProfileView extends BaseTable.View {
-  readonly name = 'activeUserWithProfile';
-  columns = this.setColumns((t) => ({
+export const ActiveUserWithProfileView = defineView(
+  'activeUserWithProfile',
+  {
+    sql: `
+      SELECT "user".*, p.bio
+      FROM "schema"."user"
+      JOIN "schema"."profile" p on "user".id = p."user_id"
+      WHERE "user"."active"
+    `,
+  },
+  (t) => ({
     id: t.identity().primaryKey(),
     name: t.text(),
     bio: t.text().nullable(),
@@ -650,30 +385,55 @@ export class ActiveUserWithProfileView extends BaseTable.View {
     age: t.integer().nullable(),
     active: t.boolean(),
     ...t.timestamps(),
-  }));
+  }),
+);
 
-  sql = `
-    SELECT "user".*, p.bio
-    FROM "schema"."user"
-    JOIN "schema"."profile" p on "user".id = p."user_id"
-    WHERE "user"."active"
-  `;
-}
+const CategoryTable = defineTable('Category', (t) => ({
+  categoryName: t.text().primaryKey(),
+  parentName: t.text().nullable(),
+  ...t.timestamps(),
+})).relations((category) => ({
+  category: category('parentName').belongsTo(() =>
+    CategoryTable('categoryName'),
+  ),
+}));
 
-class CategoryTable extends BaseTable {
-  readonly table = 'Category';
-  columns = this.setColumns((t) => ({
-    categoryName: t.text().primaryKey(),
-    parentName: t.text().nullable(),
-    ...t.timestamps(),
-  }));
+export const UniqueTable = defineTable('uniqueTable', (t) => ({
+  id: t.identity().primaryKey(),
+  one: t.text().unique().primaryKey(),
+  two: t.integer().unique(),
+  thirdColumn: t.text(),
+  fourthColumn: t.integer(),
+})).unique(['thirdColumn', 'fourthColumn']);
 
-  relations = {
-    category: this.belongsTo(() => CategoryTable, {
-      columns: ['parentName'],
-      references: ['categoryName'],
-    }),
-  };
+export function testOrchidORMWithAdapter<T extends OrmTableThunks>(
+  tables: T,
+): OrchidORM<T>;
+export function testOrchidORMWithAdapter<
+  T extends OrmTableThunks,
+  V extends OrmTableThunks,
+>(
+  options: OrchidOrmParam<
+    ({ db: Query } | { adapter: Adapter }) & OrchidORMSetupOptions<V>
+  >,
+  tables: T,
+): OrchidORM<T, V>;
+export function testOrchidORMWithAdapter<
+  T extends OrmTableThunks,
+  V extends OrmTableThunks,
+>(
+  optionsOrTables:
+    | T
+    | OrchidOrmParam<
+        ({ db: Query } | { adapter: Adapter }) & OrchidORMSetupOptions<V>
+      >,
+  tables?: T,
+): OrchidORM<T, V> {
+  if (tables) {
+    return orchidORMWithAdapter(optionsOrTables as never, tables);
+  }
+
+  return orchidORMWithAdapter({ adapter: testAdapter }, optionsOrTables as T);
 }
 
 export const db = orchidORMWithAdapter(
@@ -696,8 +456,10 @@ export const db = orchidORMWithAdapter(
     post: PostTable,
     postTag: PostTagTable,
     tag: TagTable,
+    product: Product,
     category: CategoryTable,
     task: TaskTable,
+    uniqueTable: UniqueTable,
   },
 );
 
@@ -756,3 +518,13 @@ export const UserSelectAllWithTable = selectAllAs('User', db.user);
 
 export const ProfileSelectAll = db.profile.q.selectAllColumns!.join(', ');
 export const ProfileSelectAllWithTable = selectAllAs('Profile', db.profile);
+
+export const PostColumnsSql = db.post.q.selectAllColumns!.join(', ');
+
+export const MessageColumnsSql = db.message.q.selectAllColumns!.join(', ');
+export const MessageJsonBuildObject = (as: string) =>
+  `CASE WHEN to_jsonb("${as}") IS NULL THEN NULL ELSE json_build_object(${Object.keys(
+    db.message.q.selectAllShape!,
+  )
+    .map((c) => `'${c}', "${as}"."${c}"${c === 'Decimal' ? '::text' : ''}`)
+    .join(', ')}) END "${as}"`;

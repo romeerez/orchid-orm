@@ -738,7 +738,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
     this: T,
     _schema: OutputSchema,
     fn: (input: T['__type']) => Out,
-  ): Column.Modifiers.Parse<T, OutputSchema, Out>;
+  ): Column.Parse<T, OutputSchema, Out>;
 
   parseNull<
     T extends Column.Pick.ForParseNull,
@@ -748,7 +748,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
     this: T,
     _schema: NullSchema,
     fn: () => NullType,
-  ): Column.Modifiers.ParseNull<T, NullSchema, NullType>;
+  ): Column.ParseNull<T, NullSchema, NullType>;
 
   encode<
     T extends Column.Pick.Type,
@@ -758,7 +758,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
     this: T,
     _schema: InputSchema,
     fn: (input: In) => unknown,
-  ): Column.Modifiers.Encode<T, InputSchema, In>;
+  ): Column.Encode<T, InputSchema, In>;
 
   /**
    * @deprecated use narrowType instead
@@ -871,11 +871,11 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
 
   dateAsNumber<T extends Column.Pick.ForParse>(
     this: T,
-  ): Column.Modifiers.Parse<T, NumberSchema, number>;
+  ): Column.Parse<T, NumberSchema, number>;
 
   dateAsDate<T extends Column.Pick.ForParse>(
     this: T,
-  ): Column.Modifiers.Parse<T, DateSchema, Date>;
+  ): Column.Parse<T, DateSchema, Date>;
 
   enum<T extends readonly string[]>(
     dataType: string,
@@ -886,7 +886,7 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
 
   nullable<T extends Column.Pick.ForNullable>(
     this: T,
-  ): Column.Modifiers.NullableWithSchema<
+  ): Column.NullableWithSchema<
     T,
     NullableSchema<T['inputSchema']>,
     T['nullSchema'] extends BaseSchema

@@ -3,13 +3,13 @@ import { join } from 'node:path';
 import fs from 'node:fs/promises';
 
 export async function setupBaseTable(config: InitConfig): Promise<void> {
-  const filePath = join(config.dbDirPath, 'base-table.ts');
+  const filePath = join(config.dbDirPath, 'table-factory.ts');
 
   const { timestamp } = config;
   const customTimestamp = timestamp && timestamp !== 'string';
   const columnTypesComment = customTimestamp ? '' : '// ';
 
-  let content = `import { createBaseTable } from 'orchid-orm';${
+  let content = `import { createTableFactory } from 'orchid-orm';${
     config.validation === 'zod'
       ? `\nimport { zodSchemaConfig } from 'orchid-orm-schema-to-zod';`
       : config.validation === 'valibot'
@@ -17,7 +17,7 @@ export async function setupBaseTable(config: InitConfig): Promise<void> {
         : ''
   }
 
-export const BaseTable = createBaseTable({
+export const { defineTable, sql } = createTableFactory({
   // Set \`snakeCase\` to \`true\` if columns in your database are in snake_case.
   // snakeCase: true,${
     config.validation !== 'no'
@@ -44,8 +44,6 @@ export const BaseTable = createBaseTable({
   content += `
   ${columnTypesComment}}),
 });
-
-export const { sql } = BaseTable;
 `;
 
   await fs.writeFile(filePath, content);

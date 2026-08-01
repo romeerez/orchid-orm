@@ -200,7 +200,7 @@ export type JoinResult<
         ? {
             [K in keyof T['__selectable']]: {
               as: T['__selectable'][K]['as'];
-              column: Column.Modifiers.QueryColumnToNullable<
+              column: Column.QueryColumnToNullable<
                 T['__selectable'][K]['column']
               >;
             };
@@ -208,7 +208,7 @@ export type JoinResult<
         : K extends 'result'
           ? // nullable result: inlined for optimization
             {
-              [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
+              [K in keyof T['result']]: Column.QueryColumnToNullable<
                 T['result'][K]
               >;
             }
@@ -217,7 +217,7 @@ export type JoinResult<
                 T,
                 // nullable result: inlined for optimization
                 {
-                  [K in keyof T['result']]: Column.Modifiers.QueryColumnToNullable<
+                  [K in keyof T['result']]: Column.QueryColumnToNullable<
                     T['result'][K]
                   >;
                 }
@@ -368,7 +368,7 @@ export type JoinResultSelectable<
             }
           : {
               as: K;
-              column: Column.Modifiers.QueryColumnToNullable<Result[K]>;
+              column: Column.QueryColumnToNullable<Result[K]>;
             };
       };
       relations: {
@@ -983,36 +983,21 @@ export class QueryJoin {
    * For the following examples, imagine you have a `User` table with `id` and `name`, and `Message` table with `id`, `text`, messages belongs to user via `userId` column:
    *
    * ```ts
-   * export class UserTable extends BaseTable {
-   *   readonly table = 'user';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     name: t.text(),
-   *   }));
+   * export const UserTable = defineTable('user', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   name: t.text(),
+   * })).relations((user) => ({
+   *   messages: user('id').hasMany(() => MessageTable('userId')),
+   * }));
    *
-   *   relations = {
-   *     messages: this.hasMany(() => MessageTable, {
-   *       primaryKey: 'id',
-   *       foreignKey: 'userId',
-   *     }),
-   *   };
-   * }
-   *
-   * export class MessageTable extends BaseTable {
-   *   readonly table = 'message';
-   *   columns = this.setColumns((t) => ({
-   *     id: t.identity().primaryKey(),
-   *     text: t.text(),
-   *     ...t.timestamps(),
-   *   }));
-   *
-   *   relations = {
-   *     user: this.belongsTo(() => UserTable, {
-   *       primaryKey: 'id',
-   *       foreignKey: 'userId',
-   *     }),
-   *   };
-   * }
+   * export const MessageTable = defineTable('message', (t) => ({
+   *   id: t.identity().primaryKey(),
+   *   userId: t.integer(),
+   *   text: t.text(),
+   *   ...t.timestamps(),
+   * })).relations((message) => ({
+   *   user: message('userId').belongsTo(() => UserTable('id')),
+   * }));
    * ```
    *
    * `join` is a method for SQL `JOIN`, which is equivalent to `INNER JOIN`, `LEFT INNERT JOIN`.
@@ -1209,7 +1194,7 @@ export class QueryJoin {
    * ```ts
    * db.user.join(
    *   db.message,
-   *   // `sql` can be imported from your `BaseTable` file
+   *   // `sql` can be imported from your table factory file
    *   sql`lower("message"."text") = lower("user"."name")`,
    * );
    * ```

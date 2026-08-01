@@ -1,9 +1,4 @@
-import {
-  Snake,
-  snakeData,
-  User,
-  userData,
-} from '../../../test-utils/pqb.test-utils';
+import { Snake, snakeData } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
@@ -20,14 +15,14 @@ describe('get', () => {
 
   describe('get', () => {
     it('should select column and return a single value', async () => {
-      const { id } = await User.select('id').create(userData);
-      const q = User.get('id');
+      const { Id } = await db.user.select('Id').create(UserData);
+      const q = db.user.get('Id');
 
       const result = await q;
 
       assertType<typeof result, number>();
 
-      expect(result).toBe(id);
+      expect(result).toBe(Id);
 
       expectSql(
         q.toSQL(),
@@ -40,8 +35,8 @@ describe('get', () => {
     });
 
     it('should support chaining the value with operators', async () => {
-      await User.insert(userData);
-      const q = User.get('id').gt(0);
+      await db.user.insert(UserData);
+      const q = db.user.get('Id').gt(0);
 
       const result = await q;
 
@@ -82,7 +77,7 @@ describe('get', () => {
     });
 
     it('should select raw and return a single value', async () => {
-      const q = User.get(testDb.sql`count(*)::int`.type((t) => t.integer()));
+      const q = db.user.get(testDb.sql`count(*)::int`.type((t) => t.integer()));
 
       const result = await q;
 
@@ -99,10 +94,10 @@ describe('get', () => {
     });
 
     it('should select raw from a callback and return a single value', async () => {
-      await User.create({ ...userData, age: 20 });
+      await db.user.create({ ...UserData, Age: 20 });
 
-      const q = User.get((q) =>
-        testDb.sql`${q.ref('age')} + 1`.type((t) => t.integer()),
+      const q = db.user.get((q) =>
+        testDb.sql`${q.ref('Age')} + 1`.type((t) => t.integer()),
       );
 
       const result = await q;
@@ -175,21 +170,21 @@ describe('get', () => {
     });
 
     it('should throw if not found', async () => {
-      await expect(() => User.get('id')).rejects.toThrow(NotFoundError);
+      await expect(() => db.user.get('Id')).rejects.toThrow(NotFoundError);
     });
   });
 
   describe('getOptional', () => {
     it('should select column and return a single value when exists', async () => {
-      const { id } = await User.select('id').create(userData);
+      const { Id } = await db.user.select('Id').create(UserData);
 
-      const q = User.getOptional('id');
+      const q = db.user.getOptional('Id');
 
       const result = await q;
 
       assertType<typeof result, number | undefined>();
 
-      expect(result).toBe(id);
+      expect(result).toBe(Id);
 
       expectSql(
         q.toSQL(),
@@ -223,7 +218,7 @@ describe('get', () => {
     });
 
     it('should select raw and return a single value when exists', async () => {
-      const q = User.getOptional(
+      const q = db.user.getOptional(
         testDb.sql`count(*)::int`.type((t) => t.integer()),
       );
 
@@ -244,10 +239,10 @@ describe('get', () => {
     });
 
     it('should select raw from a callback and return a single value when exists', async () => {
-      await User.create({ ...userData, age: 20 });
+      await db.user.create({ ...UserData, Age: 20 });
 
-      const q = User.getOptional((q) =>
-        testDb.sql`${q.ref('age')} + 1`.type((t) => t.integer()),
+      const q = db.user.getOptional((q) =>
+        testDb.sql`${q.ref('Age')} + 1`.type((t) => t.integer()),
       );
 
       const result = await q;
@@ -324,7 +319,7 @@ describe('get', () => {
     });
 
     it('should return undefined if not found', async () => {
-      const q = User.getOptional('id');
+      const q = db.user.getOptional('Id');
 
       const result = await q;
 

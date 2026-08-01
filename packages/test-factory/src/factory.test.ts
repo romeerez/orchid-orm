@@ -1,8 +1,8 @@
 import { FactoryConfig, ormFactory, tableFactory } from './factory';
-import { db, User, BaseTable, Profile } from './test-utils';
+import { db, User, defineTable, Profile } from './test-utils';
 import { z, ZodObject, ZodRawShape } from 'zod/v4';
 import { orchidORMWithAdapter } from 'orchid-orm';
-import { ColumnsShape, DefaultColumnTypes } from 'pqb/internal';
+import { ColumnsShape } from 'pqb/internal';
 import {
   assertType,
   testAdapter,
@@ -10,7 +10,6 @@ import {
   testDbOptions,
   useTestDatabase,
 } from 'test-utils';
-import { ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { faker } from '@faker-js/faker';
 
 const t = zodColumnTypes;
@@ -77,11 +76,7 @@ describe('factory', () => {
       columns.image = t.string();
       columns.imageUrl = t.string();
 
-      class Table extends BaseTable {
-        readonly table = 'table';
-        noPrimaryKey = true;
-        columns = this.setColumns(() => columns);
-      }
+      const Table = defineTable('table', { noPrimaryKey: true }, () => columns);
 
       const db = orchidORMWithAdapter(
         { adapter: testAdapter },
@@ -210,13 +205,9 @@ describe('factory', () => {
     const date2000 = new Date(2000, 0, 1);
     const date2005 = new Date(2005, 0, 1);
 
-    class Table extends BaseTable {
-      readonly table = 'table';
-      noPrimaryKey = true;
-      columns = this.setColumns(() => ({
-        dateBetween: t.date().min(date2000).max(date2005),
-      }));
-    }
+    const Table = defineTable('table', { noPrimaryKey: true }, (t) => ({
+      dateBetween: t.date().min(date2000).max(date2005),
+    }));
 
     const db = orchidORMWithAdapter(
       { adapter: testAdapter },
@@ -297,13 +288,10 @@ describe('factory', () => {
     });
 
     it('should respect max which is set on column', () => {
-      class ProfileTable extends BaseTable {
-        readonly table = 'profile';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-          bio: t.text().min(100).max(120),
-        }));
-      }
+      const ProfileTable = defineTable('profile', (t) => ({
+        id: t.identity().primaryKey(),
+        bio: t.text().min(100).max(120),
+      }));
 
       const db = orchidORMWithAdapter(
         {
@@ -330,14 +318,11 @@ describe('factory', () => {
     });
 
     it('should support domain and custom type columns', () => {
-      class UserTable extends BaseTable {
-        readonly table = 'user';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-          name: t.domain('domainName').as(t.integer()),
-          password: t.type('customType').as(t.integer()),
-        }));
-      }
+      const UserTable = defineTable('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.domain('domainName').as(t.integer()),
+        password: t.type('customType').as(t.integer()),
+      }));
 
       const db = orchidORMWithAdapter(
         { ...testDbOptions, adapter: testAdapter },
@@ -713,15 +698,12 @@ describe('factory', () => {
 
   describe('unique columns', () => {
     const makeTable = <T extends ColumnsShape>(
-      fn: (t: DefaultColumnTypes<ZodSchemaConfig>) => T,
+      fn: (t: typeof zodColumnTypes) => T,
     ) => {
-      return class extends BaseTable {
-        readonly table = 'table';
-        columns = this.setColumns((t) => ({
-          id: t.identity().primaryKey(),
-          ...fn(zodColumnTypes),
-        }));
-      };
+      return defineTable('table', (t) => ({
+        id: t.identity().primaryKey(),
+        ...fn(zodColumnTypes),
+      }));
     };
 
     const max = 1;

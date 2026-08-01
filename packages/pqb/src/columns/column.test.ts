@@ -1,10 +1,11 @@
 import { Column } from './column';
 import { profileData, userData } from '../test-utils/pqb.test-utils';
 import { createDbWithAdapter } from '../query/db';
-import { columnCode, ColumnToCodeCtx } from './code';
+import { columnCode, ColumnToCodeCtx, referencesArgsToCode } from './code';
 import { Code } from './code';
 import {
   assertType,
+  defineTable,
   expectSql,
   testAdapter,
   testColumnTypes as td,
@@ -244,6 +245,30 @@ describe('column type', () => {
         ],
         '})',
       ]);
+    });
+
+    it('should use function-style table references in migration code', () => {
+      const Table = defineTable('foreignTable', { schema: 'schema' }, (t) => ({
+        id: t.integer(),
+      }));
+
+      expect(
+        column
+          .foreignKey(() => Table, 'id')
+          .toCode({ ...columnToCodeCtx, migration: true }, 'key'),
+      ).toBe(`t.column().foreignKey('schema.foreignTable', 'id')`);
+
+      expect(
+        referencesArgsToCode(
+          {
+            columns: ['key'],
+            fnOrTable: () => Table,
+            foreignColumns: ['id'],
+          },
+          false,
+          true,
+        ),
+      ).toEqual([`['key'],`, `'schema.foreignTable',`, `['id'],`]);
     });
   });
 

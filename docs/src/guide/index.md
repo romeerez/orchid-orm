@@ -78,7 +78,7 @@ Inserted values are properly handled to not allow SQL injections.
 <!-- prettier-ignore-start -->
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 const posts = await db.customer
   .select({
@@ -114,30 +114,24 @@ Other ORMs take different ways of defining models:
 - `TypeORM`, and `MikroORM` models rely on experimental TS decorators and require specific typescript settings.
 - `DeepKit` hacks the TS compiler entirely.
 
-With `Orchid ORM` you write table classes in a such way:
+With `Orchid ORM` you write table definitions in a such way:
 
 ```ts
-export type User = Selectable<UserTable>;
-export class UserTable extends BaseTable {
-  readonly table = 'user';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.string(), // `string` is varchar with 255 default limit
-    password: t.varchar(50), // 50 chars max
-    // adds createdAt and updatedAt with defaults:
-    ...t.timestamps(),
-  }));
+export const UserTable = defineTable('user', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.string(), // `string` is varchar with 255 default limit
+  password: t.varchar(50), // 50 chars max
+  // adds createdAt and updatedAt with defaults:
+  ...t.timestamps(),
+})).relations((user) => ({
+  // User has one Profile, user.id -> profile.userId
+  // there are also belongsTo, hasMany, hasAndBelongsToMany
+  profile: user('id')
+    .hasOne(() => ProfileTable('userId'))
+    .required(),
+}));
 
-  relations = {
-    // User has one Profile, user.id -> profile.userId
-    // there are also belongsTo, hasMany, hasAndBelongsToMany
-    profile: this.hasOne(() => ProfileTable, {
-      required: true,
-      columns: ['id'],
-      references: ['userId'],
-    }),
-  };
-}
+export type User = Selectable<typeof UserTable>;
 ```
 
 There is no additional language to use and recompile, no decorators, no TS compiler tweaks, and no type safety compromises.

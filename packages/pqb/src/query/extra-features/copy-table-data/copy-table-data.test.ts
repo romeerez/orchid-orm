@@ -1,11 +1,11 @@
-import { Snake, User } from '../../../test-utils/pqb.test-utils';
-import { expectSql, useTestDatabase } from 'test-utils';
+import { Snake } from '../../../test-utils/pqb.test-utils';
+import { db, expectSql, useTestDatabase } from 'test-utils';
 import { copyTableData } from './copy-table-data';
 
 describe('copy', () => {
   useTestDatabase();
 
-  const columns = ['name', 'password'] as ['name', 'password'];
+  const columns = ['Name', 'Password'] as ['Name', 'Password'];
   const options = {
     columns: columns,
     format: 'csv' as const,
@@ -27,7 +27,7 @@ describe('copy', () => {
     ${'to'}   | ${'TO'}
   `('$method', ({ method, sql }) => {
     it(`should copy ${method}`, () => {
-      const q = copyTableData(User, {
+      const q = copyTableData(db.user, {
         [method as 'from']: 'path-to-file',
       });
 
@@ -35,7 +35,7 @@ describe('copy', () => {
     });
 
     it(`should copy ${method} with options`, () => {
-      const q = copyTableData(User, {
+      const q = copyTableData(db.user, {
         [method as 'from']: { program: 'program' },
         ...options,
       });

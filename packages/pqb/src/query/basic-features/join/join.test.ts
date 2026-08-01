@@ -1,19 +1,14 @@
 import {
-  Chat,
-  chatData,
   expectQueryNotMutated,
-  Message,
   messageData,
   Snake,
   snakeSelectAllWithTable,
-  User,
-  userData,
-  userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
 import { testWhere, testWhereExists } from '../where/test-where';
 import { testJoin } from './test-join';
 import {
   assertType,
+  ChatData,
   db,
   expectSql,
   ProfileSelectAll,
@@ -26,23 +21,27 @@ import {
 import { isQueryNone } from '../../extra-features/none/none';
 import { quoteTableWithSchemaAndAlias } from '../../sql/sql';
 
-const quotedUser = quoteTableWithSchemaAndAlias(User);
+const Message = db.message.includeDeleted();
+
+const quotedUser = quoteTableWithSchemaAndAlias(db.user);
 const quotedMessage = quoteTableWithSchemaAndAlias(Message);
 const quotedSnake = quoteTableWithSchemaAndAlias(Snake);
 const quotedProfile = quoteTableWithSchemaAndAlias(db.profile);
 
 const insertMessage = async () => {
-  const userId = await User.get('id').insert(userData);
-  const chatId = await Chat.get('idOfChat').insert(chatData);
-  await Message.insert({ ...messageData, authorId: userId, chatId });
+  const userId = await db.user
+    .get('Id')
+    .insert({ ...UserData, UserKey: 'user-key' });
+  const chatId = await db.chat.get('IdOfChat').insert(ChatData);
+  await Message.insert({ ...messageData, AuthorId: userId, ChatId: chatId });
 };
 
 it('should not accept wrong column as join arg', () => {
   // @ts-expect-error wrong message column
-  User.join(Message, 'Message.wrong', 'User.id');
+  db.user.join(db.message, 'Message.wrong', 'User.Id');
 
   // @ts-expect-error wrong user column
-  User.join(Message, 'Message.id', 'User.wrong');
+  db.user.join(db.message, 'Message.id', 'User.wrong');
 });
 
 describe('using db', () => {
@@ -51,8 +50,9 @@ describe('using db', () => {
   it('should ignore duplicated joins', async () => {
     await insertMessage();
 
-    const q = User.join(Message, 'Message.authorId', 'User.id')
-      .join(Message, 'Message.authorId', 'User.id')
+    const q = db.user
+      .join(Message, 'Message.AuthorId', 'User.Id')
+      .join(Message, 'Message.AuthorId', 'User.Id')
       .select('Message.updatedAt');
 
     expectSql(
@@ -101,24 +101,24 @@ describe('using db', () => {
 describe('join', () => {
   testJoin({
     method: 'join',
-    joinTo: User,
-    pkey: 'User.id',
+    joinTo: db.user,
+    pkey: 'User.Id',
     joinTarget: Message,
-    fkey: 'authorId',
-    text: 'text',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM ${quotedUser}`,
+    fkey: 'AuthorId',
+    text: 'Text',
+    selectFrom: `SELECT ${UserSelectAllWithTable} FROM ${quotedUser}`,
   });
 });
 
 describe('join table with named columns', () => {
   testJoin({
     method: 'join',
-    joinTo: User,
-    pkey: 'User.name',
+    joinTo: db.user,
+    pkey: 'User.Name',
     joinTarget: Snake,
     fkey: 'tailLength',
     text: 'snakeName',
-    selectFrom: `SELECT ${userTableColumnsSql} FROM ${quotedUser}`,
+    selectFrom: `SELECT ${UserSelectAllWithTable} FROM ${quotedUser}`,
   });
 });
 
@@ -127,9 +127,9 @@ describe('join to table with named columns', () => {
     method: 'join',
     joinTo: Snake,
     pkey: 'Snake.snakeName',
-    joinTarget: User,
-    fkey: 'name',
-    text: 'name',
+    joinTarget: db.user,
+    fkey: 'Name',
+    text: 'Name',
     selectFrom: `SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}`,
   });
 });
@@ -142,10 +142,10 @@ describe.each`
   ${'fullJoin'}  | ${'FULL JOIN'}
 `('$method', ({ method, sql }) => {
   it('should call _join with proper join type', () => {
-    const q = User.clone();
+    const q = db.user.clone();
     q.clone = (() => q) as unknown as typeof q.clone;
 
-    const args = ['authorId', 'id'] as const;
+    const args = ['AuthorId', 'Id'] as const;
 
     q[method as 'join'](Message, ...args);
 
@@ -155,10 +155,10 @@ describe.each`
 
 describe('join callback with query builder', () => {
   it('should have .on and .onOr properly working', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     const expectedSql = `
-      SELECT ${userTableColumnsSql} FROM ${quotedUser}
+      SELECT ${UserSelectAllWithTable} FROM ${quotedUser}
       JOIN ${quotedMessage}
         ON "Message"."author_id" = "User"."id"
         OR "Message"."text" = "User"."name"
@@ -167,7 +167,7 @@ describe('join callback with query builder', () => {
     expectSql(
       q
         .join(Message, (q) =>
-          q.on('Message.authorId', 'User.id').orOn('Message.text', 'User.name'),
+          q.on('Message.AuthorId', 'User.Id').orOn('Message.Text', 'User.Name'),
         )
         .toSQL(),
       expectedSql,
@@ -177,8 +177,8 @@ describe('join callback with query builder', () => {
       q
         .join(Message, (q) =>
           q
-            .on('Message.authorId', '=', 'User.id')
-            .orOn('Message.text', '=', 'User.name'),
+            .on('Message.AuthorId', '=', 'User.Id')
+            .orOn('Message.Text', '=', 'User.Name'),
         )
         .toSQL(),
       expectedSql,
@@ -196,19 +196,19 @@ describe('join callback with query builder', () => {
     `;
 
     expectSql(
-      Snake.join(User, (q) =>
+      Snake.join(db.user, (q) =>
         q
-          .on('User.name', 'Snake.snakeName')
-          .orOn('User.id', 'Snake.tailLength'),
+          .on('User.Name', 'Snake.snakeName')
+          .orOn('User.Id', 'Snake.tailLength'),
       ).toSQL(),
       expectedSql,
     );
 
     expectSql(
-      Snake.join(User, (q) =>
+      Snake.join(db.user, (q) =>
         q
-          .on('User.name', '=', 'Snake.snakeName')
-          .orOn('User.id', '=', 'Snake.tailLength'),
+          .on('User.Name', '=', 'Snake.snakeName')
+          .orOn('User.Id', '=', 'Snake.tailLength'),
       ).toSQL(),
       expectedSql,
     );
@@ -216,38 +216,44 @@ describe('join callback with query builder', () => {
 
   it('should have .on and .onOr properly working when joining table with named columns', () => {
     const reverseSql = `
-      SELECT ${userTableColumnsSql} FROM ${quotedUser}
+      SELECT ${UserSelectAllWithTable} FROM ${quotedUser}
       JOIN ${quotedSnake}
         ON "Snake"."snake_name" = "User"."name"
         OR "Snake"."tail_length" = "User"."id"
     `;
 
     expectSql(
-      User.join(Snake, (q) =>
-        q
-          .on('Snake.snakeName', 'User.name')
-          .orOn('Snake.tailLength', 'User.id'),
-      ).toSQL(),
+      db.user
+        .join(Snake, (q) =>
+          q
+            .on('Snake.snakeName', 'User.Name')
+            .orOn('Snake.tailLength', 'User.Id'),
+        )
+        .toSQL(),
       reverseSql,
     );
 
     expectSql(
-      User.join(Snake, (q) =>
-        q
-          .on('Snake.snakeName', '=', 'User.name')
-          .orOn('Snake.tailLength', '=', 'User.id'),
-      ).toSQL(),
+      db.user
+        .join(Snake, (q) =>
+          q
+            .on('Snake.snakeName', '=', 'User.Name')
+            .orOn('Snake.tailLength', '=', 'User.Id'),
+        )
+        .toSQL(),
       reverseSql,
     );
   });
 
   it('should have .onJsonPathEquals method', () => {
     expectSql(
-      User.join(User.as('otherUser'), (q) =>
-        q.onJsonPathEquals('otherUser.data', '$.name', 'User.data', '$.name'),
-      ).toSQL(),
+      db.user
+        .join(db.user.as('otherUser'), (q) =>
+          q.onJsonPathEquals('otherUser.Data', '$.name', 'User.Data', '$.name'),
+        )
+        .toSQL(),
       `
-        SELECT ${userTableColumnsSql} FROM ${quotedUser}
+        SELECT ${UserSelectAllWithTable} FROM ${quotedUser}
         JOIN "schema"."user" "otherUser"
           ON jsonb_path_query_first("otherUser"."data", $1) = jsonb_path_query_first("User"."data", $2)
       `,
@@ -276,17 +282,19 @@ describe('join callback with query builder', () => {
 
   describe('where methods', () => {
     describe('using main table columns', () => {
-      const sql = `SELECT ${userTableColumnsSql} FROM ${quotedUser} JOIN ${quotedMessage} ON `;
+      const sql = `SELECT ${UserSelectAllWithTable} FROM ${quotedUser} JOIN ${quotedMessage} ON `;
       const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake} JOIN ${quotedUser} ON `;
 
       it('should use main table column in .where', () => {
-        const q = User.join(Message, (q) => q.where({ 'User.name': 'name' }));
+        const q = db.user.join(Message, (q) =>
+          q.where({ 'User.Name': 'name' }),
+        );
 
         expectSql(q.toSQL(), sql + `"User"."name" = $1`, ['name']);
       });
 
       it('should support named column of main table in .where', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q.where({ 'Snake.snakeName': 'name' }),
         );
 
@@ -294,15 +302,15 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .whereNot', () => {
-        const q = User.join(Message, (q) =>
-          q.whereNot({ 'User.name': 'name' }),
+        const q = db.user.join(Message, (q) =>
+          q.whereNot({ 'User.Name': 'name' }),
         );
 
         expectSql(q.toSQL(), sql + `NOT "User"."name" = $1`, ['name']);
       });
 
       it('should use named main table column in .whereNot', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q.whereNot({ 'Snake.snakeName': 'name' }),
         );
 
@@ -312,8 +320,8 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .or', () => {
-        const q = User.join(Message, (q) =>
-          q.orWhere({ 'User.name': 'name' }, { 'User.age': 20 }),
+        const q = db.user.join(Message, (q) =>
+          q.orWhere({ 'User.Name': 'name' }, { 'User.Age': 20 }),
         );
 
         expectSql(q.toSQL(), sql + `"User"."name" = $1 OR "User"."age" = $2`, [
@@ -323,7 +331,7 @@ describe('join callback with query builder', () => {
       });
 
       it('should use named main table column in .or', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q.orWhere({ 'Snake.snakeName': 'name' }, { 'Snake.tailLength': 20 }),
         );
 
@@ -335,8 +343,8 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .orWhereNot', () => {
-        const q = User.join(Message, (q) =>
-          q.orWhereNot({ 'User.name': 'name' }, { 'User.age': 20 }),
+        const q = db.user.join(Message, (q) =>
+          q.orWhereNot({ 'User.Name': 'name' }, { 'User.Age': 20 }),
         );
 
         expectSql(
@@ -347,7 +355,7 @@ describe('join callback with query builder', () => {
       });
 
       it('should use named main table column in .orWhereNot', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q.orWhereNot(
             { 'Snake.snakeName': 'name' },
             { 'Snake.tailLength': 20 },
@@ -363,13 +371,15 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .whereIn', () => {
-        const q = User.join(Message, (q) => q.whereIn('User.name', ['name']));
+        const q = db.user.join(Message, (q) =>
+          q.whereIn('User.Name', ['name']),
+        );
 
         expectSql(q.toSQL(), sql + `"User"."name" IN ($1)`, ['name']);
       });
 
       it('should use named main table column in .whereIn', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q.whereIn('Snake.snakeName', ['name']),
         );
 
@@ -379,8 +389,8 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .orWhereIn', () => {
-        const q = User.join(Message, (q) =>
-          q.where({ 'User.age': 20 }).orWhereIn('User.name', ['name']),
+        const q = db.user.join(Message, (q) =>
+          q.where({ 'User.Age': 20 }).orWhereIn('User.Name', ['name']),
         );
 
         expectSql(
@@ -391,7 +401,7 @@ describe('join callback with query builder', () => {
       });
 
       it('should use named main table column in .orWhereIn', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q
             .where({ 'Snake.tailLength': 20 })
             .orWhereIn('Snake.snakeName', ['name']),
@@ -406,15 +416,15 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .whereNotIn', () => {
-        const q = User.join(Message, (q) =>
-          q.whereNotIn('User.name', ['name']),
+        const q = db.user.join(Message, (q) =>
+          q.whereNotIn('User.Name', ['name']),
         );
 
         expectSql(q.toSQL(), sql + `NOT "User"."name" IN ($1)`, ['name']);
       });
 
       it('should use named main table column in .whereNotIn', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q.whereNotIn('Snake.snakeName', ['name']),
         );
 
@@ -424,8 +434,8 @@ describe('join callback with query builder', () => {
       });
 
       it('should use main table column in .orWhereNotIn', () => {
-        const q = User.join(Message, (q) =>
-          q.where({ 'User.age': 20 }).orWhereNotIn('User.name', ['name']),
+        const q = db.user.join(Message, (q) =>
+          q.where({ 'User.Age': 20 }).orWhereNotIn('User.Name', ['name']),
         );
 
         expectSql(
@@ -436,7 +446,7 @@ describe('join callback with query builder', () => {
       });
 
       it('should use named main table column in .orWhereNotIn', () => {
-        const q = Snake.join(User, (q) =>
+        const q = Snake.join(db.user, (q) =>
           q
             .where({ 'Snake.tailLength': 20 })
             .orWhereNotIn('Snake.snakeName', ['name']),
@@ -619,7 +629,7 @@ describe('implicit lateral joins', () => {
       .join(db.message, (q) =>
         q
           .on('Message.AuthorId', 'User.Id')
-          .where({ Text: messageData.text })
+          .where({ Text: messageData.Text })
           .limit(5),
       )
       .select('Message.updatedAt');
@@ -637,7 +647,7 @@ describe('implicit lateral joins', () => {
           LIMIT $2
         ) "Message" ON true
       `,
-      [messageData.text, 5],
+      [messageData.Text, 5],
     );
 
     const res = await q;

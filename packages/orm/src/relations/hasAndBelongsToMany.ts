@@ -4,7 +4,7 @@ import {
   RelationThunkBase,
 } from './relations';
 import { NotFoundError, OrchidOrmInternalError, Query } from 'pqb';
-import { ORMTableInput } from '../orm-table/base-table';
+import { ORMTableInput } from '../orm-table/legacy-table';
 import {
   _queryCreateManyFrom,
   _queryCreateMany,
@@ -83,6 +83,7 @@ export interface HasAndBelongsToManyOptions<
   through: {
     schema?: QuerySchema;
     table: string;
+    snakeCase?: boolean;
     columns: string[];
     references: (keyof Related['columns']['shape'])[];
     foreignKey?: boolean | TableData.References.Options;
@@ -375,7 +376,10 @@ export const makeHasAndBelongsToManyMethod = (
   const foreignKeys = snakeCase
     ? [...originalForeignKeys]
     : originalForeignKeys;
-  const joinTable = options.through.table;
+  const joinTableSnakeCase = snakeCase && options.through.snakeCase !== false;
+  const joinTable = joinTableSnakeCase
+    ? toSnakeCase(options.through.table)
+    : options.through.table;
   const originalThroughForeignKeys = options.through.columns;
   const throughForeignKeys = snakeCase
     ? [...originalThroughForeignKeys]

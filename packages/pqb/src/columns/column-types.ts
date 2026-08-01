@@ -68,7 +68,7 @@ export interface DefaultColumnTypes<
   doublePrecision: SchemaConfig['doublePrecision'];
   identity(
     options?: TableData.Identity,
-  ): Column.Modifiers.HasDefault<ReturnType<SchemaConfig['integer']>>;
+  ): Column.HasDefault<ReturnType<SchemaConfig['integer']>>;
   smallSerial: SchemaConfig['smallSerial'];
   serial: SchemaConfig['serial'];
   bigSerial: SchemaConfig['bigSerial'];

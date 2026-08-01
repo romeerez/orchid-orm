@@ -1,5 +1,5 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
-import { colors, NonUniqDataItem } from 'pqb/internal';
+import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
+import { colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),
@@ -15,22 +15,24 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('foreignKeys', () => {
-  const { arrange, act, assert, table, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
-  const someTable = class Some extends BaseTable {
-    table = 'some';
-    columns = this.setColumns((t) => ({
+  const someTable = defineTable(
+    'some',
+    { noPrimaryKey: false, nameInDb: 'some' },
+    (t) => ({
       iD: t.integer().primaryKey(),
-    }));
-  };
+    }),
+  );
 
-  const someCompositeTable = class Some extends BaseTable {
-    table = 'some';
-    columns = this.setColumns((t) => ({
+  const someCompositeTable = defineTable(
+    'some',
+    { noPrimaryKey: false, nameInDb: 'some' },
+    (t) => ({
       fA: t.text().primaryKey(),
       fB: t.text().primaryKey(),
-    }));
-  };
+    }),
+  );
 
   it('should not be dropped in ignored tables', async () => {
     await arrange({
@@ -61,19 +63,19 @@ describe('foreignKeys', () => {
       },
       tables: [
         someTable,
-        table(
+        defineTable(
+          'inSchemaTable',
+          { schema: 'schema', noPrimaryKey: true, nameInDb: 'inSchemaTable' },
           (t) => ({
             someId: t.integer(),
           }),
-          undefined,
-          { name: 'schema.inSchemaTable' },
         ),
-        table(
+        defineTable(
+          'publicTable',
+          { noPrimaryKey: true, nameInDb: 'publicTable' },
           (t) => ({
             someId: t.integer(),
           }),
-          undefined,
-          { name: 'publicTable' },
         ),
       ],
     });
@@ -96,11 +98,8 @@ describe('foreignKeys', () => {
       },
       tables: [
         someTable,
-        table((t) => ({
-          someId: t
-            .name('custom_name')
-            .integer()
-            .foreignKey(() => someTable, 'iD'),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.name('custom_name').integer().foreignKey('some', 'iD'),
         })),
       ],
     });
@@ -127,21 +126,22 @@ change(async (db) => {
   });
 
   it('should match foreign keys to table classes by their database names', async () => {
-    class AccountTable extends BaseTable {
-      table = 'Account';
-      nameInDb = 'app_accounts';
-      columns = this.setColumns((t) => ({
+    const AccountTable = defineTable(
+      'Account',
+      { nameInDb: 'app_accounts', noPrimaryKey: false },
+      (t) => ({
         id: t.identity().primaryKey(),
-      }));
-    }
+      }),
+    );
 
-    class AccountEventTable extends BaseTable {
-      table = 'AccountEvent';
-      columns = this.setColumns((t) => ({
+    const AccountEventTable = defineTable(
+      'AccountEvent',
+      { nameInDb: 'account_event', noPrimaryKey: false },
+      (t) => ({
         id: t.identity().primaryKey(),
-        accountId: t.integer().foreignKey(() => AccountTable, 'id'),
-      }));
-    }
+        accountId: t.integer().foreignKey('app_accounts', 'id'),
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -164,14 +164,10 @@ change(async (db) => {
   });
 
   it('should create a self-referencing column foreign key', async () => {
-    class Table extends BaseTable {
-      table = 'table';
-      // @ts-expect-error what can I do
-      columns = this.setColumns((t) => ({
-        iD: t.integer().primaryKey(),
-        someId: t.integer().foreignKey(() => Table, 'iD'),
-      }));
-    }
+    const Table = defineTable('table', { noPrimaryKey: false }, (t) => ({
+      iD: t.integer().primaryKey(),
+      someId: t.integer().foreignKey('table', 'iD'),
+    }));
 
     await arrange({
       async prepareDb(db) {
@@ -204,6 +200,46 @@ change(async (db) => {
   ${green('+ add foreign key')} on (some_id) to table(iD)`);
   });
 
+  it('should create a column foreign key to a function-style table reference', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          iD: t.integer().primaryKey(),
+        }));
+
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer(),
+        }));
+      },
+      tables: [
+        someTable,
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey(() => someTable, 'iD'),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.add(
+      t.foreignKey(
+        ['some_id'],
+        'some',
+        ['iD'],
+      ),
+    ),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${green('+ add foreign key')} on (some_id) to some(iD)`);
+  });
+
   it('should drop a column foreign key', async () => {
     await arrange({
       async prepareDb(db) {
@@ -217,7 +253,7 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           someId: t.integer(),
         })),
       ],
@@ -260,8 +296,8 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'iD'),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'iD'),
         })),
       ],
     });
@@ -300,8 +336,8 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'iD', {
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'iD', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -334,8 +370,8 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'iD', {
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'iD', {
             name: 'fkeyName',
             match: 'FULL',
             onUpdate: 'CASCADE',
@@ -401,14 +437,10 @@ change(async (db) => {
       },
       tables: [
         someCompositeTable,
-        table(
-          (t) => ({
-            aA: t.text(),
-            bB: t.text(),
-          }),
-          (t) =>
-            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB']),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+        })).foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
       ],
     });
 
@@ -434,19 +466,12 @@ change(async (db) => {
   });
 
   it('should create a composite self-referencing foreign key', async () => {
-    class Table extends BaseTable {
-      table = 'table';
-      columns = this.setColumns(
-        (t) => ({
-          fA: t.text().primaryKey(),
-          fB: t.text().primaryKey(),
-          aA: t.text(),
-          bB: t.text(),
-        }),
-        (t): NonUniqDataItem =>
-          t.foreignKey(['aA', 'bB'], () => Table, ['fA', 'fB']),
-      );
-    }
+    const Table = defineTable('table', { noPrimaryKey: false }, (t) => ({
+      fA: t.text().primaryKey(),
+      fB: t.text().primaryKey(),
+      aA: t.text(),
+      bB: t.text(),
+    })).foreignKey(['aA', 'bB'], 'table', ['fA', 'fB']);
 
     await arrange({
       async prepareDb(db) {
@@ -501,7 +526,7 @@ change(async (db) => {
       },
       tables: [
         someCompositeTable,
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           aA: t.text(),
           bB: t.text(),
         })),
@@ -549,14 +574,10 @@ change(async (db) => {
       },
       tables: [
         someCompositeTable,
-        table(
-          (t) => ({
-            aA: t.text(),
-            bB: t.text(),
-          }),
-          (t) =>
-            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB']),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+        })).foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
       ],
     });
 
@@ -588,14 +609,10 @@ change(async (db) => {
       },
       tables: [
         someCompositeTable,
-        table(
-          (t) => ({
-            aA: t.text(),
-            bB: t.text(),
-          }),
-          (t) =>
-            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB']),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+        })).foreignKey(['aA', 'bB'], 'some', ['fA', 'fB']),
       ],
     });
 
@@ -654,16 +671,12 @@ change(async (db) => {
       },
       tables: [
         someCompositeTable,
-        table(
-          (t) => ({
-            aA: t.text(),
-            bB: t.text(),
-          }),
-          (t) =>
-            t.foreignKey(['aA', 'bB'], () => someCompositeTable, ['fA', 'fB'], {
-              name: 'toName',
-            }),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+        })).foreignKey(['aA', 'bB'], 'some', ['fA', 'fB'], {
+          name: 'toName',
+        }),
       ],
     });
 
@@ -694,8 +707,8 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'iD'),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'iD'),
         })),
       ],
     });
@@ -718,14 +731,10 @@ change(async (db) => {
   });
 
   it('should add a self-referencing foreign key together with a column', async () => {
-    class Table extends BaseTable {
-      table = 'table';
-      // @ts-expect-error what can I do
-      columns = this.setColumns((t) => ({
-        iD: t.integer().primaryKey(),
-        someId: t.integer().foreignKey(() => Table, 'iD'),
-      }));
-    }
+    const Table = defineTable('table', { noPrimaryKey: false }, (t) => ({
+      iD: t.integer().primaryKey(),
+      someId: t.integer().foreignKey('table', 'iD'),
+    }));
 
     await arrange({
       async prepareDb(db) {
@@ -764,7 +773,10 @@ change(async (db) => {
           someId: t.integer().foreignKey('some', 'iD'),
         }));
       },
-      tables: [someTable, table()],
+      tables: [
+        someTable,
+        defineTable('table', { noPrimaryKey: true }, () => ({})),
+      ],
     });
 
     await act();
@@ -797,8 +809,8 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
-          someId: t.integer().foreignKey(() => someTable, 'iD'),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          someId: t.integer().foreignKey('some', 'iD'),
         })),
       ],
     });
@@ -823,14 +835,10 @@ change(async (db) => {
   });
 
   it('should add a self-referencing foreign key in a column change', async () => {
-    class Table extends BaseTable {
-      table = 'table';
-      // @ts-expect-error what can I do
-      columns = this.setColumns((t) => ({
-        iD: t.integer().primaryKey(),
-        someId: t.integer().foreignKey(() => Table, 'iD'),
-      }));
-    }
+    const Table = defineTable('table', { noPrimaryKey: false }, (t) => ({
+      iD: t.integer().primaryKey(),
+      someId: t.integer().foreignKey('table', 'iD'),
+    }));
 
     await arrange({
       async prepareDb(db) {
@@ -874,7 +882,7 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           someId: t.integer(),
         })),
       ],
@@ -919,14 +927,10 @@ change(async (db) => {
       },
       tables: [
         someCompositeTable,
-        table(
-          (t) => ({
-            aA: t.text(),
-            cC: t.text(),
-          }),
-          (t) =>
-            t.foreignKey(['aA', 'cC'], () => someCompositeTable, ['fA', 'fB']),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          cC: t.text(),
+        })).foreignKey(['aA', 'cC'], 'some', ['fA', 'fB']),
       ],
       selects: [1],
     });
@@ -954,13 +958,14 @@ ${yellow('~ rename constraint')} on table table: table_a_a_b_b_fkey ${yellow(
   });
 
   it('should not be recreated when a foreign column is renamed', async () => {
-    class Some extends BaseTable {
-      table = 'some';
-      columns = this.setColumns((t) => ({
+    const Some = defineTable(
+      'some',
+      { noPrimaryKey: false, nameInDb: 'some' },
+      (t) => ({
         fA: t.text().primaryKey(),
         fC: t.text().primaryKey(),
-      }));
-    }
+      }),
+    );
 
     await arrange({
       async prepareDb(db) {
@@ -981,13 +986,10 @@ ${yellow('~ rename constraint')} on table table: table_a_a_b_b_fkey ${yellow(
       },
       tables: [
         Some,
-        table(
-          (t) => ({
-            aA: t.text(),
-            bB: t.text(),
-          }),
-          (t) => t.foreignKey(['aA', 'bB'], () => Some, ['fA', 'fC']),
-        ),
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+        })).foreignKey(['aA', 'bB'], 'some', ['fA', 'fC']),
       ],
       selects: [1],
     });
@@ -1022,7 +1024,7 @@ change(async (db) => {
       },
       tables: [
         someTable,
-        table((t) => ({
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
           someId: t.integer().foreignKey('some', 'iD'),
         })),
       ],
@@ -1057,23 +1059,15 @@ ${yellow('~ change table')} table:
 
   // https://github.com/romeerez/orchid-orm/issues/348
   it('should not be added when an unrelated column is added', async () => {
-    class A extends BaseTable {
-      readonly table = 'a';
+    const A = defineTable('a', { noPrimaryKey: false, nameInDb: 'a' }, (t) => ({
+      id: t.identity({ always: true }).primaryKey(),
+      name: t.text(),
+    }));
 
-      columns = this.setColumns((t) => ({
-        id: t.identity({ always: true }).primaryKey(),
-        name: t.text(),
-      }));
-    }
-
-    class B extends BaseTable {
-      readonly table = 'b';
-
-      columns = this.setColumns((t) => ({
-        id: t.identity({ always: true }).primaryKey(),
-        aId: t.integer().foreignKey(() => A, 'id'),
-      }));
-    }
+    const B = defineTable('b', { noPrimaryKey: false, nameInDb: 'b' }, (t) => ({
+      id: t.identity({ always: true }).primaryKey(),
+      aId: t.integer().foreignKey('a', 'id'),
+    }));
 
     await arrange({
       async prepareDb(db) {
@@ -1123,22 +1117,21 @@ change(async (db) => {
         }));
       },
       tables: [
-        class Table extends BaseTable {
-          table = 'reallyLongTableNameConsistingOfSeveralWords';
-          noPrimaryKey = true;
-          columns = this.setColumns(
-            (t) => ({
-              longNameForTheFirstColumn: t.text(),
-              longNameForTheSecondColumn: t.text(),
-            }),
-            (t) =>
-              t.foreignKey(
-                ['longNameForTheFirstColumn', 'longNameForTheSecondColumn'],
-                () => someCompositeTable,
-                ['fA', 'fB'],
-              ),
-          );
-        },
+        defineTable(
+          'reallyLongTableNameConsistingOfSeveralWords',
+          {
+            nameInDb: 'really_long_table_name_consisting_of_several_words',
+            noPrimaryKey: true,
+          },
+          (t) => ({
+            longNameForTheFirstColumn: t.text(),
+            longNameForTheSecondColumn: t.text(),
+          }),
+        ).foreignKey(
+          ['longNameForTheFirstColumn', 'longNameForTheSecondColumn'],
+          'some',
+          ['fA', 'fB'],
+        ),
         someCompositeTable,
       ],
     });
@@ -1176,14 +1169,10 @@ change(async (db) => {
 
   // https://github.com/romeerez/orchid-orm/issues/482
   it('should create a table with a self-referencing column foreign key', async () => {
-    class Table extends BaseTable {
-      table = 'table';
-      // @ts-expect-error what can I do
-      columns = this.setColumns((t) => ({
-        iD: t.integer().primaryKey(),
-        someId: t.integer().foreignKey(() => Table, 'iD'),
-      }));
-    }
+    const Table = defineTable('table', { noPrimaryKey: false }, (t) => ({
+      iD: t.integer().primaryKey(),
+      someId: t.integer().foreignKey('table', 'iD'),
+    }));
 
     await arrange({
       tables: [Table],
@@ -1208,28 +1197,26 @@ change(async (db) => {
 
   describe('auto foreign keys', () => {
     it('should create a table with a foreign key for a belongsTo foreignKey option', async () => {
-      class A extends BaseTable {
-        table = 'a';
-        columns = this.setColumns((t) => ({
+      const A = defineTable(
+        'a',
+        { noPrimaryKey: false, nameInDb: 'a' },
+        (t) => ({
           iD: t.integer().primaryKey(),
-        }));
-      }
+        }),
+      );
 
-      class B extends BaseTable {
-        table = 'b';
-        columns = this.setColumns((t) => ({
+      const B = defineTable(
+        'b',
+        { noPrimaryKey: false, nameInDb: 'b' },
+        (t) => ({
           iD: t.integer().primaryKey(),
           aId: t.integer(),
-        }));
-
-        relations = {
-          a: this.belongsTo(() => A, {
-            columns: ['aId'],
-            references: ['iD'],
-            foreignKey: true,
-          }),
-        };
-      }
+        }),
+      ).relations((b) => ({
+        a: b('aId')
+          .belongsTo(() => A('iD'))
+          .foreignKey(),
+      }));
 
       await arrange({
         tables: [A, B],
@@ -1264,33 +1251,26 @@ change(async (db) => {
     });
 
     it('should create a join table with foreign keys for a hasAndBelongsToTable with foreignKey options', async () => {
-      class A extends BaseTable {
-        table = 'a';
-        columns = this.setColumns((t) => ({
+      const B = defineTable(
+        'b',
+        { noPrimaryKey: false, nameInDb: 'b' },
+        (t) => ({
           iD: t.integer().primaryKey(),
-        }));
+        }),
+      );
 
-        relations = {
-          b: this.hasAndBelongsToMany(() => B, {
-            columns: ['iD'],
-            references: ['aId'],
-            foreignKey: true,
-            through: {
-              table: 'c',
-              columns: ['bId'],
-              references: ['iD'],
-              foreignKey: true,
-            },
-          }),
-        };
-      }
-
-      class B extends BaseTable {
-        table = 'b';
-        columns = this.setColumns((t) => ({
+      const A = defineTable(
+        'a',
+        { noPrimaryKey: false, nameInDb: 'a' },
+        (t) => ({
           iD: t.integer().primaryKey(),
-        }));
-      }
+        }),
+      ).relations((a) => ({
+        b: a('iD')
+          .hasAndBelongsToMany(() => B('iD'))
+          .through('c', 'aId', 'bId')
+          .foreignKey(),
+      }));
 
       await arrange({
         tables: [A, B],

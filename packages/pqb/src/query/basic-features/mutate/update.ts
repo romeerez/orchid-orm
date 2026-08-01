@@ -143,7 +143,7 @@ interface UpdateManyBySelf extends UpdateSelf {
 
 // Data type for updateMany / updateManyOptional (PK-based)
 type UpdateManyData<T extends UpdateSelf> = ({
-  [K in keyof T['shape'] as T['shape'][K] extends Column.Modifiers.IsPrimaryKey<string>
+  [K in keyof T['shape'] as T['shape'][K] extends Column.IsPrimaryKey<string>
     ? K
     : never]: T['shape'][K]['__queryType'] | Expression;
 } & {

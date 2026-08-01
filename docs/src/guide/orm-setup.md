@@ -26,7 +26,7 @@ pnpm i orchid-orm
 The first argument is an ORM configuration options object, the ORM-specific options are described below,
 see also options for a `pg` adapter that could be passed via the same object: [client options](https://node-postgres.com/api/client) + [pool options](https://node-postgres.com/api/pool).
 
-The second argument is an object where keys are names and values are table classes (see next section for defining a table class).
+The second argument is an object where keys are names and values are table definitions (see next section for defining a table).
 
 Returns an instance with tables and some specific functions prefixed with a `$` sign to not overlap with your tables.
 
@@ -159,7 +159,7 @@ import { db } from './db';
 const user = await db.user.findBy({ name: 'John' });
 ```
 
-Don't use table classes directly, this won't work:
+Don't use table definitions directly, this won't work:
 
 ```ts
 // error

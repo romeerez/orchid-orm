@@ -2,15 +2,10 @@ import {
   DbSharedOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
-  TableDataFn,
-  TableDataItem,
   Adapter,
   emptyArray,
-  MaybeArray,
   noop,
-  Column,
   AdapterClass,
-  QuerySchema,
 } from 'pqb/internal';
 import {
   ChangeCallback,
@@ -28,9 +23,9 @@ import {
 import { generate } from '../generate';
 import fs from 'node:fs/promises';
 import { testConfig } from '../../migrations.test-utils';
-import { createBaseTable } from '../../../orm-table/base-table';
+import { createTableFactory } from '../../../orm-table/table';
 
-export const BaseTable = createBaseTable({
+export const { defineTable, defineView, sql } = createTableFactory({
   columnTypes: testColumnTypes,
   snakeCase: true,
 });
@@ -62,8 +57,8 @@ const rollbackError = new Error('Rollback');
 const arrange = async (arg: {
   config?: RakeDbConfig;
   options?: { databaseURL: string; schema?: string }[];
-  tables?: (typeof BaseTable)[];
-  views?: (typeof BaseTable.View)[];
+  tables?: unknown[];
+  views?: unknown[];
   selects?: number[];
   dbOptions?: DbSharedOptions;
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
@@ -90,13 +85,15 @@ const arrange = async (arg: {
               ],
             },
             views: arg.views
-              ? Object.fromEntries(
-                  arg.views.map((klass) => [klass.name, klass]),
-                )
+              ? (Object.fromEntries(
+                  arg.views.map((view, i) => [`view${i}`, view]),
+                ) as never)
               : undefined,
           },
           arg.tables
-            ? Object.fromEntries(arg.tables.map((klass) => [klass.name, klass]))
+            ? (Object.fromEntries(
+                arg.tables.map((table, i) => [`table${i}`, table]),
+              ) as never)
             : {},
         ),
       }),
@@ -165,22 +162,6 @@ const assert = {
   },
 };
 
-const table = <Shape extends Column.Shape.QueryInit>(
-  columns?: (t: typeof BaseTable.columnTypes) => Shape,
-  dataFn?: TableDataFn<Shape, MaybeArray<TableDataItem>>,
-  options?: { noPrimaryKey?: boolean; name?: string; schema?: QuerySchema },
-) => {
-  return class Table extends BaseTable {
-    schema = options?.schema;
-    table = options?.name ?? 'table';
-    nameInDb = options?.name ?? 'table';
-    noPrimaryKey = options?.noPrimaryKey ?? true;
-    columns = columns
-      ? this.setColumns(columns, dataFn)
-      : { shape: {}, data: [] };
-  };
-};
-
 export const useGeneratorsTestUtils = () => {
   beforeEach(jest.clearAllMocks);
 
@@ -197,7 +178,5 @@ export const useGeneratorsTestUtils = () => {
     act,
     assert,
     defaultConfig: testConfig,
-    BaseTable,
-    table,
   };
 };

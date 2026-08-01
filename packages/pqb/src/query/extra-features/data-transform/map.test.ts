@@ -1,13 +1,18 @@
-import { assertType, useTestDatabase } from 'test-utils';
-import { User, userData, UserRecord } from '../../../test-utils/pqb.test-utils';
+import {
+  assertType,
+  db,
+  useTestDatabase,
+  UserData,
+  UserDefaultSelect,
+} from 'test-utils';
 
 describe('map', () => {
   useTestDatabase();
 
   describe('without data', () => {
     it('should ignore a not found record', async () => {
-      const record = await User.findOptional(0).map((record) => {
-        assertType<typeof record, UserRecord>();
+      const record = await db.user.findOptional(0).map((record) => {
+        assertType<typeof record, UserDefaultSelect>();
         return 123;
       });
 
@@ -17,10 +22,10 @@ describe('map', () => {
     });
 
     it('should ignore a not found record in a sub query', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const record = await User.take().select({
-        sub: () => User.findOptional(0).map(() => 123),
+      const record = await db.user.take().select({
+        sub: () => db.user.findOptional(0).map(() => 123),
       });
 
       assertType<typeof record, { sub: number | undefined }>();
@@ -29,7 +34,7 @@ describe('map', () => {
     });
 
     it('should ignore null for an aggregate', async () => {
-      const sum = await User.sum('age').map((sum, i, data) => {
+      const sum = await db.user.sum('Age').map((sum, i, data) => {
         assertType<typeof i, number>();
         assertType<typeof sum | typeof data, string>();
         return 0;
@@ -41,12 +46,13 @@ describe('map', () => {
     });
 
     it('should ignore null for an aggregate in a sub query when not found', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const record = await User.take().select({
+      const record = await db.user.take().select({
         sub: () =>
-          User.where({ id: 0 })
-            .sum('age')
+          db.user
+            .where({ Id: 0 })
+            .sum('Age')
             .map(() => 123),
       });
 
@@ -58,11 +64,12 @@ describe('map', () => {
 
   describe('with data', () => {
     beforeAll(async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
     });
 
     it('should not apply map when doing aggregations', async () => {
-      const res = await User.select('name')
+      const res = await db.user
+        .select('Name')
         .map(() => false)
         .count();
 
@@ -72,17 +79,17 @@ describe('map', () => {
     });
 
     it('should map multiple records', async () => {
-      const res = await User.select('name', 'createdAt').map(function (
+      const res = await db.user.select('Name', 'createdAt').map(function (
         this: string,
         user,
         i,
         data,
       ) {
         return {
-          nameLength: user.name.length,
+          nameLength: user.Name.length,
           createdAt: user.createdAt,
           index: i,
-          names: data.map((user) => user.name),
+          names: data.map((user) => user.Name),
           self: this,
         };
       }, 'self');
@@ -100,20 +107,21 @@ describe('map', () => {
 
       expect(res).toEqual([
         {
-          nameLength: userData.name.length,
+          nameLength: UserData.Name.length,
           createdAt: expect.any(Date),
           index: 0,
-          names: [userData.name],
+          names: [UserData.Name],
           self: 'self',
         },
       ]);
     });
 
     it('should map a single record', async () => {
-      const res = await User.select('name', 'createdAt')
+      const res = await db.user
+        .select('Name', 'createdAt')
         .take()
         .map((user, i, value) => ({
-          nameLength: user.name.length,
+          nameLength: user.Name.length,
           createdAt: user.createdAt,
           i,
           firstArgumentEqualsThird: user === value,
@@ -130,7 +138,7 @@ describe('map', () => {
       >();
 
       expect(res).toEqual({
-        nameLength: userData.name.length,
+        nameLength: UserData.Name.length,
         createdAt: expect.any(Date),
         i: 0,
         firstArgumentEqualsThird: true,
@@ -138,25 +146,25 @@ describe('map', () => {
     });
 
     it('should transform records in a sub-query', async () => {
-      const res = await User.select('id', {
+      const res = await db.user.select('Id', {
         users: () =>
-          User.select('name', 'createdAt').map((user) => ({
-            nameLength: user.name.length,
+          db.user.select('Name', 'createdAt').map((user) => ({
+            nameLength: user.Name.length,
             createdAt: user.createdAt,
           })),
       });
 
       assertType<
         typeof res,
-        { id: number; users: { nameLength: number; createdAt: Date }[] }[]
+        { Id: number; users: { nameLength: number; createdAt: Date }[] }[]
       >();
 
       expect(res).toEqual([
         {
-          id: expect.any(Number),
+          Id: expect.any(Number),
           users: [
             {
-              nameLength: userData.name.length,
+              nameLength: UserData.Name.length,
               createdAt: expect.any(Date),
             },
           ],
@@ -167,7 +175,7 @@ describe('map', () => {
     it('should not be called when there is no records for takeOptional', async () => {
       const fn = jest.fn();
 
-      const res = await User.findOptional(0).map(fn);
+      const res = await db.user.findOptional(0).map(fn);
 
       expect(res).toBe(undefined);
       expect(fn).not.toHaveBeenCalled();
@@ -175,8 +183,9 @@ describe('map', () => {
 
     describe('nested map', () => {
       it('should transform `all` result into `pluck`', async () => {
-        const res = await User.select({
-          nested: () => User.select('name').map(({ name }) => `${name} mapped`),
+        const res = await db.user.select({
+          nested: () =>
+            db.user.select('Name').map(({ Name }) => `${Name} mapped`),
         });
 
         assertType<typeof res, { nested: string[] }[]>();
@@ -185,11 +194,12 @@ describe('map', () => {
       });
 
       it('should transform `one` result into `value`', async () => {
-        const res = await User.select({
+        const res = await db.user.select({
           nested: () =>
-            User.select('name')
+            db.user
+              .select('Name')
               .takeOptional()
-              .map(({ name }) => `${name} mapped`),
+              .map(({ Name }) => `${Name} mapped`),
         });
 
         assertType<typeof res, { nested: string | undefined }[]>();
@@ -198,11 +208,12 @@ describe('map', () => {
       });
 
       it('should transform `oneOrThrow` result into `valueOrThrow`', async () => {
-        const res = await User.select({
+        const res = await db.user.select({
           nested: () =>
-            User.select('name')
+            db.user
+              .select('Name')
               .takeOptional()
-              .map(({ name }) => `${name} mapped`),
+              .map(({ Name }) => `${Name} mapped`),
         });
 
         assertType<typeof res, { nested: string | undefined }[]>();
@@ -211,9 +222,9 @@ describe('map', () => {
       });
 
       it('should handle `value` query', async () => {
-        const res = await User.select({
+        const res = await db.user.select({
           nested: () =>
-            User.getOptional('name').map((name) => `${name} mapped`),
+            db.user.getOptional('Name').map((name) => `${name} mapped`),
         });
 
         assertType<typeof res, { nested: string | undefined }[]>();
@@ -222,9 +233,9 @@ describe('map', () => {
       });
 
       it('should handle `valueOrThrow` query', async () => {
-        const res = await User.select({
+        const res = await db.user.select({
           nested: () =>
-            User.get('name').map(function (this: string, name, i, data) {
+            db.user.get('Name').map(function (this: string, name, i, data) {
               return `${name} ${i} ${data} ${this} mapped`;
             }, 'self'),
         });
@@ -235,8 +246,8 @@ describe('map', () => {
       });
 
       it('should handle `pluck` query', async () => {
-        const res = await User.select({
-          nested: () => User.pluck('name').map((name) => `${name} mapped`),
+        const res = await db.user.select({
+          nested: () => db.user.pluck('Name').map((name) => `${name} mapped`),
         });
 
         assertType<typeof res, { nested: string[] }[]>();
@@ -245,7 +256,7 @@ describe('map', () => {
       });
 
       it('should map `pluck` values to array of objects', async () => {
-        const res = await User.pluck('id').map((id) => ({ id, age: 18 }));
+        const res = await db.user.pluck('Id').map((id) => ({ id, age: 18 }));
 
         assertType<typeof res, { id: number; age: number }[]>();
 

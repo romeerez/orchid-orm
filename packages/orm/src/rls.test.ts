@@ -1,13 +1,10 @@
-import { BaseTable, testAdapter } from 'test-utils';
+import { defineTable, testAdapter, sql } from 'test-utils';
 import { defineRls, orchidORMWithAdapter } from './orm';
 
 describe('rls', () => {
-  class UserTable extends BaseTable {
-    readonly table = 'user';
-    columns = this.setColumns((t) => ({
-      id: t.identity().primaryKey(),
-    }));
-  }
+  const UserTable = defineTable('user', (t) => ({
+    id: t.identity().primaryKey(),
+  }));
 
   it('should store rls options in db internal when provided', () => {
     const db = orchidORMWithAdapter(
@@ -51,7 +48,7 @@ describe('rls', () => {
           name: 'user_select_policy',
           for: 'SELECT',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
         },
       ],
       restrict: [
@@ -59,8 +56,8 @@ describe('rls', () => {
           name: 'user_update_policy',
           for: 'UPDATE',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
-          withCheck: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
+          withCheck: sql`id > 0`,
         },
       ],
     });
@@ -95,19 +92,19 @@ describe('rls', () => {
           name: 'valid_select',
           for: 'SELECT',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
         },
         {
           name: 'valid_insert',
           for: 'INSERT',
           to: 'public',
-          withCheck: BaseTable.sql`id > 0`,
+          withCheck: sql`id > 0`,
         },
         {
           name: 'valid_all',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
-          withCheck: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
+          withCheck: sql`id > 0`,
         },
       ],
     });
@@ -119,8 +116,8 @@ describe('rls', () => {
           name: 'invalid_select',
           for: 'SELECT',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
-          withCheck: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
+          withCheck: sql`id > 0`,
         },
       ],
     });
@@ -132,8 +129,8 @@ describe('rls', () => {
           name: 'invalid_insert',
           for: 'INSERT',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
-          withCheck: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
+          withCheck: sql`id > 0`,
         },
       ],
     });
@@ -144,7 +141,7 @@ describe('rls', () => {
         {
           name: 'invalid_missing_to',
           for: 'SELECT',
-          using: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
         },
       ],
     });
@@ -171,7 +168,7 @@ describe('rls', () => {
           name: 'user_select_restrict',
           for: 'SELECT',
           to: 'public',
-          using: BaseTable.sql`id > 0`,
+          using: sql`id > 0`,
         },
       ],
     });

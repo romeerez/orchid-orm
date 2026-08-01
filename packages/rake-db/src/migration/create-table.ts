@@ -43,6 +43,7 @@ import { RakeDbAst } from '../ast';
 import { TableMethods } from './table-methods';
 import { NoPrimaryKey } from '../errors';
 import { Db } from 'pqb';
+import { getTableFactoryConfig } from '../config/table-factory-config';
 
 export interface TableQuery {
   text: string;
@@ -98,12 +99,8 @@ export const createTable = async <
   let shape: Shape;
   let tableData;
   if (fn) {
-    shape = getColumnTypes(
-      types,
-      fn,
-      migration.options.baseTable?.nowSQL,
-      language,
-    );
+    const tableFactory = getTableFactoryConfig(migration.options);
+    shape = getColumnTypes(types, fn, tableFactory?.nowSQL, language);
     tableData = parseTableData(dataFn);
     tableData.constraints?.forEach((x, i) => {
       if (x.name || !x.check) return;

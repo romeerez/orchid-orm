@@ -29,28 +29,23 @@ If the record is created by another process in between the two queries, `beforeC
 `beforeUpdate` hook is always called once by this `upsert` command, even if the record for the update does not exist.
 
 ```ts
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...someColumns,
-  }));
+export const SomeTable = defineTable('someTable', (t) => ({
+  ...someColumns,
+})).init((orm: typeof db, hooks) => {
+  // `before` hooks don't receive data, unlike `after` hooks
+  hooks.beforeQuery(() => console.log('before any query'));
+  // `beforeCreate` and `beforeUpdate` have a parameter that can set data to records.
+  hooks.beforeCreate(({ set }) => console.log('before create'));
+  hooks.beforeUpdate(({ set }) => console.log('before update'));
+  hooks.beforeSave(() => console.log('before create or update'));
+  hooks.beforeDelete(() => console.log('before delete'));
 
-  init(orm: typeof db) {
-    // `before` hooks don't receive data, unlike `after` hooks
-    this.beforeQuery(() => console.log('before any query'));
-    // `beforeCreate` and `beforeUpdate` have a parameter that can set data to records.
-    this.beforeCreate(({ set }) => console.log('before create'));
-    this.beforeUpdate(({ set }) => console.log('before update'));
-    this.beforeSave(() => console.log('before create or update'));
-    this.beforeDelete(() => console.log('before delete'));
-
-    // the `orm` argument is to be used for making queries in the query callbacks
-    this.beforeUpdate(async () => {
-      const data = await orm.someTable.where(...).select(...)
-      // ...performing logic with the data
-    })
-  }
-}
+  // the `orm` argument is to be used for making queries in the query callbacks
+  hooks.beforeUpdate(async () => {
+    const data = await orm.someTable.where(...).select(...)
+    // ...performing logic with the data
+  });
+});
 ```
 
 ### set values before create or update
@@ -78,32 +73,27 @@ In a case of batch create or update, the same value is set for all records.
 The callback accepts `columns` of type `string[]` that you can use to see what columns are being inserted or updated by the app code.
 
 ```ts
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...someColumns,
-  }));
+export const SomeTable = defineTable('someTable', (t) => ({
+  ...someColumns,
+})).init((orm: typeof db, hooks) => {
+  hooks.beforeCreate(({ columns, set }) => {
+    // columns is `string[]` of the columns passed to create,
+    // they do not include defaults.
+    if (columns.includes('foo')) {
+      set({ one: 'value' });
+    }
+  });
 
-  init(orm: typeof db) {
-    this.beforeCreate(({ columns, set }) => {
-      // columns is `string[]` of the columns passed to create,
-      // they do not include defaults.
-      if (columns.includes('foo')) {
-        set({ one: 'value' });
-      }
-    });
+  hooks.beforeUpdate(({ columns, set }) => {
+    // use a function for sql
+    set({ two: () => sql`value` });
+  });
 
-    this.beforeUpdate(({ columns, set }) => {
-      // use a function for sql
-      set({ two: () => sql`value` });
-    });
-
-    // is set both when creating and updating.
-    this.beforeSave(({ columns, set }) => {
-      set({ three: 'value' });
-    });
-  }
-}
+  // is set both when creating and updating.
+  hooks.beforeSave(({ columns, set }) => {
+    set({ three: 'value' });
+  });
+});
 ```
 
 You can use `AsyncLocalStorage` with any framework to store values earlier in the app flow,
@@ -128,23 +118,18 @@ const values = { userId: 123 };
 await storage.run(values, nextFunction);
 
 // table with hooks
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    userId: t.integer().readOnly(),
-  }));
+export const SomeTable = defineTable('someTable', (t) => ({
+  userId: t.integer().readOnly(),
+})).init((orm: typeof db, hooks) => {
+  hooks.beforeSave(({ columns, set }) => {
+    const userId = storage.getStore()?.userId;
+    if (!userId) {
+      throw new Error('Cannot access current user data');
+    }
 
-  init(orm: typeof db) {
-    this.beforeSave(({ columns, set }) => {
-      const userId = storage.getStore()?.userId;
-      if (!userId) {
-        throw new Error('Cannot access current user data');
-      }
-
-      set({ userId });
-    });
-  }
-}
+    set({ userId });
+  });
+});
 ```
 
 ## after hooks
@@ -178,39 +163,34 @@ The `afterQuery` hook is running after _any_ query, even when we're only selecti
 If the query has both `afterQuery` and `afterCreate`, `afterCreate` will run last.
 
 ```ts
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...someColumns,
-  }));
+export const SomeTable = defineTable('someTable', (t) => ({
+  ...someColumns,
+})).init((orm: typeof db, hooks) => {
+  // data is of type `unknown` - it can be anything
+  hooks.afterQuery((data, q) => console.log('after any query'));
 
-  init(orm: typeof db) {
-    // data is of type `unknown` - it can be anything
-    this.afterQuery((data, q) => console.log('after any query'));
+  // select `id` and `name` for the after-create hook
+  hooks.afterCreate(['id', 'name'], (data, q) => {
+    // data is an array of records
+    for (const record of data) {
+      // `id` and `name` are guaranteed to be loaded
+      console.log(`Record with id ${record.id} has name ${record.name}.`);
+    }
+  });
 
-    // select `id` and `name` for the after-create hook
-    this.afterCreate(['id', 'name'], (data, q) => {
-      // data is an array of records
-      for (const record of data) {
-        // `id` and `name` are guaranteed to be loaded
-        console.log(`Record with id ${record.id} has name ${record.name}.`);
-      }
-    });
+  hooks.afterUpdate(['id', 'name'], (data, q) =>
+    console.log(`${data.length} records were updated`),
+  );
 
-    this.afterUpdate(['id', 'name'], (data, q) =>
-      console.log(`${data.length} records were updated`),
-    );
+  // run after creating and after updating
+  hooks.afterSave(['id', 'name'], (data, q) =>
+    console.log(`${data.length} records were created or updated`),
+  );
 
-    // run after creating and after updating
-    this.afterSave(['id', 'name'], (data, q) =>
-      console.log(`${data.length} records were created or updated`),
-    );
-
-    this.afterDelete(['id', 'name'], (data, q) =>
-      console.log(`${data.length} records were deleted`),
-    );
-  }
-}
+  hooks.afterDelete(['id', 'name'], (data, q) =>
+    console.log(`${data.length} records were deleted`),
+  );
+});
 ```
 
 Note the `orm: typeof db` argument: it is the db instance that has all the tables you can perform queries with.
@@ -218,27 +198,22 @@ Note the `orm: typeof db` argument: it is the db instance that has all the table
 For example, each time when a comment is created, we want to increase the `commentCount` column of the post where the comment belongs to:
 
 ```ts
-class CommentTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...someColumns,
-  }));
+export const CommentTable = defineTable('someTable', (t) => ({
+  ...someColumns,
+})).init((orm: typeof db, hooks) => {
+  hooks.afterCreate(['postId'], async (data, q) => {
+    const allPostIds = data.map((comment) => comment.postId);
+    const uniquePostIds = [...new Set(allPostIds)];
 
-  init(orm: typeof db) {
-    this.afterCreate(['postId'], async (data, q) => {
-      const allPostIds = data.map((comment) => comment.postId);
-      const uniquePostIds = [...new Set(allPostIds)];
-
-      for (const postId of uniquePostIds) {
-        // all the post update queries will be executed in a single transaction with the original query
-        await db.post.find(postId).increment({
-          commentsCount: data.filter((comment) => comment.postId === postId)
-            .length,
-        });
-      }
-    });
-  }
-}
+    for (const postId of uniquePostIds) {
+      // all the post update queries will be executed in a single transaction with the original query
+      await db.post.find(postId).increment({
+        commentsCount: data.filter((comment) => comment.postId === postId)
+          .length,
+      });
+    }
+  });
+});
 ```
 
 ## after-commit hooks
@@ -277,36 +252,31 @@ then in `afterCreateCommit` send it to a message queue, then delete it from the 
 If the message queue fails, the action is still saved in a db table, the table could be periodically scanned and sent to the queue by a cron job.
 
 ```ts
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...someColumns,
-  }));
+export const SomeTable = defineTable('someTable', (t) => ({
+  ...someColumns,
+})).init((orm: typeof db, hooks) => {
+  // select `id` and `name` for the after-create hook
+  hooks.afterCreateCommit(['id', 'name'], (data, q) => {
+    // data is an array of records
+    for (const record of data) {
+      // `id` and `name` are guaranteed to be loaded
+      console.log(`Record with id ${record.id} has name ${record.name}.`);
+    }
+  });
 
-  init(orm: typeof db) {
-    // select `id` and `name` for the after-create hook
-    this.afterCreateCommit(['id', 'name'], (data, q) => {
-      // data is an array of records
-      for (const record of data) {
-        // `id` and `name` are guaranteed to be loaded
-        console.log(`Record with id ${record.id} has name ${record.name}.`);
-      }
-    });
+  hooks.afterUpdateCommit(['id', 'name'], (data, q) =>
+    console.log(`${data.length} records were updated`),
+  );
 
-    this.afterUpdateCommit(['id', 'name'], (data, q) =>
-      console.log(`${data.length} records were updated`),
-    );
+  // run after creating and after updating
+  hooks.afterSaveCommit(['id', 'name'], (data, q) =>
+    console.log(`${data.length} records were created or updated`),
+  );
 
-    // run after creating and after updating
-    this.afterSaveCommit(['id', 'name'], (data, q) =>
-      console.log(`${data.length} records were created or updated`),
-    );
-
-    this.afterDeleteCommit(['id', 'name'], (data, q) =>
-      console.log(`${data.length} records were deleted`),
-    );
-  }
-}
+  hooks.afterDeleteCommit(['id', 'name'], (data, q) =>
+    console.log(`${data.length} records were deleted`),
+  );
+});
 ```
 
 ## setting hooks on a query
@@ -408,22 +378,17 @@ Use `function name() {}` function syntax for hooks to give them names,
 so later they can be identified when handling after commit errors.
 
 ```ts
-class SomeTable extends BaseTable {
-  readonly table = 'someTable';
-  columns = this.setColumns((t) => ({
-    ...someColumns,
-  }));
+export const SomeTable = defineTable('someTable', (t) => ({
+  ...someColumns,
+})).init((orm: typeof db, hooks) => {
+  // anonymous funciton - has no name
+  hooks.afterCreateCommit([], async () => {
+    // ...
+  });
 
-  init(orm: typeof db) {
-    // anonymous funciton - has no name
-    this.afterCreateCommit([], async () => {
-      // ...
-    });
-
-    // named function
-    this.afterCreateCommit([], function myHook() {
-      // ...
-    });
-  }
-}
+  // named function
+  hooks.afterCreateCommit([], function myHook() {
+    // ...
+  });
+});
 ```

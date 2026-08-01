@@ -1,7 +1,6 @@
-import { expectSql, sql, testDb, useTestDatabase } from 'test-utils';
+import { db, expectSql, sql, testDb, useTestDatabase } from 'test-utils';
 import {
   emulateReturnNoRowsOnce,
-  Profile,
   profileData,
   User as UserNoHooks,
   userData,
@@ -919,14 +918,15 @@ describe('hooks', () => {
 
       describe('nested create methods', () => {
         it('create in create', async () => {
-          const res = await Profile.create({
-            ...profileData,
-            userId: () => User.create({ ...userData, age: 123 }).get('id'),
+          const res = await db.profile.create({
+            Bio: profileData.bio,
+            ProfileKey: 'key',
+            UserId: () => User.create({ ...userData, age: 123 }).get('id'),
           });
 
           expect(res).toMatchObject({
-            ...profileData,
-            userId: expect.any(Number),
+            Bio: profileData.bio,
+            UserId: expect.any(Number),
           });
 
           assert.createHooksBeingCalled({
@@ -936,20 +936,22 @@ describe('hooks', () => {
         });
 
         it('create in createMany', async () => {
-          const res = await Profile.createMany([
+          const res = await db.profile.createMany([
             {
-              ...profileData,
-              userId: () => User.create({ ...userData, age: 20 }).get('id'),
+              Bio: profileData.bio,
+              ProfileKey: 'key',
+              UserId: () => User.create({ ...userData, age: 20 }).get('id'),
             },
             {
-              ...profileData,
-              userId: () => User.create({ ...userData, age: 30 }).get('id'),
+              Bio: profileData.bio,
+              ProfileKey: 'key2',
+              UserId: () => User.create({ ...userData, age: 30 }).get('id'),
             },
           ]);
 
           expect(res).toMatchObject([
-            { ...profileData, userId: expect.any(Number) },
-            { ...profileData, userId: expect.any(Number) },
+            { Bio: profileData.bio, UserId: expect.any(Number) },
+            { Bio: profileData.bio, UserId: expect.any(Number) },
           ]);
 
           assert.createHooksBeingCalled({

@@ -173,10 +173,26 @@ export const isRawSQL = (arg: unknown): arg is RawSqlBase =>
 
 RawSql.prototype.type = ExpressionTypeMethod.prototype.type;
 
+interface RawSqlToCodeCtx {
+  t: string;
+  sql?: string;
+  isSqlUsed?: boolean;
+}
+
 // Convert raw SQL to code for a code generator.
-export const rawSqlToCode = (rawSql: RawSqlBase, t: string): string => {
+export const rawSqlToCode = (
+  rawSql: RawSqlBase,
+  ctx: string | RawSqlToCodeCtx,
+): string => {
   const { _sql: sql, _values: values } = rawSql;
-  let code = `${t}.sql`;
+  let code: string;
+
+  if (typeof ctx === 'string') {
+    code = `${ctx}.sql`;
+  } else {
+    ctx.isSqlUsed = true;
+    code = ctx.sql ?? `${ctx.t}.sql`;
+  }
 
   code +=
     typeof sql === 'string'

@@ -12,24 +12,39 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   AppCodeGenTable,
+  AppCodeGenTableFactorySource,
   appCodeGenTable,
   AppCodeGenTables,
-  getTableInfosAndFKeys,
+  getTableInfos,
 } from './app-code-generators/tables.app-code-generator';
 import { appCodeGenUpdateDbFile } from './app-code-generators/db-file.app-code-generator';
 import { generate } from '../generate/generate';
 
 export const pull = async (adapters: Adapter[], config: RakeDbConfig) => {
-  if (!config.dbPath || !config.baseTable) {
+  const { defineTable } = config;
+
+  if (!config.dbPath || !defineTable) {
     throw new Error(
       `\`${
-        config.dbPath ? 'baseTable' : 'dbPath'
+        config.dbPath ? 'defineTable' : 'dbPath'
       }\` setting must be set in the migrations config for pull command`,
     );
   }
 
-  const baseTablePath = config.baseTable.getFilePath();
-  const baseTableExportedAs = config.baseTable.exportAs;
+  if (!defineTable.types) {
+    throw new Error('defineTable is missing types');
+  }
+  if (!defineTable.exportAs) {
+    throw new Error('defineTable is missing exportAs');
+  }
+  if (typeof defineTable.getFilePath !== 'function') {
+    throw new Error('defineTable is missing getFilePath');
+  }
+
+  const tableFactorySource: AppCodeGenTableFactorySource = {
+    path: defineTable.getFilePath(),
+    exportedAs: defineTable.exportAs,
+  };
 
   const [adapter] = adapters;
   const adapterSchema = adapter.getSchema();
@@ -41,7 +56,7 @@ export const pull = async (adapters: Adapter[], config: RakeDbConfig) => {
 
   const asts = await structureToAst(ctx, adapter, config);
 
-  const { tableInfos, fkeys } = getTableInfosAndFKeys(asts, config);
+  const tableInfos = getTableInfos(asts, config);
 
   const exclusiveWriteOptions = { flag: 'wx' as const };
   const pendingFileWrites: [
@@ -60,10 +75,8 @@ export const pull = async (adapters: Adapter[], config: RakeDbConfig) => {
       case 'table': {
         const table = appCodeGenTable(
           tableInfos,
-          fkeys,
           ast,
-          baseTablePath,
-          baseTableExportedAs,
+          tableFactorySource,
           currentSchema,
         );
         tables[table.key] = table;

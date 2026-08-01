@@ -1,16 +1,19 @@
-import { User, userColumnsSql } from '../../../test-utils/pqb.test-utils';
-import { expectSql, sql } from 'test-utils';
+import { db, expectSql, sql, UserSelectAll } from 'test-utils';
 
 describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
   it('should handle limit, offset, order differently when placed before or after union', () => {
     const unionAll = `${union}All` as `unionAll`;
 
-    const q = User.order('id')
+    const q = db.user
+      .order('Id')
       .limit(1)
       .offset(1)
-      [union](User.order('name').limit(2).offset(2), () => sql`custom sql 1`)
-      [unionAll](User.order('age').limit(3).offset(3), () => sql`custom sql 2`)
-      .order('active')
+      [union](db.user.order('Name').limit(2).offset(2), () => sql`custom sql 1`)
+      [unionAll](
+        db.user.order('Age').limit(3).offset(3),
+        () => sql`custom sql 2`,
+      )
+      .order('Active')
       .limit(4)
       .offset(4);
 
@@ -20,18 +23,18 @@ describe.each(['union', 'intersect', 'except'] as const)('%s', (union) => {
       q.toSQL(),
       `
       (
-        SELECT ${userColumnsSql} FROM "schema"."user" "User" ORDER BY "User"."id" ASC LIMIT $1 OFFSET $2
+        SELECT ${UserSelectAll} FROM "schema"."user" "User" ORDER BY "User"."id" ASC LIMIT $1 OFFSET $2
       )
       ${UNION}
       (
-        SELECT ${userColumnsSql} FROM "schema"."user" "User" ORDER BY "User"."name" ASC LIMIT $3 OFFSET $4
+        SELECT ${UserSelectAll} FROM "schema"."user" "User" ORDER BY "User"."name" ASC LIMIT $3 OFFSET $4
       )
       ${UNION} (
         custom sql 1
       )
       ${UNION} ALL
       (
-        SELECT ${userColumnsSql} FROM "schema"."user" "User" ORDER BY "User"."age" ASC LIMIT $5 OFFSET $6
+        SELECT ${UserSelectAll} FROM "schema"."user" "User" ORDER BY "User"."age" ASC LIMIT $5 OFFSET $6
       )
       ${UNION} ALL (
         custom sql 2

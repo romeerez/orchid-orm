@@ -1,7 +1,7 @@
 import {
   assertType,
   expectSql,
-  BaseTable,
+  defineTable,
   db,
   Profile,
   PostData,
@@ -18,7 +18,7 @@ import {
   useTestORM,
 } from '../test-utils/orm.test-utils';
 import { orchidORMWithAdapter } from '../orm';
-import { createBaseTable } from '../orm-table/base-table';
+import { createTableFactory } from '../orm-table/table';
 
 const ormParams = {
   db: db.$qb,
@@ -316,7 +316,7 @@ describe('relations', () => {
           FROM "schema"."post" "posts"
           WHERE (
             SELECT true
-            FROM "schema"."postTag" "postTags"
+            FROM "schema"."post_tag" "postTags"
             WHERE "postTags"."tag" = $2
               AND "postTags"."post_id" = "posts"."id"
             LIMIT 1
@@ -507,13 +507,10 @@ describe('relations', () => {
   });
 
   it('should be able to update json on a table without relations (#311)', () => {
-    class UserTable extends BaseTable {
-      readonly table = 'user';
-      columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
-        data: t.json(),
-      }));
-    }
+    const UserTable = defineTable('user', (t) => ({
+      id: t.identity().primaryKey(),
+      data: t.json(),
+    }));
 
     const local = orchidORMWithAdapter({ db: db.$qb }, { user: UserTable });
 
@@ -580,7 +577,7 @@ describe('relations', () => {
   });
 
   describe('autoForeignKeys', () => {
-    const BaseTable = createBaseTable({
+    const { defineTable } = createTableFactory({
       snakeCase: true,
       autoForeignKeys: {
         onUpdate: 'CASCADE',
@@ -588,49 +585,30 @@ describe('relations', () => {
     });
 
     it('should not redefine foreign key if it already exists', async () => {
-      class UserTable extends BaseTable {
-        table = 'user';
-        columns = this.setColumns((t) => ({
-          Id: t.name('id').identity().primaryKey(),
-          Id2: t.name('id_2').integer(),
-          Id3: t.name('id_3').integer(),
-        }));
-      }
+      const UserTable = defineTable('user', (t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        Id2: t.name('id_2').integer(),
+        Id3: t.name('id_3').integer(),
+      }));
 
       const userFn = () => UserTable;
 
-      class ProfileTable extends BaseTable {
-        columns = this.setColumns(
-          (t) => ({
-            Id: t.name('id').identity().primaryKey(),
-            UserId: t
-              .name('user_id')
-              .integer()
-              .foreignKey(() => UserTable, 'Id', { onUpdate: 'NO ACTION' }),
-            UserId2: t.name('user_id_2').integer(),
-            UserId3: t.name('user_id_3').integer(),
-          }),
-          (t) => [
-            t.foreignKey(['UserId2'], 'user', ['id_2']),
-            t.foreignKey(['UserId3'], userFn, ['Id3']),
-          ],
-        );
-
-        relations = {
-          user: this.belongsTo(() => UserTable, {
-            columns: ['UserId'],
-            references: ['Id'],
-          }),
-          user2: this.belongsTo(() => UserTable, {
-            columns: ['UserId2'],
-            references: ['Id2'],
-          }),
-          user3: this.belongsTo(() => UserTable, {
-            columns: ['UserId3'],
-            references: ['Id3'],
-          }),
-        };
-      }
+      const ProfileTable = defineTable('profile', (t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t
+          .name('user_id')
+          .integer()
+          .foreignKey(() => UserTable, 'Id', { onUpdate: 'NO ACTION' }),
+        UserId2: t.name('user_id_2').integer(),
+        UserId3: t.name('user_id_3').integer(),
+      }))
+        .foreignKey(['UserId2'], 'user', ['id_2'])
+        .foreignKey(['UserId3'], userFn, ['Id3'])
+        .relations((profile) => ({
+          user: profile('UserId').belongsTo(() => UserTable('Id')),
+          user2: profile('UserId2').belongsTo(() => UserTable('Id2')),
+          user3: profile('UserId3').belongsTo(() => UserTable('Id3')),
+        }));
 
       const db = orchidORMWithAdapter(ormParams, {
         user: UserTable,
@@ -667,5 +645,31 @@ describe('relations', () => {
 
       expect(res).toEqual([{ userName: undefined }]);
     });
+  });
+
+  it('should support accessing cte on selected relations', async () => {
+    const q = db.user.with('cte', db.user.select('Id', 'Name')).select({
+      rel: (q) =>
+        q.profile.join('cte', 'cte.Id', 'profile.Id').select('Id', 'cte.Name'),
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+          WITH "cte" AS (
+            SELECT "User"."id" "Id", "User"."name" "Name"
+            FROM "schema"."user" "User"
+          )
+          SELECT row_to_json("rel".*) "rel"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."id" "Id", "cte"."Name"
+            FROM "schema"."profile"
+            JOIN "cte" ON "cte"."Id" = "profile"."id"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
+          ) "rel" ON true
+        `,
+    );
   });
 });

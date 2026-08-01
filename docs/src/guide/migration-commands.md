@@ -32,7 +32,7 @@ npm run db reset
 
 This is to produce files by introspecting your existing database.
 
-When using the migration tool together with OrchidORM, the `pull` command generates both table classes files for your project and a migration.
+When using the migration tool together with OrchidORM, the `pull` command generates both table definition files for your project and a migration.
 
 When using as a standalone tool, it only produces a migration file.
 
@@ -141,13 +141,10 @@ await db.createTable('table', (t) => ({
 It works, just when using `t.type` in the application to define a column, you need to use `as` method to treat it as another column:
 
 ```ts
-export class Table extends BaseTable {
-  readonly table = 'table';
-  columns = this.setColumns((t) => ({
-    // treat unsupported type as text
-    column: t.type('unsupported_type').as(t.text()),
-  }));
-}
+export const Table = defineTable('table', (t) => ({
+  // treat unsupported type as text
+  column: t.type('unsupported_type').as(t.text()),
+}));
 ```
 
 ## new blank migration

@@ -3,7 +3,7 @@ import { AdapterConfigBase } from 'pqb/internal';
 import { testRakeDb } from '../../test-utils/src/index';
 import { config } from 'dotenv';
 import path from 'node:path';
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
 config({ path: path.resolve('..', '..', '.env') });
 
@@ -37,7 +37,7 @@ if (['create', 'drop'].includes(command)) {
 }
 
 export const change = testRakeDb.run(options, {
-  baseTable: BaseTable,
+  defineTable,
   migrationsPath: 'migrations',
   import: (path) => require(path),
 });

@@ -20,6 +20,9 @@ export const mockAdapter = {
   queries: [],
   connection: {},
   release() {},
+  options: {
+    serializers: {},
+  },
   query(...args) {
     const [sql, values] =
       typeof args[0] === 'string' ? args : [args[0].text, args[0].values];
@@ -100,6 +103,11 @@ export const execFile = (name, code, exports = {}) => {
               ? `file:///${name}/../${path}`
               : `file:///${name}/${path}`,
           ).pathname.slice(1);
+
+          if (path.endsWith('/index.js')) {
+            path = path.replace(/\/index\.js$/, '');
+          }
+
           module = modules[path];
         }
       }

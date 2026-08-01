@@ -6,7 +6,7 @@ import {
   resetDb,
   toLine,
 } from '../rake-db.test-utils';
-import { asMock, sql } from 'test-utils';
+import { asMock, defineTable, sql } from 'test-utils';
 
 const db = getDb();
 
@@ -457,6 +457,35 @@ describe('changeTable', () => {
             expectSql(`
               ALTER TABLE "table"
                 ADD COLUMN "column_with_foreign_key" int4 NOT NULL CONSTRAINT "fkeyConstraint" REFERENCES "table"("col_umn") MATCH FULL ON DELETE CASCADE ON UPDATE CASCADE
+            `),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                DROP COLUMN "column_with_foreign_key"
+            `),
+        );
+      });
+
+      it('should handle column foreign key to a function-style table reference', async () => {
+        const ForeignTable = defineTable(
+          'foreignTable',
+          { schema: 'schema' },
+          (t) => ({
+            foreignId: t.integer(),
+          }),
+        );
+
+        await testUpAndDown(
+          (action) =>
+            db.changeTable('table', (t) => ({
+              columnWithForeignKey: t[action](
+                t.integer().foreignKey(() => ForeignTable, 'foreignId'),
+              ),
+            })),
+          () =>
+            expectSql(`
+              ALTER TABLE "table"
+                ADD COLUMN "column_with_foreign_key" int4 NOT NULL REFERENCES "schema"."foreignTable"("foreign_id")
             `),
           () =>
             expectSql(`

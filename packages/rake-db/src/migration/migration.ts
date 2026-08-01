@@ -219,7 +219,7 @@ export class Migration<CT = unknown> {
   // `rakeDb` config.
   public options!: RakeDbConfig;
   // Available column types that may be customized by a user.
-  // They are pulled from a `baseTable` or a `columnTypes` option of the `rakeDb` config.
+  // They are pulled from a table factory or `columnTypes` option of the `rakeDb` config.
   public columnTypes!: CT;
 
   private tableMethods: TableMethods | undefined;

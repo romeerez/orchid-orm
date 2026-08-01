@@ -1,5 +1,5 @@
 import {
-  TableClasses,
+  OrmTableThunks,
   OrchidORM,
   OrchidORMBundle,
   OrchidOrmParam,
@@ -20,12 +20,12 @@ export const createDb = cdb;
 
 export interface NodePostgresOrchidORMOptions
   extends NodePostgresAdapterOptions, DbSharedOptions {
-  views?: TableClasses;
+  views?: OrmTableThunks;
 }
 
 export const makeOrchidOrmDb = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   orm: OrchidORMBundle<T, V>,
   {
@@ -44,8 +44,8 @@ export const makeOrchidOrmDb = <
 };
 
 export const orchidORM = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   {
     views,

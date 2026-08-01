@@ -1,33 +1,35 @@
 import {
   expectQueryNotMutated,
-  Profile,
   Snake,
   snakeSelectAll,
-  User,
-  userColumnsSql,
-  userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
-import { expectSql, testDb } from 'test-utils';
+import {
+  db,
+  expectSql,
+  testDb,
+  UserSelectAll,
+  UserSelectAllWithTable,
+} from 'test-utils';
 
 describe('distinct', () => {
   it('should add distinct without specifying columns', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q.distinct().toSQL(),
-      `SELECT DISTINCT ${userColumnsSql} FROM "schema"."user" "User"`,
+      `SELECT DISTINCT ${UserSelectAll} FROM "schema"."user" "User"`,
     );
 
     expectQueryNotMutated(q);
   });
 
   it('should add distinct on columns', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
-      q.distinct('id', 'User.name').toSQL(),
+      q.distinct('Id', 'User.Name').toSQL(),
       `
-          SELECT DISTINCT ON ("User"."id", "User"."name") ${userColumnsSql}
+          SELECT DISTINCT ON ("User"."id", "User"."name") ${UserSelectAll}
           FROM "schema"."user" "User"
         `,
     );
@@ -48,15 +50,15 @@ describe('distinct', () => {
   });
 
   it('should add distinct on joined columns', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q
-        .join(Profile, 'Profile.userId', '=', 'User.id')
-        .distinct('User.id', 'Profile.userId')
+        .join(db.profile, 'Profile.UserId', '=', 'User.Id')
+        .distinct('User.Id', 'Profile.UserId')
         .toSQL(),
       `
-          SELECT DISTINCT ON ("User"."id", "Profile"."user_id") ${userTableColumnsSql}
+          SELECT DISTINCT ON ("User"."id", "Profile"."user_id") ${UserSelectAllWithTable}
           FROM "schema"."user" "User"
           JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
@@ -66,15 +68,14 @@ describe('distinct', () => {
   });
 
   it('should add distinct on joined named columns', () => {
-    const q = User.join(Snake, 'Snake.tailLength', 'User.id').distinct(
-      'User.id',
-      'Snake.tailLength',
-    );
+    const q = db.user
+      .join(Snake, 'Snake.tailLength', 'User.Id')
+      .distinct('User.Id', 'Snake.tailLength');
 
     expectSql(
       q.toSQL(),
       `
-          SELECT DISTINCT ON ("User"."id", "Snake"."tail_length") ${userTableColumnsSql}
+          SELECT DISTINCT ON ("User"."id", "Snake"."tail_length") ${UserSelectAllWithTable}
           FROM "schema"."user" "User"
           JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
         `,
@@ -82,15 +83,15 @@ describe('distinct', () => {
   });
 
   it('should add distinct on joined columns with alias', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q
-        .join(Profile.as('p'), 'p.userId', '=', 'User.id')
-        .distinct('User.id', 'p.userId')
+        .join(db.profile.as('p'), 'p.UserId', '=', 'User.Id')
+        .distinct('User.Id', 'p.UserId')
         .toSQL(),
       `
-          SELECT DISTINCT ON ("User"."id", "p"."user_id") ${userTableColumnsSql}
+          SELECT DISTINCT ON ("User"."id", "p"."user_id") ${UserSelectAllWithTable}
           FROM "schema"."user" "User"
           JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
@@ -100,15 +101,14 @@ describe('distinct', () => {
   });
 
   it('should add distinct on joined columns with named with alias', () => {
-    const q = User.join(Snake.as('s'), 's.tailLength', 'User.id').distinct(
-      'User.id',
-      's.tailLength',
-    );
+    const q = db.user
+      .join(Snake.as('s'), 's.tailLength', 'User.Id')
+      .distinct('User.Id', 's.tailLength');
 
     expectSql(
       q.toSQL(),
       `
-          SELECT DISTINCT ON ("User"."id", "s"."tail_length") ${userTableColumnsSql}
+          SELECT DISTINCT ON ("User"."id", "s"."tail_length") ${UserSelectAllWithTable}
           FROM "schema"."user" "User"
           JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
         `,
@@ -116,11 +116,11 @@ describe('distinct', () => {
   });
 
   it('should add distinct on raw sql', () => {
-    const q = User.all();
+    const q = db.user.all();
     expectSql(
       q.distinct(testDb.sql`"user".id`).toSQL(),
       `
-          SELECT DISTINCT ON ("user".id) ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT DISTINCT ON ("user".id) ${UserSelectAll} FROM "schema"."user" "User"
         `,
     );
     expectQueryNotMutated(q);

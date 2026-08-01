@@ -302,35 +302,28 @@ Schema-wide targets such as `allTablesIn` contain schema names directly.
 
 ### table grants
 
-For privileges that belong to one table, declare grants next to the table class with `setGrants`:
+For privileges that belong to one table, declare grants next to the table definition with `.grants(...)`:
 
 ```ts
-import { setGrants } from 'orchid-orm';
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
-export class ProjectTable extends BaseTable {
-  readonly table = 'project';
-
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    name: t.text(),
-  }));
-
-  grants = setGrants([
-    {
-      to: 'app_user',
-      privileges: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
-    },
-    {
-      to: 'reporting_user',
-      privileges: ['SELECT'],
-    },
-  ]);
-}
+export const ProjectTable = defineTable('project', (t) => ({
+  id: t.identity().primaryKey(),
+  name: t.text(),
+})).grants([
+  {
+    to: 'app_user',
+    privileges: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+  },
+  {
+    to: 'reporting_user',
+    privileges: ['SELECT'],
+  },
+]);
 ```
 
 Table-local grants are converted into ordinary table grants during migration generation.
-They use the table name and schema from the table class, and `defaultGrantedBy` applies to them the same way as to top-level grants.
+They use the table name and schema from the table definition, and `defaultGrantedBy` applies to them the same way as to top-level grants.
 
 Use top-level `grants` for schema grants, sequence grants, routine grants, database grants, schema-wide grants, and cross-cutting grants that should not be repeated on every table.
 Table grants do not grant access to sequences used by identity or serial columns; grant sequence privileges separately.
@@ -349,23 +342,22 @@ Such as when using certain extensions, or libraries, they can create schemas, ta
 
 Ignoring a schema also ignores all its tables, views, domains, enums.
 
-You can also set `generatorIgnore = true` on a table or view class.
+You can also set `generatorIgnore: true` on a table or view definition.
 The table or view stays available for queries, but `db g` will not create, change, or drop it.
 This works the same as listing its name in `generatorIgnore.tables` or `generatorIgnore.views`.
 
 ```ts
-export class LegacyReport extends BaseTable {
-  readonly table = 'legacy_report';
-  generatorIgnore = true;
-
-  columns = this.setColumns((t) => ({
+export const LegacyReport = defineTable(
+  'legacy_report',
+  { generatorIgnore: true },
+  (t) => ({
     id: t.integer().primaryKey(),
     payload: t.json(),
-  }));
-}
+  }),
+);
 ```
 
-Use `generatorIgnore` in `orchidORM` options for schema-wide ignores, regex selectors, objects without a class definition, and more granular controls:
+Use `generatorIgnore` in `orchidORM` options for schema-wide ignores, regex selectors, objects without a table definition, and more granular controls:
 
 ```ts
 export const db = orchidORM(

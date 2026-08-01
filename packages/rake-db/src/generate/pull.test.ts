@@ -2,15 +2,12 @@ import { introspectDbSchema } from './db-structure';
 import { pullDbStructure } from './pull';
 import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
 import { saveMigratedVersion } from '../migration/manage-migrated-versions';
-import {
-  DefaultColumnTypes,
-  DefaultSchemaConfig,
-  AdapterClass,
-} from 'pqb/internal';
+import { AdapterClass } from 'pqb/internal';
 import { asMock, TestAdapter, testDefaultColumnTypes } from 'test-utils';
 import { makeRakeDbConfig } from '../config/config.public';
 import { RakeDbConfig } from '../config/config';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
+import { createTableFactory } from 'orchid-orm';
 
 jest.mock('../migration/manage-migrated-versions', () => ({
   ...jest.requireActual('../migration/manage-migrated-versions'),
@@ -52,19 +49,12 @@ const adapter = new AdapterClass({
   config: options,
 });
 
-class BaseTable {
-  static getFilePath() {
-    return 'path';
-  }
-  static exportAs = 'BaseTable';
-  types!: DefaultColumnTypes<DefaultSchemaConfig>;
-  snakeCase?: boolean;
-}
-BaseTable.prototype.types = testDefaultColumnTypes;
-
 const makeConfig = (config: Partial<RakeDbConfig> = {}) =>
   makeRakeDbConfig({
-    baseTable: BaseTable,
+    defineTable: createTableFactory({
+      filePath: 'path',
+      columnTypes: testDefaultColumnTypes,
+    }).defineTable,
     logger: {
       ...console,
       warn,

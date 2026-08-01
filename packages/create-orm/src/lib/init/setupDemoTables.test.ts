@@ -38,34 +38,26 @@ describe('setupDemoTables', () => {
     const call = writeFile.mock.calls.find(([to]) => to === postTablePath);
     expect(call?.[1])
       .toBe(`import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
-import { BaseTable } from '../base-table';
+import { defineTable } from '../table-factory';
 import { CommentTable } from './comment.table';
 
 // Post type returned from database.
-export type Post = Selectable<PostTable>;
+export type Post = Selectable<typeof PostTable>;
 // Post type for insertion.
-export type PostNew = Insertable<PostTable>;
+export type PostNew = Insertable<typeof PostTable>;
 // Post type for updates.
-export type PostUpdate = Updatable<PostTable>;
+export type PostUpdate = Updatable<typeof PostTable>;
 // Post type used by query methods such as \`where\`.
-export type PostForQuery = Queryable<PostTable>;
+export type PostForQuery = Queryable<typeof PostTable>;
 
-export class PostTable extends BaseTable {
-  readonly table = 'post';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    title: t.text().min(3).max(100).unique(),
-    text: t.text().min(20).max(10000),
-    ...t.timestamps(),
-  }));
-
-  relations = {
-    comments: this.hasMany(() => CommentTable, {
-      columns: ['id'],
-      references: ['postId'],
-    }),
-  };
-}
+export const PostTable = defineTable('post', (t) => ({
+  id: t.identity().primaryKey(),
+  title: t.text().min(3).max(100).unique(),
+  text: t.text().min(20).max(10000),
+  ...t.timestamps(),
+})).relations((post) => ({
+  comments: post('id').hasMany(() => CommentTable('postId')),
+}));
 `);
   });
 
@@ -79,37 +71,29 @@ export class PostTable extends BaseTable {
     const call = writeFile.mock.calls.find(([to]) => to === commentTablePath);
     expect(call?.[1])
       .toBe(`import { Selectable, Updatable, Insertable, Queryable } from 'orchid-orm';
-import { BaseTable } from '../base-table';
+import { defineTable } from '../table-factory';
 import { PostTable } from './post.table';
 
 // Comment type returned from database.
-export type Comment = Selectable<CommentTable>;
+export type Comment = Selectable<typeof CommentTable>;
 // Comment type for insertion.
-export type CommentNew = Insertable<CommentTable>;
+export type CommentNew = Insertable<typeof CommentTable>;
 // Comment type for updates.
-export type CommentUpdate = Updatable<CommentTable>;
+export type CommentUpdate = Updatable<typeof CommentTable>;
 // Comment type used by query methods such as \`where\`.
-export type CommentForQuery = Queryable<CommentTable>;
+export type CommentForQuery = Queryable<typeof CommentTable>;
 
-export class CommentTable extends BaseTable {
-  readonly table = 'comment';
-  columns = this.setColumns((t) => ({
-    id: t.identity().primaryKey(),
-    postId: t
-      .integer()
-      .foreignKey(() => PostTable, 'id')
-      .index(),
-    text: t.text().min(5).max(1000),
-    ...t.timestamps(),
-  }));
-
-  relations = {
-    post: this.belongsTo(() => PostTable, {
-      columns: ['postId'],
-      references: ['id'],
-    }),
-  };
-}
+export const CommentTable = defineTable('comment', (t) => ({
+  id: t.identity().primaryKey(),
+  postId: t
+    .integer()
+    .foreignKey(() => PostTable, 'id')
+    .index(),
+  text: t.text().min(5).max(1000),
+  ...t.timestamps(),
+})).relations((comment) => ({
+  post: comment('postId').belongsTo(() => PostTable('id')),
+}));
 `);
   });
 });

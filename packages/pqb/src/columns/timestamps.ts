@@ -5,9 +5,9 @@ import { RawSql } from '../query/expressions/raw-sql';
 // Column types returned by `...t.timestamps()` and variations.
 export interface Timestamps<T extends Column.Pick.Data> {
   // Timestamp column with a `now()` default
-  createdAt: Column.Modifiers.HasDefault<T>;
+  createdAt: Column.HasDefault<T>;
   // Timestamp column with a `now()` default, and it's being updated on every record update.
-  updatedAt: Column.Modifiers.HasDefault<T>;
+  updatedAt: Column.HasDefault<T>;
 }
 
 // Simplified SQL type that returns raw SQL as it is, without dealing with SQL variables.

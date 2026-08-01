@@ -1,4 +1,3 @@
-import { User, userData } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
@@ -14,13 +13,13 @@ describe('pluck', () => {
   useTestDatabase();
 
   beforeEach(async () => {
-    await User.createMany(
-      Array.from({ length: 3 }, () => ({ ...userData, createdAt: now })),
+    await db.user.createMany(
+      Array.from({ length: 3 }, () => ({ ...UserData, createdAt: now })),
     );
   });
 
   it('should return array of column values, properly parsed', async () => {
-    const result = await User.pluck('createdAt');
+    const result = await db.user.pluck('createdAt');
 
     expect(result).toEqual([now, now, now]);
 
@@ -28,7 +27,9 @@ describe('pluck', () => {
   });
 
   it('should support raw expression', async () => {
-    const result = await User.pluck(testDb.sql`123`.type((t) => t.integer()));
+    const result = await db.user.pluck(
+      testDb.sql`123`.type((t) => t.integer()),
+    );
 
     expect(result).toEqual([123, 123, 123]);
 
@@ -36,9 +37,11 @@ describe('pluck', () => {
   });
 
   it('should support raw expression from a callback', async () => {
-    const q = User.order('id').pluck((q) =>
-      testDb.sql`coalesce(${q.ref('age')}, 20) + 1`.type((t) => t.integer()),
-    );
+    const q = db.user
+      .order('Id')
+      .pluck((q) =>
+        testDb.sql`coalesce(${q.ref('Age')}, 20) + 1`.type((t) => t.integer()),
+      );
 
     const result = await q;
 

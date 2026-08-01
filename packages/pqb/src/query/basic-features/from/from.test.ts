@@ -1,74 +1,74 @@
 import {
   expectQueryNotMutated,
-  Profile,
-  profileColumnsSql,
   profileData,
-  User,
-  userColumnsSql,
-  userData,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
+  db,
   expectSql,
+  ProfileSelectAll,
   sql,
   testDb,
+  UserData,
+  UserSelectAll,
   useTestDatabase,
 } from 'test-utils';
 import { raw } from '../../expressions/raw-sql';
 
 describe('from', () => {
   it('should accept a query', () => {
-    const q = User.from(User.select('name')).select('name');
+    const q = db.user.from(db.user.select('Name')).select('Name');
 
-    assertType<Awaited<typeof q>, { name: string }[]>();
+    assertType<Awaited<typeof q>, { Name: string }[]>();
 
     expectSql(
       q.toSQL(),
-      'SELECT "User"."name" FROM (SELECT "User"."name" FROM "schema"."user" "User") "User"',
+      'SELECT "User"."Name" FROM (SELECT "User"."name" "Name" FROM "schema"."user" "User") "User"',
     );
   });
 
   it('should play nicely with `with` and `join`', () => {
-    const q = User.with('w', Profile.select('userId'))
-      .from(User)
-      .join('w', 'w.userId', 'User.id')
-      .select('w.userId', 'User.id');
+    const q = db.user
+      .with('w', db.profile.select('UserId'))
+      .from(db.user)
+      .join('w', 'w.UserId', 'User.Id')
+      .select('w.UserId', 'User.Id');
 
-    assertType<Awaited<typeof q>, { userId: number; id: number }[]>();
+    assertType<Awaited<typeof q>, { Id: number; UserId: number | null }[]>();
 
     expectSql(
       q.toSQL(),
       `
         WITH "w" AS (
-          SELECT "Profile"."user_id" "userId"
+          SELECT "Profile"."user_id" "UserId"
           FROM "schema"."profile" "Profile"
         )
-        SELECT "w"."userId", "User"."id"
-        FROM (SELECT ${userColumnsSql} FROM "schema"."user" "User") "User"
-        JOIN "w" ON "w"."userId" = "User"."id"
+        SELECT "w"."UserId", "User"."Id"
+        FROM (SELECT ${UserSelectAll} FROM "schema"."user" "User") "User"
+        JOIN "w" ON "w"."UserId" = "User"."Id"
       `,
     );
   });
 
   it('should not insert sub query and alias if provided query is simple', () => {
-    const q = testDb.from(Profile).select('bio');
+    const q = testDb.from(db.profile).select('Bio');
 
-    assertType<Awaited<typeof q>, { bio: string | null }[]>();
+    assertType<Awaited<typeof q>, { Bio: string | null }[]>();
 
     expectSql(
       q.toSQL(),
-      `SELECT "Profile"."bio" FROM (SELECT ${profileColumnsSql} FROM "schema"."profile" "Profile") "Profile"`,
+      `SELECT "Profile"."Bio" FROM (SELECT ${ProfileSelectAll} FROM "schema"."profile" "Profile") "Profile"`,
     );
   });
 
   describe('inner query', () => {
     useTestDatabase();
-    beforeEach(() => User.insert(userData));
+    beforeEach(() => db.user.insert(UserData));
 
     it('should apply column types from inner query', async () => {
-      const inner = User.select('createdAt', {
-        alias: 'name',
-        count: () => User.count(),
+      const inner = db.user.select('createdAt', {
+        alias: 'Name',
+        count: () => db.user.count(),
       });
 
       const q = testDb.from(inner).where({
@@ -108,8 +108,12 @@ describe('from multiple', () => {
   useTestDatabase();
 
   it('should support multiple sources, should properly parse', async () => {
-    const userId = await User.get('id').insert(userData);
-    await Profile.insert({ ...profileData, userId });
+    const userId = await db.user.get('Id').insert(UserData);
+    await db.profile.insert({
+      Bio: profileData.bio,
+      ProfileKey: 'key',
+      UserId: userId,
+    });
 
     const q = testDb
       .with('with1', (qb) =>
@@ -121,8 +125,8 @@ describe('from multiple', () => {
       .from([
         'with1',
         'with2',
-        User.select('updatedAt'),
-        Profile.select('createdAt'),
+        db.user.select('updatedAt'),
+        db.profile.select('createdAt'),
       ])
       .select('with1.one', 'with2.two', 'User.updatedAt', 'Profile.createdAt');
 
@@ -166,7 +170,7 @@ describe('from multiple', () => {
 
 describe('fromSql', () => {
   it('should accept sql', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q.fromSql`(SELECT * FROM profile)`.as('t').toSQL(),
@@ -177,7 +181,7 @@ describe('fromSql', () => {
   });
 
   it('should accept raw', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q
@@ -193,11 +197,11 @@ describe('fromSql', () => {
 
 describe('only', () => {
   it('should add `ONLY` keyword to `FROM`', () => {
-    const q = User.only();
+    const q = db.user.only();
 
     expectSql(
       q.toSQL(),
-      `SELECT ${userColumnsSql} FROM ONLY "schema"."user" "User"`,
+      `SELECT ${UserSelectAll} FROM ONLY "schema"."user" "User"`,
     );
   });
 });

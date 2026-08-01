@@ -1,23 +1,12 @@
 import {
-  Chat,
-  chatData,
   expectQueryNotMutated,
-  Message,
   messageData,
-  Product,
-  Profile,
   profileData,
-  ProfileRecord,
   Snake,
   snakeData,
   SnakeRecord,
   snakeSelectAll,
   snakeSelectAllWithTable,
-  User,
-  userColumnsSql,
-  userData,
-  UserRecord,
-  userTableColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
 import {
   DateColumn,
@@ -29,14 +18,19 @@ import {
 } from '../../../columns';
 import {
   assertType,
+  ChatData,
   db,
   expectSql,
   jsonBuildObjectAllSql,
+  Profile,
   ProfileData,
   sql,
   testDb,
   testZodColumnTypes as t,
   UserData,
+  UserDefaultSelect,
+  UserSelectAll,
+  UserSelectAllWithTable,
   useTestDatabase,
 } from 'test-utils';
 import { z } from 'zod/v4';
@@ -44,23 +38,38 @@ import { NotFoundError } from '../../errors';
 import { EmptyObject } from '../../../utils';
 import { getShapeFromSelect } from './select.utils';
 
-const insertUserAndProfile = async () => {
-  const id = await User.get('id').create(userData);
-  await Profile.create({ ...profileData, userId: id });
+type ProfileRow = {
+  Id: number;
+  ProfileKey: string;
+  UserId: number | null;
+  UserIdNoFkey: number | null;
+  Bio: string | null;
+  Active: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
-const profileJsonBuildObjectSql = jsonBuildObjectAllSql(Profile, 'p');
+const insertUserAndProfile = async () => {
+  const id = await db.user.get('Id').create(UserData);
+  await db.profile.create({
+    Bio: profileData.bio,
+    ProfileKey: 'key',
+    UserId: id,
+  });
+};
 
-const ProfileNoParsers = Profile.clone();
+const profileJsonBuildObjectSql = jsonBuildObjectAllSql(db.profile, 'p');
+
+const ProfileNoParsers = db.profile.clone();
 ProfileNoParsers.q.parsers = undefined;
 
 const createUserMessage = async () => {
-  const userId = await User.get('id').insert(userData);
-  const chatId = await Chat.get('idOfChat').insert(chatData);
-  const message = await Message.create({
+  const userId = await db.user.get('Id').insert(UserData);
+  const chatId = await db.chat.get('IdOfChat').insert(ChatData);
+  const message = await db.message.create({
     ...messageData,
-    chatId,
-    authorId: userId,
+    ChatId: chatId,
+    AuthorId: userId,
   });
   return { message };
 };
@@ -72,33 +81,33 @@ describe('select', () => {
     it('should select and parse all columns with a *', async () => {
       await createUserMessage();
 
-      const q = User.join(Message, 'authorId', 'id').select('*');
+      const q = db.user.join(db.message, 'AuthorId', 'Id').select('*');
 
       expect(Object.keys(getShapeFromSelect(q))).toEqual(
-        Object.keys(User.q.selectAllShape),
+        Object.keys(db.user.q.selectAllShape),
       );
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql} FROM "schema"."user" "User"
-          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
+          SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id" AND ("Message"."deleted_at" IS NULL)
         `,
       );
 
       const res = await q;
 
-      assertType<typeof res, UserRecord[]>();
+      assertType<typeof res, UserDefaultSelect[]>();
 
       expect(res).toMatchObject([
-        { name: userData.name, updatedAt: expect.any(Date) },
+        { Name: UserData.Name, updatedAt: expect.any(Date) },
       ]);
     });
 
     it('should omit virtual columns from getShapeFromSelect when selecting *', () => {
       class Virtual extends VirtualColumn<DefaultSchemaConfig> {}
 
-      const Table = Object.create(User);
+      const Table = Object.create(db.user);
       Table.q = {
         selectShape: {
           ...Table.shape,
@@ -108,21 +117,24 @@ describe('select', () => {
 
       const q = Table.select('*');
       expect(Object.keys(getShapeFromSelect(q))).toEqual(
-        Object.keys(User.q.selectAllShape),
+        Object.keys(db.user.q.selectAllShape),
       );
     });
 
     it('should select all named columns with a *', async () => {
       const { message } = await createUserMessage();
-      await Snake.create({ ...snakeData, tailLength: message.authorId });
+      await Snake.create({
+        ...snakeData,
+        tailLength: message.AuthorId as number,
+      });
 
-      const q = Snake.join(Message, 'authorId', 'tailLength').select('*');
+      const q = Snake.join(db.message, 'AuthorId', 'tailLength').select('*');
 
       expectSql(
         q.toSQL(),
         `
           SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" "Snake"
-          JOIN "schema"."message" "Message" ON "Message"."author_id" = "Snake"."tail_length"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "Snake"."tail_length" AND ("Message"."deleted_at" IS NULL)
         `,
       );
 
@@ -136,30 +148,29 @@ describe('select', () => {
     it('should select all table columns with * plus specified joined columns', async () => {
       await createUserMessage();
 
-      const q = User.join(Message, 'authorId', 'id').select(
-        '*',
-        'Message.text',
-      );
+      const q = db.user
+        .join(db.message, 'AuthorId', 'Id')
+        .select('*', 'Message.Text');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT ${userTableColumnsSql}, "Message"."text" FROM "schema"."user" "User"
-          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"
+          SELECT ${UserSelectAllWithTable}, "Message"."text" "Text" FROM "schema"."user" "User"
+          JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id" AND ("Message"."deleted_at" IS NULL)
         `,
       );
 
       const res = await q;
 
-      assertType<typeof res, (UserRecord & { text: string })[]>();
+      assertType<typeof res, (UserDefaultSelect & { Text: string })[]>();
 
       expect(res).toMatchObject([{ updatedAt: expect.any(Date) }]);
     });
 
     it('should be able to select nothing', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const q = User.select();
+      const q = db.user.select();
 
       expectSql(q.toSQL(), `SELECT FROM "schema"."user" "User"`);
 
@@ -170,21 +181,24 @@ describe('select', () => {
     });
 
     it('should select provided columns', () => {
-      const q = User.all();
-      const query = q.select('id', 'name');
+      const q = db.user.all();
+      const query = q.select('Id', 'Name');
 
-      assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
+      assertType<
+        Awaited<typeof query>,
+        Pick<UserDefaultSelect, 'Id' | 'Name'>[]
+      >();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
+          SELECT "User"."id" "Id", "User"."name" "Name" FROM "schema"."user" "User"
         `,
       );
 
       expect(getShapeFromSelect(query)).toEqual({
-        id: User.shape.id,
-        name: User.shape.name,
+        Id: db.user.shape.Id,
+        Name: db.user.shape.Name,
       });
 
       expectQueryNotMutated(q);
@@ -208,21 +222,24 @@ describe('select', () => {
     });
 
     it('should select table.column', () => {
-      const q = User.all();
-      const query = q.select('User.id', 'User.name');
+      const q = db.user.all();
+      const query = q.select('User.Id', 'User.Name');
 
-      assertType<Awaited<typeof query>, Pick<UserRecord, 'id' | 'name'>[]>();
+      assertType<
+        Awaited<typeof query>,
+        Pick<UserDefaultSelect, 'Id' | 'Name'>[]
+      >();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "User"."id", "User"."name" FROM "schema"."user" "User"
+          SELECT "User"."id" "Id", "User"."name" "Name" FROM "schema"."user" "User"
         `,
       );
 
       expect(getShapeFromSelect(query)).toEqual({
-        id: User.shape.id,
-        name: User.shape.name,
+        Id: db.user.shape.Id,
+        Name: db.user.shape.Name,
       });
 
       expectQueryNotMutated(q);
@@ -246,58 +263,59 @@ describe('select', () => {
     });
 
     it('should select joined columns', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q
-        .join(Profile, 'Profile.userId', '=', 'User.id')
-        .select('User.id', 'Profile.userId');
+        .join(db.profile, 'Profile.UserId', '=', 'User.Id')
+        .select('User.Id', 'Profile.UserId');
 
-      assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; UserId: number | null }[]
+      >();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "User"."id", "Profile"."user_id" "userId" FROM "schema"."user" "User"
+          SELECT "User"."id" "Id", "Profile"."user_id" "UserId" FROM "schema"."user" "User"
           JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
       );
 
       expect(getShapeFromSelect(query)).toEqual({
-        id: User.shape.id,
-        userId: Profile.shape.userId,
+        Id: db.user.shape.Id,
+        UserId: db.profile.shape.UserId,
       });
 
       expectQueryNotMutated(q);
     });
 
     it('should select left joined columns as optional', () => {
-      const q = User.leftJoin(Profile, 'Profile.userId', 'User.id').select(
-        'User.id',
-        'Profile.userId',
-      );
+      const q = db.user
+        .leftJoin(db.profile, 'Profile.UserId', 'User.Id')
+        .select('User.Id', 'Profile.UserId');
 
-      assertType<Awaited<typeof q>, { id: number; userId: number | null }[]>();
+      assertType<Awaited<typeof q>, { Id: number; UserId: number | null }[]>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "Profile"."user_id" "userId" FROM "schema"."user" "User"
+          SELECT "User"."id" "Id", "Profile"."user_id" "UserId" FROM "schema"."user" "User"
           LEFT JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
         `,
       );
     });
 
     it('should select named joined columns', () => {
-      const q = User.join(Snake, 'tailLength', 'id').select(
-        'User.id',
-        'Snake.snakeName',
-      );
+      const q = db.user
+        .join(Snake, 'tailLength', 'Id')
+        .select('User.Id', 'Snake.snakeName');
 
-      assertType<Awaited<typeof q>, { id: number; snakeName: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; snakeName: string }[]>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "Snake"."snake_name" "snakeName"
+          SELECT "User"."id" "Id", "Snake"."snake_name" "snakeName"
           FROM "schema"."user" "User"
           JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
         `,
@@ -305,41 +323,43 @@ describe('select', () => {
     });
 
     it('should select joined columns with alias', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q
-        .join(Profile.as('p'), 'p.userId', '=', 'User.id')
-        .select('User.id', 'p.userId');
+        .join(db.profile.as('p'), 'p.UserId', '=', 'User.Id')
+        .select('User.Id', 'p.UserId');
 
-      assertType<Awaited<typeof query>, { id: number; userId: number }[]>();
+      assertType<
+        Awaited<typeof query>,
+        { Id: number; UserId: number | null }[]
+      >();
 
       expectSql(
         query.toSQL(),
         `
-          SELECT "User"."id", "p"."user_id" "userId" FROM "schema"."user" "User"
+          SELECT "User"."id" "Id", "p"."user_id" "UserId" FROM "schema"."user" "User"
           JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
       );
 
       expect(getShapeFromSelect(query)).toEqual({
-        id: User.shape.id,
-        userId: Profile.shape.userId,
+        Id: db.user.shape.Id,
+        UserId: db.profile.shape.UserId,
       });
 
       expectQueryNotMutated(q);
     });
 
     it('should select named joined columns with alias', () => {
-      const q = User.join(Snake.as('s'), 'tailLength', 'id').select(
-        'User.id',
-        's.snakeName',
-      );
+      const q = db.user
+        .join(Snake.as('s'), 'tailLength', 'Id')
+        .select('User.Id', 's.snakeName');
 
-      assertType<Awaited<typeof q>, { id: number; snakeName: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; snakeName: string }[]>();
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."id", "s"."snake_name" "snakeName"
+          SELECT "User"."id" "Id", "s"."snake_name" "snakeName"
           FROM "schema"."user" "User"
           JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
         `,
@@ -364,12 +384,12 @@ describe('select', () => {
       beforeEach(insertUserAndProfile);
 
       it('should parse columns of the table', async () => {
-        const q = User.select('createdAt');
+        const q = db.user.select('createdAt');
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
         expect(getShapeFromSelect(q)).toEqual({
-          createdAt: User.shape.createdAt,
+          createdAt: db.user.shape.createdAt,
         });
 
         expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
@@ -379,12 +399,12 @@ describe('select', () => {
       });
 
       it('should parse columns of the table, selected by column name and table name', async () => {
-        const q = User.select('User.createdAt');
+        const q = db.user.select('User.createdAt');
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
         expect(getShapeFromSelect(q)).toEqual({
-          createdAt: User.shape.createdAt,
+          createdAt: db.user.shape.createdAt,
         });
 
         expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
@@ -394,14 +414,14 @@ describe('select', () => {
       });
 
       it('should parse columns of joined table', async () => {
-        const q = Profile.join(User, 'User.id', '=', 'Profile.userId').select(
-          'User.createdAt',
-        );
+        const q = db.profile
+          .join(db.user, 'User.Id', '=', 'Profile.UserId')
+          .select('User.createdAt');
 
         assertType<Awaited<typeof q>, { createdAt: Date }[]>();
 
         expect(getShapeFromSelect(q)).toEqual({
-          createdAt: User.shape.createdAt,
+          createdAt: db.user.shape.createdAt,
         });
 
         expect((await q.all())[0].createdAt).toEqual(expect.any(Date));
@@ -412,9 +432,9 @@ describe('select', () => {
     });
 
     it('should select columns with aliases', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      const query = q.select({ aliasedId: 'id', aliasedName: 'name' });
+      const query = q.select({ aliasedId: 'Id', aliasedName: 'Name' });
 
       assertType<
         Awaited<typeof query>,
@@ -422,8 +442,8 @@ describe('select', () => {
       >();
 
       expect(getShapeFromSelect(query)).toEqual({
-        aliasedId: User.shape.id,
-        aliasedName: User.shape.name,
+        aliasedId: db.user.shape.Id,
+        aliasedName: db.user.shape.Name,
       });
 
       expectSql(
@@ -451,11 +471,11 @@ describe('select', () => {
     });
 
     it('should select table.column with aliases', () => {
-      const q = User.all();
+      const q = db.user.all();
 
       const query = q.select({
-        aliasedId: 'User.id',
-        aliasedName: 'User.name',
+        aliasedId: 'User.Id',
+        aliasedName: 'User.Name',
       });
 
       assertType<
@@ -464,8 +484,8 @@ describe('select', () => {
       >();
 
       expect(getShapeFromSelect(query)).toEqual({
-        aliasedId: User.shape.id,
-        aliasedName: User.shape.name,
+        aliasedId: db.user.shape.Id,
+        aliasedName: db.user.shape.Name,
       });
 
       expectSql(
@@ -496,20 +516,22 @@ describe('select', () => {
     });
 
     it('should select joined columns', () => {
-      const q = User.all();
-      const query = q.join(Profile, 'Profile.userId', '=', 'User.id').select({
-        aliasedId: 'User.id',
-        aliasedUserId: 'Profile.userId',
-      });
+      const q = db.user.all();
+      const query = q
+        .join(db.profile, 'Profile.UserId', '=', 'User.Id')
+        .select({
+          aliasedId: 'User.Id',
+          aliasedUserId: 'Profile.UserId',
+        });
 
       assertType<
         Awaited<typeof query>,
-        { aliasedId: number; aliasedUserId: number }[]
+        { aliasedId: number; aliasedUserId: number | null }[]
       >();
 
       expect(getShapeFromSelect(query)).toEqual({
-        aliasedId: User.shape.id,
-        aliasedUserId: Profile.shape.userId,
+        aliasedId: db.user.shape.Id,
+        aliasedUserId: db.profile.shape.UserId,
       });
 
       expectSql(
@@ -524,8 +546,8 @@ describe('select', () => {
     });
 
     it('should select named joined columns with aliases', () => {
-      const q = User.join(Snake, 'tailLength', 'id').select({
-        userId: 'User.id',
+      const q = db.user.join(Snake, 'tailLength', 'Id').select({
+        userId: 'User.Id',
         length: 'Snake.tailLength',
       });
 
@@ -542,20 +564,22 @@ describe('select', () => {
     });
 
     it('should select joined columns with alias', () => {
-      const q = User.all();
-      const query = q.join(Profile.as('p'), 'p.userId', '=', 'User.id').select({
-        aliasedId: 'User.id',
-        aliasedUserId: 'p.userId',
-      });
+      const q = db.user.all();
+      const query = q
+        .join(db.profile.as('p'), 'p.UserId', '=', 'User.Id')
+        .select({
+          aliasedId: 'User.Id',
+          aliasedUserId: 'p.UserId',
+        });
 
       assertType<
         Awaited<typeof query>,
-        { aliasedId: number; aliasedUserId: number }[]
+        { aliasedId: number; aliasedUserId: number | null }[]
       >();
 
       expect(getShapeFromSelect(query)).toEqual({
-        aliasedId: User.shape.id,
-        aliasedUserId: Profile.shape.userId,
+        aliasedId: db.user.shape.Id,
+        aliasedUserId: db.profile.shape.UserId,
       });
 
       expectSql(
@@ -570,8 +594,8 @@ describe('select', () => {
     });
 
     it('should select named joined columns with aliases from aliased join', () => {
-      const q = User.join(Snake.as('s'), 'tailLength', 'id').select({
-        userId: 'User.id',
+      const q = db.user.join(Snake.as('s'), 'tailLength', 'Id').select({
+        userId: 'User.Id',
         length: 's.tailLength',
       });
 
@@ -588,7 +612,7 @@ describe('select', () => {
     });
 
     it('should accept raw', () => {
-      const q = User.all();
+      const q = db.user.all();
       const query = q.select({ one: sql`1` });
 
       assertType<Awaited<typeof query>, { one: unknown }[]>();
@@ -603,35 +627,37 @@ describe('select', () => {
     });
 
     it('should support selecting column after selecting by object', () => {
-      const q = User.select({
-        count: sql<number>`count(*)`,
-      }).select('name');
+      const q = db.user
+        .select({
+          count: sql<number>`count(*)`,
+        })
+        .select('Name');
 
-      assertType<Awaited<typeof q>, { count: number; name: string }[]>();
+      assertType<Awaited<typeof q>, { count: number; Name: string }[]>();
     });
 
     it('should respect previous select', () => {
-      const q = User.select('id').select('name');
+      const q = db.user.select('Id').select('Name');
 
-      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      assertType<Awaited<typeof q>, { Id: number; Name: string }[]>();
     });
 
     it('table should have all columns selected if select was not applied', () => {
-      assertType<Awaited<typeof User>, UserRecord[]>();
+      assertType<Awaited<typeof db.user>, UserDefaultSelect[]>();
     });
 
     describe('select callback', () => {
       it('should support conditional query or raw expression', async () => {
         const condition = true;
-        const q = User.select({
-          key: () => (condition ? User.exists() : sql<boolean>`false`),
+        const q = db.user.select({
+          key: () => (condition ? db.user.exists() : sql<boolean>`false`),
         });
 
         assertType<Awaited<typeof q>, { key: boolean }[]>();
       });
 
       it('should accept raw in a callback', () => {
-        const query = User.select({
+        const query = db.user.select({
           one: () => sql`1`.type((t) => t.integer()),
         });
 
@@ -650,10 +676,10 @@ describe('select', () => {
       });
 
       it('should select subquery', () => {
-        const q = User.all();
-        const query = q.select({ subquery: () => User.select('id') });
+        const q = db.user.all();
+        const query = q.select({ subquery: () => db.user.select('Id') });
 
-        assertType<Awaited<typeof query>, { subquery: { id: number }[] }[]>();
+        assertType<Awaited<typeof query>, { subquery: { Id: number }[] }[]>();
 
         expect(getShapeFromSelect(query)).toEqual({
           subquery: expect.any(JSONTextColumn),
@@ -665,7 +691,7 @@ describe('select', () => {
             SELECT
               (
                 SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-                FROM (SELECT "User"."id" FROM "schema"."user" "User") "t"
+                FROM (SELECT "User"."id" "Id" FROM "schema"."user" "User") "t"
               ) "subquery"
             FROM "schema"."user" "User"
           `,
@@ -696,16 +722,16 @@ describe('select', () => {
       });
 
       it('should properly select and parse 3 levels deep select *', async () => {
-        await User.insert(userData);
+        await db.user.insert(UserData);
 
-        const res = await User.select({
+        const res = await db.user.select({
           arr: () =>
-            User.select({
-              arr: () => User.select('*'),
+            db.user.select({
+              arr: () => db.user.select('*'),
             }),
         });
 
-        assertType<typeof res, { arr: { arr: UserRecord[] }[] }[]>();
+        assertType<typeof res, { arr: { arr: UserDefaultSelect[] }[] }[]>();
 
         expect(res).toMatchObject([
           { arr: [{ arr: [{ updatedAt: expect.any(Date) }] }] },
@@ -715,18 +741,20 @@ describe('select', () => {
       // testing this issue: https://github.com/romeerez/orchid-orm/issues/45
       // and this: https://github.com/romeerez/orchid-orm/issues/310
       it('should handle nested sub selects', async () => {
-        await User.insert(userData);
+        await db.user.insert(UserData);
 
-        const res = await User.select('*', {
+        const res = await db.user.select('*', {
           author: () =>
-            User.select({
-              count: () => User.count(),
-            }).takeOptional(),
+            db.user
+              .select({
+                count: () => db.user.count(),
+              })
+              .takeOptional(),
         });
 
         assertType<
           typeof res,
-          (UserRecord & { author: { count: number } | undefined })[]
+          (UserDefaultSelect & { author: { count: number } | undefined })[]
         >();
 
         expect(res).toMatchObject([
@@ -735,36 +763,36 @@ describe('select', () => {
       });
 
       it('should combine multiple selects and give proper types', async () => {
-        const query = User.select('id').select({
-          count: () => User.count(),
+        const query = db.user.select('Id').select({
+          count: () => db.user.count(),
         });
 
-        const q = User.from(query).selectAll();
+        const q = db.user.from(query).selectAll();
 
-        assertType<Awaited<typeof q>, { id: number; count: number }[]>();
+        assertType<Awaited<typeof q>, { Id: number; count: number }[]>();
       });
 
       it('should throw when sub query with `take` is not found', async () => {
-        await User.insert(userData);
+        await db.user.insert(UserData);
 
         await expect(() =>
-          User.select({ as: () => Profile.take() }),
+          db.user.select({ as: () => db.profile.take() }),
         ).rejects.toThrow(NotFoundError);
       });
 
       it('should return undefined when sub query with `takeOptional` is not found', async () => {
-        await User.insert(userData);
+        await db.user.insert(UserData);
 
-        const res = await User.select({
-          withParsers: () => Profile.takeOptional(),
+        const res = await db.user.select({
+          withParsers: () => db.profile.takeOptional(),
           withoutParsers: () => ProfileNoParsers.takeOptional(),
         });
 
         assertType<
           typeof res,
           {
-            withParsers: ProfileRecord | undefined;
-            withoutParsers: ProfileRecord | undefined;
+            withParsers: Profile | undefined;
+            withoutParsers: Profile | undefined;
           }[]
         >();
 
@@ -774,19 +802,19 @@ describe('select', () => {
       });
 
       it('should throw when sub query with `get` is not found', async () => {
-        await User.insert(userData);
+        await db.user.insert(UserData);
 
         await expect(() =>
-          User.select({ as: () => Profile.get('id') }),
+          db.user.select({ as: () => db.profile.get('Id') }),
         ).rejects.toThrow(NotFoundError);
       });
 
       it('should not throw when not found for aggregations that can return null', async () => {
-        await User.insert(userData);
+        await db.user.insert(UserData);
 
-        const res = await User.select({
-          withParsers: () => Profile.avg('id'),
-          withoutParsers: () => ProfileNoParsers.avg('id'),
+        const res = await db.user.select({
+          withParsers: () => db.profile.avg('Id'),
+          withoutParsers: () => ProfileNoParsers.avg('Id'),
         });
 
         assertType<
@@ -806,10 +834,11 @@ describe('select', () => {
     it('should select joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.join(Profile.as('p'), 'p.userId', 'User.id')
+      const q = db.user
+        .join(db.profile.as('p'), 'p.UserId', 'User.Id')
         .select('p.*')
         .where({
-          'p.bio': profileData.bio,
+          'p.Bio': profileData.bio,
         });
 
       expectSql(
@@ -825,14 +854,16 @@ describe('select', () => {
 
       const res = await q;
 
-      assertType<typeof res, { p: ProfileRecord }[]>();
+      assertType<typeof res, { p: ProfileRow }[]>();
 
       expect(res).toEqual([
         {
           p: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
             updatedAt: expect.any(Date),
           },
@@ -843,12 +874,13 @@ describe('select', () => {
     it('should select joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.join(Profile.as('p'), 'p.userId', 'User.id')
+      const q = db.user
+        .join(db.profile.as('p'), 'p.UserId', 'User.Id')
         .select({
           profile: 'p.*',
         })
         .where({
-          'p.bio': profileData.bio,
+          'p.Bio': profileData.bio,
         });
 
       expectSql(
@@ -864,14 +896,16 @@ describe('select', () => {
 
       const res = await q;
 
-      assertType<Awaited<typeof res>, { profile: ProfileRecord }[]>();
+      assertType<Awaited<typeof res>, { profile: ProfileRow }[]>();
 
       expect(res).toEqual([
         {
           profile: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
             updatedAt: expect.any(Date),
           },
@@ -886,7 +920,9 @@ describe('select', () => {
         price: t.decimal().selectSql((column) => sql`trim_scale(${column})`),
       }));
 
-      const q = User.join(Product.as('p'), 'p.userId', 'User.id').select('p.*');
+      const q = db.user
+        .join(Product.as('p'), 'p.userId', 'User.Id')
+        .select('p.*');
 
       expectSql(
         q.toSQL(),
@@ -901,9 +937,9 @@ describe('select', () => {
     it('should select left joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'User.id').select(
-        'p.*',
-      );
+      const q = db.user
+        .leftJoin(db.profile.as('p'), 'p.UserId', 'User.Id')
+        .select('p.*');
 
       expectSql(
         q.toSQL(),
@@ -916,14 +952,16 @@ describe('select', () => {
 
       const res = await q;
 
-      assertType<typeof res, { p: ProfileRecord | undefined }[]>();
+      assertType<typeof res, { p: ProfileRow | undefined }[]>();
 
       expect(res).toEqual([
         {
           p: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
             updatedAt: expect.any(Date),
           },
@@ -934,9 +972,11 @@ describe('select', () => {
     it('should select left joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.leftJoin(Profile.as('p'), 'p.userId', 'User.id').select({
-        profile: 'p.*',
-      });
+      const q = db.user
+        .leftJoin(db.profile.as('p'), 'p.UserId', 'User.Id')
+        .select({
+          profile: 'p.*',
+        });
 
       expectSql(
         q.toSQL(),
@@ -949,14 +989,16 @@ describe('select', () => {
 
       const res = await q;
 
-      assertType<typeof res, { profile: ProfileRecord | undefined }[]>();
+      assertType<typeof res, { profile: ProfileRow | undefined }[]>();
 
       expect(res).toEqual([
         {
           profile: {
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            bio: profileData.bio,
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
             updatedAt: expect.any(Date),
           },
@@ -967,15 +1009,14 @@ describe('select', () => {
     it('should select right joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'User.id').select(
-        'name',
-        'p.*',
-      );
+      const q = db.user
+        .rightJoin(db.profile.as('p'), 'p.UserId', 'User.Id')
+        .select('Name', 'p.*');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."name", ${profileJsonBuildObjectSql} "p"
+          SELECT "User"."name" "Name", ${profileJsonBuildObjectSql} "p"
           FROM "schema"."user" "User"
           RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
@@ -983,17 +1024,19 @@ describe('select', () => {
 
       const res = await q;
 
-      assertType<typeof res, { name: string | null; p: ProfileRecord }[]>();
+      assertType<typeof res, { Name: string | null; p: ProfileRow }[]>();
 
       expect(res).toEqual([
         {
-          name: 'name',
+          Name: 'name',
           p: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
           },
         },
       ]);
@@ -1002,15 +1045,14 @@ describe('select', () => {
     it('should select right joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.rightJoin(Profile.as('p'), 'p.userId', 'User.id').select(
-        'name',
-        { profile: 'p.*' },
-      );
+      const q = db.user
+        .rightJoin(db.profile.as('p'), 'p.UserId', 'User.Id')
+        .select('Name', { profile: 'p.*' });
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."name", ${profileJsonBuildObjectSql} "profile"
+          SELECT "User"."name" "Name", ${profileJsonBuildObjectSql} "profile"
           FROM "schema"."user" "User"
           RIGHT JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
@@ -1018,20 +1060,19 @@ describe('select', () => {
 
       const res = await q;
 
-      assertType<
-        typeof res,
-        { name: string | null; profile: ProfileRecord }[]
-      >();
+      assertType<typeof res, { Name: string | null; profile: ProfileRow }[]>();
 
       expect(res).toEqual([
         {
-          name: 'name',
+          Name: 'name',
           profile: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
           },
         },
       ]);
@@ -1040,15 +1081,14 @@ describe('select', () => {
     it('should select full joined table as json', async () => {
       await insertUserAndProfile();
 
-      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'User.id').select(
-        'name',
-        'p.*',
-      );
+      const q = db.user
+        .fullJoin(db.profile.as('p'), 'p.UserId', 'User.Id')
+        .select('Name', 'p.*');
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."name", ${profileJsonBuildObjectSql} "p"
+          SELECT "User"."name" "Name", ${profileJsonBuildObjectSql} "p"
           FROM "schema"."user" "User"
           FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
@@ -1058,18 +1098,20 @@ describe('select', () => {
 
       assertType<
         typeof res,
-        { name: string | null; p: ProfileRecord | undefined }[]
+        { Name: string | null; p: ProfileRow | undefined }[]
       >();
 
       expect(res).toEqual([
         {
-          name: 'name',
+          Name: 'name',
           p: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
           },
         },
       ]);
@@ -1078,15 +1120,14 @@ describe('select', () => {
     it('should select full joined table as json with alias', async () => {
       await insertUserAndProfile();
 
-      const q = User.fullJoin(Profile.as('p'), 'p.userId', 'User.id').select(
-        'name',
-        { profile: 'p.*' },
-      );
+      const q = db.user
+        .fullJoin(db.profile.as('p'), 'p.UserId', 'User.Id')
+        .select('Name', { profile: 'p.*' });
 
       expectSql(
         q.toSQL(),
         `
-          SELECT "User"."name", ${profileJsonBuildObjectSql} "profile"
+          SELECT "User"."name" "Name", ${profileJsonBuildObjectSql} "profile"
           FROM "schema"."user" "User"
           FULL JOIN "schema"."profile" "p" ON "p"."user_id" = "User"."id"
         `,
@@ -1096,18 +1137,20 @@ describe('select', () => {
 
       assertType<
         typeof res,
-        { name: string | null; profile: ProfileRecord | undefined }[]
+        { Name: string | null; profile: ProfileRow | undefined }[]
       >();
 
       expect(res).toEqual([
         {
-          name: 'name',
+          Name: 'name',
           profile: {
-            ...profileData,
-            id: expect.any(Number),
-            userId: expect.any(Number),
-            updatedAt: expect.any(Date),
+            Id: expect.any(Number),
+            ProfileKey: expect.any(String),
+            UserId: expect.any(Number),
+            Bio: profileData.bio,
+            Active: null,
             createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
           },
         },
       ]);
@@ -1157,17 +1200,17 @@ describe('select', () => {
 
   describe('selectAll', () => {
     it('should select all columns', () => {
-      const query = User.select('id', 'name').selectAll();
+      const query = db.user.select('Id', 'Name').selectAll();
 
-      assertType<Awaited<typeof query>, UserRecord[]>();
+      assertType<Awaited<typeof query>, UserDefaultSelect[]>();
 
       expect(Object.keys(getShapeFromSelect(query))).toEqual(
-        Object.keys(User.q.selectAllShape),
+        Object.keys(db.user.q.selectAllShape),
       );
 
       expectSql(
         query.toSQL(),
-        `SELECT ${userColumnsSql} FROM "schema"."user" "User"`,
+        `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
       );
     });
 
@@ -1189,14 +1232,14 @@ describe('select', () => {
     beforeEach(insertUserAndProfile);
 
     it('should parse columns of the table', async () => {
-      const q = User.select({
+      const q = db.user.select({
         date: 'createdAt',
       });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
 
       expect(getShapeFromSelect(q)).toEqual({
-        date: User.shape.createdAt,
+        date: db.user.shape.createdAt,
       });
 
       expect((await q.all())[0].date).toEqual(expect.any(Date));
@@ -1205,14 +1248,14 @@ describe('select', () => {
     });
 
     it('should parse columns of the table, selected by column name and table name', async () => {
-      const q = User.select({
+      const q = db.user.select({
         date: 'User.createdAt',
       });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
 
       expect(getShapeFromSelect(q)).toEqual({
-        date: User.shape.createdAt,
+        date: db.user.shape.createdAt,
       });
 
       expect((await q.all())[0].date).toEqual(expect.any(Date));
@@ -1221,14 +1264,16 @@ describe('select', () => {
     });
 
     it('should parse columns of joined table', async () => {
-      const q = Profile.join(User, 'User.id', '=', 'Profile.userId').select({
-        date: 'User.createdAt',
-      });
+      const q = db.profile
+        .join(db.user, 'User.Id', '=', 'Profile.UserId')
+        .select({
+          date: 'User.createdAt',
+        });
 
       assertType<Awaited<typeof q>, { date: Date }[]>();
 
       expect(getShapeFromSelect(q)).toEqual({
-        date: User.shape.createdAt,
+        date: db.user.shape.createdAt,
       });
 
       expect((await q.all())[0].date).toEqual(expect.any(Date));
@@ -1237,8 +1282,8 @@ describe('select', () => {
     });
 
     it('should parse raw column', async () => {
-      const q = User.select({
-        date: User.sql`"created_at"`.type(() =>
+      const q = db.user.select({
+        date: db.user.sql`"created_at"`.type(() =>
           t.date().parse(z.date(), (input) => new Date(input)),
         ),
       });
@@ -1256,11 +1301,11 @@ describe('select', () => {
 
     describe('sub query', () => {
       it('should parse subquery array columns', async () => {
-        const q = User.select({
-          users: () => User.all(),
+        const q = db.user.select({
+          users: () => db.user.all(),
         });
 
-        assertType<Awaited<typeof q>, { users: UserRecord[] }[]>();
+        assertType<Awaited<typeof q>, { users: UserDefaultSelect[] }[]>();
 
         expect(getShapeFromSelect(q)).toEqual({
           users: expect.any(JSONTextColumn),
@@ -1272,11 +1317,14 @@ describe('select', () => {
       });
 
       it('should parse subquery item columns', async () => {
-        const q = User.select({
-          user: () => User.takeOptional(),
+        const q = db.user.select({
+          user: () => db.user.takeOptional(),
         });
 
-        assertType<Awaited<typeof q>, { user: UserRecord | undefined }[]>();
+        assertType<
+          Awaited<typeof q>,
+          { user: UserDefaultSelect | undefined }[]
+        >();
 
         expect(getShapeFromSelect(q)).toEqual({
           user: expect.any(JSONTextColumn),
@@ -1288,7 +1336,7 @@ describe('select', () => {
       });
 
       it('should parse subquery single value', async () => {
-        const q = User.select({
+        const q = db.user.select({
           count: (q) => q.count(),
         });
 
@@ -1304,8 +1352,8 @@ describe('select', () => {
       });
 
       it('should parse subquery pluck', async () => {
-        const q = User.select({
-          dates: () => User.pluck('createdAt'),
+        const q = db.user.select({
+          dates: () => db.user.pluck('createdAt'),
         });
 
         assertType<Awaited<typeof q>, { dates: Date[] }[]>();
@@ -1320,9 +1368,11 @@ describe('select', () => {
       });
 
       it('should cast decimal to text for a sub-selected record', () => {
-        const q = User.select({
-          product: () => Product.take(),
-        }).take();
+        const q = db.user
+          .select({
+            product: () => db.product.take(),
+          })
+          .take();
 
         expectSql(
           q.toSQL(),
@@ -1334,9 +1384,11 @@ describe('select', () => {
       });
 
       it('should cast decimal to text for sub-selected records', () => {
-        const q = User.select({
-          products: () => Product,
-        }).take();
+        const q = db.user
+          .select({
+            products: () => db.product,
+          })
+          .take();
 
         expectSql(
           q.toSQL(),
@@ -1348,9 +1400,11 @@ describe('select', () => {
       });
 
       it('should cast decimal to text for sub-selected records when selecting various columns', () => {
-        const q = User.select({
-          products: () => Product.select('id', 'camelCase', 'priceAmount'),
-        }).take();
+        const q = db.user
+          .select({
+            products: () => db.product.select('id', 'camelCase', 'priceAmount'),
+          })
+          .take();
 
         expectSql(
           q.toSQL(),

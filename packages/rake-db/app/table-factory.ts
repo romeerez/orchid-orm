@@ -1,6 +1,6 @@
-import { createBaseTable } from 'orchid-orm';
+import { createTableFactory } from 'orchid-orm';
 
-export const BaseTable = createBaseTable({
+export const { defineTable } = createTableFactory({
   snakeCase: true,
   columnTypes: (t) => ({
     ...t,

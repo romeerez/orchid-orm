@@ -41,7 +41,7 @@ import { RakeDbConfig } from 'rake-db';
 import { mockChangeLogger } from './mock-migrations/mock-change';
 import { queryLock } from '../common';
 import path from 'node:path';
-import { createBaseTable } from 'orchid-orm';
+import { createTableFactory } from 'orchid-orm';
 
 jest.mock('../common', () => {
   const actual = jest.requireActual('../common');
@@ -242,14 +242,12 @@ describe('migrate-or-rollback', () => {
         ],
       });
 
-      const BaseTable = createBaseTable({
-        snakeCase: true,
-        language: 'lang',
-      });
-
       await migrate(adapter, {
         migrations: {},
-        baseTable: BaseTable,
+        defineTable: createTableFactory({
+          snakeCase: true,
+          language: 'lang',
+        }).defineTable,
         noPrimaryKey: 'ignore',
       });
 
@@ -257,6 +255,55 @@ describe('migrate-or-rollback', () => {
         snakeCase: true,
         language: 'lang',
         noPrimaryKey: 'ignore',
+      });
+    });
+
+    it('should use `defineTable` metadata in programmatic migrations', async () => {
+      let options: unknown;
+
+      const defineTable = {
+        types: testConfig.columnTypes,
+        exportAs: 'defineTable',
+        getFilePath: () => '/path/to/table.ts',
+        snakeCase: true,
+        language: 'lang',
+        nowSQL: `now() AT TIME ZONE 'UTC'`,
+      };
+
+      const change = createMigrationChangeFn({
+        columnTypes: defineTable.types,
+      });
+
+      asMock(getMigratedVersionsMap).mockResolvedValueOnce({
+        map: {},
+        sequence: [],
+      });
+
+      asMock(getMigrations).mockResolvedValueOnce({
+        migrations: [
+          {
+            version: '001',
+            path: 'define-table-path',
+            async load() {
+              change(async (db) => {
+                options = db.options;
+              });
+            },
+          },
+        ],
+      });
+
+      await migrate(adapter, {
+        migrations: {},
+        defineTable,
+        noPrimaryKey: 'ignore',
+      });
+
+      expect(options).toMatchObject({
+        snakeCase: true,
+        language: 'lang',
+        noPrimaryKey: 'ignore',
+        defineTable,
       });
     });
 

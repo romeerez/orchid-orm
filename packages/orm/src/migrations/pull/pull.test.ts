@@ -9,9 +9,13 @@ import {
   AdapterClass,
 } from 'pqb/internal';
 import { testConfig } from '../migrations.test-utils';
-import { ChangeCallback, createMigrationInterface } from 'rake-db';
+import {
+  ChangeCallback,
+  RakeDbConfig,
+  createMigrationInterface,
+} from 'rake-db';
 import fs from 'node:fs/promises';
-import { asMock, TestAdapter } from 'test-utils';
+import { asMock, TestAdapter, testColumnTypes } from 'test-utils';
 import path from 'node:path';
 
 jest.mock('node:fs/promises', () => ({
@@ -35,6 +39,7 @@ const options: AdapterConfigBase[] = [
 
 let adapters: Adapter[] = [];
 let closers: (() => Promise<void>)[] = [];
+let config: RakeDbConfig = testConfig;
 
 let prepareDbTransactionPromise: Promise<void> | undefined;
 let resolvePrepareDbTransaction: ((err: Error) => void) | undefined;
@@ -42,15 +47,19 @@ let resolvePrepareDbTransaction: ((err: Error) => void) | undefined;
 const rollbackErr = new Error('Rollback');
 
 const arrange = async ({
+  config: arrangedConfig,
   prepareDb,
   dbFile = `import { orchidORM } from 'orchid-orm';
 
 export const db = orchidORM({ databaseURL: 'url' }, {});
 `,
 }: {
+  config?: RakeDbConfig;
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
-  dbFile?: string;
+  dbFile?: string | false;
 }) => {
+  config = arrangedConfig ?? testConfig;
+
   adapters = options.map(
     (config) =>
       new AdapterClass({
@@ -78,8 +87,8 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
 
               adapters[0] = trx;
 
-              const db = createMigrationInterface(trx, true, testConfig).getDb(
-                testConfig.columnTypes,
+              const db = createMigrationInterface(trx, true, config).getDb(
+                config.columnTypes,
               );
 
               await prepareDb(db, true);
@@ -102,7 +111,7 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
   }
 };
 
-const act = () => pull(adapters, testConfig);
+const act = () => pull(adapters, config);
 
 const assert = {
   tableFile(calls: [path: string, content: string][]) {
@@ -128,7 +137,10 @@ const assert = {
 };
 
 describe('pull', () => {
-  beforeEach(jest.clearAllMocks);
+  beforeEach(() => {
+    jest.clearAllMocks();
+    config = testConfig;
+  });
 
   afterEach(async () => {
     resolvePrepareDbTransaction?.(rollbackErr);
@@ -139,6 +151,27 @@ describe('pull', () => {
   });
 
   describe('create table', () => {
+    it('should reject baseTable without defineTable', async () => {
+      await arrange({
+        config: {
+          ...testConfig,
+          defineTable: undefined,
+          baseTable: class BaseTable {
+            static exportAs = 'BaseTable';
+            static getFilePath = () =>
+              path.join(__dirname, '..', 'migrations.test-utils');
+
+            types = testColumnTypes;
+          },
+        },
+        dbFile: false,
+      });
+
+      await expect(act()).rejects.toThrow(
+        '`defineTable` setting must be set in the migrations config for pull command',
+      );
+    });
+
     it('should create a table', async () => {
       await arrange({
         async prepareDb(db) {
@@ -176,37 +209,39 @@ describe('pull', () => {
         [
           'tables/one.table.ts',
           `import { Selectable, Insertable, Updatable } from 'orchid-orm';
-import { BaseTable } from '../migrations.test-utils';
+import { defineTable, sql } from '../migrations.test-utils';
 
-export type One = Selectable<OneTable>;
-export type OneNew = Insertable<OneTable>;
-export type OneUpdate = Updatable<OneTable>;
+export type One = Selectable<typeof OneTable>;
+export type OneNew = Insertable<typeof OneTable>;
+export type OneUpdate = Updatable<typeof OneTable>;
 
-export class OneTable extends BaseTable {
-  schema = 'schema';
-  readonly table = 'one';
-  columns = this.setColumns(
-    (t) => ({
-      one: t.integer().index({
+export const OneTable = defineTable(
+  'one',
+  {
+    schema: 'schema',
+  },
+  (t) => ({
+    one: t
+      .integer()
+      .index({
         name: 'one_idx',
-      }).check(t.sql\`(one = 69)\`),
-      two: t.text().unique({
-        name: 'two_idx',
-      }),
-      snakeCase: t.name('snake_case').boolean(),
-      numbers: t.enum('numbers', ['one', 'two']),
-      domain: t.domain('public.domain').as(t.integer().nullable()),
+      })
+      .check(sql\`(one = 69)\`),
+    two: t.text().unique({
+      name: 'two_idx',
     }),
-    (t) => [
-      t.primaryKey(['one', 'two'], 'onePkey'),
-      t.unique(['one', 'two'], {
-        name: 'uniqueIdx',
-        nullsNotDistinct: true,
-      }),
-      t.check(t.sql\`((one)::text <> two)\`, 'tableCheck'),
-    ],
-  );
-}
+    snakeCase: t.name('snake_case').boolean(),
+    numbers: t.enum('numbers', ['one', 'two']),
+    domain: t.domain('public.domain').as(t.integer().nullable()),
+  }),
+)
+  .primaryKey(['one', 'two'], 'onePkey')
+  .unique(['one', 'two'], {
+    name: 'uniqueIdx',
+    nullsNotDistinct: true,
+  })
+  .check(sql\`((one)::text <> two)\`, 'tableCheck');
+;
 `,
         ],
       ]);
@@ -231,20 +266,73 @@ export class OneTable extends BaseTable {
         [
           'tables/one.table.ts',
           `import { Selectable, Insertable, Updatable } from 'orchid-orm';
-import { BaseTable } from '../migrations.test-utils';
+import { defineTable } from '../migrations.test-utils';
 
-export type One = Selectable<OneTable>;
-export type OneNew = Insertable<OneTable>;
-export type OneUpdate = Updatable<OneTable>;
+export type One = Selectable<typeof OneTable>;
+export type OneNew = Insertable<typeof OneTable>;
+export type OneUpdate = Updatable<typeof OneTable>;
 
-export class OneTable extends BaseTable {
-  readonly table = 'one';
-  comment = 'table comment';
-  noPrimaryKey = true;
-  columns = this.setColumns((t) => ({
+export const OneTable = defineTable(
+  'one',
+  {
+    comment: 'table comment',
+    noPrimaryKey: true,
+  },
+  (t) => ({
     column: t.text(),
-  }));
-}
+  }),
+);
+`,
+        ],
+      ]);
+    });
+
+    it('should create a function-style table when defineTable is configured', async () => {
+      const defineTable = {
+        types: testColumnTypes,
+        exportAs: 'myDefineTable',
+        getFilePath: () => path.join(__dirname, '..', 'migrations.test-utils'),
+      };
+
+      await arrange({
+        config: {
+          ...testConfig,
+          baseTable: undefined,
+          defineTable,
+        },
+        async prepareDb(db) {
+          await db.createTable(
+            'one',
+            { noPrimaryKey: true, comment: 'table comment' },
+            (t) => ({
+              column: t.text(),
+            }),
+          );
+        },
+      });
+
+      await act();
+
+      assert.tableFile([
+        [
+          'tables/one.table.ts',
+          `import { Selectable, Insertable, Updatable } from 'orchid-orm';
+import { myDefineTable } from '../migrations.test-utils';
+
+export type One = Selectable<typeof OneTable>;
+export type OneNew = Insertable<typeof OneTable>;
+export type OneUpdate = Updatable<typeof OneTable>;
+
+export const OneTable = myDefineTable(
+  'one',
+  {
+    comment: 'table comment',
+    noPrimaryKey: true,
+  },
+  (t) => ({
+    column: t.text(),
+  }),
+);
 `,
         ],
       ]);
@@ -278,69 +366,46 @@ export class OneTable extends BaseTable {
         [
           'tables/one.table.ts',
           `import { Selectable, Insertable, Updatable } from 'orchid-orm';
-import { BaseTable } from '../migrations.test-utils';
-import { TwoTable } from './two.table';
+import { defineTable } from '../migrations.test-utils';
 
-export type One = Selectable<OneTable>;
-export type OneNew = Insertable<OneTable>;
-export type OneUpdate = Updatable<OneTable>;
+export type One = Selectable<typeof OneTable>;
+export type OneNew = Insertable<typeof OneTable>;
+export type OneUpdate = Updatable<typeof OneTable>;
 
-export class OneTable extends BaseTable {
-  readonly table = 'one';
-  columns = this.setColumns(
-    (t) => ({
-      one: t.integer(),
-      two: t.text(),
-    }),
-    (t) => t.primaryKey(['one', 'two']),
-  );
-  
-  relations = {
-    two: this.belongsTo(() => TwoTable, {
-      columns: ['one', 'two'],
-      references: ['three', 'four'],
-    }),
-  };
-}
+export const OneTable = defineTable(
+  'one',
+  (t) => ({
+    one: t.integer(),
+    two: t.text(),
+  }),
+)
+  .primaryKey(['one', 'two'])
+;
 `,
         ],
         [
           'tables/two.table.ts',
           `import { Selectable, Insertable, Updatable } from 'orchid-orm';
-import { BaseTable } from '../migrations.test-utils';
-import { OneTable } from './one.table';
+import { defineTable } from '../migrations.test-utils';
 
-export type Two = Selectable<TwoTable>;
-export type TwoNew = Insertable<TwoTable>;
-export type TwoUpdate = Updatable<TwoTable>;
+export type Two = Selectable<typeof TwoTable>;
+export type TwoNew = Insertable<typeof TwoTable>;
+export type TwoUpdate = Updatable<typeof TwoTable>;
 
-export class TwoTable extends BaseTable {
-  readonly table = 'two';
-  columns = this.setColumns(
-    (t) => ({
-      three: t.integer(),
-      four: t.text(),
-    }),
-    (t) => [
-      t.primaryKey(['three', 'four']),
-      t.foreignKey(
-        ['three', 'four'],
-        'one',
-        ['one', 'two'],
-        {
-          name: 'fkeyName',
-        },
-      ),
-    ],
-  );
-  
-  relations = {
-    one: this.hasMany(() => OneTable, {
-      columns: ['three', 'four'],
-      references: ['one', 'two'],
-    }),
-  };
-}
+export const TwoTable = defineTable('two', (t) => ({
+  three: t.integer(),
+  four: t.text(),
+}))
+  .primaryKey(['three', 'four'])
+  .foreignKey(
+    ['three', 'four'],
+    'one',
+    ['one', 'two'],
+    {
+      name: 'fkeyName',
+    },
+  )
+;
 `,
         ],
       ]);

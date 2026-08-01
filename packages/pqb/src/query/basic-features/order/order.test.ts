@@ -2,19 +2,17 @@ import {
   expectQueryNotMutated,
   Snake,
   snakeSelectAll,
-  User,
-  userColumnsSql,
 } from '../../../test-utils/pqb.test-utils';
-import { db, expectSql, testDb } from 'test-utils';
+import { db, expectSql, testDb, UserSelectAll } from 'test-utils';
 
 describe('order', () => {
   it('should add order by column ASC when string is provided', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
-      q.order('id', 'name').toSQL(),
+      q.order('Id', 'Name').toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           ORDER BY "User"."id" ASC, "User"."name" ASC
         `,
     );
@@ -35,12 +33,12 @@ describe('order', () => {
   });
 
   it('should handle object parameter', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
-      q.order({ id: 'ASC', name: 'DESC' }).toSQL(),
+      q.order({ Id: 'ASC', Name: 'DESC' }).toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           ORDER BY "User"."id" ASC, "User"."name" DESC
         `,
     );
@@ -48,12 +46,12 @@ describe('order', () => {
     expectSql(
       q
         .order({
-          id: 'ASC NULLS FIRST',
-          name: 'DESC NULLS LAST',
+          Id: 'ASC NULLS FIRST',
+          Name: 'DESC NULLS LAST',
         })
         .toSQL(),
       `
-          SELECT ${userColumnsSql} FROM "schema"."user" "User"
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
           ORDER BY "User"."id" ASC NULLS FIRST, "User"."name" DESC NULLS LAST
         `,
     );
@@ -83,11 +81,11 @@ describe('order', () => {
   });
 
   it('adds order with raw sql', () => {
-    const q = User.all();
+    const q = db.user.all();
     expectSql(
       q.order(testDb.sql`id ASC NULLS FIRST`).toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "schema"."user" "User"
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
         ORDER BY id ASC NULLS FIRST
       `,
     );
@@ -95,9 +93,11 @@ describe('order', () => {
   });
 
   it('should be able to order by a selected value in a sub-query', () => {
-    const q = User.select({
-      avg: () => User.avg('id'),
-    }).order('avg');
+    const q = db.user
+      .select({
+        avg: () => db.user.avg('Id'),
+      })
+      .order('avg');
 
     expectSql(
       q.toSQL(),
@@ -110,28 +110,31 @@ describe('order', () => {
   });
 
   it('should disallow ordering by sub-selected json object or arrays', () => {
-    User.select({
-      obj: () => User.take(),
-    })
+    db.user
+      .select({
+        obj: () => db.user.take(),
+      })
       // @ts-expect-error should disallow ordering by object
       .order('obj.name')
       // @ts-expect-error should disallow ordering by object
       .order('obj');
 
-    User.select({
-      arr: () => User.all(),
+    db.user
+      .select({
+        arr: () => db.user.all(),
+      })
       // @ts-expect-error should disallow ordering by array
-    }).order('arr');
+      .order('arr');
   });
 
   it('should not prefix the column when it is customly selected', () => {
-    const q = User.select({ name: 'id' }).order('name');
+    const q = db.user.select({ Name: 'Id' }).order('Name');
 
     expectSql(
       q.toSQL(),
       `
-          SELECT "User"."id" "name" FROM "schema"."user" "User"
-          ORDER BY "name" ASC
+          SELECT "User"."id" "Name" FROM "schema"."user" "User"
+          ORDER BY "id" ASC
         `,
     );
   });
@@ -162,12 +165,12 @@ describe('order', () => {
 
 describe('orderSql', () => {
   it('adds order with raw sql template literal', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q.orderSql`id ASC NULLS FIRST`.toSQL(),
       `
-        SELECT ${userColumnsSql} FROM "schema"."user" "User"
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
         ORDER BY id ASC NULLS FIRST
       `,
     );

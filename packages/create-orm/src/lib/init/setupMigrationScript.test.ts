@@ -19,10 +19,10 @@ describe('setupMigrationScript', () => {
     expect(call?.[1])
       .toBe(`import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
 export const change = rakeDb.run(config.database, {
-  baseTable: BaseTable,
+  defineTable,
   dbPath: './db',
   migrationsPath: './migrations',
   commands: {
@@ -48,10 +48,10 @@ export const change = rakeDb.run(config.database, {
     expect(call?.[1])
       .toBe(`import { rakeDb } from 'orchid-orm/migrations/postgres-js';
 import { config } from './config';
-import { BaseTable } from './base-table';
+import { defineTable } from './table-factory';
 
 export const change = rakeDb.run(config.allDatabases, {
-  baseTable: BaseTable,
+  defineTable,
   dbPath: './db',
   migrationsPath: './migrations',
   commands: {

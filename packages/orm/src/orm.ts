@@ -20,14 +20,18 @@ import {
   Rls,
   Grant,
   EmptyObject,
+  ColumnsShape,
+  RecordUnknown,
+  type TableDataItem,
   type QueryInternal,
 } from 'pqb/internal';
 import {
   ORMTableInput,
   BaseTableClass,
-  TableClasses,
+  TableClass,
   TableQueryBuilder,
-} from './orm-table/base-table';
+} from './orm-table/legacy-table';
+import type { OrmTable } from './orm-table/table';
 import { applyRelations } from './relations/relations';
 import {
   transaction,
@@ -71,36 +75,101 @@ interface OrchidORMTableHelper<T extends Query> {
   ): OrchidORMQueryHelper<T, Args, Result>;
 }
 
+/**
+ * Table definitions accepted by ORM setup.
+ */
+export interface OrmTableThunks {
+  /**
+   * ORM table or view definition keyed by the db instance property name.
+   */
+  [K: string]:
+    | TableClass
+    | {
+        data: {
+          id: string;
+          name: string | undefined;
+          table: string | undefined;
+          relations: unknown;
+          columns: ColumnsShape;
+          types: unknown;
+          computed: unknown;
+          scopes: RecordUnknown | undefined;
+          softDelete?: true | string | undefined;
+          readOnly?: boolean | undefined;
+          materialized?: true | undefined;
+          tableData: unknown;
+        };
+        prototype: { columns: { shape: ColumnsShape } };
+        instance(): ORMTableInput;
+      };
+}
+
+type OrmTableInstance<T> = T extends {
+  data: {
+    id: infer Id extends string;
+    table: infer Table extends string | undefined;
+    name: infer Name extends string | undefined;
+    columns: infer Columns extends ColumnsShape;
+    types: infer ColumnTypes;
+    relations: infer Relations;
+    computed: infer Computed;
+    scopes: infer Scopes extends RecordUnknown | undefined;
+    softDelete: infer SoftDelete extends true | string | undefined;
+    readOnly: infer ReadOnly extends boolean | undefined;
+    materialized: infer Materialized extends true | undefined;
+    tableData: infer Data extends TableDataItem[];
+  };
+}
+  ? OrmTable.Input<
+      Id,
+      Table,
+      Name,
+      Columns,
+      ColumnTypes,
+      OrmTable.Relations.Resolve<Relations>,
+      Computed,
+      Scopes,
+      SoftDelete,
+      ReadOnly,
+      Materialized,
+      Data[number]
+    >
+  : never;
+
+export type TableInstance<T> = T extends {
+  new (): infer R extends ORMTableInput;
+}
+  ? R
+  : OrmTableInstance<T>;
+
 export type OrchidORMTables<
-  TC extends TableClasses = TableClasses,
-  VC extends TableClasses = TableClasses,
+  TT extends OrmTableThunks = OrmTableThunks,
+  VT extends OrmTableThunks = OrmTableThunks,
 > = {
-  [K in keyof TC]: TC[K] extends { new (): infer R extends ORMTableInput }
-    ? OrchidORMTableHelper<TableQueryBuilder<TC, VC, R>>
-    : never;
+  [K in keyof TT]: OrchidORMTableHelper<
+    TableQueryBuilder<TT, VT, TableInstance<TT[K]>>
+  >;
 };
 
 export type OrchidORMBundle<
-  TC extends TableClasses = TableClasses,
-  VC extends TableClasses = TableClasses,
-> = OrchidORMTables<TC> & {
-  $views: OrchidORMTables<VC, TC>;
+  TT extends OrmTableThunks = OrmTableThunks,
+  VT extends OrmTableThunks = OrmTableThunks,
+> = OrchidORMTables<TT, VT> & {
+  $views: OrchidORMTables<VT, TT>;
 };
 
 export type OrchidORMDbTables<
-  TC extends TableClasses = TableClasses,
-  VC extends TableClasses = TableClasses,
+  TT extends OrmTableThunks = OrmTableThunks,
+  VT extends OrmTableThunks = OrmTableThunks,
 > = {
-  [K in keyof TC]: TC[K] extends { new (): infer R extends ORMTableInput }
-    ? TableQueryBuilder<TC, VC, R>
-    : never;
+  [K in keyof TT]: TableQueryBuilder<TT, VT, TableInstance<TT[K]>>;
 };
 
 export type OrchidORM<
-  TC extends TableClasses = TableClasses,
-  VC extends TableClasses = TableClasses,
-> = OrchidORMDbTables<TC, VC> & {
-  $views: OrchidORMDbTables<VC, TC>;
+  TT extends OrmTableThunks = OrmTableThunks,
+  VT extends OrmTableThunks = OrmTableThunks,
+> = OrchidORMDbTables<TT, VT> & {
+  $views: OrchidORMDbTables<VT, TT>;
 } & OrchidORMMethods;
 
 /**
@@ -279,9 +348,9 @@ export type OrchidOrmParam<Options> = true | null extends true
 
 interface OrchidORMBundleMetadata {
   // Original table classes for later DB binding.
-  tables: TableClasses;
+  tables: OrmTableThunks;
   // Original view classes for later DB binding.
-  views: TableClasses;
+  views: OrmTableThunks;
   // Set db-aware instance so that the minimal preliminary query objects can access it.
   setDbAwareInstance(orm: OrchidORM): void;
 }
@@ -293,8 +362,8 @@ type CommonOrmOptions = QueryLogOptions & {
   noPrimaryKey?: NoPrimaryKeyOption;
 };
 
-interface OrchidORMSetupOptions<
-  V extends TableClasses = TableClasses,
+export interface OrchidORMSetupOptions<
+  V extends OrmTableThunks = OrmTableThunks,
 > extends DbSharedOptions {
   /**
    * First-class regular views exposed under db.$views.
@@ -302,7 +371,7 @@ interface OrchidORMSetupOptions<
   views?: V;
 }
 
-const assignTablesToOrm = <T extends TableClasses>(
+const assignTablesToOrm = <T extends OrmTableThunks>(
   isTable: boolean,
   tables: T,
   result: { [K: string]: Query },
@@ -404,8 +473,8 @@ const getViewData = (
 };
 
 export const bundleOrchidORM = <
-  T extends TableClasses = EmptyObject,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks = EmptyObject,
+  V extends OrmTableThunks = EmptyObject,
 >({
   tables = {} as T,
   views = {} as V,
@@ -414,7 +483,7 @@ export const bundleOrchidORM = <
   views?: V;
 }): OrchidORMBundle<T, V> => {
   const result = {} as OrchidORMBundle<T, V>;
-  const bundledViews = {} as OrchidORMTables<V>;
+  const bundledViews = {} as OrchidORMTables<V, T>;
   const hasViews = Object.keys(views).length > 0;
 
   Object.defineProperty(result, '$views', {
@@ -482,13 +551,13 @@ export const bundleOrchidORM = <
   return result;
 };
 
-export const bundleOrchidORMTables = <T extends TableClasses>(
+export const bundleOrchidORMTables = <T extends OrmTableThunks>(
   tables: T,
 ): OrchidORMBundle<T, EmptyObject> => bundleOrchidORM({ tables });
 
 const getOrchidORMBundleMetadata = <
-  T extends TableClasses,
-  V extends TableClasses,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks,
 >(
   orm: OrchidORMBundle<T, V>,
 ): OrchidORMBundleMetadata => {
@@ -508,8 +577,8 @@ const getOrchidORMBundleMetadata = <
 };
 
 export const makeOrchidOrmDbWithAdapter = <
-  T extends TableClasses,
-  V extends TableClasses,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks,
 >(
   orm: OrchidORMBundle<T, V>,
   options: OrchidOrmParam<
@@ -526,8 +595,8 @@ export const makeOrchidOrmDbWithAdapter = <
 };
 
 const privateOrchidORMWithAdapter = <
-  T extends TableClasses,
-  V extends TableClasses,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks,
 >(
   {
     log,
@@ -650,7 +719,7 @@ const privateOrchidORMWithAdapter = <
     schema,
   );
 
-  setDbAwareInstance?.(result);
+  setDbAwareInstance?.(result as never);
 
   const initItems = [
     [tableInstances, result, true],
@@ -681,8 +750,8 @@ const privateOrchidORMWithAdapter = <
 };
 
 export const orchidORMWithAdapter = <
-  T extends TableClasses,
-  V extends TableClasses = EmptyObject,
+  T extends OrmTableThunks,
+  V extends OrmTableThunks = EmptyObject,
 >(
   options: OrchidOrmParam<
     ({ db: Query } | { adapter: Adapter }) & OrchidORMSetupOptions<V>

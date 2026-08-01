@@ -1,4 +1,4 @@
-import { useGeneratorsTestUtils } from './generators.test-utils';
+import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
 import { colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({
@@ -15,7 +15,7 @@ jest.mock('node:fs/promises', () => ({
 const { green, red, yellow } = colors;
 
 describe('schemas', () => {
-  const { arrange, act, assert, BaseTable } = useGeneratorsTestUtils();
+  const { arrange, act, assert } = useGeneratorsTestUtils();
 
   it('should not try to drop the schema specified in config', async () => {
     await arrange({
@@ -54,16 +54,16 @@ describe('schemas', () => {
         await db.createTable('two', { noPrimaryKey: true });
       },
       tables: [
-        class One extends BaseTable {
-          schema = 'one';
-          table = 'one';
-          noPrimaryKey = true;
-        },
-        class Two extends BaseTable {
-          schema = 'two';
-          table = 'two';
-          noPrimaryKey = true;
-        },
+        defineTable(
+          'one',
+          { schema: 'one', noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ),
+        defineTable(
+          'two',
+          { schema: 'two', noPrimaryKey: true, nameInDb: 'two' },
+          () => ({}),
+        ),
       ],
     });
 
@@ -101,11 +101,11 @@ change(async (db) => {
         await db.createTable('one.one', { noPrimaryKey: true });
       },
       tables: [
-        class One extends BaseTable {
-          schema = 'one';
-          table = 'one';
-          noPrimaryKey = true;
-        },
+        defineTable(
+          'one',
+          { schema: 'one', noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ),
       ],
     });
 
@@ -129,11 +129,11 @@ change(async (db) => {
         await db.createTable('from.one', { noPrimaryKey: true });
       },
       tables: [
-        class One extends BaseTable {
-          schema = 'to';
-          table = 'one';
-          noPrimaryKey = true;
-        },
+        defineTable(
+          'one',
+          { schema: 'to', noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ),
       ],
       selects: [0],
     });
@@ -170,11 +170,11 @@ change(async (db) => {
         await db.createTable('from.one', { noPrimaryKey: true });
       },
       tables: [
-        class One extends BaseTable {
-          schema = 'to';
-          table = 'one';
-          noPrimaryKey = true;
-        },
+        defineTable(
+          'one',
+          { schema: 'to', noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ),
       ],
       selects: [1],
     });
@@ -200,11 +200,11 @@ change(async (db) => {
         await db.createTable('from.one', { noPrimaryKey: true });
       },
       tables: [
-        class One extends BaseTable {
-          schema = 'to';
-          table = 'one';
-          noPrimaryKey = true;
-        },
+        defineTable(
+          'one',
+          { schema: 'to', noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ),
       ],
       selects: [2],
     });
@@ -236,16 +236,16 @@ change(async (db) => {
         await db.createTable('to.two', { noPrimaryKey: true });
       },
       tables: [
-        class One extends BaseTable {
-          schema = 'to';
-          table = 'one';
-          noPrimaryKey = true;
-        },
-        class Two extends BaseTable {
-          schema = 'from';
-          table = 'two';
-          noPrimaryKey = true;
-        },
+        defineTable(
+          'one',
+          { schema: 'to', noPrimaryKey: true, nameInDb: 'one' },
+          () => ({}),
+        ),
+        defineTable(
+          'two',
+          { schema: 'from', noPrimaryKey: true, nameInDb: 'two' },
+          () => ({}),
+        ),
       ],
     });
 

@@ -1,29 +1,25 @@
 import {
   expectQueryNotMutated,
   Snake,
-  User,
 } from '../../../test-utils/pqb.test-utils';
-import { expectSql, testDb } from 'test-utils';
+import { db, expectSql, testDb } from 'test-utils';
 
 describe('window', () => {
   it('should add window which can be used in `over`', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
       q
         .window({
           w: {
-            partitionBy: 'id',
+            partitionBy: 'Id',
             order: {
-              id: 'DESC',
+              Id: 'DESC',
             },
           },
         })
         .select({
-          avg: (q) =>
-            q.avg('id', {
-              over: 'w',
-            }),
+          avg: (q) => q.avg('Id', { over: 'w' }),
         })
         .toSQL(),
       `
@@ -54,17 +50,14 @@ describe('window', () => {
   });
 
   it('adds window with raw sql', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     const windowSql = 'PARTITION BY id ORDER BY name DESC';
     expectSql(
       q
         .window({ w: testDb.sql({ raw: windowSql }) })
         .select({
-          avg: (q) =>
-            q.avg('id', {
-              over: 'w',
-            }),
+          avg: (q) => q.avg('Id', { over: 'w' }),
         })
         .toSQL(),
       `

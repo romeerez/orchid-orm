@@ -2,7 +2,7 @@ import { change } from '../db-script';
 
 change(async (db) => {
   await db.createTable(
-    'schema.uniqueTable',
+    'schema.unique_table',
     (t) => ({
       id: t.id(),
       one: t.text().unique(),

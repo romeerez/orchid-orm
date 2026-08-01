@@ -12,7 +12,7 @@ description: Where conditions, column operators, sub-queries, and complex filter
 Constructing `WHERE` conditions:
 
 ```ts
-import { sql } from './base-table';
+import { sql } from './table-factory';
 
 db.table.where({
   // column of the current table
@@ -28,7 +28,7 @@ db.table.where({
   },
 
   // where column equals to raw SQL
-  // import `sql` from your `BaseTable`
+  // import `sql` from your table factory
   column: sql`sql expression`,
   // or use `(q) => sql` for the same
   column2: (q) => sql`sql expression`,
