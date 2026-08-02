@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.77.1
+
+### Patch Changes
+
+- 3fae4dba: Fix joinLateral nested select selection of the joined `table.*` (#738)
+- Updated dependencies [3fae4dba]
+  - pqb@0.72.1
+  - rake-db@2.37.1
+
 ## 1.77.0
 
 ### Minor Changes
