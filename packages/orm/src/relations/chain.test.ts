@@ -394,7 +394,7 @@ describe('relations chain', () => {
       assertType<
         typeof result,
         {
-          item: { Name: string; Age: string | null; Title: string } | undefined;
+          item: { Name: string; Age: number | null; Title: string } | undefined;
         }
       >();
 
@@ -463,7 +463,7 @@ describe('relations chain', () => {
       assertType<
         typeof result,
         {
-          item: { Name: string; Age: string | null } | undefined;
+          item: { Name: string; Age: number | null } | undefined;
         }
       >();
 
@@ -538,7 +538,7 @@ describe('relations chain', () => {
       assertType<
         typeof result,
         {
-          item: { Name: string; Age: string | null; Title: string } | undefined;
+          item: { Name: string; Age: number | null; Title: string } | undefined;
         }
       >();
 
@@ -609,7 +609,7 @@ describe('relations chain', () => {
       assertType<
         typeof result,
         {
-          item: { Name: string; Age: string | null } | undefined;
+          item: { Name: string; Age: number | null } | undefined;
         }
       >();
 

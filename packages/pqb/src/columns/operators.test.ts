@@ -1,4 +1,3 @@
-import { UserDataType } from '../test-utils/pqb.test-utils';
 import {
   assertType,
   testDefaultColumnTypes,
@@ -10,6 +9,7 @@ import {
   UserData,
   UserSelectAll,
   useTestDatabase,
+  UserDataType,
 } from 'test-utils';
 
 const t = testDefaultColumnTypes;

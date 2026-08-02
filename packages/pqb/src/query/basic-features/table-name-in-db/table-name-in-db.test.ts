@@ -1,18 +1,24 @@
-import { expectSql, testAdapter } from 'test-utils';
+import {
+  db,
+  expectSql,
+  testAdapter,
+  UserData,
+  UserSelectAll,
+} from 'test-utils';
 import { createDbWithAdapter } from '../../db';
 import { refreshMaterializedView } from '../../extra-features/materialized-view/materialized-view.query';
 
 describe('table name in db', () => {
   it('resolves database relation names for standalone tables', () => {
-    const db = createDbWithAdapter({
+    const localDb = createDbWithAdapter({
       adapter: testAdapter,
       snakeCase: true,
     });
 
-    const Default = db('defaultName', (t) => ({
+    const Default = localDb('defaultName', (t) => ({
       id: t.identity().primaryKey(),
     }));
-    const Explicit = db(
+    const Explicit = localDb(
       'Explicit',
       (t) => ({
         id: t.identity().primaryKey(),
@@ -20,10 +26,10 @@ describe('table name in db', () => {
       undefined,
       { nameInDb: 'custom_name' },
     );
-    const Snake = db('SnakeName', (t) => ({
+    const Snake = localDb('SnakeName', (t) => ({
       id: t.identity().primaryKey(),
     }));
-    const Same = db('same_name', (t) => ({
+    const Same = localDb('same_name', (t) => ({
       id: t.identity().primaryKey(),
     }));
 
@@ -37,71 +43,42 @@ describe('table name in db', () => {
   });
 
   it('renders database relation names with query-facing table aliases', () => {
-    const db = createDbWithAdapter({
-      adapter: testAdapter,
-      snakeCase: true,
-    });
-
-    const User = db('User', (t) => ({
-      id: t.identity().primaryKey(),
-      name: t.text(),
-    }));
-    const Profile = db(
-      'Profile',
-      (t) => ({
-        id: t.identity().primaryKey(),
-        userId: t.integer(),
-      }),
-      undefined,
-      { nameInDb: 'profiles' },
-    );
-
     expectSql(
-      User.select('id').where({ name: 'name' }).toSQL(),
+      db.user.select('Id').where({ Name: 'name' }).toSQL(),
       `
-        SELECT "User"."id" FROM "user" "User"
+        SELECT "User"."id" "Id" FROM "schema"."user" "User"
         WHERE "User"."name" = $1
       `,
       ['name'],
     );
 
     expectSql(
-      User.as('u').select('u.id').toSQL(),
+      db.user.as('u').select('u.Id').toSQL(),
       `
-        SELECT "u"."id" FROM "user" "u"
+        SELECT "u"."id" "Id" FROM "schema"."user" "u"
       `,
     );
 
     expectSql(
-      User.join(Profile, 'Profile.userId', 'User.id')
-        .select('User.id', 'Profile.id')
+      db.user
+        .join(db.profile, 'Profile.UserId', 'User.Id')
+        .select('User.Id', 'Profile.Id')
         .toSQL(),
       `
-        SELECT "User"."id", "Profile"."id"
-        FROM "user" "User"
-        JOIN "profiles" "Profile" ON "Profile"."user_id" = "User"."id"
+        SELECT "User"."id" "Id", "Profile"."id" "Id"
+        FROM "schema"."user" "User"
+        JOIN "schema"."profile" "Profile" ON "Profile"."user_id" = "User"."id"
       `,
     );
   });
 
   it('renders schema-qualified and mutation SQL with database relation names', async () => {
-    const db = createDbWithAdapter({
+    const localDb = createDbWithAdapter({
       adapter: testAdapter,
       snakeCase: true,
     });
 
-    const User = db(
-      'User',
-      (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-      }),
-      undefined,
-      {
-        schema: 'app',
-      },
-    );
-    const ReportView = db(
+    const ReportView = localDb(
       'ReportView',
       (t) => ({
         id: t.identity().primaryKey(),
@@ -114,23 +91,29 @@ describe('table name in db', () => {
     );
 
     expectSql(
-      User.select('id').toSQL(),
+      db.user.select('Id').toSQL(),
       `
-        SELECT "User"."id" FROM "app"."user" "User"
+        SELECT "User"."id" "Id" FROM "schema"."user" "User"
       `,
     );
 
     expectSql(
-      User.create({ name: 'name' }).toSQL(),
+      db.user
+        .create({
+          Name: UserData.Name,
+          UserKey: UserData.UserKey,
+          Password: UserData.Password,
+        })
+        .toSQL(),
       `
-        INSERT INTO "app"."user" AS "User"("name")
-        VALUES ($1)
-        RETURNING *
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+        VALUES ($1, $2, $3)
+        RETURNING ${UserSelectAll}
       `,
-      ['name'],
+      [UserData.Name, UserData.UserKey, UserData.Password],
     );
 
-    expectSql(User.truncate().toSQL(), 'TRUNCATE "app"."user"');
+    expectSql(db.user.truncate().toSQL(), 'TRUNCATE "schema"."user"');
 
     const query = jest
       .spyOn(ReportView.q.adapter, 'query')

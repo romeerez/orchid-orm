@@ -1,9 +1,4 @@
 import {
-  Snake,
-  SnakeRecord,
-  snakeSelectAll,
-} from '../../../test-utils/pqb.test-utils';
-import {
   assertType,
   ChatData,
   db,
@@ -137,29 +132,6 @@ describe('createFrom functions', () => {
       await q;
     });
 
-    it('should a create record from select with named columns', () => {
-      const user = db.user.find(1).select({ snakeName: 'Name' });
-
-      const query = Snake.createOneFrom(user, {
-        tailLength: 5,
-      });
-
-      assertType<Awaited<typeof query>, SnakeRecord>();
-
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-          SELECT "User"."name" "snakeName", $1
-          FROM "schema"."user" "User"
-          WHERE "User"."id" = $2
-          LIMIT 1
-          RETURNING ${snakeSelectAll}
-        `,
-        [5, 1],
-      );
-    });
-
     it('should add runtime defaults', () => {
       const q = RuntimeDefaultTable.createOneFrom(
         db.user.find(123).select('Password'),
@@ -230,7 +202,7 @@ describe('createFrom functions', () => {
           WITH "q" AS (
             INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING "User"."id"
+            RETURNING "User"."id" "Id"
           )
           INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
           SELECT "Chat"."id_of_chat" "ChatId", (SELECT "q"."Id" FROM "q"), 'text'
@@ -432,42 +404,6 @@ describe('createFrom functions', () => {
       await q;
     });
 
-    it('should a create record from select with named columns', () => {
-      const user = db.user.find(1).select({ snakeName: 'Name' });
-
-      const query = Snake.select('snakeName').createManyFrom(user, [
-        {
-          tailLength: 5,
-        },
-        {
-          tailLength: 6,
-        },
-      ]);
-
-      assertType<Awaited<typeof query>, { snakeName: string }[]>();
-
-      expectSql(
-        query.toSQL(),
-        `
-          WITH "q" AS (
-            SELECT "User"."name" "snakeName"
-            FROM "schema"."user" "User"
-            WHERE "User"."id" = $1
-            LIMIT 1
-          ), q2 AS (
-            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-            SELECT "q"."snakeName", v."tail_length"::int4
-            FROM "q", (VALUES ($2), ($3)) v("tail_length")
-            RETURNING "Snake"."snake_name" "snakeName"
-          )
-          SELECT *, NULL FROM q2
-          UNION ALL
-          SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
-        `,
-        [1, 5, 6],
-      );
-    });
-
     it('should add runtime defaults', () => {
       const q = RuntimeDefaultTable.select('Name').createManyFrom(
         db.user.find(123).select('Password'),
@@ -594,11 +530,11 @@ describe('createFrom functions', () => {
           ), "q2" AS (
             INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
             VALUES ($2, $3, $4, $5, $6)
-            RETURNING "User"."id"
+            RETURNING "User"."id" "Id"
           ), "q3" AS (
             INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
             VALUES ($7, $8, $9, $10, $11)
-            RETURNING "User"."id"
+            RETURNING "User"."id" "Id"
           ), q4 AS (
             INSERT INTO "schema"."message" AS "Message"("chat_id", "author_id", "text")
             SELECT
@@ -774,25 +710,6 @@ describe('createFrom functions', () => {
           RETURNING ${MessageColumnsSql}
         `,
         ['Title'],
-      );
-    });
-
-    it('should a create record from select with named columns', () => {
-      const sub = db.user.where({ Name: 'name' }).select({ snakeName: 'Name' });
-      const query = Snake.createForEachFrom(sub);
-
-      assertType<Awaited<typeof query>, SnakeRecord[]>();
-
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "schema"."snake" AS "Snake"("snake_name")
-          SELECT "User"."name" "snakeName"
-          FROM "schema"."user" "User"
-          WHERE "User"."name" = $1
-          RETURNING ${snakeSelectAll}
-        `,
-        ['name'],
       );
     });
 

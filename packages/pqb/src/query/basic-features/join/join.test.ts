@@ -1,8 +1,6 @@
 import {
   expectQueryNotMutated,
   messageData,
-  Snake,
-  snakeSelectAllWithTable,
 } from '../../../test-utils/pqb.test-utils';
 import { testWhere, testWhereExists } from '../where/test-where';
 import { testJoin } from './test-join';
@@ -25,7 +23,6 @@ const Message = db.message.includeDeleted();
 
 const quotedUser = quoteTableWithSchemaAndAlias(db.user);
 const quotedMessage = quoteTableWithSchemaAndAlias(Message);
-const quotedSnake = quoteTableWithSchemaAndAlias(Snake);
 const quotedProfile = quoteTableWithSchemaAndAlias(db.profile);
 
 const insertMessage = async () => {
@@ -110,30 +107,6 @@ describe('join', () => {
   });
 });
 
-describe('join table with named columns', () => {
-  testJoin({
-    method: 'join',
-    joinTo: db.user,
-    pkey: 'User.Name',
-    joinTarget: Snake,
-    fkey: 'tailLength',
-    text: 'snakeName',
-    selectFrom: `SELECT ${UserSelectAllWithTable} FROM ${quotedUser}`,
-  });
-});
-
-describe('join to table with named columns', () => {
-  testJoin({
-    method: 'join',
-    joinTo: Snake,
-    pkey: 'Snake.snakeName',
-    joinTarget: db.user,
-    fkey: 'Name',
-    text: 'Name',
-    selectFrom: `SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}`,
-  });
-});
-
 describe.each`
   method         | sql
   ${'join'}      | ${'JOIN'}
@@ -187,64 +160,6 @@ describe('join callback with query builder', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should have .on and .onOr properly working for named columns', () => {
-    const expectedSql = `
-      SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}
-      JOIN ${quotedUser}
-        ON "User"."name" = "Snake"."snake_name"
-        OR "User"."id" = "Snake"."tail_length"
-    `;
-
-    expectSql(
-      Snake.join(db.user, (q) =>
-        q
-          .on('User.Name', 'Snake.snakeName')
-          .orOn('User.Id', 'Snake.tailLength'),
-      ).toSQL(),
-      expectedSql,
-    );
-
-    expectSql(
-      Snake.join(db.user, (q) =>
-        q
-          .on('User.Name', '=', 'Snake.snakeName')
-          .orOn('User.Id', '=', 'Snake.tailLength'),
-      ).toSQL(),
-      expectedSql,
-    );
-  });
-
-  it('should have .on and .onOr properly working when joining table with named columns', () => {
-    const reverseSql = `
-      SELECT ${UserSelectAllWithTable} FROM ${quotedUser}
-      JOIN ${quotedSnake}
-        ON "Snake"."snake_name" = "User"."name"
-        OR "Snake"."tail_length" = "User"."id"
-    `;
-
-    expectSql(
-      db.user
-        .join(Snake, (q) =>
-          q
-            .on('Snake.snakeName', 'User.Name')
-            .orOn('Snake.tailLength', 'User.Id'),
-        )
-        .toSQL(),
-      reverseSql,
-    );
-
-    expectSql(
-      db.user
-        .join(Snake, (q) =>
-          q
-            .on('Snake.snakeName', '=', 'User.Name')
-            .orOn('Snake.tailLength', '=', 'User.Id'),
-        )
-        .toSQL(),
-      reverseSql,
-    );
-  });
-
   it('should have .onJsonPathEquals method', () => {
     expectSql(
       db.user
@@ -261,29 +176,9 @@ describe('join callback with query builder', () => {
     );
   });
 
-  it('should have .onJsonPathEquals method working for named columns', () => {
-    expectSql(
-      Snake.join(Snake.as('otherSnake'), (q) =>
-        q.onJsonPathEquals(
-          'otherSnake.snakeData',
-          '$.name',
-          'Snake.snakeData',
-          '$.name',
-        ),
-      ).toSQL(),
-      `
-        SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake}
-        JOIN "schema"."snake" "otherSnake"
-          ON jsonb_path_query_first("otherSnake"."snake_data", $1) = jsonb_path_query_first("Snake"."snake_data", $2)
-      `,
-      ['$.name', '$.name'],
-    );
-  });
-
   describe('where methods', () => {
     describe('using main table columns', () => {
       const sql = `SELECT ${UserSelectAllWithTable} FROM ${quotedUser} JOIN ${quotedMessage} ON `;
-      const snakeSql = `SELECT ${snakeSelectAllWithTable} FROM ${quotedSnake} JOIN ${quotedUser} ON `;
 
       it('should use main table column in .where', () => {
         const q = db.user.join(Message, (q) =>
@@ -293,30 +188,12 @@ describe('join callback with query builder', () => {
         expectSql(q.toSQL(), sql + `"User"."name" = $1`, ['name']);
       });
 
-      it('should support named column of main table in .where', () => {
-        const q = Snake.join(db.user, (q) =>
-          q.where({ 'Snake.snakeName': 'name' }),
-        );
-
-        expectSql(q.toSQL(), snakeSql + `"Snake"."snake_name" = $1`, ['name']);
-      });
-
       it('should use main table column in .whereNot', () => {
         const q = db.user.join(Message, (q) =>
           q.whereNot({ 'User.Name': 'name' }),
         );
 
         expectSql(q.toSQL(), sql + `NOT "User"."name" = $1`, ['name']);
-      });
-
-      it('should use named main table column in .whereNot', () => {
-        const q = Snake.join(db.user, (q) =>
-          q.whereNot({ 'Snake.snakeName': 'name' }),
-        );
-
-        expectSql(q.toSQL(), snakeSql + `NOT "Snake"."snake_name" = $1`, [
-          'name',
-        ]);
       });
 
       it('should use main table column in .or', () => {
@@ -328,18 +205,6 @@ describe('join callback with query builder', () => {
           'name',
           20,
         ]);
-      });
-
-      it('should use named main table column in .or', () => {
-        const q = Snake.join(db.user, (q) =>
-          q.orWhere({ 'Snake.snakeName': 'name' }, { 'Snake.tailLength': 20 }),
-        );
-
-        expectSql(
-          q.toSQL(),
-          snakeSql + `"Snake"."snake_name" = $1 OR "Snake"."tail_length" = $2`,
-          ['name', 20],
-        );
       });
 
       it('should use main table column in .orWhereNot', () => {
@@ -354,38 +219,12 @@ describe('join callback with query builder', () => {
         );
       });
 
-      it('should use named main table column in .orWhereNot', () => {
-        const q = Snake.join(db.user, (q) =>
-          q.orWhereNot(
-            { 'Snake.snakeName': 'name' },
-            { 'Snake.tailLength': 20 },
-          ),
-        );
-
-        expectSql(
-          q.toSQL(),
-          snakeSql +
-            `NOT "Snake"."snake_name" = $1 OR NOT "Snake"."tail_length" = $2`,
-          ['name', 20],
-        );
-      });
-
       it('should use main table column in .whereIn', () => {
         const q = db.user.join(Message, (q) =>
           q.whereIn('User.Name', ['name']),
         );
 
         expectSql(q.toSQL(), sql + `"User"."name" IN ($1)`, ['name']);
-      });
-
-      it('should use named main table column in .whereIn', () => {
-        const q = Snake.join(db.user, (q) =>
-          q.whereIn('Snake.snakeName', ['name']),
-        );
-
-        expectSql(q.toSQL(), snakeSql + `"Snake"."snake_name" IN ($1)`, [
-          'name',
-        ]);
       });
 
       it('should use main table column in .orWhereIn', () => {
@@ -400,37 +239,12 @@ describe('join callback with query builder', () => {
         );
       });
 
-      it('should use named main table column in .orWhereIn', () => {
-        const q = Snake.join(db.user, (q) =>
-          q
-            .where({ 'Snake.tailLength': 20 })
-            .orWhereIn('Snake.snakeName', ['name']),
-        );
-
-        expectSql(
-          q.toSQL(),
-          snakeSql +
-            `"Snake"."tail_length" = $1 OR "Snake"."snake_name" IN ($2)`,
-          [20, 'name'],
-        );
-      });
-
       it('should use main table column in .whereNotIn', () => {
         const q = db.user.join(Message, (q) =>
           q.whereNotIn('User.Name', ['name']),
         );
 
         expectSql(q.toSQL(), sql + `NOT "User"."name" IN ($1)`, ['name']);
-      });
-
-      it('should use named main table column in .whereNotIn', () => {
-        const q = Snake.join(db.user, (q) =>
-          q.whereNotIn('Snake.snakeName', ['name']),
-        );
-
-        expectSql(q.toSQL(), snakeSql + `NOT "Snake"."snake_name" IN ($1)`, [
-          'name',
-        ]);
       });
 
       it('should use main table column in .orWhereNotIn', () => {
@@ -441,21 +255,6 @@ describe('join callback with query builder', () => {
         expectSql(
           q.toSQL(),
           sql + `"User"."age" = $1 OR NOT "User"."name" IN ($2)`,
-          [20, 'name'],
-        );
-      });
-
-      it('should use named main table column in .orWhereNotIn', () => {
-        const q = Snake.join(db.user, (q) =>
-          q
-            .where({ 'Snake.tailLength': 20 })
-            .orWhereNotIn('Snake.snakeName', ['name']),
-        );
-
-        expectSql(
-          q.toSQL(),
-          snakeSql +
-            `"Snake"."tail_length" = $1 OR NOT "Snake"."snake_name" IN ($2)`,
           [20, 'name'],
         );
       });

@@ -1,7 +1,4 @@
-import {
-  expectQueryNotMutated,
-  Snake,
-} from '../../../test-utils/pqb.test-utils';
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import { db, expectSql, testDb } from 'test-utils';
 import { getColumnInfo, GetColumnInfo } from './get-column-info';
 
@@ -58,14 +55,5 @@ describe('columnInfo', () => {
     });
 
     expectQueryNotMutated(q);
-  });
-
-  it('should return info about column with custom name', async () => {
-    const query = getColumnInfo(Snake, 'snakeName');
-    expectSql(
-      query.toSQL(),
-      `SELECT * FROM information_schema.columns WHERE table_name = $1 AND table_catalog = current_database() AND table_schema = $2 AND column_name = $3`,
-      ['snake', 'schema', 'snake_name'],
-    );
   });
 });

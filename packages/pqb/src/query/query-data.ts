@@ -158,6 +158,7 @@ export interface QueryData
   returningMany?: boolean;
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
+  cteThrowOnNotFound?: boolean;
   ensureCount?: number;
   with?: WithItems;
   withShapes?: WithConfigs;

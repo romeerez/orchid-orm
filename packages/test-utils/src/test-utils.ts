@@ -1,4 +1,4 @@
-import { createDbWithAdapter, testTransaction } from 'pqb';
+import { createDbWithAdapter, Query, testTransaction } from 'pqb';
 import {
   AdapterClass,
   Column,
@@ -208,16 +208,21 @@ export const now = new Date();
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
 
+let testDatabase: { $qb: Query } | Query | undefined;
 if ('afterAll' in global) {
-  afterAll(() => testTransaction.close(testDb));
+  afterAll(() => testTransaction.close(testDatabase || testDb));
 }
 
-export const useTestDatabase = () => {
-  beforeAll(() => testTransaction.start(testDb));
+export const useTestDatabase = (db: { $qb: Query } | Query = testDb) => {
+  if (db !== testDb) {
+    testDatabase = db;
+  }
 
-  beforeEach(() => testTransaction.start(testDb));
+  beforeAll(() => testTransaction.start(db));
 
-  afterEach(() => testTransaction.rollback(testDb));
+  beforeEach(() => testTransaction.start(db));
 
-  afterAll(() => testTransaction.rollback(testDb));
+  afterEach(() => testTransaction.rollback(db));
+
+  afterAll(() => testTransaction.rollback(db));
 };

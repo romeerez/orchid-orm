@@ -52,8 +52,9 @@ import { ToSQLQuery } from '../../sql/to-sql';
 import { setSelectRelation } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.qb';
 import { _getSelectableColumn } from '../get/get.utils';
 
-// add parsers when selecting a full joined table by name or alias
-const addParsersForSelectJoined = (
+// Add parsers when selecting a full joined table by name or alias.
+// It always selects a single record, not array, it's documented.
+const addParsersForSelectJoinedWildcard = (
   q: PickQueryQ,
   arg: string,
   as: string = arg,
@@ -69,7 +70,7 @@ const addParsersForSelectJoined = (
       q,
       'batchParsers',
       batchParsers.map((x) => ({
-        path: [{ key: as as string }, ...x.path],
+        path: [{ key: as as string, returnType: 'one' }, ...x.path],
         fn: x.fn,
       })),
     );
@@ -644,7 +645,7 @@ export const setParserForSelectedString = (
 
   // 'table.*' is selecting a full joined record (without computeds)
   if (column === '*') {
-    addParsersForSelectJoined(query, table, columnAs);
+    addParsersForSelectJoinedWildcard(query, table, columnAs);
     return table === as ? column : arg;
   }
 

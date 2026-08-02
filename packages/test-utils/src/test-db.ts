@@ -16,6 +16,8 @@ export const { defineTable, defineView } = createTableFactory({
   columnTypes: testColumnTypes,
 });
 
+export type UserDataType = { name: string; tags: string[] };
+
 export type UserDefaultSelect = DefaultSelect<typeof UserTable>;
 export const UserTable = defineTable('User', { nameInDb: 'user' }, (t) => ({
   Id: t.name('id').identity().primaryKey(),
@@ -23,8 +25,8 @@ export const UserTable = defineTable('User', { nameInDb: 'user' }, (t) => ({
   UserKey: t.name('user_key').text(),
   Password: t.name('password').text().select(false),
   Picture: t.name('picture').text().nullable(),
-  Data: t.name('data').json<{ name: string; tags: string[] }>().nullable(),
-  Age: t.name('age').decimal().nullable(),
+  Data: t.name('data').json<UserDataType>().nullable(),
+  Age: t.name('age').decimal().parse(parseInt).nullable(),
   Active: t.name('active').boolean().nullable(),
   Balance: t.name('balance').decimal().nullable(),
   ...t.timestamps(),
@@ -73,6 +75,16 @@ export const UserTable = defineTable('User', { nameInDb: 'user' }, (t) => ({
     .hasAndBelongsToMany(() => TaskTable('Id', 'TaskKey'))
     .through('user_task', ['userId', 'key'], ['taskId', 'key']),
 }));
+
+export const UserNoTimestampsTable = defineTable(
+  'User',
+  { schema: () => 'schema', id: 'userNoTimestamps' },
+  (t) => ({
+    Id: t.name('id').identity().primaryKey(),
+    Name: t.name('name').string(),
+    Password: t.name('password').string(),
+  }),
+);
 
 export const TaskTable = defineTable('Task', { nameInDb: 'task' }, (t) => ({
   Id: t.name('id').identity().primaryKey(),
@@ -449,6 +461,7 @@ export const db = orchidORMWithAdapter(
   },
   {
     user: UserTable,
+    userNoTimestamps: UserNoTimestampsTable,
     profile: ProfileTable,
     profilePic: ProfilePicTable,
     chat: ChatTable,

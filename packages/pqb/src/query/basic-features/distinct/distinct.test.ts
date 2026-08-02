@@ -1,8 +1,4 @@
-import {
-  expectQueryNotMutated,
-  Snake,
-  snakeSelectAll,
-} from '../../../test-utils/pqb.test-utils';
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import {
   db,
   expectSql,
@@ -37,18 +33,6 @@ describe('distinct', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should add distinct on named columns', () => {
-    const q = Snake.distinct('snakeName', 'Snake.tailLength');
-
-    expectSql(
-      q.toSQL(),
-      `
-          SELECT DISTINCT ON ("Snake"."snake_name", "Snake"."tail_length") ${snakeSelectAll}
-          FROM "schema"."snake" "Snake"
-        `,
-    );
-  });
-
   it('should add distinct on joined columns', () => {
     const q = db.user.all();
 
@@ -67,21 +51,6 @@ describe('distinct', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should add distinct on joined named columns', () => {
-    const q = db.user
-      .join(Snake, 'Snake.tailLength', 'User.Id')
-      .distinct('User.Id', 'Snake.tailLength');
-
-    expectSql(
-      q.toSQL(),
-      `
-          SELECT DISTINCT ON ("User"."id", "Snake"."tail_length") ${UserSelectAllWithTable}
-          FROM "schema"."user" "User"
-          JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
-        `,
-    );
-  });
-
   it('should add distinct on joined columns with alias', () => {
     const q = db.user.all();
 
@@ -98,21 +67,6 @@ describe('distinct', () => {
     );
 
     expectQueryNotMutated(q);
-  });
-
-  it('should add distinct on joined columns with named with alias', () => {
-    const q = db.user
-      .join(Snake.as('s'), 's.tailLength', 'User.Id')
-      .distinct('User.Id', 's.tailLength');
-
-    expectSql(
-      q.toSQL(),
-      `
-          SELECT DISTINCT ON ("User"."id", "s"."tail_length") ${UserSelectAllWithTable}
-          FROM "schema"."user" "User"
-          JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
-        `,
-    );
   });
 
   it('should add distinct on raw sql', () => {

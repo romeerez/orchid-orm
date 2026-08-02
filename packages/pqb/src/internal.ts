@@ -52,6 +52,9 @@ export {
   type ToSQLCtx,
   type ToSqlValues,
   type OperatorsText,
+  type SelectSqlColumn,
+  type StaticSQLArgs,
+  type ColumnRefExpression,
 } from './index';
 
 // TableData - table configuration and metadata
@@ -93,12 +96,13 @@ export {
   type ColumnTypeSchemaArg,
   type DefaultColumnTypes,
   type DefaultSchemaConfig,
+  type DateColumnInput,
 } from './index';
 
 export { getForeignKeyTableInstance } from './columns/column';
 
 // Operators
-export { Operators } from './index';
+export { Operators, type OperatorsDate, type OperatorsNumber } from './index';
 
 // Column data types and utilities
 export { type StringData, type BaseNumberData } from './index';

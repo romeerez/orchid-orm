@@ -35,7 +35,9 @@ export const addTableHook = (
   const throwOnNotFound =
     // Assuming that Create always returns a record, though needs to be cautions with onConflictDoNothing
     hookPurpose !== 'Create' &&
-    (data.returnType === 'oneOrThrow' || data.returnType === 'valueOrThrow');
+    (data.cteThrowOnNotFound ||
+      data.returnType === 'oneOrThrow' ||
+      data.returnType === 'valueOrThrow');
 
   const hasAfterHook =
     afterCreate ||

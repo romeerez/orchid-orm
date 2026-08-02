@@ -125,6 +125,19 @@ const make = (
 
       q.getColumn = BooleanColumn.instance;
 
+      // turn `this.result.value` to boolean,
+      // preserve existing column name if it is set
+      if (this instanceof Expression && this.result) {
+        let column;
+        if (this.result.value?.data.name) {
+          column = Object.create(BooleanColumn.instance);
+          column.data = { ...column.data, name: this.result.value.data.name };
+        } else {
+          column = BooleanColumn.instance;
+        }
+        this.result.value = column;
+      }
+
       return setQueryOperators(this as never, boolean as never);
     },
     {

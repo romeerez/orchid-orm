@@ -1,40 +1,42 @@
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import {
-  expectQueryNotMutated,
-  Snake,
-  snakeSelectAll,
-  User,
-  userColumnsSql,
-  userData,
-  UserRecord,
-  userTableColumnsSql,
-} from '../../../test-utils/pqb.test-utils';
-import { assertType, db, expectSql, useTestDatabase } from 'test-utils';
+  assertType,
+  db,
+  expectSql,
+  useTestDatabase,
+  UserData,
+  UserDefaultSelect,
+  UserSelectAll,
+  UserSelectAllWithTable,
+} from 'test-utils';
 
 describe('delete', () => {
   useTestDatabase();
 
   it('should prevent deleting all with TS error', () => {
     // @ts-expect-error update should have where condition or forceAll flag
-    expect(() => User.delete()).toThrow('Dangerous delete without conditions');
+    expect(() => db.user.delete()).toThrow(
+      'Dangerous delete without conditions',
+    );
   });
 
   it('should allow deleting all records after using `all` method', () => {
-    User.all().delete();
+    db.user.all().delete();
   });
 
   it('should throw when deleting with an empty effective where filter', () => {
-    expect(() => User.where({}).delete().toSQL()).toThrow(
+    expect(() => db.user.where({}).delete().toSQL()).toThrow(
       'Dangerous delete without conditions',
     );
 
-    expect(() => User.where({ id: undefined }).delete().toSQL()).toThrow(
+    expect(() => db.user.where({ Id: undefined }).delete().toSQL()).toThrow(
       'Dangerous delete without conditions',
     );
   });
 
   it('should allow deleting after explicit all with an empty effective where filter', () => {
     expectSql(
-      User.all().where({ id: undefined }).delete().toSQL(),
+      db.user.all().where({ Id: undefined }).delete().toSQL(),
       `
         DELETE FROM "schema"."user" "User"
       `,
@@ -42,10 +44,10 @@ describe('delete', () => {
   });
 
   it('should delete records, returning value', async () => {
-    const id = await User.get('id').create(userData);
-    const q = User.all();
+    const id = await db.user.get('Id').create(UserData);
+    const q = db.user.all();
 
-    const query = q.find(id).get('id').delete();
+    const query = q.find(id).get('Id').delete();
     expectSql(
       query.toSQL(),
       `
@@ -63,28 +65,16 @@ describe('delete', () => {
     expectQueryNotMutated(q);
   });
 
-  it('should delete records, returning named column', async () => {
-    const query = Snake.findBy({ snakeName: 'name' }).get('snakeName').delete();
-    expectSql(
-      query.toSQL(),
-      `
-        DELETE FROM "schema"."snake" "Snake" WHERE "Snake"."snake_name" = $1
-        RETURNING "Snake"."snake_name"
-      `,
-      ['name'],
-    );
-  });
-
   it('should delete records, returning deleted rows count', async () => {
     const rowsCount = 3;
 
     for (let i = 0; i < rowsCount; i++) {
-      await User.create(userData);
+      await db.user.create(UserData);
     }
 
-    const q = User.all();
+    const q = db.user.all();
 
-    const query = q.where({ id: { gte: 1 } }).delete();
+    const query = q.where({ Id: { gte: 1 } }).delete();
     expectSql(
       query.toSQL(),
       'DELETE FROM "schema"."user" "User" WHERE "User"."id" >= $1',
@@ -100,128 +90,105 @@ describe('delete', () => {
   });
 
   it('should delete records, returning all columns', () => {
-    const q = User.all();
+    const q = db.user.all();
 
-    const query = q.selectAll().where({ id: 1 }).delete();
+    const query = q.selectAll().where({ Id: 1 }).delete();
     expectSql(
       query.toSQL(),
-      `DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING ${userColumnsSql}`,
+      `DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING ${UserSelectAll}`,
       [1],
     );
 
-    assertType<Awaited<typeof query>, UserRecord[]>();
+    assertType<Awaited<typeof query>, UserDefaultSelect[]>();
 
     expectQueryNotMutated(q);
   });
 
   it('should support appending selectAll', async () => {
-    const user = await User.create(userData);
+    const user = await db.user.create(UserData);
 
-    const result = await User.where({ id: user.id }).delete().selectAll();
+    const result = await db.user.where({ Id: user.Id }).delete().selectAll();
 
-    assertType<typeof result, UserRecord[]>();
+    assertType<typeof result, UserDefaultSelect[]>();
 
     expect(result).toEqual([user]);
   });
 
   it('should selectAll when deleting a single record', async () => {
-    const user = await User.create(userData);
+    const user = await db.user.create(UserData);
 
-    const result = await User.find(user.id).selectAll().delete();
+    const result = await db.user.find(user.Id).selectAll().delete();
 
-    assertType<typeof result, UserRecord>();
+    assertType<typeof result, UserDefaultSelect>();
 
     expect(result).toEqual(user);
   });
 
   it('should support appending selectAll when deleting a single record', async () => {
-    const user = await User.create(userData);
+    const user = await db.user.create(UserData);
 
-    const result = await User.find(user.id).delete().selectAll();
+    const result = await db.user.find(user.Id).delete().selectAll();
 
-    assertType<typeof result, UserRecord>();
+    assertType<typeof result, UserDefaultSelect>();
 
     expect(result).toEqual(user);
   });
 
-  it('should delete records, returning all named columns', () => {
-    const query = Snake.selectAll().all().delete();
-    expectSql(
-      query.toSQL(),
-      `
-        DELETE FROM "schema"."snake" "Snake"
-        RETURNING ${snakeSelectAll}
-      `,
-    );
-  });
-
   it('should delete records, returning specified columns', () => {
-    const q = User.all();
+    const q = db.user.all();
 
-    const query = q.select('id', 'name').where({ id: 1 }).delete();
+    const query = q.select('Id', 'Name').where({ Id: 1 }).delete();
     expectSql(
       query.toSQL(),
-      `DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING "User"."id", "User"."name"`,
+      `DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING "User"."id" "Id", "User"."name" "Name"`,
       [1],
     );
 
-    assertType<Awaited<typeof query>, { id: number; name: string }[]>();
+    assertType<Awaited<typeof query>, { Id: number; Name: string }[]>();
 
     expectQueryNotMutated(q);
   });
 
   it('should support appending select', async () => {
-    const user = await User.select('id', 'name').create(userData);
+    const user = await db.user.select('Id', 'Name').create(UserData);
 
-    const result = await User.where({ id: user.id })
+    const result = await db.user
+      .where({ Id: user.Id })
       .delete()
-      .select('id', 'name');
+      .select('Id', 'Name');
 
-    assertType<typeof result, { id: number; name: string }[]>();
+    assertType<typeof result, { Id: number; Name: string }[]>();
 
     expect(result).toEqual([user]);
   });
 
   it('should select column when deleting a single record', async () => {
-    const user = await User.select('id', 'name').create(userData);
+    const user = await db.user.select('Id', 'Name').create(UserData);
 
-    const result = await User.find(user.id).select('id', 'name').delete();
+    const result = await db.user.find(user.Id).select('Id', 'Name').delete();
 
-    assertType<typeof result, { id: number; name: string }>();
+    assertType<typeof result, { Id: number; Name: string }>();
 
     expect(result).toEqual(user);
   });
 
   it('should support appending select when deleting a single record', async () => {
-    const user = await User.select('id', 'name').create(userData);
+    const user = await db.user.select('Id', 'Name').create(UserData);
 
-    const result = await User.find(user.id).delete().select('id', 'name');
+    const result = await db.user.find(user.Id).delete().select('Id', 'Name');
 
-    assertType<typeof result, { id: number; name: string }>();
+    assertType<typeof result, { Id: number; Name: string }>();
 
     expect(result).toEqual(user);
   });
 
-  it('should delete records, returning specified named columns', () => {
-    const query = Snake.select('snakeName', 'tailLength').all().delete();
-    expectSql(
-      query.toSQL(),
-      `
-        DELETE FROM "schema"."snake" "Snake"
-        RETURNING
-          "Snake"."snake_name" "snakeName",
-          "Snake"."tail_length" "tailLength"
-      `,
-    );
-  });
-
   it('should support where and join statements', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     const query = q
       .selectAll()
-      .where({ id: 1 })
-      .join(db.profile, 'UserId', '=', 'id')
+      .where({ Id: 1 })
+      .join(db.profile, 'UserId', '=', 'Id')
       .delete();
 
     expectSql(
@@ -230,34 +197,38 @@ describe('delete', () => {
         DELETE FROM "schema"."user" "User"
         USING "schema"."profile" "Profile"
         WHERE "User"."id" = $1 AND "Profile"."user_id" = "User"."id"
-        RETURNING ${userTableColumnsSql}
+        RETURNING ${UserSelectAllWithTable}
       `,
       [1],
     );
 
-    assertType<Awaited<typeof query>, UserRecord[]>();
+    assertType<Awaited<typeof query>, UserDefaultSelect[]>();
 
     expectQueryNotMutated(q);
   });
 
   it('should be supported in `WITH` expressions', () => {
-    const q = User.with('a', User.find(1).select('name').delete())
+    const q = db.user
+      .with('a', db.user.find(1).select('Name').delete())
       .with('b', (q) =>
-        User.select('id').whereIn('name', q.from('a').pluck('name')).delete(),
+        db.user
+          .select('Id')
+          .whereIn('Name', q.from('a').pluck('Name'))
+          .delete(),
       )
       .from('b');
 
-    assertType<Awaited<typeof q>, { id: number }[]>();
+    assertType<Awaited<typeof q>, { Id: number }[]>();
 
     expectSql(
       q.toSQL(),
       `
         WITH "a" AS (
-          DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING "User"."name"
+          DELETE FROM "schema"."user" "User" WHERE "User"."id" = $1 RETURNING "User"."name" "Name"
         ), "b" AS (
           DELETE FROM "schema"."user" "User"
-          WHERE "User"."name" IN (SELECT "a"."name" FROM "a")
-          RETURNING "User"."id"
+          WHERE "User"."name" IN (SELECT "a"."Name" FROM "a")
+          RETURNING "User"."id" "Id"
         )
         (SELECT *, NULL FROM "b")
         UNION ALL
@@ -270,22 +241,24 @@ describe('delete', () => {
   // DELETE FROM ... USING LATERAL does not support referencing the table under deletion.
   it('should throw when deleting after joining a complex query (limit in this case)', () => {
     expect(() =>
-      User.where({ id: 1 })
-        .join(db.profile, (q) => q.on('UserId', 'User.id').limit(5))
+      db.user
+        .where({ Id: 1 })
+        .join(db.profile, (q) => q.on('UserId', 'User.Id').limit(5))
         .delete(),
     ).toThrow('Cannot join a complex query in delete');
   });
 
   it('should throw when joining a complex query after delete statement (limit in this case)', () => {
     expect(() =>
-      User.where({ id: 1 })
+      db.user
+        .where({ Id: 1 })
         .delete()
-        .join(db.profile, (q) => q.on('UserId', 'User.id').limit(5)),
+        .join(db.profile, (q) => q.on('UserId', 'User.Id').limit(5)),
     ).toThrow('Cannot join a complex query in delete');
   });
 
   it('should throw NotFoundError when no records to delete for a `one` query kind', async () => {
-    const q = User.find(1).delete();
+    const q = db.user.find(1).delete();
 
     await expect(q).rejects.toThrow('Record is not found');
   });

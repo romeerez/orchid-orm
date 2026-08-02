@@ -1,8 +1,4 @@
-import {
-  expectQueryNotMutated,
-  Snake,
-  snakeSelectAll,
-} from '../test-utils/pqb.test-utils';
+import { expectQueryNotMutated } from '../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
@@ -255,20 +251,6 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should find one by named primary key', () => {
-      const q = Snake.find(1);
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
-          WHERE "Snake"."snake_id" = $1
-          LIMIT 1
-        `,
-        [1],
-      );
-    });
-
     it('should accept raw sql', () => {
       const q = db.user.all();
       const query = q.find(testDb.sql`$a + $b`.values({ a: 1, b: 2 }));
@@ -311,20 +293,6 @@ describe('queryMethods', () => {
         [1],
       );
       expectQueryNotMutated(q);
-    });
-
-    it('should find optional one by named primary key', () => {
-      const q = Snake.findOptional(1);
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
-          WHERE "Snake"."snake_id" = $1
-          LIMIT 1
-        `,
-        [1],
-      );
     });
 
     it('should accept raw sql', () => {
@@ -513,21 +481,6 @@ describe('queryMethods', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should group by named columns', () => {
-      const q = Snake.select('snakeName', 'tailLength').group(
-        'snakeName',
-        'tailLength',
-      );
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength" FROM "schema"."snake" "Snake"
-          GROUP BY "Snake"."snake_name", "Snake"."tail_length"
-        `,
-      );
-    });
-
     it('should group by raw sql', () => {
       const q = db.user.clone();
       const expectedSql = `
@@ -618,7 +571,7 @@ describe('queryMethods', () => {
 
       assertType<
         Awaited<typeof q>,
-        ({ Id: number; Name: string } | { Id: number; Age: string | null })[]
+        ({ Id: number; Name: string } | { Id: number; Age: number | null })[]
       >();
 
       expectSql(
@@ -683,7 +636,7 @@ describe('queryMethods', () => {
 
       assertType<
         Awaited<typeof q>,
-        { Id: number; Name: string }[] | { Id: number; Age: string | null }[]
+        { Id: number; Name: string }[] | { Id: number; Age: number | null }[]
       >();
 
       expectSql(

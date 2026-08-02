@@ -1,4 +1,3 @@
-import { Snake, snakeSelectAll } from '../../../test-utils/pqb.test-utils';
 import { testWhere, testWhereExists } from './test-where';
 import {
   assertType,
@@ -209,28 +208,6 @@ describe('whereNotOneOf', () => {
   });
 });
 
-describe('where with named columns', () => {
-  testWhere(
-    (cb) => cb(Snake.all()).toSQL(),
-    `SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake" WHERE`,
-    {
-      model: Snake,
-      pkey: 'tailLength',
-      nullable: 'snakeData',
-      text: 'snakeName',
-    },
-  );
-
-  testWhereExists({
-    joinTo: db.user,
-    pkey: 'User.Id',
-    joinTarget: Snake,
-    fkey: 'tailLength',
-    text: 'snakeName',
-    selectFrom: `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
-  });
-});
-
 describe('where joined columns', () => {
   const Message = db.message.includeDeleted();
 
@@ -255,31 +232,6 @@ describe('where joined columns', () => {
     fkey: 'Message.AuthorId',
     text: 'Message.Text',
     selectFrom: `SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User" JOIN "schema"."message" "Message" ON "Message"."author_id" = "User"."id"`,
-  });
-});
-
-describe('where joined named columns', () => {
-  testWhere(
-    (cb) =>
-      cb(db.user.join(Snake, (q) => q.on('tailLength', 'User.Id'))).toSQL(),
-    `SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User" JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id" WHERE `,
-    {
-      model: db.user,
-      columnsOf: Snake,
-      pkey: 'Snake.tailLength',
-      nullable: 'Snake.snakeData',
-      text: 'Snake.snakeName',
-    },
-  );
-
-  testWhereExists({
-    joinTo: db.user.join(Snake, (q) => q.on('tailLength', 'User.Id')),
-    pkey: 'User.Id',
-    joinTarget: db.profile,
-    columnsOf: Snake,
-    fkey: 'Snake.tailLength',
-    text: 'Snake.snakeName',
-    selectFrom: `SELECT ${UserSelectAllWithTable} FROM "schema"."user" "User" JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"`,
   });
 });
 
@@ -454,20 +406,20 @@ describe('orWhere', () => {
 
 describe('whereExists', () => {
   it('should forbid selecting values on a type level', () => {
-    const q = db.user.whereExists(Snake, (q) => q.sum('tailLength'));
+    const q = db.user.whereExists(db.profile, (q) => q.sum('Id'));
     assertType<typeof q, { error: 'Cannot select in whereExists' }>();
 
-    const q2 = db.user.whereExists(() => Snake.sum('tailLength'));
+    const q2 = db.user.whereExists(() => db.profile.sum('Id'));
     assertType<typeof q2, { error: 'Cannot select in whereExists' }>();
   });
 
-  it('should handle sub-querying by a snake cased table', () => {
-    const q = db.user.whereExists(Snake, (q) => q.on('User.Id', 'tailLength'));
-    const q2 = db.user.whereExists(Snake, (q) =>
-      q.on('User.Id', 'Snake.tailLength'),
+  it('should handle sub-querying', () => {
+    const q = db.user.whereExists(db.profile, (q) => q.on('User.Id', 'UserId'));
+    const q2 = db.user.whereExists(db.profile, (q) =>
+      q.on('User.Id', 'Profile.UserId'),
     );
-    const q3 = db.user.whereExists(Snake, (q) =>
-      q.on('User.Id', '=', 'Snake.tailLength'),
+    const q3 = db.user.whereExists(db.profile, (q) =>
+      q.on('User.Id', '=', 'Profile.UserId'),
     );
 
     const sql = q.toSQL();
@@ -477,7 +429,7 @@ describe('whereExists', () => {
       `
         SELECT ${UserSelectAll} FROM "schema"."user" "User"
         WHERE EXISTS (
-          SELECT 1 FROM "schema"."snake" "Snake" WHERE "User"."id" = "Snake"."tail_length"
+          SELECT 1 FROM "schema"."profile" "Profile" WHERE "User"."id" = "Profile"."user_id"
         )
       `,
     );

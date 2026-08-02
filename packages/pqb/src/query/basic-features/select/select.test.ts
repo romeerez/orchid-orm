@@ -2,11 +2,6 @@ import {
   expectQueryNotMutated,
   messageData,
   profileData,
-  Snake,
-  snakeData,
-  SnakeRecord,
-  snakeSelectAll,
-  snakeSelectAllWithTable,
 } from '../../../test-utils/pqb.test-utils';
 import {
   DateColumn,
@@ -121,30 +116,6 @@ describe('select', () => {
       );
     });
 
-    it('should select all named columns with a *', async () => {
-      const { message } = await createUserMessage();
-      await Snake.create({
-        ...snakeData,
-        tailLength: message.AuthorId as number,
-      });
-
-      const q = Snake.join(db.message, 'AuthorId', 'tailLength').select('*');
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${snakeSelectAllWithTable} FROM "schema"."snake" "Snake"
-          JOIN "schema"."message" "Message" ON "Message"."author_id" = "Snake"."tail_length" AND ("Message"."deleted_at" IS NULL)
-        `,
-      );
-
-      const res = await q;
-
-      assertType<typeof res, SnakeRecord[]>();
-
-      expect(res).toMatchObject([{ updatedAt: expect.any(Date) }]);
-    });
-
     it('should select all table columns with * plus specified joined columns', async () => {
       await createUserMessage();
 
@@ -204,23 +175,6 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should select named columns', () => {
-      const q = Snake.select('snakeName', 'tailLength');
-
-      assertType<
-        Awaited<typeof q>,
-        { snakeName: string; tailLength: number }[]
-      >();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
-          FROM "schema"."snake" "Snake"
-        `,
-      );
-    });
-
     it('should select table.column', () => {
       const q = db.user.all();
       const query = q.select('User.Id', 'User.Name');
@@ -243,23 +197,6 @@ describe('select', () => {
       });
 
       expectQueryNotMutated(q);
-    });
-
-    it('should select named columns with table', () => {
-      const q = Snake.select('Snake.snakeName', 'Snake.tailLength');
-
-      assertType<
-        Awaited<typeof q>,
-        { snakeName: string; tailLength: number }[]
-      >();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
-          FROM "schema"."snake" "Snake"
-        `,
-      );
     });
 
     it('should select joined columns', () => {
@@ -305,23 +242,6 @@ describe('select', () => {
       );
     });
 
-    it('should select named joined columns', () => {
-      const q = db.user
-        .join(Snake, 'tailLength', 'Id')
-        .select('User.Id', 'Snake.snakeName');
-
-      assertType<Awaited<typeof q>, { Id: number; snakeName: string }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "User"."id" "Id", "Snake"."snake_name" "snakeName"
-          FROM "schema"."user" "User"
-          JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
-        `,
-      );
-    });
-
     it('should select joined columns with alias', () => {
       const q = db.user.all();
       const query = q
@@ -347,23 +267,6 @@ describe('select', () => {
       });
 
       expectQueryNotMutated(q);
-    });
-
-    it('should select named joined columns with alias', () => {
-      const q = db.user
-        .join(Snake.as('s'), 'tailLength', 'Id')
-        .select('User.Id', 's.snakeName');
-
-      assertType<Awaited<typeof q>, { Id: number; snakeName: string }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "User"."id" "Id", "s"."snake_name" "snakeName"
-          FROM "schema"."user" "User"
-          JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
-        `,
-      );
     });
 
     it('should not apply table column parsers to a selected expression with the same name as a table column', async () => {
@@ -456,20 +359,6 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should select named columns with aliases', async () => {
-      const q = Snake.select({ name: 'snakeName', length: 'tailLength' });
-
-      assertType<Awaited<typeof q>, { name: string; length: number }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name" "name", "Snake"."tail_length" "length"
-          FROM "schema"."snake" "Snake"
-        `,
-      );
-    });
-
     it('should select table.column with aliases', () => {
       const q = db.user.all();
 
@@ -496,23 +385,6 @@ describe('select', () => {
         `,
       );
       expectQueryNotMutated(q);
-    });
-
-    it('should select named columns with table with aliases', async () => {
-      const q = Snake.select({
-        name: 'Snake.snakeName',
-        length: 'Snake.tailLength',
-      });
-
-      assertType<Awaited<typeof q>, { name: string; length: number }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name" "name", "Snake"."tail_length" "length"
-          FROM "schema"."snake" "Snake"
-        `,
-      );
     });
 
     it('should select joined columns', () => {
@@ -545,24 +417,6 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should select named joined columns with aliases', () => {
-      const q = db.user.join(Snake, 'tailLength', 'Id').select({
-        userId: 'User.Id',
-        length: 'Snake.tailLength',
-      });
-
-      assertType<Awaited<typeof q>, { userId: number; length: number }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "User"."id" "userId", "Snake"."tail_length" "length"
-          FROM "schema"."user" "User"
-          JOIN "schema"."snake" "Snake" ON "Snake"."tail_length" = "User"."id"
-        `,
-      );
-    });
-
     it('should select joined columns with alias', () => {
       const q = db.user.all();
       const query = q
@@ -591,24 +445,6 @@ describe('select', () => {
         `,
       );
       expectQueryNotMutated(q);
-    });
-
-    it('should select named joined columns with aliases from aliased join', () => {
-      const q = db.user.join(Snake.as('s'), 'tailLength', 'Id').select({
-        userId: 'User.Id',
-        length: 's.tailLength',
-      });
-
-      assertType<Awaited<typeof q>, { userId: number; length: number }[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "User"."id" "userId", "s"."tail_length" "length"
-          FROM "schema"."user" "User"
-          JOIN "schema"."snake" "s" ON "s"."tail_length" = "User"."id"
-        `,
-      );
     });
 
     it('should accept raw', () => {
@@ -698,27 +534,6 @@ describe('select', () => {
         );
 
         expectQueryNotMutated(q);
-      });
-
-      it('should select subquery for named columns', () => {
-        const q = Snake.select({ subquery: () => Snake.all() });
-
-        assertType<Awaited<typeof q>, { subquery: SnakeRecord[] }[]>();
-
-        expectSql(
-          q.toSQL(),
-          `
-            SELECT
-              (
-                SELECT COALESCE(json_agg(row_to_json(t.*)), '[]')
-                FROM (
-                  SELECT ${snakeSelectAll}
-                  FROM "schema"."snake" "Snake"
-                ) "t"
-              ) "subquery"
-            FROM "schema"."snake" "Snake"
-          `,
-        );
       });
 
       it('should properly select and parse 3 levels deep select *', async () => {
@@ -1166,7 +981,7 @@ describe('select', () => {
         user: (q) => q.user.select('Age'),
       });
 
-      assertType<typeof res, { user: { Age: string | null } | undefined }[]>();
+      assertType<typeof res, { user: { Age: number | null } | undefined }[]>();
 
       expect(res).toEqual([{ user: { Age: null } }]);
     });
@@ -1211,19 +1026,6 @@ describe('select', () => {
       expectSql(
         query.toSQL(),
         `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
-      );
-    });
-
-    it('should select all named columns', () => {
-      const q = Snake.select('snakeName').selectAll();
-
-      assertType<Awaited<typeof q>, SnakeRecord[]>();
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
-        `,
       );
     });
   });

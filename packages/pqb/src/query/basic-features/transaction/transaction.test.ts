@@ -1,9 +1,10 @@
-import { assertType, testDb, useTestDatabase } from 'test-utils';
 import {
-  User,
-  userColumnsSql,
-  userData,
-} from '../../../test-utils/pqb.test-utils';
+  assertType,
+  db,
+  useTestDatabase,
+  UserData,
+  UserSelectAll,
+} from 'test-utils';
 import { AfterCommitError } from './transaction';
 import { noop } from '../../../utils';
 import {
@@ -30,19 +31,19 @@ const afterCommitSampleError = {
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
-  afterAll(testDb.close);
+  afterAll(db.$close);
 
   it('should start and commit transaction', async () => {
     const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
     const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
-    const result = await testDb.transaction(async () => {
+    const result = await db.$transaction(async () => {
       const {
         rows: [{ a }],
-      } = await testDb.query`SELECT 1 AS a`;
+      } = await db.$query`SELECT 1 AS a`;
       const {
         rows: [{ b }],
-      } = await testDb.query`SELECT 2 AS b`;
+      } = await db.$query`SELECT 2 AS b`;
       return (a + b) as number;
     });
 
@@ -63,8 +64,8 @@ describe('transaction', () => {
 
     let error: Error | undefined;
 
-    await testDb
-      .transaction(async () => {
+    await db
+      .$transaction(async () => {
         throw new Error('error');
       })
       .catch((err) => (error = err));
@@ -90,9 +91,9 @@ describe('transaction', () => {
       deferrable: true,
     };
 
-    await testDb.transaction(one, async () => {});
-    await testDb.transaction(two, async () => {});
-    await testDb.transaction(three, async () => {});
+    await db.$transaction(one, async () => {});
+    await db.$transaction(two, async () => {});
+    await db.$transaction(three, async () => {});
 
     expect(transactionSpy.mock.calls.map((call) => call[1])).toMatchObject([
       { level: one },
@@ -105,16 +106,16 @@ describe('transaction', () => {
     it('should log all the queries inside a transaction', async () => {
       const log = jest.spyOn(console, 'log').mockImplementation(noop);
 
-      await testDb.transaction({ log: true }, async () => {
-        await User.log(false); // transaction log overrides query's log
-        await testDb.query`SELECT 1 AS a`;
+      await db.$transaction({ log: true }, async () => {
+        await db.user.log(false); // transaction log overrides query's log
+        await db.$query`SELECT 1 AS a`;
       });
 
       expect(log.mock.calls).toEqual([
         [expect.stringContaining(`BEGIN`)],
         [
           expect.stringContaining(
-            `SELECT ${userColumnsSql} FROM "schema"."user"`,
+            `SELECT ${UserSelectAll} FROM "schema"."user"`,
           ),
         ],
         [expect.stringContaining(`SELECT 1 AS a`)],
@@ -128,14 +129,14 @@ describe('transaction', () => {
       const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
       const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
-      const result = await testDb.transaction(async () => {
-        return testDb.ensureTransaction(async () => {
+      const result = await db.$transaction(async () => {
+        return db.$ensureTransaction(async () => {
           const {
             rows: [{ a }],
-          } = await testDb.query`SELECT 1 AS a`;
+          } = await db.$query`SELECT 1 AS a`;
           const {
             rows: [{ b }],
-          } = await testDb.query`SELECT 2 AS b`;
+          } = await db.$query`SELECT 2 AS b`;
 
           return a + b;
         });
@@ -154,13 +155,13 @@ describe('transaction', () => {
       const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
       const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
-      const result = await testDb.ensureTransaction(async () => {
+      const result = await db.$ensureTransaction(async () => {
         const {
           rows: [{ a }],
-        } = await testDb.query`SELECT 1 AS a`;
+        } = await db.$query`SELECT 1 AS a`;
         const {
           rows: [{ b }],
-        } = await testDb.query`SELECT 2 AS b`;
+        } = await db.$query`SELECT 2 AS b`;
 
         return (a + b) as number;
       });
@@ -179,37 +180,37 @@ describe('transaction', () => {
 
   describe('isInTransaction', () => {
     it("should indicate whether we're inside a transaction", async () => {
-      expect(testDb.isInTransaction()).toBe(false);
+      expect(db.$isInTransaction()).toBe(false);
 
-      await testDb.transaction(async () => {
-        expect(testDb.isInTransaction()).toBe(true);
+      await db.$transaction(async () => {
+        expect(db.$isInTransaction()).toBe(true);
       });
 
-      expect(testDb.isInTransaction()).toBe(false);
+      expect(db.$isInTransaction()).toBe(false);
     });
 
     describe('in testTransaction', () => {
       useTestDatabase();
 
       it('should trick testTransaction into thinking that we are not in transaction on the top level', async () => {
-        expect(testDb.isInTransaction()).toBe(false);
+        expect(db.$isInTransaction()).toBe(false);
 
-        await testDb.transaction(async () => {
-          expect(testDb.isInTransaction()).toBe(true);
+        await db.$transaction(async () => {
+          expect(db.$isInTransaction()).toBe(true);
         });
       });
     });
   });
 
   describe('afterCommit hooks', () => {
-    useTestDatabase();
+    useTestDatabase(db);
 
     it('should not make the transaction wait for afterCommit hook to finish', async () => {
       let hookCalled = false;
       let hookAwaited = false;
 
-      const result = await User.transaction(async () => {
-        await User.insert(userData).afterCreateCommit([], async () => {
+      const result = await db.$transaction(async () => {
+        await db.user.insert(UserData).afterCreateCommit([], async () => {
           hookCalled = true;
           await new Promise((resolve) => process.nextTick(resolve));
           hookAwaited = true;
@@ -229,8 +230,9 @@ describe('transaction', () => {
       });
       const catcher2 = jest.fn();
 
-      const result = await User.transaction(async () => {
-        await User.insert(userData)
+      const result = await db.$transaction(async () => {
+        await db.user
+          .insert(UserData)
           .afterCreateCommit([], function one() {
             return 'hook ok';
           })
@@ -265,12 +267,12 @@ describe('transaction', () => {
       const hook2 = jest.fn();
       const hook3 = jest.fn();
 
-      await User.transaction(async () => {
-        await User.transaction(async () => {
-          testDb.afterCommit(hook1);
-          testDb.afterCommit(hook2);
+      await db.$transaction(async () => {
+        await db.$transaction(async () => {
+          db.$afterCommit(hook1);
+          db.$afterCommit(hook2);
         });
-        testDb.afterCommit(hook3);
+        db.$afterCommit(hook3);
 
         expect(hook1).not.toHaveBeenCalled();
         expect(hook2).not.toHaveBeenCalled();
@@ -286,14 +288,16 @@ describe('transaction', () => {
       const hook1 = jest.fn();
       const hook2 = jest.fn();
 
-      await User.transaction(async () => {
-        await User.transaction(async () => {
-          testDb.afterCommit(hook1);
-        });
-        testDb.afterCommit(hook2);
+      await db
+        .$transaction(async () => {
+          await db.$transaction(async () => {
+            db.$afterCommit(hook1);
+          });
+          db.$afterCommit(hook2);
 
-        throw new Error('error');
-      }).catch(() => {});
+          throw new Error('error');
+        })
+        .catch(() => {});
 
       expect(hook1).not.toHaveBeenCalled();
       expect(hook2).not.toHaveBeenCalled();
@@ -302,7 +306,7 @@ describe('transaction', () => {
     it('should run in next microtask when not in transaction', async () => {
       const hook = jest.fn();
 
-      testDb.afterCommit(hook);
+      db.$afterCommit(hook);
 
       expect(hook).not.toHaveBeenCalled();
 
@@ -316,7 +320,7 @@ describe('transaction', () => {
 describe('hooks with no test transaction', () => {
   beforeEach(() => {
     jest
-      .spyOn(User.adapterNotInTransaction, 'query')
+      .spyOn(db.user.adapterNotInTransaction, 'query')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockResolvedValueOnce({ rowCount: 1, rows: [] } as any);
   });
@@ -325,7 +329,8 @@ describe('hooks with no test transaction', () => {
     let hookCalled = false;
     let hookAwaited = false;
 
-    const result = await User.all()
+    const result = await db.user
+      .all()
       .delete()
       .afterDeleteCommit([], async () => {
         hookCalled = true;
@@ -344,7 +349,8 @@ describe('hooks with no test transaction', () => {
     });
     const catcher2 = jest.fn();
 
-    const result = await User.all()
+    const result = await db.user
+      .all()
       .delete()
       .afterDeleteCommit([], function one() {
         return 'hook ok';

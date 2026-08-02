@@ -9,56 +9,6 @@ import {
   TransactionAdapterClass,
 } from '../adapters/adapter';
 
-export type UserRecord = typeof User.__outputType;
-export type UserInsert = typeof User.__inputType;
-export type UserDataType = { name: string; tags: string[] };
-export const User = testDb('User', (t) => ({
-  id: t.identity().primaryKey(),
-  name: t.text().unique(),
-  password: t.text().select(false),
-  picture: t.text().nullable(),
-  data: t.json<UserDataType>().nullable(),
-  age: t.decimal().parse(parseInt).nullable(),
-  active: t.boolean().nullable(),
-  ...t.timestamps(),
-}));
-
-export const userColumnsSql = User.q.selectAllColumns!.join(', ');
-
-export const userTableColumnsSql = User.q
-  .selectAllColumns!.map((c) => '"User".' + c)
-  .join(', ');
-
-export type SnakeRecord = typeof Snake.__outputType;
-export type SnakeData = { name: string; tags: string[] };
-export const Snake = testDb(
-  'Snake',
-  (t) => ({
-    snakeId: t.identity().primaryKey(),
-    snakeName: t.text().unique(),
-    tailLength: t.integer(),
-    snakeData: t.json<SnakeData>().nullable(),
-    ...t.timestamps(),
-  }),
-  undefined,
-  {
-    snakeCase: true,
-  },
-);
-
-const snakeAllColumns = [
-  '"snake_id" "snakeId"',
-  '"snake_name" "snakeName"',
-  '"tail_length" "tailLength"',
-  '"snake_data" "snakeData"',
-  '"created_at" "createdAt"',
-  '"updated_at" "updatedAt"',
-];
-export const snakeSelectAll = snakeAllColumns.join(', ');
-export const snakeSelectAllWithTable = snakeAllColumns
-  .map((item) => `"Snake".${item}`)
-  .join(', ');
-
 export const expectQueryNotMutated = (q: Query) => {
   const select = q.q.selectAllColumns?.join(', ') ?? '*';
   expectSql(
@@ -96,11 +46,6 @@ export const profileData = {
 export const messageData = {
   Text: 'text',
   MessageKey: 'key',
-};
-
-export const snakeData = {
-  snakeName: 'Dave',
-  tailLength: 5,
 };
 
 export const uniqueTableData = {

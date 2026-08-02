@@ -6,6 +6,9 @@ export {
   type SqlFn,
   type QueryHelperResult,
   type ExpressionData,
+  type SelectSqlColumn,
+  type StaticSQLArgs,
+  type ColumnRefExpression,
 } from './query';
 
 export { type ToSQLCtx, type ToSqlValues } from './query/sql/to-sql';
@@ -16,6 +19,8 @@ export {
   type OperatorsOrdinalText,
   type OperatorsText,
   type Ord,
+  type OperatorsDate,
+  type OperatorsNumber,
 } from './columns/operators';
 
 export {
@@ -25,6 +30,7 @@ export {
   type ArrayData,
   type DateColumnData,
   type SerialColumnData,
+  type DateColumnInput,
 } from './columns';
 
 export {

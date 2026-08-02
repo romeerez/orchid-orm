@@ -10,6 +10,38 @@ import {
 describe('select-sub-query value', () => {
   useTestDatabase();
 
+  it('should select a single record of joinLateral, and a single nested record selected by joinLateral query', async () => {
+    await db.user.insert({
+      ...UserData,
+      profile: { create: ProfileData },
+    });
+
+    const q = db.user
+      .joinLateral(db.profile, (q) =>
+        q.select({ author: (q) => q.user.select('Id') }),
+      )
+      .select('Profile.*');
+
+    const res = await q;
+
+    assertType<
+      typeof res,
+      {
+        Profile: {
+          author: { Id: number } | undefined;
+        };
+      }[]
+    >();
+
+    expect(res).toEqual([
+      {
+        Profile: {
+          author: { Id: expect.any(Number) },
+        },
+      },
+    ]);
+  });
+
   it('should support ordering by a selected column from a select aliased in the same way as the main table', async () => {
     const q = db.category
       .select({

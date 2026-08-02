@@ -1,8 +1,4 @@
-import {
-  emulateReturnNoRowsOnce,
-  User,
-  userData,
-} from '../../../test-utils/pqb.test-utils';
+import { emulateReturnNoRowsOnce } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
@@ -286,23 +282,23 @@ describe('orCreate', () => {
 
   describe('cte', () => {
     it('should find a record when is nested in select', async () => {
-      const id = await User.get('id').insert(userData);
+      const id = await db.user.get('Id').insert(UserData);
 
-      const res = await User.take().select({
-        id: () => User.get('id').find(id).orCreate(userData),
+      const res = await db.user.take().select({
+        Id: () => db.user.find(id).get('User.Id').orCreate(UserData),
       });
 
-      expect(res).toEqual({ id });
+      expect(res).toEqual({ Id: id });
     });
 
     it('should create a record when is nested in select', async () => {
       const res = await testDb.qb
         .select({
-          id: () => User.get('id').find(0).orCreate(userData),
+          Id: () => db.user.find(0).get('Id').orCreate(UserData),
         })
         .take();
 
-      expect(res).toEqual({ id: expect.any(Number) });
+      expect(res).toEqual({ Id: expect.any(Number) });
     });
   });
 });

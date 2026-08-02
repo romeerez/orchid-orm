@@ -1,8 +1,4 @@
-import {
-  expectQueryNotMutated,
-  Snake,
-  snakeSelectAll,
-} from '../../../test-utils/pqb.test-utils';
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import { db, expectSql, testDb, UserSelectAll } from 'test-utils';
 
 describe('order', () => {
@@ -18,18 +14,6 @@ describe('order', () => {
     );
 
     expectQueryNotMutated(q);
-  });
-
-  it('should order by named columns', () => {
-    const q = Snake.order('snakeName', 'tailLength');
-
-    expectSql(
-      q.toSQL(),
-      `
-          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
-          ORDER BY "Snake"."snake_name" ASC, "Snake"."tail_length" ASC
-        `,
-    );
   });
 
   it('should handle object parameter', () => {
@@ -57,27 +41,6 @@ describe('order', () => {
     );
 
     expectQueryNotMutated(q);
-  });
-
-  it('should order by object with named columns', () => {
-    expectSql(
-      Snake.order({ snakeName: 'ASC', tailLength: 'DESC' }).toSQL(),
-      `
-          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
-          ORDER BY "Snake"."snake_name" ASC, "Snake"."tail_length" DESC
-        `,
-    );
-
-    expectSql(
-      Snake.order({
-        snakeName: 'ASC NULLS FIRST',
-        tailLength: 'DESC NULLS LAST',
-      }).toSQL(),
-      `
-          SELECT ${snakeSelectAll} FROM "schema"."snake" "Snake"
-          ORDER BY "Snake"."snake_name" ASC NULLS FIRST, "Snake"."tail_length" DESC NULLS LAST
-        `,
-    );
   });
 
   it('adds order with raw sql', () => {

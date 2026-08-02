@@ -201,25 +201,19 @@ export const _queryHookBeforeCreate = <T extends PickQueryShape>(
   );
 };
 
-export const _queryHookAfterCreate = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterCreate = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, Column.QueryColumns>,
+): PickQueryShape => {
   return after(q, 'Create', select, cb);
 };
 
-export const _queryHookAfterCreateCommit = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterCreateCommit = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Create', select, cb, true);
 };
 
@@ -250,83 +244,65 @@ export const _queryHookBeforeUpdate = <T extends PickQueryShape>(
   });
 };
 
-export const _queryHookAfterUpdate = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterUpdate = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Update', select, cb);
 };
 
-export const _queryHookAfterUpdateCommit = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterUpdateCommit = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Update', select, cb, true);
 };
 
-export const _queryHookBeforeSave = <T extends PickQueryShape>(
-  q: T,
+export const _queryHookBeforeSave = (
+  q: PickQueryShape,
   cb: QueryBeforeActionHook,
-): T => {
+): PickQueryShape => {
   return _queryHookBeforeUpdate(_queryHookBeforeCreate(q, cb), cb);
 };
 
-export const _queryHookAfterSave = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterSave = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Save', select, cb);
 };
 
-export const _queryAfterSaveCommit = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryAfterSaveCommit = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Save', select, cb, true);
 };
 
-export const _queryHookBeforeDelete = <T extends PickQueryShape>(
-  q: T,
+export const _queryHookBeforeDelete = (
+  q: PickQueryShape,
   cb: QueryBeforeHook,
-): T => {
+): PickQueryShape => {
   return before(q, 'Delete', cb);
 };
 
-export const _queryHookAfterDelete = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterDelete = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Delete', select, cb);
 };
 
-export const _queryHookAfterDeleteCommit = <
-  T extends PickQueryShape,
-  S extends HookSelectArg<T>,
->(
-  q: T,
-  select: S,
-  cb: AfterHook<S, T['shape']>,
-): T => {
+export const _queryHookAfterDeleteCommit = (
+  q: PickQueryShape,
+  select: HookSelectArg<PickQueryShape>,
+  cb: AfterHook<HookSelectArg<PickQueryShape>, PickQueryShape['shape']>,
+): PickQueryShape => {
   return after(q, 'Delete', select, cb, true);
 };
 
@@ -374,7 +350,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterCreate(_clone(this), select, cb) as unknown as T;
+    return _queryHookAfterCreate(_clone(this), select, cb) as never;
   }
 
   /**
@@ -389,11 +365,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterCreateCommit(
-      _clone(this),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterCreateCommit(_clone(this), select, cb) as never;
   }
 
   /**
@@ -420,7 +392,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterUpdate(_clone(this), select, cb) as unknown as T;
+    return _queryHookAfterUpdate(_clone(this), select, cb) as never;
   }
 
   /**
@@ -436,11 +408,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterUpdateCommit(
-      _clone(this),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterUpdateCommit(_clone(this), select, cb) as never;
   }
 
   /**
@@ -467,7 +435,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterSave(_clone(this), select, cb) as unknown as T;
+    return _queryHookAfterSave(_clone(this), select, cb) as never;
   }
 
   /**
@@ -483,7 +451,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryAfterSaveCommit(_clone(this), select, cb) as unknown as T;
+    return _queryAfterSaveCommit(_clone(this), select, cb) as never;
   }
 
   /**
@@ -510,7 +478,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterDelete(_clone(this), select, cb) as unknown as T;
+    return _queryHookAfterDelete(_clone(this), select, cb) as never;
   }
 
   /**
@@ -526,11 +494,7 @@ export abstract class QueryHooks {
     select: S,
     cb: AfterHook<S, T['shape']>,
   ): T {
-    return _queryHookAfterDeleteCommit(
-      _clone(this),
-      select,
-      cb,
-    ) as unknown as T;
+    return _queryHookAfterDeleteCommit(_clone(this), select, cb) as never;
   }
 
   /**

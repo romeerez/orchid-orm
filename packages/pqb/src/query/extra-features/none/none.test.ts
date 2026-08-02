@@ -1,6 +1,11 @@
-import { User, userData, UserRecord } from '../../../test-utils/pqb.test-utils';
 import { NotFoundError } from '../../errors';
-import { assertType, useTestDatabase } from 'test-utils';
+import {
+  assertType,
+  db,
+  useTestDatabase,
+  UserData,
+  UserDefaultSelect,
+} from 'test-utils';
 import { AdapterClass } from '../../../adapters/adapter';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,17 +15,17 @@ AdapterClass.prototype.arrays = query;
 
 describe('none', () => {
   test('mock is set up correctly', async () => {
-    await User;
+    await db.user;
     expect(query).toHaveBeenCalled();
     query.mockClear();
   });
 
   it('should return empty array for return types `all`, `rows`, `pluck`', async () => {
     const result = await Promise.all([
-      User.none(),
-      User.all().none(),
-      User.rows().none(),
-      User.pluck('id').none(),
+      db.user.none(),
+      db.user.all().none(),
+      db.user.rows().none(),
+      db.user.pluck('Id').none(),
     ]);
 
     expect(result).toEqual([[], [], [], []]);
@@ -29,9 +34,9 @@ describe('none', () => {
 
   it('should return undefined for return types `one`, `value`, `void`', async () => {
     const result = await Promise.all([
-      User.takeOptional().none(),
-      User.getOptional('id').none(),
-      User.exec().none(),
+      db.user.takeOptional().none(),
+      db.user.getOptional('Id').none(),
+      db.user.exec().none(),
     ]);
 
     expect(result).toEqual([undefined, undefined, undefined]);
@@ -40,9 +45,9 @@ describe('none', () => {
 
   it('should return 0 for return type `rowCount`', async () => {
     const result = await Promise.all([
-      User.insert(userData).none(),
-      User.all().update({}).none(),
-      User.all().delete().none(),
+      db.user.insert(UserData).none(),
+      db.user.all().update({}).none(),
+      db.user.all().delete().none(),
     ]);
 
     expect(result).toEqual([0, 0, 0]);
@@ -51,8 +56,8 @@ describe('none', () => {
 
   it('should throw NotFoundError for return types `oneOrThrow`, `valueOrThrow`', async () => {
     const result = await Promise.allSettled([
-      User.take().none(),
-      User.get('id').none(),
+      db.user.take().none(),
+      db.user.get('Id').none(),
     ]);
 
     expect(result).toEqual([
@@ -63,7 +68,7 @@ describe('none', () => {
   });
 
   it('should return false for exists', async () => {
-    const result = await User.none().exists();
+    const result = await db.user.none().exists();
 
     assertType<typeof result, boolean>();
 
@@ -71,9 +76,9 @@ describe('none', () => {
   });
 
   it('should return result in `then`', async () => {
-    const res = await User.none().then((res) => ({ res }));
+    const res = await db.user.none().then((res) => ({ res }));
 
-    assertType<typeof res, { res: UserRecord[] }>();
+    assertType<typeof res, { res: UserDefaultSelect[] }>();
 
     expect(res).toEqual({ res: [] });
   });
@@ -81,7 +86,8 @@ describe('none', () => {
   it('supports catch argument in `then`', async () => {
     const err = new Error();
 
-    const res = await User.none()
+    const res = await db.user
+      .none()
       .transform(() => {
         throw err;
       })
@@ -96,7 +102,8 @@ describe('none', () => {
   it('supports `catch`', async () => {
     const err = new Error();
 
-    const res = await User.none()
+    const res = await db.user
+      .none()
       .transform(() => {
         throw err;
       })
@@ -109,11 +116,13 @@ describe('none', () => {
     useTestDatabase();
 
     it('should return false for exists in a sub-select', async () => {
-      await User.insert(userData);
+      await db.user.insert(UserData);
 
-      const result = await User.select({
-        exists: () => User.none().exists(),
-      }).take();
+      const result = await db.user
+        .select({
+          exists: () => db.user.none().exists(),
+        })
+        .take();
 
       assertType<typeof result, { exists: boolean }>();
 

@@ -1,15 +1,4 @@
-import {
-  expectQueryNotMutated,
-  Snake,
-  snakeData,
-  SnakeRecord,
-  snakeSelectAll,
-  User,
-  userData,
-  UserInsert,
-  userColumnsSql,
-  userTableColumnsSql,
-} from '../../../test-utils/pqb.test-utils';
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   ChatData,
@@ -20,13 +9,16 @@ import {
   testDb,
   testJsonValue,
   UserData,
+  UserDefaultSelect,
+  UserSelectAll,
+  UserSelectAllWithTable,
   useTestDatabase,
 } from 'test-utils';
 
 const TableWithReadOnly = testDb(
   'table',
   (t) => ({
-    id: t.identity().primaryKey(),
+    Id: t.identity().primaryKey(),
     key: t.string(),
     value: t.integer().readOnly(),
   }),
@@ -34,17 +26,18 @@ const TableWithReadOnly = testDb(
   { schema: () => 'schema' },
 );
 
+const minUserData = {
+  Name: UserData.Name,
+  UserKey: UserData.UserKey,
+  Password: UserData.Password,
+};
+
 describe('update', () => {
   useTestDatabase();
 
   const update = {
-    name: 'new name',
-    password: 'new password',
-  };
-
-  const snakeUpdate = {
-    snakeName: 'new name',
-    tailLength: 10,
+    Name: 'new name',
+    Password: 'new password',
   };
 
   it('should not allow using appReadOnly columns', () => {
@@ -58,45 +51,46 @@ describe('update', () => {
   });
 
   it('should not mutate query', () => {
-    const q = User.all();
+    const q = db.user.all();
 
-    q.where({ name: 'name' }).update(update);
+    q.where({ Name: 'name' }).update(update);
 
     expectQueryNotMutated(q);
   });
 
   it('should prevent from updating without conditions with TS and runtime error', () => {
     // @ts-expect-error update should have where condition or forceAll flag
-    expect(() => User.update({ name: 'new name' })).toThrow(
+    expect(() => db.user.update({ Name: 'new name' })).toThrow(
       'Dangerous update without conditions',
     );
   });
 
   it('should throw when updating with an empty effective where filter', () => {
-    expect(() => User.where({}).update(update).toSQL()).toThrow(
+    expect(() => db.user.where({}).update(update).toSQL()).toThrow(
       'Dangerous update without conditions',
     );
 
     expect(() =>
-      User.where({ name: undefined }).update(update).toSQL(),
+      db.user.where({ Name: undefined }).update(update).toSQL(),
     ).toThrow('Dangerous update without conditions');
   });
 
   it('should throw when updateOrThrow has an empty effective where filter', () => {
-    expect(() => User.where({}).updateOrThrow(update).toSQL()).toThrow(
+    expect(() => db.user.where({}).updateOrThrow(update).toSQL()).toThrow(
       'Dangerous update without conditions',
     );
 
     expect(() =>
-      User.where({ name: undefined }).updateOrThrow(update).toSQL(),
+      db.user.where({ Name: undefined }).updateOrThrow(update).toSQL(),
     ).toThrow('Dangerous update without conditions');
   });
 
   it('should allow updating after explicit all with an empty effective where filter', () => {
     expectSql(
-      User.all()
-        .where({ name: undefined })
-        .update({ name: 'new name' })
+      db.user
+        .all()
+        .where({ Name: undefined })
+        .update({ Name: 'new name' })
         .toSQL(),
       `
         UPDATE "schema"."user" "User"
@@ -108,17 +102,17 @@ describe('update', () => {
   });
 
   it('should let update all records after using `all` method', async () => {
-    const q = User.all().update({ name: 'new name' });
+    const q = db.user.all().update({ Name: 'new name' });
 
     assertType<Awaited<typeof q>, number>();
   });
 
   it('should update record with raw sql, returning updated rows count', async () => {
     const count = 2;
-    const users = await User.select('id').createMany([userData, userData]);
+    const users = await db.user.select('Id').createMany([UserData, UserData]);
 
-    const query = User.orWhere(...users).update({
-      name: () => sql`'name'`,
+    const query = db.user.orWhere(...users).update({
+      Name: () => sql`'name'`,
     });
 
     expectSql(
@@ -128,7 +122,7 @@ describe('update', () => {
         SET "name" = 'name', "updated_at" = now()
         WHERE "User"."id" = $1 OR "User"."id" = $2
       `,
-      [users[0].id, users[1].id],
+      [users[0].Id, users[1].Id],
     );
 
     assertType<Awaited<typeof query>, number>();
@@ -138,9 +132,9 @@ describe('update', () => {
   });
 
   it('should update record, returning updated row count', async () => {
-    const { id } = await User.select('id').create(userData);
+    const { Id: id } = await db.user.select('Id').create(UserData);
 
-    const query = User.where({ id }).update(update);
+    const query = db.user.where({ Id: id }).update(update);
     expectSql(
       query.toSQL(),
       `
@@ -150,7 +144,7 @@ describe('update', () => {
             "updated_at" = now()
         WHERE "User"."id" = $3
       `,
-      [update.name, update.password, id],
+      [update.Name, update.Password, id],
     );
 
     const result = await query;
@@ -158,40 +152,14 @@ describe('update', () => {
 
     expect(result).toBe(1);
 
-    const updated = await User.take();
-    expect(updated).toMatchObject({ name: update.name });
-  });
-
-  it('should update record with named columns, returning updated row count', async () => {
-    const id = await Snake.get('snakeId').create(snakeData);
-
-    const q = Snake.find(id).update(snakeUpdate);
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."snake" "Snake"
-        SET "snake_name" = $1,
-            "tail_length" = $2,
-            "updated_at" = now()
-        WHERE "Snake"."snake_id" = $3
-      `,
-      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
-    );
-
-    const result = await q;
-    assertType<typeof result, number>();
-
-    expect(result).toBe(1);
-
-    const updated = await Snake.take();
-    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
+    const updated = await db.user.take();
+    expect(updated).toMatchObject({ Name: update.Name });
   });
 
   it('should update record, returning value', async () => {
-    const id = await User.get('id').create(userData);
+    const id = await db.user.get('Id').create(UserData);
 
-    const query = User.find(id).get('id').update(update);
+    const query = db.user.find(id).get('Id').update(update);
     expectSql(
       query.toSQL(),
       `
@@ -202,7 +170,7 @@ describe('update', () => {
         WHERE "User"."id" = $3
         RETURNING "User"."id"
       `,
-      [update.name, update.password, id],
+      [update.Name, update.Password, id],
     );
 
     const result = await query;
@@ -210,41 +178,14 @@ describe('update', () => {
 
     expect(typeof result).toBe('number');
 
-    const updated = await User.take();
-    expect(updated).toMatchObject({ name: update.name });
-  });
-
-  it('should update record with named columns, returning value', async () => {
-    const id = await Snake.get('snakeId').create(snakeData);
-
-    const q = Snake.find(id).get('snakeId').update(snakeUpdate);
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."snake" "Snake"
-        SET "snake_name" = $1,
-            "tail_length" = $2,
-            "updated_at" = now()
-        WHERE "Snake"."snake_id" = $3
-        RETURNING "Snake"."snake_id"
-      `,
-      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
-    );
-
-    const result = await q;
-    assertType<typeof result, number>();
-
-    expect(result).toBe(id);
-
-    const updated = await Snake.take();
-    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
+    const updated = await db.user.take();
+    expect(updated).toMatchObject({ Name: update.Name });
   });
 
   it('should update one record, return selected columns', async () => {
-    const id = await User.get('id').create(userData);
+    const id = await db.user.get('Id').create(UserData);
 
-    const query = User.select('id', 'name').find(id).update(update);
+    const query = db.user.select('Id', 'Name').find(id).update(update);
 
     expectSql(
       query.toSQL(),
@@ -254,63 +195,35 @@ describe('update', () => {
             "password" = $2,
             "updated_at" = now()
         WHERE "User"."id" = $3
-        RETURNING "User"."id", "User"."name"
+        RETURNING "User"."id" "Id", "User"."name" "Name"
       `,
-      [update.name, update.password, id],
+      [update.Name, update.Password, id],
     );
 
     const result = await query;
-    assertType<typeof result, { id: number; name: string }>();
+    assertType<typeof result, { Id: number; Name: string }>();
 
-    const updated = await User.take();
-    expect(updated).toMatchObject({ name: update.name });
+    const updated = await db.user.take();
+    expect(updated).toMatchObject({ Name: update.Name });
   });
 
   it('should support appending select', async () => {
-    const id = await User.get('id').create(userData);
+    const id = await db.user.get('Id').create(UserData);
 
-    const result = await User.find(id)
+    const result = await db.user
+      .find(id)
       .update(update)
-      .select('name', 'password');
+      .select('Name', 'Password');
 
-    assertType<typeof result, { name: string; password: string }>();
+    assertType<typeof result, { Name: string; Password: string }>();
 
     expect(result).toEqual(update);
   });
 
-  it('should update one record with named columns, return selected columns', async () => {
-    const id = await Snake.get('snakeId').create(snakeData);
-
-    const q = Snake.select('snakeName', 'tailLength')
-      .find(id)
-      .update(snakeUpdate);
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."snake" "Snake"
-        SET "snake_name" = $1,
-            "tail_length" = $2,
-            "updated_at" = now()
-        WHERE "Snake"."snake_id" = $3
-        RETURNING "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
-      `,
-      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
-    );
-
-    const result = await q;
-    assertType<typeof result, Pick<SnakeRecord, 'snakeName' | 'tailLength'>>();
-
-    expect(result).toEqual(snakeUpdate);
-
-    const updated = await Snake.take();
-    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
-  });
-
   it('should update one record, return all columns', async () => {
-    const id = await User.get('id').create(userData);
+    const id = await db.user.get('Id').create(UserData);
 
-    const query = User.selectAll().find(id).update(update);
+    const query = db.user.selectAll().find(id).update(update);
 
     expectSql(
       query.toSQL(),
@@ -320,58 +233,34 @@ describe('update', () => {
             "password" = $2,
             "updated_at" = now()
         WHERE "User"."id" = $3
-        RETURNING ${userColumnsSql}
+        RETURNING ${UserSelectAll}
       `,
-      [update.name, update.password, id],
+      [update.Name, update.Password, id],
     );
 
     const result = await query;
-    assertType<typeof result, typeof User.__outputType>();
+    assertType<typeof result, UserDefaultSelect>();
 
-    const updated = await User.take();
-    expect(updated).toMatchObject({ name: update.name });
+    const updated = await db.user.take();
+    expect(updated).toMatchObject({ Name: update.Name });
   });
 
   it('should support appending selectAll', async () => {
-    const id = await User.get('id').create(userData);
+    const id = await db.user.get('Id').create(UserData);
 
-    const result = await User.find(id).update(update).selectAll();
+    const result = await db.user.find(id).update(update).selectAll();
 
-    assertType<typeof result, typeof User.__outputType>();
+    assertType<typeof result, typeof db.user.__outputType>();
 
-    expect(result).toMatchObject({ name: update.name });
-  });
-
-  it('should update one record with named columns, return all columns', async () => {
-    const id = await Snake.get('snakeId').create(snakeData);
-
-    const q = Snake.selectAll().find(id).update(snakeUpdate);
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."snake" "Snake"
-        SET "snake_name" = $1,
-            "tail_length" = $2,
-            "updated_at" = now()
-        WHERE "Snake"."snake_id" = $3
-        RETURNING ${snakeSelectAll}
-      `,
-      [snakeUpdate.snakeName, snakeUpdate.tailLength, id],
-    );
-
-    const result = await q;
-    assertType<typeof result, SnakeRecord>();
-
-    const updated = await Snake.take();
-    expect(updated).toMatchObject({ ...snakeData, ...snakeUpdate });
+    expect(result).toMatchObject({ Name: update.Name });
   });
 
   it('should update multiple records, returning selected columns', async () => {
-    const ids = await User.pluck('id').createMany([userData, userData]);
+    const ids = await db.user.pluck('Id').createMany([UserData, UserData]);
 
-    const query = User.select('id', 'name')
-      .where({ id: { in: ids } })
+    const query = db.user
+      .select('Id', 'Name')
+      .where({ Id: { in: ids } })
       .update(update);
 
     expectSql(
@@ -382,71 +271,43 @@ describe('update', () => {
             "password" = $2,
             "updated_at" = now()
         WHERE "User"."id" IN ($3, $4)
-        RETURNING "User"."id", "User"."name"
+        RETURNING "User"."id" "Id", "User"."name" "Name"
       `,
-      [update.name, update.password, ids[0], ids[1]],
+      [update.Name, update.Password, ids[0], ids[1]],
     );
 
     const result = await query;
-    assertType<typeof result, { id: number; name: string }[]>();
+    assertType<typeof result, { Id: number; Name: string }[]>();
 
-    const updated = await User.all();
+    const updated = await db.user.all();
     expect(updated).toMatchObject([
-      { name: update.name },
-      { name: update.name },
+      { Name: update.Name },
+      { Name: update.Name },
     ]);
   });
 
   it('should support appending select', async () => {
-    const ids = await User.pluck('id').createMany([userData, userData]);
+    const ids = await db.user.pluck('Id').createMany([UserData, UserData]);
 
-    const result = await User.where({ id: { in: ids } })
+    const result = await db.user
+      .where({ Id: { in: ids } })
       .update(update)
-      .select('id', 'name');
+      .select('Id', 'Name');
 
-    assertType<typeof result, { id: number; name: string }[]>();
+    assertType<typeof result, { Id: number; Name: string }[]>();
 
     expect(result).toMatchObject([
-      { name: update.name },
-      { name: update.name },
+      { Name: update.Name },
+      { Name: update.Name },
     ]);
   });
 
-  it('should update multiple records with named columns, return selected columns', async () => {
-    const ids = await Snake.pluck('snakeId').createMany([snakeData, snakeData]);
-
-    const q = Snake.select('snakeName', 'tailLength')
-      .where({ snakeId: { in: ids } })
-      .update(snakeUpdate);
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."snake" "Snake"
-        SET "snake_name" = $1,
-            "tail_length" = $2,
-            "updated_at" = now()
-        WHERE "Snake"."snake_id" IN ($3, $4)
-        RETURNING "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
-      `,
-      [snakeUpdate.snakeName, snakeUpdate.tailLength, ...ids],
-    );
-
-    const result = await q;
-    assertType<
-      typeof result,
-      Pick<SnakeRecord, 'snakeName' | 'tailLength'>[]
-    >();
-
-    const updated = await Snake.all();
-    expect(updated).toMatchObject([snakeUpdate, snakeUpdate]);
-  });
-
   it('should update multiple records, return all columns', async () => {
-    const ids = await User.pluck('id').createMany([userData, userData]);
+    const ids = await db.user.pluck('Id').createMany([UserData, UserData]);
 
-    const query = User.selectAll()
-      .where({ id: { in: ids } })
+    const query = db.user
+      .selectAll()
+      .where({ Id: { in: ids } })
       .update(update);
 
     expectSql(
@@ -457,67 +318,41 @@ describe('update', () => {
             "password" = $2,
             "updated_at" = now()
         WHERE "User"."id" IN ($3, $4)
-        RETURNING ${userColumnsSql}
+        RETURNING ${UserSelectAll}
       `,
-      [update.name, update.password, ids[0], ids[1]],
+      [update.Name, update.Password, ids[0], ids[1]],
     );
 
     const result = await query;
-    expect(result[0]).toMatchObject({ name: update.name });
+    expect(result[0]).toMatchObject({ Name: update.Name });
 
-    assertType<typeof result, (typeof User.__outputType)[]>();
+    assertType<typeof result, (typeof db.user.__outputType)[]>();
 
-    const updated = await User.take();
-    expect(updated).toMatchObject({ name: update.name });
+    const updated = await db.user.take();
+    expect(updated).toMatchObject({ Name: update.Name });
   });
 
   it('should support appending selectAll', async () => {
-    const ids = await User.pluck('id').createMany([userData, userData]);
+    const ids = await db.user.pluck('Id').createMany([UserData, UserData]);
 
-    const result = await User.where({ id: { in: ids } })
+    const result = await db.user
+      .where({ Id: { in: ids } })
       .update(update)
       .selectAll();
 
-    assertType<typeof result, (typeof User.__outputType)[]>();
+    assertType<typeof result, (typeof db.user.__outputType)[]>();
 
     expect(result).toMatchObject([
-      { name: update.name },
-      { name: update.name },
+      { Name: update.Name },
+      { Name: update.Name },
     ]);
   });
 
-  it('should update multiple records with named columns, return all columns', async () => {
-    const ids = await Snake.pluck('snakeId').createMany([snakeData, snakeData]);
-
-    const q = Snake.selectAll()
-      .where({ snakeId: { in: ids } })
-      .update(snakeUpdate);
-
-    expectSql(
-      q.toSQL(),
-      `
-        UPDATE "schema"."snake" "Snake"
-        SET "snake_name" = $1,
-            "tail_length" = $2,
-            "updated_at" = now()
-        WHERE "Snake"."snake_id" IN ($3, $4)
-        RETURNING ${snakeSelectAll}
-      `,
-      [snakeUpdate.snakeName, snakeUpdate.tailLength, ...ids],
-    );
-
-    const result = await q;
-    assertType<typeof result, SnakeRecord[]>();
-
-    const updated = await Snake.all();
-    expect(updated).toMatchObject([snakeUpdate, snakeUpdate]);
-  });
-
   it('should ignore undefined values, and should not ignore null', () => {
-    const query = User.where({ id: 1 }).update({
-      name: 'new name',
-      password: undefined,
-      data: null,
+    const query = db.user.where({ Id: 1 }).update({
+      Name: 'new name',
+      Password: undefined,
+      Data: null,
     });
 
     expectSql(
@@ -536,8 +371,8 @@ describe('update', () => {
   });
 
   it('should support raw sql as a value', () => {
-    const query = User.where({ id: 1 }).update({
-      name: () => sql<string>`'raw sql'`,
+    const query = db.user.where({ Id: 1 }).update({
+      Name: () => sql<string>`'raw sql'`,
     });
 
     expectSql(
@@ -554,35 +389,38 @@ describe('update', () => {
   });
 
   it('should support a `WITH` table value in other `WITH` clause', () => {
-    const q = User.with('a', User.find(1).select('name').update(userData))
+    const q = db.user
+      .with('a', db.user.find(1).select('Name').update(minUserData))
       .with('b', (q) =>
-        User.find(2)
-          .select('id')
+        db.user
+          .find(2)
+          .select('Id')
           .update({
-            name: () => q.from('a').get('name'),
+            Name: () => q.from('a').get('Name'),
           }),
       )
       .from('b');
 
-    assertType<Awaited<typeof q>, { id: number }[]>();
+    assertType<Awaited<typeof q>, { Id: number }[]>();
 
     expectSql(
       q.toSQL(),
       `
         WITH "a" AS (
           UPDATE "schema"."user" "User"
-          SET "name" = $1, "password" = $2, "updated_at" = now()
-          WHERE "User"."id" = $3
-          RETURNING "User"."name"
+          SET "name" = $1, "user_key" = $2, "password" = $3,
+              "updated_at" = now()
+          WHERE "User"."id" = $4
+          RETURNING "User"."name" "Name"
         ), "b" AS (
           UPDATE "schema"."user" "User"
           SET
             "name" = (
-              SELECT "a"."name" FROM "a" LIMIT 1
+              SELECT "a"."Name" FROM "a" LIMIT 1
             ),
             "updated_at" = now()
-          WHERE "User"."id" = $4
-          RETURNING "User"."id"
+          WHERE "User"."id" = $5
+          RETURNING "User"."id" "Id"
         )
         (SELECT *, NULL FROM "b")
         UNION ALL
@@ -591,14 +429,14 @@ describe('update', () => {
           'b', (SELECT json_agg(row_to_json("b".*)) FROM "b")
         )
       `,
-      ['name', 'password', 1, 2],
+      [UserData.Name, UserData.UserKey, UserData.Password, 1, 2],
     );
   });
 
   it('should return one record when searching for one to update', async () => {
-    const { id } = await User.select('id').create(userData);
+    const { Id: id } = await db.user.select('Id').create(UserData);
 
-    const query = User.selectAll().findBy({ id }).update(update);
+    const query = db.user.selectAll().findBy({ Id: id }).update(update);
 
     expectSql(
       query.toSQL(),
@@ -608,28 +446,31 @@ describe('update', () => {
             "password" = $2,
             "updated_at" = now()
         WHERE "User"."id" = $3
-        RETURNING ${userColumnsSql}
+        RETURNING ${UserSelectAll}
       `,
-      [update.name, update.password, id],
+      [update.Name, update.Password, id],
     );
 
     const result = await query;
-    assertType<typeof result, typeof User.__outputType>();
+    assertType<typeof result, typeof db.user.__outputType>();
 
-    expect(result).toMatchObject({ name: update.name });
+    expect(result).toMatchObject({ Name: update.Name });
   });
 
   it('should throw when searching for one to update and it is not found', async () => {
-    const q = User.selectAll().findBy({ id: 1 }).update({ name: 'new name' });
+    const q = db.user
+      .selectAll()
+      .findBy({ Id: 1 })
+      .update({ Name: 'new name' });
 
-    assertType<Awaited<typeof q>, typeof User.__outputType>();
+    assertType<Awaited<typeof q>, typeof db.user.__outputType>();
 
     await expect(q).rejects.toThrow();
   });
 
   it('should update column with a sub query result', () => {
-    const q = User.all().update({
-      name: () => User.get('name'),
+    const q = db.user.all().update({
+      Name: () => db.user.get('Name'),
     });
 
     expectSql(
@@ -644,8 +485,8 @@ describe('update', () => {
   });
 
   it('should update column with a result of a sub query that performs update', () => {
-    const q = User.find(1).update({
-      name: () => User.find(2).get('name').update({ name: 'new name' }),
+    const q = db.user.find(1).update({
+      Name: () => db.user.find(2).get('Name').update({ Name: 'new name' }),
     });
 
     expectSql(
@@ -656,10 +497,10 @@ describe('update', () => {
              SET "name" = $1,
                  "updated_at" = now()
           WHERE "User"."id" = $2
-          RETURNING "User"."name"
+          RETURNING "User"."name" "Name"
         ), q2 AS (
           UPDATE "schema"."user" "User"
-             SET "name" = (SELECT "q"."name" FROM "q"),
+             SET "name" = (SELECT "q"."Name" FROM "q"),
                  "updated_at" = now()
           WHERE "User"."id" = $3
           RETURNING NULL
@@ -672,31 +513,62 @@ describe('update', () => {
     );
   });
 
+  it('should throw when an aliased update CTE does not find a record', async () => {
+    const { Id } = await db.user.select('Id').create(UserData);
+    const q = db.user.find(Id).update({
+      Picture: () =>
+        db.user.find(-1).get('Picture').update({ Picture: 'new picture' }),
+    });
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "q" AS (
+          UPDATE "schema"."user" "User"
+          SET "picture" = $1, "updated_at" = now()
+          WHERE "User"."id" = $2
+          RETURNING "User"."picture" "Picture"
+        ), q2 AS (
+          UPDATE "schema"."user" "User"
+          SET "picture" = (SELECT "q"."Picture" FROM "q"), "updated_at" = now()
+          WHERE "User"."id" = $3
+          RETURNING NULL
+        )
+        SELECT *, NULL FROM q2
+        UNION ALL
+        SELECT NULL, json_build_object('q', (SELECT json_agg(row_to_json("q".*)) FROM "q"))
+      `,
+      ['new picture', -1, Id],
+    );
+
+    await expect(q).rejects.toThrow('Record for cte q is not found');
+  });
+
   it('should update column with a result of a sub query that performs create', () => {
-    const q = User.find(1).update({
-      name: () => User.get('name').create(userData),
+    const q = db.user.find(1).update({
+      Name: () => db.user.get('Name').create(minUserData),
     });
 
     expectSql(
       q.toSQL(),
       `
           WITH "q" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
+            RETURNING "User"."name" "Name"
           )
           UPDATE "schema"."user" "User"
-             SET "name" = (SELECT "q"."name" FROM "q"),
+             SET "name" = (SELECT "q"."Name" FROM "q"),
                  "updated_at" = now()
-          WHERE "User"."id" = $3
+          WHERE "User"."id" = $4
         `,
-      [userData.name, userData.password, 1],
+      [minUserData.Name, minUserData.UserKey, minUserData.Password, 1],
     );
   });
 
   it('should update column with a result of a sub query that performs delete', () => {
-    const q = User.find(1).update({
-      name: () => User.find(2).get('name').delete(),
+    const q = db.user.find(1).update({
+      Name: () => db.user.find(2).get('Name').delete(),
     });
 
     expectSql(
@@ -705,10 +577,10 @@ describe('update', () => {
           WITH "q" AS (
             DELETE FROM "schema"."user" "User"
             WHERE "User"."id" = $1
-            RETURNING "User"."name"
+            RETURNING "User"."name" "Name"
           ), q2 AS (
             UPDATE "schema"."user" "User"
-               SET "name" = (SELECT "q"."name" FROM "q"),
+               SET "name" = (SELECT "q"."Name" FROM "q"),
                    "updated_at" = now()
             WHERE "User"."id" = $2
             RETURNING NULL
@@ -744,7 +616,7 @@ describe('update', () => {
       expect(() =>
         db.profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          Bio: (q) => q.find(1).update({ name: 'new name' }),
+          Bio: (q) => q.find(1).update({ Name: 'new name' }),
         }),
       ).toThrow();
     });
@@ -753,7 +625,7 @@ describe('update', () => {
       expect(() =>
         db.profile.all().update({
           // @ts-expect-error sub query must be of kind 'select'
-          Bio: (q) => q.create(userData),
+          Bio: (q) => q.create(UserData),
         }),
       ).toThrow();
     });
@@ -771,22 +643,23 @@ describe('update', () => {
   describe('updateOrThrow', () => {
     it('should throw if no records were found for update', async () => {
       await expect(
-        User.where({ name: 'not found' }).updateOrThrow({ name: 'name' }),
+        db.user.where({ Name: 'not found' }).updateOrThrow({ Name: 'name' }),
       ).rejects.toThrow();
 
       await expect(
-        User.select('id')
-          .where({ name: 'not found' })
-          .updateOrThrow({ name: 'name' }),
+        db.user
+          .select('Id')
+          .where({ Name: 'not found' })
+          .updateOrThrow({ Name: 'name' }),
       ).rejects.toThrow();
     });
   });
 
   it('should strip unknown keys', () => {
-    const query = User.find(1).update({
-      name: 'name',
+    const query = db.user.find(1).update({
+      Name: 'name',
       unknown: 'should be stripped',
-    } as unknown as UserInsert);
+    } as never);
 
     expectSql(
       query.toSQL(),
@@ -839,15 +712,15 @@ describe('update', () => {
     });
 
     it('should not mutate query', () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      q.where({ name: 'name' })[action]('age');
+      q.where({ Name: 'name' })[action]('Age');
 
       expectQueryNotMutated(q);
     });
 
     it(`should ${action} column by 1`, () => {
-      const q = User.all()[action]('age');
+      const q = db.user.all()[action]('Age');
 
       expectSql(
         q.toSQL(),
@@ -874,7 +747,7 @@ describe('update', () => {
     });
 
     it(`should ${action} column by provided amount`, () => {
-      const q = User.all()[action]({ age: 3 });
+      const q = db.user.all()[action]({ Age: 3 });
 
       expectSql(
         q.toSQL(),
@@ -901,7 +774,7 @@ describe('update', () => {
     });
 
     it('should support returning', () => {
-      const q = User.select('id').all()[action]({ age: 3 });
+      const q = db.user.select('Id').all()[action]({ Age: 3 });
 
       expectSql(
         q.toSQL(),
@@ -909,16 +782,16 @@ describe('update', () => {
           UPDATE "schema"."user" "User"
           SET "age" = "age" ${sign} $1,
               "updated_at" = now()
-          RETURNING "User"."id"
+          RETURNING "User"."id" "Id"
         `,
         [3],
       );
 
-      assertType<Awaited<typeof q>, { id: number }[]>();
+      assertType<Awaited<typeof q>, { Id: number }[]>();
     });
 
     it('should support appending select', () => {
-      const q = User.all()[action]({ age: 3 }).select('id');
+      const q = db.user.all()[action]({ Age: 3 }).select('Id');
 
       expectSql(
         q.toSQL(),
@@ -926,41 +799,24 @@ describe('update', () => {
           UPDATE "schema"."user" "User"
           SET "age" = "age" ${sign} $1,
               "updated_at" = now()
-          RETURNING "User"."id"
+          RETURNING "User"."id" "Id"
         `,
         [3],
       );
 
-      assertType<Awaited<typeof q>, { id: number }[]>();
-    });
-
-    it(`should ${action} named column`, () => {
-      const q = Snake.select('snakeId').all()[action]({ tailLength: 3 });
-
-      expectSql(
-        q.toSQL(),
-        `
-          UPDATE "schema"."snake" "Snake"
-          SET "tail_length" = "tail_length" ${sign} $1,
-              "updated_at" = now()
-          RETURNING "Snake"."snake_id" "snakeId"
-        `,
-        [3],
-      );
-
-      assertType<Awaited<typeof q>, { snakeId: number }[]>();
+      assertType<Awaited<typeof q>, { Id: number }[]>();
     });
 
     it('should throw not found error when record does not exist', async () => {
-      await expect(User.find(123)[action]('age')).rejects.toThrow(
+      await expect(db.user.find(123)[action]('Age')).rejects.toThrow(
         'Record is not found',
       );
     });
 
     it('should not throw not found error when record exists', async () => {
-      const id = await User.get('id').create(userData);
+      const id = await db.user.get('Id').create(UserData);
 
-      const res = await User.find(id)[action]('age');
+      const res = await db.user.find(id)[action]('Age');
 
       expect(res).toBe(1);
       assertType<typeof res, number>();
@@ -969,14 +825,15 @@ describe('update', () => {
 
   describe('chaining', () => {
     it('should handle multiple updates with increment and decrement', () => {
-      const query = User.select('id')
+      const query = db.user
+        .select('Id')
         .find(1)
-        .update({ name: 'name' })
-        .increment('id')
-        .update({ password: 'password' })
-        .decrement('age')
+        .update({ Name: 'name' })
+        .increment('Id')
+        .update({ Password: 'password' })
+        .decrement('Age')
         .update({
-          data: (q) => q.get('data').jsonInsert([0], 'data'),
+          Data: (q) => q.get('Data').jsonInsert([0], 'data'),
         });
 
       expectSql(
@@ -991,7 +848,7 @@ describe('update', () => {
               "name" = $6,
               "updated_at" = now()
           WHERE "User"."id" = $7
-          RETURNING "User"."id"
+          RETURNING "User"."id" "Id"
         `,
         ['{0}', '"data"', 1, 'password', 1, 'name', 1],
       );
@@ -999,80 +856,79 @@ describe('update', () => {
   });
 
   describe('updating with empty set', () => {
-    const User = testDb(
-      'user',
-      (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text(),
-        password: t.text(),
-      }),
-      undefined,
-      {
-        schema: () => 'schema',
-      },
-    );
-
     beforeAll(async () => {
-      await User.insert(userData);
+      await db.userNoTimestamps.insert({
+        Name: 'name',
+        Password: 'password',
+      });
     });
 
     it('should select count for return type `rowCount`', async () => {
-      const q = User.all().update({});
+      const q = db.userNoTimestamps.all().update({});
 
-      expectSql(q.toSQL(), `SELECT count(*) FROM "schema"."user"`);
+      expectSql(q.toSQL(), `SELECT count(*) FROM "schema"."user" "User"`);
 
       expect(await q).toBe(1);
     });
 
     it('should select records for return type of many records', async () => {
-      const q = User.all().select('name').update({});
-
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user"`);
-
-      const res = await q;
-
-      assertType<typeof res, { name: string }[]>();
-
-      expect(res).toEqual([{ name: userData.name }]);
-    });
-
-    it('should select one record for return type selecting one record', async () => {
-      const q = User.select('name').all().take().update({});
+      const q = db.userNoTimestamps.all().select('Name').update({});
 
       expectSql(
         q.toSQL(),
-        `SELECT "user"."name" FROM "schema"."user"  LIMIT 1`,
+        `SELECT "User"."name" "Name" FROM "schema"."user" "User"`,
       );
 
       const res = await q;
 
-      assertType<typeof res, { name: string }>();
+      assertType<typeof res, { Name: string }[]>();
 
-      expect(res).toEqual({ name: userData.name });
+      expect(res).toEqual([{ Name: 'name' }]);
+    });
+
+    it('should select one record for return type selecting one record', async () => {
+      const q = db.userNoTimestamps.select('Name').all().take().update({});
+
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."name" "Name" FROM "schema"."user" "User"  LIMIT 1`,
+      );
+
+      const res = await q;
+
+      assertType<typeof res, { Name: string }>();
+
+      expect(res).toEqual({ Name: 'name' });
     });
 
     it('should get a single value', async () => {
-      const q = User.all().take().get('name').update({});
+      const q = db.userNoTimestamps.all().take().get('Name').update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user" LIMIT 1`);
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1`,
+      );
 
       const res = await q;
 
       assertType<typeof res, string>();
 
-      expect(res).toEqual(userData.name);
+      expect(res).toEqual('name');
     });
 
     it('should pluck values', async () => {
-      const q = User.all().pluck('name').update({});
+      const q = db.userNoTimestamps.all().pluck('Name').update({});
 
-      expectSql(q.toSQL(), `SELECT "user"."name" FROM "schema"."user"`);
+      expectSql(
+        q.toSQL(),
+        `SELECT "User"."name" "Name" FROM "schema"."user" "User"`,
+      );
 
       const res = await q;
 
       assertType<typeof res, string[]>();
 
-      expect(res).toEqual([userData.name]);
+      expect(res).toEqual(['name']);
     });
   });
 
@@ -1299,10 +1155,12 @@ describe('updateMany', () => {
   describe('SQL shape', () => {
     it('should generate UPDATE ... FROM (VALUES ...) for updateManyOptional', () => {
       expectSql(
-        User.updateManyOptional([
-          { id: 1, name: 'Alice' },
-          { id: 2, name: 'Bob' },
-        ]).toSQL(),
+        db.user
+          .updateManyOptional([
+            { Id: 1, Name: 'Alice' },
+            { Id: 2, Name: 'Bob' },
+          ])
+          .toSQL(),
         `
           UPDATE "schema"."user" "User"
           SET "updated_at" = now(), "name" = "v"."name"
@@ -1332,11 +1190,11 @@ describe('updateMany', () => {
     });
 
     it('should generate CTE for strict updateMany with select', () => {
-      //
-      const columns = User.q.selectAllColumns!;
+      const columns = db.user.q.selectAllColumns!;
       expectSql(
-        User.selectAll()
-          .updateMany([{ id: 1, name: 'Alice' }])
+        db.user
+          .selectAll()
+          .updateMany([{ Id: 1, Name: 'Alice' }])
           .toSQL(),
         `
           WITH q AS (
@@ -1344,7 +1202,7 @@ describe('updateMany', () => {
             SET "updated_at" = now(), "name" = "v"."name"
             FROM (VALUES ($1::int4, $2::text)) "v"("id", "name")
             WHERE "User"."id" = "v"."id"
-            RETURNING ${userTableColumnsSql}
+            RETURNING ${UserSelectAllWithTable}
           )
           SELECT *, NULL FROM q
           UNION ALL
@@ -1359,16 +1217,16 @@ describe('updateMany', () => {
 
     it('should generate updateManyBy with a string key', () => {
       expectSql(
-        User.updateManyByOptional('name', [
-          { name: 'Alice', password: 'new-pass' },
-        ]).toSQL(),
+        db.user
+          .updateManyByOptional('Id', [{ Id: 1, Password: 'new-pass' }])
+          .toSQL(),
         `
           UPDATE "schema"."user" "User"
           SET "updated_at" = now(), "password" = "v"."password"
-          FROM (VALUES ($1::text, $2::text)) "v"("name", "password")
-          WHERE "User"."name" = "v"."name"
+          FROM (VALUES ($1::int4, $2::text)) "v"("id", "password")
+          WHERE "User"."id" = "v"."id"
         `,
-        ['Alice', 'new-pass'],
+        [1, 'new-pass'],
       );
     });
 
@@ -1393,10 +1251,11 @@ describe('updateMany', () => {
 
     it('should let .set() override per-row columns', () => {
       expectSql(
-        User.updateManyOptional([{ id: 1, name: 'Alice' }])
+        db.user
+          .updateManyOptional([{ Id: 1, Name: 'Alice' }])
           .set({
-            name: 'Override',
-            password: 'shared-pass',
+            Name: 'Override',
+            Password: 'shared-pass',
           })
           .toSQL(),
         `
@@ -1411,12 +1270,13 @@ describe('updateMany', () => {
 
     it('should let .set() override per-row columns when .set() is before updateManyOptional', () => {
       expectSql(
-        User.all()
+        db.user
+          .all()
           .set({
-            name: 'Override',
-            password: 'shared-pass',
+            Name: 'Override',
+            Password: 'shared-pass',
           })
-          .updateManyOptional([{ id: 1, name: 'Alice' }])
+          .updateManyOptional([{ Id: 1, Name: 'Alice' }])
           .toSQL(),
         `
           UPDATE "schema"."user" "User"
@@ -1430,8 +1290,9 @@ describe('updateMany', () => {
 
     it('should support .where() conditions', () => {
       expectSql(
-        User.where({ age: 18 })
-          .updateManyOptional([{ id: 1, name: 'Alice' }])
+        db.user
+          .where({ Age: 18 })
+          .updateManyOptional([{ Id: 1, Name: 'Alice' }])
           .toSQL(),
         `
           UPDATE "schema"."user" "User"
@@ -1445,8 +1306,9 @@ describe('updateMany', () => {
 
     it('should support whereExists', () => {
       expectSql(
-        User.whereExists(db.message.includeDeleted(), 'AuthorId', 'id')
-          .updateManyOptional([{ id: 1, name: 'Alice' }])
+        db.user
+          .whereExists(db.message.includeDeleted(), 'AuthorId', 'Id')
+          .updateManyOptional([{ Id: 1, Name: 'Alice' }])
           .toSQL(),
         `
           UPDATE "schema"."user" "User"
@@ -1479,7 +1341,7 @@ describe('updateMany', () => {
 
     it('should generate CTE with RETURNING NULL in strict rowCount mode', () => {
       expectSql(
-        User.updateMany([{ id: 1, name: 'Alice' }]).toSQL(),
+        db.user.updateMany([{ Id: 1, Name: 'Alice' }]).toSQL(),
         `
           WITH q AS (
             UPDATE "schema"."user" "User"
@@ -1502,97 +1364,100 @@ describe('updateMany', () => {
 
   describe('execution', () => {
     it('should batch update records and return count', async () => {
-      const users = await User.select('id').createMany([
-        { ...userData, name: 'exec1' },
-        { ...userData, name: 'exec2' },
+      const users = await db.user.select('Id').createMany([
+        { ...UserData, Name: 'exec1' },
+        { ...UserData, Name: 'exec2' },
       ]);
 
-      const count = await User.updateMany([
-        { id: users[0].id, name: 'updated1' },
-        { id: users[1].id, name: 'updated2' },
+      const count = await db.user.updateMany([
+        { Id: users[0].Id, Name: 'updated1' },
+        { Id: users[1].Id, Name: 'updated2' },
       ]);
 
       expect(count).toBe(2);
 
-      const updated = await User.where({ id: { in: users.map((u) => u.id) } })
-        .order('id')
-        .pluck('name');
+      const updated = await db.user
+        .where({ Id: { in: users.map((u) => u.Id) } })
+        .order('Id')
+        .pluck('Name');
       expect(updated).toEqual(['updated1', 'updated2']);
     });
 
     it('should return void with exec', async () => {
-      const user = await User.select('id').create({
-        ...userData,
-        name: 'exec-void',
+      const user = await db.user.select('Id').create({
+        ...UserData,
+        Name: 'exec-void',
       });
 
-      const result = await User.updateManyOptional([
-        { id: user.id, name: 'exec-void-updated' },
-      ]).exec();
+      const result = await db.user
+        .updateManyOptional([{ Id: user.Id, Name: 'exec-void-updated' }])
+        .exec();
 
       expect(result).toBe(undefined);
 
-      const updated = await User.find(user.id).get('name');
+      const updated = await db.user.find(user.Id).get('Name');
       expect(updated).toBe('exec-void-updated');
     });
 
     it('should return records when select is used', async () => {
-      const users = await User.select('id').createMany([
-        { ...userData, name: 'sel1' },
-        { ...userData, name: 'sel2' },
+      const users = await db.user.select('Id').createMany([
+        { ...UserData, Name: 'sel1' },
+        { ...UserData, Name: 'sel2' },
       ]);
 
-      const result = await User.select('id', 'name')
+      const result = await db.user
+        .select('Id', 'Name')
         .updateMany([
-          { id: users[0].id, name: 'sel-upd1' },
-          { id: users[1].id, name: 'sel-upd2' },
+          { Id: users[0].Id, Name: 'sel-upd1' },
+          { Id: users[1].Id, Name: 'sel-upd2' },
         ])
-        .order('name');
+        .order('Name');
 
-      expect(result.map((r) => r.name)).toEqual(['sel-upd1', 'sel-upd2']);
+      expect(result.map((r) => r.Name)).toEqual(['sel-upd1', 'sel-upd2']);
     });
 
     // RETURNING must qualify columns with the table name,
     // otherwise "id" is ambiguous between "user"."id" and "v"."id".
     it('should selectAll without ambiguous column reference', async () => {
-      const users = await User.select('id').createMany([
-        { ...userData, name: 'amb1' },
-        { ...userData, name: 'amb2' },
+      const users = await db.user.select('Id').createMany([
+        { ...UserData, Name: 'amb1' },
+        { ...UserData, Name: 'amb2' },
       ]);
 
-      const result = await User.selectAll()
+      const result = await db.user
+        .selectAll()
         .updateMany([
-          { id: users[0].id, name: 'amb-upd1' },
-          { id: users[1].id, name: 'amb-upd2' },
+          { Id: users[0].Id, Name: 'amb-upd1' },
+          { Id: users[1].Id, Name: 'amb-upd2' },
         ])
-        .order('name');
+        .order('Name');
 
-      expect(result.map((r) => r.name)).toEqual(['amb-upd1', 'amb-upd2']);
+      expect(result.map((r) => r.Name)).toEqual(['amb-upd1', 'amb-upd2']);
     });
 
     it('should throw NotFoundError for strict variant when row is missing', async () => {
-      const user = await User.select('id').create({
-        ...userData,
-        name: 'strict-test',
+      const user = await db.user.select('Id').create({
+        ...UserData,
+        Name: 'strict-test',
       });
 
       await expect(
-        User.updateMany([
-          { id: user.id, name: 'ok' },
-          { id: 999999, name: 'missing' },
+        db.user.updateMany([
+          { Id: user.Id, Name: 'ok' },
+          { Id: 999999, Name: 'missing' },
         ]),
       ).rejects.toThrow('Record is not found');
     });
 
     it('should NOT throw for optional variant when row is missing', async () => {
-      const user = await User.select('id').create({
-        ...userData,
-        name: 'optional-test',
+      const user = await db.user.select('Id').create({
+        ...UserData,
+        Name: 'optional-test',
       });
 
-      const count = await User.updateManyOptional([
-        { id: user.id, name: 'ok-updated' },
-        { id: 999999, name: 'missing' },
+      const count = await db.user.updateManyOptional([
+        { Id: user.Id, Name: 'ok-updated' },
+        { Id: 999999, Name: 'missing' },
       ]);
 
       expect(count).toBe(1);
@@ -1600,23 +1465,13 @@ describe('updateMany', () => {
   });
 
   describe('fallback to select', () => {
-    const User = testDb(
-      'user',
-      (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.string(),
-      }),
-      undefined,
-      { schema: () => 'schema' },
-    );
-
     it('should select count when nothing to update', () => {
       expectSql(
-        User.updateMany([{ id: 1 }, { id: 2 }]).toSQL(),
+        db.userNoTimestamps.updateMany([{ Id: 1 }, { Id: 2 }]).toSQL(),
         `
-          SELECT count(*) FROM "schema"."user",
+          SELECT count(*) FROM "schema"."user" "User",
           (VALUES ($1::int4), ($2)) "v"("id")
-          WHERE "user"."id" = "v"."id"
+          WHERE "User"."id" = "v"."id"
         `,
         [1, 2],
       );
@@ -1624,14 +1479,15 @@ describe('updateMany', () => {
 
     it('should select columns when nothing to update', () => {
       expectSql(
-        User.select('id', 'name')
-          .updateMany([{ id: 1 }, { id: 2 }])
+        db.userNoTimestamps
+          .select('Id', 'Name')
+          .updateMany([{ Id: 1 }, { Id: 2 }])
           .toSQL(),
         `
-          SELECT "user"."id", "user"."name"
-          FROM "schema"."user",
+          SELECT "User"."id" "Id", "User"."name" "Name"
+          FROM "schema"."user" "User",
           (VALUES ($1::int4), ($2)) "v"("id")
-          WHERE "user"."id" = "v"."id"
+          WHERE "User"."id" = "v"."id"
         `,
         [1, 2],
       );
@@ -1641,10 +1497,12 @@ describe('updateMany', () => {
   describe('validation', () => {
     it('should ignore undefined fields in all rows', () => {
       expectSql(
-        User.updateMany([
-          { id: 1, name: 'Alice', password: undefined },
-          { id: 2, name: 'Bob', password: undefined },
-        ]).toSQL(),
+        db.user
+          .updateMany([
+            { Id: 1, Name: 'Alice', Password: undefined },
+            { Id: 2, Name: 'Bob', Password: undefined },
+          ])
+          .toSQL(),
         `
           WITH q AS (
             UPDATE "schema"."user" "User"
@@ -1666,29 +1524,34 @@ describe('updateMany', () => {
 
     it('should throw when undefined field is inconsistent across rows', () => {
       expect(() =>
-        User.updateMany([
-          { id: 1, name: 'a', password: 'p' },
-          { id: 2, name: 'b', password: undefined },
-        ]).toSQL(),
+        db.user
+          .updateMany([
+            { Id: 1, Name: 'a', Password: 'p' },
+            { Id: 2, Name: 'b', Password: undefined },
+          ])
+          .toSQL(),
       ).toThrow('different columns');
     });
 
     it('should throw on rows with different columns', () => {
       expect(() =>
-        User.updateMany([
-          { id: 1, name: 'a' },
-          { id: 2, name: 'b', password: 'p' },
-        ]).toSQL(),
+        db.user
+          .updateMany([
+            { Id: 1, Name: 'a' },
+            { Id: 2, Name: 'b', Password: 'p' },
+          ])
+          .toSQL(),
       ).toThrow('different columns');
     });
 
     it('should throw on inconsistent rows even with .set() covering the gap', () => {
       expect(() =>
-        User.updateMany([
-          { id: 1, name: 'a', age: 18 },
-          { id: 2, name: 'b' },
-        ])
-          .set({ age: 20 })
+        db.user
+          .updateMany([
+            { Id: 1, Name: 'a', Age: 18 },
+            { Id: 2, Name: 'b' },
+          ])
+          .set({ Age: 20 })
           .toSQL(),
       ).toThrow('different columns');
     });
@@ -1697,22 +1560,22 @@ describe('updateMany', () => {
       expect(() =>
         TableWithReadOnly.updateMany([
           // @ts-expect-error value is readOnly
-          { id: 1, key: 'a', value: 42 },
+          { Id: 1, key: 'a', value: 42 },
         ]).toSQL(),
       ).toThrow('Trying to update a readonly column');
     });
 
     it('should return empty for empty data', async () => {
-      const count = await User.updateMany([]);
+      const count = await db.user.updateMany([]);
       expect(count).toBe(0);
 
-      const result = await User.selectAll().updateMany([]);
+      const result = await db.user.selectAll().updateMany([]);
       expect(result).toEqual([]);
     });
 
     it('should work with an expression as key value', () => {
       expectSql(
-        User.updateManyOptional([{ id: sql`1`, name: 'a' }]).toSQL(),
+        db.user.updateManyOptional([{ Id: sql`1`, Name: 'a' }]).toSQL(),
         `
           UPDATE "schema"."user" "User"
           SET "updated_at" = now(), "name" = "v"."name"
@@ -1725,7 +1588,7 @@ describe('updateMany', () => {
 
     it('should support expression values inside VALUES', () => {
       expectSql(
-        User.updateManyOptional([{ id: 1, name: sql`'expr'` }]).toSQL(),
+        db.user.updateManyOptional([{ Id: 1, Name: sql`'expr'` }]).toSQL(),
         `
           UPDATE "schema"."user" "User"
           SET "updated_at" = now(), "name" = "v"."name"
@@ -1738,7 +1601,8 @@ describe('updateMany', () => {
 
     it('should not add RETURNING with exec', () => {
       expectSql(
-        User.updateManyOptional([{ id: 1, name: 'a' }])
+        db.user
+          .updateManyOptional([{ Id: 1, Name: 'a' }])
           .exec()
           .toSQL(),
         `
@@ -1769,18 +1633,18 @@ describe('updateMany', () => {
 
   describe('types', () => {
     it('should return number by default', () => {
-      const q = User.updateMany([{ id: 1, name: 'a' }]);
+      const q = db.user.updateMany([{ Id: 1, Name: 'a' }]);
       assertType<Awaited<typeof q>, number>();
     });
 
     it('should return array when select is used', () => {
-      const q = User.select('id', 'name').updateMany([{ id: 1, name: 'a' }]);
-      assertType<Awaited<typeof q>, { id: number; name: string }[]>();
+      const q = db.user.select('Id', 'Name').updateMany([{ Id: 1, Name: 'a' }]);
+      assertType<Awaited<typeof q>, { Id: number; Name: string }[]>();
     });
 
     it('should map one returnType to all', () => {
-      const q = User.selectAll().updateMany([{ id: 1, name: 'a' }]);
-      assertType<Awaited<typeof q>, (typeof User.__outputType)[]>();
+      const q = db.user.selectAll().updateMany([{ Id: 1, Name: 'a' }]);
+      assertType<Awaited<typeof q>, (typeof db.user.__outputType)[]>();
     });
   });
 });

@@ -18,6 +18,7 @@ export const moveQueryToCte = (
   makeSelectList(isSubSql?: boolean): string[];
 } => {
   const { returnType } = query.q;
+  const throwOnNotFound = returnType === 'valueOrThrow';
 
   let valueAs: string | undefined;
   if (
@@ -30,6 +31,17 @@ export const moveQueryToCte = (
       first instanceof SelectItemExpression &&
       typeof first.item === 'string'
     ) {
+      const columnName = first.result.value?.data.name;
+      // A value query from `get` must expose its app-side key from the CTE,
+      // otherwise named columns return their db name and the outer CTE select cannot reference them.
+      if (columnName && columnName !== first.item) {
+        query = _clone(query) as unknown as SubQueryForSql;
+        query.q.returnType = 'one';
+        query.q.select = [{ selectAs: { [first.item]: first } }];
+        if (throwOnNotFound && query.q.type !== 'upsert') {
+          query.q.cteThrowOnNotFound = true;
+        }
+      }
       valueAs = first.item;
     } else {
       query = _clone(query) as unknown as SubQueryForSql;

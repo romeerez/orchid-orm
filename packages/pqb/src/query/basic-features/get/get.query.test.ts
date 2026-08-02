@@ -1,4 +1,3 @@
-import { Snake, snakeData } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
@@ -52,27 +51,6 @@ describe('get', () => {
           LIMIT 1
         `,
         [0],
-      );
-    });
-
-    it('should select named column and return a single value', async () => {
-      const { snakeName } = await Snake.select('snakeName').create(snakeData);
-
-      const q = Snake.get('snakeName');
-
-      const result = await q;
-
-      assertType<typeof result, string>();
-
-      expect(result).toBe(snakeName);
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name"
-          FROM "schema"."snake" "Snake"
-          LIMIT 1
-        `,
       );
     });
 
@@ -191,27 +169,6 @@ describe('get', () => {
         `
           SELECT "User"."id"
           FROM "schema"."user" "User"
-          LIMIT 1
-        `,
-      );
-    });
-
-    it('should select named column and return a single value when exists', async () => {
-      const { snakeName } = await Snake.select('snakeName').create(snakeData);
-
-      const q = Snake.getOptional('snakeName');
-
-      const result = await q;
-
-      assertType<typeof result, string | undefined>();
-
-      expect(result).toBe(snakeName);
-
-      expectSql(
-        q.toSQL(),
-        `
-          SELECT "Snake"."snake_name"
-          FROM "schema"."snake" "Snake"
           LIMIT 1
         `,
       );

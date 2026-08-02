@@ -1,4 +1,3 @@
-import { Snake } from '../../../test-utils/pqb.test-utils';
 import { db, expectSql, useTestDatabase } from 'test-utils';
 import { copyTableData } from './copy-table-data';
 
@@ -62,15 +61,15 @@ describe('copy', () => {
       );
     });
 
-    it(`should copy ${method} with columns with names`, () => {
-      const q = copyTableData(Snake, {
+    it(`should copy ${method} with columns`, () => {
+      const q = copyTableData(db.user, {
         [method as 'from']: 'path-to-file',
-        columns: ['snakeName', 'tailLength'],
+        columns: ['Id', 'Name'],
       });
 
       expectSql(
         q.toSQL(),
-        `COPY "schema"."snake"("snake_name", "tail_length") ${sql} 'path-to-file'`,
+        `COPY "schema"."user"("id", "name") ${sql} 'path-to-file'`,
       );
     });
   });

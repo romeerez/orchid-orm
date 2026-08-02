@@ -1,45 +1,38 @@
+import { expectQueryNotMutated } from '../../../test-utils/pqb.test-utils';
 import {
-  expectQueryNotMutated,
-  Snake,
-  User,
-} from '../../../test-utils/pqb.test-utils';
-import { expectSql } from 'test-utils';
+  db,
+  expectSql,
+  type UserDefaultSelect,
+  UserSelectAll,
+  UserSelectAllWithTable,
+} from 'test-utils';
 
 describe('wrap', () => {
+  const userDefaultSelect = {} as UserDefaultSelect;
+  const userSelectColumns = [UserSelectAll, UserSelectAllWithTable] as const;
+
   it('should wrap query with another', () => {
-    const q = User.all();
+    expect(userDefaultSelect).toBeDefined();
+    expect(userSelectColumns).toHaveLength(2);
+
+    const q = db.user.all();
 
     expectSql(
-      q.select('id').wrap(User.select('id')).toSQL(),
-      'SELECT "t"."id" FROM (SELECT "User"."id" FROM "schema"."user" "User") "t"',
+      q.select('Id').wrap(db.user.select('Id')).toSQL(),
+      'SELECT "t"."Id" FROM (SELECT "User"."id" "Id" FROM "schema"."user" "User") "t"',
     );
 
     expectQueryNotMutated(q);
   });
 
   it('should accept `as` parameter', () => {
-    const q = User.all();
+    const q = db.user.all();
 
     expectSql(
-      q.select('id').wrap(User.select('id'), 'wrapped').toSQL(),
-      'SELECT "wrapped"."id" FROM (SELECT "User"."id" FROM "schema"."user" "User") "wrapped"',
+      q.select('Id').wrap(db.user.select('Id'), 'wrapped').toSQL(),
+      'SELECT "wrapped"."Id" FROM (SELECT "User"."id" "Id" FROM "schema"."user" "User") "wrapped"',
     );
 
     expectQueryNotMutated(q);
-  });
-
-  it('should wrap query with named columns', () => {
-    const q = Snake.select('snakeName').wrap(Snake.select('snakeName'));
-
-    expectSql(
-      q.toSQL(),
-      `
-          SELECT "t"."snakeName"
-          FROM (
-            SELECT "Snake"."snake_name" "snakeName"
-            FROM "schema"."snake" "Snake"
-          ) "t"
-        `,
-    );
   });
 });

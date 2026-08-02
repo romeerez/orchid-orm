@@ -1,6 +1,5 @@
 import { Query } from '../../query';
 import { expectSql, testDb } from 'test-utils';
-import { userColumnsSql } from '../../../test-utils/pqb.test-utils';
 import { Column } from '../../../columns/column';
 import {
   getSqlText,
@@ -1764,9 +1763,7 @@ export const testWhereExistsCase = ({
   columnsOf = joinTarget,
   fkey,
   text,
-  selectFrom = `SELECT ${
-    joinTo.table === 'User' ? userColumnsSql : '*'
-  } FROM ${quoteTableWithSchemaAndAlias(joinTo)}`,
+  selectFrom = `SELECT '*' FROM ${quoteTableWithSchemaAndAlias(joinTo)}`,
   where,
   or,
   values = [],

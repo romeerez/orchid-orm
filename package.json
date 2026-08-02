@@ -48,12 +48,12 @@
     "pg": "8.11.2",
     "prettier": "2.8.7",
     "rimraf": "4.4.1",
-    "rolldown": "1.0.0-rc.13",
-    "rolldown-plugin-dts": "^0.23.2",
+    "rolldown": "1.2.1",
+    "rolldown-plugin-dts": "^0.28.0",
     "tslib": "2.5.0",
     "tsx": "4.21.0",
     "turbo": "1.8.8",
-    "typescript": "6.0.2"
+    "typescript": "7.0.2"
   },
   "packageManager": "pnpm@10.32.1",
   "pnpm": {

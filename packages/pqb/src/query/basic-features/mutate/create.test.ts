@@ -1,23 +1,18 @@
 import {
   expectQueryNotMutated,
-  Snake,
-  snakeData,
-  SnakeRecord,
-  snakeSelectAll,
   uniqueTableData,
-  User,
-  userColumnsSql,
-  userData,
-  UserInsert,
-  UserRecord,
 } from '../../../test-utils/pqb.test-utils';
 import {
   assertType,
   db,
   expectSql,
   MessageData,
+  now,
   sql,
   testDb,
+  UserData,
+  UserDefaultSelect,
+  UserSelectAll,
   useTestDatabase,
 } from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../../sql/sql-constants';
@@ -63,11 +58,17 @@ const RuntimeDefaultTable = testDb(
   },
 );
 
+const minUserData = {
+  Name: UserData.Name,
+  UserKey: UserData.UserKey,
+  Password: UserData.Password,
+};
+
 describe('create functions', () => {
   useTestDatabase();
 
   beforeEach(() => {
-    setMaxBindingParams(5);
+    setMaxBindingParams(12);
   });
 
   describe('create', () => {
@@ -96,153 +97,133 @@ describe('create functions', () => {
     });
 
     it('should create one record with raw SQL for a column value, should parse returned columns', async () => {
-      const q = User.create({
-        name: userData.name,
-        password: () => sql<string>`'password'`,
+      const q = db.user.create({
+        ...minUserData,
+        Password: () => sql<string>`'password'`,
       });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, 'password')
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, 'password')
+          RETURNING ${UserSelectAll}
         `,
-        [userData.name],
+        [UserData.Name, UserData.UserKey],
       );
 
       const res = await q;
 
-      assertType<typeof res, UserRecord>();
+      assertType<typeof res, UserDefaultSelect>();
 
       expect(res.updatedAt).toEqual(expect.any(Date));
     });
 
     it('should support a query builder for a column', () => {
-      const q = User.create({
-        name: userData.name,
+      const q = db.user.create({
+        ...minUserData,
         // it's expected to fail on db side, cannot reference table
-        password: (q) => q.ref('name'),
+        Password: (q) => q.ref('Name'),
       });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, "User"."name")
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, "User"."name")
+          RETURNING ${UserSelectAll}
         `,
-        [userData.name],
+        [UserData.Name, UserData.UserKey],
       );
     });
 
     it('should use a sub query value', () => {
-      const q = User.create({
-        ...userData,
-        age: () => User.avg('age'),
+      const q = db.user.create({
+        ...minUserData,
+        Age: () => db.user.avg('Age'),
       });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password", "age")
-          VALUES ($1, $2, (SELECT avg("User"."age") FROM "schema"."user" "User"))
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "age")
+          VALUES ($1, $2, $3, (SELECT avg("User"."age") FROM "schema"."user" "User"))
+          RETURNING ${UserSelectAll}
         `,
-        [userData.name, userData.password],
+        [UserData.Name, UserData.UserKey, UserData.Password],
       );
     });
 
     it('should support a `WITH` table value in other `WITH` clause', () => {
-      const q = User.with('a', User.select('name').create(userData))
+      const q = db.user
+        .with('a', db.user.select('Name').create(minUserData))
         .with('b', (q) =>
-          User.select('id').create({
-            name: () => q.from('a').get('name'),
-            password: 'password',
+          db.user.select('Id').create({
+            Name: () => q.from('a').get('Name'),
+            UserKey: 'key',
+            Password: 'password',
           }),
         )
         .from('b');
 
-      assertType<Awaited<typeof q>, { id: number }[]>();
+      assertType<Awaited<typeof q>, { Id: number }[]>();
 
       expectSql(
         q.toSQL(),
         `
           WITH "a" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($1, $2)
-            RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") VALUES ($1, $2, $3)
+            RETURNING "User"."name" "Name"
           ), "b" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES (
-              (SELECT "a"."name" FROM "a" LIMIT 1),
-              $3
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") VALUES (
+              (SELECT "a"."Name" FROM "a" LIMIT 1),
+              $4, $5
             )
-            RETURNING "User"."id"
+            RETURNING "User"."id" "Id"
           )
           SELECT * FROM "b"
         `,
-        ['name', 'password', 'password'],
+        ['name', 'key', 'password', 'key', 'password'],
       );
     });
 
     it('should create one record, returning record', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      const query = q.create(userData);
+      const query = q.create(UserData);
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password")
-        VALUES ($1, $2)
-        RETURNING ${userColumnsSql}
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at")
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING ${UserSelectAll}
       `,
-        ['name', 'password'],
+        ['name', 'key', 'password', now, now],
       );
 
       const result = await query;
-      expect(result).toMatchObject(omit(userData, ['password']));
+      expect(result).toMatchObject(omit(UserData, ['Password']));
 
-      assertType<typeof result, UserRecord>();
+      assertType<typeof result, UserDefaultSelect>();
 
-      const created = await User.take();
-      expect(created).toMatchObject(omit(userData, ['password']));
+      const created = await db.user.take();
+      expect(created).toMatchObject(omit(UserData, ['Password']));
 
       expectQueryNotMutated(q);
     });
 
-    it('should create one record with named columns, returning record', async () => {
-      const query = Snake.create(snakeData);
-
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-          VALUES ($1, $2)
-          RETURNING ${snakeSelectAll}
-        `,
-        [snakeData.snakeName, snakeData.tailLength],
-      );
-
-      const result = await query;
-      expect(result).toMatchObject(snakeData);
-
-      assertType<typeof result, SnakeRecord>();
-
-      const created = await Snake.take();
-      expect(created).toMatchObject(snakeData);
-    });
-
     it('should create one record, returning value', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      const query = q.get('id').create(userData);
+      const query = q.get('Id').create(minUserData);
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password")
-        VALUES ($1, $2)
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+        VALUES ($1, $2, $3)
         RETURNING "User"."id"
       `,
-        ['name', 'password'],
+        ['name', 'key', 'password'],
       );
 
       const result = await query;
@@ -253,88 +234,50 @@ describe('create functions', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should create one record, returning value from named column', async () => {
-      const query = Snake.get('snakeName').create(snakeData);
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-          VALUES ($1, $2)
-          RETURNING "Snake"."snake_name"
-        `,
-        [snakeData.snakeName, snakeData.tailLength],
-      );
-
-      const result = await query;
-      assertType<typeof result, string>();
-
-      expect(typeof result).toBe('string');
-    });
-
     it('should create one record, returning columns', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      const query = q.select('id', 'name').create(userData);
+      const query = q.select('Id', 'Name').create(minUserData);
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password")
-        VALUES ($1, $2)
-        RETURNING "User"."id", "User"."name"
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+        VALUES ($1, $2, $3)
+        RETURNING "User"."id" "Id", "User"."name" "Name"
       `,
-        ['name', 'password'],
+        ['name', 'key', 'password'],
       );
 
       const result = await query;
-      assertType<typeof result, { id: number; name: string }>();
+      assertType<typeof result, { Id: number; Name: string }>();
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...other } = userData;
-      expect(result).toMatchObject(other);
+      expect(result).toMatchObject({
+        Id: expect.any(Number),
+        Name: UserData.Name,
+      });
 
       expectQueryNotMutated(q);
     });
 
     it('should support appending select', async () => {
-      const result = await User.create(userData).select('id', 'name');
+      const result = await db.user.create(minUserData).select('Id', 'Name');
 
-      assertType<typeof result, { id: number; name: string }>();
+      assertType<typeof result, { Id: number; Name: string }>();
 
-      expect(result).toEqual({ id: expect.any(Number), name: userData.name });
-    });
-
-    it('should create one record, returning named columns', async () => {
-      const query = Snake.select('snakeName', 'tailLength').create(snakeData);
-      expectSql(
-        query.toSQL(),
-        `
-          INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-          VALUES ($1, $2)
-          RETURNING "Snake"."snake_name" "snakeName", "Snake"."tail_length" "tailLength"
-        `,
-        [snakeData.snakeName, snakeData.tailLength],
-      );
-
-      const result = await query;
-      assertType<
-        typeof result,
-        Pick<SnakeRecord, 'snakeName' | 'tailLength'>
-      >();
-
-      expect(result).toMatchObject(snakeData);
+      expect(result).toEqual({ Id: expect.any(Number), Name: UserData.Name });
     });
 
     it('should create one record, returning created count', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
-      const query = q.insert(userData);
+      const query = q.insert(minUserData);
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password")
-        VALUES ($1, $2)
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+        VALUES ($1, $2, $3)
       `,
-        ['name', 'password'],
+        ['name', 'key', 'password'],
       );
 
       const result = await query;
@@ -346,39 +289,43 @@ describe('create functions', () => {
     });
 
     it('should a create record with provided defaults', () => {
-      const q = User.defaults({
-        name: 'name',
-        password: 'password',
-      }).create({
-        password: 'override',
-      });
+      const q = db.user
+        .defaults({
+          Name: 'name',
+          UserKey: 'key',
+          Password: 'password',
+        })
+        .create({
+          Password: 'override',
+        });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, $2)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, $3)
+          RETURNING ${UserSelectAll}
         `,
-        ['name', 'override'],
+        ['name', 'key', 'override'],
       );
     });
 
     it('should strip unknown keys', () => {
-      const q = User.create({
-        name: 'name',
-        password: 'password',
+      const q = db.user.create({
+        Name: 'name',
+        UserKey: 'key',
+        Password: 'password',
         unknown: 'should be stripped',
-      } as unknown as UserInsert);
+      } as unknown as typeof db.user.__inputType);
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, $2)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, $3)
+          RETURNING ${UserSelectAll}
         `,
-        ['name', 'password'],
+        ['name', 'key', 'password'],
       );
     });
 
@@ -399,41 +346,42 @@ describe('create functions', () => {
     });
 
     it('should a create record with a sub query result for the column value', () => {
-      const q = User.create({
-        name: () => User.get('name'),
-        password: 'password',
+      const q = db.user.create({
+        Name: () => db.user.get('Name'),
+        UserKey: 'key',
+        Password: 'password',
       });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ((SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1), $1)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ((SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1), $1, $2)
+          RETURNING ${UserSelectAll}
         `,
-        ['password'],
+        ['key', 'password'],
       );
     });
 
     it('should create a record with a sub query result from inserting', () => {
-      const q = User.create({
-        ...userData,
-        name: () => User.create(userData).get('name'),
+      const q = db.user.create({
+        ...minUserData,
+        Name: () => db.user.create(minUserData).get('Name'),
       });
 
       expectSql(
         q.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
+            RETURNING "User"."name" "Name"
           )
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ((SELECT "q"."name" FROM "q"), $3)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ((SELECT "q"."Name" FROM "q"), $4, $5)
+          RETURNING ${UserSelectAll}
         `,
-        ['name', 'password', 'password'],
+        ['name', 'key', 'password', 'key', 'password'],
       );
     });
 
@@ -489,48 +437,69 @@ describe('create functions', () => {
     });
 
     it('should create using values from CTE', async () => {
-      const q = User.with('created1', () =>
-        User.create({ name: 'user 1', password: 'password 1' }).select('name'),
-      )
+      const q = db.user
+        .with('created1', () =>
+          db.user
+            .create({
+              Name: 'user 1',
+              UserKey: 'key 1',
+              Password: 'password 1',
+            })
+            .select('Name'),
+        )
         .with('created2', () =>
-          User.create({ name: 'user 2', password: 'password 2' }).select(
-            'password',
-          ),
+          db.user
+            .create({
+              Name: 'user 2',
+              UserKey: 'key 2',
+              Password: 'password 2',
+            })
+            .select('Password'),
         )
         .create({
-          name: (q) => q.from('created1').get('name'),
-          password: (q) => q.from('created2').get('password'),
+          Name: (q) => q.from('created1').get('Name'),
+          UserKey: 'key',
+          Password: (q) => q.from('created2').get('Password'),
         })
-        .select('name', 'password');
+        .select('Name', 'Password');
 
       expectSql(
         q.toSQL(),
         `
           WITH "created1" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($1, $2) RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") VALUES ($1, $2, $3) RETURNING "User"."name" "Name"
           ),
           "created2" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($3, $4) RETURNING "User"."password"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") VALUES ($4, $5, $6) RETURNING "User"."password" "Password"
           )
-          INSERT INTO "schema"."user" AS "User"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
           VALUES (
-            (SELECT "created1"."name" FROM "created1" LIMIT 1),
-            (SELECT "created2"."password" FROM "created2" LIMIT 1)
+            (SELECT "created1"."Name" FROM "created1" LIMIT 1),
+            $7,
+            (SELECT "created2"."Password" FROM "created2" LIMIT 1)
           )
-          RETURNING "User"."name", "User"."password"
+          RETURNING "User"."name" "Name", "User"."password" "Password"
         `,
-        ['user 1', 'password 1', 'user 2', 'password 2'],
+        [
+          'user 1',
+          'key 1',
+          'password 1',
+          'user 2',
+          'key 2',
+          'password 2',
+          'key',
+        ],
       );
 
       const res = await q;
 
-      expect(res).toEqual({ name: 'user 1', password: 'password 2' });
+      expect(res).toEqual({ Name: 'user 1', Password: 'password 2' });
     });
   });
 
   describe('insert', () => {
     it('should return row count by default', async () => {
-      const q = User.insert(userData);
+      const q = db.user.insert(minUserData);
 
       const result = await q;
 
@@ -540,77 +509,77 @@ describe('create functions', () => {
     });
 
     it('should return selected columns', async () => {
-      const result = await User.select('name').insert(userData);
+      const result = await db.user.select('Name').insert(minUserData);
 
-      assertType<typeof result, { name: string }>();
+      assertType<typeof result, { Name: string }>();
 
-      expect(result).toEqual({ name: userData.name });
+      expect(result).toEqual({ Name: UserData.Name });
     });
 
     it('should support appending select', async () => {
-      const result = await User.insert(userData).select('name');
+      const result = await db.user.insert(minUserData).select('Name');
 
-      assertType<typeof result, { name: string }>();
+      assertType<typeof result, { Name: string }>();
 
-      expect(result).toEqual({ name: userData.name });
+      expect(result).toEqual({ Name: UserData.Name });
     });
 
     it('should return a single selected value', async () => {
-      const result = await User.get('name').insert(userData);
+      const result = await db.user.get('Name').insert(minUserData);
 
       assertType<typeof result, string>();
 
-      expect(result).toBe(userData.name);
+      expect(result).toBe(UserData.Name);
     });
 
     it('should support appending get', async () => {
-      const result = await User.insert(userData).get('name');
+      const result = await db.user.insert(minUserData).get('Name');
 
       assertType<typeof result, string>();
 
-      expect(result).toBe(userData.name);
+      expect(result).toBe(UserData.Name);
     });
 
     it('should not encode value when it is an expression', () => {
       // json column has an encoder, and it shouldn't run for a raw expression
-      const q = User.insert({
-        ...userData,
-        data: () => sql`'{"key":"value"}'`,
+      const q = db.user.insert({
+        ...minUserData,
+        Data: () => sql`'{"key":"value"}'`,
       });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password", "data")
-          VALUES ($1, $2, '{"key":"value"}')
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "data")
+          VALUES ($1, $2, $3, '{"key":"value"}')
         `,
-        ['name', 'password'],
+        ['name', 'key', 'password'],
       );
     });
 
     it('should treat null as a database NULL even for JSON column', () => {
-      const q = User.insert({ ...userData, data: null });
+      const q = db.user.insert({ ...minUserData, Data: null });
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password", "data")
-          VALUES ($1, $2, $3)
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "data")
+          VALUES ($1, $2, $3, $4)
         `,
-        ['name', 'password', null],
+        ['name', 'key', 'password', null],
       );
     });
 
     it('should not make an empty RETURNING because it is not valid SQL', async () => {
-      const q = User.insert(userData).select();
+      const q = db.user.insert(minUserData).select();
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, $2)
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, $3)
         `,
-        ['name', 'password'],
+        ['name', 'key', 'password'],
       );
 
       const res = await q;
@@ -632,34 +601,36 @@ describe('create functions', () => {
     });
 
     it('should do nothing and return empty array when empty array is given', async () => {
-      expect(await User.createMany([])).toEqual([]);
+      expect(await db.user.createMany([])).toEqual([]);
     });
 
     it('should create many records with raw SQL for a column value, should parse values', async () => {
-      const q = User.createMany([
+      const q = db.user.createMany([
         {
-          name: userData.name,
-          password: () => sql<string>`'password'`,
+          Name: UserData.Name,
+          UserKey: UserData.UserKey,
+          Password: () => sql<string>`'password'`,
         },
         {
-          name: () => sql<string>`'name'`,
-          password: userData.password,
+          Name: () => sql<string>`'name'`,
+          UserKey: UserData.UserKey,
+          Password: UserData.Password,
         },
       ]);
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, 'password'), ('name', $2)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, 'password'), ('name', $3, $4)
+          RETURNING ${UserSelectAll}
         `,
-        [userData.name, userData.password],
+        [UserData.Name, UserData.UserKey, UserData.UserKey, UserData.Password],
       );
 
       const res = await q;
 
-      assertType<typeof res, UserRecord[]>();
+      assertType<typeof res, UserDefaultSelect[]>();
 
       expect(res).toMatchObject([
         { updatedAt: expect.any(Date) },
@@ -668,14 +639,14 @@ describe('create functions', () => {
     });
 
     it('should create many records, returning inserted count', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
       const arr = [
         {
-          ...userData,
-          picture: null,
+          ...minUserData,
+          Picture: null,
         },
-        userData,
+        minUserData,
       ];
 
       const query = q.insertMany(arr);
@@ -683,12 +654,12 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password", "picture")
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "picture")
         VALUES
-          ($1, $2, $3),
-          ($4, $5, DEFAULT)
+          ($1, $2, $3, $4),
+          ($5, $6, $7, DEFAULT)
       `,
-        ['name', 'password', null, 'name', 'password'],
+        ['name', 'key', 'password', null, 'name', 'key', 'password'],
       );
 
       const result = await query;
@@ -696,73 +667,72 @@ describe('create functions', () => {
 
       assertType<typeof result, number>();
 
-      const inserted = await User.all();
+      const inserted = await db.user.all();
       inserted.forEach((item, i) => {
-        expect(item).toMatchObject(omit(arr[i], ['password']));
+        expect(item).toMatchObject(omit(arr[i], ['Password']));
       });
 
       expectQueryNotMutated(q);
     });
 
     it('should create many records, returning columns', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
       const arr = [
         {
-          ...userData,
-          picture: null,
+          ...minUserData,
+          Picture: null,
         },
-        userData,
+        minUserData,
       ];
 
-      const query = q.select('id', 'name').createMany(arr);
+      const query = q.select('Id', 'Name').createMany(arr);
 
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password", "picture")
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "picture")
         VALUES
-          ($1, $2, $3),
-          ($4, $5, DEFAULT)
-        RETURNING "User"."id", "User"."name"
+          ($1, $2, $3, $4),
+          ($5, $6, $7, DEFAULT)
+        RETURNING "User"."id" "Id", "User"."name" "Name"
       `,
-        ['name', 'password', null, 'name', 'password'],
+        ['name', 'key', 'password', null, 'name', 'key', 'password'],
       );
 
       const result = await query;
-      assertType<typeof result, { id: number; name: string }[]>();
+      assertType<typeof result, { Id: number; Name: string }[]>();
 
-      const inserted = await User.all();
+      const inserted = await db.user.all();
       inserted.forEach((item, i) => {
-        expect(item).toMatchObject(omit(arr[i], ['password']));
+        expect(item).toMatchObject(omit(arr[i], ['Password']));
       });
 
       expectQueryNotMutated(q);
     });
 
     it('should support appending select', async () => {
-      const result = await User.createMany([userData, userData]).select(
-        'id',
-        'name',
-      );
+      const result = await db.user
+        .createMany([minUserData, minUserData])
+        .select('Id', 'Name');
 
-      assertType<typeof result, { id: number; name: string }[]>();
+      assertType<typeof result, { Id: number; Name: string }[]>();
 
       expect(result).toEqual([
-        { id: expect.any(Number), name: userData.name },
-        { id: expect.any(Number), name: userData.name },
+        { Id: expect.any(Number), Name: UserData.Name },
+        { Id: expect.any(Number), Name: UserData.Name },
       ]);
     });
 
     it('should create many records, returning all columns', async () => {
-      const q = User.all();
+      const q = db.user.all();
 
       const arr = [
         {
-          ...userData,
-          picture: null,
+          ...minUserData,
+          Picture: null,
         },
-        userData,
+        minUserData,
       ];
 
       const query = q.createMany(arr);
@@ -770,25 +740,25 @@ describe('create functions', () => {
       expectSql(
         query.toSQL(),
         `
-        INSERT INTO "schema"."user" AS "User"("name", "password", "picture")
+        INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "picture")
         VALUES
-          ($1, $2, $3),
-          ($4, $5, DEFAULT)
-        RETURNING ${userColumnsSql}
+          ($1, $2, $3, $4),
+          ($5, $6, $7, DEFAULT)
+        RETURNING ${UserSelectAll}
       `,
-        ['name', 'password', null, 'name', 'password'],
+        ['name', 'key', 'password', null, 'name', 'key', 'password'],
       );
 
       const result = await query;
       result.forEach((item, i) => {
-        expect(item).toMatchObject(omit(arr[i], ['password']));
+        expect(item).toMatchObject(omit(arr[i], ['Password']));
       });
 
-      assertType<typeof result, (typeof User.__outputType)[]>();
+      assertType<typeof result, UserDefaultSelect[]>();
 
-      const inserted = await User.all();
+      const inserted = await db.user.all();
       inserted.forEach((item, i) => {
-        expect(item).toMatchObject(omit(arr[i], ['password']));
+        expect(item).toMatchObject(omit(arr[i], ['Password']));
       });
 
       expectQueryNotMutated(q);
@@ -816,56 +786,57 @@ describe('create functions', () => {
     });
 
     it('should strip unknown keys', () => {
-      const query = User.createMany([
+      const query = db.user.createMany([
         {
-          name: 'name',
-          password: 'password',
+          Name: 'name',
+          UserKey: 'key',
+          Password: 'password',
           unknown: 'should be stripped',
         },
         {
-          name: 'name',
-          password: 'password',
+          Name: 'name',
+          UserKey: 'key',
+          Password: 'password',
           unknown: 'should be stripped',
         },
-      ] as unknown as UserInsert[]);
+      ] as unknown as (typeof db.user.__inputType)[]);
 
       expectSql(
         query.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ($1, $2), ($3, $4)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ($1, $2, $3), ($4, $5, $6)
+          RETURNING ${UserSelectAll}
         `,
-        ['name', 'password', 'name', 'password'],
+        ['name', 'key', 'password', 'name', 'key', 'password'],
       );
     });
 
     it('should create records with a sub query result for the column value', () => {
-      const q = User.createMany([
+      const q = db.user.createMany([
         {
-          name: () => User.get('name'),
-          password: 'password',
+          Name: () => db.user.get('Name'),
+          UserKey: 'key',
+          Password: 'password',
         },
       ]);
 
       expectSql(
         q.toSQL(),
         `
-          INSERT INTO "schema"."user" AS "User"("name", "password")
-          VALUES ((SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1), $1)
-          RETURNING ${userColumnsSql}
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+          VALUES ((SELECT "User"."name" FROM "schema"."user" "User" LIMIT 1), $1, $2)
+          RETURNING ${UserSelectAll}
         `,
-        ['password'],
+        ['key', 'password'],
       );
     });
 
     it('should create records with a sub query result from inserting', async () => {
-      setMaxBindingParams(100);
-
-      const q = User.createMany(
+      const q = db.user.createMany(
         Array.from({ length: 2 }, () => ({
-          ...userData,
-          name: () => User.create(userData).get('name'),
+          ...minUserData,
+          Name: () => db.user.create(minUserData).get('Name'),
         })),
       );
 
@@ -873,26 +844,37 @@ describe('create functions', () => {
         q.toSQL(),
         `
           WITH "q" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
+            RETURNING "User"."name" "Name"
           ), "q2" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($4, $5)
-            RETURNING "User"."name"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($6, $7, $8)
+            RETURNING "User"."name" "Name"
           )
-          INSERT INTO "schema"."user" AS "User"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
           VALUES
-            ((SELECT "q"."name" FROM "q"), $3),
-            ((SELECT "q2"."name" FROM "q2"), $6)
-          RETURNING ${userColumnsSql}
+            ((SELECT "q"."Name" FROM "q"), $4, $5),
+            ((SELECT "q2"."Name" FROM "q2"), $9, $10)
+          RETURNING ${UserSelectAll}
         `,
-        ['name', 'password', 'password', 'name', 'password', 'password'],
+        [
+          'name',
+          'key',
+          'password',
+          'key',
+          'password',
+          'name',
+          'key',
+          'password',
+          'key',
+          'password',
+        ],
       );
     });
 
     it('should override value return type with pluck', () => {
-      const q = User.get('name').createMany([userData]);
+      const q = db.user.get('Name').createMany([minUserData]);
 
       assertType<Awaited<typeof q>, string[]>();
     });
@@ -956,6 +938,7 @@ describe('create functions', () => {
 
     describe('auto-batching lots of value groups', () => {
       it('should split large insert into batches', () => {
+        setMaxBindingParams(5);
         const q = db.tag.insertMany(
           Array.from({ length: 12 }, (_, i) => ({
             Tag: `${i}`,
@@ -982,6 +965,7 @@ describe('create functions', () => {
       });
 
       it('should support batching inserts with `with` CTEs', () => {
+        setMaxBindingParams(5);
         const q = db.tag.insertMany(
           Array.from({ length: 6 }, (_, i) => ({
             Tag: () => db.tag.create({ Tag: `${i}` }).get('Tag'),
@@ -990,7 +974,7 @@ describe('create functions', () => {
 
         const sql = q.toSQL();
         const insert = (i: number) =>
-          `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($${i}) RETURNING "Tag"."tag"`;
+          `INSERT INTO "schema"."tag" AS "Tag"("tag") VALUES ($${i}) RETURNING "Tag"."tag" "Tag"`;
         expect(sql).toMatchObject({
           batch: [
             {
@@ -1016,14 +1000,17 @@ describe('create functions', () => {
       });
 
       it('should throw when too many values for single insert group', () => {
-        const q = User.insertMany([
+        setMaxBindingParams(6);
+
+        const q = db.user.insertMany([
           {
-            id: 1,
-            name: 'name',
-            password: 'password',
-            picture: 'picture',
-            data: null,
-            age: 25,
+            Id: 1,
+            Name: 'name',
+            UserKey: 'key',
+            Password: 'password',
+            Picture: 'picture',
+            Data: null,
+            Age: 25,
           },
         ]);
 
@@ -1034,85 +1021,113 @@ describe('create functions', () => {
     });
 
     it('should create many using values from CTE', async () => {
-      const q = User.with('created1', () =>
-        User.create({ name: 'user 1', password: 'password 1' }).select(
-          'name',
-          'password',
-        ),
-      )
+      const q = db.user
+        .with('created1', () =>
+          db.user
+            .create({
+              Name: 'user 1',
+              UserKey: 'key 1',
+              Password: 'password 1',
+            })
+            .select('Name', 'Password'),
+        )
         .with('created2', () =>
-          User.create({ name: 'user 2', password: 'password 2' }).select(
-            'name',
-            'password',
-          ),
+          db.user
+            .create({
+              Name: 'user 2',
+              UserKey: 'key 2',
+              Password: 'password 2',
+            })
+            .select('Name', 'Password'),
         )
         .createMany([
           {
-            name: (q) => q.from('created1').get('name'),
-            password: (q) => q.from('created2').get('password'),
+            Name: (q) => q.from('created1').get('Name'),
+            UserKey: 'key',
+            Password: (q) => q.from('created2').get('Password'),
           },
           {
-            name: (q) => q.from('created2').get('name'),
-            password: (q) => q.from('created1').get('password'),
+            Name: (q) => q.from('created2').get('Name'),
+            UserKey: 'key',
+            Password: (q) => q.from('created1').get('Password'),
           },
         ])
-        .select('name', 'password');
+        .select('Name', 'Password');
 
       expectSql(
         q.toSQL(),
         `
           WITH "created1" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($1, $2) RETURNING "User"."name", "User"."password"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") VALUES ($1, $2, $3) RETURNING "User"."name" "Name", "User"."password" "Password"
           ),
           "created2" AS (
-            INSERT INTO "schema"."user" AS "User"("name", "password") VALUES ($3, $4) RETURNING "User"."name", "User"."password"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") VALUES ($4, $5, $6) RETURNING "User"."name" "Name", "User"."password" "Password"
           )
-          INSERT INTO "schema"."user" AS "User"("name", "password")
+          INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
           VALUES (
-            (SELECT "created1"."name" FROM "created1" LIMIT 1),
-            (SELECT "created2"."password" FROM "created2" LIMIT 1)
+            (SELECT "created1"."Name" FROM "created1" LIMIT 1),
+            $7,
+            (SELECT "created2"."Password" FROM "created2" LIMIT 1)
           ), (
-            (SELECT "created2"."name" FROM "created2" LIMIT 1),
-            (SELECT "created1"."password" FROM "created1" LIMIT 1)
+            (SELECT "created2"."Name" FROM "created2" LIMIT 1),
+            $8,
+            (SELECT "created1"."Password" FROM "created1" LIMIT 1)
           )
-          RETURNING "User"."name", "User"."password"
+          RETURNING "User"."name" "Name", "User"."password" "Password"
         `,
-        ['user 1', 'password 1', 'user 2', 'password 2'],
+        [
+          'user 1',
+          'key 1',
+          'password 1',
+          'user 2',
+          'key 2',
+          'password 2',
+          'key',
+          'key',
+        ],
       );
 
       const res = await q;
 
       expect(res).toEqual([
-        { name: 'user 1', password: 'password 2' },
-        { name: 'user 2', password: 'password 1' },
+        { Name: 'user 1', Password: 'password 2' },
+        { Name: 'user 2', Password: 'password 1' },
       ]);
     });
 
     it('should fail in batch mode when there is a non-select query in CTE', async () => {
-      const q = User.with('created', () =>
-        User.create({ name: 'user 1', password: 'password 1' }).select(
-          'name',
-          'password',
-        ),
-      )
+      setMaxBindingParams(5);
+      const q = db.user
+        .with('created', () =>
+          db.user
+            .create({
+              Name: 'user 1',
+              UserKey: 'key 1',
+              Password: 'password 1',
+            })
+            .select('Name', 'Password'),
+        )
         .createMany([
           {
-            name: 'first',
-            age: 20,
-            password: (q) => q.from('created').get('password'),
+            Name: 'first',
+            Age: 20,
+            UserKey: 'key',
+            Password: (q) => q.from('created').get('Password'),
           },
           {
-            name: 'second',
-            age: 30,
-            password: (q) => q.from('created').get('password'),
+            Name: 'second',
+            Age: 30,
+            UserKey: 'key',
+            Password: (q) => q.from('created').get('Password'),
           },
           {
-            name: 'third',
-            age: 40,
-            password: (q) => q.from('created').get('password'),
+            Name: 'third',
+            Age: 40,
+            UserKey: 'key',
+            Password: (q) => q.from('created').get('Password'),
           },
         ])
-        .select('name', 'password');
+        .select('Name', 'Password');
 
       expect(() => q.toSQL()).toThrow(
         'Cannot insert many records when having a non-select sub-query',
@@ -1122,11 +1137,11 @@ describe('create functions', () => {
 
   describe('insertMany', () => {
     it('should do nothing and return 0 when empty array is given', async () => {
-      expect(await User.insertMany([])).toBe(0);
+      expect(await db.user.insertMany([])).toBe(0);
     });
 
     it('should return row count by default', async () => {
-      const result = await User.insertMany([userData, userData]);
+      const result = await db.user.insertMany([minUserData, minUserData]);
 
       assertType<typeof result, number>();
 
@@ -1134,58 +1149,64 @@ describe('create functions', () => {
     });
 
     it('should return records with selected columns', async () => {
-      const result = await User.select('name').insertMany([userData, userData]);
+      const result = await db.user
+        .select('Name')
+        .insertMany([minUserData, minUserData]);
 
-      assertType<typeof result, { name: string }[]>();
+      assertType<typeof result, { Name: string }[]>();
 
       expect(result).toEqual([
-        { name: userData.name },
-        { name: userData.name },
+        { Name: UserData.Name },
+        { Name: UserData.Name },
       ]);
     });
 
     it('should support appending select', async () => {
-      const result = await User.insertMany([userData, userData]).select('name');
+      const result = await db.user
+        .insertMany([minUserData, minUserData])
+        .select('Name');
 
-      assertType<typeof result, { name: string }[]>();
+      assertType<typeof result, { Name: string }[]>();
 
       expect(result).toEqual([
-        { name: userData.name },
-        { name: userData.name },
+        { Name: UserData.Name },
+        { Name: UserData.Name },
       ]);
     });
 
     it('should override single returning value with multiple', async () => {
-      const result = await User.get('name').insertMany([userData, userData]);
+      const result = await db.user
+        .get('Name')
+        .insertMany([minUserData, minUserData]);
 
       assertType<typeof result, string[]>();
 
-      expect(result).toEqual([userData.name, userData.name]);
+      expect(result).toEqual([UserData.Name, UserData.Name]);
     });
   });
 
   describe('onConflict', () => {
     it('should accept where condition for merge', () => {
-      const q = User.all();
+      const q = db.user.all();
 
       const query = q
-        .select('id')
-        .create(userData)
-        .onConflict('name')
+        .select('Id')
+        .create(minUserData)
+        .onConflict('Id')
         .merge()
-        .where({ name: 'where name' });
+        .where({ Name: 'where name' });
 
       expectSql(
         query.toSQL(),
         `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($2, $3)
-            ON CONFLICT ("name")
-            DO UPDATE SET "password" = excluded."password"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($2, $3, $4)
+            ON CONFLICT ("id")
+            DO UPDATE SET "name" = excluded."name", "user_key" = excluded."user_key", "password" = excluded."password"
             WHERE "User"."name" = $1
-            RETURNING "User"."id"
+            RETURNING "User"."id" "Id"
           `,
-        ['where name', 'name', 'password'],
+        ['where name', 'name', 'key', 'password'],
       );
 
       expectQueryNotMutated(q);
@@ -1205,9 +1226,11 @@ describe('create functions', () => {
         },
       );
 
-      const q = table.insert(userData).onConflictDoNothing({
-        constraint: 'pkey',
-      });
+      const q = table
+        .insert({ name: 'name', password: 'password' })
+        .onConflictDoNothing({
+          constraint: 'pkey',
+        });
 
       expectSql(
         q.toSQL(),
@@ -1226,7 +1249,7 @@ describe('create functions', () => {
           .insert({
             MessageKey: 'key',
             ChatId: 1,
-            Text: userData.name,
+            Text: UserData.Name,
           })
           .onConflictDoNothing();
 
@@ -1237,58 +1260,42 @@ describe('create functions', () => {
             VALUES ($1, $2, $3)
             ON CONFLICT DO NOTHING
           `,
-          ['key', 1, userData.name],
+          ['key', 1, UserData.Name],
         );
       });
 
       it('should perform `ON CONFLICT` without a target', () => {
-        const q = User.all();
+        const q = db.user.all();
 
-        const query = q.insert(userData).onConflictDoNothing();
+        const query = q.insert(minUserData).onConflictDoNothing();
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
             ON CONFLICT DO NOTHING
           `,
-          ['name', 'password'],
+          ['name', 'key', 'password'],
         );
 
         expectQueryNotMutated(q);
       });
 
       it('should accept single column', () => {
-        const q = User.all();
+        const q = db.user.all();
 
-        const query = q.insert(userData).onConflictDoNothing('id');
+        const query = q.insert(minUserData).onConflictDoNothing('Id');
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
             ON CONFLICT ("id") DO NOTHING
           `,
-          ['name', 'password'],
+          ['name', 'key', 'password'],
         );
 
         expectQueryNotMutated(q);
-      });
-
-      it('should accept single named column', () => {
-        const query = Snake.count()
-          .create(snakeData)
-          .onConflictDoNothing('snakeName');
-
-        expectSql(
-          query.toSQL(),
-          `
-            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-            VALUES ($1, $2)
-            ON CONFLICT ("snake_name") DO NOTHING
-          `,
-          [snakeData.snakeName, snakeData.tailLength],
-        );
       });
 
       it('should accept multiple columns', () => {
@@ -1307,7 +1314,7 @@ describe('create functions', () => {
 
         const q = table
           .count()
-          .create(userData)
+          .create({ name: 'name', password: 'password' })
           .onConflictDoNothing(['id', 'name']);
 
         expectSql(
@@ -1321,51 +1328,22 @@ describe('create functions', () => {
         );
       });
 
-      it('should accept multiple named columns', () => {
-        const table = testDb(
-          'Snake',
-          (t) => ({
-            snakeName: t.name('snake_name').text(),
-            tailLength: t.name('tail_length').integer(),
-          }),
-          (t) => t.primaryKey(['snakeName', 'tailLength']),
-          {
-            schema: () => 'schema',
-          },
-        );
-
-        const q = table
-          .count()
-          .create(snakeData)
-          .onConflictDoNothing(['snakeName', 'tailLength']);
-
-        expectSql(
-          q.toSQL(),
-          `
-            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-            VALUES ($1, $2)
-            ON CONFLICT ("snake_name", "tail_length") DO NOTHING
-          `,
-          [snakeData.snakeName, snakeData.tailLength],
-        );
-      });
-
       it('can accept raw query', () => {
-        const q = User.all();
+        const q = db.user.all();
 
         const query = q
           .count()
-          .create(userData)
+          .create(minUserData)
           .onConflictDoNothing(sql`raw query`);
 
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
             ON CONFLICT raw query DO NOTHING
           `,
-          ['name', 'password'],
+          ['name', 'key', 'password'],
         );
 
         expectQueryNotMutated(q);
@@ -1416,66 +1394,48 @@ describe('create functions', () => {
       });
 
       it('should accept object with values to update', () => {
-        const q = User.all();
+        const q = db.user.all();
 
         const query = q
           .count()
-          .create(userData)
-          .onConflict('name')
-          .set({ name: 'new name' });
+          .create(minUserData)
+          .onConflict('Id')
+          .set({ Name: 'new name' });
 
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($2, $3)
-            ON CONFLICT ("name")
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($2, $3, $4)
+            ON CONFLICT ("id")
             DO UPDATE SET "name" = $1
           `,
-          ['new name', 'name', 'password'],
+          ['new name', 'name', 'key', 'password'],
         );
 
         expectQueryNotMutated(q);
       });
 
-      it('should accept object with values to update for named column', () => {
-        const query = Snake.count()
-          .create(snakeData)
-          .onConflict('snakeName')
-          .set({ snakeName: 'new name' });
-
-        expectSql(
-          query.toSQL(),
-          `
-            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-            VALUES ($2, $3)
-            ON CONFLICT ("snake_name")
-            DO UPDATE SET "snake_name" = $1
-          `,
-          ['new name', snakeData.snakeName, snakeData.tailLength],
-        );
-      });
-
       it('should accept raw sql', () => {
-        const q = User.all();
+        const q = db.user.all();
 
         const query = q
           .count()
-          .create(userData)
+          .create(minUserData)
           .onConflict(sql`on conflict raw`)
           .set({
-            name: () => sql`${'new name'}`,
+            Name: () => sql`${'new name'}`,
           });
 
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($2, $3)
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($2, $3, $4)
             ON CONFLICT on conflict raw
             DO UPDATE SET "name" = $1
           `,
-          ['new name', 'name', 'password'],
+          ['new name', 'name', 'key', 'password'],
         );
 
         expectQueryNotMutated(q);
@@ -1484,17 +1444,17 @@ describe('create functions', () => {
 
     describe('merge', () => {
       it(`should merge all columns except onConflict's column`, () => {
-        const q = User.insert(userData).onConflict('name').merge();
+        const q = db.user.insert(minUserData).onConflict('Id').merge();
 
         expectSql(
           q.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            ON CONFLICT ("name")
-            DO UPDATE SET "password" = excluded."password"
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
+            ON CONFLICT ("id")
+            DO UPDATE SET "name" = excluded."name", "user_key" = excluded."user_key", "password" = excluded."password"
           `,
-          ['name', 'password'],
+          ['name', 'key', 'password'],
         );
       });
 
@@ -1530,8 +1490,12 @@ describe('create functions', () => {
       });
 
       it('should DO NOTHING if all columns are excluded', () => {
-        const q = User.insert({ name: 'name', password: undefined as never })
-          .onConflict('name')
+        const q = db.user
+          .insert({
+            Name: 'name',
+            Password: undefined as never,
+          } as unknown as typeof db.user.__inputType)
+          .onConflict('Id')
           .merge();
 
         expectSql(
@@ -1539,7 +1503,7 @@ describe('create functions', () => {
           `
             INSERT INTO "schema"."user" AS "User"("name")
             VALUES ($1)
-            ON CONFLICT ("name")
+            ON CONFLICT ("id")
             DO UPDATE SET "name" = excluded."name"
           `,
           ['name'],
@@ -1547,44 +1511,26 @@ describe('create functions', () => {
       });
 
       it('should accept single column', () => {
-        const q = User.all();
+        const q = db.user.all();
 
         const query = q
           .count()
-          .create(userData)
-          .onConflict('name')
-          .merge('name');
+          .create(minUserData)
+          .onConflict('Id')
+          .merge('Name');
 
         expectSql(
           query.toSQL(),
           `
-            INSERT INTO "schema"."user" AS "User"("name", "password")
-            VALUES ($1, $2)
-            ON CONFLICT ("name")
+            INSERT INTO "schema"."user" AS "User"("name", "user_key", "password")
+            VALUES ($1, $2, $3)
+            ON CONFLICT ("id")
             DO UPDATE SET "name" = excluded."name"
           `,
-          ['name', 'password'],
+          ['name', 'key', 'password'],
         );
 
         expectQueryNotMutated(q);
-      });
-
-      it('should accept single named column', () => {
-        const query = Snake.count()
-          .create(snakeData)
-          .onConflict('snakeName')
-          .merge('snakeName');
-
-        expectSql(
-          query.toSQL(),
-          `
-            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-            VALUES ($1, $2)
-            ON CONFLICT ("snake_name")
-            DO UPDATE SET "snake_name" = excluded."snake_name"
-          `,
-          [snakeData.snakeName, snakeData.tailLength],
-        );
       });
 
       it('should accept multiple columns', () => {
@@ -1603,7 +1549,7 @@ describe('create functions', () => {
 
         const q = table
           .count()
-          .create(userData)
+          .create({ name: 'name', password: 'password' })
           .onConflict(['id', 'name'])
           .merge(['name', 'password']);
 
@@ -1618,39 +1564,6 @@ describe('create functions', () => {
               "password" = excluded."password"
           `,
           ['name', 'password'],
-        );
-      });
-
-      it('should accept multiple named columns', () => {
-        const table = testDb(
-          'Snake',
-          (t) => ({
-            snakeName: t.name('snake_name').text(),
-            tailLength: t.name('tail_length').integer(),
-          }),
-          (t) => t.primaryKey(['snakeName', 'tailLength']),
-          {
-            schema: () => 'schema',
-          },
-        );
-
-        const q = table
-          .count()
-          .create(snakeData)
-          .onConflict(['snakeName', 'tailLength'])
-          .merge(['snakeName', 'tailLength']);
-
-        expectSql(
-          q.toSQL(),
-          `
-            INSERT INTO "schema"."snake" AS "Snake"("snake_name", "tail_length")
-            VALUES ($1, $2)
-            ON CONFLICT ("snake_name", "tail_length")
-            DO UPDATE SET
-              "snake_name" = excluded."snake_name",
-              "tail_length" = excluded."tail_length"
-          `,
-          [snakeData.snakeName, snakeData.tailLength],
         );
       });
 
@@ -1671,7 +1584,7 @@ describe('create functions', () => {
 
         const q = table
           .count()
-          .create(userData)
+          .create({ name: 'name', password: 'password' })
           .onConflict(['id', 'name'])
           .merge({ except: 'hasDefault' });
 

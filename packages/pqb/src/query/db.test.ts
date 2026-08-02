@@ -1,7 +1,7 @@
-import { User, userData } from '../test-utils/pqb.test-utils';
-import { createDbWithAdapter, Db } from './db';
+import { createDbWithAdapter, Db } from 'pqb';
 import {
   assertType,
+  db,
   defineTable,
   testDefaultColumnTypes,
   createTestDb,
@@ -12,6 +12,10 @@ import {
   testDbOptions,
   useTestDatabase,
   testDefaultSchemaConfig,
+  UserData,
+  UserDefaultSelect,
+  UserSelectAll,
+  UserSelectAllWithTable,
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
 import { Query } from './query';
@@ -26,6 +30,11 @@ import { QueryLogger } from './basic-features/log/log';
 import { orchidORMWithAdapter } from 'orchid-orm';
 import { Adapter, TransactionAdapterClass } from '../adapters/adapter';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
+
+const selectedUserData = {
+  Name: UserData.Name,
+  UserKey: UserData.UserKey,
+};
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
@@ -178,12 +187,12 @@ describe('db', () => {
   });
 
   it('keeps read APIs and rejects mutation APIs for read-only query types', () => {
-    const User = testDb(
+    const ReadOnlyUser = testDb(
       'user',
       (t) => ({
-        id: t.identity().primaryKey(),
-        name: t.text().unique(),
-        password: t.text().select(false),
+        Id: t.name('id').identity().primaryKey(),
+        Name: t.name('name').text().unique(),
+        Password: t.name('password').text().select(false),
       }),
       undefined,
       { readOnly: true },
@@ -205,80 +214,95 @@ describe('db', () => {
 
     const readOnlyError = CannotMutateReadOnlyTableError;
     // @ts-expect-error read-only query cannot create
-    expect(() => User.create(userData)).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.create(UserData)).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot insert
-    expect(() => User.insert(userData)).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.insert(UserData)).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot create many
-    expect(() => User.createMany([userData])).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.createMany([UserData])).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot insert many
-    expect(() => User.insertMany([userData])).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.insertMany([UserData])).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot create from a query
-      User.createOneFrom(User.select('name', 'password').take()),
+      ReadOnlyUser.createOneFrom(
+        ReadOnlyUser.select('Name', 'Password').take(),
+      ),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot insert from a query
-      User.insertOneFrom(User.select('name', 'password')),
+      ReadOnlyUser.insertOneFrom(ReadOnlyUser.select('Name', 'Password')),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot create many from a query
-      User.createManyFrom(User.select('name', 'password')),
+      ReadOnlyUser.createManyFrom(ReadOnlyUser.select('Name', 'Password')),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot insert many from a query
-      User.insertManyFrom(User.select('name', 'password')),
+      ReadOnlyUser.insertManyFrom(ReadOnlyUser.select('Name', 'Password')),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot create for each source row
-      User.createForEachFrom(User.select('name', 'password')),
+      ReadOnlyUser.createForEachFrom(ReadOnlyUser.select('Name', 'Password')),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot insert for each source row
-      User.insertForEachFrom(User.select('name', 'password')),
+      ReadOnlyUser.insertForEachFrom(ReadOnlyUser.select('Name', 'Password')),
     ).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot update
-    expect(() => User.all().update({ name: 'name' })).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.all().update({ Name: 'name' })).toThrow(
+      readOnlyError,
+    );
     // @ts-expect-error read-only query cannot update or throw
-    expect(() => User.find(1).updateOrThrow({ name: 'name' })).toThrow(
+    expect(() => ReadOnlyUser.find(1).updateOrThrow({ Name: 'name' })).toThrow(
       readOnlyError,
     );
     // @ts-expect-error read-only query cannot update from another query
-    expect(() => User.updateFrom(() => User)).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.updateFrom(() => ReadOnlyUser)).toThrow(
+      readOnlyError,
+    );
     // @ts-expect-error read-only query cannot set after updateFrom
-    expect(() => User.all().set({ name: 'name' })).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.all().set({ Name: 'name' })).toThrow(
+      readOnlyError,
+    );
     // @ts-expect-error read-only query cannot increment
-    expect(() => User.all().increment('id')).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.all().increment('Id')).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot decrement
-    expect(() => User.all().decrement('id')).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.all().decrement('Id')).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot update many
-    expect(() => User.updateMany([{ id: 1, name: 'name' }])).toThrow(
+    expect(() => ReadOnlyUser.updateMany([{ Id: 1, Name: 'name' }])).toThrow(
       readOnlyError,
     );
     expect(() =>
       // @ts-expect-error read-only query cannot optionally update many
-      User.updateManyOptional([{ id: 1, name: 'name' }]),
+      ReadOnlyUser.updateManyOptional([{ Id: 1, Name: 'name' }]),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot update many by unique keys
-      User.updateManyBy('name', [{ name: 'name', password: 'password' }]),
+      ReadOnlyUser.updateManyBy('Name', [
+        { Name: 'name', Password: 'password' },
+      ]),
     ).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot optionally update many by unique keys
-      User.updateManyByOptional('name', {
-        name: 'name',
-        password: 'password',
+      ReadOnlyUser.updateManyByOptional('Name', {
+        Name: 'name',
+        Password: 'password',
       }),
     ).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot delete
-    expect(() => User.all().delete()).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.all().delete()).toThrow(readOnlyError);
     expect(() =>
       // @ts-expect-error read-only query cannot upsert
-      User.find(1).upsert({ create: userData, update: { name: 'name' } }),
+      ReadOnlyUser.find(1).upsert({
+        create: UserData,
+        update: { Name: 'name' },
+      }),
     ).toThrow(readOnlyError);
     // @ts-expect-error read-only query cannot orCreate
-    expect(() => User.find(1).orCreate(userData)).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.find(1).orCreate(UserData)).toThrow(
+      readOnlyError,
+    );
     // @ts-expect-error read-only query cannot truncate
-    expect(() => User.truncate()).toThrow(readOnlyError);
+    expect(() => ReadOnlyUser.truncate()).toThrow(readOnlyError);
     // @ts-expect-error read-only soft-delete query cannot soft delete
     expect(() => ReadOnlySoftDeleteUser.all().delete()).toThrow(readOnlyError);
     // @ts-expect-error read-only soft-delete query cannot hard delete
@@ -326,14 +350,14 @@ describe('db', () => {
 
   describe('overriding column types', () => {
     it('should return date as string by default unless it is Bun SQL', async () => {
-      await User.create(userData);
+      await db.user.create(UserData);
 
-      const db = createDbWithAdapter({
+      const customDb = createDbWithAdapter({
         adapter: testAdapter,
         snakeCase: true,
         schemaConfig: () => testDefaultSchemaConfig,
       });
-      const table = db(
+      const table = customDb(
         'user',
         (t) => ({
           id: t.identity().primaryKey(),
@@ -352,9 +376,9 @@ describe('db', () => {
     });
 
     it('should return date as Date when overridden', async () => {
-      await User.create(userData);
+      await db.user.create(UserData);
 
-      const db = createDbWithAdapter({
+      const customDb = createDbWithAdapter({
         snakeCase: true,
         adapter: testAdapter,
         columnTypes: (t) => ({
@@ -365,7 +389,7 @@ describe('db', () => {
         }),
       });
 
-      const table = db(
+      const table = customDb(
         'user',
         (t) => ({
           id: t.identity().primaryKey(),
@@ -556,17 +580,17 @@ describe('db', () => {
   });
 
   describe('query methods', () => {
-    const sql = 'SELECT 1 AS one';
+    const selectOneSql = 'SELECT 1 AS one';
 
     it('should perform a query', async () => {
       const query = jest.spyOn(testDb.adapter, 'query');
       const original = testDb.internal.asyncStorage.getStore;
       testDb.internal.asyncStorage.getStore = jest.fn(() => undefined);
 
-      const result = await testDb.query(raw({ raw: sql }));
+      const result = await testDb.query(raw({ raw: selectOneSql }));
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toHaveBeenCalledWith(sql, [], undefined);
+      expect(query).toHaveBeenCalledWith(selectOneSql, [], undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -579,7 +603,7 @@ describe('db', () => {
       const result = await testDb.query`SELECT 1 AS one`;
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toHaveBeenCalledWith(sql, [], undefined);
+      expect(query).toHaveBeenCalledWith(selectOneSql, [], undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -590,10 +614,10 @@ describe('db', () => {
         state?.transactionAdapter &&
         jest.spyOn(state.transactionAdapter, 'query');
 
-      const result = await testDb.query(raw({ raw: sql }));
+      const result = await testDb.query(raw({ raw: selectOneSql }));
 
       expect(result.rows).toEqual([{ one: 1 }]);
-      expect(query).toHaveBeenCalledWith(sql, [], undefined);
+      expect(query).toHaveBeenCalledWith(selectOneSql, [], undefined);
     });
 
     it('should query arrays', async () => {
@@ -601,10 +625,10 @@ describe('db', () => {
       const original = testDb.internal.asyncStorage.getStore;
       testDb.internal.asyncStorage.getStore = jest.fn(() => undefined);
 
-      const result = await testDb.queryArrays(raw({ raw: sql }));
+      const result = await testDb.queryArrays(raw({ raw: selectOneSql }));
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toHaveBeenCalledWith(sql, [], undefined);
+      expect(query).toHaveBeenCalledWith(selectOneSql, [], undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -617,7 +641,7 @@ describe('db', () => {
       const result = await testDb.queryArrays`SELECT 1 AS one`;
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toHaveBeenCalledWith(sql, [], undefined);
+      expect(query).toHaveBeenCalledWith(selectOneSql, [], undefined);
 
       testDb.internal.asyncStorage.getStore = original;
     });
@@ -628,69 +652,69 @@ describe('db', () => {
         state?.transactionAdapter &&
         jest.spyOn(state.transactionAdapter, 'arrays');
 
-      const result = await testDb.queryArrays(raw({ raw: sql }));
+      const result = await testDb.queryArrays(raw({ raw: selectOneSql }));
 
       expect(result.rows).toEqual([[1]]);
-      expect(query).toHaveBeenCalledWith(sql, [], undefined);
+      expect(query).toHaveBeenCalledWith(selectOneSql, [], undefined);
     });
 
     it('should support query modifiers', async () => {
-      const user = await User.create(userData);
+      const user = await db.user.create(UserData);
 
-      const records = await testDb.query.records<{
-        name: string;
-      }>`SELECT * FROM "schema"."user"`;
-      assertType<typeof records, { name: string }[]>();
-      expect(records).toMatchObject([userData]);
+      const records = await testDb.query
+        .records<UserDefaultSelect>`SELECT ${sql.unsafe(UserSelectAllWithTable)} FROM "schema"."user" "User"`;
+      assertType<typeof records, UserDefaultSelect[]>();
+      expect(records).toMatchObject([selectedUserData]);
 
-      const take = await testDb.query.take<{
-        name: string;
-      }>`SELECT * FROM "schema"."user"`;
-      assertType<typeof take, { name: string }>();
-      expect(take).toMatchObject(userData);
+      const take = await testDb.query
+        .take<UserDefaultSelect>`SELECT ${sql.unsafe(UserSelectAll)} FROM "schema"."user"`;
+      assertType<typeof take, UserDefaultSelect>();
+      expect(take).toMatchObject(selectedUserData);
 
       await expect(
-        () => testDb.query.take`SELECT * FROM "schema"."user" WHERE id = 0`,
+        () =>
+          testDb.query
+            .take`SELECT ${sql.unsafe(UserSelectAll)} FROM "schema"."user" WHERE id = 0`,
       ).rejects.toThrow('Record is not found');
 
-      const takeOptional = await testDb.query.takeOptional<{
-        name: string;
-      }>`SELECT * FROM "schema"."user"`;
-      assertType<typeof takeOptional, { name: string } | undefined>();
-      expect(takeOptional).toMatchObject(userData);
+      const takeOptional = await testDb.query
+        .takeOptional<UserDefaultSelect>`SELECT ${sql.unsafe(UserSelectAll)} FROM "schema"."user"`;
+      assertType<typeof takeOptional, UserDefaultSelect | undefined>();
+      expect(takeOptional).toMatchObject(selectedUserData);
 
-      const takeOptionalNotFound = await testDb.query.takeOptional<{
-        name: string;
-      }>`SELECT * FROM "schema"."user" WHERE id = 0`;
+      const takeOptionalNotFound = await testDb.query
+        .takeOptional<UserDefaultSelect>`SELECT ${sql.unsafe(UserSelectAll)} FROM "schema"."user" WHERE id = 0`;
       expect(takeOptionalNotFound).toBe(undefined);
 
       const rows = await testDb.query.rows<
         [number, string]
-      >`SELECT id, name FROM "schema"."user"`;
+      >`SELECT "id" "Id", "name" "Name" FROM "schema"."user"`;
       assertType<typeof rows, [number, string][]>();
-      expect(rows).toEqual([[user.id, user.name]]);
+      expect(rows).toEqual([[user.Id, user.Name]]);
 
       const pluck = await testDb.query
-        .pluck<number>`SELECT id FROM "schema"."user"`;
+        .pluck<number>`SELECT "id" "Id" FROM "schema"."user"`;
       assertType<typeof pluck, number[]>();
-      expect(pluck).toEqual([user.id]);
+      expect(pluck).toEqual([user.Id]);
 
       const get = await testDb.query
-        .get<number>`SELECT id FROM "schema"."user"`;
+        .get<number>`SELECT "id" "Id" FROM "schema"."user"`;
       assertType<typeof get, number>();
-      expect(get).toEqual(user.id);
+      expect(get).toEqual(user.Id);
 
       await expect(
-        () => testDb.query.get`SELECT * FROM "schema"."user" WHERE id = 0`,
+        () =>
+          testDb.query
+            .get`SELECT ${sql.unsafe(UserSelectAll)} FROM "schema"."user" WHERE id = 0`,
       ).rejects.toThrow('Record is not found');
 
       const getOptional = await testDb.query
-        .getOptional<number>`SELECT id FROM "schema"."user"`;
+        .getOptional<number>`SELECT "id" "Id" FROM "schema"."user"`;
       assertType<typeof getOptional, number | undefined>();
-      expect(getOptional).toEqual(user.id);
+      expect(getOptional).toEqual(user.Id);
 
       const getOptionalNotFound = await testDb.query
-        .getOptional<number>`SELECT id FROM "schema"."user" WHERE id = 0`;
+        .getOptional<number>`SELECT "id" "Id" FROM "schema"."user" WHERE id = 0`;
       assertType<typeof getOptionalNotFound, number | undefined>();
       expect(getOptionalNotFound).toBe(undefined);
     });
@@ -699,33 +723,34 @@ describe('db', () => {
   describe('qb', () => {
     useTestDatabase();
     const { qb } = testDb;
+    const qbUserData = { name: 'name', password: 'password' };
 
     it('should support create', async () => {
       const created = await qb
         .withSchema('schema')
         .from('user')
-        .create(userData);
+        .create(qbUserData);
       assertType<typeof created, RecordUnknown>();
-      expect(created).toMatchObject(userData);
+      expect(created).toMatchObject(qbUserData);
 
       const inserted = await qb
         .withSchema('schema')
         .from('user')
-        .insert(userData);
+        .insert(qbUserData);
       assertType<typeof inserted, number>();
       expect(inserted).toBe(1);
 
       const createdMany = await qb
         .withSchema('schema')
         .from('user')
-        .createMany([userData]);
+        .createMany([qbUserData]);
       assertType<typeof createdMany, RecordUnknown[]>();
-      expect(createdMany).toMatchObject([userData]);
+      expect(createdMany).toMatchObject([qbUserData]);
 
       const insertedMany = await qb
         .withSchema('schema')
         .from('user')
-        .insertMany([userData, userData]);
+        .insertMany([qbUserData, qbUserData]);
       assertType<typeof insertedMany, number>();
       expect(insertedMany).toBe(2);
 
@@ -735,11 +760,11 @@ describe('db', () => {
         .createOneFrom(
           qb.withSchema('schema').from('user').select('name').take(),
           {
-            password: userData.password,
+            password: qbUserData.password,
           },
         );
       assertType<typeof createdFrom, RecordUnknown>();
-      expect(createdFrom).toMatchObject(userData);
+      expect(createdFrom).toMatchObject(qbUserData);
 
       const insertedFrom = await qb
         .withSchema('schema')
@@ -747,7 +772,7 @@ describe('db', () => {
         .insertOneFrom(
           qb.withSchema('schema').from('user').select('name').take(),
           {
-            password: userData.password,
+            password: qbUserData.password,
           },
         );
       assertType<typeof insertedFrom, number>();
@@ -764,7 +789,7 @@ describe('db', () => {
             .limit(1),
         );
       assertType<typeof createdManyFrom, RecordUnknown[]>();
-      expect(createdManyFrom).toMatchObject([userData]);
+      expect(createdManyFrom).toMatchObject([qbUserData]);
 
       const insertedManyFrom = await qb
         .withSchema('schema')
@@ -781,12 +806,14 @@ describe('db', () => {
     });
 
     it('should support update', async () => {
-      const user = await qb.from('schema.user').create({ ...userData, age: 1 });
+      const user = await qb
+        .from('schema.user')
+        .create({ ...qbUserData, age: 1 });
 
       const updatedCount = await qb
         .from('schema.user')
         .findBy({ id: user.id })
-        .update(userData);
+        .update(qbUserData);
       assertType<typeof updatedCount, number>();
       expect(updatedCount).toBe(1);
 
@@ -794,9 +821,9 @@ describe('db', () => {
         .from('schema.user')
         .selectAll()
         .findBy({ id: user.id })
-        .update(userData);
+        .update(qbUserData);
       assertType<typeof updated, RecordUnknown>();
-      expect(updated).toMatchObject(userData);
+      expect(updated).toMatchObject(qbUserData);
 
       const updatedSql = await qb
         .from('schema.user')
@@ -823,7 +850,7 @@ describe('db', () => {
     });
 
     it('should support delete', async () => {
-      const user = await qb.from('schema.user').create(userData);
+      const user = await qb.from('schema.user').create(qbUserData);
 
       const deleted = await qb
         .from('schema.user')
@@ -831,7 +858,7 @@ describe('db', () => {
         .findBy({ id: user.id })
         .delete();
       assertType<typeof deleted, RecordUnknown>();
-      expect(deleted).toMatchObject(userData);
+      expect(deleted).toMatchObject(qbUserData);
     });
   });
 
