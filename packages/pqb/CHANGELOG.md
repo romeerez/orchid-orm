@@ -1,5 +1,12 @@
 # pqb
 
+## 0.72.3
+
+### Patch Changes
+
+- 39566098: Enable `none` method type in a `where` callback (#739)
+- f4f4c32b: Fix `uuid().primaryKey()` to be marked as having a default on TS level (#740)
+
 ## 0.72.2
 
 ### Patch Changes

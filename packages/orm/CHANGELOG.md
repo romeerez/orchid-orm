@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.77.3
+
+### Patch Changes
+
+- f4f4c32b: Fix `uuid().primaryKey()` to be marked as having a default on TS level (#740)
+- Updated dependencies [39566098]
+- Updated dependencies [f4f4c32b]
+  - pqb@0.72.3
+  - rake-db@2.37.3
+
 ## 1.77.2
 
 ### Patch Changes
