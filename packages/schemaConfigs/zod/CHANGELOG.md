@@ -1,5 +1,13 @@
 # orchid-orm-schema-to-zod
 
+## 1.2.2
+
+### Patch Changes
+
+- ac3dfbdf: Add `brand` for branded types for columns (#734)
+- Updated dependencies [ac3dfbdf]
+  - pqb@0.72.2
+
 ## 1.2.1
 
 ### Patch Changes

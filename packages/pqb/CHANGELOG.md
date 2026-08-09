@@ -1,5 +1,11 @@
 # pqb
 
+## 0.72.2
+
+### Patch Changes
+
+- ac3dfbdf: Add `brand` for branded types for columns (#734)
+
 ## 0.72.1
 
 ### Patch Changes

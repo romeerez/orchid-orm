@@ -1,5 +1,13 @@
 # orchid-orm-valibot
 
+## 0.5.2
+
+### Patch Changes
+
+- ac3dfbdf: Add `brand` for branded types for columns (#734)
+- Updated dependencies [ac3dfbdf]
+  - pqb@0.72.2
+
 ## 0.5.1
 
 ### Patch Changes

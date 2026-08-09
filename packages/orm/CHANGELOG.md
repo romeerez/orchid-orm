@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.77.2
+
+### Patch Changes
+
+- ac3dfbdf: Add `brand` for branded types for columns (#734)
+- Updated dependencies [ac3dfbdf]
+  - pqb@0.72.2
+  - rake-db@2.37.2
+
 ## 1.77.1
 
 ### Patch Changes
