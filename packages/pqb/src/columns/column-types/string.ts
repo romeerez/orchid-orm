@@ -725,8 +725,8 @@ export class UUIDColumn<Schema extends ColumnSchemaConfig> extends Column {
     name?: Name,
   ): // using & bc otherwise the return type doesn't match `primaryKey` in ColumnType and TS complains
   T & {
-    data: { primaryKey: Name; default: true };
-  } {
+    data: { primaryKey: Name };
+  } & Column.Data.Default {
     const column = super.primaryKey(name);
     if (!column.data.default) column.data.default = uuidDefault;
     return column as never;

@@ -269,7 +269,7 @@ describe('table', () => {
   it('should support table type helpers', () => {
     const { defineTable } = createTableFactory();
     const TestTable = defineTable('test', (t) => ({
-      id: t.identity().primaryKey(),
+      id: t.uuid().primaryKey(),
       visible: t.text().parse(() => true),
       hidden: t.text().select(false),
       optional: t.text().default('text'),
@@ -281,7 +281,7 @@ describe('table', () => {
     assertType<
       Queryable<typeof TestTable>,
       {
-        id?: number;
+        id?: string;
         visible?: string;
         hidden?: string;
         optional?: string;
@@ -290,12 +290,12 @@ describe('table', () => {
     >();
     assertType<
       DefaultSelect<typeof TestTable>,
-      { id: number; visible: boolean; optional: string; required: boolean }
+      { id: string; visible: boolean; optional: string; required: boolean }
     >();
     assertType<
       Selectable<typeof TestTable>,
       {
-        id: number;
+        id: string;
         visible: boolean;
         hidden: string;
         optional: string;
@@ -305,7 +305,7 @@ describe('table', () => {
     assertType<
       Insertable<typeof TestTable>,
       {
-        id?: number;
+        id?: string;
         visible: string;
         hidden: string;
         optional?: string;
@@ -315,7 +315,7 @@ describe('table', () => {
     assertType<
       Updatable<typeof TestTable>,
       {
-        id?: number;
+        id?: string;
         visible?: string;
         hidden?: string;
         optional?: string;

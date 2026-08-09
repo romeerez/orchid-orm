@@ -292,7 +292,7 @@ describe('baseTable', () => {
     class Table extends Base {
       readonly table = 'test';
       columns = this.setColumns((t) => ({
-        id: t.identity().primaryKey(),
+        id: t.uuid().primaryKey(),
         visible: t.text().parse(() => true),
         hidden: t.text().select(false),
         optional: t.text().default('text'),
@@ -305,7 +305,7 @@ describe('baseTable', () => {
     assertType<
       Queryable<Table>,
       {
-        id?: number;
+        id?: string;
         visible?: string;
         hidden?: string;
         optional?: string;
@@ -314,12 +314,12 @@ describe('baseTable', () => {
     >();
     assertType<
       DefaultSelect<Table>,
-      { id: number; visible: boolean; optional: string; required: boolean }
+      { id: string; visible: boolean; optional: string; required: boolean }
     >();
     assertType<
       Selectable<Table>,
       {
-        id: number;
+        id: string;
         visible: boolean;
         hidden: string;
         optional: string;
@@ -329,7 +329,7 @@ describe('baseTable', () => {
     assertType<
       Insertable<Table>,
       {
-        id?: number;
+        id?: string;
         visible: string;
         hidden: string;
         optional?: string;
@@ -339,7 +339,7 @@ describe('baseTable', () => {
     assertType<
       Updatable<Table>,
       {
-        id?: number;
+        id?: string;
         visible?: string;
         hidden?: string;
         optional?: string;
