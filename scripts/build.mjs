@@ -26,10 +26,11 @@ const cleanDts = async (dir, inSrc = false) => {
   );
 };
 
-const run = (command, args) =>
+const run = (command, args, env = process.env) =>
   new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: process.cwd(),
+      env,
       stdio: 'inherit',
     });
 
@@ -52,12 +53,17 @@ if (args[0] === '--clean') {
         ? 'turbo'
         : 'rolldown';
   const commandArgs = isTurbo ? ['run', 'build'] : args;
+  const skipCleanup = process.env.ORCHID_BUILD_FROM_TURBO === '1';
   let exitCode;
 
   try {
-    exitCode = await run(command, commandArgs);
+    exitCode = await run(
+      command,
+      commandArgs,
+      isTurbo ? { ...process.env, ORCHID_BUILD_FROM_TURBO: '1' } : process.env,
+    );
   } finally {
-    await cleanDts(packagesDir);
+    if (!skipCleanup) await cleanDts(packagesDir);
   }
 
   process.exitCode = exitCode;

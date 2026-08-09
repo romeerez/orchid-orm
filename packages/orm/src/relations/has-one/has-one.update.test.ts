@@ -565,7 +565,7 @@ describe('hasOne', () => {
 
         expect(count).toBe(2);
 
-        const bios = await db.profile.pluck('Bio');
+        const bios = await db.profile.order('Bio').pluck('Bio');
         expect(bios).toEqual(['bio', 'updated']);
       });
 
