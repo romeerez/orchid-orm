@@ -129,6 +129,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | 'withData'
           | 'windows'
           | 'then'
+          | 'none'
           ? T[K]
           : never;
       }
@@ -152,6 +153,7 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
                   | 'withData'
                   | 'windows'
                   | 'then'
+                  | 'none'
                 )
             ? T[K]
             : never;

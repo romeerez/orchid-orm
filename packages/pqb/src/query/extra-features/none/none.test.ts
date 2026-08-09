@@ -5,6 +5,7 @@ import {
   useTestDatabase,
   UserData,
   UserDefaultSelect,
+  expectSql,
 } from 'test-utils';
 import { AdapterClass } from '../../../adapters/adapter';
 
@@ -18,6 +19,19 @@ describe('none', () => {
     await db.user;
     expect(query).toHaveBeenCalled();
     query.mockClear();
+  });
+
+  it('should be supported in `.where`', async () => {
+    const q = db.user.select('Id').where((q) => q.none());
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "User"."id" "Id"
+        FROM "schema"."user" "User"
+        WHERE ((false))
+      `,
+    );
   });
 
   it('should return empty array for return types `all`, `rows`, `pluck`', async () => {
