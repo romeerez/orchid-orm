@@ -55,6 +55,8 @@ export {
   type SelectSqlColumn,
   type StaticSQLArgs,
   type ColumnRefExpression,
+  type BrandColumn,
+  type BrandColumnsShape,
 } from './index';
 
 // TableData - table configuration and metadata

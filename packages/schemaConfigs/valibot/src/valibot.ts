@@ -24,6 +24,7 @@ import {
   ArrayColumnValue,
   ColumnSchemaGetterColumns,
   ColumnSchemaGetterTableClass,
+  DateColumnInput,
   makeColumnNullable,
   setColumnEncode,
   setColumnParse,
@@ -34,71 +35,105 @@ import {
   AdapterSchemaConfigOptions,
   getDateAsNumberFn,
   getDateAsDateFn,
-  RecordUnknown,
 } from 'pqb/internal';
 import {
-  actionIssue,
-  actionOutput,
+  _addIssue,
+  _stringify,
   array,
-  ArraySchema,
-  BaseSchema,
-  BaseTransformation,
-  BaseValidation,
+  ArraySchema as ValibotArraySchema,
+  GenericSchema as BaseSchema,
+  GenericTransformation as BaseTransformation,
+  GenericValidation as BaseValidation,
+  BrandAction,
+  BaseIssue,
   boolean,
-  BooleanSchema,
-  coerce,
+  BooleanSchema as ValibotBooleanSchema,
   cuid2,
   date,
-  DateSchema,
+  DateSchema as ValibotDateSchema,
   email,
   emoji,
   endsWith,
   finite,
   includes,
   instance,
-  InstanceSchema,
+  InstanceSchema as ValibotInstanceSchema,
   integer,
+  IntegerAction,
   ipv4,
   ipv6,
   isoDateTime,
   length,
   maxLength,
   maxValue,
+  message as setSchemaMessage,
   minLength,
   minValue,
   never,
-  NeverSchema,
+  NeverSchema as ValibotNeverSchema,
   nullable,
-  NullableSchema,
+  NullableSchema as ValibotNullableSchema,
   number,
-  NumberSchema,
+  NumberSchema as ValibotNumberSchema,
   object,
   ObjectEntries,
-  ObjectSchema,
+  ObjectSchema as ValibotObjectSchema,
   optional,
-  OptionalSchema,
-  Output,
+  OptionalSchema as ValibotOptionalSchema,
   partial,
   pick,
   picklist,
-  PicklistSchema,
+  PicklistSchema as ValibotPicklistSchema,
+  pipe,
   regex,
   required,
   startsWith,
   string,
-  stringify,
-  StringSchema,
+  StringSchema as ValibotStringSchema,
+  SchemaWithPipe,
   toLowerCase,
-  toTrimmed,
+  trim,
   toUpperCase,
+  toDate,
   ulid,
   union,
   unknown,
-  UnknownSchema,
-  UnionSchema,
+  UnknownSchema as ValibotUnknownSchema,
+  UnionSchema as ValibotUnionSchema,
   url,
   uuid,
+  InferOutput,
 } from 'valibot';
+
+type ArraySchema<Item extends BaseSchema> = ValibotArraySchema<Item, undefined>;
+type BooleanSchema = ValibotBooleanSchema<undefined>;
+type DateSchema = ValibotDateSchema<undefined>;
+type InstanceSchema<Class extends new (...args: never[]) => object> =
+  ValibotInstanceSchema<Class, undefined>;
+type NeverSchema = ValibotNeverSchema<undefined>;
+type NullableSchema<Schema extends BaseSchema> = ValibotNullableSchema<
+  Schema,
+  undefined
+>;
+type NumberSchema = ValibotNumberSchema<undefined>;
+type ObjectSchema<Entries> = Entries extends ObjectEntries
+  ? ValibotObjectSchema<Entries, undefined>
+  : never;
+type OptionalSchema<Schema extends BaseSchema> = ValibotOptionalSchema<
+  Schema,
+  undefined
+>;
+type PicklistSchema<Options extends readonly string[]> = ValibotPicklistSchema<
+  Options,
+  undefined
+>;
+type StringSchema = ValibotStringSchema<undefined>;
+type UnionSchema<Options extends readonly BaseSchema[]> = ValibotUnionSchema<
+  Options,
+  undefined
+>;
+type UnknownSchema = ValibotUnknownSchema;
+type Output<Schema extends BaseSchema> = InferOutput<Schema>;
 
 class ValibotJSONColumn<Schema extends BaseSchema> extends JSONColumn<
   Output<Schema>,
@@ -124,10 +159,6 @@ class ValibotJSONTextColumn<Schema extends BaseSchema> extends JSONTextColumn<
   }
 }
 
-interface ValibotSchemaWithPipe extends RecordUnknown {
-  pipe: unknown[];
-}
-
 function applyMethod(
   column: unknown,
   key: string,
@@ -140,19 +171,16 @@ function applyMethod(
     key,
     value,
     params,
-  ) as unknown as {
-    [K: string]: ValibotSchemaWithPipe;
-  };
+  ) as unknown as Record<string, BaseSchema>;
 
   const v = validation(
     value as never,
     typeof params === 'object' ? params.message : params,
   );
 
-  cloned.inputSchema.pipe.push(v);
-  cloned.outputSchema.pipe.push(v);
-  // oxlint-disable-next-line typescript/no-explicit-any
-  (cloned.querySchema as any).pipe.push(v);
+  cloned.inputSchema = pipe(cloned.inputSchema, v);
+  cloned.outputSchema = pipe(cloned.outputSchema, v);
+  cloned.querySchema = pipe(cloned.querySchema, v);
 
   return cloned as never;
 }
@@ -169,19 +197,16 @@ function applySimpleMethod(
     key,
     true,
     params,
-  ) as unknown as {
-    [K: string]: ValibotSchemaWithPipe;
-  };
+  ) as unknown as Record<string, BaseSchema>;
 
   const v = validation(
     ...(args as never[]),
     (typeof params === 'object' ? params.message : params) as never,
   );
 
-  cloned.inputSchema.pipe.push(v);
-  cloned.outputSchema.pipe.push(v);
-  // oxlint-disable-next-line typescript/no-explicit-any
-  (cloned.querySchema as any).pipe.push(v);
+  cloned.inputSchema = pipe(cloned.inputSchema, v);
+  cloned.outputSchema = pipe(cloned.outputSchema, v);
+  cloned.querySchema = pipe(cloned.querySchema, v);
 
   return cloned as never;
 }
@@ -234,7 +259,7 @@ class ValibotArrayColumn<Item extends ArrayColumnValue> extends ArrayColumn<
   ArraySchema<Item['querySchema']>
 > {
   constructor(schemaConfig: ValibotSchemaConfig, item: Item) {
-    super(schemaConfig, item, array(item.inputSchema, []));
+    super(schemaConfig, item, array(item.inputSchema));
   }
 }
 
@@ -261,6 +286,9 @@ export type GtValidation<
   TInput extends string | number | bigint | boolean | Date,
   TRequirement extends TInput,
 > = BaseValidation<TInput> & {
+  kind: 'validation';
+  reference: typeof gt;
+  message?: string;
   /**
    * The validation type.
    */
@@ -279,26 +307,27 @@ export function gt<
   message?: string,
 ): GtValidation<TInput, TRequirement> {
   return {
+    kind: 'validation',
     type: 'gt',
+    reference: gt,
     expects: `>${
       requirement instanceof Date
         ? requirement.toJSON()
-        : stringify(requirement)
+        : _stringify(requirement)
     }`,
     async: false,
     message,
     requirement,
-    _parse(input) {
-      if (input > this.requirement) {
-        return actionOutput(input);
+    '~run'(dataset, config) {
+      if (dataset.typed && !(dataset.value > this.requirement)) {
+        _addIssue(this, 'value', dataset, config, {
+          received:
+            dataset.value instanceof Date
+              ? dataset.value.toJSON()
+              : _stringify(dataset.value),
+        });
       }
-      return actionIssue(
-        this,
-        gt,
-        input,
-        'value',
-        input instanceof Date ? input.toJSON() : stringify(input),
-      );
+      return dataset;
     },
   };
 }
@@ -307,6 +336,9 @@ export type LtValidation<
   TInput extends string | number | bigint | boolean | Date,
   TRequirement extends TInput,
 > = BaseValidation<TInput> & {
+  kind: 'validation';
+  reference: typeof lt;
+  message?: string;
   /**
    * The validation type.
    */
@@ -325,26 +357,27 @@ export function lt<
   message?: string,
 ): LtValidation<TInput, TRequirement> {
   return {
+    kind: 'validation',
     type: 'lt',
+    reference: lt,
     expects: `<${
       requirement instanceof Date
         ? requirement.toJSON()
-        : stringify(requirement)
+        : _stringify(requirement)
     }`,
     async: false,
     message,
     requirement,
-    _parse(input) {
-      if (input < this.requirement) {
-        return actionOutput(input);
+    '~run'(dataset, config) {
+      if (dataset.typed && !(dataset.value < this.requirement)) {
+        _addIssue(this, 'value', dataset, config, {
+          received:
+            dataset.value instanceof Date
+              ? dataset.value.toJSON()
+              : _stringify(dataset.value),
+        });
       }
-      return actionIssue(
-        this,
-        lt,
-        input,
-        'value',
-        input instanceof Date ? input.toJSON() : stringify(input),
-      );
+      return dataset;
     },
   };
 }
@@ -353,6 +386,9 @@ export type StepValidation<
   TInput extends number,
   TRequirement extends TInput,
 > = BaseValidation<TInput> & {
+  kind: 'validation';
+  reference: typeof step;
+  message?: string;
   /**
    * The validation type.
    */
@@ -368,16 +404,18 @@ export function step<TInput extends number, TRequirement extends TInput>(
   message?: string,
 ): StepValidation<TInput, TRequirement> {
   return {
+    kind: 'validation',
     type: 'step',
-    expects: `a multiple of ${stringify(requirement)}`,
+    reference: step,
+    expects: `a multiple of ${_stringify(requirement)}`,
     async: false,
     message,
     requirement,
-    _parse(input) {
-      if (input % this.requirement === 0) {
-        return actionOutput(input);
+    '~run'(dataset, config) {
+      if (dataset.typed && dataset.value % this.requirement !== 0) {
+        _addIssue(this, 'value', dataset, config);
       }
-      return actionIssue(this, step, input, 'value', stringify(input));
+      return dataset;
     },
   };
 }
@@ -618,7 +656,7 @@ const stringMethods: StringMethods = {
   },
 
   trim(params) {
-    return applySimpleMethod(this, 'trim', toTrimmed, params);
+    return applySimpleMethod(this, 'trim', trim, params);
   },
 
   toLowerCase(params) {
@@ -834,9 +872,9 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   narrowAllTypes<
     T extends Column.InputOutputQueryTypesWithSchemas,
     Types extends {
-      input?: { _types?: { output: T['__inputType'] } };
-      output?: { _types?: { output: T['__outputType'] } };
-      query?: { _types?: { output: T['__queryType'] } };
+      input?: { '~types'?: { output: T['__inputType'] } };
+      output?: { '~types'?: { output: T['__outputType'] } };
+      query?: { '~types'?: { output: T['__queryType'] } };
     },
   >(
     this: T,
@@ -908,12 +946,14 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
   unknown(): UnknownSchema;
   never(): NeverSchema;
   stringSchema(): StringSchema;
-  stringMin(max: number): StringSchema;
-  stringMax(max: number): StringSchema;
-  stringMinMax(min: number, max: number): StringSchema;
+  stringMin(max: number): BaseSchema<string, string>;
+  stringMax(max: number): BaseSchema<string, string>;
+  stringMinMax(min: number, max: number): BaseSchema<string, string>;
   number(): NumberSchema;
-  int(): NumberSchema;
-  stringNumberDate(): DateSchema;
+  int(): SchemaWithPipe<
+    readonly [NumberSchema, IntegerAction<number, undefined>]
+  >;
+  stringNumberDate(): BaseSchema<DateColumnInput, Date>;
   timeInterval(): ObjectSchema<{
     years: OptionalSchema<NumberSchema>;
     months: OptionalSchema<NumberSchema>;
@@ -922,8 +962,8 @@ export interface ValibotSchemaConfig extends ColumnSchemaConfig {
     minutes: OptionalSchema<NumberSchema>;
     seconds: OptionalSchema<NumberSchema>;
   }>;
-  bit(max: number): StringSchema;
-  uuid(): StringSchema;
+  bit(max?: number): BaseSchema<string, string>;
+  uuid(): BaseSchema<string, string>;
 
   inputSchema<T extends ColumnSchemaGetterTableClass>(
     this: T,
@@ -1012,14 +1052,14 @@ export const valibotSchemaConfig = (
     dateAsNumber() {
       // oxlint-disable-next-line typescript/no-explicit-any
       return (this as any).parse(
-        number([]),
+        number(),
         getDateAsNumberFn(this as never),
       ) as never;
     },
     dateAsDate() {
       // oxlint-disable-next-line typescript/no-explicit-any
       return (this as any).parse(
-        date([]),
+        date(),
         getDateAsDateFn(this as never),
       ) as never;
     },
@@ -1042,53 +1082,51 @@ export const valibotSchemaConfig = (
     json<Schema extends BaseSchema = UnknownSchema>(schema?: Schema) {
       return new ValibotJSONColumn(
         schemaConfig,
-        (schema ?? unknown([])) as Schema,
+        (schema ?? unknown()) as Schema,
         options?.jsonEncodedByDriver,
       );
     },
     jsonText<Schema extends BaseSchema = UnknownSchema>(schema?: Schema) {
       return new ValibotJSONTextColumn(
         schemaConfig,
-        (schema ?? unknown([])) as Schema,
+        (schema ?? unknown()) as Schema,
       );
     },
-    boolean: () => boolean([]),
-    buffer: () => instance(Buffer, []),
-    unknown: () => unknown([]),
+    boolean: () => boolean(),
+    buffer: () => instance(Buffer),
+    unknown: () => unknown(),
     never: () => never(),
-    stringSchema: () => string([]),
+    stringSchema: () => string(),
     stringMin(min) {
-      return string([minLength(min)]);
+      return pipe(string(), minLength(min));
     },
     stringMax(max) {
-      return string([maxLength(max)]);
+      return pipe(string(), maxLength(max));
     },
     stringMinMax(min, max) {
-      return string([minLength(min), maxLength(max)]);
+      return pipe(string(), minLength(min), maxLength(max));
     },
-    number: () => number([]),
-    int: () => number([integer()]),
+    number: () => number(),
+    int: () => pipe(number(), integer()),
 
-    stringNumberDate: () =>
-      coerce(date([]), (input) => new Date(input as string)),
+    stringNumberDate: () => pipe(union([string(), number(), date()]), toDate()),
 
     timeInterval: () =>
-      object(
-        {
-          years: optional(number()),
-          months: optional(number()),
-          days: optional(number()),
-          hours: optional(number()),
-          minutes: optional(number()),
-          seconds: optional(number()),
-        },
-        [],
-      ),
+      object({
+        years: optional(number()),
+        months: optional(number()),
+        days: optional(number()),
+        hours: optional(number()),
+        minutes: optional(number()),
+        seconds: optional(number()),
+      }),
 
     bit: (max?: number) =>
-      max ? string([maxLength(max), regex(/[10]/g)]) : string([regex(/[10]/g)]),
+      max
+        ? pipe(string(), maxLength(max), regex(/[10]/g))
+        : pipe(string(), regex(/[10]/g)),
 
-    uuid: () => string([uuid()]),
+    uuid: () => pipe(string(), uuid()),
 
     inputSchema() {
       return mapSchema(this, 'inputSchema');
@@ -1099,7 +1137,9 @@ export const valibotSchemaConfig = (
     },
 
     querySchema() {
-      return partial(mapSchema(this, 'querySchema'));
+      return partial(mapSchema(this, 'querySchema') as never) as QuerySchema<
+        typeof this
+      >;
     },
 
     createSchema<T extends ColumnSchemaGetterTableClass>(this: T) {
@@ -1144,15 +1184,14 @@ export const valibotSchemaConfig = (
     },
 
     error(message: string) {
-      const c = this as Column & {
-        inputSchema: RecordUnknown;
-        outputSchema: RecordUnknown;
-        querySchema: RecordUnknown;
+      const c = Object.create(this as object) as Column & {
+        inputSchema: BaseSchema;
+        outputSchema: BaseSchema;
+        querySchema: BaseSchema;
       };
-      c.inputSchema.message =
-        c.outputSchema.message =
-        (c.querySchema as RecordUnknown).message =
-          message;
+      c.inputSchema = setSchemaMessage(c.inputSchema, message);
+      c.outputSchema = setSchemaMessage(c.outputSchema, message);
+      c.querySchema = setSchemaMessage(c.querySchema, message);
       return c as never;
     },
 
@@ -1202,35 +1241,79 @@ type MapSchema<
   T extends ColumnSchemaGetterTableClass,
   Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
 > = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
+  readonly [K in keyof ColumnSchemaGetterColumns<T>]: ColumnValidationSchema<
+    T,
+    K,
+    Key
+  >;
 }>;
 
+type TableName<T extends ColumnSchemaGetterTableClass> = T['data'] extends {
+  table: infer Table extends string;
+}
+  ? Table
+  : T['data'] extends { name: infer Name extends string }
+    ? Name
+    : never;
+
+// The default token is represented as `true | string` before table binding.
+type ColumnBrand<
+  T extends ColumnSchemaGetterTableClass,
+  K extends keyof ColumnSchemaGetterColumns<T>,
+> = true extends ColumnSchemaGetterColumns<T>[K]['data']['branded']
+  ? `${TableName<T>}.${K & string}`
+  : ColumnSchemaGetterColumns<T>[K]['data']['branded'] & string;
+
+type BrandedSchema<
+  Schema extends BaseSchema<unknown, unknown, BaseIssue<unknown>>,
+  Brand extends PropertyKey,
+> = SchemaWithPipe<readonly [Schema, BrandAction<InferOutput<Schema>, Brand>]>;
+
+type ColumnValidationSchema<
+  T extends ColumnSchemaGetterTableClass,
+  K extends keyof ColumnSchemaGetterColumns<T>,
+  Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
+  Brand extends PropertyKey = ColumnBrand<T, K>,
+> = SchemaOf<
+  [Brand] extends [never]
+    ? ColumnSchemaGetterColumns<T>[K][Key]
+    : ColumnSchemaGetterColumns<T>[K][Key] extends BaseSchema<
+          unknown,
+          unknown,
+          BaseIssue<unknown>
+        >
+      ? BrandedSchema<ColumnSchemaGetterColumns<T>[K][Key], Brand>
+      : ColumnSchemaGetterColumns<T>[K][Key]
+>;
+
+type SchemaOf<Schema> = Schema extends BaseSchema ? Schema : never;
+
 type QuerySchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T>]: OptionalSchema<
-    ColumnSchemaGetterColumns<T>[K]['querySchema']
+  readonly [K in keyof ColumnSchemaGetterColumns<T>]: OptionalSchema<
+    ColumnValidationSchema<T, K, 'querySchema'>
   >;
 }>;
 
 type CreateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+  readonly [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
     ? never
     : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
-    ? OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
+    ? OptionalSchema<ColumnValidationSchema<T, K, 'inputSchema'>>
     : ColumnSchemaGetterColumns<T>[K]['data']['default'] extends true
-      ? OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
-      : ColumnSchemaGetterColumns<T>[K]['inputSchema'];
+      ? OptionalSchema<ColumnValidationSchema<T, K, 'inputSchema'>>
+      : ColumnValidationSchema<T, K, 'inputSchema'>;
 }>;
 
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+  readonly [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
     ? never
-    : K]: OptionalSchema<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+    : K]: OptionalSchema<ColumnValidationSchema<T, K, 'inputSchema'>>;
 }>;
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ObjectSchema<{
-  [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
+  readonly [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
     ? K
-    : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
+    : never]: ColumnValidationSchema<T, K, 'inputSchema'>;
 }>;
 
 function mapSchema<

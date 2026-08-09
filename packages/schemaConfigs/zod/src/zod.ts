@@ -1105,18 +1105,59 @@ type MapSchema<
   Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
 > = ZodObject<
   {
-    [K in keyof ColumnSchemaGetterColumns<T>]: ColumnSchemaGetterColumns<T>[K][Key];
+    [K in keyof ColumnSchemaGetterColumns<T>]: ColumnValidationSchema<
+      T,
+      K,
+      Key
+    >;
   },
-  core.$strict
+  core.$strip
 >;
+
+type TableName<T extends ColumnSchemaGetterTableClass> = T['data'] extends {
+  table: infer Table extends string;
+}
+  ? Table
+  : T['data'] extends { name: infer Name extends string }
+    ? Name
+    : never;
+
+// The default token is represented as `true | string` before table binding.
+type ColumnBrand<
+  Column,
+  Table extends string,
+  Key extends string,
+> = Column extends { data: { branded: infer Brand } }
+  ? true extends Brand
+    ? `${Table}.${Key}`
+    : Brand & string
+  : never;
+
+type BrandedSchema<
+  Schema,
+  Brand extends PropertyKey,
+> = Schema extends ZodTypeAny ? core.$ZodBranded<Schema, Brand> : Schema;
+
+type ColumnValidationSchema<
+  T extends ColumnSchemaGetterTableClass,
+  K extends keyof ColumnSchemaGetterColumns<T>,
+  Key extends 'inputSchema' | 'outputSchema' | 'querySchema',
+  Brand extends PropertyKey = ColumnBrand<
+    ColumnSchemaGetterColumns<T>[K],
+    TableName<T>,
+    K & string
+  >,
+> = [Brand] extends [never]
+  ? ColumnSchemaGetterColumns<T>[K][Key]
+  : BrandedSchema<ColumnSchemaGetterColumns<T>[K][Key], Brand>;
 
 type QuerySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
   {
     [K in keyof ColumnSchemaGetterColumns<T>]: ZodOptional<
-      ColumnSchemaGetterColumns<T>[K]['querySchema']
+      ColumnValidationSchema<T, K, 'querySchema'>
     >;
   },
-  core.$strict
+  core.$strip
 >;
 
 type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
@@ -1124,30 +1165,30 @@ type CreateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
     [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
       ? never
       : K]: ColumnSchemaGetterColumns<T>[K]['data']['isNullable'] extends true
-      ? ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
+      ? ZodOptional<ColumnValidationSchema<T, K, 'inputSchema'>>
       : ColumnSchemaGetterColumns<T>[K]['data']['default'] extends true
-        ? ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>
-        : ColumnSchemaGetterColumns<T>[K]['inputSchema'];
+        ? ZodOptional<ColumnValidationSchema<T, K, 'inputSchema'>>
+        : ColumnValidationSchema<T, K, 'inputSchema'>;
   },
-  core.$strict
+  core.$strip
 >;
 
 type UpdateSchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
   {
     [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
       ? never
-      : K]: ZodOptional<ColumnSchemaGetterColumns<T>[K]['inputSchema']>;
+      : K]: ZodOptional<ColumnValidationSchema<T, K, 'inputSchema'>>;
   },
-  core.$strict
+  core.$strip
 >;
 
 type PkeySchema<T extends ColumnSchemaGetterTableClass> = ZodObject<
   {
     [K in keyof ColumnSchemaGetterColumns<T> as ColumnSchemaGetterColumns<T>[K]['data']['primaryKey'] extends string
       ? K
-      : never]: ColumnSchemaGetterColumns<T>[K]['inputSchema'];
+      : never]: ColumnValidationSchema<T, K, 'inputSchema'>;
   },
-  core.$strict
+  core.$strip
 >;
 
 function mapSchema<

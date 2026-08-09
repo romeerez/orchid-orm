@@ -18,6 +18,7 @@ import {
   ZodUnion,
 } from 'zod/v4';
 import { AssertEqual, assertType } from 'test-utils';
+import { createTableFactory } from 'orchid-orm';
 
 const schemaConfig = zodSchemaConfig();
 const t = makeColumnTypes(schemaConfig);
@@ -1258,6 +1259,47 @@ describe('zod schema config', () => {
           'Invalid input: expected boolean, received null',
         ],
       });
+    });
+  });
+
+  describe('brand', () => {
+    it('should preserve branded types in table schemas', () => {
+      const { defineTable } = createTableFactory({
+        schemaConfig: zodSchemaConfig,
+      });
+
+      const table = defineTable('table', (t) => ({
+        id: t.text().primaryKey().brand(),
+        name: t.text().brand(),
+        custom: t.text().brand('custom'),
+      }));
+
+      const inputSchema = table.inputSchema();
+      const outputSchema = table.outputSchema();
+      const querySchema = table.querySchema();
+      const createSchema = table.createSchema();
+      const updateSchema = table.updateSchema();
+      const pkeySchema = table.pkeySchema();
+
+      const expected = z.object({
+        id: z.string().brand('table.id'),
+        name: z.string().brand('table.name'),
+        custom: z.string().brand('custom'),
+      });
+      const expectedQuery = expected.partial();
+      const expectedCreate = z.object({
+        name: z.string().brand('table.name'),
+        custom: z.string().brand('custom'),
+      });
+      const expectedUpdate = expectedCreate.partial();
+      const expectedPkey = z.object({ id: z.string().brand('table.id') });
+
+      assertType<typeof inputSchema, typeof expected>();
+      assertType<typeof outputSchema, typeof expected>();
+      assertType<typeof querySchema, typeof expectedQuery>();
+      assertType<typeof createSchema, typeof expectedCreate>();
+      assertType<typeof updateSchema, typeof expectedUpdate>();
+      assertType<typeof pkeySchema, typeof expectedPkey>();
     });
   });
 });

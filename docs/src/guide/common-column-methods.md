@@ -82,6 +82,40 @@ export const Table = defineTable('table', (t) => ({
 }));
 ```
 
+## brand
+
+Use `brand` to make a column's TypeScript type distinct from other values with
+the same underlying type. This is useful for preventing accidental assignment
+of identifiers or other domain-specific values to the wrong column.
+
+Without an argument, the brand is the table and column name, so each branded
+column is distinct. Pass a token to share a brand between columns intentionally.
+
+```ts
+export const Users = defineTable('users', (t) => ({
+  id: t.uuid().primaryKey().brand(), // branded as `users.id`
+  email: t.text().brand('email'),
+}));
+
+export const Invitations = defineTable('invitations', (t) => ({
+  recipientEmail: t.text().brand('email'), // compatible with `Users.email`
+}));
+```
+
+Branding affects TypeScript types only; it does not change the database column
+or runtime values. Zod and Valibot validation-schema integrations preserve
+brands in the schemas they generate.
+
+You can also construct branded types yourself by importing `Branded`:
+
+```ts
+import { type Branded } from 'orchid-orm';
+
+type Email = Branded<string, 'email'>;
+```
+
+Orchid uses the same `tagged-tag` package as [type-fest](https://github.com/sindresorhus/type-fest), so their branded types are compatible.
+
 ## identity
 
 Available for `smallint`, `integer`, `bigint`.

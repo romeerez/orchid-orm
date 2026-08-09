@@ -54,7 +54,7 @@
   "devDependencies": {
     "orchid-orm": "workspace:*",
     "test-utils": "workspace:*",
-    "zod": "4.3.6"
+    "zod": "4.4.3"
   },
   "peerDependencies": {
     "@faker-js/faker": "9.x"

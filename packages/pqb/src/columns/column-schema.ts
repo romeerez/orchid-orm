@@ -3,6 +3,10 @@ import { PostgresInterval } from '../adapters/driver-adapter-shared';
 import { AdapterSchemaConfigOptions } from '../adapters/adapter';
 
 export interface ColumnSchemaGetterTableClass {
+  data?: {
+    table: string | undefined;
+    name: string | undefined;
+  };
   prototype: {
     columns: {
       shape: Column.Shape.ForValidation;

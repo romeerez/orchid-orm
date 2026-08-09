@@ -205,6 +205,12 @@ export namespace Column {
         : T[K];
   };
 
+  export interface Branded<Token extends true | string = true> {
+    data: {
+      branded: Token;
+    };
+  }
+
   export namespace Pick {
     export interface Data {
       data: Column.Data;
@@ -405,6 +411,7 @@ export namespace Column {
     name?: string;
     readOnly?: boolean;
     appReadOnly: true | undefined;
+    branded: true | string | undefined;
   }
 
   // type of data for ColumnType
@@ -519,6 +526,7 @@ export namespace Column {
     readonly?: boolean;
     valueToArray?: boolean;
     skipValueToArray?: boolean;
+    branded: true | string | undefined;
   }
 
   export namespace Data {
@@ -1098,6 +1106,13 @@ export abstract class Column {
    * @deprecated use `type`, `inputType`, `outputType`, `queryType` instead
    */
   narrowAllTypes: this['__schema']['narrowAllTypes'];
+
+  brand<T, Token extends true | string = true>(
+    this: T,
+    _token?: Token,
+  ): T & Column.Branded<Token> {
+    return this as never;
+  }
 
   input<
     T extends { inputSchema: unknown },

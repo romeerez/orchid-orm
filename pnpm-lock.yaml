@@ -88,6 +88,9 @@ importers:
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/create-orm:
     dependencies:
@@ -124,8 +127,8 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: 4.3.6
-        version: 4.3.6
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/pqb:
     dependencies:
@@ -138,13 +141,16 @@ importers:
       postgres:
         specifier: '>=3'
         version: 3.4.7
+      tagged-tag:
+        specifier: 1.0.0
+        version: 1.0.0
     devDependencies:
       test-utils:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: 4.3.6
-        version: 4.3.6
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/rake-db:
     dependencies:
@@ -168,8 +174,8 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: ^4.3.6
-        version: 4.3.6
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/schemaConfigs/valibot:
     dependencies:
@@ -177,8 +183,8 @@ importers:
         specifier: workspace:*
         version: link:../../pqb
       valibot:
-        specifier: 0.29.0
-        version: 0.29.0
+        specifier: 1.4.2
+        version: 1.4.2(typescript@7.0.2)
     devDependencies:
       test-utils:
         specifier: workspace:*
@@ -191,7 +197,7 @@ importers:
         version: link:../../pqb
       zod:
         specifier: 4.*
-        version: 4.3.6
+        version: 4.4.3
     devDependencies:
       test-utils:
         specifier: workspace:*
@@ -218,11 +224,11 @@ importers:
         specifier: workspace:*
         version: link:../rake-db
       valibot:
-        specifier: 0.29.0
-        version: 0.29.0
+        specifier: 1.4.2
+        version: 1.4.2(typescript@7.0.2)
       zod:
-        specifier: 4.3.6
-        version: 4.3.6
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/test-factory:
     dependencies:
@@ -243,14 +249,14 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
       zod:
-        specifier: 4.3.6
-        version: 4.3.6
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/test-utils:
     devDependencies:
       zod:
-        specifier: ^4.3.6
-        version: 4.3.6
+        specifier: 4.4.3
+        version: 4.4.3
 
 packages:
 
@@ -3552,6 +3558,10 @@ packages:
     resolution: {integrity: sha512-eNRKgb3z66Yp3D2CixVujOUvXLFUTij/zVnV8KRyvFdQwpz7I5DS8UfRkTeLzb64u+dkzDSdelE24izu+zSSUg==}
     engines: {node: ^14.18.0 || >=16.0.0}
 
+  tagged-tag@1.0.0:
+    resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
+    engines: {node: '>=20'}
+
   term-size@2.2.1:
     resolution: {integrity: sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg==}
     engines: {node: '>=8'}
@@ -3713,8 +3723,13 @@ packages:
     resolution: {integrity: sha512-/EH/sDgxU2eGxajKdwLCDmQ4FWq+kpi3uCmBGpw1xJtnAxEjlD8j8PEiGWpCIMIs3ciNAgH0d3TTJiUkYzyZjA==}
     engines: {node: '>=10.12.0'}
 
-  valibot@0.29.0:
-    resolution: {integrity: sha512-JhZn08lwZPhAamOCfBwBkv/btQt4KeQhekULPH8crH053zUCLSOGEF2zKExu3bFf245tsj6J1dY0ysd/jUiMIQ==}
+  valibot@1.4.2:
+    resolution: {integrity: sha512-gjdCvJ6d3RyHAneqxMYMW9QMCwYMb3jpOO0IyHZV1bnRHFBHrX3VkIILt5XYR0WhwHiH7Mty8ovuPZ/O3gamrg==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
@@ -3817,8 +3832,8 @@ packages:
   yuku-parser@0.8.1:
     resolution: {integrity: sha512-YvUz2jdFMIq0QjN8LmI32ox+RBCn3l8VToAXVQ5QFfLTxSxmGZS6JP80ptePEju+CpeTdINLmUm7Ewodzh1QnQ==}
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
 
@@ -7178,6 +7193,8 @@ snapshots:
     dependencies:
       '@pkgr/core': 0.3.6
 
+  tagged-tag@1.0.0: {}
+
   term-size@2.2.1: {}
 
   test-exclude@6.0.0:
@@ -7389,7 +7406,9 @@ snapshots:
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
 
-  valibot@0.29.0: {}
+  valibot@1.4.2(typescript@7.0.2):
+    optionalDependencies:
+      typescript: 7.0.2
 
   validate-npm-package-license@3.0.4:
     dependencies:
@@ -7543,4 +7562,4 @@ snapshots:
       '@yuku-parser/binding-win32-arm64': 0.8.1
       '@yuku-parser/binding-win32-x64': 0.8.1
 
-  zod@4.3.6: {}
+  zod@4.4.3: {}

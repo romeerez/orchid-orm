@@ -90,6 +90,7 @@ import { DbRole } from './extra-features/roles/roles';
 import { Rls } from './extra-features/rls/rls.db';
 import { Grant } from './extra-features/grants/grants.db';
 import { getTableNameInDb } from './basic-features/table-name-in-db/table-name-in-db';
+import { type BrandColumnsShape } from '../columns/brand';
 
 type ShapeHasPrimaryKeys<Shape extends Column.QueryColumnsInit> = {
   [K in keyof Shape]: Shape[K]['data']['primaryKey'] extends string ? K : never;
@@ -258,7 +259,7 @@ export class Db<
   declare __isQuery: true;
   declare __as: Table & string;
   declare __selectable: SelectableFromShape<
-    ComputedColumnsFromOptions<Shape, Options>,
+    ComputedColumnsFromOptions<Table, Shape, Options>,
     Table
   >;
   declare __readOnly: ReadOnly;
@@ -318,19 +319,19 @@ export class Db<
     UniqueConstraints<Shape> | TableDataItemsUniqueConstraints<Data>
   >;
   declare catch: QueryCatch;
-  shape: ComputedColumnsFromOptions<Shape, Options>;
+  shape: ComputedColumnsFromOptions<Table, Shape, Options>;
 
   constructor(
     public adapterNotInTransaction: Adapter,
     public qb: QueryBuilder,
     public table: Table = undefined as Table,
-    shape: ComputedColumnsFromOptions<Shape, Options>,
+    shape: ComputedColumnsFromOptions<Table, Shape, Options>,
     public columnTypes: ColumnTypes,
     asyncStorage: AsyncLocalStorage<AsyncState>,
     options: DbTableOptions<
       ColumnTypes,
       Table,
-      ComputedColumnsFromOptions<Shape, Options>
+      ComputedColumnsFromOptions<Table, Shape, Options>
     >,
     tableData: TableData = {},
     viewData?: QueryInternal['viewData'],
@@ -718,7 +719,7 @@ export interface DbTableConstructor<ColumnTypes> {
     options?: Options,
   ): Db<
     Table,
-    Shape,
+    BrandColumnsShape<Shape, Table>,
     Data,
     ColumnTypes,
     Options extends { readOnly: true } ? true : undefined,
@@ -751,7 +752,7 @@ export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
 
 export interface DbResult<ColumnTypes>
   extends
-    Db<undefined, EmptyObject, never, ColumnTypes, never, never>,
+    Db<undefined, EmptyObject, never, ColumnTypes, never>,
     DbTableConstructor<ColumnTypes> {
   adapterNotInTransaction: Adapter;
   adapter: Adapter;

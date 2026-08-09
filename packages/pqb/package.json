@@ -88,11 +88,12 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@types/pg": ">=8"
+    "@types/pg": ">=8",
+    "tagged-tag": "1.0.0"
   },
   "devDependencies": {
     "test-utils": "workspace:*",
-    "zod": "4.3.6"
+    "zod": "4.4.3"
   },
   "peerDependencies": {
     "pg": ">=8",

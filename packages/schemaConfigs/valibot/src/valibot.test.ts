@@ -1,35 +1,75 @@
-import { CustomTypeColumn, makeColumnTypes, VirtualColumn } from 'pqb/internal';
+import {
+  CustomTypeColumn,
+  type DateColumnInput,
+  makeColumnTypes,
+  VirtualColumn,
+} from 'pqb/internal';
+import { createTableFactory } from 'orchid-orm';
 import { AssertEqual, assertType } from 'test-utils';
 import { ValibotSchemaConfig, valibotSchemaConfig } from './valibot';
 import {
-  ArraySchema,
-  BaseSchema,
+  ArraySchema as ValibotArraySchema,
+  GenericSchema as BaseSchema,
+  brand,
   boolean,
-  BooleanSchema,
-  DateSchema,
-  InstanceSchema,
-  NullableSchema,
+  BooleanSchema as ValibotBooleanSchema,
+  DateSchema as ValibotDateSchema,
+  InstanceSchema as ValibotInstanceSchema,
+  NullableSchema as ValibotNullableSchema,
   number,
-  NumberSchema,
+  NumberSchema as ValibotNumberSchema,
   object,
-  Output,
+  InferInput,
+  InferOutput as Output,
   parse,
   partial,
-  PicklistSchema,
+  pipe,
+  PicklistSchema as ValibotPicklistSchema,
   string,
-  StringSchema,
+  StringSchema as ValibotStringSchema,
   date,
-  NeverSchema,
+  integer,
+  NeverSchema as ValibotNeverSchema,
   transform,
   optional,
   nullable,
-  ObjectSchema,
-  OptionalSchema,
-  UnionSchema,
+  ObjectSchema as ValibotObjectSchema,
+  OptionalSchema as ValibotOptionalSchema,
+  UnionSchema as ValibotUnionSchema,
   literal,
-  LiteralSchema,
+  LiteralSchema as ValibotLiteralSchema,
   unknown,
 } from 'valibot';
+
+type ArraySchema<Item extends BaseSchema> = ValibotArraySchema<Item, undefined>;
+type BooleanSchema = ValibotBooleanSchema<undefined>;
+type DateSchema = ValibotDateSchema<undefined>;
+type InstanceSchema<Class extends new (...args: never[]) => object> =
+  ValibotInstanceSchema<Class, undefined>;
+type LiteralSchema<Value extends import('valibot').Literal> =
+  ValibotLiteralSchema<Value, undefined>;
+type NeverSchema = ValibotNeverSchema<undefined>;
+type NullableSchema<Schema extends BaseSchema> = ValibotNullableSchema<
+  Schema,
+  undefined
+>;
+type NumberSchema = ValibotNumberSchema<undefined>;
+type ObjectSchema<Entries> = Entries extends import('valibot').ObjectEntries
+  ? ValibotObjectSchema<Entries, undefined>
+  : never;
+type OptionalSchema<Schema extends BaseSchema> = ValibotOptionalSchema<
+  Schema,
+  undefined
+>;
+type PicklistSchema<Options extends readonly string[]> = ValibotPicklistSchema<
+  Options,
+  undefined
+>;
+type StringSchema = ValibotStringSchema<undefined>;
+type UnionSchema<Options extends readonly BaseSchema[]> = ValibotUnionSchema<
+  Options,
+  undefined
+>;
 
 const schemaConfig = valibotSchemaConfig();
 const t = makeColumnTypes(schemaConfig);
@@ -42,8 +82,10 @@ type TypeBase = {
 
 const assertAllTypes = <T extends TypeBase, Expected extends BaseSchema>(
   ..._: AssertEqual<
-    T['inputSchema'] | T['outputSchema'] | T['querySchema'],
-    Expected
+    | Output<T['inputSchema']>
+    | Output<T['outputSchema']>
+    | Output<T['querySchema']>,
+    Output<Expected>
   > extends true
     ? []
     : ['invalid type']
@@ -119,7 +161,7 @@ describe('valibot schema config', () => {
       querySchema: klass.querySchema(),
     };
 
-    const expected = object({ id: number(), name: string() });
+    const expected = object({ id: pipe(number(), integer()), name: string() });
 
     assertType<typeof type.inputSchema, typeof expected>();
     assertType<typeof type.outputSchema, typeof expected>();
@@ -153,7 +195,9 @@ describe('valibot schema config', () => {
 
       const schema = klass.querySchema();
 
-      const expected = partial(object({ id: number(), name: string() }));
+      const expected = partial(
+        object({ id: pipe(number(), integer()), name: string() }),
+      );
 
       assertType<typeof schema, typeof expected>();
 
@@ -253,7 +297,10 @@ describe('valibot schema config', () => {
 
       const pkeySchema = klass.pkeySchema();
 
-      const expected = object({ id: number(), name: string() });
+      const expected = object({
+        id: pipe(number(), integer()),
+        name: string(),
+      });
       assertType<typeof pkeySchema, typeof expected>();
 
       expect(parse(pkeySchema, { id: 1, name: 'name' })).toEqual({
@@ -262,7 +309,7 @@ describe('valibot schema config', () => {
       });
 
       expect(() => parse(pkeySchema, {})).toThrow(
-        'Invalid type: Expected !undefined but received undefined',
+        'Invalid key: Expected "id" but received undefined',
       );
     });
   });
@@ -520,8 +567,13 @@ describe('valibot schema config', () => {
   };
 
   assertType<
-    (typeof dateTypes)[keyof typeof dateTypes]['inputSchema'],
-    DateSchema
+    InferInput<(typeof dateTypes)[keyof typeof dateTypes]['inputSchema']>,
+    DateColumnInput
+  >();
+
+  assertType<
+    Output<(typeof dateTypes)[keyof typeof dateTypes]['inputSchema']>,
+    Date
   >();
 
   assertType<
@@ -530,8 +582,13 @@ describe('valibot schema config', () => {
   >();
 
   assertType<
-    (typeof dateTypes)[keyof typeof dateTypes]['inputSchema'],
-    DateSchema
+    InferInput<(typeof dateTypes)[keyof typeof dateTypes]['querySchema']>,
+    DateColumnInput
+  >();
+
+  assertType<
+    Output<(typeof dateTypes)[keyof typeof dateTypes]['querySchema']>,
+    Date
   >();
 
   // describe.each(['date', 'timestampNoTZ', 'timestamp'])('%s', (method) => {
@@ -554,7 +611,7 @@ describe('valibot schema config', () => {
       expectInputQueryThrow(
         type(),
         'malformed',
-        'Invalid type: Expected Date but received Date',
+        'Invalid date: Received "Invalid Date"',
       );
     });
 
@@ -566,7 +623,7 @@ describe('valibot schema config', () => {
       expectInputQueryThrow(
         type(),
         new Date(NaN),
-        'Invalid type: Expected Date but received Date',
+        'Invalid type: Expected (string | number | Date) but received Date',
       );
     });
 
@@ -578,7 +635,7 @@ describe('valibot schema config', () => {
       expectInputQueryThrow(
         type(),
         new Date(NaN),
-        'Invalid type: Expected Date but received Date',
+        'Invalid type: Expected (string | number | Date) but received Date',
       );
     });
 
@@ -673,7 +730,7 @@ describe('valibot schema config', () => {
       expectAllThrow(
         type,
         'd',
-        'Invalid type: Expected "a" | "b" | "c" but received "d"',
+        'Invalid type: Expected ("a" | "b" | "c") but received "d"',
       );
     });
   });
@@ -1090,7 +1147,10 @@ describe('valibot schema config', () => {
 
   describe('customizing schema types', () => {
     const fn = (s: StringSchema) =>
-      transform(s, (s) => s.split('').reverse().join(''));
+      pipe(
+        s,
+        transform((s) => s.split('').reverse().join('')),
+      );
 
     const type = t.string().input(fn).output(fn).query(fn);
 
@@ -1139,8 +1199,51 @@ describe('valibot schema config', () => {
       expect(parse(type.outputSchema, 123)).toBe(123);
       expect(parse(type.outputSchema, true)).toBe(true);
       expect(() => parse(type.outputSchema, null)).toThrow(
-        'Invalid type: Expected number | boolean but received null',
+        'Invalid type: Expected (number | boolean) but received null',
       );
+    });
+  });
+
+  describe('brand', () => {
+    it('should preserve branded types in table schemas', () => {
+      const { defineTable } = createTableFactory({
+        schemaConfig: valibotSchemaConfig,
+      });
+
+      const table = defineTable('table', (t) => ({
+        id: t.text().primaryKey().brand(),
+        name: t.text().brand(),
+        custom: t.text().brand('custom'),
+      }));
+
+      const inputSchema = table.inputSchema();
+      const outputSchema = table.outputSchema();
+      const querySchema = table.querySchema();
+      const createSchema = table.createSchema();
+      const updateSchema = table.updateSchema();
+      const pkeySchema = table.pkeySchema();
+
+      const expected = object({
+        id: pipe(string(), brand('table.id')),
+        name: pipe(string(), brand('table.name')),
+        custom: pipe(string(), brand('custom')),
+      });
+      const expectedQuery = partial(expected);
+      const expectedCreate = object({
+        name: pipe(string(), brand('table.name')),
+        custom: pipe(string(), brand('custom')),
+      });
+      const expectedUpdate = partial(expectedCreate);
+      const expectedPkey = object({
+        id: pipe(string(), brand('table.id')),
+      });
+
+      assertType<typeof inputSchema, typeof expected>();
+      assertType<typeof outputSchema, typeof expected>();
+      assertType<typeof querySchema, typeof expectedQuery>();
+      assertType<typeof createSchema, typeof expectedCreate>();
+      assertType<typeof updateSchema, typeof expectedUpdate>();
+      assertType<typeof pkeySchema, typeof expectedPkey>();
     });
   });
 });

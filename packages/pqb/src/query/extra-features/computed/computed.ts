@@ -22,6 +22,7 @@ import { finalizeNestedHookSelect } from '../hooks/hooks';
 import { applyBatchTransforms } from '../data-transform/transform';
 import { QueryData } from '../../query-data';
 import { ColumnDataSelectSqlProp } from '../select-sql/select-sql';
+import { type BrandColumn } from '../../../columns/brand';
 
 export interface ColumnDataComputedProp extends ColumnDataSelectSqlProp {
   // SQL computed-column marker used for virtual/read-only/default-excluded semantics.
@@ -29,6 +30,7 @@ export interface ColumnDataComputedProp extends ColumnDataSelectSqlProp {
 }
 
 export type ComputedColumnsFromOptions<
+  Table extends string | undefined,
   Shape,
   Options,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,18 +39,24 @@ export type ComputedColumnsFromOptions<
       [K in (keyof Shape | keyof R) & string]: K extends keyof Shape
         ? Shape[K]
         : K extends keyof R
-          ? R[K] extends QueryOrExpression<unknown>
-            ? R[K]['result']['value']
-            : R[K] extends () => {
-                  result: {
-                    value: infer Value extends Column.Pick.QueryColumn;
-                  };
-                }
-              ? Value
-              : never
+          ? BrandColumn<ComputedColumnValue<R[K]>, `${Table}.${K & string}`>
           : never;
     }
   : Shape;
+
+type ComputedColumnValue<T> = T extends
+  | {
+      result: {
+        value: infer Value extends Column.Pick.QueryColumn;
+      };
+    }
+  | (() => {
+      result: {
+        value: infer Value extends Column.Pick.QueryColumn;
+      };
+    })
+  ? Value
+  : never;
 
 export interface ComputedOptionsConfig {
   [K: string]: QueryOrExpression<unknown> | ReturnsQueryOrExpression<unknown>;

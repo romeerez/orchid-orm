@@ -15,4 +15,5 @@ export {
   type Query,
   type QueryHelperResult,
   type QuerySchema,
+  type Branded,
 } from './index';

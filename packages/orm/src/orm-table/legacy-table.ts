@@ -37,6 +37,7 @@ import {
   Rls,
   Grant,
   type RawSqlBase,
+  type BrandColumnsShape,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -246,7 +247,10 @@ export interface TableQueryBuilder<
     TableInfo,
     Db<
       T['table'] extends string ? T['table'] : T['name'],
-      T['columns']['shape'],
+      BrandColumnsShape<
+        T['columns']['shape'],
+        T['table'] extends string ? T['table'] : T['name']
+      >,
       T['columns']['data'],
       T['types'],
       T['table'] extends string
