@@ -34,7 +34,7 @@ export {
 } from './columns';
 
 export {
-  Branded,
+  type Branded,
   type BrandColumn,
   type BrandColumnsShape,
 } from './columns/brand';

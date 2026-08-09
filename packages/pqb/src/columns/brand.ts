@@ -1,4 +1,4 @@
-import tag from 'tagged-tag';
+import type tag from 'tagged-tag';
 
 interface Brand<Token extends PropertyKey> {
   readonly [tag]: { [K in Token]: never };
