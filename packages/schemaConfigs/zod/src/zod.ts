@@ -1127,7 +1127,7 @@ type ColumnBrand<
   Column,
   Table extends string,
   Key extends string,
-> = Column extends { data: { branded: infer Brand } }
+> = Column extends { data: { branded: infer Brand extends string | true } }
   ? true extends Brand
     ? `${Table}.${Key}`
     : Brand & string

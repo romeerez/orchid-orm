@@ -1262,7 +1262,9 @@ type ColumnBrand<
   K extends keyof ColumnSchemaGetterColumns<T>,
 > = true extends ColumnSchemaGetterColumns<T>[K]['data']['branded']
   ? `${TableName<T>}.${K & string}`
-  : ColumnSchemaGetterColumns<T>[K]['data']['branded'] & string;
+  : ColumnSchemaGetterColumns<T>[K]['data']['branded'] extends string
+    ? ColumnSchemaGetterColumns<T>[K]['data']['branded'] & string
+    : never;
 
 type BrandedSchema<
   Schema extends BaseSchema<unknown, unknown, BaseIssue<unknown>>,

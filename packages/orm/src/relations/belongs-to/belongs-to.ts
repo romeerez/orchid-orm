@@ -37,7 +37,7 @@ import { joinQueryChainHOF } from '../common/joinQueryChain';
 import { BelongsToDataForCreate, belongsToCreate } from './belongs-to.create';
 import { nestedUpdate, BelongsToNestedUpdate } from './belongs-to.update';
 
-export { BelongsToDataForCreate };
+export { type BelongsToDataForCreate };
 
 export interface BelongsTo extends RelationThunkBase {
   type: 'belongsTo';
