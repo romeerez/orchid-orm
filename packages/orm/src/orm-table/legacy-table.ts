@@ -51,20 +51,24 @@ import {
   BelongsToInfo,
   BelongsToOptions,
   BelongsToQuery,
-} from '../relations/belongsTo';
+} from '../relations/belongs-to/belongs-to';
 import {
   HasOne,
   HasOneInfo,
   HasOneOptions,
   HasOneQuery,
-} from '../relations/hasOne';
+} from '../relations/has-one/has-one';
 import {
   HasAndBelongsToMany,
   HasAndBelongsToManyInfo,
   HasAndBelongsToManyOptions,
   HasAndBelongsToManyQuery,
-} from '../relations/hasAndBelongsToMany';
-import { HasMany, HasManyInfo, HasManyQuery } from '../relations/hasMany';
+} from '../relations/has-and-belongs-to-many/has-and-belongs-to-many';
+import {
+  HasMany,
+  HasManyInfo,
+  HasManyQuery,
+} from '../relations/has-many/has-many';
 import { Db, Query } from 'pqb';
 import { TableFactoryOptions } from './table.common';
 

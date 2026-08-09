@@ -3,8 +3,8 @@ import {
   BelongsToParams,
   getBelongsToRequired,
   makeBelongsToMethod,
-} from './belongsTo';
-import { HasOne, HasOneParams, makeHasOneMethod } from './hasOne';
+} from './belongs-to/belongs-to';
+import { HasOne, HasOneParams, makeHasOneMethod } from './has-one/has-one';
 import {
   TableQueryBuilder,
   ORMTableInput,
@@ -27,12 +27,12 @@ import {
   PickQuerySelectableRelations,
   RelationConfigBase,
 } from 'pqb/internal';
-import { HasMany, makeHasManyMethod } from './hasMany';
+import { HasMany, makeHasManyMethod } from './has-many/has-many';
 import {
   HasAndBelongsToMany,
   HasAndBelongsToManyParams,
   makeHasAndBelongsToManyMethod,
-} from './hasAndBelongsToMany';
+} from './has-and-belongs-to-many/has-and-belongs-to-many';
 import { getSourceRelation, getThroughRelation } from './common/utils';
 import { Query } from 'pqb';
 import { OrmTableThunks, TableInstance } from '../orm';

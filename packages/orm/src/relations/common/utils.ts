@@ -23,8 +23,9 @@ import {
   UpdateSelf,
 } from 'pqb/internal';
 import { Query } from 'pqb';
-import { HasOneNestedInsert, HasOneNestedUpdate } from '../hasOne';
-import { HasManyNestedInsert, HasManyNestedUpdate } from '../hasMany';
+import { HasOneNestedInsert, HasOneNestedUpdate } from '../has-one/has-one';
+import { HasManyNestedUpdate } from '../has-many/has-many';
+import { HasManyNestedInsert } from '../has-many/has-many.create';
 import { ORMTableInput } from '../../orm-table/legacy-table';
 import { RelationRefsOptions } from './options';
 
@@ -469,4 +470,46 @@ export const selectCteColumnFromManySql = (
     if (rowIndex) sql += ` OFFSET ${rowIndex}`;
   }
   return sql + ')';
+};
+
+export const selectCteColumnMustExistSql = (
+  i: number,
+  cteAs: string,
+  column: string,
+) => {
+  const selectColumn = selectCteColumnSql(cteAs, column);
+
+  return i === 0
+    ? `CASE WHEN (SELECT count(*) FROM "${cteAs}") = 0 AND (SELECT 'not-found')::int = 0 THEN NULL ELSE ${selectColumn} END`
+    : selectColumn;
+};
+
+export const setForeignKeysFromCte = (
+  record: RecordUnknown,
+  primaryKeys: string[],
+  foreignKeys: string[],
+  mustExist?: boolean,
+) => {
+  for (const key of foreignKeys) {
+    record[key] = new RawSql('');
+  }
+
+  return (as: string) => {
+    foreignKeys.forEach(
+      mustExist
+        ? (foreignKey, i) => {
+            (record[foreignKey] as RawSql)._sql = selectCteColumnMustExistSql(
+              i,
+              as,
+              primaryKeys[i],
+            );
+          }
+        : (foreignKey, i) => {
+            (record[foreignKey] as RawSql)._sql = selectCteColumnSql(
+              as,
+              primaryKeys[i],
+            );
+          },
+    );
+  };
 };
