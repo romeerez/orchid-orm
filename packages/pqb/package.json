@@ -80,7 +80,7 @@
     "bun:check": "bun --bun jest --runInBand",
     "check:coverage": "jest --coverage --coverageReporters json-summary",
     "types": "tsc",
-    "build": "rimraf ./dist/ && rolldown -c ./rolldown.config.mjs",
+    "build": "rimraf ./dist/ && node ../../scripts/build.mjs -c ./rolldown.config.mjs",
     "lint": "oxlint --fix",
     "lint:check": "oxlint",
     "fmt": "oxfmt",
