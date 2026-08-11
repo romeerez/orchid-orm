@@ -5,6 +5,7 @@ import {
   RecordString,
   RecordUnknown,
   rollbackSql,
+  quoteIdentifier,
 } from '../utils';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { setTimeout } from 'node:timers/promises';
@@ -617,8 +618,10 @@ const transaction = <T>(
     state?.transactionId !== undefined ? state.transactionId + 1 : 0;
 
   const fn = (transactionAdapter: TransactionAdapter) => {
-    if (log && sql.text) log.afterQuery(sql, ctx.logData);
-    if (log) ctx.logData = log.beforeQuery(commitSql);
+    if (log && sql.text) {
+      log.afterQuery(sql, ctx.logData);
+      ctx.logData = log.beforeQuery(commitSql);
+    }
 
     if (state || !asyncStorage) {
       const parentTransactionRole = state?.transactionRole;
@@ -670,6 +673,7 @@ const transaction = <T>(
       fn,
       ctx,
       transactionId,
+      log,
     );
   } else {
     return realTransaction(
@@ -766,14 +770,38 @@ const nestedTransaction = async <T>(
   cb: (adapter: TransactionAdapter) => Promise<T>,
   ctx: TransactionCtx,
   transactionId: number,
+  log?: QueryLogObject,
 ) => {
   const state = ctx.state;
   const parentRole = state?.transactionRole;
   const parentSetConfig = state?.transactionSetConfig;
 
-  const result = await transactionAdapter.savepoint(
-    `t${transactionId}`,
-    async () => {
+  const savepointName = `t${transactionId}`;
+  const quotedSavepointName = quoteIdentifier(savepointName);
+  const savepointSql = {
+    text: `SAVEPOINT ${quotedSavepointName}`,
+    values: emptyArray,
+  } as SingleSqlItem;
+  const releaseSavepointSql = {
+    text: `RELEASE SAVEPOINT ${quotedSavepointName}`,
+    values: emptyArray,
+  } as SingleSqlItem;
+  const rollbackToSavepointSql = {
+    text: `ROLLBACK TO SAVEPOINT ${quotedSavepointName}`,
+    values: emptyArray,
+  } as SingleSqlItem;
+
+  let savepointLogData: unknown;
+  let releaseSavepointLogData: unknown;
+  let rollbackToSavepointLogData: unknown;
+
+  if (log) savepointLogData = log.beforeQuery(savepointSql);
+
+  let result: T;
+  try {
+    result = await transactionAdapter.savepoint(savepointName, async () => {
+      if (log) log.afterQuery(savepointSql, savepointLogData);
+
       const setRoleSql = getSetRoleSql(parentRole, options);
       if (setRoleSql) {
         // awaited by await below
@@ -789,8 +817,14 @@ const nestedTransaction = async <T>(
       let result;
       try {
         result = await cb(new TransactionAdapterClass(adapter, client));
-        // config is reverted by rollback to savepoint, role is not reverted and it is undone manually in the finally section
+      } catch (err) {
+        if (log) {
+          rollbackToSavepointLogData = log.beforeQuery(rollbackToSavepointSql);
+        }
+
+        throw err;
       } finally {
+        // config is reverted by rollback to savepoint, role is not reverted and it is undone manually in the finally section
         const resetRoleSql = getResetRoleSql(parentRole, options);
         if (resetRoleSql) {
           await driverAdapter.queryClient(client, resetRoleSql);
@@ -803,9 +837,24 @@ const nestedTransaction = async <T>(
         driverAdapter.queryClient(client, resetSetConfigSql);
       }
 
+      if (log) {
+        releaseSavepointLogData = log.beforeQuery(releaseSavepointSql);
+      }
+
       return result;
-    },
-  );
+    });
+
+    if (log) {
+      log.afterQuery(releaseSavepointSql, releaseSavepointLogData);
+    }
+  } catch (err) {
+    if (log) {
+      rollbackToSavepointLogData ??= log.beforeQuery(rollbackToSavepointSql);
+      log.afterQuery(rollbackToSavepointSql, rollbackToSavepointLogData);
+    }
+
+    throw err;
+  }
 
   // transactionId is trx.testTransactionCount when only the test transactions are left,
   // and it's time to execute after commit hooks, because they won't be executed for test transactions.

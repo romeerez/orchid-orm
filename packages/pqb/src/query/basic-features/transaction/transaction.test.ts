@@ -122,6 +122,43 @@ describe('transaction', () => {
         [expect.stringContaining(`COMMIT`)],
       ]);
     });
+
+    it('should log savepoint queries for a successful nested transaction', async () => {
+      const log = jest.spyOn(console, 'log').mockImplementation(noop);
+
+      await db.$transaction({ log: true }, async () => {
+        await db.$transaction(async () => {
+          await db.$query`SELECT 1 AS a`;
+        });
+      });
+
+      expect(log.mock.calls).toEqual([
+        [expect.stringContaining('BEGIN')],
+        [expect.stringContaining('SAVEPOINT "t1"')],
+        [expect.stringContaining('SELECT 1 AS a')],
+        [expect.stringContaining('RELEASE SAVEPOINT "t1"')],
+        [expect.stringContaining('COMMIT')],
+      ]);
+    });
+
+    it('should log rollback to savepoint for a failed nested transaction', async () => {
+      const log = jest.spyOn(console, 'log').mockImplementation(noop);
+
+      await db.$transaction({ log: true }, async () => {
+        await db
+          .$transaction(async () => {
+            throw new Error('rollback nested transaction');
+          })
+          .catch(noop);
+      });
+
+      expect(log.mock.calls).toEqual([
+        [expect.stringContaining('BEGIN')],
+        [expect.stringContaining('SAVEPOINT "t1"')],
+        [expect.stringContaining('ROLLBACK TO SAVEPOINT "t1"')],
+        [expect.stringContaining('COMMIT')],
+      ]);
+    });
   });
 
   describe('ensureTransaction', () => {
