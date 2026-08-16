@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.78.2
+
+### Patch Changes
+
+- 6fb601f1: Log savepoint queries (#741)
+- d11ce222: Add defineTable extensions and factory table defaults (#744)
+- 38349cc4: Add `$select` for batching independent selections into one query (#742)
+- Updated dependencies [6fb601f1]
+  - rake-db@2.37.6
+  - pqb@0.73.2
+
 ## 1.78.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.37.6
+
+### Patch Changes
+
+- 6fb601f1: Log savepoint queries (#741)
+- Updated dependencies [6fb601f1]
+  - pqb@0.73.2
+
 ## 2.37.5
 
 ### Patch Changes
