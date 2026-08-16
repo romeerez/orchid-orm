@@ -71,7 +71,8 @@ import {
   HasManyQuery,
 } from '../relations/has-many/has-many';
 import { Db, Query } from 'pqb';
-import { TableFactoryOptions } from './table.common';
+import type { CommonTableFactoryOptions } from './table.common';
+export type { CommonTableFactoryOptions } from './table.common';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {
@@ -336,7 +337,7 @@ export interface ORMTableInput extends PickORMTableInputColumnsAndComputed {
    * Keep this table-like definition available at runtime, but exclude it from
    * generated migration DDL reconciliation.
    */
-  generatorIgnore?: true;
+  generatorIgnore?: boolean;
 
   /* Only for tables */
 
@@ -786,7 +787,7 @@ export function createBaseTable<
   exportAs = 'BaseTable',
   language,
   autoForeignKeys,
-}: TableFactoryOptions<SchemaConfig, ColumnTypes> = {}): BaseTableClass<
+}: CommonTableFactoryOptions<SchemaConfig, ColumnTypes> = {}): BaseTableClass<
   SchemaConfig,
   ColumnTypes
 > {

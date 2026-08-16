@@ -33,8 +33,20 @@ import {
 } from 'pqb/internal';
 import type { Query } from 'pqb';
 import { ORMTableInput } from './legacy-table';
-import { TableFactoryOptions } from './table.common';
+import type { CommonTableFactoryOptions } from './table.common';
 import type { OrchidORM } from '../orm';
+
+export interface TableFactoryOptions<
+  SchemaConfig extends ColumnSchemaConfig,
+  ColumnTypes,
+> extends CommonTableFactoryOptions<SchemaConfig, ColumnTypes> {
+  /** Default database schema for tables created by this factory. */
+  schema?: QuerySchema;
+  /** Default no-primary-key setting for tables created by this factory. */
+  noPrimaryKey?: boolean;
+  /** Default migration-generation ignore setting for tables created by this factory. */
+  generatorIgnore?: boolean;
+}
 
 export interface OrmTable<
   Id extends string,
@@ -471,7 +483,7 @@ export namespace OrmTable {
     /**
      * Exclude this table from generated migration DDL reconciliation.
      */
-    generatorIgnore?: true;
+    generatorIgnore?: boolean;
     /**
      * Auto-create foreign keys for relations of this table.
      */
@@ -531,6 +543,17 @@ export namespace OrmTable {
       never,
       DefineTableReadOnly<Options>
     >;
+
+    /**
+     * Creates a table-definition helper with inherited factory options.
+     * Options provided here replace the corresponding parent options.
+     */
+    extend<
+      ExtendedSchemaConfig extends ColumnSchemaConfig = SchemaConfig,
+      ExtendedColumnTypes = ColumnTypes,
+    >(
+      options: TableFactoryOptions<ExtendedSchemaConfig, ExtendedColumnTypes>,
+    ): DefineTable<ExtendedSchemaConfig, ExtendedColumnTypes>;
 
     /**
      * Returns the file path where the table factory was defined.
@@ -1649,11 +1672,12 @@ export const createTableFactory = <
       id,
       table,
       nameInDb,
-      schema: tableOptions?.schema,
-      noPrimaryKey: tableOptions?.noPrimaryKey,
+      schema: tableOptions?.schema ?? options?.schema,
+      noPrimaryKey: tableOptions?.noPrimaryKey ?? options?.noPrimaryKey,
       snakeCase,
       comment: tableOptions?.comment,
-      generatorIgnore: tableOptions?.generatorIgnore,
+      generatorIgnore:
+        tableOptions?.generatorIgnore ?? options?.generatorIgnore,
       readOnly: tableOptions?.readOnly,
       columns: {
         shape,
@@ -1835,6 +1859,20 @@ export const createTableFactory = <
   defineTable.nowSQL = options?.nowSQL;
   defineTable.snakeCase = options?.snakeCase;
   defineTable.language = options?.language;
+  defineTable.extend = <
+    ExtendedSchemaConfig extends ColumnSchemaConfig,
+    ExtendedColumnTypes,
+  >(
+    extendedOptions: TableFactoryOptions<
+      ExtendedSchemaConfig,
+      ExtendedColumnTypes
+    >,
+  ) =>
+    createTableFactory<ExtendedSchemaConfig, ExtendedColumnTypes>({
+      ...options,
+      ...extendedOptions,
+    } as TableFactoryOptions<ExtendedSchemaConfig, ExtendedColumnTypes>)
+      .defineTable;
 
   const defineView = ((
     name: string,

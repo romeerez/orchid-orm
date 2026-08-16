@@ -178,6 +178,10 @@ export const TenantUserTable = defineTable(
 );
 ```
 
+`schema` can also be a default of `createTableFactory` or a helper derived with
+`defineTable.extend`. A `schema` provided in a table's options always takes
+precedence over that default.
+
 [$withOptions](/guide/orm-setup#withoptions) allows to run queries with a given schema, but only if the schema wasn't set as shown above.
 
 ## snakeCase
@@ -218,6 +222,20 @@ export const NoPrimaryKeyTable = defineTable(
 ```
 
 Primary key presence checks are on by default. See [noPrimaryKey in ORM setup](/guide/orm-setup#noPrimaryKey) for global configuration options.
+
+For function-style tables, `createTableFactory` can make `noPrimaryKey` a
+factory default. Set `noPrimaryKey: false` in a table's options to keep the
+check for a table that overrides an inherited `true` default.
+
+## generatorIgnore
+
+Set `generatorIgnore: true` to keep a table available for queries while
+excluding it from generated migration DDL reconciliation. Function-style table
+factories can set this as a default for their tables. Set
+`generatorIgnore: false` on a table to opt it back into migration generation
+when the factory default is `true`.
+
+See [generatorIgnore](/guide/generate-migrations#generatorignore) for details.
 
 ## readOnly tables
 

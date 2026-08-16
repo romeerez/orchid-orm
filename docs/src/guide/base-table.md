@@ -50,6 +50,68 @@ export const { defineTable, defineView, sql } = createTableFactory({
 
 See [override column types](/guide/columns-overview#override-column-types) for details of customizing columns.
 
+## table defaults
+
+`createTableFactory` can set defaults for every table created with its
+`defineTable` helper:
+
+- `schema` sets the database schema.
+- `noPrimaryKey` suppresses the missing-primary-key check.
+- `generatorIgnore` excludes the table from generated migration DDL
+  reconciliation.
+
+```ts
+import { createTableFactory } from 'orchid-orm';
+
+export const { defineTable } = createTableFactory({
+  schema: 'app',
+  noPrimaryKey: true,
+  generatorIgnore: true,
+});
+```
+
+These defaults apply to tables only. An option passed to an individual table
+takes precedence, including `false` for `noPrimaryKey` and `generatorIgnore`:
+
+```ts
+export const ConfigTable = defineTable(
+  'config',
+  { noPrimaryKey: false, generatorIgnore: false },
+  (t) => ({
+    id: t.identity().primaryKey(),
+  }),
+);
+```
+
+## extend defineTable
+
+Use `defineTable.extend` to derive a helper with additional or overridden
+factory defaults. This is useful when a group of tables shares a dynamic tenant
+schema:
+
+```ts
+import { createTableFactory } from 'orchid-orm';
+
+const { defineTable: defineBaseTable } = createTableFactory({
+  noPrimaryKey: true,
+});
+
+export const defineTable = defineBaseTable.extend({
+  schema: () => getActiveTenant().schema,
+  noPrimaryKey: false,
+});
+
+export const BlogPostTable = defineTable('blogPost', (t) => ({
+  id: t.identity().primaryKey(),
+  title: t.text(),
+}));
+```
+
+`extend` returns a new helper and does not change its parent. In this example,
+tables defined with `defineBaseTable` still have `noPrimaryKey: true` and no
+default schema. You can call `extend` again on the derived helper; later
+options replace earlier defaults.
+
 When using the `node-postgres` or `bun` adapters, set the `schemaConfig`
 imported from the corresponding adapter. Nothing is needed when using
 `postgres-js`.

@@ -4,7 +4,7 @@ import {
   TableData,
 } from 'pqb/internal';
 
-export interface TableFactoryOptions<
+export interface CommonTableFactoryOptions<
   SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
 > {

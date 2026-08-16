@@ -5,6 +5,7 @@ import {
   testAdapter,
   testColumnTypes,
   testOrchidORMWithAdapter,
+  testZodColumnTypes,
   useTestDatabase,
   zodSchemaConfig,
 } from 'test-utils';
@@ -147,9 +148,149 @@ describe('table', () => {
       expect(defineTable.snakeCase).toBe(true);
       expect(defineTable.language).toBe('Ukrainian');
     });
+
+    it('should derive independent defineTable helpers with inherited options', () => {
+      const { defineTable } = createTableFactory({
+        schema: 'baseSchema',
+        noPrimaryKey: true,
+        generatorIgnore: true,
+        filePath: '/base/path.ts',
+        defineTableExportAs: 'baseTable',
+        language: 'Ukrainian',
+        nowSQL: 'clock_timestamp()',
+        snakeCase: true,
+      });
+      const derived = defineTable.extend({
+        schema: 'derivedSchema',
+        noPrimaryKey: false,
+        generatorIgnore: false,
+        defineTableExportAs: 'derivedTable',
+        filePath: '/derived/path.ts',
+        language: 'English',
+        nowSQL: 'now()',
+        snakeCase: false,
+      });
+      const chained = derived.extend({ schema: 'chainedSchema' });
+
+      const BaseTable = defineTable('baseTable', (t) => ({ name: t.text() }));
+      const DerivedTable = derived('derivedTable', (t) => ({
+        id: t.identity().primaryKey(),
+      }));
+      const ChainedTable = chained('chainedTable', (t) => ({
+        id: t.identity().primaryKey(),
+      }));
+
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const db = testOrchidORMWithAdapter({
+        base: BaseTable,
+        derived: DerivedTable,
+        chained: ChainedTable,
+      });
+
+      expectSql(
+        db.base.toSQL(),
+        `
+          SELECT *
+          FROM "baseSchema"."base_table" "baseTable"
+        `,
+      );
+      expectSql(
+        db.derived.toSQL(),
+        `
+          SELECT *
+          FROM "derivedSchema"."derivedTable"
+        `,
+      );
+      expectSql(
+        db.chained.toSQL(),
+        `
+          SELECT *
+          FROM "chainedSchema"."chainedTable"
+        `,
+      );
+      expect(warn).not.toHaveBeenCalled();
+      expect(db.base.internal.generatorIgnored).toBe(true);
+      expect(db.derived.internal.generatorIgnored).toBe(false);
+      expect(defineTable.exportAs).toBe('baseTable');
+      expect(derived.exportAs).toBe('derivedTable');
+      expect(derived.nowSQL).toBe('now()');
+      expect(derived.snakeCase).toBe(false);
+      expect(derived.language).toBe('English');
+      expect(derived.getFilePath()).toBe('/derived/path.ts');
+      warn.mockRestore();
+    });
+
+    it('should use extended schema config and column types for derived helpers', () => {
+      const { defineTable } = createTableFactory();
+      const derived = defineTable.extend({
+        schemaConfig: zodSchemaConfig,
+        columnTypes: testZodColumnTypes,
+      });
+      const retained = derived.extend({ schema: 'app' });
+      const TestTable = retained('test', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+      }));
+      const expected = z.object({ id: z.number(), name: z.string() });
+      const inputSchema = TestTable.inputSchema();
+
+      assertType<typeof retained.types, typeof testZodColumnTypes>();
+      assertType<typeof inputSchema, typeof expected>();
+      expect(inputSchema.parse({ id: 1, name: 'name' })).toEqual({
+        id: 1,
+        name: 'name',
+      });
+    });
   });
 
   describe('table options', () => {
+    it('should apply factory defaults and allow table options to override them', () => {
+      const { defineTable } = createTableFactory({
+        schema: 'factorySchema',
+        noPrimaryKey: true,
+        generatorIgnore: true,
+      });
+      const DefaultTable = defineTable('default', (t) => ({
+        name: t.text(),
+      }));
+      const OverrideTable = defineTable(
+        'override',
+        {
+          schema: 'tableSchema',
+          noPrimaryKey: false,
+          generatorIgnore: false,
+        },
+        (t) => ({
+          id: t.identity().primaryKey(),
+        }),
+      );
+
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const db = testOrchidORMWithAdapter({
+        default: DefaultTable,
+        override: OverrideTable,
+      });
+
+      expectSql(
+        db.default.toSQL(),
+        `
+          SELECT *
+          FROM "factorySchema"."default"
+        `,
+      );
+      expectSql(
+        db.override.toSQL(),
+        `
+          SELECT *
+          FROM "tableSchema"."override"
+        `,
+      );
+      expect(warn).not.toHaveBeenCalled();
+      expect(db.default.internal.generatorIgnored).toBe(true);
+      expect(db.override.internal.generatorIgnored).toBe(false);
+      warn.mockRestore();
+    });
+
     it('should support `schema` option', () => {
       const { defineTable } = createTableFactory();
       const TestTable = defineTable(
