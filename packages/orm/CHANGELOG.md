@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.1
+
+### Patch Changes
+
+- 12d38d16: Fix belongsTo nested create type guard
+- Updated dependencies [12d38d16]
+  - pqb@0.73.1
+  - rake-db@2.37.5
+
 ## 1.78.0
 
 ### Minor Changes

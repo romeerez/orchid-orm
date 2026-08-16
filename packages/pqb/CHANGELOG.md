@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.1
+
+### Patch Changes
+
+- 12d38d16: Fix belongsTo nested create type guard
+
 ## 0.73.0
 
 ### Minor Changes
