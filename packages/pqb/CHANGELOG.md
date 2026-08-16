@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.3
+
+### Patch Changes
+
+- 2ae6d24d: Suppress log of Rollback error of a test transaction
+
 ## 0.73.2
 
 ### Patch Changes
