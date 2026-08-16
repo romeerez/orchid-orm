@@ -1,6 +1,7 @@
 import {
   defineTable,
   defineView,
+  GeneratorTestDb,
   sql,
   useGeneratorsTestUtils,
 } from './generators.test-utils';
@@ -33,9 +34,7 @@ describe('views', () => {
     }),
   );
 
-  const createSourceTable = async (
-    db: Parameters<NonNullable<Parameters<typeof arrange>[0]['prepareDb']>>[0],
-  ) => {
+  const createSourceTable = async (db: GeneratorTestDb) => {
     await db.createTable('source', (t) => ({
       id: t.identity().primaryKey(),
       active: t.boolean(),

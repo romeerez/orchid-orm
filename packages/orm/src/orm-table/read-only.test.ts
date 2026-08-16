@@ -35,18 +35,6 @@ const db = orchidORMWithAdapter(
 
 describe('readOnly', () => {
   const readOnlyError = CannotMutateReadOnlyTableError;
-  type RelationHook = (data: Record<string, unknown>[], q: unknown) => unknown;
-  const expectAfterHookReadOnlyError = async (
-    query: unknown,
-    hookName: 'afterCreate' | 'afterUpdate',
-  ) => {
-    const hooks = (query as { q: Record<string, unknown> }).q[hookName] as
-      | RelationHook[]
-      | undefined;
-
-    expect(hooks).toHaveLength(1);
-    await expect(hooks?.[0]([{ id: 1 }], query)).rejects.toThrow(readOnlyError);
-  };
 
   it('maps table readOnly declarations into query read-only capability', () => {
     assertType<typeof db.table.__readOnly, undefined>();
@@ -155,27 +143,27 @@ describe('readOnly', () => {
 
     describe('nested update', () => {
       it('cannot do nested update', async () => {
-        const query = db.table.find(1).update({
-          // @ts-expect-error read-only relation cannot update
-          readOnlyHasMany: {
-            update: { where: { id: 1 }, data: { name: 'name' } },
-          },
-        });
-
-        await expectAfterHookReadOnlyError(query, 'afterUpdate');
+        expect(() =>
+          db.table.find(1).update({
+            // @ts-expect-error read-only relation cannot update
+            readOnlyHasMany: {
+              update: { where: { id: 1 }, data: { name: 'name' } },
+            },
+          }),
+        ).toThrow(readOnlyError);
       });
     });
 
     describe('nested delete', () => {
       it('cannot do nested delete', async () => {
-        const query = db.table.find(1).update({
-          // @ts-expect-error read-only relation cannot delete
-          readOnlyHasMany: {
-            delete: { id: 1 },
-          },
-        });
-
-        await expectAfterHookReadOnlyError(query, 'afterUpdate');
+        expect(() =>
+          db.table.find(1).update({
+            // @ts-expect-error read-only relation cannot delete
+            readOnlyHasMany: {
+              delete: { id: 1 },
+            },
+          }),
+        ).toThrow(readOnlyError);
       });
     });
   });
@@ -183,38 +171,40 @@ describe('readOnly', () => {
   describe('hasAndBelongsToMany', () => {
     describe('nested create', () => {
       it('cannot do nested create', async () => {
-        const query = db.table.create({
-          readOnlyHasAndBelongsToMany: {
-            // @ts-expect-error read-only relation cannot create
-            create: [{ name: 'name' }],
-          },
-        });
-
-        await expectAfterHookReadOnlyError(query, 'afterCreate');
+        expect(() =>
+          db.table.create({
+            readOnlyHasAndBelongsToMany: {
+              // @ts-expect-error read-only relation cannot create
+              create: [{ name: 'name' }],
+            },
+          }),
+        ).toThrow(readOnlyError);
       });
     });
 
     describe('nested update', () => {
       it('cannot do nested update', async () => {
-        const query = db.table.find(1).update({
-          readOnlyHasAndBelongsToMany: {
-            // @ts-expect-error read-only relation cannot update
-            update: { where: { id: 1 }, data: { name: 'name' } },
-          },
-        });
-
-        await expectAfterHookReadOnlyError(query, 'afterUpdate');
+        expect(() =>
+          db.table.find(1).update({
+            readOnlyHasAndBelongsToMany: {
+              // @ts-expect-error read-only relation cannot update
+              update: { where: { id: 1 }, data: { name: 'name' } },
+            },
+          }),
+        ).toThrow(readOnlyError);
       });
     });
 
     describe('nested delete', () => {
       it('cannot do nested delete', async () => {
-        db.table.find(1).update({
-          readOnlyHasAndBelongsToMany: {
-            // @ts-expect-error read-only relation cannot delete
-            delete: { id: 1 },
-          },
-        });
+        expect(() =>
+          db.table.find(1).update({
+            readOnlyHasAndBelongsToMany: {
+              // @ts-expect-error read-only relation cannot delete
+              delete: { id: 1 },
+            },
+          }),
+        ).toThrow(readOnlyError);
 
         expect(() =>
           // @ts-expect-error read-only relation cannot delete

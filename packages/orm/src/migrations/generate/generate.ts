@@ -13,6 +13,7 @@ import {
   getQuerySchema,
   emptyObject,
   Grant,
+  RawSqlBase,
   toArray,
 } from 'pqb/internal';
 import { Query } from 'pqb';
@@ -48,12 +49,22 @@ export interface CodeTableQueryData {
   schema?: string;
 }
 
+export interface CodeViewData {
+  query?: Query;
+  sql?: string | RawSqlBase;
+  recursive?: boolean;
+  checkOption?: 'LOCAL' | 'CASCADED';
+  securityBarrier?: boolean;
+  securityInvoker?: boolean;
+  withData?: boolean;
+}
+
 export interface CodeView extends PickQueryInternal {
   name: string;
   shape: ColumnsShape;
   q: CodeTableQueryData;
   materialized?: boolean;
-  viewData: NonNullable<QueryInternal['viewData']>;
+  viewData: CodeViewData;
 }
 
 export interface CodeItems {
@@ -674,7 +685,7 @@ const processCodeItemShape = (
 const addGrantSchemas = (
   schemas: Set<string>,
   currentSchema: string,
-  grant: NonNullable<QueryInternal['grants']>[number],
+  grant: Grant.InternalPrivilege,
 ) => {
   for (const schema of [
     ...(grant.schemas ?? []),

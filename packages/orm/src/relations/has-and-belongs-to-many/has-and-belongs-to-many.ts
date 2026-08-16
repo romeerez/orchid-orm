@@ -32,6 +32,8 @@ import {
   toSnakeCase,
   Column,
   CreateSelf,
+  toArray,
+  RawSql,
   QueryHasWhere,
   QuerySchema,
   internalSchemaConfig,
@@ -39,17 +41,23 @@ import {
 } from 'pqb/internal';
 import {
   addAutoForeignKey,
-  hasRelationHandleCreate,
-  hasRelationHandleUpdate,
   NestedUpdateManyItems,
+  NestedUpdateManyUpdate,
   throwIfQueryReturnsAllForNestedUpdate,
 } from '../common/utils';
-import { HasManyNestedUpdate } from '../has-many/has-many';
 import { HasManyNestedInsert } from '../has-many/has-many.create';
 import { joinQueryChainHOF } from '../common/joinQueryChain';
-import { nestedInsert } from './has-and-belongs-to-many.create';
 import {
-  nestedUpdate,
+  hasAndBelongsToManyCreate,
+  nestedInsert,
+} from './has-and-belongs-to-many.create';
+import {
+  nestedUpdateAdd,
+  nestedUpdateCreate,
+  nestedUpdateDelete,
+  nestedUpdateDisconnect,
+  nestedUpdateSet,
+  nestedUpdateUpdate,
   nestedUpdateUpsert,
 } from './has-and-belongs-to-many.update';
 
@@ -117,6 +125,11 @@ export interface HasAndBelongsToManyInfo<
             where: WhereArg<Q>;
             create: CreateData<Q>;
           }[];
+          upsert?: MaybeArray<{
+            findBy: Q['internal']['uniqueColumns'];
+            update: UpdateData<Q>;
+            create?: CreateData<Q> | (() => CreateData<Q>);
+          }>;
         }
       : {
           // find existing records by `where` conditions and update their foreign keys with the new id
@@ -136,10 +149,10 @@ export interface HasAndBelongsToManyInfo<
         set?: MaybeArray<WhereArg<Q>>;
         add?: MaybeArray<WhereArg<Q>>;
         delete?: MaybeArray<WhereArg<Q>>;
-        update?: {
+        update?: MaybeArray<{
           where: MaybeArray<WhereArg<Q>>;
           data: UpdateData<Q>;
-        };
+        }>;
         create?: CreateData<Q>[];
       }
     : {
@@ -153,16 +166,16 @@ export interface HasAndBelongsToManyInfo<
         set?: MaybeArray<WhereArg<Q>>;
         add?: MaybeArray<WhereArg<Q>>;
         delete?: MaybeArray<WhereArg<Q>>;
-        update?: {
+        update?: MaybeArray<{
           where: MaybeArray<WhereArg<Q>>;
           data: UpdateData<Q>;
-        };
+        }>;
         create?: CreateData<Q>[];
-        upsert?: {
+        upsert?: MaybeArray<{
           findBy: Q['internal']['uniqueColumns'];
           update: UpdateData<Q>;
           create?: CreateData<Q> | (() => CreateData<Q>);
-        };
+        }>;
       }
     : {
         disconnect?: MaybeArray<WhereArg<Q>>;
@@ -192,7 +205,6 @@ interface QueryReturnsOne extends Query {
 
 class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasManyNestedInsert;
-  private readonly nestedUpdate: HasManyNestedUpdate;
 
   constructor(
     // is used to generate a migration for join table
@@ -203,43 +215,136 @@ class HasAndBelongsToManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig>
   ) {
     super(schema);
     this.nestedInsert = nestedInsert(state);
-    this.nestedUpdate = nestedUpdate(state);
   }
 
   create(
-    q: CreateSelf,
+    self: CreateSelf,
     ctx: CreateCtx,
     items: RecordUnknown[],
     rowIndexes: number[],
+    count: number,
   ) {
-    hasRelationHandleCreate(
-      q as unknown as Query,
+    hasAndBelongsToManyCreate(
+      this.key,
+      this.state,
+      this.nestedInsert,
+      self,
       ctx,
       items,
       rowIndexes,
-      this.key,
-      this.state.primaryKeys,
-      this.nestedInsert,
+      count,
     );
   }
 
   update(q: UpdateSelf, set: RecordUnknown) {
     const querySelf = q as unknown as Query;
     const params = set[this.key] as NestedUpdateManyItems;
+    const hasUpdate =
+      !!params.update &&
+      toArray(params.update).some(
+        (update) => !Array.isArray(update.where) || update.where.length,
+      );
+    const hasAdd =
+      params.add && (!Array.isArray(params.add) || params.add.length > 0);
+    const addedAs = hasUpdate && hasAdd ? new RawSql('') : undefined;
+    const setAs = hasUpdate && params.set ? new RawSql('') : undefined;
+    const sourceCondition = addedAs || setAs ? new RawSql('') : undefined;
+    const updateFrom = sourceCondition ? new RawSql('') : undefined;
 
-    hasRelationHandleUpdate(
-      querySelf,
-      set,
-      this.key,
-      this.state.primaryKeys,
-      this.nestedUpdate,
-    );
+    const setSourceCondition = () => {
+      if (!sourceCondition) return;
 
-    if (params.upsert) {
+      const relatedAs =
+        this.state.relatedTableQuery.q.as || this.state.relatedTableQuery.table;
+      const joinCondition = (as: string) =>
+        this.state.throughPrimaryKeys
+          .map(
+            (key, i) =>
+              `"${relatedAs}"."${(this.state.relatedTableQuery.shape as ColumnsShape)[key].data.name || key}" = ${as}."${this.state.throughForeignKeys[i]}"`,
+          )
+          .join(' AND ');
+      const sourceAs = '"relatedIds"';
+      sourceCondition._sql = joinCondition(sourceAs);
+      const columns = this.state.throughForeignKeys;
+      const sourceColumns = columns.map((key) => `"${key}"`).join(', ');
+      updateFrom!._sql = `(${[addedAs, setAs]
+        .filter((as): as is RawSql => !!as && !!as._sql)
+        .map((as) => `SELECT ${sourceColumns} FROM ${as._sql}`)
+        .concat()
+        .join(' UNION ALL ')}) AS ${sourceAs}`;
+    };
+
+    if (params.add) {
+      nestedUpdateAdd(querySelf, this.state, params.add, (as) => {
+        if (addedAs) {
+          addedAs._sql = `"${as}"`;
+          setSourceCondition();
+        }
+      });
+      set[this.key] = { ...params, add: undefined };
+    }
+
+    if (params.create?.length) {
+      nestedUpdateCreate(querySelf, this.state, params.create);
+      set[this.key] = { ...params, create: undefined };
+    }
+
+    if (
+      params.disconnect &&
+      (!Array.isArray(params.disconnect) || params.disconnect.length > 0)
+    ) {
+      nestedUpdateDisconnect(querySelf, this.state, params.disconnect);
+      set[this.key] = { ...params, disconnect: undefined };
+    }
+
+    if (
+      params.delete &&
+      (!Array.isArray(params.delete) || params.delete.length)
+    ) {
+      nestedUpdateDelete(querySelf, this.state, params.delete);
+      set[this.key] = { ...params, delete: undefined };
+    }
+
+    if (params.set) {
+      nestedUpdateSet(querySelf, this.state, params.set, (as) => {
+        if (setAs) {
+          setAs._sql = `"${as}"`;
+          setSourceCondition();
+        }
+      });
+      set[this.key] = { ...params, set: undefined };
+    }
+
+    if (
+      !!params.upsert &&
+      (!Array.isArray(params.upsert) || params.upsert.length > 0)
+    ) {
       throwIfQueryReturnsAllForNestedUpdate(querySelf, {
         upsert: params.upsert,
       });
-      nestedUpdateUpsert(querySelf, this.state, params.upsert);
+      nestedUpdateUpsert(
+        querySelf,
+        this.state,
+        params.upsert,
+        undefined,
+        hasAdd || params.set ? updateFrom : undefined,
+        hasAdd || params.set ? sourceCondition : undefined,
+        params.disconnect,
+        params.set,
+      );
+    }
+
+    if (hasUpdate) {
+      nestedUpdateUpdate(
+        querySelf,
+        this.state,
+        params.update as NestedUpdateManyUpdate,
+        updateFrom,
+        sourceCondition,
+        params.disconnect,
+        params.set,
+      );
+      set[this.key] = { ...params, update: undefined };
     }
   }
 }

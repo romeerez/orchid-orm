@@ -1,7 +1,6 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
 import {
   type RawSqlBase,
-  type QueryInternal,
   type SingleSql,
   QueryResult,
   Adapter,
@@ -12,7 +11,7 @@ import {
   rawSqlToSql,
   sqlToRawSql,
 } from 'pqb/internal';
-import { AbortSignal } from '../generate';
+import { AbortSignal, CodeViewData } from '../generate';
 
 export interface CompareExpression {
   compare: {
@@ -28,14 +27,14 @@ export interface SqlExpression extends CompareExpression {
 }
 
 export const viewDataToSql = (
-  viewData: NonNullable<QueryInternal['viewData']>,
+  viewData: CodeViewData,
   viewName: string,
 ): RawSqlBase => {
   return sqlToRawSql(viewDataToQuerySql(viewData, viewName));
 };
 
 const viewDataToQuerySql = (
-  viewData: NonNullable<QueryInternal['viewData']>,
+  viewData: CodeViewData,
   viewName: string,
 ): SingleSql => {
   if (viewData.query) return queryToSql(viewData.query);

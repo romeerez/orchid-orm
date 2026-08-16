@@ -1,5 +1,9 @@
 import { colors, type Grant } from 'pqb/internal';
-import { defineTable, useGeneratorsTestUtils } from './generators.test-utils';
+import {
+  defineTable,
+  GeneratorTestDb,
+  useGeneratorsTestUtils,
+} from './generators.test-utils';
 import * as verifyMigrationModule from '../verify-migration';
 import { setGrants } from '../../../orm';
 
@@ -29,8 +33,7 @@ const { green, red } = colors;
 describe('grants', () => {
   const { arrange, act, assert } = useGeneratorsTestUtils();
 
-  type ArrangeParams = Parameters<typeof arrange>[0];
-  type TestDb = Parameters<NonNullable<ArrangeParams['prepareDb']>>[0];
+  type TestDb = GeneratorTestDb;
 
   const grantee = 'app-user';
   const grantor = 'grant_items_grantor';

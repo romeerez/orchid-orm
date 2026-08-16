@@ -104,6 +104,7 @@ export const nestedUpdate = ({
         ),
         primaryKeys,
       );
+      upsertQuery.q.returnType = 'one';
 
       const asFn = setForeignKeysFromCte(update, primaryKeys, foreignKeys);
 
@@ -152,11 +153,13 @@ export const nestedUpdate = ({
           true,
         );
 
-        _prependWith(
-          self,
-          asFn,
-          _queryFindBy(query.select(...loadPrimaryKeys), params.set as never),
+        const findByQuery = _queryFindBy(
+          query.select(...loadPrimaryKeys),
+          params.set as never,
         );
+        findByQuery.q.returnType = 'value';
+
+        _prependWith(self, asFn, findByQuery);
       }
     }
   }) as BelongsToNestedUpdate;

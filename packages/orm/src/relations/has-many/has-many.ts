@@ -13,7 +13,6 @@ import {
   UpdateData,
   UpdateSelf,
   _queryDefaults,
-  _queryUpdate,
   PickQueryQ,
   _queryWhere,
   SelectableFromShape,
@@ -29,14 +28,8 @@ import {
   internalSchemaConfig,
 } from 'pqb/internal';
 import { addAutoForeignKey, joinHasRelation } from '../common/utils';
-import {
-  HasManyNestedUpdate,
-  hasManyUpdate,
-  nestedUpdate,
-} from './has-many.update';
+import { hasManyUpdate } from './has-many.update';
 import { makeHasManyThroughMethod } from './has-many.through';
-
-export type { HasManyNestedUpdate } from './has-many.update';
 import { RelationRefsOptions, RelationThroughOptions } from '../common/options';
 import {
   HasOneOptions,
@@ -100,6 +93,11 @@ export interface HasManyInfo<
               where: WhereArg<Q>;
               create: CreateData<Q>;
             }[];
+            upsert?: MaybeArray<{
+              findBy: Q['internal']['uniqueColumns'];
+              update: UpdateData<Q>;
+              create?: CreateData<Q> | (() => CreateData<Q>);
+            }>;
           }
       : never;
   };
@@ -111,10 +109,10 @@ export interface HasManyInfo<
     ? {
         disconnect?: MaybeArray<WhereArg<Q>>;
         delete?: MaybeArray<WhereArg<Q>>;
-        update?: {
+        update?: MaybeArray<{
           where: MaybeArray<WhereArg<Q>>;
           data: UpdateData<Q>;
-        };
+        }>;
       }
     : never;
   // Only for records that update a single record:
@@ -125,18 +123,18 @@ export interface HasManyInfo<
     ? {
         disconnect?: MaybeArray<WhereArg<Q>>;
         delete?: MaybeArray<WhereArg<Q>>;
-        update?: {
+        update?: MaybeArray<{
           where: MaybeArray<WhereArg<Q>>;
           data: UpdateData<Q>;
-        };
+        }>;
         set?: MaybeArray<WhereArg<Q>>;
         add?: MaybeArray<WhereArg<Q>>;
         create?: CreateData<Q>[];
-        upsert?: {
+        upsert?: MaybeArray<{
           findBy: Q['internal']['uniqueColumns'];
           update: UpdateData<Q>;
           create?: CreateData<Q> | (() => CreateData<Q>);
-        };
+        }>;
       }
     : never;
 }
@@ -150,7 +148,6 @@ interface State {
 
 class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasManyNestedInsert;
-  private readonly nestedUpdate: HasManyNestedUpdate;
   private readonly setNulls: RecordUnknown;
 
   constructor(
@@ -160,7 +157,6 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   ) {
     super(schema);
     this.nestedInsert = nestedInsert(state);
-    this.nestedUpdate = nestedUpdate(state);
 
     this.setNulls = {};
     for (const foreignKey of state.foreignKeys) {
@@ -188,7 +184,7 @@ class HasManyVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   }
 
   update(self: UpdateSelf, set: RecordUnknown) {
-    hasManyUpdate(this.key, this.state, this.nestedUpdate, self, set);
+    hasManyUpdate(this.key, this.state, self, set);
   }
 }
 

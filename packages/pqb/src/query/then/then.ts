@@ -791,12 +791,19 @@ const then = async (
     if (err instanceof adapter.errorClass) {
       // errno for Bun SQL, code for others
       const code = getDriverErrorCode(err);
-      if (
-        // a special not found error thrown by 'not-found'::int
-        code === '22P02' &&
-        err.message.endsWith(`"not-found"`)
-      ) {
-        error = new NotFoundError(q);
+      // A special not found error thrown by the CTE count check.
+      const notFound = err.message.match(/"(.*):not-found:(\d+):(\d+)"$/);
+      if (code === '22P02' && notFound) {
+        const [, message, expected, actual] = notFound;
+        error =
+          Number(expected) === 1 && !message
+            ? new NotFoundError(q)
+            : new NotFoundError(
+                q,
+                `Expected to find at least ${expected} record(s)${
+                  message ? ` ${message}` : ''
+                }, but found ${actual}`,
+              );
       } else {
         error = new (q.error as unknown as new () => QueryError)();
         adapter.assignError(error, err);

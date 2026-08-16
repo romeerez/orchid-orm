@@ -399,8 +399,9 @@ For `belongsTo` and `hasOne` you can do only one thing per each relation.
 For instance, create an author while creating a book, or connect the book to the author while creating it.
 But not create and connect at the same time.
 
-For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relation:
-while updating the author, you can create new books, connect some books, and delete books by conditions.
+For `hasMany` and `hasAndBelongsToMany` you can combine multiple commands for a single relation.
+For example, when creating an author, you can create books, connect existing books, use `connectOrCreate`, and upsert books in the same payload.
+When updating, you can combine any supported nested operations for the relation.
 
 When the related table has `readonly readOnly = true`, nested actions that would create, update, delete, or upsert records in that related table are unavailable at the TypeScript level.
 
@@ -620,7 +621,8 @@ Update related records.
 
 `belongsTo` and `hasOne` accept objects with data for the update.
 
-`hasMany` and `hasAndBelongsToMany` accepts `where` conditions and `data` objects. `where` can be an object or an array of objects.
+`hasMany` and `hasAndBelongsToMany` accept an update group with `where` conditions and a `data` object.
+Provide one group to update matching records in the same way, or an array of groups to update different matching records with different data.
 
 ```ts
 await db.book.find(1).update({
@@ -633,17 +635,22 @@ await db.book.find(1).update({
 
 await db.author.find(1).update({
   books: {
-    update: {
-      where: {
-        title: 'old book title',
+    update: [
+      {
+        where: { title: 'old book title' },
+        data: { title: 'new book title' },
       },
-      data: {
-        title: 'new book title',
+      {
+        where: { title: 'another old book title' },
+        data: { title: 'another new book title' },
       },
-    },
+    ],
   },
 });
 ```
+
+When combining operations for a `hasMany` or `hasAndBelongsToMany` relation, nested `update` and the update branch of nested `upsert` use the relation state established by connection operations in the same payload.
+They can update records added with `add` or selected with `set`, but do not update records that the payload disconnects or deletes.
 
 When updating multiple records, all their related records will be updated:
 
@@ -701,15 +708,26 @@ await db.book.find(1).update({
 
 await db.author.find(1).update({
   books: {
-    upsert: {
-      findBy: { id: 1 },
-      update: {
-        title: 'new title',
+    upsert: [
+      {
+        findBy: { id: 1 },
+        update: {
+          title: 'updated book',
+        },
+        create: {
+          title: 'created book',
+        },
       },
-      create: {
-        title: 'new title',
+      {
+        findBy: { id: 2 },
+        update: {
+          title: 'another updated book',
+        },
+        create: {
+          title: 'another created book',
+        },
       },
-    },
+    ],
   },
 });
 
@@ -741,6 +759,25 @@ await db.book.find(1).update({
         name: 'new name',
         email: 'some@email.com',
       }),
+    },
+  },
+});
+```
+
+When using a table's `upsert`, its `create` branch accepts all nested relation operations supported by `create`, and its `update` branch accepts all those supported by `update`.
+Only the branch selected by the parent upsert runs.
+
+```ts
+await db.user.find(userId).upsert({
+  update: {
+    messages: {
+      add: [{ id: messageId }],
+    },
+  },
+  create: {
+    ...userData,
+    messages: {
+      connect: [{ id: messageId }],
     },
   },
 });

@@ -28,9 +28,9 @@ import { ORMTableInput } from '../../orm-table/legacy-table';
 import {
   RelationData,
   RelationThunkBase,
-  RelationToOneDataForCreate,
   RelationConfigParams,
   RelationConfigSelf,
+  RelationToOneDataForCreate,
 } from '../relations';
 import { addAutoForeignKey, joinHasRelation } from '../common/utils';
 import { RelationRefsOptions, RelationThroughOptions } from '../common/options';
@@ -166,7 +166,6 @@ export interface State {
 }
 
 export type { HasOneNestedInsert } from './has-one.create';
-export type { HasOneNestedUpdate } from './has-one.update';
 
 class HasOneVirtualColumn extends VirtualColumn<ColumnSchemaConfig> {
   private readonly nestedInsert: HasOneNestedInsert;

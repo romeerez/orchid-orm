@@ -21,7 +21,10 @@ export const addTableHook = (
 ): void => {
   if (data.ensureCount !== undefined && ctx.cteName) {
     const cteHooks = setCteHooks(ctx, true);
-    (cteHooks.ensureCount ??= {})[ctx.cteName] = { count: data.ensureCount };
+    (cteHooks.ensureCount ??= {})[ctx.cteName] = {
+      count: data.ensureCount.expected,
+      message: data.ensureCount.message,
+    };
   }
 
   const afterCreate = data.afterCreate;

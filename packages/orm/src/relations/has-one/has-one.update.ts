@@ -20,12 +20,6 @@ import {
 } from '../common/utils';
 import { State } from './has-one';
 
-export type HasOneNestedUpdate = (
-  query: Query,
-  data: RecordUnknown[],
-  relationData: NestedUpdateOneItem,
-) => Promise<void>;
-
 export const hasOneUpdate = (
   key: string,
   state: State,

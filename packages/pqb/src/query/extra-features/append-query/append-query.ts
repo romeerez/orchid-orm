@@ -7,7 +7,12 @@ export const _appendQuery = (
   main: Query,
   append: Query,
   asFn: (as: string) => void,
+  appendAsFn?: (as: string) => void,
 ) => {
+  if (appendAsFn) {
+    append = pushQueryValueImmutable(append, 'asFns', appendAsFn);
+  }
+
   return pushQueryValueImmutable(
     pushQueryValueImmutable(
       main,

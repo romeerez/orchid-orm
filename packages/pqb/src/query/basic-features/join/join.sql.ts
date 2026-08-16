@@ -34,6 +34,11 @@ export type SimpleJoinItemNonSubQueryArgs =
 
 export type JoinItemArgs =
   | {
+      // raw join target, used for dynamically named CTEs
+      u?: true;
+      x: RawSql;
+    }
+  | {
       // `updateFrom`: forbid LATERAL
       u?: true;
       c?: Column.QueryColumns;
@@ -194,6 +199,8 @@ export const processJoinItem = (
     } else {
       on = whereToSql(ctx, j, j.q, joinAs);
     }
+  } else if ('x' in args) {
+    target = args.x.makeSQL(ctx, quotedAs);
   } else if ('w' in args) {
     const { w } = args;
     target = `"${w}"`;

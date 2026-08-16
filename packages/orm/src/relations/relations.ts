@@ -41,6 +41,7 @@ import { OrmTableThunks, TableInstance } from '../orm';
 // - `create` to create a related record
 // - `connect` to find existing record and use its primary key
 // - `connectOrCreate` to first try connecting to an existing record, and create it if not found
+// - `upsert` to update an existing related record, or create one when missing
 export type RelationToOneDataForCreate<
   Rel extends { nestedCreateQuery: unknown; table: Query },
 > =
@@ -53,6 +54,7 @@ export type RelationToOneDataForCreate<
       create?: never;
       connect: WhereArg<Rel['table']>;
       connectOrCreate?: never;
+      upsert?: never;
     }
   | {
       create?: never;

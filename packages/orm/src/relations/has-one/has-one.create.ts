@@ -339,7 +339,7 @@ export const hasOneCreate = (
           _queryWhere(query, [connectWhereExists] as never);
         }
 
-        query.q.ensureCount = 1;
+        query.q.ensureCount = { expected: 1 };
 
         const appendQuery =
           querySelf.q.type === 'upsert'

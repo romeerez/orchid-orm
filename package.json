@@ -10,7 +10,7 @@
     "check": "turbo run check --filter=!./packages/repro",
     "bun:check": "turbo run bun:check --filter=!./packages/repro",
     "check:coverage": "turbo run check:coverage --cache-dir=.turbo",
-    "types": "turbo run types --filter=!./packages/test-builds",
+    "types": "turbo run types --filter=!./packages/test-builds --filter=!./packages/repro",
     "build": "node scripts/build.mjs --turbo",
     "cleanup:dts": "node scripts/build.mjs --clean",
     "lint": "turbo run lint",

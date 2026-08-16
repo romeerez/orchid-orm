@@ -20,9 +20,11 @@ export interface EnsureCount {
 export type EnsureCountItem =
   | {
       count: number;
+      message?: string;
     }
   | {
       jsonNotNull: string;
+      message?: string;
     };
 
 export interface CteTableHooks {

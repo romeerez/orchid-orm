@@ -1,5 +1,6 @@
 import {
   defineTable,
+  GeneratorTestDb,
   sql,
   useGeneratorsTestUtils,
 } from './generators.test-utils';
@@ -22,9 +23,7 @@ const { green, red, yellow } = colors;
 
 describe('rls', () => {
   const { arrange, act, assert } = useGeneratorsTestUtils();
-  type MigrationDb = Parameters<
-    NonNullable<Parameters<typeof arrange>[0]['prepareDb']>
-  >[0];
+  type MigrationDb = GeneratorTestDb;
 
   const permit = () =>
     [

@@ -159,7 +159,7 @@ export interface QueryData
   wrapInTransaction?: boolean;
   throwOnNotFound?: boolean;
   cteThrowOnNotFound?: boolean;
-  ensureCount?: number;
+  ensureCount?: { expected: number; message?: string };
   with?: WithItems;
   withShapes?: WithConfigs;
   joinTo?: QueryDataJoinTo;

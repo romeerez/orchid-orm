@@ -1,5 +1,12 @@
 # Breaking changes
 
+## orchid-orm 1.78.0
+
+Previously, `set` on `hasAndBelongsToMany` and `hasMany` relations did not
+throw when a provided condition could not find a related record. Nested
+`update` also did not throw when it could not find a related record to update.
+Both now throw `NotFoundError` in those cases.
+
 ## orchid-orm 1.77.0
 
 The class-based table design is deprecated in favor of the new table design.

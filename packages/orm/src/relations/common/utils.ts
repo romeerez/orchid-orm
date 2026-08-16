@@ -1,7 +1,6 @@
 import {
   _clone,
   _queryHookAfterCreate,
-  _queryHookAfterUpdate,
   _hookSelectColumns,
   _queryWhereIn,
   Column,
@@ -23,8 +22,7 @@ import {
   UpdateSelf,
 } from 'pqb/internal';
 import { Query } from 'pqb';
-import { HasOneNestedInsert, HasOneNestedUpdate } from '../has-one/has-one';
-import { HasManyNestedUpdate } from '../has-many/has-many';
+import { HasOneNestedInsert } from '../has-one/has-one';
 import { HasManyNestedInsert } from '../has-many/has-many.create';
 import { ORMTableInput } from '../../orm-table/legacy-table';
 import { RelationRefsOptions } from './options';
@@ -33,6 +31,7 @@ export interface NestedInsertOneItem {
   create?: NestedInsertOneItemCreate;
   connect?: NestedInsertOneItemConnect;
   connectOrCreate?: NestedInsertOneItemConnectOrCreate;
+  upsert?: NestedUpdateUpsert;
 }
 
 export type NestedInsertOneItemCreate = RecordUnknown;
@@ -47,6 +46,7 @@ export interface NestedInsertManyItems {
   create?: NestedInsertManyCreate;
   connect?: NestedInsertManyConnect;
   connectOrCreate?: NestedInsertManyConnectOrCreate;
+  upsert?: MaybeArray<NestedUpdateManyUpsert>;
 }
 
 export type NestedInsertManyCreate = RecordUnknown[];
@@ -72,23 +72,45 @@ export interface NestedUpdateOneItem {
 }
 
 export interface NestedUpdateManyItems {
-  add?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
-  disconnect?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
-  set?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
-  delete?: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
-  update?: {
-    where: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
-    data: UpdateData<UpdateSelf>;
-  };
-  create: RecordUnknown[];
-  upsert?: {
-    findBy: PickQuerySelectableRelations;
-    update: UpdateData<UpdateSelf>;
-    create?: RecordUnknown | (() => RecordUnknown);
-  };
+  add?: NestedUpdateManyAdd;
+  disconnect?: NestedUpdateManyDisconnect;
+  set?: NestedUpdateManySet;
+  delete?: NestedUpdateManyDelete;
+  update?: NestedUpdateManyUpdate;
+  create: NestedUpdateManyCreate;
+  upsert?: NestedUpdateManyUpsert;
 }
 
-export type NestedUpdateItem = NestedUpdateOneItem | NestedUpdateManyItems;
+export type NestedUpdateManyAdd = MaybeArray<
+  WhereArg<PickQuerySelectableRelations>
+>;
+
+export type NestedUpdateManyDisconnect = MaybeArray<
+  WhereArg<PickQuerySelectableRelations>
+>;
+
+export type NestedUpdateManySet = MaybeArray<
+  WhereArg<PickQuerySelectableRelations>
+>;
+
+export type NestedUpdateManyDelete = MaybeArray<
+  WhereArg<PickQuerySelectableRelations>
+>;
+
+export interface NestedUpdateManyUpdateItem {
+  where: MaybeArray<WhereArg<PickQuerySelectableRelations>>;
+  data: UpdateData<UpdateSelf>;
+}
+
+export type NestedUpdateManyUpdate = MaybeArray<NestedUpdateManyUpdateItem>;
+
+export type NestedUpdateManyCreate = RecordUnknown[];
+
+export interface NestedUpdateManyUpsert {
+  findBy: PickQuerySelectableRelations;
+  update: UpdateData<UpdateSelf>;
+  create?: RecordUnknown | (() => RecordUnknown);
+}
 
 interface NestedUpdateSingleRecordParams {
   set?: unknown;
@@ -96,7 +118,7 @@ interface NestedUpdateSingleRecordParams {
   upsert?: unknown;
 }
 
-interface NestedUpdateUpsert {
+export interface NestedUpdateUpsert {
   update: UpdateData<UpdateSelf>;
   create?: RecordUnknown | (() => RecordUnknown);
 }
@@ -145,6 +167,55 @@ export const makeNestedUpdateUpsertData = (
   },
 });
 
+export const makeRawSqlPlaceholders = (length: number): RawSql[] => {
+  return Array.from({ length }, () => new RawSql(''));
+};
+
+export const makeRawSqlPlaceholderRecord = (keys: string[]): RecordUnknown => {
+  const placeholders = makeRawSqlPlaceholders(keys.length);
+  const record: RecordUnknown = {};
+
+  for (let i = 0; i < keys.length; i++) {
+    record[keys[i]] = placeholders[i];
+  }
+
+  return record;
+};
+
+export const setRawSqlPlaceholdersFromCte = (
+  placeholders: RawSql[],
+  cte: string,
+  primaryKeys: string[],
+  rowIndex: number,
+  count: number,
+) => {
+  for (let i = 0; i < placeholders.length; i++) {
+    placeholders[i]._sql = selectCteColumnFromManySql(
+      cte,
+      primaryKeys[i],
+      rowIndex,
+      count,
+    );
+  }
+};
+
+export const setRawSqlPlaceholderRecordFromCte = (
+  record: RecordUnknown,
+  keys: string[],
+  cte: string,
+  primaryKeys: string[],
+  rowIndex: number,
+  count: number,
+) => {
+  setRawSqlPlaceholdersFromCte(
+    keys.map((key) => record[key] as RawSql),
+    cte,
+    primaryKeys,
+    rowIndex,
+    count,
+  );
+};
+
 export const getThroughRelation = (
   table: Query,
   through: string,
@@ -181,7 +252,10 @@ export const hasRelationHandleCreate = (
         (Array.isArray(value.connect) && value.connect.length === 0)) &&
       (!value.connectOrCreate ||
         (Array.isArray(value.connectOrCreate) &&
-          value.connectOrCreate.length === 0))
+          value.connectOrCreate.length === 0)) &&
+      (!('upsert' in value) ||
+        !value.upsert ||
+        (Array.isArray(value.upsert) && value.upsert.length === 0))
     )
       return;
 
@@ -211,53 +285,6 @@ export const hasRelationHandleCreate = (
       ),
     );
   });
-};
-
-export const hasRelationHandleUpdate = (
-  q: Query,
-  set: RecordUnknown,
-  key: string,
-  primaryKeys: string[],
-  nestedUpdate: HasOneNestedUpdate | HasManyNestedUpdate,
-) => {
-  const value = set[key] as NestedUpdateItem;
-
-  if (
-    !value.set &&
-    !('upsert' in value) &&
-    (!value.add || (Array.isArray(value.add) && value.add.length === 0)) &&
-    (!value.disconnect ||
-      (Array.isArray(value.disconnect) && value.disconnect.length === 0)) &&
-    (!value.delete ||
-      (Array.isArray(value.delete) && value.delete.length === 0)) &&
-    (!value.update ||
-      (Array.isArray(value.update.where) && value.update.where.length === 0)) &&
-    (!value.create ||
-      (Array.isArray(value.create) && value.create.length === 0))
-  )
-    return;
-
-  q.q.wrapInTransaction = true;
-
-  _queryHookAfterUpdate(q, primaryKeys, (rows, q) => {
-    return (nestedUpdate as HasOneNestedUpdate)(
-      q,
-      rows,
-      value as NestedUpdateOneItem,
-    );
-  });
-};
-
-export const _selectIfNotSelected = (q: Query, columns: string[]) => {
-  const select = q.q.select || [];
-  if (!select.includes('*')) {
-    for (const column of columns) {
-      if (!select.includes(column)) {
-        select.push(column);
-      }
-    }
-    q.q.select = select;
-  }
 };
 
 export function joinHasThrough(
@@ -480,7 +507,7 @@ export const selectCteColumnMustExistSql = (
   const selectColumn = selectCteColumnSql(cteAs, column);
 
   return i === 0
-    ? `CASE WHEN (SELECT count(*) FROM "${cteAs}") = 0 AND (SELECT 'not-found')::int = 0 THEN NULL ELSE ${selectColumn} END`
+    ? `CASE WHEN (SELECT count(*) FROM "${cteAs}") = 0 AND (SELECT ':not-found:1:0')::int = 0 THEN NULL ELSE ${selectColumn} END`
     : selectColumn;
 };
 

@@ -407,14 +407,20 @@ export const toSql: ToSql = (
               )
             : emptyArray),
           ...(ensureCount
-            ? Object.entries(ensureCount).map(
-                ([cteName, item]) =>
-                  `'#${cteName}', CASE WHEN ${
-                    'count' in item
-                      ? `(SELECT count(*) FROM "${cteName}") < ${item.count}`
-                      : `(SELECT "${cteName}"."${item.jsonNotNull}" FROM "${cteName}") IS NULL`
-                  } THEN (SELECT 'not-found')::int END`,
-              )
+            ? Object.entries(ensureCount).map(([cteName, item]) => {
+                const expected = 'count' in item ? item.count : 1;
+                const message = (item.message || '').replace(/'/g, "''");
+                const notFound =
+                  'count' in item && item.count > 1
+                    ? `(SELECT '${message}:not-found:${expected}:' || (SELECT count(*) FROM "${cteName}"))::int`
+                    : `(SELECT '${message}:not-found:${expected}:0')::int`;
+
+                return `'#${cteName}', CASE WHEN ${
+                  'count' in item
+                    ? `(SELECT count(*) FROM "${cteName}") < ${item.count}`
+                    : `(SELECT "${cteName}"."${item.jsonNotNull}" FROM "${cteName}") IS NULL`
+                } THEN ${notFound} END`;
+              })
             : emptyArray),
         ];
 

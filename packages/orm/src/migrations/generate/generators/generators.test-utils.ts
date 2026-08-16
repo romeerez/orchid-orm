@@ -30,6 +30,10 @@ export const { defineTable, defineView, sql } = createTableFactory({
   snakeCase: true,
 });
 
+export type GeneratorTestDb = Parameters<
+  ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>
+>[0];
+
 const defaultOptions = [
   {
     // use a separate db for every jest worker because schema changes in one test can block other tests

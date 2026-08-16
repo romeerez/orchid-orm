@@ -1,30 +1,29 @@
-import { OrchidOrmInternalError, Query } from 'pqb';
+import { Query } from 'pqb';
 import {
-  MaybeArray,
   objectHasValues,
-  PickQuerySelectableRelations,
   RecordUnknown,
   toArray,
-  WhereArg,
   _appendQuery,
+  _hookSelectColumns,
   _queryDelete,
+  _queryInsertMany,
+  _querySelect,
   _queryUpdate,
   _queryUpsert,
+  CreateSelf,
+  RawSql,
   UpdateSelf,
+  ColumnsShape,
+  getPrimaryKeys,
+  MaybeArray,
 } from 'pqb/internal';
 import {
-  hasRelationHandleUpdate,
   makeNestedUpdateRelationIds,
   makeNestedUpdateUpsertData,
   NestedUpdateManyItems,
+  NestedUpdateManyUpsert,
   throwIfQueryReturnsAllForNestedUpdate,
 } from '../common/utils';
-
-export type HasManyNestedUpdate = (
-  query: Query,
-  data: RecordUnknown[],
-  relationData: NestedUpdateManyItems,
-) => Promise<void>;
 
 interface State {
   query: Query.NotReadOnlyQuery;
@@ -33,179 +32,337 @@ interface State {
   on?: RecordUnknown;
 }
 
-const getWhereForNestedUpdate = (
-  t: Query,
-  data: RecordUnknown[],
-  params: MaybeArray<WhereArg<PickQuerySelectableRelations>> | undefined,
-  primaryKeys: string[],
-  foreignKeys: string[],
-): Query => {
-  return t.where({
-    IN: {
-      columns: foreignKeys,
-      values: data.map((item) => primaryKeys.map((key) => item[key])),
-    },
-    OR: params ? toArray(params) : undefined,
-  });
-};
-
-export const nestedUpdate = ({
-  query: relQuery,
-  primaryKeys,
-  foreignKeys,
-}: State) => {
-  const len = primaryKeys.length;
-
-  return (async (_, data, params) => {
-    const t = relQuery.clone();
-
-    if (params.create) {
-      const obj: RecordUnknown = {};
-      for (let i = 0; i < len; i++) {
-        obj[foreignKeys[i]] = data[0][primaryKeys[i]];
-      }
-
-      await (t as Query.NotReadOnlyQuery).insertMany(
-        params.create.map((create) => ({
-          ...create,
-          ...obj,
-        })),
-      );
-    }
-
-    if (params.add) {
-      if (data.length > 1) {
-        throw new OrchidOrmInternalError(
-          relQuery,
-          '`connect` is not available when updating multiple records, it is only applicable for a single record update',
-        );
-      }
-
-      const obj: RecordUnknown = {};
-      for (let i = 0; i < len; i++) {
-        obj[foreignKeys[i]] = data[0][primaryKeys[i]];
-      }
-
-      const relatedWheres = toArray(params.add);
-
-      const count = (await _queryUpdate(
-        t.where({ OR: relatedWheres }) as unknown as UpdateSelf,
-        obj as never,
-      )) as unknown as number;
-
-      if (count < relatedWheres.length) {
-        throw new OrchidOrmInternalError(
-          relQuery,
-          `Expected to find at least ${relatedWheres.length} record(s) based on \`add\` conditions, but found ${count}`,
-        );
-      }
-    }
-
-    if (params.disconnect || params.set) {
-      const obj: RecordUnknown = {};
-      for (const foreignKey of foreignKeys) {
-        obj[foreignKey] = null;
-      }
-
-      const setConditions =
-        params.set &&
-        (Array.isArray(params.set)
-          ? params.set.length
-          : objectHasValues(params.set)) &&
-        (Array.isArray(params.set)
-          ? {
-              OR: params.set,
-            }
-          : params.set);
-
-      let queryToDisconnect = getWhereForNestedUpdate(
-        t,
-        data,
-        params.disconnect,
-        primaryKeys,
-        foreignKeys,
-      );
-
-      // do not nullify those records that are going to be set, because the column may non-nullable.
-      if (setConditions) {
-        queryToDisconnect = queryToDisconnect.whereNot(setConditions) as never;
-      }
-
-      await _queryUpdate(
-        queryToDisconnect as unknown as UpdateSelf,
-        obj as never,
-      );
-
-      if (setConditions) {
-        const obj: RecordUnknown = {};
-        for (let i = 0; i < len; i++) {
-          obj[foreignKeys[i]] = data[0][primaryKeys[i]];
-        }
-
-        await _queryUpdate(
-          t.where<Query>(setConditions as never) as unknown as UpdateSelf,
-          obj as never,
-        );
-      }
-    }
-
-    if (params.delete || params.update) {
-      const q = getWhereForNestedUpdate(
-        t,
-        data,
-        params.delete || params.update?.where,
-        primaryKeys,
-        foreignKeys,
-      );
-
-      if (params.delete) {
-        await _queryDelete(q);
-      } else if (params.update) {
-        await _queryUpdate(
-          q as unknown as UpdateSelf,
-          params.update.data as never,
-        );
-      }
-    }
-  }) as HasManyNestedUpdate;
+type NestedUpdateManyParams = Omit<NestedUpdateManyItems, 'upsert'> & {
+  upsert?: MaybeArray<NestedUpdateManyUpsert>;
 };
 
 export const hasManyUpdate = (
   key: string,
   state: State,
-  nestedUpdateFn: HasManyNestedUpdate,
   self: UpdateSelf,
   set: RecordUnknown,
 ) => {
   const querySelf = self as unknown as Query;
-  const params = set[key] as NestedUpdateManyItems;
+  const params = set[key] as NestedUpdateManyParams;
   throwIfQueryReturnsAllForNestedUpdate(querySelf, params);
-
-  hasRelationHandleUpdate(
-    querySelf,
-    set,
-    key,
-    state.primaryKeys,
-    nestedUpdateFn,
-  );
-
-  if (params.upsert) {
-    const { primaryKeys, foreignKeys, query: relQuery } = state;
-
-    const ids = makeNestedUpdateRelationIds(
+  const makeRelationIds = () =>
+    makeNestedUpdateRelationIds(
       querySelf,
-      relQuery,
-      primaryKeys,
-      foreignKeys,
+      state.query,
+      state.primaryKeys,
+      state.foreignKeys,
     );
 
-    const appendedQuery = _queryUpsert(
-      ids.existingRelQuery,
-      makeNestedUpdateUpsertData(params.upsert, ids.setIds),
+  const hasDisconnect =
+    !!params.disconnect &&
+    (!Array.isArray(params.disconnect) || params.disconnect.length > 0);
+
+  const hasSetConditions =
+    params.set &&
+    (Array.isArray(params.set)
+      ? params.set.length
+      : objectHasValues(params.set));
+
+  if (hasDisconnect || params.set !== undefined) {
+    const { primaryKeys, foreignKeys, query: relQuery } = state;
+    const relatedAs = relQuery.q.as || relQuery.table;
+    const joinSql = new RawSql('');
+    let mainAs: string | undefined;
+    let aliasedPrimaryKeys: string[] | undefined;
+    const setNulls = Object.fromEntries(
+      foreignKeys.map((foreignKey) => [foreignKey, null]),
+    );
+    let queryToDisconnect = relQuery.clone().updateFrom('');
+    if (hasDisconnect && params.set === undefined) {
+      queryToDisconnect = queryToDisconnect.where({
+        OR: toArray(params.disconnect),
+      }) as never;
+    }
+
+    // Do not nullify records that are going to be set, because the column may
+    // be non-nullable.
+    if (params.set && hasSetConditions) {
+      queryToDisconnect = queryToDisconnect.whereNot(
+        Array.isArray(params.set) ? { OR: params.set } : params.set,
+      ) as never;
+    }
+
+    const disconnectQuery = _queryUpdate(
+      queryToDisconnect.whereSql(joinSql) as unknown as UpdateSelf,
+      setNulls as never,
     ) as unknown as Query;
 
-    appendedQuery.q.returnType = 'void';
+    disconnectQuery.q.returnType = 'void';
 
-    _appendQuery(querySelf, appendedQuery, ids.setAppendedAs);
+    const setJoinSql = () => {
+      if (mainAs && aliasedPrimaryKeys) {
+        joinSql._sql = foreignKeys
+          .map(
+            (foreignKey, i) =>
+              `"${relatedAs}"."${(relQuery.shape as ColumnsShape)[foreignKey].data.name || foreignKey}" = "${mainAs}"."${aliasedPrimaryKeys![i]}"`,
+          )
+          .join(' AND ');
+      }
+    };
+
+    _hookSelectColumns(querySelf, primaryKeys, (aliased) => {
+      aliasedPrimaryKeys = aliased;
+      setJoinSql();
+    });
+
+    _appendQuery(querySelf, disconnectQuery, (as) => {
+      mainAs = as;
+      (disconnectQuery.q.updateFrom as { w: string }).w = as;
+      disconnectQuery.q.joinedShapes = {
+        ...disconnectQuery.q.joinedShapes,
+        [as]: {},
+      };
+      setJoinSql();
+    });
+  }
+
+  const hasAdd =
+    params.add && (!Array.isArray(params.add) || params.add.length > 0);
+  const updates = params.update ? toArray(params.update) : [];
+  const hasUpdate = updates.some(
+    (update) => !Array.isArray(update.where) || update.where.length,
+  );
+  const relatedIdsAs =
+    hasUpdate && (hasAdd || hasSetConditions) ? ([] as RawSql[]) : undefined;
+  const sourceCondition = relatedIdsAs ? new RawSql('') : undefined;
+  const updateFrom = relatedIdsAs ? new RawSql('') : undefined;
+  const upsertRelatedIdsAs = params.upsert ? ([] as RawSql[]) : undefined;
+  const upsertSourceCondition = upsertRelatedIdsAs ? new RawSql('') : undefined;
+  const upsertUpdateFrom = upsertRelatedIdsAs ? new RawSql('') : undefined;
+  let appendRelatedQuery: (() => void) | undefined;
+
+  const setSourceCondition = (
+    relatedIdsAs: RawSql[] | undefined,
+    sourceCondition: RawSql | undefined,
+    updateFrom: RawSql | undefined,
+    relatedPrimaryKeys: string[],
+  ) => {
+    if (!relatedIdsAs) return;
+
+    const relatedAs = state.query.q.as || state.query.table;
+    const sourceAs = '"relatedIds"';
+    sourceCondition!._sql = relatedPrimaryKeys
+      .map(
+        (primaryKey) =>
+          `"${relatedAs}"."${(state.query.shape as ColumnsShape)[primaryKey].data.name || primaryKey}" = ${sourceAs}."${primaryKey}"`,
+      )
+      .join(' AND ');
+    const columns = relatedPrimaryKeys.map((key) => `"${key}"`).join(', ');
+    updateFrom!._sql = `(${relatedIdsAs
+      .map((as) => `SELECT ${columns} FROM ${as._sql}`)
+      .join(' UNION ALL ')}) AS ${sourceAs}`;
+  };
+
+  if (hasAdd || hasSetConditions) {
+    const { query: relQuery } = state;
+    const relatedWheres = [
+      ...(hasAdd ? toArray(params.add) : []),
+      ...(hasSetConditions ? toArray(params.set) : []),
+    ];
+    if (relatedIdsAs || upsertRelatedIdsAs) {
+      const relatedPrimaryKeys = getPrimaryKeys(relQuery);
+      const relatedQuery = _querySelect(
+        relQuery.clone().where({ OR: relatedWheres }),
+        relatedPrimaryKeys as never,
+      ) as Query;
+      relatedQuery.q.returnType = 'void';
+
+      _appendQuery(
+        querySelf,
+        relatedQuery,
+        () => {},
+        (as) => {
+          if (relatedIdsAs) {
+            relatedIdsAs.push(new RawSql(`"${as}"`));
+            setSourceCondition(
+              relatedIdsAs,
+              sourceCondition,
+              updateFrom,
+              relatedPrimaryKeys,
+            );
+          }
+          if (upsertRelatedIdsAs) {
+            upsertRelatedIdsAs.push(new RawSql(`"${as}"`));
+            setSourceCondition(
+              upsertRelatedIdsAs,
+              upsertSourceCondition,
+              upsertUpdateFrom,
+              relatedPrimaryKeys,
+            );
+          }
+        },
+      );
+
+      if (!querySelf.q.upsertUpdate) {
+        relatedQuery.q.ensureCount = {
+          expected: relatedWheres.length,
+          message: `based on \`${hasAdd ? 'add' : 'set'}\` conditions`,
+        };
+      }
+    }
+
+    appendRelatedQuery = () => {
+      const ids = makeRelationIds();
+      const addQuery = _queryUpdate(
+        (sourceCondition
+          ? relQuery.clone().where({
+              OR: relatedWheres,
+              NOT: {
+                OR: updates.flatMap((update) => toArray(update.where)),
+              },
+            })
+          : relQuery
+              .clone()
+              .where({ OR: relatedWheres })) as unknown as UpdateSelf,
+        ids.setIds as never,
+      ) as unknown as Query;
+
+      addQuery.q.returnType = 'void';
+      if (!sourceCondition && !querySelf.q.upsertUpdate) {
+        addQuery.q.ensureCount = {
+          expected: relatedWheres.length,
+          message: `based on \`${hasAdd ? 'add' : 'set'}\` conditions`,
+        };
+      }
+
+      _appendQuery(querySelf, addQuery, ids.setAppendedAs);
+    };
+  }
+
+  if (upsertRelatedIdsAs) {
+    const { query: relQuery } = state;
+    const ids = makeRelationIds();
+    let existingRelQuery = hasDisconnect
+      ? ids.existingRelQuery.whereNot({ OR: toArray(params.disconnect) })
+      : ids.existingRelQuery;
+    if (params.set !== undefined) {
+      existingRelQuery = (
+        hasSetConditions
+          ? existingRelQuery.where(
+              Array.isArray(params.set) ? { OR: params.set } : params.set,
+            )
+          : existingRelQuery.none()
+      ) as Query;
+    }
+    const relatedPrimaryKeys = getPrimaryKeys(relQuery);
+    const relatedQuery = _querySelect(
+      existingRelQuery,
+      relatedPrimaryKeys as never,
+    ) as Query;
+    relatedQuery.q.returnType = 'void';
+
+    _appendQuery(querySelf, relatedQuery, ids.setAppendedAs, (as) => {
+      upsertRelatedIdsAs.push(new RawSql(`"${as}"`));
+      setSourceCondition(
+        upsertRelatedIdsAs,
+        upsertSourceCondition,
+        upsertUpdateFrom,
+        relatedPrimaryKeys,
+      );
+    });
+  }
+
+  if (
+    params.delete &&
+    (!Array.isArray(params.delete) || params.delete.length > 0)
+  ) {
+    const ids = makeRelationIds();
+    const deleteQuery = _queryDelete(
+      ids.existingRelQuery.where({
+        OR: toArray(params.delete),
+      }) as Query.NotReadOnlyQuery,
+    ) as unknown as Query;
+
+    deleteQuery.q.returnType = 'void';
+
+    _appendQuery(querySelf, deleteQuery, ids.setAppendedAs);
+  }
+
+  appendRelatedQuery?.();
+
+  if (params.upsert) {
+    const { query: relQuery } = state;
+
+    for (const upsert of toArray(params.upsert)) {
+      const ids = makeRelationIds();
+
+      const appendedQuery = _queryUpsert(
+        (upsertSourceCondition
+          ? relQuery
+              .clone()
+              .where(upsert.findBy as never)
+              .whereSql(upsertSourceCondition)
+          : ids.existingRelQuery.where(upsert.findBy as never)) as Query,
+        makeNestedUpdateUpsertData(
+          upsertSourceCondition
+            ? { ...upsert, update: { ...upsert.update, ...ids.setIds } }
+            : upsert,
+          ids.setIds,
+        ),
+      ) as unknown as Query;
+
+      if (upsertUpdateFrom) {
+        appendedQuery.q.updateFrom = {
+          u: true,
+          x: upsertUpdateFrom,
+        };
+      }
+
+      appendedQuery.q.returnType = 'void';
+
+      _appendQuery(querySelf, appendedQuery, ids.setAppendedAs);
+    }
+  }
+
+  if (hasUpdate) {
+    for (const update of updates) {
+      if (Array.isArray(update.where) && update.where.length === 0) continue;
+
+      const { query: relQuery } = state;
+      const ids = makeRelationIds();
+      let relatedUpdateQuery: Query = relQuery.clone().where({
+        OR: toArray(update.where),
+      });
+
+      if (sourceCondition) {
+        relatedUpdateQuery.q.updateFrom = {
+          u: true,
+          x: updateFrom as RawSql,
+        };
+        relatedUpdateQuery = relatedUpdateQuery.whereSql(sourceCondition);
+      } else {
+        relatedUpdateQuery = ids.existingRelQuery.where({
+          OR: toArray(update.where),
+        });
+      }
+      const updateQuery = _queryUpdate(
+        relatedUpdateQuery as unknown as UpdateSelf,
+        (sourceCondition
+          ? { ...update.data, ...ids.setIds }
+          : update.data) as never,
+      ) as unknown as Query;
+
+      updateQuery.q.returnType = 'void';
+
+      _appendQuery(querySelf, updateQuery, ids.setAppendedAs);
+    }
+  }
+
+  if (params.create?.length) {
+    const { query: relQuery } = state;
+    const ids = makeRelationIds();
+    const createQuery = _queryInsertMany(
+      relQuery.clone() as unknown as CreateSelf,
+      params.create.map((data) => ({ ...data, ...ids.setIds })),
+    ) as unknown as Query;
+
+    createQuery.q.returnType = 'void';
+
+    _appendQuery(querySelf, createQuery, ids.setAppendedAs);
   }
 };

@@ -203,6 +203,14 @@ export const selectToSqlList = (
 
                 aliases?.push(as);
               } else if (delayedRelationSelect && isRelationQuery(value)) {
+                // delayed relations aren't physically selected: do not count that as a column.
+                // except for when deleting a relation - in that case it's selected in the same query.
+                if (
+                  (delayedRelationSelect.query as Query).q.type !== 'delete'
+                ) {
+                  ctx.selectedCount--;
+                }
+
                 setMutativeQueriesSelectRelationsSqlState(
                   delayedRelationSelect,
                   as,

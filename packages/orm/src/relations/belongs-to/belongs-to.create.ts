@@ -16,13 +16,13 @@ import {
   _onUpsertUpdate,
   _prependWithOnUpsertCreate,
 } from 'pqb/internal';
-import { RelationToOneDataForCreateSameQuery } from '../relations';
 import {
   NestedInsertOneItemCreate,
   selectCteColumnFromManySql,
   selectCteColumnMustExistSql,
   setForeignKeysFromCte,
 } from '../common/utils';
+import { RelationToOneDataForCreateSameQuery } from '../relations';
 
 export interface BelongsToDataForCreate<
   Name extends string,
@@ -79,7 +79,9 @@ export const belongsToCreate = (
       ? 'create'
       : value.connect
         ? 'connect'
-        : 'connectOrCreate';
+        : value.connectOrCreate
+          ? 'connectOrCreate'
+          : undefined;
 
     if (kind) {
       const nestedCreateItem = ((nestedCreateItems ??= {})[kind] ??= {
@@ -89,7 +91,7 @@ export const belongsToCreate = (
       nestedCreateItem.items.push(item);
       nestedCreateItem.values.push(value[kind] as RecordUnknown);
 
-      if (kind !== 'connect') {
+      if (kind === 'create' || kind === 'connectOrCreate') {
         for (const key of foreignKeys) {
           item[key] = new RawSql('');
         }

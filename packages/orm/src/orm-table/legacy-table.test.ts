@@ -660,6 +660,7 @@ describe('baseTable', () => {
 
     class PostTagTable extends Base {
       readonly table = 'postTag';
+      noPrimaryKey = true;
       schema: QuerySchema = () => 'schema';
       columns = this.setColumns((t) => ({
         postId: t.integer(),

@@ -191,6 +191,7 @@ export {
   _queryHookAfterCreate,
   _queryHookAfterUpdate,
   _queryInsert,
+  _queryInsertForEachFrom,
   _queryInsertMany,
   _queryJoinOn,
   _queryRows,

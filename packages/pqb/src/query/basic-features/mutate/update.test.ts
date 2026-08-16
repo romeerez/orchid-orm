@@ -1209,7 +1209,7 @@ describe('updateMany', () => {
           SELECT ${columns.map(() => 'NULL').join(', ')},
           json_build_object('#q',
             CASE WHEN (SELECT count(*) FROM "q") < 1
-            THEN (SELECT 'not-found')::int END)
+            THEN (SELECT ':not-found:1:0')::int END)
         `,
         [1, 'Alice'],
       );
@@ -1355,7 +1355,7 @@ describe('updateMany', () => {
           SELECT NULL,
           json_build_object('#q',
             CASE WHEN (SELECT count(*) FROM "q") < 1
-            THEN (SELECT 'not-found')::int END)
+            THEN (SELECT ':not-found:1:0')::int END)
         `,
         [1, 'Alice'],
       );
@@ -1446,7 +1446,7 @@ describe('updateMany', () => {
           { Id: user.Id, Name: 'ok' },
           { Id: 999999, Name: 'missing' },
         ]),
-      ).rejects.toThrow('Record is not found');
+      ).rejects.toThrow('Expected to find at least 2 record(s), but found 1');
     });
 
     it('should NOT throw for optional variant when row is missing', async () => {
@@ -1516,7 +1516,7 @@ describe('updateMany', () => {
           SELECT NULL,
           json_build_object('#q',
             CASE WHEN (SELECT count(*) FROM "q") < 2
-            THEN (SELECT 'not-found')::int END)
+            THEN (SELECT ':not-found:2:' || (SELECT count(*) FROM "q"))::int END)
         `,
         [1, 'Alice', 2, 'Bob'],
       );
