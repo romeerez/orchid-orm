@@ -3,7 +3,7 @@ import { Query } from './query/query';
 // The `Rollback` is not an error,
 // but a command to throw by `rollback` function,
 // and catch it immediately by the transaction to handle the rollback.
-class Rollback extends Error {}
+export class Rollback extends Error {}
 
 // `testTransaction` will store its state under this unique key in the `db.internal`.
 const trxForTest: unique symbol = Symbol('trxForTest');

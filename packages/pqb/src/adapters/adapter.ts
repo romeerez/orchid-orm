@@ -35,6 +35,7 @@ import {
 } from './adapter.utils';
 import { _runAfterCommitHooks } from '../query/basic-features/transaction/transaction';
 import { PostgresInterval } from './driver-adapter-shared';
+import { Rollback } from '../testTransaction';
 
 export type { SqlSessionState } from './features/sql-session-context';
 
@@ -58,6 +59,19 @@ export interface QueryResult<T = any> {
     name: string;
   }[];
 }
+
+const logSavepointRollback = (
+  log: QueryLogObject,
+  error: Error | undefined,
+  rollbackSql: { text: string },
+  rollbackLogData: unknown,
+): void => {
+  if (error instanceof Rollback) {
+    log.afterQuery(rollbackSql, rollbackLogData);
+  } else if (error) {
+    log.onError(error, rollbackSql, rollbackLogData);
+  }
+};
 
 export interface AdapterConfigBase {
   databaseURL?: string;
@@ -614,7 +628,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
         rollbackLogData = log.beforeQuery(rollbackSql);
       },
       () => {
-        if (error) log.onError(error, rollbackSql, rollbackLogData);
+        logSavepointRollback(log, error, rollbackSql, rollbackLogData);
       },
     );
   }
@@ -667,7 +681,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
         rollbackLogData = log.beforeQuery(rollbackSql);
       },
       () => {
-        if (error) log.onError(error, rollbackSql, rollbackLogData);
+        logSavepointRollback(log, error, rollbackSql, rollbackLogData);
       },
     );
 

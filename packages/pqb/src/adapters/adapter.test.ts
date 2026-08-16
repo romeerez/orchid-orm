@@ -5,6 +5,7 @@ import {
   TransactionAdapterClass,
 } from './adapter';
 import { OrchidOrmInternalError, QueryError } from '../query/errors';
+import { Rollback } from '../testTransaction';
 import { allDriverAdapters, sql, testDb, testDbOptions } from 'test-utils';
 import { createDbWithAdapter } from 'pqb';
 import { DefaultSchemaConfig } from 'pqb/index';
@@ -377,6 +378,35 @@ describe('adapter runtime abstractions', () => {
             expect(log.onError.mock.calls.map(([, sql]) => sql.text)).toEqual(
               expect.arrayContaining(['ROLLBACK TO SAVEPOINT "t1"']),
             );
+          });
+
+          it('logs a Rollback savepoint rollback as a completed query', async () => {
+            const log = {
+              colors: false,
+              beforeQuery: jest.fn(),
+              afterQuery: jest.fn(),
+              onError: jest.fn(),
+            };
+
+            await expect(
+              adapter.transaction(
+                testDb.internal.asyncStorage,
+                { log },
+                async () =>
+                  await adapter.transaction(
+                    testDb.internal.asyncStorage,
+                    { log },
+                    async () => {
+                      throw new Rollback();
+                    },
+                  ),
+              ),
+            ).rejects.toThrow(Rollback);
+
+            expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
+              expect.arrayContaining(['ROLLBACK TO SAVEPOINT "t1"']),
+            );
+            expect(log.onError).not.toHaveBeenCalled();
           });
 
           it('sets search_path for transaction setConfig', async () => {
@@ -899,6 +929,37 @@ describe('adapter runtime abstractions', () => {
                 'ROLLBACK TO SAVEPOINT "hacky_log_rollback"',
               ]),
             );
+          });
+
+          it('logs a Rollback hacky savepoint rollback as a completed query', async () => {
+            const log = {
+              colors: false,
+              beforeQuery: jest.fn(),
+              afterQuery: jest.fn(),
+              onError: jest.fn(),
+            };
+
+            await adapter.transaction(undefined, undefined, async (trx) => {
+              const state: HackySavepointState = {
+                name: 'hacky_log_test_transaction_rollback',
+              };
+
+              await trx.hackySavepoint(
+                state,
+                incrementCounterSql,
+                undefined,
+                undefined,
+                log,
+              );
+              await state.activeSavepoint!.rollback(new Rollback());
+            });
+
+            expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
+              expect.arrayContaining([
+                'ROLLBACK TO SAVEPOINT "hacky_log_test_transaction_rollback"',
+              ]),
+            );
+            expect(log.onError).not.toHaveBeenCalled();
           });
 
           it('persists savepoint changes after release', async () => {
