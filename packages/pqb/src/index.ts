@@ -11,6 +11,11 @@ export {
   type ColumnRefExpression,
 } from './query';
 
+export {
+  type SelectAsFnReturnType,
+  type SelectResultObj,
+} from './query/basic-features/select/select';
+
 export { type ToSQLCtx, type ToSqlValues } from './query/sql/to-sql';
 
 export {
@@ -187,6 +192,7 @@ export {
   type QueryManyTakeOptional,
   type QueryOrExpression,
   type QueryReturnType,
+  type QueryTake,
   type QuerySchema,
   type QueryScopes,
   type SelectableFromShape,

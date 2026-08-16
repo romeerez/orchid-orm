@@ -121,6 +121,8 @@ export { getShapeFromSelect } from './index';
 // Hook select
 export { type HookSelectValue } from './index';
 
+export { type SelectAsFnReturnType, type SelectResultObj } from './index';
+
 // Query internal types and utilities
 export {
   getPrimaryKeys,
@@ -158,6 +160,7 @@ export {
   type QueryManyTakeOptional,
   type QueryOrExpression,
   type QueryReturnType,
+  type QueryTake,
   type QueryScopes,
   type SelectableFromShape,
   type ShapeUniqueColumns,

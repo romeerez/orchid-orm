@@ -122,6 +122,21 @@ const row = result.rows[0];
 row[0]; // our value
 ```
 
+## $select
+
+Use `$select` to select independent query and expression results in a single SQL query.
+Each value is a callback returning a query or SQL expression. The helper returns a
+single-result query, so it can be awaited directly or further composed.
+
+```ts
+const result = await db.$select({
+  userCount: () => db.user.count(),
+  one: () => sql<number>`1::int`,
+});
+
+// { userCount: number; one: number }
+```
+
 ## $withOptions
 
 [//]: # 'has JSDoc'

@@ -67,7 +67,7 @@ export interface SelectAsArg<T extends SelectSelf> {
     | ((q: SelectAsFnArg<T>) => unknown);
 }
 
-type SelectAsFnReturnType =
+export type SelectAsFnReturnType =
   | {
       result: Column.QueryColumns;
       returnType: Exclude<QueryReturnType, 'rows'>;
@@ -120,7 +120,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
           : T[K];
 };
 
-type SelectResultObj<
+export type SelectResultObj<
   T extends SelectSelf,
   Obj,
 > = Obj extends SelectAsCheckReturnTypes

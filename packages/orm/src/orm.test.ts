@@ -14,6 +14,7 @@ import {
   MessageData,
   ChatData,
   UserData,
+  sql,
   testAdapter,
 } from 'test-utils';
 import { Db, QueryHelperResult } from 'pqb';
@@ -250,6 +251,17 @@ describe('orm', () => {
   });
 
   describe('query methods', () => {
+    it('should select independent query and expression results', async () => {
+      const result = await db.$select({
+        userCount: () => db.user.count(),
+        one: () => sql<number>`1::int`,
+      });
+
+      assertType<typeof result, { userCount: number; one: number }>();
+
+      expect(result).toEqual({ userCount: 0, one: 1 });
+    });
+
     it('should perform a query with the $query method', async () => {
       const spy = jest.spyOn(db.$qb as Db, 'query');
 

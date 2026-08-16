@@ -24,6 +24,9 @@ import {
   RecordUnknown,
   type TableDataItem,
   type QueryInternal,
+  type QueryTake,
+  type SelectAsFnReturnType,
+  type SelectResultObj,
 } from 'pqb/internal';
 import {
   ORMTableInput,
@@ -45,6 +48,8 @@ import { Db, Query } from 'pqb';
 export interface FromQuery extends Query {
   returnType: 'all';
 }
+
+type OrmSelectArg = Record<string, () => SelectAsFnReturnType>;
 
 interface OrchidORMQueryHelper<
   Q extends Query,
@@ -272,6 +277,24 @@ interface OrchidORMMethods {
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
   $queryArrays: Db['queryArrays'];
+
+  /**
+   * Use `$select` to select independent query and expression results in a single SQL query.
+   * Each value is a callback returning a query or SQL expression. The helper returns a
+   * single-result query, so it can be awaited directly or further composed.
+   *
+   * ```ts
+   * const result = await db.$select({
+   *   userCount: () => db.user.count(),
+   *   one: () => sql<number>`1::int`,
+   * });
+   *
+   * // { userCount: number; one: number }
+   * ```
+   */
+  $select<Obj extends OrmSelectArg>(
+    selection: Obj,
+  ): QueryTake<SelectResultObj<Db, Obj>>;
 
   /**
    * See {@link FromMethods.from}
@@ -664,6 +687,8 @@ const privateOrchidORMWithAdapter = <
     $withRecursive: qb.withRecursive.bind(qb),
     $withSql: qb.withSql.bind(qb),
     $from: qb.from.bind(qb),
+    $select: ((selection) =>
+      qb.select(selection).take()) as OrchidORMMethods['$select'],
     $close: adapter.close.bind(adapter),
     $withOptions: qb.withOptions.bind(qb),
   } as unknown as OrchidORM<T, V>;
