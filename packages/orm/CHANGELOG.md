@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.78.3
+
+### Patch Changes
+
+- 0e0030b1: Optimize has-many and has-and-belongs-to-many connect and connectOrCreate when creating too many records
+
 ## 1.78.2
 
 ### Patch Changes
