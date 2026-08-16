@@ -11,7 +11,7 @@ import {
 
 const adapter = testAdapter;
 const query = jest.spyOn(adapter, 'query').mockImplementation();
-const savepoint = jest.fn((_, cb) => cb());
+const savepoint = jest.fn((_, __, cb) => cb());
 asMock(jest.spyOn(adapter, 'transaction')).mockImplementation(
   (_asyncStorage, _options, fn) => {
     const trx = Object.create(adapter);
