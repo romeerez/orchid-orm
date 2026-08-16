@@ -20,7 +20,9 @@ export const runSqlInSavePoint = async (
   try {
     const query = () => adapter.query(sql);
 
-    await (adapter.isInTransaction() ? adapter.savepoint('s', query) : query());
+    await (adapter.isInTransaction()
+      ? adapter.savepoint('s', undefined, query)
+      : query());
 
     return 'done';
   } catch (err) {

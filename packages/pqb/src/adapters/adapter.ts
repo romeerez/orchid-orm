@@ -216,7 +216,11 @@ export interface Adapter {
  */
 export interface TransactionAdapter extends Adapter {
   isInTransaction(this: Adapter): this is TransactionAdapter;
-  savepoint<T>(name: string, cb: () => Promise<T>): Promise<T>;
+  savepoint<T>(
+    name: string,
+    log: QueryLogObject | undefined,
+    cb: () => Promise<T>,
+  ): Promise<T>;
 
   /**
    * This is a workaround for postgres-js savepoint limitations.
@@ -229,6 +233,7 @@ export interface TransactionAdapter extends Adapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    log?: QueryLogObject,
   ): Promise<QueryResult<T>>;
 }
 
@@ -277,6 +282,11 @@ export interface DriverAdapter {
     setClient: (client: Client) => void,
     name: string,
     cb: () => Promise<T>,
+    onSavepoint?: SavepointCallback,
+    beforeRelease?: SavepointCallback,
+    onRelease?: SavepointCallback,
+    beforeRollback?: SavepointCallback,
+    onRollback?: SavepointCallback,
   ): Promise<T>;
   hackySavepoint<T extends QueryResultRow>(
     client: Client,
@@ -285,9 +295,16 @@ export interface DriverAdapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    onSavepoint?: SavepointCallback,
+    beforeRelease?: SavepointCallback,
+    onRelease?: SavepointCallback,
+    beforeRollback?: SavepointCallback,
+    onRollback?: SavepointCallback,
   ): Promise<QueryResult<T>>;
   close(pool: Pool): Promise<void>;
 }
+
+export type SavepointCallback = () => void;
 
 /**
  * Constructor params for the shared runtime adapter orchestrator.
@@ -548,14 +565,57 @@ export class TransactionAdapterClass implements TransactionAdapter {
     );
   }
 
-  savepoint<T>(name: string, cb: () => Promise<T>): Promise<T> {
+  async savepoint<T>(
+    name: string,
+    log: QueryLogObject | undefined,
+    cb: () => Promise<T>,
+  ): Promise<T> {
+    if (!log) {
+      return this.driverAdapter.savepoint(
+        this.client,
+        (client) => {
+          this.client = client;
+        },
+        name,
+        cb,
+      );
+    }
+
+    const savepointSql = { text: `SAVEPOINT "${name}"` };
+    const savepointLogData = log.beforeQuery(savepointSql);
+    let releaseSql!: typeof savepointSql;
+    let releaseLogData: unknown;
+    let rollbackSql!: typeof savepointSql;
+    let rollbackLogData: unknown;
+    let error: Error | undefined;
+
     return this.driverAdapter.savepoint(
       this.client,
       (client) => {
         this.client = client;
       },
       name,
-      cb,
+      async () => {
+        try {
+          return await cb();
+        } catch (err) {
+          error = err as Error;
+          throw err;
+        }
+      },
+      () => log.afterQuery(savepointSql, savepointLogData),
+      () => {
+        releaseSql = { text: `RELEASE SAVEPOINT "${name}"` };
+        releaseLogData = log.beforeQuery(releaseSql);
+      },
+      () => log.afterQuery(releaseSql, releaseLogData),
+      () => {
+        rollbackSql = { text: `ROLLBACK TO SAVEPOINT "${name}"` };
+        rollbackLogData = log.beforeQuery(rollbackSql);
+      },
+      () => {
+        if (error) log.onError(error, rollbackSql, rollbackLogData);
+      },
     );
   }
 
@@ -564,8 +624,30 @@ export class TransactionAdapterClass implements TransactionAdapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    log?: QueryLogObject,
   ): Promise<QueryResult<T>> {
-    return this.driverAdapter.hackySavepoint(
+    if (!log) {
+      return this.driverAdapter.hackySavepoint<T>(
+        this.client,
+        (client) => {
+          this.client = client;
+        },
+        state,
+        text,
+        values,
+        arraysMode,
+      );
+    }
+
+    const savepointSql = { text: `SAVEPOINT "${state.name}"` };
+    const savepointLogData = log.beforeQuery(savepointSql);
+    let releaseSql!: typeof savepointSql;
+    let releaseLogData: unknown;
+    let rollbackSql!: typeof savepointSql;
+    let rollbackLogData: unknown;
+    let error: Error | undefined;
+
+    const result = this.driverAdapter.hackySavepoint<T>(
       this.client,
       (client) => {
         this.client = client;
@@ -574,7 +656,31 @@ export class TransactionAdapterClass implements TransactionAdapter {
       text,
       values,
       arraysMode,
+      () => log.afterQuery(savepointSql, savepointLogData),
+      () => {
+        releaseSql = { text: `RELEASE SAVEPOINT "${state.name}"` };
+        releaseLogData = log.beforeQuery(releaseSql);
+      },
+      () => log.afterQuery(releaseSql, releaseLogData),
+      () => {
+        rollbackSql = { text: `ROLLBACK TO SAVEPOINT "${state.name}"` };
+        rollbackLogData = log.beforeQuery(rollbackSql);
+      },
+      () => {
+        if (error) log.onError(error, rollbackSql, rollbackLogData);
+      },
     );
+
+    const activeSavepoint = state.activeSavepoint;
+    if (activeSavepoint) {
+      const rollback = activeSavepoint.rollback;
+      activeSavepoint.rollback = async (err) => {
+        error = err as Error;
+        return rollback.call(activeSavepoint, err);
+      };
+    }
+
+    return result;
   }
 
   close(): Promise<void> {
@@ -773,6 +879,7 @@ const nestedTransaction = async <T>(
 
   const result = await transactionAdapter.savepoint(
     `t${transactionId}`,
+    options?.log,
     async () => {
       const setRoleSql = getSetRoleSql(parentRole, options);
       if (setRoleSql) {

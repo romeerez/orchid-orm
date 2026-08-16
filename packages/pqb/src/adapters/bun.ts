@@ -17,7 +17,7 @@ import {
   AdapterSchemaConfigOptions,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
-import { HackySavepointState } from './adapter';
+import { HackySavepointState, SavepointCallback } from './adapter';
 import { parseInterval } from './driver-adapter-shared';
 
 const schemaConfig: AdapterSchemaConfigOptions = {
@@ -256,15 +256,25 @@ export const BunAdapter: DriverAdapter = {
     _setClient: (client: BunSql) => void,
     name: string,
     cb: () => Promise<T>,
+    onSavepoint: SavepointCallback | undefined,
+    beforeRelease: SavepointCallback | undefined,
+    onRelease: SavepointCallback | undefined,
+    beforeRollback: SavepointCallback | undefined,
+    onRollback: SavepointCallback | undefined,
   ): Promise<T> {
     const safeName = quoteIdentifier(name);
     try {
       await queryClient(client, `SAVEPOINT ${safeName}`);
+      onSavepoint?.();
       const res = await cb();
+      beforeRelease?.();
       await queryClient(client, `RELEASE SAVEPOINT ${safeName}`);
+      onRelease?.();
       return res;
     } catch (err) {
+      beforeRollback?.();
       await queryClient(client, `ROLLBACK TO SAVEPOINT ${safeName}`);
+      onRollback?.();
       throw err;
     }
   },
@@ -277,6 +287,11 @@ export const BunAdapter: DriverAdapter = {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    onSavepoint?: SavepointCallback,
+    beforeRelease?: SavepointCallback,
+    onRelease?: SavepointCallback,
+    beforeRollback?: SavepointCallback,
+    onRollback?: SavepointCallback,
   ): Promise<QueryResult<T>> {
     const safeName = quoteIdentifier(state.name);
 
@@ -297,6 +312,7 @@ export const BunAdapter: DriverAdapter = {
     const savepointPromise = (async () => {
       try {
         await queryClient(client, `SAVEPOINT ${safeName}`);
+        onSavepoint?.();
 
         try {
           const res = await queryClient<T>(client, text, values, arraysMode);
@@ -307,10 +323,14 @@ export const BunAdapter: DriverAdapter = {
         }
 
         const result = await promise;
+        beforeRelease?.();
         await queryClient(client, `RELEASE SAVEPOINT ${safeName}`);
+        onRelease?.();
         return result;
       } catch (err) {
+        beforeRollback?.();
         await queryClient(client, `ROLLBACK TO SAVEPOINT ${safeName}`);
+        onRollback?.();
         throw err;
       }
     })();

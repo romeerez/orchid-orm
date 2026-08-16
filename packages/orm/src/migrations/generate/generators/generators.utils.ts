@@ -77,7 +77,9 @@ export const compareSqlExpressions = async (
     const query = () => adapter.query(combinedQueries, values);
 
     const result = await (
-      adapter.isInTransaction() ? adapter.savepoint(viewName, query) : query()
+      adapter.isInTransaction()
+        ? adapter.savepoint(viewName, undefined, query)
+        : query()
     ).then(
       (res) => (res as unknown as QueryResult[])[1],
       async (err) => {
@@ -137,7 +139,7 @@ export const compareViewsExpressions = async (
     const sql = queries.flatMap((q) => q.batch).join(';');
     const query = () => adapter.query(sql, []);
     results = (await (adapter.isInTransaction()
-      ? adapter.savepoint('orchidOrmGeneratorViews', query)
+      ? adapter.savepoint('orchidOrmGeneratorViews', undefined, query)
       : query())) as unknown as QueryResult[];
   } catch {
     results = (
@@ -147,7 +149,11 @@ export const compareViewsExpressions = async (
           const query = () => adapter.query(sql, []);
           return (await (
             adapter.isInTransaction()
-              ? adapter.savepoint(`orchidOrmGeneratorViews${i}`, query)
+              ? adapter.savepoint(
+                  `orchidOrmGeneratorViews${i}`,
+                  undefined,
+                  query,
+                )
               : query()
           ).catch((err) => {
             if (typeof err === 'object') {

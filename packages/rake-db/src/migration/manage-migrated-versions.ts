@@ -118,7 +118,11 @@ export const getMigratedVersionsMap = async (
   let result;
   try {
     if (adapter.isInTransaction()) {
-      result = await adapter.savepoint('check_migrations_table', queryVersion);
+      result = await adapter.savepoint(
+        'check_migrations_table',
+        undefined,
+        queryVersion,
+      );
     } else {
       result = await queryVersion();
     }

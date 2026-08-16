@@ -320,6 +320,65 @@ describe('adapter runtime abstractions', () => {
             expect(querySpy.mock.calls.map((call) => call[1])).toEqual([]);
           });
 
+          it('logs SAVEPOINT and RELEASE SAVEPOINT for a successful savepoint', async () => {
+            const log = {
+              colors: false,
+              beforeQuery: jest.fn(),
+              afterQuery: jest.fn(),
+              onError: jest.fn(),
+            };
+
+            await adapter.transaction(
+              testDb.internal.asyncStorage,
+              { log },
+              async () =>
+                await adapter.transaction(
+                  testDb.internal.asyncStorage,
+                  { log },
+                  async () => {},
+                ),
+            );
+
+            expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
+              expect.arrayContaining([
+                'SAVEPOINT "t1"',
+                'RELEASE SAVEPOINT "t1"',
+              ]),
+            );
+          });
+
+          it('logs SAVEPOINT and ROLLBACK TO SAVEPOINT for a failed savepoint', async () => {
+            const log = {
+              colors: false,
+              beforeQuery: jest.fn(),
+              afterQuery: jest.fn(),
+              onError: jest.fn(),
+            };
+            const error = new Error('savepoint failed');
+
+            await expect(
+              adapter.transaction(
+                testDb.internal.asyncStorage,
+                { log },
+                async () =>
+                  await adapter.transaction(
+                    testDb.internal.asyncStorage,
+                    { log },
+                    async () => {
+                      throw error;
+                    },
+                  ),
+              ),
+            ).rejects.toThrow(error);
+
+            expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
+              expect.arrayContaining(['SAVEPOINT "t1"']),
+            );
+            expect(log.onError.mock.calls.map(([, sql]) => sql.text)).toEqual(
+              expect.arrayContaining(['ROLLBACK TO SAVEPOINT "t1"']),
+            );
+          });
+
           it('sets search_path for transaction setConfig', async () => {
             const res = await adapter.transaction(
               undefined,
@@ -779,6 +838,67 @@ describe('adapter runtime abstractions', () => {
 
           beforeEach(async () => {
             await adapter.query(`UPDATE ${counterTable} SET "value" = 0`);
+          });
+
+          it('logs SAVEPOINT and RELEASE SAVEPOINT after release', async () => {
+            const log = {
+              colors: false,
+              beforeQuery: jest.fn(),
+              afterQuery: jest.fn(),
+              onError: jest.fn(),
+            };
+
+            await adapter.transaction(undefined, undefined, async (trx) => {
+              const state: HackySavepointState = { name: 'hacky_log_release' };
+
+              await trx.hackySavepoint(
+                state,
+                incrementCounterSql,
+                undefined,
+                undefined,
+                log,
+              );
+              await state.activeSavepoint!.release();
+            });
+
+            expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
+              expect.arrayContaining([
+                'SAVEPOINT "hacky_log_release"',
+                'RELEASE SAVEPOINT "hacky_log_release"',
+              ]),
+            );
+          });
+
+          it('logs SAVEPOINT and ROLLBACK TO SAVEPOINT after rollback', async () => {
+            const log = {
+              colors: false,
+              beforeQuery: jest.fn(),
+              afterQuery: jest.fn(),
+              onError: jest.fn(),
+            };
+            const error = new Error('hacky savepoint failed');
+
+            await adapter.transaction(undefined, undefined, async (trx) => {
+              const state: HackySavepointState = { name: 'hacky_log_rollback' };
+
+              await trx.hackySavepoint(
+                state,
+                incrementCounterSql,
+                undefined,
+                undefined,
+                log,
+              );
+              await state.activeSavepoint!.rollback(error);
+            });
+
+            expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
+              expect.arrayContaining(['SAVEPOINT "hacky_log_rollback"']),
+            );
+            expect(log.onError.mock.calls.map(([, sql]) => sql.text)).toEqual(
+              expect.arrayContaining([
+                'ROLLBACK TO SAVEPOINT "hacky_log_rollback"',
+              ]),
+            );
           });
 
           it('persists savepoint changes after release', async () => {

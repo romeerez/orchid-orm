@@ -1,4 +1,5 @@
 import { Query, QueryReturnType } from '../query';
+import { QueryLogObject } from '../basic-features/log/log';
 import {
   _runAfterCommitHooks,
   AsyncTransactionState,
@@ -387,6 +388,7 @@ const then = async (
         adapter,
         method,
         sql,
+        log,
         startingSavepoint,
         releasingSavepoint,
         sqlSessionContextGetStateFromAsyncState(state),
@@ -447,6 +449,7 @@ const then = async (
             adapter,
             queryMethod,
             sql,
+            log,
             i === 0 ? startingSavepoint : undefined,
             i === last ? releasingSavepoint : undefined,
             sqlSessionContextGetStateFromAsyncState(state),
@@ -862,6 +865,7 @@ const execQuery = (
   adapter: Adapter,
   method: 'query' | 'arrays',
   sql: SingleSql,
+  log: QueryLogObject | undefined,
   startingSavepoint: ThenSavepointState | undefined,
   releasingSavepoint: ThenSavepointState | undefined,
   sqlSessionState: SqlSessionState | undefined,
@@ -871,6 +875,7 @@ const execQuery = (
     if (releasingSavepoint) {
       promise = startingSavepoint.transactionAdapter.savepoint(
         startingSavepoint.name,
+        log,
         () => {
           return (promise = adapter[method as 'query'](
             sql.text,
@@ -885,6 +890,7 @@ const execQuery = (
         sql.text,
         sql.values,
         method === 'arrays',
+        log,
       );
     }
   } else {

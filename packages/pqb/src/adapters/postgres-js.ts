@@ -15,7 +15,7 @@ import {
   noop,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
-import { HackySavepointState } from './adapter';
+import { HackySavepointState, SavepointCallback } from './adapter';
 import { parseInterval } from './driver-adapter-shared';
 import { patchPostgresJsArrayParsers } from './postgres-js-array-parser-patch';
 
@@ -207,16 +207,33 @@ export const PostgresJsAdapter: DriverAdapter = {
     setClient: (client: postgres.TransactionSql) => void,
     name: string,
     cb: () => Promise<T>,
+    onSavepoint: SavepointCallback | undefined,
+    beforeRelease: SavepointCallback | undefined,
+    onRelease: SavepointCallback | undefined,
+    beforeRollback: SavepointCallback | undefined,
+    onRollback: SavepointCallback | undefined,
   ): Promise<T> {
     let result: T | undefined;
-    await client
-      .savepoint(name, async (savepointClient) => {
+    let failed = false;
+    try {
+      await client.savepoint(name, async (savepointClient) => {
         setClient(savepointClient);
-        result = await cb();
-      })
-      .finally(() => {
-        setClient(client);
+        onSavepoint?.();
+        try {
+          result = await cb();
+          beforeRelease?.();
+        } catch (err) {
+          beforeRollback?.();
+          failed = true;
+          throw err;
+        }
       });
+      onRelease?.();
+    } finally {
+      setClient(client);
+      if (failed) onRollback?.();
+    }
+
     return result as T;
   },
 
@@ -227,6 +244,11 @@ export const PostgresJsAdapter: DriverAdapter = {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    onSavepoint?: SavepointCallback,
+    beforeRelease?: SavepointCallback,
+    onRelease?: SavepointCallback,
+    beforeRollback?: SavepointCallback,
+    onRollback?: SavepointCallback,
   ): Promise<QueryResult<T>> {
     let resolve: () => void;
     let reject: (err: unknown) => void;
@@ -242,11 +264,12 @@ export const PostgresJsAdapter: DriverAdapter = {
       resultReject = rej;
     });
 
+    let failed = false;
     const savepointPromise = client
       .savepoint<void>(state.name, async (savepointClient) => {
+        setClient(savepointClient);
+        onSavepoint?.();
         try {
-          setClient(savepointClient);
-
           const res = await this.queryClient<T>(
             savepointClient,
             text,
@@ -254,15 +277,20 @@ export const PostgresJsAdapter: DriverAdapter = {
             arraysMode,
           );
           resultResolve(res as QueryResult<T>);
+
+          await promise;
+          beforeRelease?.();
         } catch (err) {
           resultReject(err);
+          beforeRollback?.();
+          failed = true;
           throw err;
         }
-
-        return promise;
       })
+      .then(() => onRelease?.())
       .finally(() => {
         setClient(client);
+        if (failed) onRollback?.();
       });
 
     state.activeSavepoint = {
