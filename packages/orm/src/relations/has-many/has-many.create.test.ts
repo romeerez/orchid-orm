@@ -1063,7 +1063,7 @@ describe('hasMany create', () => {
       useMultiQueryNestedCreate();
 
       it('should use a multi-query strategy when inserting too many records', async () => {
-        await testConnectOrCreateInCreateMany(6);
+        await testConnectOrCreateInCreateMany(3);
       });
     });
 
@@ -1420,7 +1420,7 @@ describe('hasMany create', () => {
       useMultiQueryNestedCreate();
 
       it('should use a multi-query strategy when inserting too many records', async () => {
-        await testUpsertInCreateMany(7);
+        await testUpsertInCreateMany(2);
       });
     });
 

@@ -15,6 +15,7 @@ import {
   _queryUpsert,
   _queryUpdate,
   _queryWhere,
+  getFreeAlias,
   RawSql,
   RecordUnknown,
   CreateSelf,
@@ -30,6 +31,7 @@ import {
   NestedInsertManyItems,
   NestedUpdateManyUpsert,
   makeRawSqlPlaceholders,
+  queryUnionAll,
   setRawSqlPlaceholdersFromCte,
 } from '../common/utils';
 import { HasManyNestedInsert } from '../has-many/has-many.create';
@@ -508,6 +510,7 @@ export const nestedInsert = ({
     let connected: RecordUnknown[];
     if (items.length) {
       const queries: Query[] = [];
+      const indexAs = getFreeAlias(t.shape, 'i');
 
       for (const [, { connect }] of items as [
         unknown,
@@ -516,14 +519,16 @@ export const nestedInsert = ({
         for (const item of connect) {
           queries.push(
             _queryFindBy(
-              t.select(...throughPrimaryKeys),
+              t.select(...throughPrimaryKeys, {
+                [indexAs]: new RawSql(String(queries.length)),
+              }),
               item as never,
             ) as Query,
           );
         }
       }
 
-      connected = (await Promise.all(queries)) as Record<string, unknown[]>[];
+      connected = (await queryUnionAll(queries, indexAs)) as RecordUnknown[];
     } else {
       connected = [];
     }
@@ -538,6 +543,7 @@ export const nestedInsert = ({
     let connectOrCreated: (RecordUnknown | undefined)[];
     if (items.length) {
       const queries: Query[] = [];
+      const indexAs = getFreeAlias(t.shape, 'i');
 
       for (const [, { connectOrCreate }] of items as [
         unknown,
@@ -546,14 +552,16 @@ export const nestedInsert = ({
         for (const item of connectOrCreate) {
           queries.push(
             _queryFindByOptional(
-              t.select(...throughPrimaryKeys),
+              t.select(...throughPrimaryKeys, {
+                [indexAs]: new RawSql(String(queries.length)),
+              }),
               item.where as never,
             ) as Query,
           );
         }
       }
 
-      connectOrCreated = (await Promise.all(queries)) as RecordUnknown[];
+      connectOrCreated = await queryUnionAll(queries, indexAs);
     } else {
       connectOrCreated = [];
     }

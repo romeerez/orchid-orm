@@ -167,6 +167,18 @@ export const makeNestedUpdateUpsertData = (
   },
 });
 
+export const queryUnionAll = async (queries: Query[], indexAs: string) => {
+  const records = (await queries[0].unionAll(...queries.slice(1))) as Record<
+    string,
+    unknown
+  >[];
+  const result: (RecordUnknown | undefined)[] = Array(queries.length);
+  for (const record of records) {
+    result[record[indexAs] as number] = record;
+  }
+  return result;
+};
+
 export const makeRawSqlPlaceholders = (length: number): RawSql[] => {
   return Array.from({ length }, () => new RawSql(''));
 };

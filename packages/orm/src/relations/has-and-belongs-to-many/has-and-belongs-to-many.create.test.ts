@@ -526,7 +526,7 @@ describe('hasAndBelongsToMany create', () => {
       useMultiQueryNestedCreate();
 
       it('should use a multi-query strategy when inserting too many records', async () => {
-        await testConnectMany(6);
+        await testConnectMany(3);
       });
     });
 
@@ -841,7 +841,7 @@ describe('hasAndBelongsToMany create', () => {
       useMultiQueryNestedCreate();
 
       it('should use a multi-query strategy when inserting too many records', async () => {
-        await testConnectOrCreateMany(7);
+        await testConnectOrCreateMany(4);
       });
     });
 

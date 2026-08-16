@@ -15,6 +15,7 @@ import {
   _queryWhere,
   CreateCtx,
   CreateSelf,
+  getFreeAlias,
   prepareSubQueryForSql,
   RawSql,
   RecordUnknown,
@@ -30,6 +31,7 @@ import {
   NestedUpdateManyUpsert,
   NestedInsertOneItemConnectOrCreate,
   makeNestedUpdateUpsertData,
+  queryUnionAll,
   selectCteColumnFromManySql,
   makeRawSqlPlaceholderRecord,
   setRawSqlPlaceholderRecordFromCte,
@@ -89,9 +91,10 @@ export const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
       }
     }
 
-    let connected: number[];
+    let connected: (RecordUnknown | undefined)[];
     if (items.length) {
       const queries: Query[] = [];
+      const indexAs = getFreeAlias(t.shape, 'i');
       for (let i = 0, len = items.length; i < len; i++) {
         const [selfData, { connectOrCreate }] = items[i] as [
           RecordUnknown,
@@ -105,15 +108,18 @@ export const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
           }
 
           queries.push(
-            _queryUpdate(
-              t.where(item.where as WhereArg<Query>) as unknown as UpdateSelf,
-              obj as never,
-            ) as unknown as Query,
+            _querySelect(
+              _queryUpdate(
+                t.where(item.where as WhereArg<Query>) as unknown as UpdateSelf,
+                obj as never,
+              ) as unknown as Query,
+              [{ [indexAs]: new RawSql(String(queries.length)) }],
+            ) as Query,
           );
         }
       }
 
-      connected = (await Promise.all(queries)) as number[];
+      connected = await queryUnionAll(queries, indexAs);
     } else {
       connected = [];
     }
@@ -125,7 +131,7 @@ export const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
         const length = item[1].connectOrCreate.length;
         connectedI += length;
         for (let i = length; i > 0; i--) {
-          if (connected[connectedI - i] === 0) {
+          if (!connected[connectedI - i]) {
             items.push(item);
             break;
           }
@@ -159,7 +165,7 @@ export const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
 
         if (connectOrCreate) {
           for (const item of connectOrCreate) {
-            if (connected[connectedI++] === 0) {
+            if (!connected[connectedI++]) {
               records.push({
                 ...item.create,
                 ...obj,
@@ -172,41 +178,27 @@ export const nestedInsert = ({ query, primaryKeys, foreignKeys }: State) => {
       await _queryCreateMany(t, records);
     }
 
-    items.length = 0;
-    for (const item of data) {
-      if (item[1].upsert) {
-        items.push(item);
+    const queries: Query[] = [];
+    for (const [selfData, { upsert }] of data) {
+      if (!upsert) continue;
+
+      const obj: RecordUnknown = {};
+      for (let i = 0; i < len; i++) {
+        obj[foreignKeys[i]] = selfData[primaryKeys[i]];
+      }
+
+      for (const item of toArray(upsert)) {
+        queries.push(
+          _queryUpsert(t.clone().where(item.findBy as never) as never, {
+            update: { ...item.update, ...obj },
+            create: makeNestedUpdateUpsertData(item, obj).create,
+          }) as Query,
+        );
       }
     }
 
-    if (items.length) {
-      const queries: Query[] = [];
-      for (const [selfData, { upsert }] of items as [
-        RecordUnknown,
-        NestedInsertManyItems,
-      ][]) {
-        const foreignKeyValues: RecordUnknown = {};
-        for (let i = 0; i < len; i++) {
-          foreignKeyValues[foreignKeys[i]] = selfData[primaryKeys[i]];
-        }
-
-        for (const item of toArray(upsert!)) {
-          queries.push(
-            _queryUpsert(
-              t
-                .clone()
-                .where(item.findBy as unknown as WhereArg<Query>) as never,
-              {
-                update: { ...item.update, ...foreignKeyValues },
-                create: makeNestedUpdateUpsertData(item, foreignKeyValues)
-                  .create,
-              } as never,
-            ) as unknown as Query,
-          );
-        }
-      }
-
-      await Promise.all(queries);
+    if (queries.length) {
+      await queries[0].unionAll(...queries.slice(1));
     }
   }) as HasManyNestedInsert;
 };
