@@ -78,6 +78,16 @@ describe('hasAndBelongsToMany create', () => {
   };
 
   describe('create', () => {
+    it('should restrict the type', () => {
+      db.user.create({
+        ...UserData,
+        chats: {
+          // @ts-expect-error the type is restricted
+          create: 123,
+        },
+      });
+    });
+
     it('should support create', async () => {
       const q = db.user.insert({
         ...UserData,
@@ -343,6 +353,16 @@ describe('hasAndBelongsToMany create', () => {
   });
 
   describe('connect', () => {
+    it('should restrict the type', () => {
+      db.user.create({
+        ...UserData,
+        chats: {
+          // @ts-expect-error the type is restricted
+          connect: 123,
+        },
+      });
+    });
+
     it('should support connect', async () => {
       await db.chat.createMany([
         { ...ChatData, Title: 'chat 1' },
@@ -637,6 +657,16 @@ describe('hasAndBelongsToMany create', () => {
   });
 
   describe('connectOrCreate', () => {
+    it('should restrict the type', () => {
+      db.user.create({
+        ...UserData,
+        chats: {
+          // @ts-expect-error the type is restricted
+          connectOrCreate: 123,
+        },
+      });
+    });
+
     it('should support connect or create', async () => {
       const chatId = await db.chat.get('IdOfChat').create({
         ...ChatData,
@@ -995,6 +1025,18 @@ describe('hasAndBelongsToMany create', () => {
   });
 
   describe('upsert', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.create({
+          ...UserData,
+          chats: {
+            // @ts-expect-error the type is restricted
+            upsert: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should update and create related records from an array', async () => {
       const chat = await db.chat.create({
         ...ChatData,

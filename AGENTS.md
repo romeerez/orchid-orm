@@ -79,7 +79,8 @@ Packages are located in `packages/`:
 
 ## TypeScript Guidelines
 
-- Prefer `interface` over `type` when possible
+- prefer `interface` over `type` when possible
+- type-only tests: avoid `false &&` and `if (false)`, use `expect(() => ...).toThrow()` instead when it throws
 
 ## Code Guidelines
 

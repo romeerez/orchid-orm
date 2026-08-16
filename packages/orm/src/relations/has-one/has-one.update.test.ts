@@ -14,6 +14,15 @@ describe('hasOne update', () => {
   const activeProfileData = { ...ProfileData, Active: true };
 
   describe('disconnect', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        profile: {
+          // @ts-expect-error the type is restricted
+          disconnect: 123,
+        },
+      });
+    });
+
     it('should nullify foreignKey', async () => {
       const user = await db.user.create({
         ...UserData,
@@ -205,6 +214,17 @@ describe('hasOne update', () => {
   });
 
   describe('set', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.where({ Id: 1 }).update({
+          profile: {
+            // @ts-expect-error the type is restricted
+            set: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should nullify foreignKey of previous related record and set foreignKey to new related record', async () => {
       const Id = await db.user.get('Id').create(UserData);
 
@@ -350,6 +370,15 @@ describe('hasOne update', () => {
   });
 
   describe('delete', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        profile: {
+          // @ts-expect-error the type is restricted
+          delete: 123,
+        },
+      });
+    });
+
     it('should delete related record', async () => {
       const Id = await db.user
         .get('Id')
@@ -521,6 +550,15 @@ describe('hasOne update', () => {
   });
 
   describe('update', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        profile: {
+          // @ts-expect-error the type is restricted
+          update: 123,
+        },
+      });
+    });
+
     it('should update related record', async () => {
       const Id = await db.user
         .get('Id')
@@ -701,6 +739,17 @@ describe('hasOne update', () => {
   });
 
   describe('upsert', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.where({ Id: 1 }).update({
+          profile: {
+            // @ts-expect-error the type is restricted
+            upsert: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should update related record if it exists', async () => {
       const user = await db.user.create({
         ...UserData,
@@ -921,6 +970,17 @@ describe('hasOne update', () => {
   });
 
   describe('create', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.where({ Id: 1 }).update({
+          profile: {
+            // @ts-expect-error the type is restricted
+            create: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should create new related record', async () => {
       const userId = await db.user
         .get('Id')

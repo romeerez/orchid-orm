@@ -14,6 +14,15 @@ describe('hasAndBelongsToMany update', () => {
   useTestORM();
 
   describe('add', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        chats: {
+          // @ts-expect-error the type is restricted
+          add: 123,
+        },
+      });
+    });
+
     it('should connect many related records to one', async () => {
       const userId = await db.user.get('Id').create(UserData);
 
@@ -243,6 +252,15 @@ describe('hasAndBelongsToMany update', () => {
   });
 
   describe('disconnect', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        chats: {
+          // @ts-expect-error the type is restricted
+          disconnect: 123,
+        },
+      });
+    });
+
     it('should delete join table rows', async () => {
       const userId = await db.user.get('Id').create({
         ...UserData,
@@ -367,6 +385,15 @@ describe('hasAndBelongsToMany update', () => {
   });
 
   describe('set', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        chats: {
+          // @ts-expect-error the type is restricted
+          set: 123,
+        },
+      });
+    });
+
     it('should delete previous join records and create join records for matching related records', async () => {
       const Id = await db.user.get('Id').create({
         ...UserData,
@@ -574,6 +601,15 @@ describe('hasAndBelongsToMany update', () => {
   });
 
   describe('delete', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        chats: {
+          // @ts-expect-error the type is restricted
+          delete: 123,
+        },
+      });
+    });
+
     it('should delete related records', async () => {
       const Id = await db.user.get('Id').create({
         ...UserData,
@@ -788,6 +824,17 @@ describe('hasAndBelongsToMany update', () => {
   });
 
   describe('update', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.where({ Id: 1 }).update({
+          chats: {
+            // @ts-expect-error the type is restricted
+            update: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should update related records', async () => {
       const id = await db.user.get('Id').create({
         ...UserData,
@@ -1102,6 +1149,17 @@ describe('hasAndBelongsToMany update', () => {
   });
 
   describe('upsert', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.where({ Id: 1 }).update({
+          tasks: {
+            // @ts-expect-error the type is restricted
+            upsert: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should update related records if they exist', async () => {
       const data = await db.user
         .select('Id', { taskIds: (q) => q.tasks.pluck('Id') })
@@ -1344,6 +1402,15 @@ describe('hasAndBelongsToMany update', () => {
   });
 
   describe('create', () => {
+    it('should restrict the type', () => {
+      db.user.where({ Id: 1 }).update({
+        chats: {
+          // @ts-expect-error the type is restricted
+          create: 123,
+        },
+      });
+    });
+
     it('should create many records and connect them', async () => {
       const userIds = await db.user
         .pluck('Id')

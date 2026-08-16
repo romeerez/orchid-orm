@@ -159,6 +159,7 @@ export type CreateRelationsData<T extends CreateSelf> =
     // Intersect create data per foreign key column, while same-column
     // belongsTo relations stay in a shared union.
     CreateRelationsDataOmittingFKeys<T, T['relationsDataForCreate']> &
+    CreateRelationsDataValidation<T> &
     T['relationsDataForCreateOptional'];
 
 export type CreateRelationsDataOmit<T extends CreateSelf, OmitKeys> =
@@ -178,6 +179,7 @@ export type CreateRelationsDataOmit<T extends CreateSelf, OmitKeys> =
     // Intersect create data per foreign key column, while same-column
     // belongsTo relations stay in a shared union.
     CreateRelationsDataOmittingFKeys<T, T['relationsDataForCreate']> &
+    CreateRelationsDataValidation<T> &
     T['relationsDataForCreateOptional'];
 
 // Intersection of create data grouped by column/relation.
@@ -217,6 +219,23 @@ type CreateRelationDataOmittingFKeys<T extends CreateSelf, Union> = (
     : // hasOne, hasMany, hasAndBelongsToMany
       Union,
 ) => void;
+
+type RelationNestedNames<Data> = Data extends RelationConfigDataForCreate
+  ? keyof Data['nested']
+  : never;
+
+type RelationNestedData<Data, Name> = Data extends RelationConfigDataForCreate
+  ? Name extends keyof Data['nested']
+    ? Data['nested'][Name]
+    : never
+  : never;
+
+type CreateRelationsDataValidation<
+  T extends CreateSelf,
+  Data = T['relationsDataForCreate'][keyof T['relationsDataForCreate']],
+> = {
+  [K in RelationNestedNames<Data>]?: RelationNestedData<Data, K>;
+};
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.

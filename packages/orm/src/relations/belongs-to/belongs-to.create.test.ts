@@ -122,6 +122,26 @@ describe('belongsTo create', () => {
   };
 
   describe('create', () => {
+    it('should restrict the type', () => {
+      db.profile.create({
+        ...ProfileData,
+        user: {
+          // @ts-expect-error the type is restricted
+          create: 123,
+        },
+      });
+
+      db.profile.createMany([
+        {
+          ...ProfileData,
+          user: {
+            // @ts-expect-error the type is restricted
+            create: 123,
+          },
+        },
+      ]);
+    });
+
     it('should support create', async () => {
       const chatData = testData.createMessageChat();
       const senderData = testData.createMessageSender();
@@ -430,6 +450,18 @@ describe('belongsTo create', () => {
   });
 
   describe('connect', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.profile.create({
+          ...ProfileData,
+          user: {
+            // @ts-expect-error the type is restricted
+            connect: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should support connect', async () => {
       await db.chat.create({ ...ChatData, Title: 'chat' });
       await db.user.create({ ...UserData, Name: 'user' });
@@ -612,6 +644,18 @@ describe('belongsTo create', () => {
   });
 
   describe('connectOrCreate', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.profile.create({
+          ...ProfileData,
+          user: {
+            // @ts-expect-error the type is restricted
+            connectOrCreate: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should support connect or create', async () => {
       const chat = await db.chat.select('IdOfChat').create({
         ...ChatData,

@@ -68,6 +68,16 @@ describe('hasOne create', () => {
   };
 
   describe('create', () => {
+    it('should restrict the type', () => {
+      db.user.create({
+        ...UserData,
+        profile: {
+          // @ts-expect-error the type is restricted
+          create: 123,
+        },
+      });
+    });
+
     it('should support create', async () => {
       const q = db.user.create({
         ...UserData,
@@ -357,6 +367,16 @@ describe('hasOne create', () => {
   });
 
   describe('connect', () => {
+    it('should restrict the type', () => {
+      db.user.create({
+        ...UserData,
+        profile: {
+          // @ts-expect-error the type is restricted
+          connect: 123,
+        },
+      });
+    });
+
     it('should support connect', async () => {
       await db.profile.create({
         Bio: 'profile',
@@ -622,6 +642,18 @@ describe('hasOne create', () => {
   });
 
   describe('connectOrCreate', () => {
+    it('should restrict the type', () => {
+      expect(() =>
+        db.user.create({
+          ...UserData,
+          profile: {
+            // @ts-expect-error the type is restricted
+            connectOrCreate: 123,
+          },
+        }),
+      ).toThrow();
+    });
+
     it('should support connect or create', async () => {
       const profileId = await db.profile.get('Id').create({
         Bio: 'profile 1',
