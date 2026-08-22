@@ -1,7 +1,7 @@
 packages:
   - 'packages/*'
   - 'packages/schemaConfigs/*'
-  - 'e2e/*'
+  - '!e2e/*'
   - '!packages/benchmarks'
 
 minimumReleaseAge: 4320 # 3 days in minutes

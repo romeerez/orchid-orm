@@ -78,6 +78,90 @@ db.someTable.where({
 });
 ```
 
+## dealing with precise numbers
+
+JavaScript `number` values cannot safely represent every value supported by Postgres numeric types. In particular, `bigint`, `bigSerial`, `numeric`, and `decimal` may lose precision when converted to a JavaScript number. Orchid ORM therefore returns them as strings by default and accepts strings when creating or updating records.
+
+Strings are sufficient when your app only stores and retrieves these values. If it needs to calculate with them, define a custom column in `createTableFactory` that encodes and parses values with a precise-number library.
+
+There are several mature, widely used libraries to represent and work with precise numbers safely, from the same author.
+
+In short:
+
+- `big.js`: minimalist; easy-to-use; precision specified in decimal places; precision applied to division only.
+- `bignumber.js`: bases 2-64; configuration options; NaN; Infinity; precision specified in decimal places; precision applied to division only; base prefixes.
+- `decimal.js`: bases 2-64; configuration options; NaN; Infinity; non-integer powers, exp, ln, log; precision specified in significant digits; precision always applied; random numbers.
+
+More details on how to choose: [https://github.com/MikeMcl/big.js/issues/45#issuecomment-104211175](https://github.com/MikeMcl/big.js/issues/45#issuecomment-104211175).
+
+For example, install `big.js`:
+
+```sh
+npm i big.js
+npm i -D @types/big.js
+```
+
+Then define a `bigDecimal` column:
+
+```ts
+import Big from 'big.js';
+
+export const { defineTable, sql } = createTableFactory({
+  columnTypes: (t) => ({
+    ...t,
+    bigDecimal() {
+      return (
+        t
+          .decimal()
+          // Encode an app value as a string supported by Postgres.
+          .encode((value: Big) => value.toString())
+          // Parse a Postgres value for the app.
+          .parse((value: string) => new Big(value))
+      );
+    },
+  }),
+});
+```
+
+When integrating a validation library, provide its type as the first argument to `encode` and `parse`:
+
+```ts
+import Big from 'big.js';
+import { z } from 'zod';
+
+export const { defineTable, sql } = createTableFactory({
+  columnTypes: (t) => ({
+    ...t,
+    bigDecimal() {
+      return t
+        .decimal()
+        .encode(z.instanceof(Big), (value: Big) => value.toString())
+        .parse(z.instanceof(Big), (value: string) => new Big(value));
+    },
+  }),
+});
+```
+
+Use the custom column in a table:
+
+```ts
+export const SomeTable = defineTable('post', (t) => ({
+  id: t.identity().primaryKey(),
+  number: t.bigDecimal(),
+}));
+```
+
+The table now accepts and returns `Big` values:
+
+```ts
+await db.someTable.create({
+  number: new Big('9007199254740993.01'),
+});
+
+const { number } = await db.someTable.take();
+number.minus('1.234567801234567e+8');
+```
+
 ## text
 
 - `t.text()` is for an unlimited database `text` type.

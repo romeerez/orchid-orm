@@ -4,5 +4,5 @@ To use the prompts, skills, etc. with your AI agent, run the sync script:
 
 ```bash
 # pass agent name as argument
-pnpm ai:sync claude
+pnpm ai-sync claude
 ```
