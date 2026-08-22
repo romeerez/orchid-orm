@@ -169,6 +169,9 @@ export {
   type UniqueConstraints,
   type UpdateData,
   type WhereArg,
+  type QueryThenShallowSimplify,
+  type QueryCatch,
+  type SelectAs,
 } from './index';
 
 export { type UpdateSelf } from './query/basic-features/mutate/update';
@@ -300,7 +303,12 @@ export {
 } from './index';
 
 // Expression types
-export { Expression, isExpression, type TemplateLiteralArgs } from './index';
+export {
+  Expression,
+  isExpression,
+  ValExpression,
+  type TemplateLiteralArgs,
+} from './index';
 
 // Query basic features - AS
 export { getQueryAs } from './index';

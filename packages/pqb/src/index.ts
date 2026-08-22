@@ -1,6 +1,8 @@
 // Public API exports for pqb package
 // These are the only exports that are considered part of the public API
 
+export { ValExpression } from './query/expressions/val-expression';
+
 export {
   type PickQueryInputType,
   type SqlFn,
@@ -9,6 +11,9 @@ export {
   type SelectSqlColumn,
   type StaticSQLArgs,
   type ColumnRefExpression,
+  type QueryThenShallowSimplify,
+  type QueryCatch,
+  type SelectAs,
 } from './query';
 
 export {

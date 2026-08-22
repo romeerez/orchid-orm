@@ -185,6 +185,22 @@ sql({
 sql`($one + $two) / $one`.type((t) => t.numeric()).values({ one: 1, two: 2 });
 ```
 
+## sql.val
+
+`sql.val` turns a JavaScript value into an ORM-compatible expression. Use it when a
+query builder callback needs to return a value instead of a query or another SQL
+expression.
+
+For example, conditionally select the current user's profile. The query is only
+constructed when there is a current user; otherwise, return `null` directly:
+
+```ts
+const result = await db.$select({
+  profile: () =>
+    currentUser ? db.user.find(currentUser.id).chain('profile') : sql.val(null),
+});
+```
+
 ## sql.join
 
 [//]: # 'has JSDoc'

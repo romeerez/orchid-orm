@@ -23,11 +23,8 @@ import {
   raw,
   RawSql,
   sqlFn,
-  UnsafeSqlExpression,
-  type RawSqlBase,
+  type SqlFnMethods,
 } from './expressions/raw-sql';
-import { type SqlJoinExpression } from './expressions/sql-join-expression';
-import { SqlRefExpression } from './expressions/sql-ref-expression';
 import { ScopeArgumentQuery } from './extra-features/scope/scope';
 import {
   defaultSchemaConfig,
@@ -727,19 +724,13 @@ export interface DbTableConstructor<ColumnTypes> {
   >;
 }
 
-export interface DbSqlMethod<ColumnTypes> {
+export interface DbSqlMethod<ColumnTypes> extends SqlFnMethods {
   <T>(
     ...args: StaticSQLArgs
   ): RawSql<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
   <T>(
     ...args: [DynamicSQLArg<Column.Pick.QueryColumnOfType<T>>]
   ): DynamicRawSQL<Column.Pick.QueryColumnOfType<T>, ColumnTypes>;
-  join<T = unknown>(
-    items: readonly unknown[],
-    separator?: RawSqlBase,
-  ): SqlJoinExpression<Column.Pick.QueryColumnOfType<T>>;
-  ref(name: string): SqlRefExpression;
-  unsafe(sql: string | number | boolean): UnsafeSqlExpression;
 }
 
 export type MapTableScopesOption<T> = T extends { scopes: RecordUnknown }
@@ -935,6 +926,7 @@ export function _createDbSqlMethod<ColumnTypes>(
   fn.ref = sqlFn.ref;
   fn.join = sqlFn.join;
   fn.unsafe = sqlFn.unsafe;
+  fn.val = sqlFn.val;
   return fn;
 }
 

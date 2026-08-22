@@ -150,6 +150,9 @@ export const useQueryCounter = () => {
     return querySpies.reduce((acc, spy) => acc + spy.mock.calls.length, 0);
   };
 
+  const getQueriesSql = () =>
+    querySpies.flatMap((spy) => spy.mock.calls.map(([sql]) => sql));
+
   const querySpies = [
     jest.spyOn(AdapterClass.prototype, 'query'),
     jest.spyOn(AdapterClass.prototype, 'arrays'),
@@ -162,5 +165,6 @@ export const useQueryCounter = () => {
   return {
     resetQueriesCount,
     getQueriesCount,
+    getQueriesSql,
   };
 };

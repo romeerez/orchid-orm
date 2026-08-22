@@ -137,6 +137,19 @@ const result = await db.$select({
 // { userCount: number; one: number }
 ```
 
+Use [sql.val](/guide/sql-expressions#sqlval) to return a value conditionally,
+without constructing a query:
+
+```ts
+const result = await db.$select({
+  profile: () =>
+    currentUser ? db.user.find(currentUser.id).chain('profile') : sql.val(null),
+});
+```
+
+When every selected value is `sql.val`, `$select` does not perform a database
+query and returns those values immediately.
+
 ## $withOptions
 
 [//]: # 'has JSDoc'

@@ -253,9 +253,9 @@ describe('expressions', () => {
         value: (q) => {
           return q
             .fn('concat', [
-              sql`${q.val('one')}::text`,
+              sql`${sql.val('one')}::text`,
               'Name',
-              sql`${q.val('two')}::text`,
+              sql`${sql.val('two')}::text`,
               'User.Password',
             ])
             .type((t) => t.string())

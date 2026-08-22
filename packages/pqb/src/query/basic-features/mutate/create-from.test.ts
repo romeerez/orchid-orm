@@ -732,7 +732,7 @@ describe('createFrom functions', () => {
 
       const sub = db.chat.find(chatId).select({
         ChatId: 'IdOfChat',
-        Text: (q) => q.val('Title'),
+        Text: () => sql.val('Title'),
       });
       const q = Message.insertForEachFrom(sub);
 

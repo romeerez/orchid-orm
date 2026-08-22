@@ -511,6 +511,30 @@ describe('select', () => {
         );
       });
 
+      it('should support callback returning sql.val', async () => {
+        await db.user.insert(UserData);
+
+        const q = db.user
+          .select({
+            null: () => sql.val(null),
+          })
+          .take();
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT $1 "null" FROM "schema"."user" "User" LIMIT 1
+          `,
+          [null],
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { null: null }>();
+
+        expect(res).toEqual({ null: null });
+      });
+
       it('should select subquery', () => {
         const q = db.user.all();
         const query = q.select({ subquery: () => db.user.select('Id') });

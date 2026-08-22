@@ -10,7 +10,6 @@ import { Column, UnknownColumn } from '../../columns';
 import { RefExpression } from './ref-expression';
 import { _clone } from '../basic-features/clone/clone';
 import { getFullColumnTable } from '../query.utils';
-import { ValExpression } from './val-expression';
 import { SelectableOrExpressions } from './expression';
 import { AggregateOptions, makeFnExpression } from './fn-expression';
 import { OrExpression, OrExpressionArg } from './or-expression';
@@ -138,10 +137,6 @@ export class QueryExpressions {
     q.q.returnType = undefined;
 
     return new RefExpression(column || UnknownColumn.instance, q, arg) as never;
-  }
-
-  val(value: unknown): ValExpression {
-    return new ValExpression(value);
   }
 
   /**

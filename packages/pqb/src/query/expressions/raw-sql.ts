@@ -13,6 +13,7 @@ import {
 } from './expression';
 import { SqlJoinExpression } from './sql-join-expression';
 import { SqlRefExpression } from './sql-ref-expression';
+import { ValExpression } from './val-expression';
 import { Column } from '../../columns/column';
 import { ColumnSchemaConfig } from '../../columns/column-schema';
 import { DefaultColumnTypes } from '../../columns/column-types';
@@ -270,20 +271,7 @@ export function sqlQueryArgsToExpression(args: SQLQueryArgs): RawSqlBase {
     : (args[0] as never);
 }
 
-export interface SqlFn {
-  <
-    T,
-    Args extends
-      | TemplateLiteralArgs
-      | [sql: string]
-      | [values: RecordUnknown, sql?: string],
-  >(
-    this: T,
-    ...args: Args
-  ): Args extends [RecordUnknown]
-    ? (...sql: TemplateLiteralArgs) => RawSql<Column.Pick.QueryColumn, T>
-    : RawSql<Column.Pick.QueryColumn, T>;
-
+export interface SqlFnMethods {
   /**
    * `sql.join` builds a SQL list from values and expressions.
    * Plain values are bound as query parameters, while SQL expressions render as SQL.
@@ -341,6 +329,22 @@ export interface SqlFn {
    */
   ref(name: string): SqlRefExpression;
   unsafe(sql: string | number | boolean): UnsafeSqlExpression;
+  val<T>(value: T): ValExpression<T>;
+}
+
+export interface SqlFn extends SqlFnMethods {
+  <
+    T,
+    Args extends
+      | TemplateLiteralArgs
+      | [sql: string]
+      | [values: RecordUnknown, sql?: string],
+  >(
+    this: T,
+    ...args: Args
+  ): Args extends [RecordUnknown]
+    ? (...sql: TemplateLiteralArgs) => RawSql<Column.Pick.QueryColumn, T>
+    : RawSql<Column.Pick.QueryColumn, T>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -365,6 +369,7 @@ export const sqlFn: SqlFn = ((...args: any[]): any => {
 sqlFn.ref = (name) => new SqlRefExpression(name);
 sqlFn.join = (items, separator) => new SqlJoinExpression(items, separator);
 sqlFn.unsafe = (sql) => new UnsafeSqlExpression(sql);
+sqlFn.val = (value) => new ValExpression(value);
 
 export class UnsafeSqlExpression extends Expression {
   declare result: { value: Column.Pick.QueryColumn };
