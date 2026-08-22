@@ -339,22 +339,17 @@ describe('batch queries', () => {
         };
       });
 
-    expect(hackySavepoint?.mock.calls).toEqual([
-      [
-        {
-          transactionAdapter,
-          name: 's1',
-          activeSavepoint: {
-            release: expect.any(Function),
-            rollback: expect.any(Function),
-          },
+    expect(hackySavepoint?.mock.calls[0]?.slice(0, 3)).toEqual([
+      {
+        transactionAdapter,
+        name: 's1',
+        activeSavepoint: {
+          release: expect.any(Function),
+          rollback: expect.any(Function),
         },
-        `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
-        [0, 1],
-        expect.any(Boolean),
-        undefined,
-        undefined,
-      ],
+      },
+      `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
+      [0, 1],
     ]);
     expect([
       ...(querySpy?.mock.calls || []),

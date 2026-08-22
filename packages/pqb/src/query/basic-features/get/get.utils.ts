@@ -100,7 +100,7 @@ const _get = <
   if (q.returning) q.returning = undefined;
 
   q.returnType = returnType;
-
+  q.batchParsers = undefined;
   let value: unknown = arg;
 
   const selectAs: SelectAsValue = {};

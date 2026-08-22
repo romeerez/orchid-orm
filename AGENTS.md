@@ -148,6 +148,19 @@ All packages use Jest. Tests are colocated under `packages/**/src/**/*.test.ts` 
 - Reuse `packages/test-utils/src/test-utils.ts`: `useTestDatabase()` provides rollback isolation, `expectSql()` checks normalized SQL, and `assertType` verifies type mappings.
 - Reuse `packages/test-utils/src/test-db.ts` and `packages/orm/src/test-utils/orm.test-utils.ts` instead of duplicating common database fixtures or ORM helpers.
 - Database tests use `PG_URL`, `PG_GENERATE_URL`, and `ADAPTER`; `postgres-js` is the default adapter.
-- Start with the affected non-watch package check, then run `pnpm verify` after changes in published packages or `test-utils`. Adapter changes require the postgres-js, node-postgres, and Bun matrix.
 - CI additionally runs coverage, lint, formatting, workspace types, build, and built-package type checks.
 - Tests must defend observable public SQL, runtime, migration, or type behavior. Avoid assertions tied only to internal implementation.
+
+## Task Completion
+
+After a code changing task is ready, run a verification:
+
+```sh
+pnpm verify
+```
+
+After successfully verifying a task, run:
+
+```sh
+node .gitnexus/run.cjs analyze
+```

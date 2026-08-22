@@ -33,6 +33,16 @@ describe('get', () => {
       );
     });
 
+    it('should reset batch parsers after selecting a taken relation', async () => {
+      const { Id } = await db.user.create(UserData);
+      const q = db.user.select({ posts: (q) => q.posts.take() });
+
+      const result = await q.get('Id');
+
+      assertType<typeof result, number>();
+      expect(result).toBe(Id);
+    });
+
     it('should support chaining the value with operators', async () => {
       await db.user.insert(UserData);
       const q = db.user.get('Id').gt(0);
@@ -172,6 +182,16 @@ describe('get', () => {
           LIMIT 1
         `,
       );
+    });
+
+    it('should reset batch parsers after selecting a taken relation', async () => {
+      const { Id } = await db.user.create(UserData);
+      const q = db.user.select({ posts: (q) => q.posts.take() });
+
+      const result = await q.getOptional('Id');
+
+      assertType<typeof result, number | undefined>();
+      expect(result).toBe(Id);
     });
 
     it('should select raw and return a single value when exists', async () => {

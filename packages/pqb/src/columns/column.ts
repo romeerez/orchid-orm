@@ -1049,7 +1049,6 @@ export abstract class Column {
    * const size = await db.table.get('size');
    * ```
    *
-   * @deprecated use `type` instead
    */
   narrowType: this['__schema']['narrowType'];
 

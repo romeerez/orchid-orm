@@ -667,11 +667,6 @@ export class TransactionAdapterClass implements TransactionAdapter {
         values,
         arraysMode,
         prepare,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
       );
     }
 

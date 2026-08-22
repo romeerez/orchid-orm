@@ -93,6 +93,19 @@ describe('using db', () => {
     const res = await q;
     expect(res).toBe(0);
   });
+
+  it('should parse a de-duplicated join value selected later', async () => {
+    await insertMessage();
+
+    const q = db.user
+      .select({
+        firstJoinName: (q) => q.messages.count(),
+        messagesCount: (q) => q.messages.count(),
+      })
+      .select('messagesCount');
+
+    expect(await q).toEqual([{ firstJoinName: 0, messagesCount: 0 }]);
+  });
 });
 
 describe('join', () => {

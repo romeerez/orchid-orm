@@ -93,4 +93,13 @@ describe('pluck', () => {
       ['relation user'],
     );
   });
+
+  it('should reset batch parsers after selecting a taken relation', async () => {
+    const q = db.user.select({ posts: (q) => q.posts.take() });
+
+    const result = await q.pluck('Id');
+
+    expect(result).toHaveLength(3);
+    expect(result.every((id) => typeof id === 'number')).toBe(true);
+  });
 });

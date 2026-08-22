@@ -355,12 +355,9 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
     return arg;
   }
 
-  const joinedAs = (query as unknown as Query).q.valuesJoinedAs?.[
-    arg as string
-  ];
   return setParserForSelectedString(
     query as never,
-    joinedAs ? joinedAs + '.' + (arg as string) : (arg as string),
+    arg as string,
     as,
     key,
     columnAlias,
@@ -636,6 +633,13 @@ export const setParserForSelectedString = (
   columnAlias?: string,
 ): string | undefined => {
   const { q } = query;
+  const joinedAs = q.valuesJoinedAs?.[arg];
+  if (joinedAs) {
+    const parser = q.joinedParsers?.[joinedAs]?.v;
+    if (parser) setParserToQuery(q, columnAs || arg, parser);
+    return joinedAs + '.' + arg;
+  }
+
   const index = arg.indexOf('.');
   if (index === -1) {
     return selectColumn(query, q, arg, columnAs, columnAlias);

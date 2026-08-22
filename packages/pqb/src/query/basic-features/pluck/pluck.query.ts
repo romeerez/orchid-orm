@@ -60,7 +60,7 @@ export class QueryPluck {
   ): PluckResult<T, S> {
     const q = _clone(this);
     q.q.returnType = 'pluck';
-
+    q.q.batchParsers = undefined;
     let selected;
     const selectAs: SelectAsValue = {};
     const item = processSelectAsArg(

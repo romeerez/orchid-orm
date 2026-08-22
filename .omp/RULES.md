@@ -6,3 +6,4 @@
 - Preserve the dependency direction: `pqb` is the core; `orm`, `rake-db`, schema configs, and `test-factory` may depend on it, never the reverse. Cross-package internal `pqb` APIs go through `pqb/internal`, not deep imports.
 - Prefer simple, clear, concise code. Refactor duplicated or generated code and structure modules and functions by responsibility.
 - Use non-watch package checks: `pnpm <package-alias> check <path/to/file.test.ts>`. Do not use `test` or `t` in agent verification.
+- For bug fixes, determine which abstraction owns the incorrect behavior and check its other callers; don't patch only the reproducing call path when the bug belongs to shared behavior.
