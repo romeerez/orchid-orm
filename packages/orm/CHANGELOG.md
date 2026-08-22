@@ -1,5 +1,21 @@
 # orchid-orm
 
+## 1.78.5
+
+### Patch Changes
+
+- 81167bf4: Add reusable `db.$prepare` queries with adapter-level prepared statement support (#486)
+- 8fa3cce6: Add `sql.val` support to `$select` (#745)
+- 29d4b0ae: Fix scalar queries after selecting a taken relation or a deduplicated relation
+  value (#747)
+- 8feed8cf: Fix using `.chain()` in `db.$select` (#745)
+- Updated dependencies [81167bf4]
+- Updated dependencies [8fa3cce6]
+- Updated dependencies [29d4b0ae]
+- Updated dependencies [8feed8cf]
+  - pqb@0.73.4
+  - rake-db@2.37.8
+
 ## 1.78.4
 
 ### Patch Changes
