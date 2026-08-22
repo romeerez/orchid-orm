@@ -1,0 +1,9 @@
+{
+  "defaultBranch": "main",
+  "indexOnly": true,
+  "skipContextFiles": true,
+  "skipSkills": true,
+  "embeddings": false,
+  "workers": 8,
+  "workerTimeout": 60
+}

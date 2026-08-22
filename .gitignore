@@ -6,6 +6,8 @@ optimizing.md
 .turbo
 coverage
 dist
+.gitnexus/
+.gitnexusrc/
 coverage-summary.json
 .pnpm-debug.log
 trace/

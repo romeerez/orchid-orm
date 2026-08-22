@@ -3,7 +3,7 @@ name: write-about
 description: Use when the user prompts "write about for".
 ---
 
-Write a new `about.md` for a specific feature and save it in that feature's folder.
+Write a new `AGENTS.md` for a specific feature and save it in that feature's folder.
 
 **Input**: The argument after `/write-about` should identify the feature. It may be:
 
@@ -23,7 +23,7 @@ Examples:
 - Use `public` vs `internal` as supporting context that helps explain the feature's role
 - Figure out what the feature depends on and what depends on it
 - Ask clarifying questions whenever the feature boundary, purpose, or target folder is not clear enough
-- Write the final document to `about.md` inside the relevant feature folder
+- Write the final document to `AGENTS.md` inside the relevant feature folder
 
 **Steps**
 
@@ -44,11 +44,11 @@ Examples:
 
 2. **Confirm the write location**
 
-   The output file must be `<feature-folder>/about.md`.
+   The output file must be `<feature-folder>/AGENTS.md`.
 
    If the user named a feature that is implemented across scattered files without an obvious folder:
    - Find the nearest cohesive feature directory
-   - If there still is no clear home for `about.md`, ask the user where they want it stored
+   - If there still is no clear home for `AGENTS.md`, ask the user where they want it stored
 
    Do not create an arbitrary new feature structure just to place the document.
 
@@ -128,13 +128,13 @@ Examples:
    - The feature boundary
    - The intended audience or naming
    - Whether two similarly named features should be treated separately or together
-   - Whether an existing `about.md` should be replaced when the situation is ambiguous
+   - Whether an existing `AGENTS.md` should be replaced when the situation is ambiguous
 
    Ask only the minimum questions needed to proceed.
 
-9. **Write `about.md`**
+9. **Write `AGENTS.md`**
 
-   Create or replace `<feature-folder>/about.md` with a concise, factual document.
+   Create or replace `<feature-folder>/AGENTS.md` with a concise, factual document.
 
    Use this structure:
 

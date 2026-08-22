@@ -6,6 +6,17 @@ Treat every rule in this file as mandatory for every change in that directory.
 - There are no exceptions for private, internal, helper-only, temporary, or one-file-local code.
 - Before creating a new query file or typing `class ... extends ...Error`, stop and re-check the relevant section below.
 
+## Adapter verification
+
+Database-backed tests default to `postgres-js`; that no-env path is the fastest local loop.
+
+- For a `node-postgres` adapter implementation or test change, run the affected package with `ADAPTER=node-postgres`.
+- For a `postgres-js` adapter implementation or test change, run the affected package without `ADAPTER`, or set `ADAPTER=postgres-js` explicitly.
+- For a Bun adapter implementation or test change, run the affected package with `ADAPTER=bun` and its `bun:check` script.
+- For shared adapter runtime code, the `test-utils` adapter registry, or shared adapter test infrastructure, run `pnpm verify`; it selects the process-isolated adapter matrix for affected DB-backed packages.
+
+Adapter-backed helpers are singletons created at module load. Never try to switch adapters in a single Jest process; execute each adapter run in a separate process.
+
 ## File naming
 
 - Query builder methods, which are mixed into the `QueryMethods` interface, should be kept in files with the `.query` suffix.

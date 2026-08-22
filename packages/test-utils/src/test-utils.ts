@@ -31,10 +31,22 @@ import { BunAdapter, bunSchemaConfig, createDb as bunCreateDb } from 'pqb/bun';
 import { orchidORM as bunOrchidORM } from '../../orm/src/adapters/bun';
 import { rakeDb as bunsRakeDb } from '../../rake-db/src/adapters/bun';
 
+/**
+ * Adapter ids supported by first-party database-backed test helpers.
+ *
+ * This union and `adapterSetups` must change together.
+ */
 export type TestAdapterName = 'postgres-js' | 'node-postgres' | 'bun';
 
+/** The adapter used by the fast local test path when `ADAPTER` is unset. */
 export const defaultAdapter: TestAdapterName = 'postgres-js';
 
+/**
+ * The first-party test adapter registry.
+ *
+ * Helpers below are initialized once at module load, so adapter matrix runs
+ * must start one Jest process per registry entry rather than hot-swapping here.
+ */
 const adapterSetups = {
   'node-postgres': () => ({
     TestAdapter: NodePostgresAdapter,
@@ -59,12 +71,20 @@ const adapterSetups = {
 const isTestAdapterName = (adapter: string): adapter is TestAdapterName =>
   adapter in adapterSetups;
 
+/**
+ * The adapter selected for this process.
+ *
+ * Resolve and validate it before creating singleton test helpers so a typo
+ * fails before Jest can execute tests with the unintended default adapter.
+ */
 export const testAdapterName = (process.env.ADAPTER ||
   defaultAdapter) as TestAdapterName;
 
 if (!isTestAdapterName(testAdapterName)) {
   throw new Error(
-    `Invalid ADAPTER "${testAdapterName}", expected "postgres-js" or "node-postgres"`,
+    `Invalid ADAPTER "${testAdapterName}", expected one of: ${Object.keys(
+      adapterSetups,
+    ).join(', ')}`,
   );
 }
 
