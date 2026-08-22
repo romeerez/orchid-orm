@@ -481,7 +481,7 @@ export const processSelectAsArg = <T extends SelectSelf>(
   let column: Column | undefined;
 
   if (typeof value === 'function') {
-    value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value);
+    value = resolveSubQueryCallback(q as unknown as ToSQLQuery, value) as Query;
 
     if (isQueryNone(value)) {
       if (value.q.innerJoinLateral) {
@@ -492,12 +492,13 @@ export const processSelectAsArg = <T extends SelectSelf>(
     if (isExpression(value)) {
       column = value.result.value as Column;
     } else {
-      // `subQuery = 1` case is when callback returns the same query as it gets,
-      // for example `q => q.get('name')`.
-      const isSelfReferencingQuery =
-        (value as unknown as Query).q.subQuery === 1;
+      // subQuery is undefined when doing `select({ x: () => db.someTable })`, returning unrelated query
+      // subQuery is 1 when doing `select({ x: (q) => q })`, returning a self query
+      const isSelfReferencingQuery = value.q.subQuery === 1;
+      // subQuery is > 1 when doing `select({ x: (q) => q.relation })`, returning a relation
+      const isSelectingRelation = value.q.subQuery && value.q.subQuery > 1;
 
-      if (isRelationQuery(value) && !isSelfReferencingQuery) {
+      if (isRelationQuery(value) && isSelectingRelation) {
         joinQuery = true;
         setSelectRelation(query.q);
 

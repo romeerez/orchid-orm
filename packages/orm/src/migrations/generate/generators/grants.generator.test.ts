@@ -5,7 +5,7 @@ import {
   useGeneratorsTestUtils,
 } from './generators.test-utils';
 import * as verifyMigrationModule from '../verify-migration';
-import { setGrants } from '../../../orm';
+import { setGrants } from '../../../orm-instance/orm-instance';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),

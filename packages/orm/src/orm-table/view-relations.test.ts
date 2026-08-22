@@ -6,7 +6,7 @@ import {
   testAdapter,
   testOrchidORMWithAdapter,
 } from 'test-utils';
-import { orchidORMWithAdapter } from '../orm';
+import { orchidORMWithAdapter } from '../orm-instance/orm-instance';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 import { createTableFactory } from './table';
 

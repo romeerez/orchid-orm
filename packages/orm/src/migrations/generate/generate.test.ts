@@ -6,7 +6,7 @@ import {
 } from './generators/generators.test-utils';
 import { asMock } from 'test-utils';
 import { verifyMigration } from './verify-migration';
-import { defineRls } from '../../orm';
+import { defineRls } from '../../orm-instance/orm-instance';
 
 jest.mock('rake-db', () => {
   const actual = jest.requireActual('../../../../rake-db/src');

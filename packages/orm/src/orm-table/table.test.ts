@@ -18,7 +18,10 @@ import {
 } from './legacy-table';
 import { createTableFactory } from './table';
 import { z } from 'zod/v4';
-import { bundleOrchidORM, makeOrchidOrmDbWithAdapter } from '../orm';
+import {
+  bundleOrchidORM,
+  makeOrchidOrmDbWithAdapter,
+} from '../orm-instance/orm-instance';
 import { Expression, Query, QueryHelperResult } from 'pqb';
 import {
   Column,

@@ -44,7 +44,7 @@ import {
   RelationToTableInput,
   RelationTableToQuery,
 } from '../relations/relations';
-import { OrchidORM, OrmTableThunks } from '../orm';
+import { OrchidORM, OrmTableThunks } from '../orm-instance/orm-instance';
 import {
   BelongsTo,
   BelongsToDataForCreate,

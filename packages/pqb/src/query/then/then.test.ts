@@ -352,7 +352,7 @@ describe('batch queries', () => {
         `INSERT INTO "tmp.then"("num") VALUES ($1), ($2) RETURNING "tmp.then"."num"`,
         [0, 1],
         expect.any(Boolean),
-        undefined,
+        expect.any(Object),
       ],
     ]);
     expect([

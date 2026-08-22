@@ -1,6 +1,6 @@
 import { Query } from 'pqb';
 import { useTestORM, chatSelectAll } from '../../test-utils/orm.test-utils';
-import { orchidORMWithAdapter } from '../../orm';
+import { orchidORMWithAdapter } from '../../orm-instance/orm-instance';
 import {
   Chat,
   Profile,

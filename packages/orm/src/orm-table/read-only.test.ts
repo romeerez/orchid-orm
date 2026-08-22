@@ -1,4 +1,4 @@
-import { orchidORMWithAdapter } from '../orm';
+import { orchidORMWithAdapter } from '../orm-instance/orm-instance';
 import {
   defineTable,
   assertType,

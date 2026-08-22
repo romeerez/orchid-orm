@@ -25,7 +25,7 @@ import {
   bundleOrchidORM,
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
-} from '../orm';
+} from '../orm-instance/orm-instance';
 import { QueryHelperResult } from 'pqb';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 

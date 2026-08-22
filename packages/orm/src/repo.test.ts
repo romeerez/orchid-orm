@@ -1,4 +1,4 @@
-import { orchidORMWithAdapter } from './orm';
+import { orchidORMWithAdapter } from './orm-instance/orm-instance';
 import { createRepo } from './repo';
 import {
   defineTable,

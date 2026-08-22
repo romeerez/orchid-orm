@@ -35,7 +35,7 @@ import {
 } from './has-and-belongs-to-many/has-and-belongs-to-many';
 import { getSourceRelation, getThroughRelation } from './common/utils';
 import { Query } from 'pqb';
-import { OrmTableThunks, TableInstance } from '../orm';
+import { OrmTableThunks, TableInstance } from '../orm-instance/orm-instance';
 
 // `belongsTo` and `hasOne` relation data available for create. It supports:
 // - `create` to create a related record

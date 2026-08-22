@@ -10,7 +10,7 @@ import {
   colors,
 } from 'pqb/internal';
 import { DbMigration } from 'rake-db';
-import { defineRls } from '../../../orm';
+import { defineRls } from '../../../orm-instance/orm-instance';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),

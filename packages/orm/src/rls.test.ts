@@ -1,5 +1,5 @@
 import { defineTable, testAdapter, sql } from 'test-utils';
-import { defineRls, orchidORMWithAdapter } from './orm';
+import { defineRls, orchidORMWithAdapter } from './orm-instance/orm-instance';
 
 describe('rls', () => {
   const UserTable = defineTable('user', (t) => ({

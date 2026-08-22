@@ -1,6 +1,6 @@
 import { useTestORM, userRowToJSON } from '../../test-utils/orm.test-utils';
 import { Query } from 'pqb';
-import { orchidORMWithAdapter } from '../../orm';
+import { orchidORMWithAdapter } from '../../orm-instance/orm-instance';
 import {
   Profile,
   defineTable,

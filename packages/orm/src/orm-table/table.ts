@@ -34,7 +34,7 @@ import {
 import type { Query } from 'pqb';
 import { ORMTableInput } from './legacy-table';
 import type { CommonTableFactoryOptions } from './table.common';
-import type { OrchidORM } from '../orm';
+import type { OrchidORM } from '../orm-instance/orm-instance';
 
 export interface TableFactoryOptions<
   SchemaConfig extends ColumnSchemaConfig,

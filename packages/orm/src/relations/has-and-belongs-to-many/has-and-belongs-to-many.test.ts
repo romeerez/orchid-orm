@@ -11,7 +11,7 @@ import {
   UserSelectAll,
 } from 'test-utils';
 import { createTableFactory } from '../../orm-table/table';
-import { orchidORMWithAdapter } from '../../orm';
+import { orchidORMWithAdapter } from '../../orm-instance/orm-instance';
 
 const ormParams = {
   db: db.$qb,

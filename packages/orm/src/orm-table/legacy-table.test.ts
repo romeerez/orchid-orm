@@ -12,7 +12,7 @@ import {
   makeOrchidOrmDbWithAdapter,
   setGrants,
   defineRls,
-} from '../orm';
+} from '../orm-instance/orm-instance';
 import {
   getCallerFilePath,
   DefaultSchemaConfig,

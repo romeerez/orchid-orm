@@ -5,7 +5,7 @@ import {
   useGeneratorsTestUtils,
 } from './generators.test-utils';
 import { colors, type RlsPolicy } from 'pqb/internal';
-import { defineRls } from '../../../orm';
+import { defineRls } from '../../../orm-instance/orm-instance';
 
 jest.mock('rake-db', () => ({
   ...jest.requireActual('../../../../../rake-db/src'),

@@ -24,32 +24,28 @@ import {
   RecordUnknown,
   type TableDataItem,
   type QueryInternal,
-  type QueryTake,
-  type SelectAsFnReturnType,
-  type SelectResultObj,
 } from 'pqb/internal';
 import {
   ORMTableInput,
   BaseTableClass,
   TableClass,
   TableQueryBuilder,
-} from './orm-table/legacy-table';
-import type { OrmTable } from './orm-table/table';
-import { applyRelations } from './relations/relations';
+} from '../orm-table/legacy-table';
+import type { OrmTable } from '../orm-table/table';
+import { applyRelations } from '../relations/relations';
 import {
   transaction,
   ensureTransaction,
   isInTransaction,
   afterCommit,
-} from './transaction';
+} from '../transaction';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Db, Query } from 'pqb';
+import { ormSelect, OrmSelectMethods } from './features/orm-select/orm-select';
 
 export interface FromQuery extends Query {
   returnType: 'all';
 }
-
-type OrmSelectArg = Record<string, () => SelectAsFnReturnType>;
 
 interface OrchidORMQueryHelper<
   Q extends Query,
@@ -189,7 +185,7 @@ export const setGrants = <const T extends readonly Grant.TableClassGrant[]>(
   grants: T,
 ): T => grants;
 
-interface OrchidORMMethods {
+interface OrchidORMMethods extends OrmSelectMethods {
   /**
    * @see import('pqb').QueryTransaction.prototype.transaction
    */
@@ -277,24 +273,6 @@ interface OrchidORMMethods {
    * @param args - SQL template literal, or an object { raw: string, values?: unknown[] }
    */
   $queryArrays: Db['queryArrays'];
-
-  /**
-   * Use `$select` to select independent query and expression results in a single SQL query.
-   * Each value is a callback returning a query or SQL expression. The helper returns a
-   * single-result query, so it can be awaited directly or further composed.
-   *
-   * ```ts
-   * const result = await db.$select({
-   *   userCount: () => db.user.count(),
-   *   one: () => sql<number>`1::int`,
-   * });
-   *
-   * // { userCount: number; one: number }
-   * ```
-   */
-  $select<Obj extends OrmSelectArg>(
-    selection: Obj,
-  ): QueryTake<SelectResultObj<Db, Obj>>;
 
   /**
    * See {@link FromMethods.from}
@@ -687,8 +665,7 @@ const privateOrchidORMWithAdapter = <
     $withRecursive: qb.withRecursive.bind(qb),
     $withSql: qb.withSql.bind(qb),
     $from: qb.from.bind(qb),
-    $select: ((selection) =>
-      qb.select(selection).take()) as OrchidORMMethods['$select'],
+    $select: ormSelect(qb),
     $close: adapter.close.bind(adapter),
     $withOptions: qb.withOptions.bind(qb),
   } as unknown as OrchidORM<T, V>;

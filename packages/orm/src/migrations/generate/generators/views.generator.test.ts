@@ -5,7 +5,7 @@ import {
   sql,
   useGeneratorsTestUtils,
 } from './generators.test-utils';
-import { setGrants } from '../../../orm';
+import { setGrants } from '../../../orm-instance/orm-instance';
 import { colors } from 'pqb/internal';
 
 jest.mock('rake-db', () => ({

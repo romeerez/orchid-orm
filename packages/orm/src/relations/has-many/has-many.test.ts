@@ -6,7 +6,7 @@ import {
   messageJSONBuildObject,
   userRowToJSON,
 } from '../../test-utils/orm.test-utils';
-import { orchidORMWithAdapter } from '../../orm';
+import { orchidORMWithAdapter } from '../../orm-instance/orm-instance';
 import {
   Message,
   db,
