@@ -1,6 +1,6 @@
 ---
 outline: deep
-description: ORM methods prefixed with $ including $query, $queryArrays, $withOptions, $getAdapter, $from, and $close.
+description: ORM methods prefixed with $ including $query, $queryArrays, $prepare, $withOptions, $getAdapter, $from, and $close.
 ---
 
 # ORM Methods
@@ -149,6 +149,50 @@ const result = await db.$select({
 
 When every selected value is `sql.val`, `$select` does not perform a database
 query and returns those values immediately.
+
+## $prepare
+
+`$prepare` creates a reusable prepared query. SQL is built lazily on the first
+call and reused by later calls, avoiding repeated query construction.
+
+```ts
+const findUsers = db.$prepare(() => db.user.where({ active: true }));
+
+const users = await findUsers();
+```
+
+Pass an object generic to define values that change on each execution:
+
+```ts
+const findUsers = db.$prepare<{ minAge: number; name: string }>((params) =>
+  db.user.where({
+    age: { gte: params.minAge },
+    name: params.name,
+  }),
+);
+
+const users = await findUsers({ minAge: 18, name: 'Ada' });
+```
+
+All parameter properties are required and cannot include `undefined`.
+Values closed over by the callback are static: the value is captured when
+`$prepare` is called and cannot be supplied to the returned executor. Use
+prepared parameters for values that vary per call.
+
+The Bun SQL adapter does not support preparing individual queries, so `$prepare`
+does not prepare database statements when using Bun. To prepare statements
+globally in Bun, pass `prepare: true` when creating the ORM; it applies to all
+queries:
+
+```ts
+const db = orchidORM(
+  {
+    databaseURL: process.env.DATABASE_URL,
+    prepare: true,
+  },
+  tables,
+);
+```
 
 ## $withOptions
 

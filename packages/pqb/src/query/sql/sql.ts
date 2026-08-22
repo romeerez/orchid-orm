@@ -30,6 +30,8 @@ export interface SingleSqlItem {
   text: string;
   // bind values passed along with SQL string
   values?: unknown[];
+  // execute with a driver prepared statement
+  prepare?: true;
   runAfterQuery?: RunAfterQuery;
 }
 

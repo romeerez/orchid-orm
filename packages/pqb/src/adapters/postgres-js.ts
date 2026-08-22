@@ -152,9 +152,13 @@ export const PostgresJsAdapter: DriverAdapter = {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
   ): Promise<QueryResult<T>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query = client.unsafe(text, values as never) as any;
+    let query = (
+      prepare
+        ? client.unsafe(text, values as never, { prepare: true })
+        : client.unsafe(text, values as never)
+    ) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     if (arraysMode) query = query.values();
 
@@ -244,6 +248,7 @@ export const PostgresJsAdapter: DriverAdapter = {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
     onSavepoint?: SavepointCallback,
     beforeRelease?: SavepointCallback,
     onRelease?: SavepointCallback,
@@ -275,6 +280,7 @@ export const PostgresJsAdapter: DriverAdapter = {
             text,
             values,
             arraysMode,
+            prepare,
           );
           resultResolve(res as QueryResult<T>);
 

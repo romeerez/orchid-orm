@@ -74,11 +74,17 @@ export interface NodePostgresAdapterOptions extends Omit<AdapterConfig, 'log'> {
   schema?: QuerySchema;
 }
 
+const preparedStatements = new WeakMap<
+  PoolClient,
+  { names: Map<string, string>; index: number }
+>();
+
 const queryClient = <T = QueryResultRow>(
   client: PoolClient,
   text: string,
   values?: unknown[],
   arraysMode?: boolean,
+  prepare?: true,
 ): Promise<QueryResult<T>> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any = {
@@ -87,6 +93,21 @@ const queryClient = <T = QueryResultRow>(
     rowMode: arraysMode ? 'array' : undefined,
     types: defaultTypesConfig,
   };
+
+  if (prepare) {
+    let statements = preparedStatements.get(client);
+    if (!statements) {
+      statements = { names: new Map(), index: 0 };
+      preparedStatements.set(client, statements);
+    }
+
+    let name = statements.names.get(text);
+    if (!name) {
+      name = `orchid_${statements.index++}`;
+      statements.names.set(text, name);
+    }
+    params.name = name;
+  }
 
   // When using save points (it's in transaction), need to perform a single query at a time.
   // stating 1 then 2 then releasing 1 would fail.
@@ -231,6 +252,7 @@ export const NodePostgresAdapter: DriverAdapter = {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
     onSavepoint?: SavepointCallback,
     beforeRelease?: SavepointCallback,
     onRelease?: SavepointCallback,
@@ -259,7 +281,13 @@ export const NodePostgresAdapter: DriverAdapter = {
         onSavepoint?.();
 
         try {
-          const res = await queryClient<T>(client, text, values, arraysMode);
+          const res = await queryClient<T>(
+            client,
+            text,
+            values,
+            arraysMode,
+            prepare,
+          );
           resultResolve!(res as QueryResult<T>);
         } catch (err) {
           resultReject!(err);

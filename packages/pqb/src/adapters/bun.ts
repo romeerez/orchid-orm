@@ -143,6 +143,9 @@ const queryClient = <T = QueryResultRow>(
   text: string,
   values?: unknown[],
   arraysMode?: boolean,
+  // Bun only enables prepared statements globally, not per query.
+  // Preparing manually would require managing Bun's physical connections.
+  _prepare?: true,
 ): Promise<QueryResult<T>> => {
   const runQuery = () => {
     const query = client.unsafe(text, values);
@@ -287,6 +290,7 @@ export const BunAdapter: DriverAdapter = {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
     onSavepoint?: SavepointCallback,
     beforeRelease?: SavepointCallback,
     onRelease?: SavepointCallback,
@@ -315,7 +319,13 @@ export const BunAdapter: DriverAdapter = {
         onSavepoint?.();
 
         try {
-          const res = await queryClient<T>(client, text, values, arraysMode);
+          const res = await queryClient<T>(
+            client,
+            text,
+            values,
+            arraysMode,
+            prepare,
+          );
           resultResolve?.(res as QueryResult<T>);
         } catch (err) {
           resultReject?.(err);

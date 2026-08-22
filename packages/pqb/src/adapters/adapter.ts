@@ -185,6 +185,7 @@ export interface Adapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
+    prepare?: true,
   ): Promise<QueryResult<T>>;
 
   // make a query to get rows as array of column values.
@@ -198,6 +199,7 @@ export interface Adapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
+    prepare?: true,
   ): Promise<QueryResult<R>>;
 
   /**
@@ -247,6 +249,7 @@ export interface TransactionAdapter extends Adapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
     log?: QueryLogObject,
   ): Promise<QueryResult<T>>;
 }
@@ -285,6 +288,7 @@ export interface DriverAdapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
   ): Promise<QueryResult<T>>;
   begin<DriverClient, Result>(
     pool: Pool,
@@ -309,6 +313,7 @@ export interface DriverAdapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
     onSavepoint?: SavepointCallback,
     beforeRelease?: SavepointCallback,
     onRelease?: SavepointCallback,
@@ -377,6 +382,7 @@ export class AdapterClass implements Adapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
+    prepare?: true,
   ): Promise<QueryResult<T>> {
     return runQueryHandlePool<QueryResult<T>>(
       this.pool,
@@ -384,6 +390,8 @@ export class AdapterClass implements Adapter {
       text,
       values,
       sqlSessionState,
+      undefined,
+      prepare,
     );
   }
 
@@ -396,6 +404,7 @@ export class AdapterClass implements Adapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
+    prepare?: true,
   ): Promise<QueryResult<R>> {
     return runQueryHandlePool<QueryResult<R>>(
       this.pool,
@@ -404,6 +413,7 @@ export class AdapterClass implements Adapter {
       values,
       sqlSessionState,
       true,
+      prepare,
     );
   }
 
@@ -501,6 +511,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
+    prepare?: true,
   ): Promise<QueryResult<T>> {
     const setup = sqlSessionContextComputeSetup(sqlSessionState);
 
@@ -510,6 +521,8 @@ export class TransactionAdapterClass implements TransactionAdapter {
       text,
       values,
       setup,
+      undefined,
+      prepare,
     );
   }
 
@@ -522,6 +535,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
     values?: unknown[],
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
+    prepare?: true,
   ): Promise<QueryResult<R>> {
     const setup = sqlSessionContextComputeSetup(sqlSessionState);
 
@@ -532,6 +546,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
       values,
       setup,
       true,
+      prepare,
     );
   }
 
@@ -638,6 +653,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
     text: string,
     values?: unknown[],
     arraysMode?: boolean,
+    prepare?: true,
     log?: QueryLogObject,
   ): Promise<QueryResult<T>> {
     if (!log) {
@@ -650,6 +666,12 @@ export class TransactionAdapterClass implements TransactionAdapter {
         text,
         values,
         arraysMode,
+        prepare,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
       );
     }
 
@@ -670,6 +692,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
       text,
       values,
       arraysMode,
+      prepare,
       () => log.afterQuery(savepointSql, savepointLogData),
       () => {
         releaseSql = { text: `RELEASE SAVEPOINT "${state.name}"` };
@@ -1011,6 +1034,7 @@ const runQueryHandlePool = async <Result extends QueryResult = QueryResult>(
   // SQL session state (role and setConfig) from async storage
   sqlSessionState?: SqlSessionState,
   arraysMode?: boolean,
+  prepare?: true,
   client?: Client,
 ): Promise<Result> => {
   const setup = sqlSessionContextComputeSetup(sqlSessionState);
@@ -1023,6 +1047,7 @@ const runQueryHandlePool = async <Result extends QueryResult = QueryResult>(
       values,
       setup,
       arraysMode,
+      prepare,
     );
   }
 
@@ -1036,6 +1061,7 @@ const runQueryHandlePool = async <Result extends QueryResult = QueryResult>(
       values,
       setup,
       arraysMode,
+      prepare,
     );
   } finally {
     driverAdapter.release(client);
@@ -1051,9 +1077,10 @@ const runQueryHandleSetupAndCleanup = <
   values?: unknown[],
   setup?: SqlSessionContextSetupResult,
   arraysMode?: boolean,
+  prepare?: true,
 ): Promise<Result> => {
   const mainQuery = () =>
-    driverAdapter.queryClient(client, text, values, arraysMode);
+    driverAdapter.queryClient(client, text, values, arraysMode, prepare);
 
   if (setup) {
     return sqlSessionContextExecute<Result>(

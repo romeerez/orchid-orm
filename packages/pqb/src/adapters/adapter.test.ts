@@ -68,6 +68,29 @@ describe('adapter runtime abstractions', () => {
           ]);
         });
 
+        it('runs prepared queries', async () => {
+          await expect(
+            adapter.query<{ value: number }>(
+              'SELECT $1::integer AS "value"',
+              [1],
+              undefined,
+              true,
+            ),
+          ).resolves.toMatchObject({
+            rows: [{ value: 1 }],
+          });
+          await expect(
+            adapter.query<{ value: number }>(
+              'SELECT $1::integer AS "value"',
+              [2],
+              undefined,
+              true,
+            ),
+          ).resolves.toMatchObject({
+            rows: [{ value: 2 }],
+          });
+        });
+
         describe('column types handling', () => {
           const user = db('user', (t) => ({
             id: t.identity().primaryKey(),
@@ -886,6 +909,7 @@ describe('adapter runtime abstractions', () => {
                 incrementCounterSql,
                 undefined,
                 undefined,
+                undefined,
                 log,
               );
               await state.activeSavepoint!.release();
@@ -914,6 +938,7 @@ describe('adapter runtime abstractions', () => {
               await trx.hackySavepoint(
                 state,
                 incrementCounterSql,
+                undefined,
                 undefined,
                 undefined,
                 log,
@@ -947,6 +972,7 @@ describe('adapter runtime abstractions', () => {
               await trx.hackySavepoint(
                 state,
                 incrementCounterSql,
+                undefined,
                 undefined,
                 undefined,
                 log,

@@ -287,9 +287,6 @@ export function maybeWrappedThen(
   }
 }
 
-const queriesNames: RecordString = {};
-let nameI = 0;
-
 const callAfterHook = function (
   this: [result: unknown[], q: Query],
   cb: QueryAfterHook,
@@ -317,7 +314,7 @@ const then = async (
 ): Promise<unknown> => {
   const { q: query } = q;
 
-  let sql: (Sql & { name?: string }) | undefined;
+  let sql: Sql | undefined;
   let logData: unknown | undefined;
   const log = state?.log ?? query.log;
   setCurrentDefaultSchema(state?.schema);
@@ -374,9 +371,7 @@ const then = async (
 
     if ('text' in sql) {
       if (query.autoPreparedStatements) {
-        sql.name =
-          queriesNames[sql.text] ||
-          (queriesNames[sql.text] = (nameI++).toString(36));
+        sql.prepare = true;
       }
 
       if (log) {
@@ -870,6 +865,7 @@ const execQuery = (
   releasingSavepoint: ThenSavepointState | undefined,
   sqlSessionState: SqlSessionState | undefined,
 ) => {
+  const prepare = sql.prepare;
   let promise: Promise<QueryResult>;
   if (startingSavepoint) {
     if (releasingSavepoint) {
@@ -877,24 +873,48 @@ const execQuery = (
         startingSavepoint.name,
         log,
         () => {
-          return (promise = adapter[method as 'query'](
-            sql.text,
-            sql.values,
-            sqlSessionState,
-          ));
+          return prepare
+            ? (promise = adapter[method as 'query'](
+                sql.text,
+                sql.values,
+                sqlSessionState,
+                prepare,
+              ))
+            : (promise = adapter[method as 'query'](
+                sql.text,
+                sql.values,
+                sqlSessionState,
+              ));
         },
       );
     } else {
-      promise = startingSavepoint.transactionAdapter.hackySavepoint(
-        startingSavepoint,
-        sql.text,
-        sql.values,
-        method === 'arrays',
-        log,
-      );
+      promise = prepare
+        ? startingSavepoint.transactionAdapter.hackySavepoint(
+            startingSavepoint,
+            sql.text,
+            sql.values,
+            method === 'arrays',
+            prepare,
+            log,
+          )
+        : startingSavepoint.transactionAdapter.hackySavepoint(
+            startingSavepoint,
+            sql.text,
+            sql.values,
+            method === 'arrays',
+            undefined,
+            log,
+          );
     }
   } else {
-    promise = adapter[method as 'query'](sql.text, sql.values, sqlSessionState);
+    promise = prepare
+      ? adapter[method as 'query'](
+          sql.text,
+          sql.values,
+          sqlSessionState,
+          prepare,
+        )
+      : adapter[method as 'query'](sql.text, sql.values, sqlSessionState);
   }
 
   if (!startingSavepoint && releasingSavepoint) {

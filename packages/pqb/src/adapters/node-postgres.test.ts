@@ -46,6 +46,46 @@ describe('node-postgres', () => {
       expect(result.fields).toEqual([{ name: 'one' }]);
     });
 
+    it('assigns prepared statement names per client', async () => {
+      const rawResult = makeQueryResult([], []);
+      const firstClient = {
+        query: jest.fn((_params: { name?: string }) =>
+          Promise.resolve(rawResult),
+        ),
+      };
+      const secondClient = {
+        query: jest.fn((_params: { name?: string }) =>
+          Promise.resolve(rawResult),
+        ),
+      };
+
+      await NodePostgresAdapter.queryClient(
+        firstClient as unknown as PoolClient,
+        'SELECT 1',
+        undefined,
+        undefined,
+        true,
+      );
+      await NodePostgresAdapter.queryClient(
+        secondClient as unknown as PoolClient,
+        'SELECT 2',
+        undefined,
+        undefined,
+        true,
+      );
+      await NodePostgresAdapter.queryClient(
+        firstClient as unknown as PoolClient,
+        'SELECT 1',
+        undefined,
+        undefined,
+        true,
+      );
+
+      expect(firstClient.query.mock.calls[0]?.[0]?.name).toBe('orchid_0');
+      expect(secondClient.query.mock.calls[0]?.[0]?.name).toBe('orchid_0');
+      expect(firstClient.query.mock.calls[1]?.[0]?.name).toBe('orchid_0');
+    });
+
     it('uses rowMode=array for arrays query', async () => {
       const rawResult = makeQueryResult([[1]], [{ name: 'one' }]);
       const client = {

@@ -175,6 +175,7 @@ export {
 } from './index';
 
 export { type UpdateSelf } from './query/basic-features/mutate/update';
+export { type QueryThen } from './query/then/then';
 
 // Internal query functions (prefixed with _)
 export {

@@ -339,4 +339,4 @@ You can also override this for a specific table, see [noPrimaryKey](/guide/defin
 
 ## ORM Methods
 
-The ORM exposes specific functions prefixed with a `$` sign to not overlap with your table names. See [ORM Methods](/guide/orm-methods) for details on `$query`, `$queryArrays`, `$withOptions`, `$getAdapter`, `$from`, and `$close`.
+The ORM exposes specific functions prefixed with a `$` sign to not overlap with your table names. See [ORM Methods](/guide/orm-methods) for details on `$query`, `$queryArrays`, `$prepare`, `$withOptions`, `$getAdapter`, `$from`, and `$close`.

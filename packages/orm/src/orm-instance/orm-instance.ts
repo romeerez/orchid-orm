@@ -42,6 +42,10 @@ import {
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Db, Query } from 'pqb';
 import { ormSelect, OrmSelectMethods } from './features/orm-select/orm-select';
+import {
+  ormPrepare,
+  OrmPrepareMethods,
+} from './features/orm-prepare/orm-prepare';
 
 export interface FromQuery extends Query {
   returnType: 'all';
@@ -185,7 +189,7 @@ export const setGrants = <const T extends readonly Grant.TableClassGrant[]>(
   grants: T,
 ): T => grants;
 
-interface OrchidORMMethods extends OrmSelectMethods {
+interface OrchidORMMethods extends OrmPrepareMethods, OrmSelectMethods {
   /**
    * @see import('pqb').QueryTransaction.prototype.transaction
    */
@@ -666,6 +670,7 @@ const privateOrchidORMWithAdapter = <
     $withSql: qb.withSql.bind(qb),
     $from: qb.from.bind(qb),
     $select: ormSelect(qb),
+    $prepare: ormPrepare(),
     $close: adapter.close.bind(adapter),
     $withOptions: qb.withOptions.bind(qb),
   } as unknown as OrchidORM<T, V>;
