@@ -268,7 +268,7 @@ const options = {
   databaseURL: process.env.DATABASE_URL,
   connectRetry: {
     attempts: 5,
-    stragegy(currentAttempt: number, maxAttempts: number) {
+    strategy(currentAttempt: number, maxAttempts: number) {
       // linear: wait 100ms after 1st attempt, then 200m after 2nd, and so on.
       return setTimeout(currentAttempt * 100);
     },
