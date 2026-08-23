@@ -281,7 +281,7 @@ Possible options are:
 ```ts
 interface IndexOptions {
   name?: string;
-  // NULLS NOT DISTINCT: availabe in Postgres 15+, makes sense only for unique index
+  // NULLS NOT DISTINCT: available in Postgres 15+, makes sense only for unique index
   nullsNotDistinct?: true;
   // create a unique index
   unique?: true;
