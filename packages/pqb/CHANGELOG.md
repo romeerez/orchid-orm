@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.5
+
+### Patch Changes
+
+- 770ebf1a: Fix parameter encoding for JSON containment operators (#754).
+
 ## 0.73.4
 
 ### Patch Changes
