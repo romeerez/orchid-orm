@@ -1,4 +1,9 @@
-import { IsQuery, Query, SetQueryReturnsColumnOrThrow } from '../query/query';
+import {
+  isQuery,
+  IsQuery,
+  Query,
+  SetQueryReturnsColumnOrThrow,
+} from '../query/query';
 import { Column } from './column';
 import { ToSQLCtx } from '../query/sql/to-sql';
 import { MoveMutativeQueryToCte } from '../query/basic-features/cte/cte.sql';
@@ -206,7 +211,7 @@ const quoteValue = (
       return arg.toSQL(ctx, quotedAs);
     }
 
-    if ('toSQL' in arg) {
+    if (isQuery(arg)) {
       return `(${moveMutativeQueryToCte(ctx, arg as never)})`;
     }
 
@@ -233,7 +238,7 @@ const quoteLikeValue = (
       return arg.toSQL(ctx, quotedAs);
     }
 
-    if ('toSQL' in arg) {
+    if (isQuery(arg)) {
       return `replace(replace((${moveMutativeQueryToCte(
         ctx,
         arg as never,
@@ -635,8 +640,19 @@ const jsonPathQueryOp = (
         : ''
   })`;
 
-const shouldEncodeJson = (ctx: ToSQLCtx) =>
-  ctx.q.adapter.driverAdapter.schemaConfig?.jsonEncodedByDriver === false;
+const encodeJsonIfNeeded = (ctx: ToSQLCtx, value: unknown) =>
+  ctx.q.adapter.driverAdapter.schemaConfig?.jsonEncodedByDriver === false
+    ? JSON.stringify(value)
+    : value;
+
+const quoteJsonOperand = (
+  arg: unknown,
+  ctx: ToSQLCtx,
+  quotedAs: string | undefined,
+): string =>
+  isExpression(arg) || isQuery(arg)
+    ? quoteValue(arg, ctx, quotedAs)
+    : addValue(ctx.values, encodeJsonIfNeeded(ctx, arg));
 
 const quoteJsonValue = (
   arg: unknown,
@@ -647,32 +663,24 @@ const quoteJsonValue = (
   if (arg && typeof arg === 'object') {
     if (IN && Array.isArray(arg)) {
       return `(${arg
-        .map((value) =>
-          shouldEncodeJson(ctx)
-            ? addValue(ctx.values, JSON.stringify(value))
-            : addValue(ctx.values, value),
-        )
+        .map((value) => addValue(ctx.values, encodeJsonIfNeeded(ctx, value)))
         .join(', ')})`;
     }
 
     if (Array.isArray(arg)) {
-      return shouldEncodeJson(ctx)
-        ? addValue(ctx.values, JSON.stringify(arg))
-        : addValue(ctx.values, arg);
+      return addValue(ctx.values, encodeJsonIfNeeded(ctx, arg));
     }
 
     if (isExpression(arg)) {
       return 'to_jsonb(' + arg.toSQL(ctx, quotedAs) + ')';
     }
 
-    if ('toSQL' in arg) {
+    if (isQuery(arg)) {
       return `to_jsonb((${moveMutativeQueryToCte(ctx, arg as never)}))`;
     }
   }
 
-  return shouldEncodeJson(ctx)
-    ? addValue(ctx.values, JSON.stringify(arg))
-    : addValue(ctx.values, arg);
+  return addValue(ctx.values, encodeJsonIfNeeded(ctx, arg));
 };
 
 const serializeJsonValue = (
@@ -685,7 +693,7 @@ const serializeJsonValue = (
       return 'to_jsonb(' + arg.toSQL(ctx, quotedAs) + ')';
     }
 
-    if ('toSQL' in arg) {
+    if (isQuery(arg)) {
       return `to_jsonb((${moveMutativeQueryToCte(ctx, arg as never)}))`;
     }
   }
@@ -760,11 +768,11 @@ const json = {
   ) as never,
   jsonSupersetOf: make(
     (key, value, ctx, quotedAs) =>
-      `${key} @> ${quoteValue(value, ctx, quotedAs)}`,
+      `${key} @> ${quoteJsonOperand(value, ctx, quotedAs)}`,
   ),
   jsonSubsetOf: make(
     (key, value, ctx, quotedAs) =>
-      `${key} <@ ${quoteValue(value, ctx, quotedAs)}`,
+      `${key} <@ ${quoteJsonOperand(value, ctx, quotedAs)}`,
   ),
   jsonSet: makeVarArg(
     (key, [path, value], ctx, quotedAs) =>
