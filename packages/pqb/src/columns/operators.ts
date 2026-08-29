@@ -640,8 +640,10 @@ const jsonPathQueryOp = (
         : ''
   })`;
 
-const shouldEncodeJson = (ctx: ToSQLCtx) =>
-  ctx.q.adapter.driverAdapter.schemaConfig?.jsonEncodedByDriver === false;
+const encodeJsonIfNeeded = (ctx: ToSQLCtx, value: unknown) =>
+  ctx.q.adapter.driverAdapter.schemaConfig?.jsonEncodedByDriver === false
+    ? JSON.stringify(value)
+    : value;
 
 const quoteJsonOperand = (
   arg: unknown,
@@ -650,7 +652,7 @@ const quoteJsonOperand = (
 ): string =>
   isExpression(arg) || isQuery(arg)
     ? quoteValue(arg, ctx, quotedAs)
-    : addValue(ctx.values, shouldEncodeJson(ctx) ? JSON.stringify(arg) : arg);
+    : addValue(ctx.values, encodeJsonIfNeeded(ctx, arg));
 
 const quoteJsonValue = (
   arg: unknown,
@@ -661,18 +663,12 @@ const quoteJsonValue = (
   if (arg && typeof arg === 'object') {
     if (IN && Array.isArray(arg)) {
       return `(${arg
-        .map((value) =>
-          shouldEncodeJson(ctx)
-            ? addValue(ctx.values, JSON.stringify(value))
-            : addValue(ctx.values, value),
-        )
+        .map((value) => addValue(ctx.values, encodeJsonIfNeeded(ctx, value)))
         .join(', ')})`;
     }
 
     if (Array.isArray(arg)) {
-      return shouldEncodeJson(ctx)
-        ? addValue(ctx.values, JSON.stringify(arg))
-        : addValue(ctx.values, arg);
+      return addValue(ctx.values, encodeJsonIfNeeded(ctx, arg));
     }
 
     if (isExpression(arg)) {
@@ -684,9 +680,7 @@ const quoteJsonValue = (
     }
   }
 
-  return shouldEncodeJson(ctx)
-    ? addValue(ctx.values, JSON.stringify(arg))
-    : addValue(ctx.values, arg);
+  return addValue(ctx.values, encodeJsonIfNeeded(ctx, arg));
 };
 
 const serializeJsonValue = (
