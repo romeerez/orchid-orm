@@ -1574,8 +1574,26 @@ describe('operators', () => {
             SELECT ${UserSelectAll} FROM "schema"."user" "User"
             WHERE "User"."data" ${sql} $1
           `,
-          [JSON.stringify({ a: 'b' })],
+          [testJsonValue({ a: 'b' })],
         );
+      });
+
+      it('should compare JSON values', async () => {
+        const value = { a: 'b' };
+
+        await jsonTable.insert({
+          name: 'name',
+          password: 'password',
+          data: value,
+        });
+
+        const count = await jsonTable
+          .where({
+            data: { [method]: value },
+          })
+          .count();
+
+        expect(count).toBe(1);
       });
 
       it('should handle sub query', () => {
