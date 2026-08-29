@@ -205,7 +205,7 @@ export const SnakeCaseTable = defineTable(
 
 All tables should have a primary key. Even if it is a join table, it should have a composite primary key consisting of foreign key columns.
 
-If you forgot to define a primary key, ORM will send a friendly remained by throwing an error.
+If you forgot to define a primary key, the ORM will send you a friendly reminder by throwing an error.
 
 Disable the check for a specific table by setting `noPrimaryKey` option:
 
