@@ -19,7 +19,12 @@ Agents MUST maintain this `AGENTS.md` when repository structure, commands, conve
 
 ## Nested `AGENTS.md` Maintenance
 
-After any code change, maintain the nested `AGENTS.md` for every package or cohesive feature folder touched by the change. Create one when the applicable package or feature folder has none.
+After any code change, maintain the most deeply colocated `AGENTS.md` for each
+package or cohesive feature folder touched by the change. Create that
+feature-folder file when none exists; update its parent package guidance only
+when the knowledge applies across the whole package. Do not place
+feature-specific knowledge in a package-level file when a more focused
+`AGENTS.md` is applicable.
 
 Nested files are a progressively more focused layer of guidance: they add only durable knowledge specific to their subtree and never repeat parent guidance. Record the feature's intent, invariants and boundaries to preserve, externally meaningful constraints, and durable decisions with their rationale when that rationale prevents a plausible but harmful change.
 

@@ -843,12 +843,9 @@ export const _joinLateral = (
 
   if (!existingValue) {
     const joinedAs = getQueryAs(query);
-    setObjectValueImmutable(
-      joinQuery.q,
-      'joinedShapes',
-      joinedAs,
-      query.q.selectShape,
-    );
+    // selectShape is extended after the relation is joined.
+    const parentShape = { ...query.q.selectShape };
+    setObjectValueImmutable(joinQuery.q, 'joinedShapes', joinedAs, parentShape);
   }
 
   const joinedShapeMayHaveNames =

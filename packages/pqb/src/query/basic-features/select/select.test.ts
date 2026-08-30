@@ -667,6 +667,32 @@ describe('select', () => {
         expect(res).toEqual([{ withParsers: null, withoutParsers: null }]);
       });
     });
+
+    it('should select relation with the same alias as a foreign key', async () => {
+      const q = db.post.findOptional(0).select({
+        UserId: (q) => q.user.get('Id'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "UserId"."UserId" "UserId"
+          FROM "schema"."post" "Post"
+          LEFT JOIN LATERAL (
+            SELECT array["user"."id"] "UserId"
+            FROM "schema"."user"
+            WHERE "user"."id" = "Post"."user_id"
+              AND "user"."user_key" = "Post"."title"
+          ) "UserId" ON true
+          WHERE "Post"."id" = $1
+          LIMIT 1
+        `,
+        [0],
+      );
+
+      const res = await q;
+      assertType<typeof res, { UserId: number } | undefined>();
+    });
   });
 
   describe('select implicit json', () => {
