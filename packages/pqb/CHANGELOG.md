@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.6
+
+### Patch Changes
+
+- 9dc6f7db: Fix scalar relation selections whose alias matches a foreign-key column (#751)
+
 ## 0.73.5
 
 ### Patch Changes
