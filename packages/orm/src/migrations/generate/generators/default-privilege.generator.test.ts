@@ -1386,6 +1386,83 @@ change(async (db) => {
     );
   });
 
+  it('should ignore implicit privileges of the owner in global default privileges', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createRole('role1');
+        // Postgres also stores the owner's own privileges when changing global default privileges.
+        // The owner is not `postgres` because the generator skips the `postgres` grantee.
+        await db.changeDefaultPrivileges({
+          owner: 'app-user',
+          grantee: 'role1',
+          grant: {
+            tables: {
+              privileges: ['SELECT'],
+            },
+          },
+        });
+      },
+      dbOptions: {
+        roles: [
+          {
+            name: 'role1',
+            defaultPrivileges: [
+              {
+                owner: 'app-user',
+                tables: {
+                  privileges: ['SELECT'],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    await act();
+
+    assert.migration();
+  });
+
+  it('should keep explicit privileges of the owner in schema default privileges', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createSchema('testSchema');
+        await db.changeDefaultPrivileges({
+          owner: 'app-user',
+          grantee: 'app-user',
+          schema: 'testSchema',
+          grant: {
+            tables: {
+              privileges: ['SELECT'],
+            },
+          },
+        });
+      },
+      schema: 'testSchema',
+      dbOptions: {
+        roles: [
+          {
+            name: 'app-user',
+            defaultPrivileges: [
+              {
+                owner: 'app-user',
+                schema: 'testSchema',
+                tables: {
+                  privileges: ['SELECT'],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    await act();
+
+    assert.migration();
+  });
+
   it('should filter out MAINTAIN privilege for PostgreSQL version below 17', async () => {
     (_getDbVersion as jest.Mock).mockResolvedValue(16);
 
