@@ -1,5 +1,4 @@
 import {
-  changeCache,
   migrate,
   MigrateConfig,
   migrateConfigDefaults,
@@ -391,19 +390,37 @@ describe('migrate-or-rollback', () => {
       return config;
     };
 
+    // a directory per test, so that tests don't share cached migration changes
+    let testDir = 0;
+
     const makeFile = (version: number, load: () => void = jest.fn()) => ({
-      path: `path/000${version}_file.ts`,
+      path: `path/${testDir}/000${version}_file.ts`,
       name: `file.ts`,
       version: `000${version}`,
       load,
     });
 
-    const files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
+    let files: ReturnType<typeof makeFile>[];
 
     const change = (
       fn: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>,
     ) => {
       pushChange({ fn: fn as never, config });
+    };
+
+    /**
+     * Like `import`, evaluates the migration file only on the first call,
+     * and returns the same module on the subsequent calls.
+     */
+    const mockImport = (fn: () => void) => {
+      let module: object | undefined;
+      return () => {
+        if (!module) {
+          change(async () => fn());
+          module = {};
+        }
+        return module;
+      };
     };
 
     const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
@@ -424,9 +441,8 @@ describe('migrate-or-rollback', () => {
 
     beforeEach(() => {
       jest.clearAllMocks();
-      for (const key in changeCache) {
-        delete changeCache[key];
-      }
+      testDir++;
+      files = [makeFile(1), makeFile(2), makeFile(3), makeFile(4)];
     });
 
     afterAll(async () => {
@@ -692,6 +708,20 @@ describe('migrate-or-rollback', () => {
         await expect(act(migrate)).rejects.toThrow(
           `Missing a default export in ${files[0].path} migration`,
         );
+      });
+
+      it('should not share changes between migrations with the same key from different sets', async () => {
+        const applied: string[] = [];
+        const importA = mockImport(() => applied.push('a'));
+        const importB = mockImport(() => applied.push('b'));
+
+        // all migrations have the same key
+        for (const load of [importA, importB, importA]) {
+          arrange({ files: [makeFile(1, load)], versions: [] });
+          await act(migrate);
+        }
+
+        expect(applied).toEqual(['a', 'b', 'a']);
       });
 
       it('should call processMigrateConfig to handle log option', async () => {
@@ -1108,6 +1138,16 @@ describe('migrate-or-rollback', () => {
           [expect.stringContaining(`SELECT 'test query 1'`)],
           [expect.stringContaining(`SELECT 'test query 2'`)],
         ]);
+      });
+
+      it('should run the same migration module more than once', async () => {
+        let runs = 0;
+        const load = mockImport(() => runs++);
+
+        await runMigration(adapter, load);
+        await runMigration(adapter, load);
+
+        expect(runs).toBe(2);
       });
 
       it('should support config with `transactionSearchPath`', async () => {
