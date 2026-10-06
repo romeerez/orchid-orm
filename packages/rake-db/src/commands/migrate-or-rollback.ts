@@ -554,9 +554,20 @@ const checkMigrationOrder = (
   return;
 };
 
-// Cache `change` functions of migrations. Key is a migration file name, value is array of `change` functions.
-// When migrating two or more databases, files are loaded just once due to this cache.
-export const changeCache: Record<string, MigrationChange[] | undefined> = {};
+/**
+ * Cache of migration changes, keyed by the loaded migration module.
+ * Different migration sets with the same keys load different modules, so they don't share changes.
+ *
+ * A migration file registers its changes by calling `change` at the top level, which runs only on the first import:
+ * subsequent imports return the already evaluated module and register nothing.
+ * The cache allows running the same migration again, for example, when migrating several databases.
+ */
+const changesByModule = new WeakMap<object, MigrationChange[]>();
+
+/**
+ * Cache of migration changes, keyed by the migration path, for loaders that don't return a module, such as file loaders.
+ */
+const changesByPath = new Map<string, MigrationChange[]>();
 
 export const getChanges = async (
   file: MigrationItemHasLoad,
@@ -564,14 +575,18 @@ export const getChanges = async (
 ): Promise<MigrationChange[]> => {
   clearChanges();
 
-  let changes = file.path ? changeCache[file.path] : undefined;
-  if (!changes) {
-    const module = (await file.load()) as
-      | {
-          default?: MaybeArray<MigrationChange>;
-        }
-      | undefined;
+  const module = (await file.load()) as
+    | {
+        default?: MaybeArray<MigrationChange>;
+      }
+    | undefined;
 
+  const isModule = typeof module === 'object' && module !== null;
+  let changes: MigrationChange[] | undefined;
+  if (isModule) changes = changesByModule.get(module);
+  else if (file.path) changes = changesByPath.get(file.path);
+
+  if (!changes) {
     const exported = module?.default && toArray(module.default);
 
     if (config?.forceDefaultExports && !exported) {
@@ -581,7 +596,8 @@ export const getChanges = async (
     }
 
     changes = exported || getCurrentChanges();
-    if (file.path) changeCache[file.path] = changes;
+    if (isModule) changesByModule.set(module, changes);
+    else if (file.path) changesByPath.set(file.path, changes);
   }
 
   return changes;
