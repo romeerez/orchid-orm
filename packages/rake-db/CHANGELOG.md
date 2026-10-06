@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.11
+
+### Patch Changes
+
+- 70d44750: Fix migration generator trying to drop the bootstrap superuser when it isn't named `postgres` (#766)
+
 ## 2.37.10
 
 ### Patch Changes
