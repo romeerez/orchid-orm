@@ -123,7 +123,7 @@ export const db = orchidORM(
 );
 ```
 
-The migration logic will ignore the `postgres` role and all the roles that starts with `pg_`,
+The migration logic will ignore the bootstrap superuser (the role with `oid` 10, which cannot be dropped), the `postgres` role, and all the roles that start with `pg_`,
 it will synchronize all other roles.
 
 You can tweak this filter by setting `managedRolesSql` that's being applied to a query of `pg_roles` table:
@@ -134,7 +134,7 @@ export const db = orchidORM(
     databaseURL: process.env.DATABASE_URL,
     roles: [...roles],
     // it's a default SQL
-    managedRolesSql: `rolname != 'postgres' AND rolname !~ '^pg_'`,
+    managedRolesSql: `oid != 10 AND rolname != 'postgres' AND rolname !~ '^pg_'`,
   },
   { ...tables },
 );

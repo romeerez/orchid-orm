@@ -745,6 +745,12 @@ FROM pg_collation
 JOIN pg_namespace n on pg_collation.collnamespace = n.oid
 WHERE ${filterSchema('n.nspname')}`;
 
+/**
+ * Fixed oid of the bootstrap superuser created by `initdb` (`BOOTSTRAP_SUPERUSERID` in PostgreSQL sources).
+ * Its name may differ from `postgres`, and it cannot be dropped.
+ */
+const BOOTSTRAP_SUPERUSER_OID = 10;
+
 const roleSql = (params: {
   whereSql?: string;
 }) => `SELECT COALESCE(json_agg(json_build_object(
@@ -760,7 +766,8 @@ const roleSql = (params: {
   'bypassRls', rolbypassrls,
   'config', rolconfig
 )), '[]') FROM pg_roles WHERE ${
-  params.whereSql ?? `rolname != 'postgres' AND rolname !~ '^pg_'`
+  params.whereSql ??
+  `oid != ${BOOTSTRAP_SUPERUSER_OID} AND rolname != 'postgres' AND rolname !~ '^pg_'`
 }`;
 
 const defaultPrivilegesSql = `SELECT COALESCE(json_agg(t.*), '[]') FROM (
