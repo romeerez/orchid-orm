@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.13
+
+### Patch Changes
+
+- 6f94181e: Fix `migrate` running a migration from another `migrations` object with the same key (#764)
+
 ## 2.37.12
 
 ### Patch Changes
