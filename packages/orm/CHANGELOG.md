@@ -1,5 +1,13 @@
 # orchid-orm
 
+## 1.78.9
+
+### Patch Changes
+
+- 66424a72: Fix migration generator failing on global default privileges when not connected as `postgres` (#769)
+- Updated dependencies [66424a72]
+  - rake-db@2.37.12
+
 ## 1.78.8
 
 ### Patch Changes

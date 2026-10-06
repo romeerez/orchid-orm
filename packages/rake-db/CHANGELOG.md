@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.12
+
+### Patch Changes
+
+- 66424a72: Fix migration generator failing on global default privileges when not connected as `postgres` (#769)
+
 ## 2.37.11
 
 ### Patch Changes
