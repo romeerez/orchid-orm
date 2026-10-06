@@ -787,6 +787,7 @@ const defaultPrivilegesSql = `SELECT COALESCE(json_agg(t.*), '[]') FROM (
     array_agg(ae.is_grantable) "isGrantables"
   FROM pg_default_acl d
   JOIN LATERAL aclexplode(d.defaclacl) ae ON true
+  WHERE d.defaclnamespace <> 0 OR ae.grantee <> d.defaclrole
   GROUP BY "grantor", "grantee", "schema", "object"
 ) t`;
 
