@@ -910,11 +910,12 @@ describe('hooks', () => {
             .with(
               'cte',
               User.createForEachFrom(
-                User.select('Name', 'UserKey', 'Password', 'Age'),
+                User.select('Name', 'UserKey', 'Password', 'Age').order('Age'),
               ),
             )
             .from('cte')
-            .select('Name', 'Age');
+            .select('Name', 'Age')
+            .order('Age');
 
           expect(res).toMatchObject([
             { Name: UserData.Name, Age: 1 },
