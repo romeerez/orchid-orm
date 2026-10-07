@@ -1461,7 +1461,12 @@ describe('hasMany update', () => {
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
-        expect(afterUpdate).toHaveBeenCalledWith(ids, expect.any(Db));
+        // `UPDATE ... RETURNING` does not guarantee the order of rows
+        expect(afterUpdate).toHaveBeenCalledWith(
+          expect.arrayContaining(ids),
+          expect.any(Db),
+        );
+        expect(afterUpdate.mock.calls[0][0]).toHaveLength(ids.length);
       });
     });
   });
