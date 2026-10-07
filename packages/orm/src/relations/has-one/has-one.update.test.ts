@@ -201,7 +201,7 @@ describe('hasOne update', () => {
 
         expect(count).toBe(2);
 
-        const ids = await db.profile.pluck('Id');
+        const ids = await db.profile.pluck('Id').order('Id');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);

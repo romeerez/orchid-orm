@@ -298,7 +298,9 @@ describe('hasAndBelongsToMany create', () => {
 
         resetQueriesCount();
 
-        const ids = await db.chat.select('IdOfChat', 'ChatKey');
+        const ids = await db.chat
+          .select('IdOfChat', 'ChatKey')
+          .order('IdOfChat');
 
         expect(getQueriesCount()).toBe(1);
 
@@ -314,7 +316,9 @@ describe('hasAndBelongsToMany create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const ids = await db.chat.select('IdOfChat', 'ChatKey');
+        const ids = await db.chat
+          .select('IdOfChat', 'ChatKey')
+          .order('IdOfChat');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -611,8 +615,12 @@ describe('hasAndBelongsToMany create', () => {
 
       expect(getQueriesCount()).toBe(1);
 
-      const user1Chats = await db.user.queryRelated('activeChats', user1);
-      const user2Chats = await db.user.queryRelated('activeChats', user2);
+      const user1Chats = await db.user
+        .queryRelated('activeChats', user1)
+        .order('IdOfChat');
+      const user2Chats = await db.user
+        .queryRelated('activeChats', user2)
+        .order('IdOfChat');
 
       expect(user1Chats).toEqual([chats[0], chats[1]]);
       expect(user2Chats).toEqual([chats[2], chats[3]]);
@@ -966,7 +974,9 @@ describe('hasAndBelongsToMany create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const ids = await db.chat.select('IdOfChat', 'ChatKey');
+        const ids = await db.chat
+          .select('IdOfChat', 'ChatKey')
+          .order('IdOfChat');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -980,7 +990,9 @@ describe('hasAndBelongsToMany create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const ids = await db.chat.select('IdOfChat', 'ChatKey');
+        const ids = await db.chat
+          .select('IdOfChat', 'ChatKey')
+          .order('IdOfChat');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);

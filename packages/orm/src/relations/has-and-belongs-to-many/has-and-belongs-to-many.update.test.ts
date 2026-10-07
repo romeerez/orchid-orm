@@ -349,10 +349,12 @@ describe('hasAndBelongsToMany update', () => {
 
       expect(count).toBe(1);
 
-      const chats = await db.user.queryRelated('chats', {
-        Id: userId,
-        UserKey: 'key',
-      });
+      const chats = await db.user
+        .queryRelated('chats', {
+          Id: userId,
+          UserKey: 'key',
+        })
+        .order('IdOfChat');
 
       expect(chats.map((chat) => chat.Title)).toEqual(['chat 1', 'chat 3']);
     });
@@ -700,6 +702,7 @@ describe('hasAndBelongsToMany update', () => {
 
       const chats = await db.user
         .queryRelated('chats', { Id, UserKey: 'key' })
+        .order('IdOfChat')
         .pluck('Title');
 
       expect(chats).toEqual(['chat 1', 'chat 3']);
@@ -770,11 +773,7 @@ describe('hasAndBelongsToMany update', () => {
         expect(beforeDelete).toHaveBeenCalledTimes(1);
         expect(afterDelete).toHaveBeenCalledTimes(1);
 
-        const actual = afterDelete.mock.calls[0][0].sort(
-          (a: { IdOfChat: number }, b: { IdOfChat: number }) =>
-            a.IdOfChat - b.IdOfChat,
-        );
-        expect(actual).toEqual(hookData);
+        expect(afterDelete).toHaveBeenCalledWith(hookData, expect.any(Db));
       });
 
       it('should invoke callbacks in a batch update', async () => {
@@ -814,11 +813,10 @@ describe('hasAndBelongsToMany update', () => {
         expect(beforeDelete).toHaveBeenCalledTimes(1);
         expect(afterDelete).toHaveBeenCalledTimes(1);
 
-        const actual = afterDelete.mock.calls[0][0].sort(
-          (a: { IdOfChat: number }, b: { IdOfChat: number }) =>
-            a.IdOfChat - b.IdOfChat,
+        expect(afterDelete).toHaveBeenCalledWith(
+          [hookData[0], hookData[2]],
+          expect.any(Db),
         );
-        expect(actual).toEqual([hookData[0], hookData[2]]);
       });
     });
   });
@@ -1103,7 +1101,7 @@ describe('hasAndBelongsToMany update', () => {
 
         expect(count).toBe(1);
 
-        const hookData = await db.chat.select('IdOfChat');
+        const hookData = await db.chat.select('IdOfChat').order('IdOfChat');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -1136,7 +1134,7 @@ describe('hasAndBelongsToMany update', () => {
 
         expect(count).toBe(2);
 
-        const ids = await db.chat.pluck('IdOfChat');
+        const ids = await db.chat.pluck('IdOfChat').order('IdOfChat');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -1564,7 +1562,9 @@ describe('hasAndBelongsToMany update', () => {
 
         resetQueriesCount();
 
-        const ids = await db.chat.select('IdOfChat', 'ChatKey');
+        const ids = await db.chat
+          .select('IdOfChat', 'ChatKey')
+          .order('IdOfChat');
 
         expect(getQueriesCount()).toBe(1);
 
@@ -1588,7 +1588,9 @@ describe('hasAndBelongsToMany update', () => {
 
         expect(count).toBe(2);
 
-        const ids = await db.chat.select('IdOfChat', 'ChatKey');
+        const ids = await db.chat
+          .select('IdOfChat', 'ChatKey')
+          .order('IdOfChat');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);

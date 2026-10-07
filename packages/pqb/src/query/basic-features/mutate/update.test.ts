@@ -1405,15 +1405,15 @@ describe('updateMany', () => {
         { ...UserData, Name: 'sel2' },
       ]);
 
-      const result = await db.user
-        .select('Id', 'Name')
-        .updateMany([
-          { Id: users[0].Id, Name: 'sel-upd1' },
-          { Id: users[1].Id, Name: 'sel-upd2' },
-        ])
-        .order('Name');
+      const result = await db.user.select('Id', 'Name').updateMany([
+        { Id: users[0].Id, Name: 'sel-upd1' },
+        { Id: users[1].Id, Name: 'sel-upd2' },
+      ]);
 
-      expect(result.map((r) => r.Name)).toEqual(['sel-upd1', 'sel-upd2']);
+      expect(result.map((r) => r.Name).sort()).toEqual([
+        'sel-upd1',
+        'sel-upd2',
+      ]);
     });
 
     // RETURNING must qualify columns with the table name,
@@ -1424,15 +1424,15 @@ describe('updateMany', () => {
         { ...UserData, Name: 'amb2' },
       ]);
 
-      const result = await db.user
-        .selectAll()
-        .updateMany([
-          { Id: users[0].Id, Name: 'amb-upd1' },
-          { Id: users[1].Id, Name: 'amb-upd2' },
-        ])
-        .order('Name');
+      const result = await db.user.selectAll().updateMany([
+        { Id: users[0].Id, Name: 'amb-upd1' },
+        { Id: users[1].Id, Name: 'amb-upd2' },
+      ]);
 
-      expect(result.map((r) => r.Name)).toEqual(['amb-upd1', 'amb-upd2']);
+      expect(result.map((r) => r.Name).sort()).toEqual([
+        'amb-upd1',
+        'amb-upd2',
+      ]);
     });
 
     it('should throw NotFoundError for strict variant when row is missing', async () => {

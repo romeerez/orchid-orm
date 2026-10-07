@@ -562,7 +562,7 @@ describe('relations', () => {
         parent: (q) => helper(q.category),
       });
 
-      const result = await q;
+      const result = await q.order('categoryName');
 
       assertType<
         typeof result,

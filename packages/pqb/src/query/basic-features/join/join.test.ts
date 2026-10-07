@@ -593,7 +593,7 @@ describe('joinData', () => {
       .where({ 'data.foo': { gte: 1 } })
       .select('Id', 'data.foo', 'data.bar');
 
-    const result = await q;
+    const result = await q.order('data.foo');
 
     assertType<
       typeof result,

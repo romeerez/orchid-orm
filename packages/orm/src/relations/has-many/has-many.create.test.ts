@@ -387,7 +387,7 @@ describe('hasMany create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const ids = await db.message.select('Id');
+        const ids = await db.message.select('Id').order('Id');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -424,7 +424,7 @@ describe('hasMany create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const ids = await db.message.select('Id');
+        const ids = await db.message.select('Id').order('Id');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
@@ -1212,7 +1212,7 @@ describe('hasMany create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const messages = await db.message.select('Id');
+        const messages = await db.message.select('Id').order('Id');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
