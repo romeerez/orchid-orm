@@ -373,6 +373,45 @@ describe('migrate-or-rollback', () => {
         expect.stringContaining('Migrated file'),
       ]);
     });
+
+    describe('migration lock', () => {
+      const getHeldAdvisoryLockKeys = async () => {
+        // `pg_locks` shows a bigint advisory key split into `classid` (high half) and `objid` (low half) with `objsubid = 1`,
+        // see https://www.postgresql.org/docs/current/view-pg-locks.html
+        const { rows } = await adapter.query<{ key: string }>(
+          `SELECT ((classid::bigint << 32) | objid::bigint)::text AS key
+          FROM pg_locks
+          WHERE locktype = 'advisory' AND objsubid = 1 AND pid = pg_backend_pid()`,
+        );
+        return rows.map((row) => row.key);
+      };
+
+      it('should take the default advisory lock', async () => {
+        arrange({ config: { ...testConfig, migrations: {} } });
+
+        await act(migrate);
+
+        expect(await getHeldAdvisoryLockKeys()).toEqual([
+          '8582141715823621641',
+        ]);
+      });
+
+      it('should take the advisory lock with `migrationLockKey`', async () => {
+        arrange({
+          config: {
+            ...testConfig,
+            migrations: {},
+            migrationLockKey: 1234567890123456789n,
+          },
+        });
+
+        await act(migrate);
+
+        expect(await getHeldAdvisoryLockKeys()).toEqual([
+          '1234567890123456789',
+        ]);
+      });
+    });
   });
 
   describe('with mocked dependencies', () => {

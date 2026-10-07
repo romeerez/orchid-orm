@@ -259,6 +259,10 @@ type MigrateConfig =
   // pass a function for dynamic resolution, e.g. in multi-tenant apps
   transactionSearchPath?: string | (() => string);
 
+  // advisory lock key used while migrating or rolling back
+  // default: a fixed key shared by all rake-db configurations
+  migrationLockKey?: bigint;
+
   // throw when a migration file has no default export
   // default: false
   forceDefaultExports?: boolean;
