@@ -36,6 +36,11 @@ export interface RakeDbCliConfigInputBase<
   noPrimaryKey?: NoPrimaryKeyOption;
   transactionSearchPath?: SearchPath;
   /**
+   * Advisory lock key used while migrating or rolling back.
+   * Defaults to rake-db's fixed lock key.
+   */
+  migrationLockKey?: bigint;
+  /**
    * Throw if a migration doesn't have a default export.
    * This is needed when in your setup you're importing migration files first and execute them later,
    * in that case you should export changes in migrations.
@@ -149,6 +154,7 @@ export interface RakeDbConfig<ColumnTypes = unknown> extends QueryLogOptions {
   afterRollback?: MigrationCallback;
   migrationId: RakeDbMigrationId;
   transactionSearchPath?: SearchPath;
+  migrationLockKey?: bigint;
   forceDefaultExports?: boolean;
   afterChangeCommit?: ChangeCommitCallback;
   basePath: string;

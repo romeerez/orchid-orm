@@ -9,7 +9,7 @@ import { TableQuery } from './migration/create-table';
 import { MigrationsSet } from './migration/migrations-set';
 import { RakeDbConfig } from './config/config';
 
-export const RAKE_DB_LOCK_KEY = '8582141715823621641';
+export const RAKE_DB_LOCK_KEY = 8582141715823621641n;
 
 export interface RakeDbCtx {
   migrationsPromise?: Promise<MigrationsSet>;
@@ -161,8 +161,8 @@ export const transaction = <T>(
   );
 };
 
-export const queryLock = (trx: Adapter) =>
-  trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);
+export const queryLock = (trx: Adapter, key = RAKE_DB_LOCK_KEY) =>
+  trx.query(`SELECT pg_advisory_xact_lock('${key}')`);
 
 export const getCliParam = (
   args: string[] | undefined,

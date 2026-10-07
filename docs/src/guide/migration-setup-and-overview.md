@@ -30,6 +30,9 @@ when deploying a cluster of node.js applications, every application tries to app
 the first one will set a lock and apply the migrations, the rest will wait for a lock,
 and after the lock is released all migrations are already applied.
 
+By default, all migration runs against a database use the same advisory lock key.
+To run migrations for separate schemas concurrently, set a distinct `migrationLockKey` in each rake-db configuration.
+
 Locally, migrations are compiled from TS to JS on the fly before running.
 When deploying to a remote server, you may want to precompile migrations first to make migration process a bit faster on the server side.
 
@@ -304,6 +307,9 @@ type Config = {
 
   // throw if a migration doesn't have a default export
   forceDefaultExports?: boolean;
+
+  // advisory lock key, see "how it works" above
+  migrationLockKey?: bigint;
 
   beforeMigrate?(db: Db): Promise<void>;
   afterMigrate?(db: Db): Promise<void>;

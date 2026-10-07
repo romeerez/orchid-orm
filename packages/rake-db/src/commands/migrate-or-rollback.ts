@@ -66,6 +66,11 @@ export interface MigrateConfigBase extends QueryLogOptions {
   migrationsTable?: string;
   transaction?: 'single' | 'per-migration';
   transactionSearchPath?: SearchPath;
+  /**
+   * Advisory lock key used while migrating or rolling back.
+   * Defaults to rake-db's fixed lock key.
+   */
+  migrationLockKey?: bigint;
   forceDefaultExports?: boolean;
   beforeChange?: ChangeCallback;
   afterChange?: ChangeCallback;
@@ -432,7 +437,7 @@ export const migrateOrRollback = async (
     }
   }
 
-  if (!skipLock) await queryLock(trx);
+  if (!skipLock) await queryLock(trx, config.migrationLockKey);
 
   let db: DbResult<unknown> | undefined;
 
