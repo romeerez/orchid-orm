@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.14
+
+### Patch Changes
+
+- 9c038406: Add `migrationLockKey` option to customize the advisory lock key used for migrations (#771)
+
 ## 2.37.13
 
 ### Patch Changes
