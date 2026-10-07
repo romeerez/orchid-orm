@@ -2075,7 +2075,10 @@ describe('relations chain', () => {
 
         expect(chats).toMatchObject(data);
 
-        const ids = await db.user.queryRelated('chats', user).pluck('IdOfChat');
+        const ids = await db.user
+          .queryRelated('chats', user)
+          .order('IdOfChat')
+          .pluck('IdOfChat');
         expect(ids).toEqual(chats.map((chat) => chat.IdOfChat));
       });
     });

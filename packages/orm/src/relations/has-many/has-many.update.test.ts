@@ -50,6 +50,7 @@ describe('hasMany update', () => {
         .pluck('Id');
       const user2Messages = await db.user
         .queryRelated('messages', user2)
+        .order('Id')
         .pluck('Id');
 
       expect(user1Messages).toEqual([]);
@@ -387,7 +388,7 @@ describe('hasMany update', () => {
 
         expect(count).toBe(1);
 
-        const ids = await db.message.select('Id');
+        const ids = await db.message.select('Id').order('Id');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -449,6 +450,7 @@ describe('hasMany update', () => {
 
         const ids = await db.message
           .where({ Text: { in: ['message 1', 'message 3'] } })
+          .order('Id')
           .select('Id');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
@@ -655,7 +657,7 @@ describe('hasMany update', () => {
 
       expect(count).toBe(1);
 
-      const messages = await db.message;
+      const messages = await db.message.order('Id');
 
       expect(messages.map((m) => m.AuthorId)).toEqual([id, null]);
     });
@@ -732,7 +734,7 @@ describe('hasMany update', () => {
 
         expect(count).toBe(1);
 
-        const ids = await db.message.pluck('Id');
+        const ids = await db.message.pluck('Id').order('Id');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
@@ -850,6 +852,7 @@ describe('hasMany update', () => {
 
       const messages = await db.user
         .queryRelated('messages', { Id, UserKey: 'key' })
+        .order('Id')
         .select('Text');
       expect(messages).toEqual([{ Text: 'message 1' }, { Text: 'message 3' }]);
     });
@@ -937,7 +940,7 @@ describe('hasMany update', () => {
 
       expect(await db.message.count()).toBe(2);
 
-      const messages = await db.message.pluck('Text');
+      const messages = await db.message.pluck('Text').order('Id');
       expect(messages).toEqual(['message 1', 'message 4']);
     });
 
@@ -988,7 +991,7 @@ describe('hasMany update', () => {
           },
         });
 
-        const ids = await db.message.pluck('Id');
+        const ids = await db.message.pluck('Id').order('Id');
 
         resetQueriesCount();
 
@@ -1037,7 +1040,7 @@ describe('hasMany update', () => {
           },
         ]);
 
-        const ids = await db.message.pluck('Id');
+        const ids = await db.message.pluck('Id').order('Id');
 
         resetQueriesCount();
 
@@ -1237,7 +1240,7 @@ describe('hasMany update', () => {
 
       expect(count).toBe(1);
 
-      const messages = await db.message.pluck('Text');
+      const messages = await db.message.pluck('Text').order('Id');
       expect(messages).toEqual(['message 1', 'message 2', 'updated']);
     });
 
@@ -1325,7 +1328,7 @@ describe('hasMany update', () => {
 
       expect(count).toBe(2);
 
-      const messages = await db.message.pluck('Text');
+      const messages = await db.message.pluck('Text').order('Id');
       expect(messages).toEqual(['message 1', 'message 2', 'updated']);
     });
 
@@ -1381,7 +1384,7 @@ describe('hasMany update', () => {
           },
         });
 
-        const ids = await db.message.pluck('Id');
+        const ids = await db.message.pluck('Id').order('Id');
 
         resetQueriesCount();
 
@@ -1435,7 +1438,7 @@ describe('hasMany update', () => {
           },
         ]);
 
-        const ids = await db.message.select('Id');
+        const ids = await db.message.select('Id').order('Id');
 
         resetQueriesCount();
 
@@ -1461,12 +1464,7 @@ describe('hasMany update', () => {
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);
-        // `UPDATE ... RETURNING` does not guarantee the order of rows
-        expect(afterUpdate).toHaveBeenCalledWith(
-          expect.arrayContaining(ids),
-          expect.any(Db),
-        );
-        expect(afterUpdate.mock.calls[0][0]).toHaveLength(ids.length);
+        expect(afterUpdate).toHaveBeenCalledWith(ids, expect.any(Db));
       });
     });
   });
@@ -1939,7 +1937,7 @@ describe('hasMany update', () => {
 
         expect(count).toBe(1);
 
-        const ids = await db.message.select('Id');
+        const ids = await db.message.select('Id').order('Id');
 
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);

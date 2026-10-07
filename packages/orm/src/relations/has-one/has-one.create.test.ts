@@ -215,7 +215,7 @@ describe('hasOne create', () => {
 
       expect(count).toBe(2);
 
-      const data = await db.user.select('Name', {
+      const data = await db.user.order('Id').select('Name', {
         profile: (q) =>
           q.profile.select('Bio', {
             pic: (q) => q.pic.select('Url'),
@@ -1018,7 +1018,7 @@ describe('hasOne create', () => {
 
         expect(getQueriesCount()).toBe(1);
 
-        const ids = (await db.profile.pluck('Id')).sort((a, b) => a - b);
+        const ids = await db.profile.pluck('Id').order('Id');
 
         expect(beforeUpdate).toHaveBeenCalledTimes(1);
         expect(afterUpdate).toHaveBeenCalledTimes(1);

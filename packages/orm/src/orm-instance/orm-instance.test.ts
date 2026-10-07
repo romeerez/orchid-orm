@@ -313,7 +313,7 @@ describe('orm', () => {
         [1],
       );
 
-      const result = await q;
+      const result = await q.order('messagesCount');
       expect(result).toEqual([
         {
           createdAt: expect.any(Date),

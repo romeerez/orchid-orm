@@ -79,15 +79,26 @@ export const useRelationCallback = <T extends Query>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const q = rel.query.q as any;
 
+  // `RETURNING` does not guarantee row order: sort rows by the first selected column
+  const key = selectArr[0] as string;
+  const compare = (
+    a: Record<string, number | string>,
+    b: Record<string, number | string>,
+  ) => (a[key] === b[key] ? 0 : a[key] < b[key] ? -1 : 1);
+  const sorted =
+    (fn: jest.Mock) =>
+    (rows: Record<string, number | string>[], query: Query) =>
+      fn([...rows].sort(compare), query);
+
   beforeAll(() => {
     q.beforeCreate = [beforeCreate];
-    q.afterCreate = [afterCreate];
+    q.afterCreate = [sorted(afterCreate)];
     q.afterCreateSelect = select;
     q.beforeUpdate = [beforeUpdate];
-    q.afterUpdate = [afterUpdate];
+    q.afterUpdate = [sorted(afterUpdate)];
     q.afterUpdateSelect = select;
     q.beforeDelete = [beforeDelete];
-    q.afterDelete = [afterDelete];
+    q.afterDelete = [sorted(afterDelete)];
     q.afterDeleteSelect = select;
   });
 

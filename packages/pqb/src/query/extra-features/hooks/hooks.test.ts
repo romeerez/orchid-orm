@@ -763,10 +763,9 @@ describe('hooks', () => {
         ]);
         jest.clearAllMocks();
 
-        const res = await User[method](User.select('Name', 'Password')).select(
-          '*',
-          'Password',
-        );
+        const res = await User[method](
+          User.select('Name', 'Password').order('Name'),
+        ).select('*', 'Password');
 
         expect(res).toMatchObject([hookSetCreateValues, hookSetCreateValues]);
 
