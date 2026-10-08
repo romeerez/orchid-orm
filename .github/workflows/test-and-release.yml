@@ -58,8 +58,7 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
-          # timezone-related bug is fixed in canary, not released at the time of writing: https://github.com/oven-sh/bun/pull/31212
-          bun-version: canary
+          bun-version: 1.4.2
 
       - uses: pnpm/action-setup@v4
         with:
