@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.78.13
+
+### Patch Changes
+
+- ccdf072b: Add `--rename`, `--create`, and `--recreate` flags to answer migration generator questions. If questions remain unanswered without a terminal or with `--non-interactive`, the command lists them with the flags to answer them and writes no migration (#777)
+
 ## 1.78.12
 
 ### Patch Changes
