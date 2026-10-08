@@ -99,6 +99,41 @@ ${green('+ add values to enum')} my_enum: third_new`,
     );
   });
 
+  it('should rename an empty enum value after prompt', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createEnum('my_enum', ['', 'done']);
+
+        await db.createTable('my_table', { noPrimaryKey: true }, (t) => ({
+          myEnumCol: t.enum('my_enum'),
+        }));
+      },
+      tables: [
+        defineTable(
+          'my_table',
+          { noPrimaryKey: true, nameInDb: 'my_table' },
+          (t) => ({
+            myEnumCol: t.enum('my_enum', ['ready', 'done']),
+          }),
+        ),
+      ],
+      selects: [1],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.renameEnumValues('my_enum', { '': 'ready' });
+});
+`);
+
+    assert.report(
+      `${yellow('~ rename values in enum')} my_enum:  ${yellow('=>')} ready`,
+    );
+  });
+
   it('should not recreate an index that is unrelated to the enum', async () => {
     await arrange({
       async prepareDb(db) {

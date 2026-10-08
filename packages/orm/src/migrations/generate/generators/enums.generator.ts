@@ -1,13 +1,11 @@
-import {
-  DbStructure,
-  IntrospectedStructure,
-  promptSelect,
-  RakeDbAst,
-} from 'rake-db';
-import { promptCreateOrRename } from './generators.utils';
+import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
-import { colors, RecordString } from 'pqb/internal';
-import { AbortSignal } from '../generate';
+import { RecordString } from 'pqb/internal';
+import {
+  AddOrRenameEnumValueQuestion,
+  MigrationDecider,
+  MigrationDecisionCtx,
+} from '../migration-decider';
 
 export interface EnumItem {
   schema?: string;
@@ -21,9 +19,9 @@ export const processEnums = async (
   {
     codeItems: { enums },
     currentSchema,
-    verifying,
     internal: { generatorIgnore },
   }: ComposeMigrationParams,
+  decisionCtx: MigrationDecisionCtx,
   pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
   const createEnums: EnumItem[] = [];
@@ -49,7 +47,14 @@ export const processEnums = async (
 
     const codeEnum = enums.get(`${dbEnum.schemaName}.${dbEnum.name}`);
     if (codeEnum) {
-      await changeEnum(ast, dbEnum, codeEnum, pendingDbTypes, verifying);
+      await changeEnum(
+        ast,
+        dbEnum,
+        codeEnum,
+        pendingDbTypes,
+        decisionCtx,
+        currentSchema,
+      );
       continue;
     }
 
@@ -72,7 +77,14 @@ export const processEnums = async (
       });
       pendingDbTypes.add(toSchema, dbEnum.name);
 
-      await changeEnum(ast, dbEnum, codeEnum, pendingDbTypes, verifying);
+      await changeEnum(
+        ast,
+        dbEnum,
+        codeEnum,
+        pendingDbTypes,
+        decisionCtx,
+        currentSchema,
+      );
 
       continue;
     }
@@ -82,15 +94,19 @@ export const processEnums = async (
 
   for (const codeEnum of createEnums) {
     if (dropEnums.length) {
-      const i = await promptCreateOrRename(
-        'enum',
-        codeEnum.name,
-        dropEnums.map((x) => x.name),
-        verifying,
-      );
-      if (i) {
-        const dbEnum = dropEnums[i - 1];
-        dropEnums.splice(i - 1, 1);
+      const dbEnum = await decisionCtx.decider.createOrRename({
+        kind: 'enum',
+        target: {
+          schema: codeEnum.schema ?? currentSchema,
+          name: codeEnum.name,
+        },
+        candidates: dropEnums,
+        candidateSource: (x) => decisionCtx.dbSource(x),
+        name: codeEnum.name,
+        candidateName: (x) => x.name,
+      });
+      if (dbEnum) {
+        dropEnums.splice(dropEnums.indexOf(dbEnum), 1);
 
         const fromSchema = dbEnum.schemaName;
         const from = dbEnum.name;
@@ -119,7 +135,14 @@ export const processEnums = async (
         });
         pendingDbTypes.add(toSchema, to);
 
-        await changeEnum(ast, dbEnum, codeEnum, pendingDbTypes, verifying);
+        await changeEnum(
+          ast,
+          dbEnum,
+          codeEnum,
+          pendingDbTypes,
+          decisionCtx,
+          currentSchema,
+        );
 
         continue;
       }
@@ -149,7 +172,8 @@ const changeEnum = async (
   dbEnum: DbStructure.Enum,
   codeEnum: EnumItem,
   pendingDbTypes: PendingDbTypes,
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
+  currentSchema: string,
 ) => {
   const { values: dbValues } = dbEnum;
   const { values: codeValues, schema, name } = codeEnum;
@@ -184,13 +208,17 @@ const changeEnum = async (
     return;
   }
 
-  const enumValueChanges = await promptEnumValueChanges(
-    name,
+  const enumValueChanges = await resolveEnumValueChanges(
+    {
+      source: decisionCtx.dbSource(dbEnum),
+      target: { schema: schema ?? currentSchema, name },
+      enumName: name,
+    },
     dbValues,
     codeValues,
     addValues,
     dropValues,
-    verifying,
+    decisionCtx.decider,
   );
   if (enumValueChanges) {
     let changed = false;
@@ -238,13 +266,16 @@ interface EnumValueChanges {
   toValues: string[];
 }
 
-const promptEnumValueChanges = async (
-  enumName: string,
+const resolveEnumValueChanges = async (
+  enumQuestion: Pick<
+    AddOrRenameEnumValueQuestion,
+    'source' | 'target' | 'enumName'
+  >,
   dbValues: string[],
   codeValues: string[],
   addValues: string[],
   dropValues: string[],
-  verifying: boolean | undefined,
+  decider: MigrationDecider,
 ): Promise<EnumValueChanges | undefined> => {
   if (!addValues.length || !dropValues.length) return;
 
@@ -253,26 +284,15 @@ const promptEnumValueChanges = async (
 
   for (const value of addValues) {
     if (remainingDropValues.length) {
-      if (verifying) throw new AbortSignal();
-
-      const i = await promptSelect({
-        message: `Add or rename ${colors.blueBold(
-          value,
-        )} enum value in ${colors.blueBold(enumName)}?`,
-        options: [
-          `${colors.greenBold('+')} ${value}  ${colors.pale('add enum value')}`,
-          ...remainingDropValues.map(
-            (dropValue) =>
-              `${colors.yellowBold('~')} ${dropValue} ${colors.yellowBold(
-                '=>',
-              )} ${value}  ${colors.pale('rename enum value')}`,
-          ),
-        ],
+      const dropValue = await decider.addOrRenameEnumValue({
+        ...enumQuestion,
+        value,
+        candidates: remainingDropValues,
       });
 
-      if (i) {
-        const dropValue = remainingDropValues[i - 1];
-        remainingDropValues.splice(i - 1, 1);
+      // an empty string is a valid enum value
+      if (dropValue !== undefined) {
+        remainingDropValues.splice(remainingDropValues.indexOf(dropValue), 1);
         renamedValues[dropValue] = value;
       }
     }

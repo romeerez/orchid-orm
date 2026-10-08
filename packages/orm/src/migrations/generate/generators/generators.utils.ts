@@ -1,17 +1,16 @@
-import { RakeDbAst, promptSelect } from 'rake-db';
+import { RakeDbAst } from 'rake-db';
 import {
   type RawSqlBase,
   type SingleSql,
   QueryResult,
   Adapter,
-  colors,
   TransactionAdapter,
   getDriverErrorCode,
   queryToSql,
   rawSqlToSql,
   sqlToRawSql,
 } from 'pqb/internal';
-import { AbortSignal, CodeViewData } from '../generate';
+import { CodeViewData } from '../generate';
 
 export interface CompareExpression {
   compare: {
@@ -231,56 +230,6 @@ export const compareSqlExpressionResult = (
 
   const firstMatching = matches.indexOf(true);
   return firstMatching === -1 ? undefined : firstMatching;
-};
-
-export const promptCreateOrRename = (
-  kind: string,
-  name: string,
-  drop: string[],
-  verifying: boolean | undefined,
-): Promise<number> => {
-  if (verifying) throw new AbortSignal();
-
-  let hintPos = name.length + 4;
-  for (const from of drop) {
-    const value = from.length + 8 + name.length;
-    if (value > hintPos) hintPos = value;
-  }
-
-  let max = 0;
-  const add = name.length + 3;
-  for (const name of drop) {
-    if (name.length + add > max) {
-      max = name.length + add;
-    }
-  }
-
-  const renameMessage = `rename ${kind}`;
-
-  return promptSelect({
-    message: `Create or rename ${colors.blueBold(
-      name,
-    )} ${kind} from another ${kind}?`,
-    options: [
-      `${colors.greenBold('+')} ${name}  ${colors.pale(
-        `create ${kind}`.padStart(
-          hintPos + renameMessage.length - name.length - 4,
-          ' ',
-        ),
-      )}`,
-      ...drop.map(
-        (d) =>
-          `${colors.yellowBold('~')} ${d} ${colors.yellowBold(
-            '=>',
-          )} ${name}  ${colors.pale(
-            renameMessage.padStart(
-              hintPos + renameMessage.length - d.length - name.length - 8,
-              ' ',
-            ),
-          )}`,
-      ),
-    ],
-  });
 };
 
 export const checkForColumnAddOrDrop = (

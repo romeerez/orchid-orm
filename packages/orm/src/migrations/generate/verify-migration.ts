@@ -7,6 +7,7 @@ import {
 } from 'rake-db';
 import { composeMigration, ComposeMigrationParams } from './compose-migration';
 import { AbortSignal } from './generate';
+import { verifyingDecider } from './migration-decider';
 
 const rollbackErr = new Error('Rollback');
 
@@ -52,16 +53,12 @@ export const verifyMigration = async (
         roles,
         ...structureParams,
       });
-      generateMigrationParams.verifying = true;
 
       try {
-        code = await composeMigration(
-          trx,
-          config,
-          [],
-          dbStructure,
-          generateMigrationParams,
-        );
+        code = await composeMigration(trx, config, [], dbStructure, {
+          ...generateMigrationParams,
+          decider: verifyingDecider,
+        });
       } catch (err) {
         if (err instanceof AbortSignal) {
           code = false;

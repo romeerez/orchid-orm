@@ -18,6 +18,10 @@ export const patchRakeDb = () => {
       'migration-name': 'set migration file name',
       up: 'auto-apply migration',
       'migration-name up': 'with a custom name and apply it',
+      '--non-interactive': 'report unanswered questions instead of asking',
+      '--rename kind:old=new': 'answer to rename an item',
+      '--create kind:name': 'answer to create an item',
+      '--recreate column:old=new': 'answer to recreate a column, losing data',
     },
     helpAfter: 'reset',
   };

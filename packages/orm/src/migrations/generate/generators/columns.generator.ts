@@ -9,7 +9,6 @@ import {
   encodeColumnDefault,
   concatSchemaAndName,
   getSchemaAndTableFromName,
-  promptSelect,
   RakeDbConfig,
 } from 'rake-db';
 import { Column } from 'pqb/internal';
@@ -22,11 +21,10 @@ import {
   RecordUnknown,
   toSnakeCase,
   Adapter,
-  colors,
 } from 'pqb/internal';
-import { promptCreateOrRename } from './generators.utils';
 import { ChangeTableData, CompareSql } from './tables.generator';
 import { AbortSignal } from '../generate';
+import { MigrationDecisionCtx, MigrationItemId } from '../migration-decider';
 
 export interface TypeCastsCache {
   value?: Map<string, Set<string>>;
@@ -48,7 +46,7 @@ export const processColumns = async (
   currentSchema: string,
   compareSql: CompareSql,
   typeCastsCache: TypeCastsCache,
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
 ) => {
   const { dbTable } = changeTableData;
   const dbColumns = Object.fromEntries(
@@ -70,7 +68,7 @@ export const processColumns = async (
     columnsToAdd,
     columnsToDrop,
     columnsToChange,
-    verifying,
+    decisionCtx,
   );
 
   await changeColumns(
@@ -86,7 +84,7 @@ export const processColumns = async (
     compareSql,
     changeTableData,
     typeCastsCache,
-    verifying,
+    decisionCtx,
   );
 
   dropColumns(changeTableData, columnsToDrop);
@@ -154,28 +152,36 @@ const groupColumns = (
 const addOrRenameColumns = async (
   config: RakeDbConfig,
   dbStructure: IntrospectedStructure,
-  {
-    dbTableData,
-    schema,
-    changeTableAst: { name: tableName, shape },
-  }: ChangeTableData,
+  changeTableData: ChangeTableData,
   columnsToAdd: KeyAndColumn[],
   columnsToDrop: KeyAndColumn[],
   columnsToChange: ColumnsToChange,
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
 ) => {
+  const {
+    dbTableData,
+    schema,
+    changeTableAst: { name: tableName, shape },
+  } = changeTableData;
+
   for (const { key, column } of columnsToAdd) {
     if (columnsToDrop.length) {
       const codeName = column.data.name ?? key;
-      const i = await promptCreateOrRename(
-        'column',
-        codeName,
-        columnsToDrop.map((x) => x.key),
-        verifying,
-      );
-      if (i) {
-        const drop = columnsToDrop[i - 1];
-        columnsToDrop.splice(i - 1, 1);
+      const drop = await decisionCtx.decider.createOrRename({
+        kind: 'column',
+        target: codeColumnTarget(changeTableData, codeName),
+        candidates: columnsToDrop,
+        candidateSource: (x) =>
+          dbColumnSource(
+            decisionCtx,
+            changeTableData,
+            x.column.data.name ?? x.key,
+          ),
+        name: codeName,
+        candidateName: (x) => x.key,
+      });
+      if (drop) {
+        columnsToDrop.splice(columnsToDrop.indexOf(drop), 1);
 
         const from = drop.column.data.name ?? drop.key;
         columnsToChange.set(from, {
@@ -261,7 +267,7 @@ const changeColumns = async (
   compareSql: CompareSql,
   changeTableData: ChangeTableData,
   typeCastsCache: TypeCastsCache,
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
 ) => {
   for (const [
     key,
@@ -284,9 +290,10 @@ const changeColumns = async (
       compareSql,
       changeTableData,
       typeCastsCache,
-      verifying,
+      decisionCtx,
       key,
       dbName,
+      codeColumn.data.name ?? codeKey,
       dbColumn,
       codeColumn,
     );
@@ -334,9 +341,10 @@ const compareColumns = async (
   compareSql: CompareSql,
   changeTableData: ChangeTableData,
   typeCastsCache: TypeCastsCache,
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
   key: string,
   dbName: string,
+  codeName: string,
   dbColumn: Column,
   codeColumn: Column,
 ): Promise<'change' | 'recreate' | undefined> => {
@@ -362,21 +370,15 @@ const compareColumns = async (
         !(codeColumn instanceof EnumColumn) ||
         !deepCompare(dbColumn.options, codeColumn.options)
       ) {
-        if (verifying) throw new AbortSignal();
-
-        const tableName = concatSchemaAndName(changeTableData.changeTableAst);
-        const abort = await promptSelect({
-          message: `Cannot cast type of ${tableName}'s column ${key} from ${dbType} to ${codeType}`,
-          options: [
-            `${colors.yellowBold(
-              `-/+`,
-            )} recreate the column, existing data will be ${colors.red(
-              'lost',
-            )}`,
-            `write migration manually`,
-          ],
+        const recreate = await decisionCtx.decider.recreateColumn({
+          source: dbColumnSource(decisionCtx, changeTableData, dbName),
+          target: codeColumnTarget(changeTableData, codeName),
+          tableName: concatSchemaAndName(changeTableData.changeTableAst),
+          columnName: key,
+          fromType: dbType,
+          toType: codeType,
         });
-        if (abort) {
+        if (!recreate) {
           throw new AbortSignal();
         }
 
@@ -582,6 +584,20 @@ const changeColumn = (
     to: { column: simpleCodeColumn },
   };
 };
+
+const dbColumnSource = (
+  decisionCtx: MigrationDecisionCtx,
+  { dbTable }: ChangeTableData,
+  name: string,
+): MigrationItemId => {
+  const { schema, name: table } = decisionCtx.dbSource(dbTable);
+  return { schema, table, name };
+};
+
+const codeColumnTarget = (
+  { schema, changeTableAst }: ChangeTableData,
+  name: string,
+): MigrationItemId => ({ schema, table: changeTableAst.name, name });
 
 export const getColumnDbType = (
   column: Column.Pick.DataAndDataType,

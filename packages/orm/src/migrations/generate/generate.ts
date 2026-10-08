@@ -28,6 +28,7 @@ import {
   migrate,
   migrateAndClose,
   RakeDbAst,
+  RakeDbError,
   RakeDbConfig,
   getTableFactoryConfig,
   writeMigrationFile,
@@ -36,6 +37,8 @@ import { EnumItem } from './generators/enums.generator';
 import { CodeDomain } from './generators/domains.generator';
 import { composeMigration, ComposeMigrationParams } from './compose-migration';
 import { verifyMigration } from './verify-migration';
+import { interactiveDecider } from './migration-decider';
+import { makeAnswersDecider, parseGenerateArgs } from './migration-answers';
 import { report } from './report-generated-migration';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -99,14 +102,21 @@ export const generate = async (
 
   if (!dbPath.endsWith('.ts')) dbPath += '.ts';
 
-  let migrationName = args[0] ?? 'generated';
+  const { positional, nonInteractive, answers } = parseGenerateArgs(args);
+
+  let migrationName = positional[0] ?? 'generated';
   let up: boolean;
   if (migrationName === 'up') {
     up = true;
     migrationName = 'generated';
   } else {
-    up = args[1] === 'up';
+    up = positional[1] === 'up';
   }
+
+  const decider = makeAnswersDecider(
+    answers,
+    nonInteractive || !process.stdin.isTTY ? undefined : interactiveDecider,
+  );
 
   if (afterPull) {
     adapters = [afterPull.adapter];
@@ -169,6 +179,7 @@ export const generate = async (
       generatorIgnore,
       grants: effectiveGrants,
     },
+    decider,
   };
 
   const ast: RakeDbAst[] = [];
@@ -188,6 +199,12 @@ export const generate = async (
       return;
     }
     throw err;
+  }
+
+  const problems = decider.problems();
+  if (problems) {
+    if (!afterPull) await closeAdapters(adapters);
+    throw new RakeDbError(problems);
   }
 
   if (migrationCode && !afterPull) {

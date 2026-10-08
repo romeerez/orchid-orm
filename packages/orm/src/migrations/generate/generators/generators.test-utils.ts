@@ -154,7 +154,7 @@ const arrange = async (arg: {
   }
 };
 
-const act = () => generate(adapters, config, []);
+const act = (args: string[] = []) => generate(adapters, config, args);
 
 const assert = {
   migration(code?: string) {
@@ -167,7 +167,17 @@ const assert = {
 };
 
 export const useGeneratorsTestUtils = () => {
-  beforeEach(jest.clearAllMocks);
+  const { isTTY } = process.stdin;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // answer the questions as in an interactive terminal, unless a test changes it
+    process.stdin.isTTY = true;
+  });
+
+  afterAll(() => {
+    process.stdin.isTTY = isTTY;
+  });
 
   afterEach(async () => {
     resolvePrepareDbTransaction?.(rollbackError);

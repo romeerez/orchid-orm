@@ -1,16 +1,16 @@
 import { RakeDbAst, IntrospectedStructure } from 'rake-db';
-import { promptCreateOrRename } from './generators.utils';
 import { ComposeMigrationParams } from '../compose-migration';
+import { MigrationDecisionCtx } from '../migration-decider';
 
 export const processSchemas = async (
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
   {
     codeItems: { schemas },
-    verifying,
     internal: { generatorIgnore },
     currentSchema,
   }: ComposeMigrationParams,
+  { decider }: MigrationDecisionCtx,
 ): Promise<void> => {
   const createSchemas: string[] = [];
   const dropSchemas: string[] = [];
@@ -34,15 +34,16 @@ export const processSchemas = async (
 
   for (const schema of createSchemas) {
     if (dropSchemas.length) {
-      const i = await promptCreateOrRename(
-        'schema',
-        schema,
-        dropSchemas,
-        verifying,
-      );
-      if (i) {
-        const from = dropSchemas[i - 1];
-        dropSchemas.splice(i - 1, 1);
+      const from = await decider.createOrRename({
+        kind: 'schema',
+        target: { name: schema },
+        candidates: dropSchemas,
+        candidateSource: (x) => ({ name: x }),
+        name: schema,
+        candidateName: (x) => x,
+      });
+      if (from) {
+        dropSchemas.splice(dropSchemas.indexOf(from), 1);
 
         const views = dbStructure.views || [];
 
