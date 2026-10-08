@@ -43,6 +43,7 @@ This tool will automatically write a migration to create, drop, change, rename d
 
 When you're renaming a table, column, enum, or a schema in the code, it will interactively ask via the terminal whether you want to create a new item or to rename the old one.
 Such as when renaming a column, you may choose to drop the old one and create a new (data will be lost), or to rename the existing (data is preserved).
+When there is no interactive terminal (stdin is not a TTY), the command fails with an error instead of waiting for an answer.
 
 If you don't set a custom constraint name for indexes, primary keys, foreign keys, exclude constraints, they have a default name such as `table_pkey`, `table_column_idx`, `table_someId_fkey`, `table_column_exclude`.
 When renaming a table, the table primary key will be also renamed. When renaming a column, its index or foreign key will be renamed as well.

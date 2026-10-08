@@ -1,4 +1,5 @@
 import { colors } from 'pqb/internal';
+import { RakeDbError } from './errors';
 
 const ESC = '\x1B';
 const CSI = `${ESC}[`;
@@ -6,12 +7,14 @@ const cursorShow = `${CSI}?25h`;
 const cursorHide = `${CSI}?25l`;
 const { stdin, stdout } = process;
 
-const visibleChars = (s: string) =>
+const stripAnsi = (s: string) =>
   s.replace(
     // eslint-disable-next-line no-control-regex
     /[\u001B\u009B][[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PRZcf-ntqry=><~]))/g,
     '',
-  ).length;
+  );
+
+const visibleChars = (s: string) => stripAnsi(s).length;
 
 const clear = (text: string) => {
   const rows = text
@@ -42,20 +45,31 @@ interface Ctx<T> {
 }
 
 const prompt = async <T>({
+  message,
   render,
   onKeyPress,
   validate,
   value,
   cursor: showCursor,
 }: {
+  message: string;
   render(ctx: Ctx<T>): string;
   onKeyPress(ctx: Ctx<T>, s: string): void;
   validate?(ctx: Ctx<T>): boolean;
   value?: T;
   cursor?: boolean;
 }): Promise<T> => {
+  // without a terminal, no answer can ever arrive, so fail instead of hanging
+  if (!stdin.isTTY) {
+    throw new RakeDbError(
+      `Cannot prompt "${stripAnsi(
+        message,
+      )}": stdin is not a TTY, run the command in an interactive terminal`,
+    );
+  }
+
   stdin.resume();
-  if (stdin.isTTY) stdin.setRawMode(true);
+  stdin.setRawMode(true);
   stdin.setEncoding('utf-8');
 
   if (!showCursor) stdout.write(cursorHide);
@@ -91,7 +105,7 @@ const prompt = async <T>({
 
     const close = () => {
       if (!showCursor) stdout.write(cursorShow);
-      if (stdin.isTTY) stdin.setRawMode(false);
+      stdin.setRawMode(false);
       stdin.off('data', keypress);
       stdin.pause();
     };
@@ -131,6 +145,7 @@ export const promptSelect = ({
   inactive?: (s: string) => string;
 }) =>
   prompt<number>({
+    message,
     value: 0,
     render(ctx) {
       let text = `${message} ${colors.pale(
@@ -170,6 +185,7 @@ export const promptConfirm = ({
   password?: boolean;
 }) =>
   prompt<boolean>({
+    message,
     value: true,
     render(ctx) {
       return `${colors.bright(message)}\n${
@@ -207,6 +223,7 @@ export const promptText = ({
     password ? '*'.repeat(ctx.value.length) : ctx.value;
 
   return prompt<string>({
+    message,
     value: def,
     cursor: true,
     validate: (ctx) => !min || ctx.value.length >= min,
