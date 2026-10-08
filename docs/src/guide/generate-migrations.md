@@ -43,7 +43,7 @@ This tool will automatically write a migration to create, drop, change, rename d
 
 When you're renaming a table, column, enum, or a schema in the code, it will interactively ask via the terminal whether you want to create a new item or to rename the old one.
 Such as when renaming a column, you may choose to drop the old one and create a new (data will be lost), or to rename the existing (data is preserved).
-When there is no interactive terminal (stdin is not a TTY), the command fails with an error instead of waiting for an answer.
+The questions can be answered with flags as well, see [answering with flags](#answering-with-flags).
 
 If you don't set a custom constraint name for indexes, primary keys, foreign keys, exclude constraints, they have a default name such as `table_pkey`, `table_column_idx`, `table_someId_fkey`, `table_column_exclude`.
 When renaming a table, the table primary key will be also renamed. When renaming a column, its index or foreign key will be renamed as well.
@@ -52,6 +52,60 @@ The tool handles migration generation for
 tables, columns, schemas, enums, primary keys, foreign keys, indexes, database checks, exclude constraints, extensions, domain types, and configured views.
 
 Let me know by opening an issue if you'd like to have a support for additional database features such as triggers and procedures.
+
+### answering with flags
+
+The questions can also be answered with flags, which is useful for scripts and AI agents:
+
+```shell
+pnpm db g rename-users --rename table:public.users=public.members
+```
+
+Questions not answered by flags are asked interactively when stdin is a TTY.
+Use `--non-interactive` to suppress prompts, including in pseudo-terminals used by AI agents.
+If any questions remain unanswered, the command exits with a non-zero status without writing a migration, and lists the questions reached in this run with the flags for every possible answer:
+
+```
+Cannot generate the migration.
+
+Run the command again with one of the suggested flags for each question, keeping the answer flags given before:
+
+Create or rename table public.members?
+  --create table:public.members
+  --rename table:public.users=public.members
+
+More questions may come up after these are answered.
+```
+
+Run the command again with the chosen flags, keeping the flags given before.
+An answer can bring up new questions: for example, the columns of a renamed table are compared only once the table rename is answered.
+A run that fails this way still applies the pending migrations, as every run of `db g` does before comparing the database with the code.
+
+- `--rename kind:old=new` renames an existing item instead of dropping it and creating a new one.
+- `--create kind:name` creates a new item instead of renaming an existing one. For an enum value, it adds the value.
+- `--recreate column:old=new` drops and adds a column whose type cannot be cast to the new one, losing its data.
+  Without this answer, write such a migration manually.
+
+The `kind` is one of `schema`, `role`, `enum`, `table`, `column`, `enum-value`.
+Items are given by their names in the database, not by the keys in the code, separated by dots:
+
+- schemas and roles: `name`
+- enums and tables: `schema.name`
+- columns: `schema.table.column`
+- enum values: `schema.enum.value`
+
+The old name is the name in the database before the migration, and the new name is the name after it.
+For example, when schema `legacy` is renamed to `app`, and its table `users` to `members`, the table is renamed with `--rename table:legacy.users=app.members`.
+
+Wrap a name in double quotes when it contains `.`, `"`, `=`, or whitespace, or is empty, and double the quotes inside it.
+The shell removes double quotes, so put such a flag value in single quotes: `--create 'table:public."a.b"'`, `--create 'enum-value:public.status.""'`.
+The flags listed by the command are quoted for a POSIX shell, such as bash or zsh.
+
+The flags only answer the questions that the command would ask otherwise, and don't override what it decides on its own.
+For example, when only the schema of a table changes in the code, the table is moved to the new schema without a question, even when `--create` is given for it.
+So a `--create` or `--recreate` that doesn't match any question is ignored.
+When all questions are answered, a `--rename` that doesn't match any question fails the command, so that an intended rename is never silently ignored.
+Unknown flags fail the command as well.
 
 ## row level security
 

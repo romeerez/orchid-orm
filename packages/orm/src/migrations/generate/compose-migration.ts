@@ -18,13 +18,17 @@ import { processDefaultPrivileges } from './generators/default-privilege.generat
 import { processGrants } from './generators/grants.generator';
 import { processViews } from './generators/views.generator';
 import { processMaterializedViews } from './generators/materialized-views.generator';
+import {
+  MigrationDecider,
+  makeMigrationDecisionCtx,
+} from './migration-decider';
 
 export interface ComposeMigrationParams {
   structureToAstCtx: StructureToAstCtx;
   codeItems: CodeItems;
   currentSchema: string;
   internal: QueryInternal;
-  verifying?: boolean;
+  decider: MigrationDecider;
 }
 
 /**
@@ -48,15 +52,16 @@ export const composeMigration = async (
   params: ComposeMigrationParams,
 ): Promise<string | undefined> => {
   const { structureToAstCtx, currentSchema } = params;
+  const decisionCtx = makeMigrationDecisionCtx(params.decider, dbStructure);
 
-  await processRoles(ast, dbStructure, params);
+  await processRoles(ast, dbStructure, params, decisionCtx);
 
   processDefaultPrivileges(ast, dbStructure, params);
   processGrants(ast, dbStructure, params);
 
   const domainsMap = makeDomainsMap(structureToAstCtx, dbStructure);
 
-  await processSchemas(ast, dbStructure, params);
+  await processSchemas(ast, dbStructure, params, decisionCtx);
   processExtensions(ast, dbStructure, params);
 
   const pendingDbTypes = new PendingDbTypes();
@@ -69,7 +74,7 @@ export const composeMigration = async (
     params,
     pendingDbTypes,
   );
-  await processEnums(ast, dbStructure, params, pendingDbTypes);
+  await processEnums(ast, dbStructure, params, decisionCtx, pendingDbTypes);
 
   await processTables(
     ast,
@@ -78,6 +83,7 @@ export const composeMigration = async (
     dbStructure,
     config,
     params,
+    decisionCtx,
     pendingDbTypes,
   );
 

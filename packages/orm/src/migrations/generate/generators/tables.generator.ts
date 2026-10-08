@@ -23,7 +23,6 @@ import {
 import {
   CompareExpression,
   compareSqlExpressions,
-  promptCreateOrRename,
   SqlExpression,
 } from './generators.utils';
 import { processPrimaryKey } from './primary-key.generator';
@@ -34,6 +33,7 @@ import { processChecks } from './checks.generator';
 import { CodeTable } from '../generate';
 import { ComposeMigrationParams, PendingDbTypes } from '../compose-migration';
 import { processTableRls } from './rls.generator';
+import { MigrationDecisionCtx } from '../migration-decider';
 
 export interface CompareSql {
   values: unknown[];
@@ -82,8 +82,8 @@ export const processTables = async (
     codeItems: { tables },
     currentSchema,
     internal: { generatorIgnore },
-    verifying,
   }: ComposeMigrationParams,
+  decisionCtx: MigrationDecisionCtx,
   pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
   const createTables: CodeTable[] = collectCreateTables(
@@ -114,7 +114,7 @@ export const processTables = async (
     tableShapes,
     currentSchema,
     ast,
-    verifying,
+    decisionCtx,
   );
 
   await applyChangeTables(
@@ -128,7 +128,7 @@ export const processTables = async (
     config,
     compareSql,
     expressions,
-    verifying,
+    decisionCtx,
     pendingDbTypes,
   );
 
@@ -300,7 +300,7 @@ const applyChangeTables = async (
   config: RakeDbConfig,
   compareSql: CompareSql,
   expressions: SqlExpression[],
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
   pendingDbTypes: PendingDbTypes,
 ): Promise<void> => {
   const compareExpressions: CompareExpression[] = [];
@@ -321,7 +321,7 @@ const applyChangeTables = async (
       compareSql,
       compareExpressions,
       typeCastsCache,
-      verifying,
+      decisionCtx,
     );
 
     if (compareExpressions.length) {
@@ -425,19 +425,23 @@ const applyCreateOrRenameTables = async (
   tableShapes: TableShapes,
   currentSchema: string,
   ast: RakeDbAst[],
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
 ) => {
   for (const codeTable of createTables) {
     if (dropTables.length) {
-      const i = await promptCreateOrRename(
-        'table',
-        codeTable.table,
-        dropTables.map((x) => x.name),
-        verifying,
-      );
-      if (i) {
-        const dbTable = dropTables[i - 1];
-        dropTables.splice(i - 1, 1);
+      const dbTable = await decisionCtx.decider.createOrRename({
+        kind: 'table',
+        target: {
+          schema: codeTable.q.schema ?? currentSchema,
+          name: codeTable.table,
+        },
+        candidates: dropTables,
+        candidateSource: (x) => decisionCtx.dbSource(x),
+        name: codeTable.table,
+        candidateName: (x) => x.name,
+      });
+      if (dbTable) {
+        dropTables.splice(dropTables.indexOf(dbTable), 1);
 
         ast.push({
           type: 'renameType',
@@ -553,7 +557,7 @@ const processTableChange = async (
   compareSql: CompareSql,
   compareExpressions: CompareExpression[],
   typeCastsCache: TypeCastsCache,
-  verifying: boolean | undefined,
+  decisionCtx: MigrationDecisionCtx,
 ) => {
   await processColumns(
     adapter,
@@ -566,7 +570,7 @@ const processTableChange = async (
     currentSchema,
     compareSql,
     typeCastsCache,
-    verifying,
+    decisionCtx,
   );
 
   processPrimaryKey(config, changeTableData);

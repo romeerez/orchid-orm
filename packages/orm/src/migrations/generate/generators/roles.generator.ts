@@ -1,7 +1,7 @@
 import { DbStructure, IntrospectedStructure, RakeDbAst } from 'rake-db';
 import { ComposeMigrationParams } from '../compose-migration';
+import { MigrationDecisionCtx } from '../migration-decider';
 import { deepCompare } from 'pqb/internal';
-import { promptCreateOrRename } from './generators.utils';
 
 const defaults = {
   super: false,
@@ -17,7 +17,8 @@ const defaults = {
 export const processRoles = async (
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,
-  { verifying, internal: { roles } }: ComposeMigrationParams,
+  { internal: { roles } }: ComposeMigrationParams,
+  { decider }: MigrationDecisionCtx,
 ) => {
   if (!dbStructure.roles || !roles) return;
 
@@ -66,15 +67,16 @@ export const processRoles = async (
     if (found.has(codeRole.name)) continue;
 
     if (dropRoles.length) {
-      const i = await promptCreateOrRename(
-        'table',
-        codeRole.name,
-        dropRoles.map((x) => x.name),
-        verifying,
-      );
-      if (i) {
-        const dbRole = dropRoles[i - 1];
-        dropRoles.splice(i - 1, 1);
+      const dbRole = await decider.createOrRename({
+        kind: 'role',
+        target: { name: codeRole.name },
+        candidates: dropRoles,
+        candidateSource: (x) => ({ name: x.name }),
+        name: codeRole.name,
+        candidateName: (x) => x.name,
+      });
+      if (dbRole) {
+        dropRoles.splice(dropRoles.indexOf(dbRole), 1);
 
         ast.push(makeRenameOrChangeAst(dbRole, codeRole));
 
