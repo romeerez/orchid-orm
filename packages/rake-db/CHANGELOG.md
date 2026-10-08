@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.15
+
+### Patch Changes
+
+- 276ba0e0: Fail with an error instead of hanging when an interactive prompt is needed but stdin is not a TTY (#777)
+
 ## 2.37.14
 
 ### Patch Changes
