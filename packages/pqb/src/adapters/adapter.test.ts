@@ -657,13 +657,14 @@ describe('adapter runtime abstractions', () => {
               },
             );
 
+            // a connection that ran the transaction reports reset custom settings as '' rather than null
             const [afterRole, afterUserId, afterTenantId] = await Promise.all([
               adapter.query('SELECT current_role role'),
               adapter.query(
-                `SELECT current_setting('app.user_id', true) "userId"`,
+                `SELECT nullif(current_setting('app.user_id', true), '') "userId"`,
               ),
               adapter.query(
-                `SELECT current_setting('app.tenant_id', true) "tenantId"`,
+                `SELECT nullif(current_setting('app.tenant_id', true), '') "tenantId"`,
               ),
             ]);
 
