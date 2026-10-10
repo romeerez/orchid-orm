@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.17
+
+### Patch Changes
+
+- 01850050: Fix composite foreign key column order in database introspection (#763)
+
 ## 2.37.16
 
 ### Patch Changes
