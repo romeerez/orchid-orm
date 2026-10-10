@@ -272,6 +272,40 @@ change(async (db) => {
   ${red('- drop column')} iD integer, checks (i_d = 123)`);
   });
 
+  it('should be dropped together with a column when another table has a check with the same name', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.integer().check(sql`i_d = 123`, 'same_name'),
+        }));
+
+        await db.createTable('other', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.integer().check(sql`col_umn = 456`, 'same_name'),
+        }));
+      },
+      tables: [
+        defineTable('table', { noPrimaryKey: true }, () => ({})),
+        defineTable('other', { noPrimaryKey: true }, (t) => ({
+          colUmn: t.integer().check(sql`col_umn = 456`, 'same_name'),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    iD: t.drop(t.integer().check(t.sql\`(i_d = 123)\`)),
+  }));
+});
+`);
+
+    assert.report(`${yellow('~ change table')} table:
+  ${red('- drop column')} iD integer, checks (i_d = 123)`);
+  });
+
   it('should be added in a column change', async () => {
     await arrange({
       async prepareDb(db) {

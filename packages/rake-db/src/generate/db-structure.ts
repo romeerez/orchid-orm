@@ -643,15 +643,16 @@ const constraintsSql = `SELECT
       WHEN false THEN
         json_build_object(
           'columns',
-          json_agg(ccu.column_name),
+          json_agg(a.attname ORDER BY k.ordinality),
           'expression',
           pg_get_expr(conbin, conrelid)
         )
       END
-    FROM information_schema.constraint_column_usage ccu
+    FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
+    JOIN pg_catalog.pg_attribute a
+      ON a.attrelid = c.conrelid
+     AND a.attnum = k.attnum
     WHERE conbin IS NOT NULL
-      AND ccu.constraint_name = c.conname
-      AND ccu.table_schema = s.nspname
   ) AS "check"
 FROM pg_catalog.pg_constraint c
 JOIN pg_class t ON t.oid = conrelid
