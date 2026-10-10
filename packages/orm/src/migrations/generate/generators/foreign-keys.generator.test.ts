@@ -586,6 +586,44 @@ change(async (db) => {
     assert.migration();
   });
 
+  it('should not recreate composite foreign keys with columns ordered differently from their tables', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable('some', (t) => ({
+          fA: t.text().primaryKey(),
+          fB: t.text().primaryKey(),
+        }));
+
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            aA: t.text(),
+            bB: t.text(),
+          }),
+          (t) => [
+            t.foreignKey(['bB', 'aA'], 'some', ['fA', 'fB']),
+            t.foreignKey(['aA', 'bB'], 'some', ['fB', 'fA']),
+          ],
+        );
+      },
+      tables: [
+        someCompositeTable,
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          aA: t.text(),
+          bB: t.text(),
+        }))
+          .foreignKey(['bB', 'aA'], 'some', ['fA', 'fB'])
+          .foreignKey(['aA', 'bB'], 'some', ['fB', 'fA']),
+      ],
+    });
+
+    await act();
+
+    assert.migration();
+    assert.report('No changes were detected');
+  });
+
   it('should recreate composite foreign key when option changes', async () => {
     await arrange({
       async prepareDb(db) {

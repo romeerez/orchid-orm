@@ -614,23 +614,19 @@ const constraintsSql = `SELECT
         ft.relname,
         'columns',
         (
-          SELECT json_agg(ccu.column_name ORDER BY a.attnum)
-          FROM information_schema.key_column_usage ccu
+          SELECT json_agg(a.attname ORDER BY k.ordinality)
+          FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
           JOIN pg_catalog.pg_attribute a
             ON a.attrelid = c.conrelid
-           AND a.attname = ccu.column_name
-          WHERE ccu.constraint_name = c.conname
-            AND ccu.table_schema = cs.nspname
+           AND a.attnum = k.attnum
         ),
         'foreignColumns',
         (
-          SELECT json_agg(ccu.column_name ORDER BY a.attnum)
-          FROM information_schema.constraint_column_usage ccu
+          SELECT json_agg(a.attname ORDER BY k.ordinality)
+          FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ordinality)
           JOIN pg_catalog.pg_attribute a
             ON a.attrelid = c.confrelid
-           AND a.attname = ccu.column_name
-          WHERE ccu.constraint_name = c.conname
-            AND ccu.table_schema = cs.nspname
+           AND a.attnum = k.attnum
         ),
         'match',
         c.confmatchtype,
@@ -641,7 +637,6 @@ const constraintsSql = `SELECT
       )
     FROM pg_class ft
     JOIN pg_catalog.pg_namespace fs ON fs.oid = ft.relnamespace
-    JOIN pg_catalog.pg_namespace cs ON cs.oid = c.connamespace
     WHERE contype = 'f' AND ft.oid = confrelid
   ) AS "references",
   (
