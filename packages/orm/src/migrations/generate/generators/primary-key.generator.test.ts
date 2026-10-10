@@ -286,6 +286,44 @@ change(async (db) => {
     );
   });
 
+  it('should drop a composite primary key with columns not in table column order', async () => {
+    await arrange({
+      async prepareDb(db) {
+        await db.createTable(
+          'table',
+          { noPrimaryKey: true },
+          (t) => ({
+            iD: t.identity(),
+            kEy: t.text(),
+          }),
+          (t) => t.primaryKey(['kEy', 'iD']),
+        );
+      },
+      tables: [
+        defineTable('table', { noPrimaryKey: true }, (t) => ({
+          iD: t.identity(),
+          kEy: t.text(),
+        })),
+      ],
+    });
+
+    await act();
+
+    assert.migration(`import { change } from '../src/migrations/dbScript';
+
+change(async (db) => {
+  await db.changeTable('table', (t) => ({
+    ...t.drop(t.primaryKey(['k_ey', 'i_d'])),
+  }));
+});
+`);
+
+    assert.report(
+      `${yellow('~ change table')} table:
+  ${red('- drop primary key')} on (k_ey, i_d)`,
+    );
+  });
+
   it('should change a composite primary key', async () => {
     await arrange({
       async prepareDb(db) {
