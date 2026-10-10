@@ -277,6 +277,63 @@ describe('expressions', () => {
       const res = await q;
       expect(res).toEqual([{ value: false }]);
     });
+
+    it('should select values from a subquery', async () => {
+      await db.user.insert(UserData);
+
+      const query = testDb
+        .from(db.user.select({ value: sql.val(null) }))
+        .select('value');
+
+      assertType<Awaited<typeof query>, { value: null }[]>();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "User"."value"
+          FROM (SELECT $1 "value" FROM "schema"."user" "User") "User"
+        `,
+        [null],
+      );
+
+      expect(await query).toEqual([{ value: null }]);
+    });
+
+    it('should select a reused value expression in a relation', async () => {
+      await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const value = sql.val('value');
+      const query = db.user.select({
+        value,
+        profile: (q) => q.profile.select({ value }),
+      });
+
+      assertType<
+        Awaited<typeof query>,
+        { value: string; profile: { value: string } }[]
+      >();
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT $1 "value", row_to_json("profile".*) "profile"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT $2 "value" FROM "schema"."profile"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
+          ) "profile" ON true
+        `,
+        ['value', 'value'],
+      );
+
+      expect(await query).toEqual([
+        { value: 'value', profile: { value: 'value' } },
+      ]);
+    });
   });
 
   describe('fn', () => {

@@ -1,10 +1,10 @@
-import { addValue, emptyObject } from '../../utils';
+import { addValue } from '../../utils';
 import { Column } from '../../columns';
 import { Expression, ExpressionData } from './expression';
 import { ToSqlValues } from '../sql/to-sql';
 
 export class ValExpression<T> extends Expression {
-  result = { value: emptyObject as Column.Pick.QueryColumnOfType<T> };
+  declare result: { value: Column.Pick.QueryColumnOfType<T> };
   q: ExpressionData;
 
   constructor(public value: unknown) {
