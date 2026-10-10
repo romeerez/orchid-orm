@@ -596,14 +596,12 @@ const constraintsSql = `SELECT
   t.relname AS "tableName",
   c.conname AS "name",
   (
-    SELECT json_agg(ccu.column_name ORDER BY a.attnum)
-    FROM information_schema.constraint_column_usage ccu
+    SELECT json_agg(a.attname ORDER BY k.ordinality)
+    FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
     JOIN pg_catalog.pg_attribute a
       ON a.attrelid = c.conrelid
-     AND a.attname = ccu.column_name
+     AND a.attnum = k.attnum
     WHERE contype = 'p'
-      AND ccu.constraint_name = c.conname
-      AND ccu.table_schema = s.nspname
   ) AS "primaryKey",
   (
     SELECT
