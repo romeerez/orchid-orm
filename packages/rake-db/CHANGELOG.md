@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.18
+
+### Patch Changes
+
+- e1d0a44f: Fix composite primary key column order in database introspection (#783)
+
 ## 2.37.17
 
 ### Patch Changes
