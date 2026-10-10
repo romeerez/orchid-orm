@@ -1,5 +1,6 @@
 import { VirtualColumn } from './virtual';
 import { RawSql } from '../../query/expressions/raw-sql';
+import { ValExpression } from '../../query/expressions/val-expression';
 import { internalSchemaConfig } from '../default-schema-config';
 import { ColumnSchemaConfig } from '../column-schema';
 
@@ -21,4 +22,6 @@ export class UnknownColumn<
   }
 }
 
-RawSql.prototype.result = { value: UnknownColumn.instance };
+RawSql.prototype.result = ValExpression.prototype.result = {
+  value: UnknownColumn.instance,
+};
