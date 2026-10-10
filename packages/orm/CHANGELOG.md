@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.14
+
+### Patch Changes
+
+- 27ea1e0a: Fix selecting `sql.val` expressions in nested relations and derived tables.
+- Updated dependencies [27ea1e0a]
+  - pqb@0.73.7
+  - rake-db@2.37.16
+
 ## 1.78.13
 
 ### Patch Changes

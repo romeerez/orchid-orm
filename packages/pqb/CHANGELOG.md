@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.7
+
+### Patch Changes
+
+- 27ea1e0a: Fix selecting `sql.val` expressions in nested relations and derived tables.
+
 ## 0.73.6
 
 ### Patch Changes
