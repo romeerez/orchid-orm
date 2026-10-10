@@ -1,5 +1,11 @@
 # rake-db
 
+## 2.37.19
+
+### Patch Changes
+
+- 10485415: Fix check columns in database introspection when checks in different tables share a name (#783)
+
 ## 2.37.18
 
 ### Patch Changes
