@@ -1,5 +1,16 @@
 # orchid-orm
 
+## 1.78.19
+
+### Patch Changes
+
+- 04f52ca2: Fix `where` conditions and relation selects when a value is selected under the key of a table column.
+- 04f52ca2: Fix selecting relations after `create` and `update` when the primary key column has a parser.
+- Updated dependencies [04f52ca2]
+- Updated dependencies [04f52ca2]
+  - pqb@0.73.9
+  - rake-db@2.37.21
+
 ## 1.78.18
 
 ### Patch Changes
