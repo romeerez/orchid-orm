@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.8
+
+### Patch Changes
+
+- 4c2070a0: Fix selecting a joined table as JSON to exclude columns with `select(false)`.
+
 ## 0.73.7
 
 ### Patch Changes

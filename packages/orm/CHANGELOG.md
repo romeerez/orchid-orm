@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.18
+
+### Patch Changes
+
+- 4c2070a0: Fix selecting a joined table as JSON to exclude columns with `select(false)`.
+- Updated dependencies [4c2070a0]
+  - pqb@0.73.8
+  - rake-db@2.37.20
+
 ## 1.78.17
 
 ### Patch Changes
