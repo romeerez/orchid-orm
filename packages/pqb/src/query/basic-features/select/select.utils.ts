@@ -452,7 +452,11 @@ export const processSelectArg = <T extends SelectSelf>(
       key,
     );
     if (item) {
-      selectShape[key] = item;
+      // keep a table column for conditions, joins, and relation loading,
+      // except for a joined value: `valuesJoinedAs` redirects the key to it
+      if (!selectShape[key] || query.q.valuesJoinedAs?.[key]) {
+        selectShape[key] = item;
+      }
     } else if (item === false) {
       // propagate `none` state of a joined sub-query
       return false;

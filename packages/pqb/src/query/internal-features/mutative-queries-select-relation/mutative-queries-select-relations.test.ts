@@ -1,13 +1,16 @@
 import {
   ChatData,
   db,
+  defineTable,
   MessageData,
   PostData,
   ProfileData,
+  sql,
   TaskData,
   UserData,
   useTestDatabase,
 } from 'test-utils';
+import { orchidORMWithAdapter } from 'orchid-orm';
 import { MAX_BINDING_PARAMS } from '../../sql/sql-constants';
 import { NotFoundError } from '../../errors';
 
@@ -803,6 +806,114 @@ describe('mutative queries select relations', () => {
         const all = await db.user.select('Name');
         expect(all.length).toBe(1);
       });
+    });
+  });
+
+  describe('primary key with a parser', () => {
+    const ProfileTable = defineTable('profile', (t) => ({
+      id: t.identity().primaryKey(),
+      userId: t.name('user_id').integer().nullable(),
+      bio: t.text().nullable(),
+    }));
+
+    const UserTable = defineTable('user', (t) => ({
+      id: t.identity().primaryKey().parse(String),
+      name: t.text(),
+      password: t.text(),
+    })).relations((user) => ({
+      profile: user('id').hasOne(() => ProfileTable('userId')),
+    }));
+
+    const local = orchidORMWithAdapter(
+      { db: db.$qb, schema: () => 'schema' },
+      { user: UserTable, profile: ProfileTable },
+    );
+
+    const userData = {
+      name: 'name',
+      password: 'password',
+      profile: { create: { bio: 'bio' } },
+    };
+
+    it('should load relations in create', async () => {
+      const res = await local.user
+        .select({ profile: (q) => q.profile.select('bio') })
+        .insert(userData);
+
+      expect(res).toEqual({ profile: { bio: 'bio' } });
+    });
+
+    it('should load relations in update', async () => {
+      await local.user.insert(userData);
+
+      const res = await local.user
+        .all()
+        .update({ name: 'new name' })
+        .select({ profile: (q) => q.profile.select('bio') });
+
+      expect(res).toEqual([{ profile: { bio: 'bio' } }]);
+    });
+  });
+
+  describe('selecting a value under the same key as a primary key', () => {
+    it('should load relations in create when the value has a parser', async () => {
+      const res = await db.user
+        .select({
+          Id: sql<string>`'2020-01-01'`.type((t) => t.timestamp().asDate()),
+          profile: (q) => q.profile.select('Bio'),
+        })
+        .insert({
+          ...UserData,
+          profile: { create: ProfileData },
+        });
+
+      expect(res).toEqual({
+        Id: new Date('2020-01-01'),
+        profile: { Bio: ProfileData.Bio },
+      });
+    });
+
+    it('should load relations in update when the value has a parser', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const res = await db.user
+        .find(user.Id)
+        .update({ Name: 'new name' })
+        .select({
+          Id: sql<string>`'2020-01-01'`.type((t) => t.timestamp().asDate()),
+          profile: (q) => q.profile.select('Bio'),
+        });
+
+      expect(res).toEqual({
+        Id: new Date('2020-01-01'),
+        profile: { Bio: ProfileData.Bio },
+      });
+
+      const all = await db.user.select('Name');
+      expect(all).toEqual([{ Name: 'new name' }]);
+    });
+
+    it('should load relations in delete', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profileNoFkey: { create: ProfileData },
+      });
+
+      const res = await db.user
+        .find(user.Id)
+        .delete()
+        .select({
+          Id: sql`'{"a":1}'::json`.type((t) => t.json()),
+          profile: (q) => q.profileNoFkey.select('Bio'),
+        });
+
+      expect(res).toEqual({ Id: { a: 1 }, profile: { Bio: ProfileData.Bio } });
+
+      const all = await db.user.select('Name');
+      expect(all).toEqual([]);
     });
   });
 

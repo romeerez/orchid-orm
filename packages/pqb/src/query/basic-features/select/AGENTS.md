@@ -1,5 +1,10 @@
 # Select Feature Guidance
 
+A value selected under a source-column key, except a scalar relation, must not
+replace that column in the selection shape: conditions, joins, windows, and
+relation loading resolve keys through it. Resolve output aliases in the query's
+`ORDER BY`; use source columns for ordering inside windows and aggregates.
+
 Selecting a scalar relation under a key that matches a source-column key must
 still correlate the relation through the source column's database name. Treat
 the relation's parent selection shape as a snapshot: later user-facing

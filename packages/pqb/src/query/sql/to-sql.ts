@@ -345,7 +345,9 @@ export const toSql: ToSql = (
     }
 
     if (query.order) {
-      pushOrderBySql(ctx, query, quotedAs, query.order);
+      // unlike windows and aggregates,
+      // the query's ORDER BY can refer to selected values by their aliases
+      pushOrderBySql(ctx, query, quotedAs, query.order, true);
     }
 
     pushLimitOffsetSql(ctx, query, fromQuery);
