@@ -45,4 +45,19 @@ describe('window', () => {
     );
     expectQueryNotMutated(q);
   });
+
+  it('should order a window by a table column when it is selected under its key', () => {
+    const q = db.user
+      .window({ w: { order: 'Id' } })
+      .select({ Id: 'Id', avg: (q) => q.avg('Id', { over: 'w' }) });
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "User"."id" "Id", avg("User"."id") OVER "w" "avg"
+        FROM "schema"."user" "User"
+        WINDOW "w" AS (ORDER BY "User"."id" ASC)
+      `,
+    );
+  });
 });

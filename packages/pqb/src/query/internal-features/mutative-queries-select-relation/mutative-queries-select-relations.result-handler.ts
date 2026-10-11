@@ -12,6 +12,7 @@ import {
   SelectItem,
 } from '../../basic-features/select/select.sql';
 import { maybeWrappedThen, ThenSavepointState } from '../../then/then';
+import { setParserToQuery } from '../../query-columns/query-column-parsers';
 
 export const checkIfNeedResultAllForMutativeQueriesSelectRelations = (
   sql: MutativeQueriesSelectRelationsSqlProp,
@@ -78,15 +79,21 @@ export const loadRelations = async (
 
   const select: SelectItem[] = [{ selectAs }];
 
+  // the mutation result has primary keys parsed by column parsers,
+  // while the cloned parsers can have a parser of a value selected under a primary key name
+  const { parsers, defaultParsers } = selectQuery.q;
+  if (parsers) selectQuery.q.parsers = { ...parsers };
+
   const relationKeyAliases = primaryKeys.map((key) => {
+    let as = key;
     if (key in selectAs) {
-      const as = getFreeAlias(selectAs, key);
+      as = getFreeAlias(selectAs, key);
       selectAs[as] = key;
-      return as;
     } else {
       select.push(key);
-      return key;
     }
+    setParserToQuery(selectQuery.q, as, defaultParsers?.[key]);
+    return as;
   });
 
   selectQuery.q.select = select;

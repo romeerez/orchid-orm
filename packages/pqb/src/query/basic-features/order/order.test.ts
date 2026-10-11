@@ -97,7 +97,7 @@ describe('order', () => {
       q.toSQL(),
       `
           SELECT "User"."id" "Name" FROM "schema"."user" "User"
-          ORDER BY "id" ASC
+          ORDER BY "Name" ASC
         `,
     );
   });

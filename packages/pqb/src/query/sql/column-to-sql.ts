@@ -38,20 +38,24 @@ export function simpleColumnToSQL(
       if (typeof s === 'object' && 'selectAs' in s) {
         if (key in s.selectAs) {
           dontAlias = true;
-          sql = simpleColumnToSQL(
-            ctx,
-            queryData,
-            shape,
-            key,
-            shape[key],
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            true,
-          );
+          // refer to the selected value by its alias,
+          // the shape may have a table column under the same key
+          sql = queryData.valuesJoinedAs?.[key]
+            ? simpleColumnToSQL(
+                ctx,
+                queryData,
+                shape,
+                key,
+                shape[key],
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                true,
+              )
+            : `"${key}"`;
           break;
         }
       }

@@ -693,6 +693,44 @@ describe('select', () => {
       const res = await q;
       assertType<typeof res, { UserId: number } | undefined>();
     });
+
+    it('should filter and join relations by a table column when a value is selected under its name', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const q = db.user.find(user.Id).select({
+        Id: sql`true`.type((t) => t.boolean()),
+        profile: (q) => q.profile.select('Bio'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT true "Id", row_to_json("profile".*) "profile"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT "profile"."bio" "Bio"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
+          ) "profile" ON true
+          WHERE "User"."id" = $1
+          LIMIT 1
+        `,
+        [user.Id],
+      );
+
+      const res = await q;
+
+      assertType<
+        typeof res,
+        { Id: boolean; profile: { Bio: string | null } }
+      >();
+
+      expect(res).toEqual({ Id: true, profile: { Bio: ProfileData.Bio } });
+    });
   });
 
   describe('select implicit json', () => {
