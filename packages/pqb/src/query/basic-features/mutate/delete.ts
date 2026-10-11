@@ -16,6 +16,7 @@ import {
 } from '../../pick-query-types';
 import { EmptyTuple } from '../../../utils';
 import { _clone } from '../clone/clone';
+import { OmitRowVersions } from '../select/row-versions';
 
 export type DeleteMethodsNames = 'delete';
 
@@ -23,11 +24,13 @@ export type DeleteArgs<T extends PickQueryHasWhere> =
   T['__hasWhere'] extends true ? EmptyTuple : [never];
 
 export type DeleteResult<T extends PickQueryHasSelectResultReturnType> =
-  T['__hasSelect'] extends true
-    ? T
-    : T['returnType'] extends undefined | 'all'
-      ? SetQueryReturnsRowCountMany<T>
-      : SetQueryReturnsRowCount<T>;
+  OmitRowVersions<
+    T['__hasSelect'] extends true
+      ? T
+      : T['returnType'] extends undefined | 'all'
+        ? SetQueryReturnsRowCountMany<T>
+        : SetQueryReturnsRowCount<T>
+  >;
 
 export interface DeleteSelf
   extends

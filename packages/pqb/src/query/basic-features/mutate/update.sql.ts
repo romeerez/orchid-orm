@@ -37,6 +37,7 @@ import {
   handleInsertAndUpdateSelectRelationsSqlState,
 } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 import { ColumnsShape } from 'pqb/index';
+import { UpdateReturningSql } from '../select/row-versions';
 
 export const pushUpdateSql = (
   ctx: ToSQLCtx,
@@ -287,6 +288,15 @@ const pushUpdateReturning = (
   relationSelectState: MutativeQueriesSelectRelationsSqlState | undefined,
   isSubSql?: boolean,
 ) => {
+  // Enable row versions only while compiling this query's returned selection.
+  // Nested queries and sibling CTEs compile with their own SQL contexts.
+  const previous = ctx.updateReturning;
+  const state: UpdateReturningSql = {
+    // Empty updates become SELECT, so both versions read the current row.
+    // Avoid self-assignment for RETURNING: it writes the row and fires triggers.
+    empty: keyword === 'SELECT',
+  };
+  ctx.updateReturning = state;
   const returning = makeReturningSql(
     ctx,
     query,
@@ -297,8 +307,17 @@ const pushUpdateReturning = (
     undefined,
     isSubSql,
   );
+  ctx.updateReturning = previous;
 
-  if (returning) ctx.sql.push(keyword, returning);
+  if (returning) {
+    const renames =
+      state.aliases &&
+      Object.entries(state.aliases)
+        .filter(([version, alias]) => alias !== version)
+        .map(([version, alias]) => `${version.toUpperCase()} AS "${alias}"`)
+        .join(', ');
+    ctx.sql.push(renames ? `${keyword} WITH (${renames})` : keyword, returning);
+  }
 };
 
 const processData = (
