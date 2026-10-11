@@ -953,6 +953,57 @@ describe('mutative queries select relations', () => {
       ]);
     });
 
+    it('should work for a relation value in insert', async () => {
+      const res = await db.user
+        .insert({
+          ...UserData,
+          profile: { create: ProfileData },
+        })
+        .select({
+          Id: (q) => q.profile.get('Bio'),
+        });
+
+      expect(res).toEqual({ Id: ProfileData.Bio });
+    });
+
+    it('should work for a relation value in update', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const res = await db.user
+        .find(user.Id)
+        .update({ Name: 'new name' })
+        .select({
+          Id: (q) => q.profile.get('Bio'),
+        });
+
+      expect(res).toEqual({ Id: ProfileData.Bio });
+
+      const all = await db.user.select('Name');
+      expect(all).toEqual([{ Name: 'new name' }]);
+    });
+
+    it('should work for a relation value in delete', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profileNoFkey: { create: ProfileData },
+      });
+
+      const res = await db.user
+        .find(user.Id)
+        .delete()
+        .select({
+          Id: (q) => q.profileNoFkey.get('Bio'),
+        });
+
+      expect(res).toEqual({ Id: ProfileData.Bio });
+
+      const all = await db.user.select('Name');
+      expect(all).toEqual([]);
+    });
+
     describe('in a batch', () => {
       it('should work when inserting a batch', async () => {
         setMaxBindingParams(5);

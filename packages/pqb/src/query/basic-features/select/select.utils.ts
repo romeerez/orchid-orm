@@ -440,6 +440,7 @@ export const processSelectArg = <T extends SelectSelf>(
   }
 
   const selectAs: SelectAsValue = {};
+  const fromShape = (query.q.fromShape ??= query.q.selectShape);
   const selectShape = (query.q.selectShape = { ...query.q.selectShape });
 
   for (const key in arg as unknown as SelectAsArg<T>) {
@@ -452,14 +453,21 @@ export const processSelectArg = <T extends SelectSelf>(
       key,
     );
     if (item) {
-      // keep a table column for conditions, joins, and relation loading,
-      // except for a joined value: `valuesJoinedAs` redirects the key to it
-      if (!selectShape[key] || query.q.valuesJoinedAs?.[key]) {
-        selectShape[key] = item;
-      }
+      // keep a source column for conditions, joins, and relation loading
+      if (!fromShape[key]) selectShape[key] = item;
     } else if (item === false) {
       // propagate `none` state of a joined sub-query
       return false;
+    }
+
+    // conditions keep referring to a source column when a relation is joined under its key
+    if (query.q.valuesJoinedAs?.[key] && fromShape[key]) {
+      setObjectValueImmutable(
+        query.q,
+        'valuesJoinedUnderColumns',
+        key,
+        item || UnknownColumn.instance,
+      );
     }
   }
 

@@ -124,6 +124,27 @@ describe('order', () => {
         `,
     );
   });
+
+  it('should order by a relation value selected under a table column name', () => {
+    const q = db.user
+      .select({ Id: (q) => q.profile.get('Bio') })
+      .order({ Id: 'ASC NULLS FIRST' });
+
+    expectSql(
+      q.toSQL(),
+      `
+          SELECT "Id"."Id" "Id"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT array["profile"."bio"] "Id"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
+          ) "Id" ON true
+          ORDER BY "Id"."Id"[1] ASC NULLS FIRST
+        `,
+    );
+  });
 });
 
 describe('orderSql', () => {

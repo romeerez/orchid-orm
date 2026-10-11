@@ -15,7 +15,6 @@ import { moveQueryToCte } from '../../basic-features/cte/move-mutative-query-to-
 import { ensureCTECount } from '../../extra-features/hooks/hooks.sql';
 import { JoinItem } from '../../basic-features/join/join.sql';
 import { getQueryAs } from '../../basic-features/as/as';
-import { RecordString } from '../../../utils';
 
 export interface MutativeQueriesSelectRelationsQueryData {
   selectRelation?: true;
@@ -55,31 +54,6 @@ export const handleInsertAndUpdateSelectRelationsSqlState = (
 ) => {
   if (state) {
     ctx.topCtx.mutativeQueriesSelectRelationsSqlState = state;
-  }
-};
-
-// It's a workaround for soft-delete when selecting a relation.
-// if relation is selected under the same name as primary key, valuesJoinedAs will make SQL use relation instead of pkey for the condition.
-// Temporarily unsetting valuesJoinedAs.
-export const unsetValuesJoinedAsForMutativeSelectRelations = (
-  query: ToSQLQuery,
-): RecordString | undefined => {
-  if (!query.q.selectRelation || !query.q.valuesJoinedAs) {
-    return;
-  }
-
-  const { valuesJoinedAs } = query.q;
-  query.q.valuesJoinedAs = undefined;
-
-  return valuesJoinedAs;
-};
-
-export const restoreValuesJoinedAsForMutativeSelectRelations = (
-  query: ToSQLQuery,
-  valuesJoinedAs: RecordString | undefined,
-) => {
-  if (valuesJoinedAs) {
-    query.q.valuesJoinedAs = valuesJoinedAs;
   }
 };
 

@@ -171,7 +171,7 @@ export function queryFrom<
   }
 
   data.from = arg as SubQueryForSql;
-  data.selectAllColumns = data.scopes = undefined;
+  data.selectAllColumns = data.scopes = data.fromShape = undefined;
 
   return self as never;
 }

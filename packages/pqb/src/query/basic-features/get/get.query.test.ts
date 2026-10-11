@@ -160,6 +160,16 @@ describe('get', () => {
     it('should throw if not found', async () => {
       await expect(() => db.user.get('Id')).rejects.toThrow(NotFoundError);
     });
+
+    it('should get a relation value selected under a table column name', async () => {
+      await db.user.create(UserData);
+
+      const result = await db.user
+        .select({ Id: (q) => q.posts.count() })
+        .get('Id');
+
+      expect(result).toBe(0);
+    });
   });
 
   describe('getOptional', () => {

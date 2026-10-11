@@ -731,6 +731,169 @@ describe('select', () => {
 
       expect(res).toEqual({ Id: true, profile: { Bio: ProfileData.Bio } });
     });
+
+    it('should filter by a table column when a relation value is selected under its name', async () => {
+      const user = await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const q = db.user.find(user.Id).select({
+        Id: (q) => q.profile.get('Bio'),
+      });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "Id"."Id" "Id"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT array["profile"."bio"] "Id"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
+          ) "Id" ON true
+          WHERE "User"."id" = $1
+          LIMIT 1
+        `,
+        [user.Id],
+      );
+
+      const res = await q;
+
+      assertType<typeof res, { Id: string | null }>();
+
+      expect(res).toEqual({ Id: ProfileData.Bio });
+    });
+
+    it('should filter by a relation value selected twice under the same key', async () => {
+      await db.user.create({
+        ...UserData,
+        posts: { create: [{ Body: 'post' }] },
+      });
+      await db.user.create(UserData);
+
+      const q = db.user
+        .select({ postsCount: (q) => q.posts.count() })
+        .select({ postsCount: (q) => q.posts.count() })
+        .where({ postsCount: 1 });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "postsCount"."postsCount" "postsCount", "postsCount"."postsCount" "postsCount"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT count(*) "postsCount"
+            FROM "schema"."post" "posts"
+            WHERE "posts"."user_id" = "User"."id"
+              AND "posts"."title" = "User"."user_key"
+          ) "postsCount" ON true
+          WHERE "postsCount"."postsCount" = $1
+        `,
+        [1],
+      );
+
+      expect(await q).toEqual([{ postsCount: 1 }]);
+    });
+
+    it('should filter by a relation value selected under the key of a previously selected value', async () => {
+      await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const q = db.user
+        .select({ bio: sql`'x'`.type((t) => t.text()) })
+        .select({ bio: (q) => q.profile.get('Bio') })
+        .where({ bio: ProfileData.Bio });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT 'x' "bio", "bio"."bio" "bio"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT array["profile"."bio"] "bio"
+            FROM "schema"."profile"
+            WHERE "profile"."user_id" = "User"."id"
+              AND "profile"."profile_key" = "User"."user_key"
+          ) "bio" ON true
+          WHERE "bio"."bio"[1] = $1
+        `,
+        [ProfileData.Bio],
+      );
+
+      expect(await q).toEqual([{ bio: ProfileData.Bio }]);
+    });
+
+    it('should filter by a `from` source column when a relation is selected under its key', async () => {
+      await db.user.create(UserData);
+
+      const q = db.user
+        .from(
+          db.user.select('Id', 'UserKey', {
+            n: sql`1`.type((t) => t.integer()),
+          }),
+        )
+        .select({ n: (q) => q.posts.count() })
+        .where({ n: 1 });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "n"."n" "n"
+          FROM (
+            SELECT "User"."id" "Id", "User"."user_key" "UserKey", 1 "n"
+            FROM "schema"."user" "User"
+          ) "User"
+          LEFT JOIN LATERAL (
+            SELECT count(*) "n"
+            FROM "schema"."post" "posts"
+            WHERE "posts"."user_id" = "User"."Id"
+              AND "posts"."title" = "User"."UserKey"
+          ) "n" ON true
+          WHERE "User"."n" = $1
+        `,
+        [1],
+      );
+
+      expect(await q).toEqual([{ n: 0 }]);
+    });
+
+    it('should filter by a relation value selected under a key that a `from` source lacks', async () => {
+      await db.user.create({
+        ...UserData,
+        posts: { create: [{ Body: 'post' }] },
+      });
+      await db.user.create(UserData);
+
+      const q = db.user
+        .from(db.user.select('Id', 'UserKey'))
+        .select({ Name: (q) => q.posts.count() })
+        .where({ Name: 0 });
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "Name"."Name" "Name"
+          FROM (
+            SELECT "User"."id" "Id", "User"."user_key" "UserKey"
+            FROM "schema"."user" "User"
+          ) "User"
+          LEFT JOIN LATERAL (
+            SELECT count(*) "Name"
+            FROM "schema"."post" "posts"
+            WHERE "posts"."user_id" = "User"."Id"
+              AND "posts"."title" = "User"."UserKey"
+          ) "Name" ON true
+          WHERE "Name"."Name" = $1
+        `,
+        [0],
+      );
+
+      expect(await q).toEqual([{ Name: 0 }]);
+    });
   });
 
   describe('select implicit json', () => {

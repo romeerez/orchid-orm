@@ -35,34 +35,10 @@ import {
   MutativeQueriesSelectRelationsSqlState,
   newMutativeQueriesSelectRelationsSqlState,
   handleInsertAndUpdateSelectRelationsSqlState,
-  restoreValuesJoinedAsForMutativeSelectRelations,
-  unsetValuesJoinedAsForMutativeSelectRelations,
 } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 import { ColumnsShape } from 'pqb/index';
 
 export const pushUpdateSql = (
-  ctx: ToSQLCtx,
-  query: ToSQLQuery,
-  q: QueryData,
-  quotedAs: string,
-  isSubSql?: boolean,
-): Sql => {
-  const valuesJoinedAs = unsetValuesJoinedAsForMutativeSelectRelations(query);
-
-  try {
-    return pushUpdateSqlWithoutValuesJoinedAs(
-      ctx,
-      query,
-      q,
-      quotedAs,
-      isSubSql,
-    );
-  } finally {
-    restoreValuesJoinedAsForMutativeSelectRelations(query, valuesJoinedAs);
-  }
-};
-
-const pushUpdateSqlWithoutValuesJoinedAs = (
   ctx: ToSQLCtx,
   query: ToSQLQuery,
   q: QueryData,
