@@ -1061,6 +1061,24 @@ describe('select', () => {
 
       expect(res).toEqual({ user: undefined });
     });
+
+    it('should not include columns excluded from the default selection when selecting joined table as json', () => {
+      const Account = testDb('account', (t) => ({
+        id: t.identity().primaryKey(),
+        password: t.text().select(false),
+      }));
+
+      const q = db.user.join(Account.as('a'), 'a.id', 'User.Id').select('a.*');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT CASE WHEN to_jsonb("a") IS NULL THEN NULL ELSE json_build_object('id', "a"."id") END "a"
+          FROM "schema"."user" "User"
+          JOIN "schema"."account" "a" ON "a"."id" = "User"."id"
+        `,
+      );
+    });
   });
 
   describe('selectAll', () => {

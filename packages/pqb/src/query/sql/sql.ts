@@ -133,7 +133,7 @@ export const makeRowToJson = (
   ctx: ToSQLCtx,
   table: string,
   shape: Column.Shape.Data,
-  aliasName: boolean,
+  isTableShape: boolean,
   includingExplicitSelect?: boolean,
 ): string => {
   let isSimple = true;
@@ -142,13 +142,15 @@ export const makeRowToJson = (
   for (const key in shape) {
     const column = shape[key];
     if (!includingExplicitSelect && column.data.explicitSelect) {
+      // Table rows contain columns excluded from the default selection.
+      if (isTableShape) isSimple = false;
       continue;
     }
 
     const selectSql = !column.data.computed ? column.data.selectSql : undefined;
     const outputColumn = getSelectedColumnData(column);
     if (
-      (aliasName && column.data.name) ||
+      (isTableShape && column.data.name) ||
       outputColumn.data.jsonCast ||
       selectSql
     ) {
@@ -157,7 +159,7 @@ export const makeRowToJson = (
 
     const value = selectSql
       ? selectSql.toSQL(ctx, `"${table}"`)
-      : `"${table}"."${(aliasName && column.data.name) || key}"`;
+      : `"${table}"."${(isTableShape && column.data.name) || key}"`;
 
     list.push(
       `'${key}', ${value}${
