@@ -51,6 +51,7 @@ import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { setSelectRelation } from '../../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.qb';
 import { _getSelectableColumn } from '../get/get.utils';
+import { getReturningColumn } from './row-versions';
 
 // Add parsers when selecting a full joined table by name or alias.
 // It always selects a single record, not array, it's documented.
@@ -436,6 +437,12 @@ export const processSelectArg = <T extends SelectSelf>(
 ): SelectItem | undefined | false => {
   const query = q as unknown as Query;
   if (typeof arg === 'string') {
+    const returning = getReturningColumn(query, arg);
+    if (returning) {
+      const key = columnAs || returning.name;
+      addParserForRawExpression(query, key, returning);
+      return { selectAs: { [key]: returning } };
+    }
     return setParserForSelectedString(query, arg, as, columnAs);
   }
 
@@ -444,14 +451,18 @@ export const processSelectArg = <T extends SelectSelf>(
   const selectShape = (query.q.selectShape = { ...query.q.selectShape });
 
   for (const key in arg as unknown as SelectAsArg<T>) {
-    const item = processSelectAsArg(
-      q,
-      selectAs,
-      as,
-      key,
-      (arg as unknown as SelectAsArg<T>)[key],
-      key,
-    );
+    const value = (arg as unknown as SelectAsArg<T>)[key];
+    if (typeof value === 'string') {
+      const returning = getReturningColumn(query, value);
+      if (returning) {
+        addParserForRawExpression(query, key, returning);
+        selectAs[key] = returning;
+        // row versions exist only in RETURNING,
+        // keep them out of the shape for conditions and relations
+        continue;
+      }
+    }
+    const item = processSelectAsArg(q, selectAs, as, key, value, key);
     if (item) {
       // keep a source column for conditions, joins, and relation loading
       if (!fromShape[key]) selectShape[key] = item;

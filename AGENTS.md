@@ -112,7 +112,7 @@ pnpm doc                            # VitePress development server
 pnpm doc:build                      # build documentation
 ```
 
-For database-backed work, start PostgreSQL 15+ (for example `docker compose -f docker-compose.pg.yml up -d`), copy `.env.example`, then run `pnpm db create` and `pnpm db migrate`. Set `ADAPTER=postgres-js`, `ADAPTER=node-postgres`, or `ADAPTER=bun` for adapter-sensitive tests.
+For database-backed work, start PostgreSQL 18+ (for example `docker compose -f docker-compose.pg.yml up -d`), copy `.env.example`, then run `pnpm db create` and `pnpm db migrate`. Set `ADAPTER=postgres-js`, `ADAPTER=node-postgres`, or `ADAPTER=bun` for adapter-sensitive tests.
 
 ## Code Conventions & Common Patterns
 
