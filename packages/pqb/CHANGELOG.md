@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.10
+
+### Patch Changes
+
+- 7ad9a5b1: Fix `where` conditions, `create`, `update`, and `delete` when a relation is selected under the key of a table column.
+
 ## 0.73.9
 
 ### Patch Changes

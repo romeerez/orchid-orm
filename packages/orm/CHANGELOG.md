@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.20
+
+### Patch Changes
+
+- 7ad9a5b1: Fix `where` conditions, `create`, `update`, and `delete` when a relation is selected under the key of a table column.
+- Updated dependencies [7ad9a5b1]
+  - pqb@0.73.10
+  - rake-db@2.37.22
+
 ## 1.78.19
 
 ### Patch Changes
