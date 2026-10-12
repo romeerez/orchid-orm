@@ -3,9 +3,12 @@ import {
   assertType,
   db,
   expectSql,
+  PostData,
   sql,
+  UserData,
   UserSelectAll,
   UserSelectAllWithTable,
+  useTestDatabase,
 } from 'test-utils';
 
 describe('where', () => {
@@ -436,5 +439,104 @@ describe('whereExists', () => {
 
     expect(q2.toSQL()).toEqual(sql);
     expect(q3.toSQL()).toEqual(sql);
+  });
+
+  describe('joins', () => {
+    useTestDatabase();
+
+    const createUserWithTaggedPost = async () => {
+      const user = await db.user.create(UserData);
+      const post = await db.post.create({
+        ...PostData,
+        UserId: user.Id,
+        Title: user.UserKey,
+      });
+      await db.tag.create({ Tag: 'tag' });
+      await db.postTag.create({ PostId: post.Id, Tag: 'tag' });
+      return user;
+    };
+
+    const helper = db.post.makeHelper((post, title: string) => {
+      const joined = post.where({ Title: title }).join('onePostTag');
+      return joined.whereExists((q) =>
+        q.postTags.where({ Tag: joined.ref('onePostTag.Tag') }),
+      );
+    });
+
+    it('should preserve joins added by a helper in a relation callback', () => {
+      const query = db.user
+        .whereExists((q) => q.posts.useHelper(helper, 'title'))
+        .select('Id');
+
+      expectSql(
+        query.toSQL(),
+        `
+          SELECT "User"."id" "Id" FROM "schema"."user" "User"
+          WHERE EXISTS (
+            SELECT 1 FROM "schema"."post" "posts"
+            JOIN "schema"."post_tag" "onePostTag"
+              ON "onePostTag"."post_id" = "posts"."id"
+            WHERE "posts"."title" = $1
+              AND EXISTS (
+                SELECT 1 FROM "schema"."post_tag" "postTags"
+                WHERE "postTags"."tag" = "onePostTag"."tag"
+                  AND "postTags"."post_id" = "posts"."id"
+              )
+              AND "posts"."user_id" = "User"."id"
+              AND "posts"."title" = "User"."user_key"
+          )
+        `,
+        ['title'],
+      );
+    });
+
+    it('should preserve joins for relation names and query arguments', async () => {
+      const user = await createUserWithTaggedPost();
+
+      const named = db.user.whereExists('posts', (q) =>
+        q.useHelper(helper, user.UserKey),
+      );
+      expect(await named.pluck('Id')).toEqual([user.Id]);
+
+      const query = db.user.whereExists(
+        db.post.useHelper(helper, user.UserKey),
+        'UserId',
+        'Id',
+      );
+      expect(await query.pluck('Id')).toEqual([user.Id]);
+    });
+
+    it('should preserve joins in a CTE callback', async () => {
+      const user = await createUserWithTaggedPost();
+      const query = db.user
+        .with('postRows', db.post.select('Id', 'UserId'))
+        .whereExists('postRows', (q) =>
+          q
+            .join(db.postTag, 'PostId', 'postRows.Id')
+            .on('UserId', 'User.Id')
+            .where({ 'postTag.Tag': 'tag' }),
+        )
+        .select('Id');
+
+      expectSql(
+        query.toSQL(),
+        `
+          WITH "postRows" AS (
+            SELECT "Post"."id" "Id", "Post"."user_id" "UserId"
+            FROM "schema"."post" "Post"
+          )
+          SELECT "User"."id" "Id" FROM "schema"."user" "User"
+          WHERE EXISTS (
+            SELECT 1 FROM "postRows"
+            JOIN "schema"."post_tag" "postTag"
+              ON "postTag"."post_id" = "postRows"."Id"
+            WHERE "postRows"."UserId" = "User"."id"
+              AND "postTag"."tag" = $1
+          )
+        `,
+        ['tag'],
+      );
+      expect(await query).toEqual([{ Id: user.Id }]);
+    });
   });
 });
