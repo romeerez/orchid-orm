@@ -146,6 +146,8 @@ export interface QueryData
   type: QueryType;
   adapter: Adapter;
   selectShape: ColumnsShape;
+  // `selectShape` before `select` added selected values to it: columns of the table or a `from` source
+  fromShape?: ColumnsShape;
   // Database relation name used when it differs from the query-facing table alias.
   nameInDb?: string;
   handleResult: HandleResult;
@@ -173,6 +175,9 @@ export interface QueryData
   // to select values with `get` or aggregate them when they were joined inside `select`.
   // joined table name is implicit in such a case.
   valuesJoinedAs?: RecordString;
+  // columns of values joined under source column keys: conditions refer to the source columns by these keys,
+  // aggregate arguments and the query's ORDER BY refer to the values
+  valuesJoinedUnderColumns?: { [K: string]: Column };
   schema?: QuerySchema;
   select?: SelectItem[];
   selectCache?: { sql: string; aliases: string[] };

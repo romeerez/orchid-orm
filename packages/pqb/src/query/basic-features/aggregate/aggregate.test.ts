@@ -395,6 +395,33 @@ describe('aggregate', () => {
 
       expect(typeof res).toBe('number');
     });
+
+    it('should aggregate a relation value selected under a table column name', async () => {
+      const AuthorId = await db.user.get('Id').insert(UserData);
+      const ChatId = await db.chat.get('IdOfChat').insert(ChatData);
+      await db.message.insertMany([
+        { ...MessageData, AuthorId, ChatId },
+        { ...MessageData, AuthorId, ChatId },
+      ]);
+
+      const q = db.user.select({ Id: (q) => q.messages.count() }).sum('Id');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT sum("Id"."Id")
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT count(*) "Id"
+            FROM "schema"."message" "messages"
+            WHERE ("messages"."author_id" = "User"."id" AND "messages"."message_key" = "User"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
+          ) "Id" ON true
+        `,
+      );
+
+      expect(await q).toBe(2);
+    });
   });
 
   describe.each`

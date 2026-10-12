@@ -64,6 +64,8 @@ export const loadRelations = async (
   selectQuery.q.with = undefined;
   selectQuery.q.appendQueries = undefined;
   selectQuery.q.valuesJoinedAs = undefined;
+  // hook select renames would swap a relation loaded under a primary key name with that key
+  selectQuery.q.hookSelect = undefined;
 
   const matchSourceTableIds: RecordUnknown = {};
   for (const pkey of primaryKeys) {

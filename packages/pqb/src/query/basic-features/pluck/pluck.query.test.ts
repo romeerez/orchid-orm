@@ -102,4 +102,12 @@ describe('pluck', () => {
     expect(result).toHaveLength(3);
     expect(result.every((id) => typeof id === 'number')).toBe(true);
   });
+
+  it('should pluck a relation value selected under a table column name', async () => {
+    const result = await db.user
+      .select({ Id: (q) => q.profile.getOptional('Bio') })
+      .pluck('Id');
+
+    expect(result).toEqual([null, null, null]);
+  });
 });

@@ -15,6 +15,7 @@ export function simpleColumnToSQL(
   ctx: ToSQLCtx,
   queryData: {
     valuesJoinedAs?: RecordString;
+    valuesJoinedUnderColumns?: { [K: string]: Column };
     select?: SelectItem[];
     joinedShapes?: JoinedShapes;
     getColumn?: Column;
@@ -40,21 +41,9 @@ export function simpleColumnToSQL(
           dontAlias = true;
           // refer to the selected value by its alias,
           // the shape may have a table column under the same key
-          sql = queryData.valuesJoinedAs?.[key]
-            ? simpleColumnToSQL(
-                ctx,
-                queryData,
-                shape,
-                key,
-                shape[key],
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                true,
-              )
+          const joinAs = queryData.valuesJoinedAs?.[key];
+          sql = joinAs
+            ? joinedValueToSql(ctx, queryData, shape, key, joinAs)
             : `"${key}"`;
           break;
         }
@@ -81,7 +70,7 @@ export function simpleColumnToSQL(
         const name = data.name || key;
         dontAlias = name === as;
 
-        if (!select) {
+        if (!select && !queryData.valuesJoinedUnderColumns?.[key]) {
           const joinAs = !select && queryData.valuesJoinedAs?.[key];
           if (joinAs) {
             quotedAs = `"${joinAs}"`;
@@ -110,6 +99,35 @@ export function simpleColumnToSQL(
 
   return sql;
 }
+
+// Refers to a relation value that is selected and joined under the key,
+// even when a source column has the same key.
+export const joinedValueToSql = (
+  ctx: ToSQLCtx,
+  queryData: {
+    valuesJoinedAs?: RecordString;
+    valuesJoinedUnderColumns?: { [K: string]: Column };
+    select?: SelectItem[];
+    joinedShapes?: JoinedShapes;
+  },
+  shape: Column.QueryColumns,
+  key: string,
+  joinAs: string,
+): string =>
+  simpleColumnToSQL(
+    ctx,
+    queryData,
+    shape,
+    key,
+    queryData.valuesJoinedUnderColumns?.[key] || shape[key],
+    `"${joinAs}"`,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    true,
+  );
 
 export const tableColumnToSql = (
   ctx: ToSQLCtx,

@@ -1,5 +1,5 @@
 import { Query, SetQueryReturnsColumnOrThrow } from '../query';
-import { columnToSql } from '../sql/column-to-sql';
+import { columnToSql, joinedValueToSql } from '../sql/column-to-sql';
 import { OrderItem, pushOrderBySql } from '../basic-features/order/order.sql';
 import { WhereItem, whereToSql } from '../basic-features/where/where.sql';
 import { windowToSql } from '../basic-features/window/window.sql';
@@ -183,7 +183,12 @@ const fnArgToSql = (
   quotedAs?: string,
 ): string => {
   if (typeof arg === 'string') {
-    if (arg.endsWith('.*') || data.valuesJoinedAs?.[arg]) {
+    const joinAs = data.valuesJoinedAs?.[arg];
+    if (joinAs) {
+      return joinedValueToSql(ctx, data, data.selectShape, arg, joinAs);
+    }
+
+    if (arg.endsWith('.*')) {
       return columnToSql(
         ctx,
         data,
