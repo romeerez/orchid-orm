@@ -151,6 +151,7 @@ export const processJoinItem = (
   },
   args: JoinItemArgs,
   quotedAs: string | undefined,
+  whereExists?: boolean,
 ): SqlJoinItem => {
   let target: string;
   let on: string | undefined;
@@ -197,6 +198,7 @@ export const processJoinItem = (
         true,
       );
     } else {
+      if (whereExists) target = appendQueryJoins(ctx, target, j, joinAs);
       on = whereToSql(ctx, j, j.q, joinAs);
     }
   } else if ('x' in args) {
@@ -214,7 +216,9 @@ export const processJoinItem = (
       if (s) {
         target = subJoinToSql(ctx, r, target, !forbidLateral, target);
       } else {
-        on = whereToSql(ctx, r as unknown as Query, r.q, target);
+        const joinAs = target;
+        if (whereExists) target = appendQueryJoins(ctx, target, r, joinAs);
+        on = whereToSql(ctx, r as unknown as Query, r.q, joinAs);
       }
     } else {
       on = processArgs(
@@ -290,6 +294,7 @@ export const processJoinItem = (
 
     // if it's a sub query, WHERE conditions are already in the sub query
     if (!s) {
+      if (whereExists) target = appendQueryJoins(ctx, target, q, joinAs);
       const whereSql = whereToSql(
         ctx,
         q,
@@ -311,6 +316,29 @@ export const processJoinItem = (
   }
 
   return { target, on };
+};
+
+/**
+ * Appends joins of the query to the join target.
+ * When `whereExists` does not wrap the query into a sub query, its joins
+ * must be rendered directly in the `EXISTS` `FROM` clause to preserve them.
+ */
+const appendQueryJoins = (
+  ctx: ToSQLCtx,
+  target: string,
+  query: ToSQLQuery,
+  quotedAs: string,
+) => {
+  if (!query.q.join) return target;
+
+  const sql = [target];
+  pushJoinSql(
+    { ...ctx, sql },
+    query,
+    query.q as QueryData & { join: JoinItem[] },
+    quotedAs,
+  );
+  return sql.join(' ');
 };
 
 const getArgQueryTarget = (

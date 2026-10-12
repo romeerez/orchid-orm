@@ -315,6 +315,7 @@ const processWhere = (
           query,
           args,
           quotedAs,
+          true,
         );
 
         const sql = `EXISTS (SELECT 1 FROM ${target}${
