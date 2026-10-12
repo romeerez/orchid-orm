@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.21
+
+### Patch Changes
+
+- aac8573f: Preserve joins inside `whereExists` and `whereNotExists`, including joins added by query helpers in relation subqueries.
+- Updated dependencies [aac8573f]
+  - pqb@0.73.11
+  - rake-db@2.37.23
+
 ## 1.78.20
 
 ### Patch Changes

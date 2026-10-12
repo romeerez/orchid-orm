@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.11
+
+### Patch Changes
+
+- aac8573f: Preserve joins inside `whereExists` and `whereNotExists`, including joins added by query helpers in relation subqueries.
+
 ## 0.73.10
 
 ### Patch Changes
