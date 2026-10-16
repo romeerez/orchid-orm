@@ -20,3 +20,15 @@ or `getOptional`.
 `narrowType` is the supported API for narrowing a column's compatible
 input, output, and query TypeScript types together. It does not configure a
 PostgreSQL custom type; that separate concern belongs to `t.type(name)`.
+
+## Test transactions
+
+`testTransaction.rollback` pairs with the latest `start` call, including one
+that failed or is still starting, because test runners run `afterEach` and
+`afterAll` after a failed or timed-out `beforeEach` or `beforeAll`. A failed
+`start` keeps its record for that `rollback` to discard, and a starting one is
+rolled back once it starts, rejecting its `start` so that the hook awaiting it
+stops. Otherwise that `rollback` reaches the outer test transaction.
+
+Exercise this with a failed `start` inside an aborted test transaction: after
+the paired `rollback`, the aborted transaction must still be open.

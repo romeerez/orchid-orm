@@ -266,8 +266,9 @@ export const BunAdapter: DriverAdapter = {
     onRollback: SavepointCallback | undefined,
   ): Promise<T> {
     const safeName = quoteIdentifier(name);
+    // `ROLLBACK TO` below must not run for a savepoint that wasn't created
+    await queryClient(client, `SAVEPOINT ${safeName}`);
     try {
-      await queryClient(client, `SAVEPOINT ${safeName}`);
       onSavepoint?.();
       const res = await cb();
       beforeRelease?.();
@@ -305,6 +306,8 @@ export const BunAdapter: DriverAdapter = {
       resolve = res;
       reject = rej;
     });
+    // handled: `rollback` rejects it even after the savepoint has failed
+    promise.catch(noop);
 
     let resultResolve: ((res: QueryResult<T>) => void) | undefined;
     let resultReject: ((err: unknown) => void) | undefined;
@@ -314,8 +317,9 @@ export const BunAdapter: DriverAdapter = {
     });
 
     const savepointPromise = (async () => {
+      // `ROLLBACK TO` below must not run for a savepoint that wasn't created
+      await queryClient(client, `SAVEPOINT ${safeName}`);
       try {
-        await queryClient(client, `SAVEPOINT ${safeName}`);
         onSavepoint?.();
 
         try {
@@ -344,6 +348,8 @@ export const BunAdapter: DriverAdapter = {
         throw err;
       }
     })();
+    // the query never runs when `SAVEPOINT` fails
+    savepointPromise.catch(resultReject!);
 
     state.activeSavepoint = {
       async release() {

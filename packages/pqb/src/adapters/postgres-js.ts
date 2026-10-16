@@ -261,6 +261,8 @@ export const PostgresJsAdapter: DriverAdapter = {
       resolve = res;
       reject = rej;
     });
+    // handled: `rollback` rejects it even after the savepoint has failed
+    promise.catch(noop);
 
     let resultResolve: (res: QueryResult<T>) => void;
     let resultReject: (err: unknown) => void;
@@ -298,6 +300,8 @@ export const PostgresJsAdapter: DriverAdapter = {
         setClient(client);
         if (failed) onRollback?.();
       });
+    // the query never runs when `SAVEPOINT` fails
+    savepointPromise.catch(resultReject!);
 
     state.activeSavepoint = {
       async release() {
