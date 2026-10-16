@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { logParamToLogObject, QueryLogObject } from '../log/log';
 import {
   AdapterTransactionOptions,
@@ -35,6 +36,29 @@ export interface AsyncState extends SqlSessionState {
   transactionRole?: SqlSessionState['role'];
   // Effective transaction set_config map for transaction-scoped SQL session context.
   transactionSetConfig?: SqlSessionState['setConfig'];
+}
+
+/**
+ * Async local storage of the query state that falls back to a state set for code running outside of its `run` callbacks.
+ *
+ * It wraps `AsyncLocalStorage` instead of extending it, because Node.js `run` restores the previous state read with `getStore`,
+ * and an overridden `getStore` would leave the fallback state in the caller's context.
+ */
+export class AsyncStateStorage {
+  /**
+   * State of the innermost test transaction, for code running outside of `run` callbacks.
+   */
+  fallback?: AsyncState;
+
+  private storage = new AsyncLocalStorage<AsyncState>();
+
+  getStore(): AsyncState | undefined {
+    return this.storage.getStore() ?? this.fallback;
+  }
+
+  run<Result>(state: AsyncState, cb: () => Result): Result {
+    return this.storage.run(state, cb);
+  }
 }
 
 export interface StorageOptions extends SqlSessionState {

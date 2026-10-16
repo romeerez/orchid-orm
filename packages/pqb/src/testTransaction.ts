@@ -1,5 +1,6 @@
 import { Query } from './query/query';
 import { QueryError } from './query/errors';
+import { AsyncState } from './query/basic-features/storage/storage';
 
 // The `Rollback` is not an error,
 // but a command to throw by `rollback` function,
@@ -67,7 +68,6 @@ export const testTransaction = {
   start(arg: Arg): Promise<void> {
     const db = argToDb(arg);
     const { asyncStorage } = db.internal;
-    const { getStore } = asyncStorage;
     const { adapter } = db.baseQuery.q;
     const data: TrxData = {
       adapter: {
@@ -81,6 +81,8 @@ export const testTransaction = {
 
     return new Promise<void>((resolve, reject) => {
       let started = false;
+      let state: AsyncState | undefined;
+      let fallback: AsyncState | undefined;
       data.promise = db
         .transaction(() => {
           if (data.cancelled) throw new Rollback();
@@ -88,13 +90,17 @@ export const testTransaction = {
           started = true;
           resolve();
           return new Promise<void>((_, rej) => {
-            const state = asyncStorage.getStore();
-            db.internal.asyncStorage.getStore = () => state;
+            state = asyncStorage.getStore();
+            fallback = asyncStorage.fallback;
+            asyncStorage.fallback = state;
             const t = state?.transactionAdapter;
-            if (t) {
-              adapter.query = t.query.bind(t);
-              adapter.arrays = t.arrays.bind(t);
-              adapter.transaction = t.transaction.bind(t);
+            if (state && t) {
+              // routes queries of other instances that share the adapter, nested levels use the same `t`
+              if (!fallback) {
+                adapter.query = t.query.bind(t);
+                adapter.arrays = t.arrays.bind(t);
+                adapter.transaction = t.transaction.bind(t);
+              }
 
               state.testTransactionCount = state.testTransactionCount
                 ? state.testTransactionCount + 1
@@ -112,12 +118,11 @@ export const testTransaction = {
         .finally(() => {
           if (!started) return;
 
-          const state = db.internal.asyncStorage.getStore();
           if (state?.testTransactionCount) {
             state.testTransactionCount--;
           }
 
-          db.internal.asyncStorage.getStore = getStore;
+          asyncStorage.fallback = fallback;
         });
 
       // rejects `start` when the transaction failed to start or was rolled back while starting,

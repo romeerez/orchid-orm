@@ -381,7 +381,11 @@ export { type NoPrimaryKeyOption } from './index';
 export { _initQueryBuilder, type DbResult, type DbOptions } from './index';
 
 // AsyncState
-export { type AsyncState, type SqlSessionState } from './index';
+export {
+  type AsyncState,
+  AsyncStateStorage,
+  type SqlSessionState,
+} from './index';
 
 // Column utilities
 export { type DbStructureDomainsMap, getColumnBaseType } from './index';

@@ -484,9 +484,7 @@ const formatDebugInfo = (
     }
   }
 
-  const adapterFile = consideredFiles.find((file) =>
-    file.split('/').includes('adapters'),
-  );
+  const adapterFile = consideredFiles.find(isAdapterSensitiveFile);
   lines.push(
     adapterFile
       ? `  Adapter matrix: enabled by ${adapterFile}`
@@ -543,11 +541,20 @@ const getDebugPackageLines = (
   return lines;
 };
 
+const isAdapterSensitiveFile = (file: string): boolean => {
+  const segments = file.split('/');
+
+  return (
+    segments.includes('adapters') ||
+    (segments.at(-1) as string).startsWith('testTransaction')
+  );
+};
+
 const hasAdapterChange = (changedFiles: string[]): boolean => {
   return changedFiles.some((file) => {
     if (shouldIgnoreChangedFile(file)) return false;
 
-    return file.split('/').includes('adapters');
+    return isAdapterSensitiveFile(file);
   });
 };
 

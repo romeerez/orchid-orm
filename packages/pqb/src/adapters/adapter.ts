@@ -6,7 +6,6 @@ import {
   RecordUnknown,
   rollbackSql,
 } from '../utils';
-import { AsyncLocalStorage } from 'node:async_hooks';
 import { setTimeout } from 'node:timers/promises';
 import { QueryError } from '../query/errors';
 import {
@@ -19,6 +18,7 @@ import {
 } from '../query';
 import {
   AsyncState,
+  AsyncStateStorage,
   ProcessedStorageOptions,
 } from '../query/basic-features/storage/storage';
 import {
@@ -208,7 +208,7 @@ export interface Adapter {
    * `options` can be `undefined`.
    */
   transaction<T>(
-    asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
+    asyncStorage: AsyncStateStorage | undefined,
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T>;
@@ -449,7 +449,7 @@ export class AdapterClass implements Adapter {
   }
 
   transaction<T>(
-    asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
+    asyncStorage: AsyncStateStorage | undefined,
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T> {
@@ -579,7 +579,7 @@ export class TransactionAdapterClass implements TransactionAdapter {
   }
 
   async transaction<T>(
-    asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
+    asyncStorage: AsyncStateStorage | undefined,
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T> {
@@ -730,7 +730,7 @@ interface TransactionCtx {
 }
 
 const transaction = <T>(
-  asyncStorage: AsyncLocalStorage<AsyncState> | undefined,
+  asyncStorage: AsyncStateStorage | undefined,
   adapter: Adapter,
   driverAdapter: DriverAdapter,
   poolOrClient: Pool | Client,

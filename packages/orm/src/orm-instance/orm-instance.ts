@@ -5,7 +5,7 @@ import {
   QueryLogOptions,
   StorageOptions,
   Adapter,
-  AsyncState,
+  AsyncStateStorage,
   defaultSchemaConfig,
   DbSharedOptions,
   DbTableOptionScopes,
@@ -39,7 +39,6 @@ import {
   isInTransaction,
   afterCommit,
 } from '../transaction';
-import { AsyncLocalStorage } from 'node:async_hooks';
 import { Db, Query } from 'pqb';
 import { ormSelect, OrmSelectMethods } from './features/orm-select/orm-select';
 import {
@@ -382,7 +381,7 @@ const assignTablesToOrm = <T extends OrmTableThunks>(
   result: { [K: string]: Query },
   adapter: Adapter,
   qb: Db,
-  asyncStorage: AsyncLocalStorage<AsyncState>,
+  asyncStorage: AsyncStateStorage,
   commonOptions: CommonOrmOptions,
   schema: DbSharedOptions['schema'],
 ) => {
@@ -639,7 +638,7 @@ const privateOrchidORMWithAdapter = <
   } else {
     adapter = options.adapter;
 
-    asyncStorage = new AsyncLocalStorage<AsyncState>();
+    asyncStorage = new AsyncStateStorage();
 
     qb = _initQueryBuilder(
       adapter,

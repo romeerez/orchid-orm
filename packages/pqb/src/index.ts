@@ -423,6 +423,7 @@ export {
 // AsyncState
 export {
   type AsyncState,
+  AsyncStateStorage,
   type SqlSessionState,
 } from './query/basic-features/storage/storage';
 

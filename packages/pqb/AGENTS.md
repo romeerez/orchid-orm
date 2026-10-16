@@ -32,3 +32,16 @@ stops. Otherwise that `rollback` reaches the outer test transaction.
 
 Exercise this with a failed `start` inside an aborted test transaction: after
 the paired `rollback`, the aborted transaction must still be open.
+
+Code outside of `withOptions` scopes and transaction callbacks, such as a test
+body, runs in the innermost test transaction through the storage fallback.
+`withOptions` scopes take precedence over the fallback, and a test transaction
+started inside a scope keeps that scope's state as the fallback until it is
+rolled back.
+
+Exercise the fallback with `withOptions({ setConfig })` inside a test
+transaction started on the same instance, and with a test transaction started
+inside a `withOptions` scope: after its rollback, queries must see the outer
+test transaction's settings. Run it under node-postgres as well: postgres.js
+makes savepoint names unique, so only other drivers show a rollback to the
+wrong savepoint.

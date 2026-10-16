@@ -254,13 +254,37 @@ test('formats debug info for global changes', async () => {
   );
 });
 
-test('detects adapter folder changes', () => {
+test('detects adapter-sensitive changes', () => {
   strictEqual(
     hasAdapterChange(['packages/pqb/src/adapters/postgres-js.ts']),
     true,
   );
+  strictEqual(hasAdapterChange(['packages/pqb/src/testTransaction.ts']), true);
+  strictEqual(
+    hasAdapterChange(['packages/pqb/src/testTransaction.test.ts']),
+    true,
+  );
   strictEqual(hasAdapterChange(['packages/pqb/src/query.ts']), false);
   strictEqual(hasAdapterChange(['scripts/verify.ts']), false);
+});
+
+test('formats debug info for test transaction changes', async () => {
+  const packages = await getPackageInfos();
+  const changedFiles = ['packages/pqb/src/testTransaction.ts'];
+  const affected = getChangedPackages(changedFiles, packages);
+
+  strictEqual(
+    formatDebugInfo(changedFiles, packages, affected),
+    [
+      'Debug:',
+      '  Changed files considered:',
+      '    packages/pqb/src/testTransaction.ts -> changed package pqb',
+      '  Adapter matrix: enabled by packages/pqb/src/testTransaction.ts',
+      '  Packages:',
+      '    changed: pqb',
+      '    dependent: orm, rake-db, zod, valibot, test-factory',
+    ].join('\n'),
+  );
 });
 
 test('uses all adapters for adapter changes', async () => {
