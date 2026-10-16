@@ -51,3 +51,14 @@ answering without a terminal, pass `--non-interactive` to `act` or set
 `process.stdin.isTTY` to `false`. To test what a question contains, spy on the
 interactive decider and capture the question when it is asked, because
 generators change the candidate lists after the answer.
+
+Jest does not stop a timed-out test, so its code keeps running while the
+following tests run. The generator test utils keep each test's adapters,
+config, and `prepareDb` transaction to that test. The test's own teardown waits
+for its `prepareDb` to finish and then rolls back its transaction, even after
+the test timed out; otherwise the open transaction keeps its locks and every
+following test in the file times out. An error of `prepareDb` fails the test
+that caused it. `act` reads the state of the latest `arrange`, so call it right
+after `arrange` returns, without awaiting anything in between. To check this,
+delay `prepareDb` of one test beyond the Jest timeout: only that test must
+fail.
