@@ -1,6 +1,7 @@
 import {
   Adapter,
   AdapterClass,
+  getDriverErrorCode,
   HackySavepointState,
   TransactionAdapterClass,
 } from './adapter';
@@ -342,6 +343,21 @@ describe('adapter runtime abstractions', () => {
             expect(beginSpy).toHaveBeenCalledTimes(1);
             expect(savepointSpy).toHaveBeenCalledTimes(1);
             expect(querySpy.mock.calls.map((call) => call[1])).toEqual([]);
+          });
+
+          it('rejects a savepoint with the SAVEPOINT error and skips its callback in an aborted transaction', async () => {
+            const cb = jest.fn();
+            let error: unknown;
+
+            await adapter.transaction(undefined, undefined, async (trx) => {
+              await trx.query('SELECT 1/0').catch(() => {});
+              error = await trx
+                .savepoint('aborted', undefined, cb)
+                .catch((err) => err);
+            });
+
+            expect(getDriverErrorCode(error as object)).toBe('25P02');
+            expect(cb).not.toHaveBeenCalled();
           });
 
           it('logs SAVEPOINT and RELEASE SAVEPOINT for a successful savepoint', async () => {
@@ -1066,6 +1082,22 @@ describe('adapter runtime abstractions', () => {
 
             const after = await getCounterValue(adapter);
             expect(after).toBe(before + 1);
+          });
+
+          it('rejects with the SAVEPOINT error in an aborted transaction', async () => {
+            let error: unknown;
+
+            await adapter.transaction(undefined, undefined, async (trx) => {
+              await trx.query('SELECT 1/0').catch(() => {});
+              const state: HackySavepointState = { name: 'hacky_aborted' };
+              error = await trx
+                .hackySavepoint(state, 'SELECT 1')
+                .catch((err) => err);
+
+              await state.activeSavepoint!.rollback(error);
+            });
+
+            expect(getDriverErrorCode(error as object)).toBe('25P02');
           });
         });
 
