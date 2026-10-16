@@ -53,6 +53,8 @@ describe('indexes', () => {
     '\n  ',
   );
 
+  // creating `postgis` is CPU-heavy in PostgreSQL and exceeds the default
+  // timeout when the machine is busy with parallel test runs
   it('should properly quote a geography type, not detect any changes', async () => {
     await arrange({
       dbOptions: {
@@ -84,7 +86,7 @@ describe('indexes', () => {
     await act();
 
     assert.migration();
-  });
+  }, 30000);
 
   it('should properly quote an array type, not detect any changes', async () => {
     await arrange({
