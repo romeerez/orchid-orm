@@ -330,28 +330,23 @@ Create a separate file for test utilities, let's say it is located in `src/lib/t
 import { testTransaction } from 'orchid-orm';
 import { db } from './path-to-your-db';
 
-export const useTestDatabase = () => {
-  beforeAll(async () => {
-    await testTransaction.start(db);
-  });
+// `setup` creates data for all tests of a `describe` inside its test transaction
+export const useTestDatabase = (setup?: () => unknown) => {
+  const all = testTransaction.hooks(db, { setup });
+  const each = testTransaction.hooks(db);
 
-  beforeEach(async () => {
-    await testTransaction.start(db);
-  });
-
-  afterEach(async () => {
-    await testTransaction.rollback(db);
-  });
-
-  afterAll(async () => {
-    await testTransaction.close(db);
-  });
+  beforeAll(all.start);
+  beforeEach(each.start);
+  afterEach(each.rollback);
+  afterAll(all.close);
 };
 ```
 
-- `testTransaction.start` starts a new transaction
-- `testTransaction.rollback` performs a rollback
-- `testTransaction.close` performs a rollback, when called for a top-level transaction it will close `db`.
+`testTransaction.hooks` returns functions for a pair of test hooks:
+
+- `start` starts a new test transaction and runs the `setup` inside it
+- `rollback` rolls back the test transaction started by `start` of the same hooks
+- `close` performs a rollback, and when no test transaction is left open, it closes `db`
 
 Now, we can use it in our tests in such way:
 
@@ -386,7 +381,7 @@ describe('title', () => {
 });
 ```
 
-Additionally, you can use `useTestDatabase` in the nested `describe` to have a data created only in the scope of this `describe`:
+Additionally, you can use `useTestDatabase` in the nested `describe` with a `setup` to have a data created only in the scope of this `describe`:
 
 ```ts
 import { useTestDatabase } from './test-utils';
@@ -399,11 +394,7 @@ describe('outer', () => {
   });
 
   describe('inner', () => {
-    useTestDatabase();
-
-    beforeAll(async () => {
-      await db.table.create(...data);
-    });
+    useTestDatabase(() => db.table.create(data));
 
     // all `it` block in the inner describe will have a created record in the db
     it('should have the created record', async () => {
@@ -419,6 +410,36 @@ describe('outer', () => {
 ```
 
 Check out [test factories](/guide/test-factories), a perfect pair with `testTransaction` to use for testing.
+
+### timed-out hooks
+
+Test runners don't cancel a hook or a test that has exceeded its timeout: its code keeps running during the next tests.
+The functions returned by `testTransaction.hooks` handle such hooks:
+
+- `rollback` and `close` roll back the test transaction of their own `start` rather than the latest started one, so a late `afterEach` doesn't roll back the test transaction of the next test in place of its own.
+- They wait for a `setup` that is still running, so that its data is rolled back rather than written after the rollback.
+  Create data for a `describe` in the `setup` rather than in a separate `beforeAll`.
+- When a test transaction is rolled back while test transactions started inside it are still open, they are rolled back as well, and `rollback` rejects with a `TestTransactionError`.
+  It means that a test transaction was left open unexpectedly, usually by a hook or a test that didn't finish in time. The isolation of the following tests can't be trusted then: treat this error as fatal and stop the test run, the hooks only report it.
+
+The hooks don't stop a test or a hook that keeps running, and don't make its late queries safe: such queries run in whichever test transaction is open at that moment.
+
+### start, rollback, and close
+
+`testTransaction.start`, `testTransaction.rollback`, and `testTransaction.close` are a lower-level API for hooks that run strictly one after another:
+
+```ts
+beforeEach(async () => {
+  await testTransaction.start(db);
+});
+
+afterEach(async () => {
+  await testTransaction.rollback(db);
+});
+```
+
+- `testTransaction.rollback(db)` rolls back the latest started test transaction, and `testTransaction.close(db)` also closes `db` when no test transaction is left open.
+- `testTransaction.start` resolves with the started test transaction, its `rollback()` and `close()` target that test transaction. `start` accepts a `signal` to cancel the start before its transaction has started.
 
 ## transaction options
 

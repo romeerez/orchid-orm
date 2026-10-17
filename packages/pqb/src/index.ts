@@ -502,7 +502,12 @@ export {
   refreshMaterializedView,
   type RefreshMaterializedViewOptions,
 } from './query/extra-features/materialized-view/materialized-view.query';
-export { testTransaction } from './testTransaction';
+export {
+  testTransaction,
+  TestTransactionError,
+  type TestTransaction,
+  type TestTransactionHooks,
+} from './testTransaction';
 
 // Error types
 export {
