@@ -238,11 +238,14 @@ export const useTestDatabase = (db: { $qb: Query } | Query = testDb) => {
     testDatabase = db;
   }
 
-  beforeAll(() => testTransaction.start(db));
+  const all = testTransaction.hooks(db);
+  const each = testTransaction.hooks(db);
 
-  beforeEach(() => testTransaction.start(db));
+  beforeAll(all.start);
 
-  afterEach(() => testTransaction.rollback(db));
+  beforeEach(each.start);
 
-  afterAll(() => testTransaction.rollback(db));
+  afterEach(each.rollback);
+
+  afterAll(all.rollback);
 };

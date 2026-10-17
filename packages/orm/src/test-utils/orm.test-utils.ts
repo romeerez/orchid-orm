@@ -1,5 +1,5 @@
-import { db } from 'test-utils';
-import { Query, testTransaction } from 'pqb';
+import { db, useTestDatabase } from 'test-utils';
+import { Query } from 'pqb';
 import {
   AdapterClass,
   ColumnsShape,
@@ -132,23 +132,7 @@ export const useRelationCallback = <T extends Query>(
   };
 };
 
-export const useTestORM = () => {
-  beforeAll(async () => {
-    await testTransaction.start(db);
-  });
-
-  beforeEach(async () => {
-    await testTransaction.start(db);
-  });
-
-  afterEach(async () => {
-    await testTransaction.rollback(db);
-  });
-
-  afterAll(async () => {
-    await testTransaction.close(db);
-  });
-};
+export const useTestORM = () => useTestDatabase(db);
 
 export const useQueryCounter = () => {
   const resetQueriesCount = () => querySpies?.forEach((spy) => spy.mockClear());
