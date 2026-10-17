@@ -8,3 +8,4 @@
 - The adapter matrix applies to DB-backed packages: `pqb`, `orm`, `rake-db`, and `test-factory`. `scripts/verify.ts` runs their affected tests sequentially under the default adapter, `node-postgres`, and Bun when an adapter implementation changes.
 - Keep the no-env command as the fastest local loop. Use `ADAPTER=<id>` with the package's regular `check` command for a targeted driver run; Bun uses its `bun:check` command.
 - Unknown adapter ids must fail before tests execute and list every valid id.
+- `useTestDatabase` ends its outer hooks with `rollback` and leaves closing the pool to the module-level `afterAll`: `db` and `testDb` share the adapter but count their test transactions separately, so a `close` of one would end the pool while the other still has a test transaction open.

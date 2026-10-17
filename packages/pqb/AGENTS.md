@@ -23,15 +23,64 @@ PostgreSQL custom type; that separate concern belongs to `t.type(name)`.
 
 ## Test transactions
 
-`testTransaction.rollback` pairs with the latest `start` call, including one
+`start`, `rollback`, and `close` of one instance must run one at a time in the
+call order, each finishing its cleanup before the next one starts; only the
+cancellation of a start that has not started yet takes effect at once: a start
+still waiting for its turn is skipped, and one whose `BEGIN` or `SAVEPOINT` is
+in flight is rolled back. A rollback may wait behind a slow query of a
+timed-out test while the next hook already calls `start`; out of order, that
+`start` reads a transaction state that the rollback overwrites later. Exercise
+this with a rollback held behind a `pg_sleep` query while the next `start` is
+called.
+
+`testTransaction.rollback(db)` pairs with the latest `start` call, including one
 that failed or is still starting, because test runners run `afterEach` and
 `afterAll` after a failed or timed-out `beforeEach` or `beforeAll`. A failed
-`start` keeps its record for that `rollback` to discard, and a starting one is
-rolled back once it starts, rejecting its `start` so that the hook awaiting it
-stops. Otherwise that `rollback` reaches the outer test transaction.
+`start` keeps its record for that `rollback` to discard; otherwise that
+`rollback` reaches the outer test transaction. A starting one is cancelled when
+`rollback` is called rather than in its turn of the queue, so that its `start`
+rejects without leaving a test transaction open and the hook awaiting it stops;
+the `rollback` settles once that `start` does. An aborted `signal` of `start`
+cancels it the same way.
 
 Exercise this with a failed `start` inside an aborted test transaction: after
-the paired `rollback`, the aborted transaction must still be open.
+the paired `rollback`, the aborted transaction must still be open. To cancel a
+start while its `BEGIN` or `SAVEPOINT` is in flight, call `rollback` or abort
+from a spy on `adapter.transaction` or
+`TransactionAdapterClass.prototype.savepoint`: right after `start`, the
+cancellation happens before any SQL.
+
+When called, a handle's `rollback` claims the test transactions whose `start`
+was called after its own, rather than those left when its turn in the queue
+comes, so a `start` called later is never rolled back with it. Open ones among
+them are rolled back as well and reported with `TestTransactionError`; failed
+starts are dropped silently.
+
+Do not decide on restoring the adapter or closing the connection by what is left
+on the stack: a record leaves the stack when `rollback` is called and joins it
+when `start` is called, while the transaction ends or begins only in its turn of
+the queue. The test transaction that rebound the adapter restores it, and the
+pool is closed only when no started test transaction is left open, whether or
+not it is still on the stack. Otherwise a `start` called during a rollback
+begins on the released connection of the rolled back transaction, or closing the
+pool waits for a rollback queued behind it. Exercise both with a rollback that
+is not awaited before the next `start` or `close`.
+
+`testTransaction.hooks` wait for their `start` and `setup` before rolling back,
+because a timed-out hook keeps running and its `setup` would write past the
+rollback. Once both have ended, `rollback` and `close` reach the test
+transaction in the same call, so a `start` called right after is not rolled back
+with it, and `close` uses the `close` of the test transaction so that nothing
+runs between the rollback and closing the pool. After a failed `start` there is
+no test transaction: close by the count of open test transactions, never with
+`testTransaction.close(db)`, which takes the record of another start off the
+stack. A second `start` before the teardown of the previous one rejects rather
+than replacing it, since the replaced test transaction would stay open without
+an error. Exercise the wait with a `setup` held on a controlled promise while
+`rollback` is called.
+
+Queries of test bodies carry no async context and cannot be attributed to a test
+transaction: do not reject a query by the test transaction it came from.
 
 Code outside of `withOptions` scopes and transaction callbacks, such as a test
 body, runs in the innermost test transaction through the storage fallback.
