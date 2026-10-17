@@ -757,6 +757,40 @@ describe('adapter runtime abstractions', () => {
             );
           });
 
+          it('applies role and setConfig of a nested transaction after a previous one threw synchronously', async () => {
+            const currentRole = adapter.getUser();
+            const options = {
+              role: currentRole,
+              setConfig: { 'app.setting': 'nested' },
+            };
+
+            await adapter.transaction(
+              testDb.internal.asyncStorage,
+              { role: 'app-user' },
+              async (trx) => {
+                await expect(
+                  trx.transaction(testDb.internal.asyncStorage, options, () => {
+                    throw new Error('sync');
+                  }),
+                ).rejects.toThrow('sync');
+
+                await trx.transaction(
+                  testDb.internal.asyncStorage,
+                  options,
+                  async () => {
+                    const result = await trx.query(
+                      `SELECT current_role "role", current_setting('app.setting', true) "setting"`,
+                    );
+
+                    expect(result).toMatchObject({
+                      rows: [{ role: currentRole, setting: 'nested' }],
+                    });
+                  },
+                );
+              },
+            );
+          });
+
           it('restores effective parent context for deeper nested transactions', async () => {
             const currentRole = adapter.getUser();
 
