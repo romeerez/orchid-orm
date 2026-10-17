@@ -202,10 +202,10 @@ describe('transaction', () => {
       useTestDatabase();
 
       it('should trick testTransaction into thinking that we are not in transaction on the top level', async () => {
-        expect(db.$isInTransaction()).toBe(false);
+        expect(testDb.isInTransaction()).toBe(false);
 
-        await db.$transaction(async () => {
-          expect(db.$isInTransaction()).toBe(true);
+        await testDb.transaction(async () => {
+          expect(testDb.isInTransaction()).toBe(true);
         });
       });
 
