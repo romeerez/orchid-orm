@@ -1,6 +1,7 @@
 import {
   assertType,
   db,
+  testDb,
   useTestDatabase,
   UserData,
   UserSelectAll,
@@ -189,6 +190,14 @@ describe('transaction', () => {
       expect(db.$isInTransaction()).toBe(false);
     });
 
+    it('should not be in transaction after a transaction inside withOptions', async () => {
+      await db.$withOptions({ log: false }, async () => {
+        await db.$transaction(async () => {});
+
+        expect(db.$isInTransaction()).toBe(false);
+      });
+    });
+
     describe('in testTransaction', () => {
       useTestDatabase();
 
@@ -198,6 +207,16 @@ describe('transaction', () => {
         await db.$transaction(async () => {
           expect(db.$isInTransaction()).toBe(true);
         });
+      });
+
+      it('should not be in transaction after a transaction callback throws synchronously', async () => {
+        await expect(
+          testDb.transaction(() => {
+            throw new Error('sync');
+          }),
+        ).rejects.toThrow('sync');
+
+        expect(testDb.isInTransaction()).toBe(false);
       });
     });
   });
@@ -309,6 +328,20 @@ describe('transaction', () => {
       db.$afterCommit(hook);
 
       expect(hook).not.toHaveBeenCalled();
+
+      await new Promise(queueMicrotask as never);
+
+      expect(hook).toHaveBeenCalled();
+    });
+
+    it('should run in next microtask after a transaction inside withOptions', async () => {
+      const hook = jest.fn();
+
+      await db.$withOptions({ log: false }, async () => {
+        await db.$transaction(async () => {});
+
+        db.$afterCommit(hook);
+      });
 
       await new Promise(queueMicrotask as never);
 

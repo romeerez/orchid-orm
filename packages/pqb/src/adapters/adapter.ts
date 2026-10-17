@@ -754,11 +754,12 @@ const transaction = <T>(
   const transactionId =
     state?.transactionId !== undefined ? state.transactionId + 1 : 0;
 
-  const fn = (transactionAdapter: TransactionAdapter) => {
+  const fn = async (transactionAdapter: TransactionAdapter) => {
     if (log && sql.text) log.afterQuery(sql, ctx.logData);
     if (log) ctx.logData = log.beforeQuery(commitSql);
 
     if (state || !asyncStorage) {
+      const parentTransactionId = state?.transactionId;
       const parentTransactionRole = state?.transactionRole;
       const parentTransactionSetConfig = state?.transactionSetConfig;
 
@@ -774,13 +775,15 @@ const transaction = <T>(
         }
       }
 
-      return Promise.resolve(cb(transactionAdapter)).finally(() => {
+      try {
+        return await cb(transactionAdapter);
+      } finally {
         if (state) {
-          state.transactionId = transactionId - 1;
+          state.transactionId = parentTransactionId;
           state.transactionRole = parentTransactionRole;
           state.transactionSetConfig = parentTransactionSetConfig;
         }
-      });
+      }
     }
 
     ctx.state = {
@@ -872,10 +875,11 @@ const realTransaction = async <T>(
         }
 
         const transaction = cb(new TransactionAdapterClass(adapter, client));
+        if (!promises) return transaction;
 
-        return promises
-          ? Promise.all(promises).then(() => transaction)
-          : transaction;
+        // handles a rejection of `transaction` that comes before `promises` finish
+        promises.push(transaction);
+        return Promise.all(promises).then(() => transaction);
       },
       trxOpts,
     )

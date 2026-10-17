@@ -176,6 +176,7 @@ describe('testTransaction', () => {
       setting: string;
     }>`SELECT current_setting('app.setting', true) AS setting`;
     expect(rows[0].setting).toBe('outer');
+    expect(localDb.isInTransaction()).toBe(false);
 
     await testTransaction.close(localDb);
   });
