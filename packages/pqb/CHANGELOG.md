@@ -1,5 +1,13 @@
 # pqb
 
+## 0.73.13
+
+### Patch Changes
+
+- f660fb8e: Fix `isInTransaction` returning `true` and after-commit hooks never running after a transaction inside `withOptions` has finished
+- f660fb8e: Fix an unhandled rejection, which crashes Node by default, when the callback of a `transaction` with `role` or `setConfig` throws before its first `await`
+- f660fb8e: Fix `isInTransaction` returning `true` outside of a user transaction, and nested transactions skipping a repeated `role` or `setConfig`, after a transaction callback throws synchronously, which also happens when `testTransaction.rollback` cancels a starting `testTransaction.start` (#798)
+
 ## 0.73.12
 
 ### Patch Changes
