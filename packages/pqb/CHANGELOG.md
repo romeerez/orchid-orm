@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.14
+
+### Patch Changes
+
+- 4ca0271e: Apply `withOptions` options, such as `setConfig`, inside a test transaction started on the same instance instead of ignoring them (#798)
+
 ## 0.73.13
 
 ### Patch Changes
