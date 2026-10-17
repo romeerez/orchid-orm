@@ -17,7 +17,6 @@ import {
   makeColumnTypes,
 } from '../columns';
 import { inspect } from 'node:util';
-import { AsyncLocalStorage } from 'node:async_hooks';
 import {
   DynamicRawSQL,
   raw,
@@ -82,7 +81,7 @@ import {
 import { QueryData, QueryDataScopes, SelectAllColumn } from './query-data';
 import { QueryInternal } from './query-internal';
 import { QuerySchema } from './basic-features/schema/schema';
-import { AsyncState } from './basic-features/storage/storage';
+import { AsyncStateStorage } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
 import { Rls } from './extra-features/rls/rls.db';
 import { Grant } from './extra-features/grants/grants.db';
@@ -324,7 +323,7 @@ export class Db<
     public table: Table = undefined as Table,
     shape: ComputedColumnsFromOptions<Table, Shape, Options>,
     public columnTypes: ColumnTypes,
-    asyncStorage: AsyncLocalStorage<AsyncState>,
+    asyncStorage: AsyncStateStorage,
     options: DbTableOptions<
       ColumnTypes,
       Table,
@@ -868,7 +867,7 @@ export const createDbWithAdapter = <
         )(makeColumnTypes(schemaConfig))
       : ctOrFn;
 
-  const asyncStorage = new AsyncLocalStorage<AsyncState>();
+  const asyncStorage = new AsyncStateStorage();
 
   const qb = _initQueryBuilder(
     adapter,
@@ -933,7 +932,7 @@ export function _createDbSqlMethod<ColumnTypes>(
 export const _initQueryBuilder = (
   adapter: Adapter,
   columnTypes: unknown,
-  asyncStorage: AsyncLocalStorage<AsyncState>,
+  asyncStorage: AsyncStateStorage,
   commonOptions: DbTableOptions<unknown, undefined, Column.QueryColumns>,
   options: DbSharedOptions,
 ): Db => {

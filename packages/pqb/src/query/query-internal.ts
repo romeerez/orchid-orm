@@ -1,5 +1,4 @@
 import { QueryInternalColumnNameToKey } from './query-columns/query-columns';
-import { AsyncLocalStorage } from 'node:async_hooks';
 import { RecordUnknown } from '../utils';
 import { TableData } from '../tableData';
 import {
@@ -9,7 +8,7 @@ import {
   Query,
 } from './query';
 import { Rls } from './extra-features/rls/rls.db';
-import { AsyncState } from './basic-features/storage/storage';
+import { AsyncStateStorage } from './basic-features/storage/storage';
 import { DbRole } from './extra-features/roles/roles';
 import { Grant } from './extra-features/grants/grants.db';
 import { RawSqlBase } from './expressions/raw-sql';
@@ -29,7 +28,7 @@ export interface QueryInternal<
   UniqueConstraints = any,
 > extends QueryInternalColumnNameToKey {
   runtimeDefaultColumns?: string[];
-  asyncStorage: AsyncLocalStorage<AsyncState>;
+  asyncStorage: AsyncStateStorage;
   // Store scopes data, used for adding or removing a scope to the query.
   scopes?: RecordUnknown;
   // `camelCase` by default, set to true to map column names to and from `snake_case`

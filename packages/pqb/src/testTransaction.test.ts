@@ -9,6 +9,14 @@ import {
 import { testTransaction } from './testTransaction';
 import { QueryError } from './query/errors';
 import { getDriverErrorCode } from './adapters/adapter';
+import { Db } from './query/db';
+
+const getSetting = async (db: Db, name = 'app.setting') => {
+  const { rows } = await db.query<{
+    setting: string | null;
+  }>`SELECT current_setting(${name}, true) AS setting`;
+  return rows[0].setting;
+};
 
 describe('testTransaction', () => {
   describe('using test database', () => {
@@ -172,10 +180,58 @@ describe('testTransaction', () => {
     await expect(start).rejects.toThrow('rolled back before it started');
     await rollback;
 
-    const { rows } = await localDb.query<{
-      setting: string;
-    }>`SELECT current_setting('app.setting', true) AS setting`;
-    expect(rows[0].setting).toBe('outer');
+    expect(await getSetting(localDb)).toBe('outer');
+    expect(localDb.isInTransaction()).toBe(false);
+
+    await testTransaction.close(localDb);
+  });
+
+  it('should apply `withOptions` inside a test transaction started on the same instance', async () => {
+    const localDb = createTestDb(testDbOptions);
+    await testTransaction.start(localDb);
+
+    const setting = await localDb.withOptions(
+      { setConfig: { 'app.setting': 'value' } },
+      () => getSetting(localDb),
+    );
+
+    expect(setting).toBe('value');
+
+    await testTransaction.close(localDb);
+  });
+
+  it('should use a test transaction started inside `withOptions` with its options until it is rolled back', async () => {
+    const localDb = createTestDb(testDbOptions);
+    await testTransaction.start(localDb);
+    await localDb.query`SELECT set_config('app.setting', 'outer', true), set_config('app.other', 'outer', true)`;
+
+    await localDb.withOptions({ setConfig: { 'app.setting': 'scope' } }, () =>
+      testTransaction.start(localDb),
+    );
+    expect(await getSetting(localDb)).toBe('scope');
+
+    await localDb.query`SELECT set_config('app.other', 'inner', true)`;
+    await testTransaction.start(localDb);
+    await testTransaction.rollback(localDb);
+    await testTransaction.rollback(localDb);
+
+    expect(await getSetting(localDb)).toBe('outer');
+    expect(await getSetting(localDb, 'app.other')).toBe('outer');
+
+    await testTransaction.rollback(localDb);
+    expect(localDb.isInTransaction()).toBe(false);
+
+    await testTransaction.start(localDb);
+    await testTransaction.close(localDb);
+  });
+
+  it('should not keep a rolled back test transaction for code that called `withOptions`', async () => {
+    const localDb = createTestDb(testDbOptions);
+    await testTransaction.start(localDb);
+    await localDb.withOptions({ log: false }, async () => {});
+
+    await testTransaction.rollback(localDb);
+
     expect(localDb.isInTransaction()).toBe(false);
 
     await testTransaction.close(localDb);

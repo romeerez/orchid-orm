@@ -46,7 +46,7 @@ Node 24 strips TypeScript types by default, so no loader is required.
 - Ignores changes to `scripts/verify.ts` and `scripts/verify.test.ts`; those files do not make any package affected.
 - Runs changed package tests with `check -o`.
 - Runs dependent package tests and global-change tests with `check`.
-- When any non-ignored changed file has an `adapters` folder segment in its path, runs adapter-aware affected package tests under all supported adapters (`pqb`, `orm`, `rake-db`, and `test-factory`):
+- When any non-ignored changed file has an `adapters` folder segment in its path or a file name starting with `testTransaction`, runs adapter-aware affected package tests under all supported adapters (`pqb`, `orm`, `rake-db`, and `test-factory`):
   - `pnpm --filter <pkg> check -o` for changed packages, `pnpm --filter <pkg> check` for dependents.
   - `ADAPTER=node-postgres pnpm --filter <pkg> check -o` for changed packages, `ADAPTER=node-postgres pnpm --filter <pkg> check` for dependents.
   - `ADAPTER=bun pnpm --filter <pkg> bun:check -o` for changed packages, `ADAPTER=bun pnpm --filter <pkg> bun:check` for dependents.
