@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.78.25
+
+### Patch Changes
+
+- e2f935cc: Added `testTransaction.hooks` for test hooks that may time out: their `rollback` and `close` end the test transaction of their own `start`. `testTransaction.start` resolves with the started transaction, and accepts a `signal` to cancel the start (#798).
+- Updated dependencies [e2f935cc]
+- Updated dependencies [e2f935cc]
+  - pqb@0.73.15
+  - rake-db@2.37.27
+
 ## 1.78.24
 
 ### Patch Changes

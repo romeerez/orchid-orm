@@ -1,5 +1,12 @@
 # pqb
 
+## 0.73.15
+
+### Patch Changes
+
+- e2f935cc: Fixed `isInTransaction()` returning `true` after a test transaction was started while the previous one was still rolling back (#798)
+- e2f935cc: Added `testTransaction.hooks` for test hooks that may time out: their `rollback` and `close` end the test transaction of their own `start`. `testTransaction.start` resolves with the started transaction, and accepts a `signal` to cancel the start (#798).
+
 ## 0.73.14
 
 ### Patch Changes
