@@ -36,6 +36,19 @@ describe('create-or-drop', () => {
         owner: 'username',
       });
 
+    // `toThrow` with an error that has a `cause` also compares engine-specific own properties,
+    // such as `line` and `column` that Bun sets inconsistently, so the fields are compared explicitly
+    const expectError = async (
+      message: string,
+      status: CreateOrDropError['status'],
+      cause: unknown,
+    ) => {
+      const error = await act().catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(CreateOrDropError);
+      expect(error).toMatchObject({ message, status, cause });
+    };
+
     it('should run successfully', async () => {
       const result = await act();
 
@@ -62,9 +75,7 @@ describe('create-or-drop', () => {
       const err = new Error('sslmode=require');
       query.mockRejectedValueOnce(err);
 
-      await expect(act()).rejects.toThrow(
-        new CreateOrDropError('SSL required', 'ssl-required', err),
-      );
+      await expectError('SSL required', 'ssl-required', err);
     });
 
     it('should return forbidden error if insufficient privilege', async () => {
@@ -73,18 +84,14 @@ describe('create-or-drop', () => {
       });
       query.mockRejectedValueOnce(err);
 
-      await expect(act()).rejects.toThrow(
-        new CreateOrDropError('Insufficient privilege', 'forbidden', err),
-      );
+      await expectError('Insufficient privilege', 'forbidden', err);
     });
 
     it('should return auth-failed error if auth failed', async () => {
       const err = new Error('password authentication failed');
       query.mockRejectedValueOnce(err);
 
-      await expect(act()).rejects.toThrow(
-        new CreateOrDropError('Authentication failed', 'auth-failed', err),
-      );
+      await expectError('Authentication failed', 'auth-failed', err);
     });
 
     it('should return unexpected error', async () => {
