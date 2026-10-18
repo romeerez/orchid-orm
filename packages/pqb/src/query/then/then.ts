@@ -440,15 +440,23 @@ const then = async (
             logData = log.beforeQuery(sql);
           }
 
-          const result = await execQuery(
-            adapter,
-            queryMethod,
-            sql,
-            log,
-            i === 0 ? startingSavepoint : undefined,
-            i === last ? releasingSavepoint : undefined,
-            sqlSessionContextGetStateFromAsyncState(state),
-          );
+          // try/catch rather than `.catch`: `execQuery` can throw synchronously
+          let result;
+          try {
+            result = await execQuery(
+              adapter,
+              queryMethod,
+              sql,
+              log,
+              i === 0 ? startingSavepoint : undefined,
+              i === last ? releasingSavepoint : undefined,
+              sqlSessionContextGetStateFromAsyncState(state),
+            );
+          } catch (err) {
+            // the driver rolls the savepoint back by itself only when its own query, the first one of the batch, fails
+            await startingSavepoint?.activeSavepoint?.rollback(err);
+            throw err;
+          }
 
           if (queryResult) {
             queryResult.rowCount += result.rowCount;

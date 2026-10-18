@@ -363,4 +363,37 @@ describe('batch queries', () => {
 
     expect(result).toEqual([0, 1, 2]);
   });
+
+  // out of the integer range
+  const invalid = 2 ** 31;
+
+  it.each([
+    ['first', [invalid, 0, 1]],
+    ['second', [0, 1, invalid]],
+  ])(
+    'should roll back the inserted rows and keep the transaction usable when the %s query of a caught batch fails',
+    async (_, nums) => {
+      const Table = testDb(
+        'tmp.then',
+        (t) => ({
+          num: t.integer().primaryKey(),
+        }),
+        undefined,
+        {
+          schema: undefined,
+        },
+      );
+
+      const result = await Table.transaction(async () => {
+        const countBefore = await Table.count();
+        const error = await Table.insertMany(
+          nums.map((num) => ({ num })),
+        ).catch((err: unknown) => err);
+
+        return { error, inserted: (await Table.count()) - countBefore };
+      });
+
+      expect(result).toMatchObject({ error: { code: '22003' }, inserted: 0 });
+    },
+  );
 });
