@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.27
+
+### Patch Changes
+
+- 4971f33a: `testTransaction.start` cancelled by `rollback` or by its `signal` while waiting for the previous test transaction to roll back rejects at once (#798).
+- Updated dependencies [4971f33a]
+  - pqb@0.73.17
+  - rake-db@2.37.29
+
 ## 1.78.26
 
 ### Patch Changes

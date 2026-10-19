@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.17
+
+### Patch Changes
+
+- 4971f33a: `testTransaction.start` cancelled by `rollback` or by its `signal` while waiting for the previous test transaction to roll back rejects at once (#798).
+
 ## 0.73.16
 
 ### Patch Changes
