@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.16
+
+### Patch Changes
+
+- 438b8044: Keep the transaction usable after catching an error of `insertMany` or `createMany` split into several queries.
+
 ## 0.73.15
 
 ### Patch Changes

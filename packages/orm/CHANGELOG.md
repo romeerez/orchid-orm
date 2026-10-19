@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.26
+
+### Patch Changes
+
+- 438b8044: Keep the transaction usable after catching an error of `insertMany` or `createMany` split into several queries.
+- Updated dependencies [438b8044]
+  - pqb@0.73.16
+  - rake-db@2.37.28
+
 ## 1.78.25
 
 ### Patch Changes
