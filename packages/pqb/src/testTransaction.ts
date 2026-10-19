@@ -1,6 +1,22 @@
 import { Query } from './query/query';
 import { OrchidOrmError, QueryError } from './query/errors';
-import { AsyncState } from './query/basic-features/storage/storage';
+import {
+  AsyncState,
+  AsyncStateStorage,
+} from './query/basic-features/storage/storage';
+import { QueryLogObject } from './query/basic-features/log/log';
+import { QuerySchema } from './query/basic-features/schema/schema';
+import {
+  Adapter,
+  AdapterConfigBase,
+  AdapterTransactionOptions,
+  DriverAdapter,
+  HackySavepointState,
+  QueryResult,
+  QueryResultRow,
+  TransactionAdapter,
+} from './adapters/adapter';
+import { SqlSessionState } from './adapters/features/sql-session-context';
 import { noop } from './utils';
 
 // The `Rollback` is not an error,
@@ -9,11 +25,30 @@ import { noop } from './utils';
 export class Rollback extends Error {}
 
 /**
- * Error of a test transaction rolled back together with inner test transactions that were still open,
- * of an inner test transaction rolled back that way,
- * and of `start` of test transaction hooks called again before the previous `start` was rolled back.
+ * Kind of a `TestTransactionError`:
+ * - `startedAgain`: `start` of test transaction hooks was called again before the previous `start` was rolled back
+ * - `innerOpen`: a test transaction was rolled back while test transactions started inside it were still open, they were rolled back as well
+ * - `byOuter`: the test transaction was rolled back together with an outer one
+ * - `rolledBack`: a query or a transaction of a test transaction whose rollback was called
  */
-export class TestTransactionError extends OrchidOrmError {}
+export type TestTransactionErrorKind =
+  | 'startedAgain'
+  | 'innerOpen'
+  | 'byOuter'
+  | 'rolledBack';
+
+/**
+ * Error of test transactions, `kind` tells what happened.
+ */
+export class TestTransactionError extends OrchidOrmError {
+  constructor(
+    public kind: TestTransactionErrorKind,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
+}
 
 /**
  * Test transaction started by `testTransaction.start`.
@@ -75,6 +110,8 @@ interface TestTransactions {
   queue: Promise<void>;
   // count of started transactions whose lifecycle hasn't ended, whether or not they are still in `levels`.
   live: number;
+  // the adapter of the outermost started transaction whose lifecycle hasn't ended.
+  adapter?: TestTransactionAdapter;
 }
 
 // Type to store transaction data on `db.internal`.
@@ -87,6 +124,10 @@ type Arg = { $qb: Query } | Query;
 
 // Get queryable instance from the transaction argument.
 const argToDb = (arg: Arg): Query => ('$qb' in arg ? arg.$qb : arg);
+
+// Callbacks of the transactions of test transactions, mapped to the test transactions of their instance:
+// the adapter of the outermost one passes those of its own nested test transactions to the adapter it wraps.
+const levelStarts = new WeakMap<object, TestTransactions>();
 
 // A record of a `start` call, it is also the handle returned by `start`.
 class TestTransactionLevel implements TestTransaction {
@@ -106,6 +147,8 @@ class TestTransactionLevel implements TestTransaction {
   rolledBack?: Promise<void>;
   // the level is rolled back together with an outer level.
   byOuter?: boolean;
+  // the adapter created by this level when it is the outermost one.
+  adapter?: TestTransactionAdapter;
 
   constructor(
     private db: Query,
@@ -116,6 +159,7 @@ class TestTransactionLevel implements TestTransaction {
     if (this.byOuter) {
       return this.rolledBack!.then(() => {
         throw new TestTransactionError(
+          'byOuter',
           'Test transaction was rolled back together with an outer test transaction',
         );
       });
@@ -128,6 +172,186 @@ class TestTransactionLevel implements TestTransaction {
 
   close(): Promise<void> {
     return closeAfter(this.db, this.trx, this.rollback());
+  }
+}
+
+// Transaction adapter of the outermost test transaction, used by the tested code for queries, transactions, and savepoints:
+// it rejects them once the test transaction is rolled back, and keeps queries and savepoints in flight for rollbacks to wait for them.
+class TestTransactionAdapter implements TransactionAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errorClass: new (...args: any[]) => Error;
+  driverAdapter: DriverAdapter;
+  // set when the rollback of its test transaction is called.
+  rolledBack?: boolean;
+  // queries and savepoints in flight.
+  private inFlight = new Set<Promise<unknown>>();
+
+  constructor(
+    private trx: TestTransactions,
+    private adapter: TransactionAdapter,
+  ) {
+    this.errorClass = adapter.errorClass;
+    this.driverAdapter = adapter.driverAdapter;
+  }
+
+  // Wait for the operations that are in flight now.
+  async settle(): Promise<void> {
+    await Promise.allSettled(this.inFlight);
+  }
+
+  // Get the error to reject an operation with.
+  private getError() {
+    if (this.rolledBack) {
+      return new TestTransactionError(
+        'rolledBack',
+        'Test transaction was rolled back, it cannot run queries anymore',
+      );
+    }
+
+    return;
+  }
+
+  private track<T>(promise: Promise<T>): Promise<T> {
+    this.inFlight.add(promise);
+    const remove = () => this.inFlight.delete(promise);
+    promise.then(remove, remove);
+    return promise;
+  }
+
+  // Run the operation unless rejected, keep it while it is in flight.
+  private run<T>(op: () => Promise<T>): Promise<T> {
+    const error = this.getError();
+    return error ? Promise.reject(error) : this.track(op());
+  }
+
+  query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    values?: unknown[],
+    sqlSessionState?: SqlSessionState,
+    prepare?: true,
+  ): Promise<QueryResult<T>> {
+    return this.run(() =>
+      this.adapter.query<T>(text, values, sqlSessionState, prepare),
+    );
+  }
+
+  arrays<
+    // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+    R extends any[] = any[],
+  >(
+    text: string,
+    values?: unknown[],
+    sqlSessionState?: SqlSessionState,
+    prepare?: true,
+  ): Promise<QueryResult<R>> {
+    return this.run(() =>
+      this.adapter.arrays<R>(text, values, sqlSessionState, prepare),
+    );
+  }
+
+  transaction<T>(
+    asyncStorage: AsyncStateStorage | undefined,
+    options: AdapterTransactionOptions | undefined,
+    cb: (adapter: TransactionAdapter) => Promise<T>,
+  ): Promise<T> {
+    // a test transaction of another instance sharing the adapter is a transaction of the tested code for this one
+    if (levelStarts.get(cb) === this.trx) {
+      return this.adapter.transaction(asyncStorage, options, cb);
+    }
+
+    const error = this.getError();
+    if (error) return Promise.reject(error);
+
+    const outer = asyncStorage?.getStore();
+    return this.adapter.transaction(asyncStorage, options, () => {
+      // an instance with another storage gets a new state with the adapter of the transaction, route its queries through this adapter;
+      // tell it by identity: an existing state may hold the adapter passed here, in a chain of these adapters
+      const state = asyncStorage?.getStore();
+      if (state && state !== outer) {
+        state.transactionAdapter = this;
+      }
+      return cb(this);
+    });
+  }
+
+  savepoint<T>(
+    name: string,
+    log: QueryLogObject | undefined,
+    cb: () => Promise<T>,
+  ): Promise<T> {
+    return this.run(() => this.adapter.savepoint(name, log, cb));
+  }
+
+  hackySavepoint<T extends QueryResultRow = QueryResultRow>(
+    state: HackySavepointState,
+    text: string,
+    values?: unknown[],
+    arraysMode?: boolean,
+    prepare?: true,
+    log?: QueryLogObject,
+  ): Promise<QueryResult<T>> {
+    const error = this.getError();
+    if (error) return Promise.reject(error);
+
+    const result = this.adapter.hackySavepoint<T>(
+      state,
+      text,
+      values,
+      arraysMode,
+      prepare,
+      log,
+    );
+
+    // the savepoint stays open after the query until a following query releases or rolls it back
+    const savepoint = state.activeSavepoint!;
+    const { release, rollback } = savepoint;
+    this.track(
+      new Promise<void>((resolve) => {
+        savepoint.release = () => release.call(savepoint).finally(resolve);
+        savepoint.rollback = (err) =>
+          rollback.call(savepoint, err).finally(resolve);
+      }),
+    );
+    // a failed query rolls back the savepoint by itself, nothing would roll it back otherwise
+    result.catch((err) => savepoint.rollback(err)).catch(noop);
+
+    return result;
+  }
+
+  isInTransaction(this: Adapter): this is TransactionAdapter {
+    return true;
+  }
+
+  assignError(to: QueryError, from: Error): void {
+    return this.adapter.assignError(to, from);
+  }
+
+  close(): Promise<void> {
+    return this.adapter.close();
+  }
+
+  getDatabase(): string {
+    return this.adapter.getDatabase();
+  }
+
+  getUser(): string {
+    return this.adapter.getUser();
+  }
+
+  getSearchPath(): string | undefined {
+    return this.adapter.getSearchPath();
+  }
+
+  getHost(): string {
+    return this.adapter.getHost();
+  }
+
+  getSchema(): QuerySchema | undefined {
+    return this.adapter.getSchema();
+  }
+
+  clone(params?: AdapterConfigBase): Adapter {
+    return this.adapter.clone(params);
   }
 }
 
@@ -168,44 +392,57 @@ const begin = (
   return new Promise((resolve, reject) => {
     let state: AsyncState | undefined;
     let fallback: AsyncState | undefined;
-    // adapter methods replaced by the outermost level, to restore when it ends
-    let adapterMethods:
-      | Pick<typeof adapter, 'query' | 'arrays' | 'transaction'>
+    // replaced by the outermost level, to restore when it ends
+    let replaced:
+      | {
+          transactionAdapter: TransactionAdapter;
+          methods: Pick<typeof adapter, 'query' | 'arrays' | 'transaction'>;
+        }
       | undefined;
-    level.lifecycle = db
-      .transaction(() => {
-        if (level.cancelled) throw new Rollback();
+    const run = () => {
+      if (level.cancelled) throw new Rollback();
 
-        const ended = new Promise<void>((_, end) => {
-          level.end = end;
-        });
+      const ended = new Promise<void>((_, end) => {
+        level.end = end;
+      });
 
-        state = asyncStorage.getStore();
-        fallback = asyncStorage.fallback;
-        asyncStorage.fallback = state;
-        const t = state?.transactionAdapter;
-        if (state && t) {
-          // routes queries of other instances that share the adapter, nested levels use the same `t`
-          if (!fallback) {
-            adapterMethods = {
+      state = asyncStorage.getStore();
+      fallback = asyncStorage.fallback;
+      asyncStorage.fallback = state;
+      const t = state?.transactionAdapter;
+      if (state && t) {
+        // routes the tested code of this and other instances that share the adapter through a `TestTransactionAdapter`,
+        // nested levels use the same one
+        if (!fallback) {
+          const wrapper = new TestTransactionAdapter(trx, t);
+          level.adapter = trx.adapter = wrapper;
+          replaced = {
+            transactionAdapter: t,
+            methods: {
               query: adapter.query,
               arrays: adapter.arrays,
               transaction: adapter.transaction,
-            };
-            adapter.query = t.query.bind(t);
-            adapter.arrays = t.arrays.bind(t);
-            adapter.transaction = t.transaction.bind(t);
-          }
-
-          state.testTransactionCount = state.testTransactionCount
-            ? state.testTransactionCount + 1
-            : 1;
+            },
+          };
+          state.transactionAdapter = wrapper;
+          adapter.query = wrapper.query.bind(wrapper);
+          adapter.arrays = wrapper.arrays.bind(wrapper);
+          adapter.transaction = wrapper.transaction.bind(wrapper);
         }
 
-        trx.live++;
-        resolve(level);
-        return ended;
-      })
+        state.testTransactionCount = state.testTransactionCount
+          ? state.testTransactionCount + 1
+          : 1;
+      }
+
+      trx.live++;
+      resolve(level);
+      return ended;
+    };
+    levelStarts.set(run, trx);
+
+    level.lifecycle = db
+      .transaction(run)
       .catch((err) => {
         if (!(err instanceof Rollback)) throw toQueryError(db, err);
       })
@@ -217,7 +454,11 @@ const begin = (
         }
 
         asyncStorage.fallback = fallback;
-        if (adapterMethods) Object.assign(adapter, adapterMethods);
+        if (replaced) {
+          state!.transactionAdapter = replaced.transactionAdapter;
+          Object.assign(adapter, replaced.methods);
+          trx.adapter = undefined;
+        }
         trx.live--;
       });
 
@@ -258,15 +499,19 @@ const cancel = (level: TestTransactionLevel, reason: unknown) => {
   });
 };
 
-// Take the level and the levels started inside it off the stack,
-// and roll them back in one turn of the queue, the innermost first.
-const rollbackWithInner = (
+// Roll back the levels taken off the stack in one turn of the queue, the innermost first.
+// `level` is the outermost of them, the others are the levels started inside it.
+const rollbackLevels = (
   trx: TestTransactions,
   level: TestTransactionLevel,
+  levels: TestTransactionLevel[],
 ): Promise<void> => {
-  const levels = trx.levels.splice(trx.levels.indexOf(level)).reverse();
+  if (level.adapter) level.adapter.rolledBack = true;
 
-  const rollback = enqueue(trx, async () => {
+  return enqueue(trx, async () => {
+    // let queries and savepoints in flight finish in the transactions they started in
+    await trx.adapter?.settle();
+
     let open = 0;
     let failure: { error: unknown } | undefined;
     for (const item of levels) {
@@ -284,12 +529,22 @@ const rollbackWithInner = (
 
     if (open) {
       throw new TestTransactionError(
+        'innerOpen',
         open === 1
           ? 'Test transaction had an inner test transaction still open, it was rolled back as well'
           : `Test transaction had ${open} inner test transactions still open, they were rolled back as well`,
       );
     }
   });
+};
+
+// Take the level and the levels started inside it off the stack, and roll them back.
+const rollbackWithInner = (
+  trx: TestTransactions,
+  level: TestTransactionLevel,
+): Promise<void> => {
+  const levels = trx.levels.splice(trx.levels.indexOf(level)).reverse();
+  const rollback = rollbackLevels(trx, level, levels);
 
   const rolledBack = rollback.then(noop, noop);
   for (const inner of levels) {
@@ -389,13 +644,7 @@ export const testTransaction = {
       );
     }
 
-    return setRollback(
-      level,
-      enqueue(trx!, () => {
-        level.end!(new Rollback());
-        return level.lifecycle!;
-      }),
-    );
+    return setRollback(level, rollbackLevels(trx!, level, [level]));
   },
 
   /**
@@ -460,6 +709,7 @@ export const testTransaction = {
         if (attempt) {
           return Promise.reject(
             new TestTransactionError(
+              'startedAgain',
               'Test transaction hooks were started again before the previous start was rolled back',
             ),
           );

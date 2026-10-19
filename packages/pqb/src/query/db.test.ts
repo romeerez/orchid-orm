@@ -28,7 +28,7 @@ import {
 import { RecordUnknown } from '../utils';
 import { QueryLogger } from './basic-features/log/log';
 import { orchidORMWithAdapter } from 'orchid-orm';
-import { Adapter, TransactionAdapterClass } from '../adapters/adapter';
+import { Adapter } from '../adapters/adapter';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 
 const selectedUserData = {
@@ -879,7 +879,7 @@ describe('db', () => {
       });
 
       expect(adapter).not.toBe(testAdapter);
-      expect(adapter).toBeInstanceOf(TransactionAdapterClass);
+      expect(adapter!.isInTransaction()).toBe(true);
     });
   });
 });

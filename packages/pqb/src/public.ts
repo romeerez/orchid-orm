@@ -6,6 +6,7 @@ export {
   copyTableData,
   testTransaction,
   TestTransactionError,
+  type TestTransactionErrorKind,
   type TestTransaction,
   type TestTransactionHooks,
   OrchidOrmInternalError,

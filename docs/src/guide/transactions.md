@@ -419,10 +419,12 @@ The functions returned by `testTransaction.hooks` handle such hooks:
 - `rollback` and `close` roll back the test transaction of their own `start` rather than the latest started one, so a late `afterEach` doesn't roll back the test transaction of the next test in place of its own.
 - They wait for a `setup` that is still running, so that its data is rolled back rather than written after the rollback.
   Create data for a `describe` in the `setup` rather than in a separate `beforeAll`.
+- A rollback waits for the queries that are in flight, so that they finish inside their test transaction.
 - When a test transaction is rolled back while test transactions started inside it are still open, they are rolled back as well, and `rollback` rejects with a `TestTransactionError`.
   It means that a test transaction was left open unexpectedly, usually by a hook or a test that didn't finish in time. The isolation of the following tests can't be trusted then: treat this error as fatal and stop the test run, the hooks only report it.
+- Queries that reach the outermost test transaction once its rollback is called, such as queries of a `$withOptions` callback that outlived it, reject with a `TestTransactionError` instead of running outside of a transaction.
 
-The hooks don't stop a test or a hook that keeps running, and don't make its late queries safe: such queries run in whichever test transaction is open at that moment.
+The hooks don't stop a test or a hook that keeps running, and don't make its late queries safe in general: a query issued after its test transaction was rolled back runs in whichever test transaction is open at that moment.
 
 ### start, rollback, and close
 
