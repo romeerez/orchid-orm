@@ -91,6 +91,8 @@ const argToDb = (arg: Arg): Query => ('$qb' in arg ? arg.$qb : arg);
 // A record of a `start` call, it is also the handle returned by `start`.
 class TestTransactionLevel implements TestTransaction {
   started?: Promise<TestTransaction>;
+  // rejects `started` while the start waits for its turn in the queue.
+  rejectStart?: (reason: unknown) => void;
   // set when the start is cancelled before its transaction started, `start` rejects with the reason.
   cancelled?: { reason: unknown };
   // `BEGIN` or `SAVEPOINT` failed, or the start was cancelled: there is no transaction to roll back.
@@ -157,6 +159,9 @@ const begin = (
     level.failed = true;
     return Promise.reject(level.cancelled.reason);
   }
+
+  // from now on, a cancellation rolls back the transaction once it starts
+  level.rejectStart = undefined;
 
   const { asyncStorage } = db.internal;
   const { adapter } = db.baseQuery.q;
@@ -237,10 +242,17 @@ const setRollback = (level: TestTransactionLevel, rollback: Promise<void>) => {
   return rollback;
 };
 
+// Cancel a start that hasn't started its transaction:
+// one waiting for its turn rejects at once and is skipped in its turn, one whose `BEGIN` or `SAVEPOINT` is in flight is rolled back once it starts.
+const cancelStart = (level: TestTransactionLevel, reason: unknown) => {
+  level.cancelled ??= { reason };
+  level.rejectStart?.(level.cancelled.reason);
+};
+
 // Cancel a start that hasn't started its transaction, settles once that start settles.
 const cancel = (level: TestTransactionLevel, reason: unknown) => {
-  level.cancelled ??= { reason };
-  const cancelled = level.cancelled;
+  cancelStart(level, reason);
+  const cancelled = level.cancelled!;
   return level.started!.then(noop, (err) => {
     if (err !== cancelled.reason) throw err;
   });
@@ -338,13 +350,16 @@ export const testTransaction = {
     // added even when the transaction fails to start, to be removed by the `rollback` paired with this `start`
     trx.levels.push(level);
 
-    const started = enqueue(trx, () => begin(db, trx, level));
+    const started = new Promise<TestTransaction>((resolve, reject) => {
+      level.rejectStart = reject;
+      enqueue(trx, () => begin(db, trx, level)).then(resolve, reject);
+    });
 
     const signal = options?.signal;
     if (!signal) return (level.started = started);
 
     const abort = () => {
-      if (!level.end) level.cancelled ??= { reason: signal.reason };
+      if (!level.end) cancelStart(level, signal.reason);
     };
     if (signal.aborted) abort();
     else signal.addEventListener('abort', abort);
