@@ -411,6 +411,37 @@ describe('testTransaction', () => {
       expect(close).toHaveBeenCalled();
     });
 
+    it.each(['rollback', 'signal'])(
+      'should reject a start waiting for its turn at once when it is cancelled by %s',
+      async (by) => {
+        const localDb = createTestDb(testDbOptions);
+        const root = await testTransaction.start(localDb);
+        const a = await testTransaction.start(localDb);
+        let queryEnded = false;
+        const query = localDb.query`SELECT pg_sleep(0.05)`.then(() => {
+          queryEnded = true;
+        });
+        // waits for the query in flight
+        const aRollback = a.rollback();
+        const abort = new AbortController();
+        const start = testTransaction.start(localDb, { signal: abort.signal });
+        const reason = new Error('aborted');
+
+        const cancel =
+          by === 'rollback'
+            ? testTransaction.rollback(localDb)
+            : abort.abort(reason);
+
+        await expect(start).rejects.toThrow(
+          by === 'rollback' ? 'rolled back before it started' : reason,
+        );
+        expect(queryEnded).toBe(false);
+
+        await Promise.all([query, aRollback, cancel]);
+        await root.close();
+      },
+    );
+
     it('should roll back a start aborted while its savepoint is in flight', async () => {
       const localDb = createTestDb(testDbOptions);
       const close = jest.spyOn(localDb.q.adapter, 'close');

@@ -26,12 +26,13 @@ PostgreSQL custom type; that separate concern belongs to `t.type(name)`.
 `start`, `rollback`, and `close` of one instance must run one at a time in the
 call order, each finishing its cleanup before the next one starts; only the
 cancellation of a start that has not started yet takes effect at once: a start
-still waiting for its turn is skipped, and one whose `BEGIN` or `SAVEPOINT` is
-in flight is rolled back. A rollback may wait behind a slow query of a
-timed-out test while the next hook already calls `start`; out of order, that
-`start` reads a transaction state that the rollback overwrites later. Exercise
-this with a rollback held behind a `pg_sleep` query while the next `start` is
-called.
+still waiting for its turn rejects at once and is skipped in its turn, and one
+whose `BEGIN` or `SAVEPOINT` is in flight is rolled back. A rollback may wait
+behind a slow query of a timed-out test while the next hook already calls
+`start`; out of order, that `start` reads a transaction state that the rollback
+overwrites later. Exercise this with a rollback held behind a `pg_sleep` query
+while the next `start` is called, and check that cancelling that `start` rejects
+it before the query ends.
 
 `testTransaction.rollback(db)` pairs with the latest `start` call, including one
 that failed or is still starting, because test runners run `afterEach` and
