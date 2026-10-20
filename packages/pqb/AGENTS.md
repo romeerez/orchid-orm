@@ -128,6 +128,4 @@ rolled back.
 Exercise the fallback with `withOptions({ setConfig })` inside a test
 transaction started on the same instance, and with a test transaction started
 inside a `withOptions` scope: after its rollback, queries must see the outer
-test transaction's settings. Run it under node-postgres as well: postgres.js
-makes savepoint names unique, so only other drivers show a rollback to the
-wrong savepoint.
+test transaction's settings.

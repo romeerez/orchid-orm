@@ -8,7 +8,11 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../sql/sql-constants';
-import { QueryResultRow } from '../../adapters/adapter';
+import {
+  QueryResultRow,
+  TransactionAdapterClass,
+} from '../../adapters/adapter';
+import { createDbWithAdapter } from '../db';
 import { NotFoundError, QueryError } from '../errors';
 import { noop } from '../../utils';
 import { AsyncState } from '../basic-features/storage/storage';
@@ -107,6 +111,30 @@ describe('then', () => {
         failedCatchResult: 'caught',
         subsequentQueryResult: { ok: 'ok' },
       });
+    });
+
+    it('should give the savepoints of caught queries of instances sharing the adapter different names', async () => {
+      const savepoint = jest.spyOn(
+        TransactionAdapterClass.prototype,
+        'savepoint',
+      );
+      // transactions of other instances nest on the connection of the test transaction
+      for (let i = 0; i < 2; i++) {
+        const instance = createDbWithAdapter({ adapter: testAdapter });
+        await instance.transaction(() =>
+          instance('user', (t) => ({ id: t.identity().primaryKey() }))
+            .count()
+            .catch(noop),
+        );
+      }
+
+      // the savepoints of the transactions are named with `t`
+      const names = savepoint.mock.calls
+        .map(([name]) => name)
+        .filter((name) => name.startsWith('s'));
+      savepoint.mockRestore();
+      expect(names).toHaveLength(2);
+      expect(names[0]).not.toBe(names[1]);
     });
   });
 
@@ -342,7 +370,7 @@ describe('batch queries', () => {
     expect(hackySavepoint?.mock.calls[0]?.slice(0, 3)).toEqual([
       {
         transactionAdapter,
-        name: 's1',
+        name: expect.stringMatching(/^s\d+$/),
         activeSavepoint: {
           release: expect.any(Function),
           rollback: expect.any(Function),
