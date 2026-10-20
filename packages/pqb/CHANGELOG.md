@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.18
+
+### Patch Changes
+
+- 22406461: Wait for running queries before rolling back a test transaction, and reject queries of a `$withOptions` callback that outlived the outermost one (#798).
+
 ## 0.73.17
 
 ### Patch Changes

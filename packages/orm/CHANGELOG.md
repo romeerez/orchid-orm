@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.28
+
+### Patch Changes
+
+- 22406461: Wait for running queries before rolling back a test transaction, and reject queries of a `$withOptions` callback that outlived the outermost one (#798).
+- Updated dependencies [22406461]
+  - pqb@0.73.18
+  - rake-db@2.37.30
+
 ## 1.78.27
 
 ### Patch Changes
