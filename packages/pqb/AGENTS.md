@@ -57,7 +57,7 @@ comes, so a `start` called later is never rolled back with it. Open ones among
 them are rolled back as well and reported with `TestTransactionError`; failed
 starts are dropped silently.
 
-The outermost test transaction routes the tested code through a
+The outermost test transaction of an instance routes the tested code through a
 `TestTransactionAdapter`: it replaces the transaction adapter of its state, so
 that `withOptions` copies keep it, and the bound adapter methods, so that other
 instances sharing the adapter reach it; a transaction of another instance gets
@@ -71,6 +71,32 @@ and cleanup must bypass it: nested levels start through
 of another instance sharing the adapter is a transaction of the tested code for
 it: bypassed, it would start inside a root whose rollback is called, and end
 after that root restored the adapter, binding the adapter back to the wrapper.
+
+The root test transaction is the outermost one on the connection. It keeps the
+adapter methods it replaced and the wrappers of other instances started inside
+it, the innermost last. A wrapper of another instance routes the adapter to
+itself when it starts; when it ends, the adapter goes to the innermost wrapper
+left, or to the root. Only the root restores the replaced methods; a wrapper
+ending after the root leaves the adapter alone, even when a new root has
+started. Never restore what a wrapper found at its start: test transactions of
+different instances end in any order, and the adapter would stay bound to a
+rolled back wrapper, rejecting every following test transaction.
+
+Check for the rollback again right before the callback of a transaction runs:
+its savepoint may already exist when the rollback is called, and a start of
+another instance would then attach its wrapper after the root.
+
+Exercise these orders with test transactions of separate instances:
+
+- Start test transactions of two other instances inside the root, roll back the
+  root first, then start a new one.
+- End a test transaction of another instance after a new root started: queries
+  of an instance without a test transaction must reach the new root.
+- Roll back the middle one of three while the innermost is open: queries of an
+  instance without a test transaction must reject rather than reach the root.
+- Delay the callback of a start of another instance until the root is rolled
+  back: the start must reject, and queries of an instance without a test
+  transaction must not reach its wrapper.
 
 A level's rollback first waits for the queries and savepoints in flight through
 the wrapper, including a `hackySavepoint` until it is released or rolled back,
@@ -93,12 +119,13 @@ test transaction of another one, then query the outer instance after both end.
 Do not decide on restoring the adapter or closing the connection by what is left
 on the stack: a record leaves the stack when `rollback` is called and joins it
 when `start` is called, while the transaction ends or begins only in its turn of
-the queue. The test transaction that rebound the adapter restores it, and the
-pool is closed only when no started test transaction is left open, whether or
-not it is still on the stack. Otherwise a `start` called during a rollback
-begins on the released connection of the rolled back transaction, or closing the
-pool waits for a rollback queued behind it. Exercise both with a rollback that
-is not awaited before the next `start` or `close`.
+the queue. The outermost test transaction of an instance restores the
+transaction adapter of its state and ends its routing of the shared adapter when
+it ends, and the pool is closed only when no started test transaction is left
+open, whether or not it is still on the stack. Otherwise a `start` called during
+a rollback begins on the released connection of the rolled back transaction, or
+closing the pool waits for a rollback queued behind it. Exercise both with a
+rollback that is not awaited before the next `start` or `close`.
 
 `testTransaction.hooks` wait for their `start` and `setup` before rolling back,
 because a timed-out hook keeps running and its `setup` would write past the
