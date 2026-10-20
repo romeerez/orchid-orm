@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.29
+
+### Patch Changes
+
+- 64a0ecef: Give savepoints unique names, so that a test transaction rolls back to its own savepoint when a transaction of another instance sharing the adapter is still open inside it (#798).
+- Updated dependencies [64a0ecef]
+  - pqb@0.73.19
+  - rake-db@2.37.31
+
 ## 1.78.28
 
 ### Patch Changes

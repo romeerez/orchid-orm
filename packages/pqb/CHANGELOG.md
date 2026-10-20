@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.19
+
+### Patch Changes
+
+- 64a0ecef: Give savepoints unique names, so that a test transaction rolls back to its own savepoint when a transaction of another instance sharing the adapter is still open inside it (#798).
+
 ## 0.73.18
 
 ### Patch Changes
