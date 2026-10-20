@@ -11,6 +11,7 @@ import { HookPurpose } from '../extra-features/hooks/hooks.sql';
 import {
   Adapter,
   AfterCommitHook,
+  generateSavepointName,
   getDriverErrorCode,
   HackySavepointState,
   QueryResult,
@@ -854,7 +855,7 @@ const setCatchingSavepoint = (
   return catchTrx && catchTrx.transactionAdapter
     ? {
         transactionAdapter: catchTrx.transactionAdapter,
-        name: `s${(catchTrx.catchI = (catchTrx.catchI || 0) + 1)}`,
+        name: generateSavepointName('s'),
       }
     : undefined;
 };

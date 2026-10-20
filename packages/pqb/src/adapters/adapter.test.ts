@@ -381,8 +381,8 @@ describe('adapter runtime abstractions', () => {
 
             expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
               expect.arrayContaining([
-                'SAVEPOINT "t1"',
-                'RELEASE SAVEPOINT "t1"',
+                expect.stringMatching(/^SAVEPOINT "t\d+"$/),
+                expect.stringMatching(/^RELEASE SAVEPOINT "t\d+"$/),
               ]),
             );
           });
@@ -412,10 +412,14 @@ describe('adapter runtime abstractions', () => {
             ).rejects.toThrow(error);
 
             expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
-              expect.arrayContaining(['SAVEPOINT "t1"']),
+              expect.arrayContaining([
+                expect.stringMatching(/^SAVEPOINT "t\d+"$/),
+              ]),
             );
             expect(log.onError.mock.calls.map(([, sql]) => sql.text)).toEqual(
-              expect.arrayContaining(['ROLLBACK TO SAVEPOINT "t1"']),
+              expect.arrayContaining([
+                expect.stringMatching(/^ROLLBACK TO SAVEPOINT "t\d+"$/),
+              ]),
             );
           });
 
@@ -443,7 +447,9 @@ describe('adapter runtime abstractions', () => {
             ).rejects.toThrow(Rollback);
 
             expect(log.afterQuery.mock.calls.map(([sql]) => sql.text)).toEqual(
-              expect.arrayContaining(['ROLLBACK TO SAVEPOINT "t1"']),
+              expect.arrayContaining([
+                expect.stringMatching(/^ROLLBACK TO SAVEPOINT "t\d+"$/),
+              ]),
             );
             expect(log.onError).not.toHaveBeenCalled();
           });

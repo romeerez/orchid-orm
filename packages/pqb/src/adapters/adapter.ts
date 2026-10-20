@@ -899,6 +899,17 @@ const realTransaction = async <T>(
   return result;
 };
 
+let savepointI = 0;
+
+/**
+ * Generates a savepoint name that was never generated before.
+ * Inside a test transaction, instances sharing an adapter run on one connection,
+ * so names numbered per instance would repeat, and a rollback or a release would go to the savepoint of another instance.
+ * The prefix tells savepoints apart in logs: `t` for transactions, `s` for caught queries.
+ */
+export const generateSavepointName = (prefix: 't' | 's') =>
+  `${prefix}${++savepointI}`;
+
 const nestedTransaction = async <T>(
   adapter: Adapter,
   driverAdapter: DriverAdapter,
@@ -914,7 +925,7 @@ const nestedTransaction = async <T>(
   const parentSetConfig = state?.transactionSetConfig;
 
   const result = await transactionAdapter.savepoint(
-    `t${transactionId}`,
+    generateSavepointName('t'),
     options?.log,
     async () => {
       const setRoleSql = getSetRoleSql(parentRole, options);

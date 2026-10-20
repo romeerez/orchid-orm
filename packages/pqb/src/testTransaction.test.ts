@@ -875,6 +875,31 @@ describe('testTransaction', () => {
       await next.close();
     });
 
+    it('should roll back a test transaction of another instance sharing the adapter to its own savepoint when a transaction of a third instance outlives it', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      await setSetting(localDb, 'root');
+      const inner = await testTransaction.start(other);
+      await setSetting(other, 'inner');
+      const late = holdTransaction(third);
+      await late.opened;
+
+      await inner.rollback();
+      expect(await getSetting(localDb)).toBe('root');
+
+      // the late end of the transaction must not release the savepoint of the next test transaction:
+      // its own savepoint is gone, so its `RELEASE` fails (postgres-js sends no `RELEASE`)
+      const next = await testTransaction.start(other);
+      late.release();
+      await late.transaction.catch(noop);
+      await next.rollback();
+      expect(await getSetting(localDb)).toBe('root');
+
+      await root.close();
+    });
+
     it('should restore the SQL session settings of a query in flight before the rollback', async () => {
       // one connection, so that the next test transaction reuses the connection of the rolled back one
       const localDb = createTestDb({ ...testDbOptions, max: 1 });

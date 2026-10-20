@@ -28,8 +28,6 @@ export interface AsyncState extends SqlSessionState {
   log?: QueryLogObject;
   // number of test transaction wrapping the current one
   testTransactionCount?: number;
-  // sequential number for catching save-points
-  catchI?: number;
   // a db schema to use by default
   schema?: QuerySchema;
   // Effective transaction role for transaction-scoped SQL session context.
