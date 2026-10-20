@@ -57,6 +57,39 @@ comes, so a `start` called later is never rolled back with it. Open ones among
 them are rolled back as well and reported with `TestTransactionError`; failed
 starts are dropped silently.
 
+The outermost test transaction routes the tested code through a
+`TestTransactionAdapter`: it replaces the transaction adapter of its state, so
+that `withOptions` copies keep it, and the bound adapter methods, so that other
+instances sharing the adapter reach it; a transaction of another instance gets
+it as the adapter of its new state, and existing states keep theirs. Tell the
+new state by comparing it with the state before the call: with wrappers of
+nested instances, an existing state also holds the adapter passed to the
+callback. The wrapper rejects queries, transactions, and savepoints once the
+rollback of its test transaction is called. The levels' own starts, rollbacks,
+and cleanup must bypass it: nested levels start through
+`db.transaction`, and the wrapper recognizes their callbacks. A test transaction
+of another instance sharing the adapter is a transaction of the tested code for
+it: bypassed, it would start inside a root whose rollback is called, and end
+after that root restored the adapter, binding the adapter back to the wrapper.
+
+A level's rollback first waits for the queries and savepoints in flight through
+the wrapper, including a `hackySavepoint` until it is released or rolled back,
+since SQL they send later (the restore of the SQL session context, `RELEASE`)
+would run after the rollback, on the outer level or on the reused connection of
+the next test transaction. Every `hackySavepoint` must be released or rolled
+back, also when a later query of its batch fails, or that rollback never ends.
+Never wait for callbacks of transactions of the tested code: the code of a
+timed-out test may never end them.
+
+Exercise the wait under all three adapters with a `withOptions({ setConfig })`
+query in flight at the rollback of a test transaction on a pool of one
+connection, and with a `hackySavepoint` held over the rollback. Exercise the
+rejection with a `withOptions` scope and a transaction of another instance
+sharing the adapter that outlive their test transaction, and with a test
+transaction of another instance started while the rollback waits for a query.
+Exercise the chain with a nested test transaction of the outer instance inside a
+test transaction of another one, then query the outer instance after both end.
+
 Do not decide on restoring the adapter or closing the connection by what is left
 on the stack: a record leaves the stack when `rollback` is called and joins it
 when `start` is called, while the transaction ends or begins only in its turn of
