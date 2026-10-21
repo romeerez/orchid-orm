@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.20
+
+### Patch Changes
+
+- 68230ddb: Fix test transactions failing when instances share an adapter and roll back their test transactions out of order (#798).
+
 ## 0.73.19
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.30
+
+### Patch Changes
+
+- 68230ddb: Fix test transactions failing when instances share an adapter and roll back their test transactions out of order (#798).
+- Updated dependencies [68230ddb]
+  - pqb@0.73.20
+  - rake-db@2.37.32
+
 ## 1.78.29
 
 ### Patch Changes
