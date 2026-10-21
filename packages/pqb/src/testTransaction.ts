@@ -27,18 +27,23 @@ export class Rollback extends Error {}
 /**
  * Kind of a `TestTransactionError`:
  * - `startedAgain`: `start` of test transaction hooks was called again before the previous `start` was rolled back
- * - `innerOpen`: a test transaction was rolled back while test transactions started inside it were still open, they were rolled back as well
+ * - `innerOpen`: a test transaction was rolled back while test transactions started inside it were still open or starting, the open ones were rolled back as well, and the starting ones cancelled
  * - `byOuter`: the test transaction was rolled back together with an outer one
  * - `rolledBack`: a query or a transaction of a test transaction whose rollback was called
+ * - `blocked`: a query, a transaction, or a test transaction on a database adapter blocked by an `innerOpen` error, which is its `cause`
  */
 export type TestTransactionErrorKind =
   | 'startedAgain'
   | 'innerOpen'
   | 'byOuter'
-  | 'rolledBack';
+  | 'rolledBack'
+  | 'blocked';
 
 /**
  * Error of test transactions, `kind` tells what happened.
+ * After an `innerOpen` error, the database adapter is blocked until the process ends:
+ * queries, transactions, and test transactions of every instance sharing it reject with a `blocked` error.
+ * Its connections can still be closed.
  */
 export class TestTransactionError extends OrchidOrmError {
   constructor(
@@ -56,7 +61,8 @@ export class TestTransactionError extends OrchidOrmError {
 export interface TestTransaction {
   /**
    * Roll back this test transaction.
-   * Open test transactions started inside it are rolled back as well, and then it rejects with a `TestTransactionError`.
+   * When test transactions started inside it are still open or starting, the open ones are rolled back as well, the starting ones are cancelled,
+   * the adapter is blocked, and it rejects with a `TestTransactionError`, or with a database error if the rollback itself fails.
    * Called again, it returns the rollback in progress, or does nothing once that rollback has ended.
    * After this test transaction is rolled back together with an outer one, it rejects with a `TestTransactionError`.
    */
@@ -74,7 +80,7 @@ export interface TestTransaction {
 export interface TestTransactionHooks {
   /**
    * Start a test transaction and run the `setup` inside it.
-   * It rejects with a `TestTransactionError` when the previous `start` wasn't followed by `rollback` or `close`.
+   * It rejects with a `TestTransactionError` when the previous `start` wasn't followed by `rollback` or `close`, and when the adapter is blocked.
    */
   start(): Promise<void>;
   /**
@@ -102,6 +108,17 @@ interface HooksAttempt {
 // `testTransaction` will store its state under this unique key in the `db.internal`.
 const trxForTest: unique symbol = Symbol('trxForTest');
 
+// The state of test transactions of all instances sharing an adapter.
+interface SharedTestTransactions {
+  adapter: Adapter;
+  // the first error that blocked the adapter, it stays blocked for good.
+  blocked?: TestTransactionError;
+  // levels whose transaction hasn't started yet, a block cancels them.
+  starting: Set<TestTransactionLevel>;
+}
+
+const sharedTestTransactions = new WeakMap<Adapter, SharedTestTransactions>();
+
 // The state of test transactions of one instance, stored in the `db.internal`.
 interface TestTransactions {
   // records of `start` calls, the innermost last, including failed and starting ones.
@@ -112,6 +129,8 @@ interface TestTransactions {
   live: number;
   // the adapter of the outermost started transaction whose lifecycle hasn't ended.
   adapter?: TestTransactionAdapter;
+  // the state of the instances sharing the adapter of this one.
+  shared: SharedTestTransactions;
 }
 
 // Type to store transaction data on `db.internal`.
@@ -175,6 +194,14 @@ class TestTransactionLevel implements TestTransaction {
   }
 }
 
+// Error of an operation on a blocked adapter.
+const toBlockedError = (cause: TestTransactionError) =>
+  new TestTransactionError(
+    'blocked',
+    `The database adapter is blocked after a test transaction error: ${cause.message}`,
+    { cause },
+  );
+
 // Route the methods of the adapter shared by instances to the wrapper.
 const bindAdapter = (adapter: Adapter, wrapper: TestTransactionAdapter) => {
   adapter.query = wrapper.query.bind(wrapper);
@@ -183,7 +210,8 @@ const bindAdapter = (adapter: Adapter, wrapper: TestTransactionAdapter) => {
 };
 
 // Transaction adapter of the outermost test transaction of an instance, used by the tested code for queries, transactions, and savepoints:
-// it rejects them once the test transaction is rolled back, and keeps queries and savepoints in flight for rollbacks to wait for them.
+// it rejects them when the adapter is blocked or the test transaction is rolled back,
+// and keeps queries and savepoints in flight for rollbacks to wait for them.
 // The root is the wrapper of the outermost test transaction on the connection; wrappers of other instances start inside it and route through it.
 class TestTransactionAdapter implements TransactionAdapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -231,8 +259,10 @@ class TestTransactionAdapter implements TransactionAdapter {
 
   // Stop routing through this wrapper when its test transaction ends:
   // the root restores the replaced methods, a wrapper of another instance routes to the innermost wrapper left, or to the root.
-  // A wrapper ending after the root leaves the methods alone.
+  // A wrapper ending after the root, or on a blocked adapter, leaves the methods alone.
   detach(shared: Adapter) {
+    if (this.trx.shared.blocked) return;
+
     const { root } = this;
     if (!root) {
       Object.assign(shared, this.replaced);
@@ -251,6 +281,9 @@ class TestTransactionAdapter implements TransactionAdapter {
 
   // Get the error to reject an operation with.
   private getError() {
+    const { blocked } = this.trx.shared;
+    if (blocked) return toBlockedError(blocked);
+
     if (this.rolledBack) {
       return new TestTransactionError(
         'rolledBack',
@@ -420,6 +453,16 @@ const toQueryError = (db: Query, err: unknown) => {
   return error;
 };
 
+// Get the state of test transactions of the instances sharing the adapter.
+const getShared = (adapter: Adapter) => {
+  let shared = sharedTestTransactions.get(adapter);
+  if (!shared) {
+    shared = { adapter, starting: new Set() };
+    sharedTestTransactions.set(adapter, shared);
+  }
+  return shared;
+};
+
 // Run the operation after the previous operation of the instance has settled, whether it succeeded or failed.
 const enqueue = <T>(trx: TestTransactions, op: () => Promise<T>) => {
   const result = trx.queue.then(op);
@@ -454,6 +497,7 @@ const begin = (
       const ended = new Promise<void>((_, end) => {
         level.end = end;
       });
+      trx.shared.starting.delete(level);
 
       state = asyncStorage.getStore();
       fallback = asyncStorage.fallback;
@@ -539,6 +583,21 @@ const cancel = (level: TestTransactionLevel, reason: unknown) => {
   });
 };
 
+// Block the adapter for good with the error: cancel the starts whose transaction hasn't started,
+// and reject queries and transactions through the adapter, also when no test transaction routes them.
+const block = (shared: SharedTestTransactions, error: TestTransactionError) => {
+  if (shared.blocked) return;
+
+  shared.blocked = error;
+  for (const level of shared.starting) {
+    cancelStart(level, toBlockedError(error));
+  }
+
+  const reject = () => Promise.reject(toBlockedError(error));
+  const { adapter } = shared;
+  adapter.query = adapter.arrays = adapter.transaction = reject;
+};
+
 // Roll back the levels taken off the stack in one turn of the queue, the innermost first.
 // `level` is the outermost of them, the others are the levels started inside it.
 const rollbackLevels = (
@@ -546,19 +605,34 @@ const rollbackLevels = (
   level: TestTransactionLevel,
   levels: TestTransactionLevel[],
 ): Promise<void> => {
+  // inner levels started or starting when the rollback is called, failed and cancelled starts don't count
+  let open = 0;
+  for (const item of levels) {
+    if (item !== level && !item.failed && !item.cancelled) open++;
+  }
+
+  let error: TestTransactionError | undefined;
+  if (open) {
+    error = new TestTransactionError(
+      'innerOpen',
+      open === 1
+        ? 'Test transaction rollback found an inner test transaction still open or starting'
+        : `Test transaction rollback found ${open} inner test transactions still open or starting`,
+    );
+    block(trx.shared, error);
+  }
+
   if (level.adapter) level.adapter.rolledBack = true;
 
   return enqueue(trx, async () => {
     // let queries and savepoints in flight finish in the transactions they started in
     await trx.adapter?.settle();
 
-    let open = 0;
     let failure: { error: unknown } | undefined;
     for (const item of levels) {
       // a failed start has no transaction
       if (!item.end) continue;
 
-      if (item !== level) open++;
       item.end(new Rollback());
       await item.lifecycle!.catch((error) => {
         failure ??= { error };
@@ -567,14 +641,7 @@ const rollbackLevels = (
 
     if (failure) throw failure.error;
 
-    if (open) {
-      throw new TestTransactionError(
-        'innerOpen',
-        open === 1
-          ? 'Test transaction had an inner test transaction still open, it was rolled back as well'
-          : `Test transaction had ${open} inner test transactions still open, they were rolled back as well`,
-      );
-    }
+    if (error) throw error;
   });
 };
 
@@ -624,7 +691,7 @@ export const testTransaction = {
   /**
    * Start a test transaction.
    * The returned promise is resolved with the test transaction as soon as it starts, not waiting for it to end.
-   * It is rejected when `rollback` is called before the transaction started.
+   * It is rejected when `rollback` is called before the transaction started, and when the adapter is blocked (see `TestTransactionError`).
    *
    * `start`, `rollback`, and `close` of one instance run one at a time in the call order.
    *
@@ -640,15 +707,23 @@ export const testTransaction = {
       levels: [],
       queue: Promise.resolve(),
       live: 0,
+      shared: getShared(db.baseQuery.q.adapter),
     });
     const level = new TestTransactionLevel(db, trx);
     // added even when the transaction fails to start, to be removed by the `rollback` paired with this `start`
     trx.levels.push(level);
 
+    const { shared } = trx;
+    shared.starting.add(level);
     const started = new Promise<TestTransaction>((resolve, reject) => {
-      level.rejectStart = reject;
-      enqueue(trx, () => begin(db, trx, level)).then(resolve, reject);
+      const fail = (reason: unknown) => {
+        shared.starting.delete(level);
+        reject(reason);
+      };
+      level.rejectStart = fail;
+      enqueue(trx, () => begin(db, trx, level)).then(resolve, fail);
     });
+    if (shared.blocked) cancelStart(level, toBlockedError(shared.blocked));
 
     const signal = options?.signal;
     if (!signal) return (level.started = started);
