@@ -79,6 +79,28 @@ const holdNextTransaction = (
   return { called: called.promise, release: release.resolve };
 };
 
+// Make the callback of the next savepoint wait for `release`, `created` resolves once the savepoint is created.
+const holdNextSavepoint = () => {
+  const created = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const { savepoint } = TransactionAdapterClass.prototype;
+  jest
+    .spyOn(TransactionAdapterClass.prototype, 'savepoint')
+    .mockImplementationOnce(function (
+      this: TransactionAdapterClass,
+      name,
+      log,
+      cb,
+    ) {
+      return savepoint.call(this, name, log, async () => {
+        created.resolve();
+        await release.promise;
+        return cb();
+      });
+    } as typeof savepoint);
+  return { created: created.promise, release: release.resolve };
+};
+
 // Start a transaction that stays open until `release` is called, `opened` resolves once it has started.
 const holdTransaction = (
   db: Db,
@@ -897,6 +919,118 @@ describe('testTransaction', () => {
       await next.rollback();
       expect(await getSetting(localDb)).toBe('root');
 
+      await root.close();
+    });
+
+    it('should allow a new test transaction when the root is rolled back first', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
+      await testTransaction.start(localDb);
+      const inner = await testTransaction.start(other);
+      const innermost = await testTransaction.start(third);
+
+      await testTransaction.rollback(localDb);
+      // their savepoints are gone with the root
+      await expect(inner.rollback()).rejects.toThrow();
+      await expect(innermost.rollback()).rejects.toThrow();
+
+      const next = await testTransaction.start(localDb);
+      await setSetting(localDb, 'next');
+      expect(await getSetting(localDb)).toBe('next');
+      await next.close();
+    });
+
+    it('should keep the adapter routed to the new root when an old test transaction of another instance ends late', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      // has no test transaction, its queries go through the shared adapter
+      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
+      await testTransaction.start(localDb);
+      // let the savepoint roll back, but delay the end of the test transaction of `other` until the next root started
+      const rolledBack = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      onNextSavepoint(noop, (result) =>
+        result.finally(() => {
+          rolledBack.resolve();
+          return release.promise;
+        }),
+      );
+      const inner = await testTransaction.start(other);
+      const rollback = inner.rollback();
+      await rolledBack.promise;
+      await testTransaction.rollback(localDb);
+
+      const next = await testTransaction.start(localDb);
+      await setSetting(localDb, 'next');
+      release.resolve();
+      await rollback;
+
+      expect(await getSetting(outside)).toBe('next');
+      await next.close();
+    });
+
+    it('should reject a start of another instance that resumes after the root is rolled back', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      // has no test transaction, its queries go through the shared adapter
+      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      // create the savepoint, then delay the start until the root is rolled back
+      const { created, release } = holdNextSavepoint();
+      const inner = testTransaction.start(other);
+      await created;
+
+      await root.rollback();
+      release();
+
+      // its savepoint is gone with the root, so the rollback of the savepoint fails as well
+      await expect(inner).rejects.toThrow();
+      // the adapter is not routed to the test transaction of `other`
+      await outside.query`SELECT 1`;
+      await root.close();
+    });
+
+    it('should reject queries through the shared adapter after a middle test transaction ends', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
+      // has no test transaction, its queries go through the shared adapter
+      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      await testTransaction.start(other);
+      const innermost = await testTransaction.start(third);
+
+      await testTransaction.rollback(other);
+      await expectTestTransactionError(outside.query`SELECT 1`, {
+        kind: 'rolledBack',
+      });
+
+      // its savepoint is gone with the test transaction of `other`
+      await innermost.rollback().catch(noop);
+      await root.close();
+    });
+
+    it('should wait for queries through the shared adapter before rolling back a test transaction of another instance', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      // has no test transaction, its queries go through the shared adapter
+      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      await setSetting(localDb, 'root');
+      const inner = await testTransaction.start(other);
+      await setSetting(other, 'inner');
+      const called = onNextQuery();
+      const late = outside.withOptions(
+        { setConfig: { 'app.setting': 'late' } },
+        () => outside.query`SELECT pg_sleep(0.05)`,
+      );
+      await called;
+
+      await Promise.all([late, inner.rollback()]);
+
+      // restoring the settings after the rollback would leave 'inner' in the root
+      expect(await getSetting(localDb)).toBe('root');
       await root.close();
     });
 

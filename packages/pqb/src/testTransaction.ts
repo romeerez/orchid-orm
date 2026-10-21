@@ -175,14 +175,28 @@ class TestTransactionLevel implements TestTransaction {
   }
 }
 
-// Transaction adapter of the outermost test transaction, used by the tested code for queries, transactions, and savepoints:
+// Route the methods of the adapter shared by instances to the wrapper.
+const bindAdapter = (adapter: Adapter, wrapper: TestTransactionAdapter) => {
+  adapter.query = wrapper.query.bind(wrapper);
+  adapter.arrays = wrapper.arrays.bind(wrapper);
+  adapter.transaction = wrapper.transaction.bind(wrapper);
+};
+
+// Transaction adapter of the outermost test transaction of an instance, used by the tested code for queries, transactions, and savepoints:
 // it rejects them once the test transaction is rolled back, and keeps queries and savepoints in flight for rollbacks to wait for them.
+// The root is the wrapper of the outermost test transaction on the connection; wrappers of other instances start inside it and route through it.
 class TestTransactionAdapter implements TransactionAdapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
   driverAdapter: DriverAdapter;
   // set when the rollback of its test transaction is called.
   rolledBack?: boolean;
+  // the root, set on wrappers of other instances started inside it.
+  private root?: TestTransactionAdapter;
+  // of the root: the methods of the shared adapter it replaced.
+  private replaced?: Pick<Adapter, 'query' | 'arrays' | 'transaction'>;
+  // of the root: the wrappers of other instances started inside it, the innermost last.
+  private nested: TestTransactionAdapter[] = [];
   // queries and savepoints in flight.
   private inFlight = new Set<Promise<unknown>>();
 
@@ -197,6 +211,42 @@ class TestTransactionAdapter implements TransactionAdapter {
   // Wait for the operations that are in flight now.
   async settle(): Promise<void> {
     await Promise.allSettled(this.inFlight);
+  }
+
+  // Route the methods of the shared adapter through this wrapper.
+  attach(shared: Adapter) {
+    const outer = this.adapter;
+    if (outer instanceof TestTransactionAdapter) {
+      this.root = outer.root ?? outer;
+      this.root.nested.push(this);
+    } else {
+      this.replaced = {
+        query: shared.query,
+        arrays: shared.arrays,
+        transaction: shared.transaction,
+      };
+    }
+    bindAdapter(shared, this);
+  }
+
+  // Stop routing through this wrapper when its test transaction ends:
+  // the root restores the replaced methods, a wrapper of another instance routes to the innermost wrapper left, or to the root.
+  // A wrapper ending after the root leaves the methods alone.
+  detach(shared: Adapter) {
+    const { root } = this;
+    if (!root) {
+      Object.assign(shared, this.replaced);
+      this.nested.length = 0;
+      return;
+    }
+
+    const { nested } = root;
+    const i = nested.indexOf(this);
+    // the root has ended and cleared the list
+    if (i === -1) return;
+
+    nested.splice(i, 1);
+    bindAdapter(shared, nested.at(-1) ?? root);
   }
 
   // Get the error to reject an operation with.
@@ -264,6 +314,10 @@ class TestTransactionAdapter implements TransactionAdapter {
 
     const outer = asyncStorage?.getStore();
     return this.adapter.transaction(asyncStorage, options, () => {
+      // the rollback may have been called while the transaction was starting
+      const error = this.getError();
+      if (error) throw error;
+
       // an instance with another storage gets a new state with the adapter of the transaction, route its queries through this adapter;
       // tell it by identity: an existing state may hold the adapter passed here, in a chain of these adapters
       const state = asyncStorage?.getStore();
@@ -392,13 +446,8 @@ const begin = (
   return new Promise((resolve, reject) => {
     let state: AsyncState | undefined;
     let fallback: AsyncState | undefined;
-    // replaced by the outermost level, to restore when it ends
-    let replaced:
-      | {
-          transactionAdapter: TransactionAdapter;
-          methods: Pick<typeof adapter, 'query' | 'arrays' | 'transaction'>;
-        }
-      | undefined;
+    // the transaction adapter of the state, restored when the outermost test transaction of the instance ends
+    let stateAdapter: TransactionAdapter | undefined;
     const run = () => {
       if (level.cancelled) throw new Rollback();
 
@@ -416,18 +465,9 @@ const begin = (
         if (!fallback) {
           const wrapper = new TestTransactionAdapter(trx, t);
           level.adapter = trx.adapter = wrapper;
-          replaced = {
-            transactionAdapter: t,
-            methods: {
-              query: adapter.query,
-              arrays: adapter.arrays,
-              transaction: adapter.transaction,
-            },
-          };
+          stateAdapter = t;
           state.transactionAdapter = wrapper;
-          adapter.query = wrapper.query.bind(wrapper);
-          adapter.arrays = wrapper.arrays.bind(wrapper);
-          adapter.transaction = wrapper.transaction.bind(wrapper);
+          wrapper.attach(adapter);
         }
 
         state.testTransactionCount = state.testTransactionCount
@@ -454,9 +494,9 @@ const begin = (
         }
 
         asyncStorage.fallback = fallback;
-        if (replaced) {
-          state!.transactionAdapter = replaced.transactionAdapter;
-          Object.assign(adapter, replaced.methods);
+        if (stateAdapter) {
+          state!.transactionAdapter = stateAdapter;
+          level.adapter!.detach(adapter);
           trx.adapter = undefined;
         }
         trx.live--;
