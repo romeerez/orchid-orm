@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.31
+
+### Patch Changes
+
+- afdd377a: Block the database adapter after a test transaction is rolled back together with open inner ones, so that the following tests that use it fail instead of running without isolation (#798).
+- Updated dependencies [afdd377a]
+  - pqb@0.73.21
+  - rake-db@2.37.33
+
 ## 1.78.30
 
 ### Patch Changes

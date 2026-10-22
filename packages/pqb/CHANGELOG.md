@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.21
+
+### Patch Changes
+
+- afdd377a: Block the database adapter after a test transaction is rolled back together with open inner ones, so that the following tests that use it fail instead of running without isolation (#798).
+
 ## 0.73.20
 
 ### Patch Changes
