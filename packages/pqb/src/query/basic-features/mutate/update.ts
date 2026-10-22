@@ -51,6 +51,7 @@ import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-q
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { RefExpression } from '../../expressions/ref-expression';
+import { QueryHasRowVersions } from '../select/row-versions';
 
 export interface UpdateSelf
   extends
@@ -107,11 +108,12 @@ export type UpdateArg<T extends UpdateSelf> = T['__hasWhere'] extends true
 
 // `update` and `updateOrThrow` methods output type.
 // Unless something was explicitly selected on the query, it's returning the count of updated records.
-type UpdateResult<T extends UpdateSelf> = T['__hasSelect'] extends true
-  ? T
-  : T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsRowCountMany<T>
-    : SetQueryReturnsRowCount<T>;
+type UpdateResult<T extends UpdateSelf> = QueryHasRowVersions &
+  (T['__hasSelect'] extends true
+    ? T
+    : T['returnType'] extends undefined | 'all'
+      ? SetQueryReturnsRowCountMany<T>
+      : SetQueryReturnsRowCount<T>);
 
 export type NumericColumns<T extends UpdateSelf> = {
   [K in keyof T['__inputType']]: Exclude<
@@ -169,13 +171,14 @@ type UpdateManyByData<T extends UpdateSelf, K> = ({
 })[];
 
 // Return type for updateMany/updateManyBy — mirrors InsertManyResult
-type UpdateManyResult<T extends UpdateSelf> = T['__hasSelect'] extends true
-  ? T['returnType'] extends 'one' | 'oneOrThrow'
-    ? SetQueryReturnsAllResult<T, T['result']>
-    : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetQueryReturnsPluckColumnResult<T, T['result']>
-      : SetQueryResult<T, T['result']>
-  : SetQueryReturnsRowCountMany<T>;
+type UpdateManyResult<T extends UpdateSelf> = QueryHasRowVersions &
+  (T['__hasSelect'] extends true
+    ? T['returnType'] extends 'one' | 'oneOrThrow'
+      ? SetQueryReturnsAllResult<T, T['result']>
+      : T['returnType'] extends 'value' | 'valueOrThrow'
+        ? SetQueryReturnsPluckColumnResult<T, T['result']>
+        : SetQueryResult<T, T['result']>
+    : SetQueryReturnsRowCountMany<T>);
 
 const _queryUpdateMany = <T extends UpdateSelf>(
   self: T,
@@ -566,6 +569,44 @@ export class QueryUpdate {
    * ```
    *
    * If the table has `updatedAt` [timestamp](/guide/common-column-methods.html#timestamps), it will be updated even for an empty data.
+   *
+   * ### old and new values
+   *
+   * On PostgreSQL 18+, `select` placed after `update` can return column values from before and after the update, using `old.` and `new.` prefixes:
+   *
+   * ```ts
+   * const result = await db.user
+   *   .find(1)
+   *   .update({ name: 'new name' })
+   *   .select({ oldName: 'old.name', newName: 'new.name' });
+   * // { oldName: 'old name', newName: 'new name' }
+   * ```
+   *
+   * Columns without a prefix return new values.
+   * Without an alias, `old.name` is returned under the `name` key, so use different aliases to select both versions of the same column.
+   *
+   * Use `old.*` and `new.*` to return nested objects with the table's default columns:
+   *
+   * ```ts
+   * const result = await db.user
+   *   .find(1)
+   *   .update({ name: 'new name' })
+   *   .select('name', { fullOld: 'old.*', fullNew: 'new.*' });
+   * // {
+   * //   name: 'new name',
+   * //   fullOld: { id: 1, name: 'old name', ... },
+   * //   fullNew: { id: 1, name: 'new name', ... },
+   * // }
+   * ```
+   *
+   * Without aliases, the objects are returned under the `old` and `new` keys.
+   * Columns marked with `select(false)` are excluded from these objects and can be selected explicitly, for example as `old.password`.
+   *
+   * Relations and computed columns cannot be prefixed and are not included in `old.*` and `new.*`.
+   * If the table, or a table joined before `select`, is named or aliased `old` or `new`, the prefix refers to that table.
+   * A table joined after `select` doesn't change what the prefixes refer to.
+   *
+   * When there are no columns to update, the update is [turned into a `SELECT`](/guide/update#empty-set), and both prefixes return the current values.
    *
    * @param arg - data to update records with, may have specific values, raw SQL, queries, or callbacks with sub-queries.
    */
