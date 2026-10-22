@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.32
+
+### Patch Changes
+
+- 615648f0: Add the `teardownTimeout` option to `testTransaction.hooks`: a rollback or a close that doesn't end in time rejects and blocks the database adapter, so that the test run fails instead of waiting behind a stuck teardown (#798).
+- Updated dependencies [615648f0]
+  - pqb@0.73.22
+  - rake-db@2.37.34
+
 ## 1.78.31
 
 ### Patch Changes
