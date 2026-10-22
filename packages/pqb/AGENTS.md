@@ -98,6 +98,30 @@ Exercise these orders with test transactions of separate instances:
   back: the start must reject, and queries of an instance without a test
   transaction must not reach its wrapper.
 
+A rollback with open or starting inner test transactions (a cascade) blocks the
+shared adapter for good: the late code of the test that lost its test
+transaction may reach any test transaction on that adapter. Decide the block
+synchronously when `rollback()` is called, not in its turn of the queue, and
+keep the first error in the state shared by the instances of the adapter.
+
+The block cancels every start whose transaction hasn't started, including one
+whose `BEGIN` or `SAVEPOINT` is in flight: a start leaves that set only once its
+transaction has started or its start has failed. It binds the methods of the
+shared adapter to a rejecting target at once, also when no wrapper routes them.
+Wrappers check the block as well, since `withOptions` scopes keep them.
+
+Never unblock: `detach` on a blocked adapter rebinds nothing, and `close` keeps
+the block. A start on a blocked adapter is recorded on the stack and cancelled,
+so that the paired `rollback` discards it rather than rolling back an outer test
+transaction.
+
+Exercise the block with a cascade of another instance after the root was rolled
+back: queries of an instance without a test transaction must reject, and so must
+a root start paused in its turn before its transaction begins. Exercise an inner
+start whose `SAVEPOINT` is in flight at the rollback, a start waiting in the
+queue, which rejects at once, and a `withOptions` scope that outlives the
+block.
+
 A level's rollback first waits for the queries and savepoints in flight through
 the wrapper, including a `hackySavepoint` until it is released or rolled back,
 since SQL they send later (the restore of the SQL session context, `RELEASE`)

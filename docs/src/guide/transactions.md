@@ -420,11 +420,18 @@ The functions returned by `testTransaction.hooks` handle such hooks:
 - They wait for a `setup` that is still running, so that its data is rolled back rather than written after the rollback.
   Create data for a `describe` in the `setup` rather than in a separate `beforeAll`.
 - A rollback waits for the queries that are in flight, so that they finish inside their test transaction.
-- When a test transaction is rolled back while test transactions started inside it are still open, they are rolled back as well, and `rollback` rejects with a `TestTransactionError`.
-  It means that a test transaction was left open unexpectedly, usually by a hook or a test that didn't finish in time. The isolation of the following tests can't be trusted then: treat this error as fatal and stop the test run, the hooks only report it.
+- When a test transaction is rolled back while test transactions started inside it are still open or starting, the open ones are rolled back as well, and the starting ones are cancelled.
+  `rollback` rejects with a `TestTransactionError` of kind `innerOpen`, or with a database error if the rollback itself fails.
+  It means that a test transaction was left open unexpectedly, usually by a hook or a test that didn't finish in time, and the isolation of the following tests can't be trusted.
+  From then on, `db` is blocked until the process ends, and so are other instances sharing its adapter.
+  Their queries, transactions, and test transactions reject with a `TestTransactionError` of kind `blocked`, whose `cause` is the first `innerOpen` error, so the following tests that use them fail with that cause.
+  `close` still closes `db`.
+  The block doesn't stop the test runner: treat this error as fatal and stop the test run, for example with the `bail` option of the runner.
+  When the runner shares modules between test files, as Bun does by default, `db` stays blocked in the remaining files.
 - Queries that reach the outermost test transaction once its rollback is called, such as queries of a `$withOptions` callback that outlived it, reject with a `TestTransactionError` instead of running outside of a transaction.
 
-The hooks don't stop a test or a hook that keeps running, and don't make its late queries safe in general: a query issued after its test transaction was rolled back runs in whichever test transaction is open at that moment.
+The hooks don't stop a test or a hook that keeps running, and don't make its late queries safe in general.
+Unless a query issued after its test transaction was rolled back is rejected as described above, it may run in whichever test transaction is open at that moment, or outside of a transaction.
 
 ### start, rollback, and close
 
@@ -441,7 +448,9 @@ afterEach(async () => {
 ```
 
 - `testTransaction.rollback(db)` rolls back the latest started test transaction, and `testTransaction.close(db)` also closes `db` when no test transaction is left open.
-- `testTransaction.start` resolves with the started test transaction, its `rollback()` and `close()` target that test transaction. `start` accepts a `signal` to cancel the start before its transaction has started.
+- `testTransaction.start` resolves with the started test transaction, its `rollback()` and `close()` target that test transaction.
+  `start` accepts a `signal` to cancel the start before its transaction has started.
+  A rollback of a test transaction with open inner ones rolls them back as well and blocks `db`, see [timed-out hooks](#timed-out-hooks).
 
 ## transaction options
 
