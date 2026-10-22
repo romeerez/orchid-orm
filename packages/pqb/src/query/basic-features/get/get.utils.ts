@@ -1,7 +1,7 @@
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { Operators, setQueryOperators } from '../../../columns/operators';
 import { getFullColumnTable } from '../../query.utils';
-import { Column, setColumnData } from '../../../columns';
+import { Column } from '../../../columns';
 import {
   PickQueryQ,
   PickQueryRelationsWithData,
@@ -12,6 +12,7 @@ import {
 import { Expression, isExpression } from '../../expressions/expression';
 import {
   IsQuery,
+  isQuery,
   Query,
   SetQueryReturnsColumnOptional,
   SetQueryReturnsColumnOrThrow,
@@ -53,12 +54,20 @@ export type GetResult<
   ? SetQueryReturnsValueOrThrow<T, Arg>
   : SetQueryReturnsColumnOrThrow<T, ResolveGetArgColumn<Arg>>;
 
+// the value column of `getOptional`: when selected inside another query, a not found record gives `undefined`
+type OptionalValueColumn<C> = {
+  [K in keyof C]: K extends '__outputType' ? C[K] | undefined : C[K];
+};
+
 export type GetResultOptional<
   T extends QueryGetSelf,
   Arg extends GetArg<T>,
 > = Arg extends string
   ? SetQueryReturnsValueOptional<T, Arg>
-  : SetQueryReturnsColumnOptional<T, ResolveGetArgColumn<Arg>>;
+  : SetQueryReturnsColumnOptional<
+      T,
+      OptionalValueColumn<ResolveGetArgColumn<Arg>>
+    >;
 
 export const _getSelectableColumn = (
   q: IsQuery,
@@ -115,11 +124,18 @@ const _get = <
     returnType,
   );
   if (selected !== false) {
-    // a selected sub-query wraps its own value into an array, the value of this query isn't wrapped
-    q.getColumn = column = selected?.data.valueToArray
-      ? setColumnData(selected, 'valueToArray', undefined)
-      : selected;
     value = selectAs.v || value;
+    const subQuery = isQuery(value);
+    // the value of a selected nested query is wrapped into an array by that query, not by this one
+    if (selected && (subQuery || selected.data.valueToArray)) {
+      column = Object.create(selected) as Column;
+      column.data = { ...selected.data, valueToArray: undefined };
+      // an aggregate sub-query always returns a row, but this query can find no record
+      if (subQuery) column.data.skipValueToArray = undefined;
+    } else {
+      column = selected;
+    }
+    q.getColumn = column;
   }
 
   if (typeof value === 'string') {

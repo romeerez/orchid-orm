@@ -196,7 +196,7 @@ describe('select-sub-query value', () => {
         `
           SELECT
             (
-              SELECT (SELECT count(*) FROM "schema"."user" "User") "v"
+              SELECT array[(SELECT count(*) FROM "schema"."user" "User")] "v"
               FROM "schema"."user" "User"
               LIMIT 1
             ) "count",
@@ -245,9 +245,43 @@ describe('select-sub-query value', () => {
       });
       expect(relation).toEqual([{ value: undefined }]);
 
+      // an aggregate sub-query always returns a row, but the record of the outer query is not found
+      const aggregate = await db.user.select({
+        optional: () => none.getOptional(() => db.user.count()),
+        relation: (q) => q.profile.getOptional(() => db.user.count()),
+        transformed: () =>
+          none
+            .getOptional(() => db.user.count())
+            .transform((n) => (n === undefined ? -1 : n)),
+        foundNull: () => db.user.getOptional(() => none.sum('Age')),
+      });
+      assertType<
+        typeof aggregate,
+        {
+          optional: number | undefined;
+          relation: number | undefined;
+          transformed: number;
+          foundNull: string | null | undefined;
+        }[]
+      >();
+      expect(aggregate).toEqual([
+        {
+          optional: undefined,
+          relation: undefined,
+          transformed: -1,
+          foundNull: null,
+        },
+      ]);
+
       await expect(
         db.user.select({
           value: () => none.get(() => db.user.getOptional('Age')),
+        }),
+      ).rejects.toThrow(NotFoundError);
+
+      await expect(
+        db.user.select({
+          value: () => none.get(() => db.user.count()),
         }),
       ).rejects.toThrow(NotFoundError);
     });
@@ -339,6 +373,26 @@ describe('select-sub-query value', () => {
       assertType<typeof result, string[]>();
 
       expect(result).toEqual([UserData.Name, undefined]);
+    });
+
+    it('should return undefined for an aggregate sub-query value of a missing relation', async () => {
+      await db.user.insertMany([
+        {
+          ...UserData,
+          profile: { create: {} },
+        },
+        UserData,
+      ]);
+
+      const q = db.user
+        .order('Id')
+        .pluck((q) => q.profile.getOptional(() => db.user.count()));
+
+      const result = await q;
+
+      assertType<typeof result, (number | undefined)[]>();
+
+      expect(result).toEqual([2, undefined]);
     });
 
     it('should resolve any aggregations to null, because aggregations always return null', async () => {

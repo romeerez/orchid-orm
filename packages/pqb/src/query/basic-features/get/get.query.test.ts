@@ -185,6 +185,26 @@ describe('get', () => {
 
       expect(result).toBe(0);
     });
+
+    it('should not wrap a value of a nested value query into an array again', () => {
+      const q = db.user
+        .from(db.user.select({ nickname: () => db.user.get('Name') }))
+        .get('nickname');
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "User"."nickname"
+          FROM (
+            SELECT (
+              SELECT array["User"."name"] FROM "schema"."user" "User" LIMIT 1
+            ) "nickname"
+            FROM "schema"."user" "User"
+          ) "User"
+          LIMIT 1
+        `,
+      );
+    });
   });
 
   describe('getOptional', () => {
