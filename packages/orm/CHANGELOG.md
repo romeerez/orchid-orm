@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.36
+
+### Patch Changes
+
+- 0a160f3c: Block the database adapter when a test transaction is rolled back while a transaction started inside it is still open (#798)
+- Updated dependencies [0a160f3c]
+  - pqb@0.73.26
+  - rake-db@2.37.38
+
 ## 1.78.35
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.26
+
+### Patch Changes
+
+- 0a160f3c: Block the database adapter when a test transaction is rolled back while a transaction started inside it is still open (#798)
+
 ## 0.73.25
 
 ### Patch Changes
