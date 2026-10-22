@@ -230,6 +230,7 @@ After-commit hooks have a guarantee that the transaction, or a single query, fin
 If no records were updated or deleted, the `afterUpdateCommit` and `afterDeleteCommit` hooks **won't** run.
 
 `afterCommit` hooks run **after** transaction, even if they are synchronous. Transaction logic does not wait for `afterCommit` hook to finish.
+A rollback of a test transaction waits for running hooks, see [after-commit hooks in tests](/guide/transactions#after-commit-hooks-in-tests).
 
 If you'd like to handle `afterCommit` function errors, use try/catch inside the hooks,
 or consider [catchAfterCommitError](#catchAfterCommitError) that will catch an error for any of the `afterCommit` hooks attached to the current query.

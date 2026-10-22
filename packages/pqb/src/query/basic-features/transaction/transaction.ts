@@ -1,5 +1,7 @@
+import { types } from 'node:util';
 import { Query } from '../../query';
 import {
+  Adapter,
   AfterCommitStandaloneHook,
   SqlSessionState,
   TransactionAdapter,
@@ -10,6 +12,7 @@ import { PickQueryQAndInternal } from '../../pick-query-types';
 import { _clone } from '../clone/clone';
 import { AsyncState, processStorageOptions } from '../storage/storage';
 import { QuerySchema } from '../schema/schema';
+import { startAfterCommitRun } from '../../../testTransaction';
 
 export interface AsyncTransactionState extends AsyncState {
   transactionAdapter: TransactionAdapter;
@@ -126,28 +129,59 @@ export type AfterCommitErrorHandler = (
   error: AfterCommitError,
 ) => void | Promise<void>;
 
+/**
+ * Wait for the results of after-commit hooks, and handle their errors.
+ * `end` ends the run of the hooks registered by `startAfterCommitRun`.
+ */
 export const _runAfterCommitHooks = async (
   result: unknown,
   promises: unknown[],
   getHookNames: () => string[],
   catchAfterCommitErrors: AfterCommitErrorHandler[] | undefined,
+  end: (() => void) | undefined,
 ) => {
-  const hookResults = await Promise.allSettled(promises);
-  if (hookResults.some((result) => result.status === 'rejected')) {
-    const hookNames = getHookNames();
+  try {
+    const hookResults = await Promise.allSettled(promises);
+    if (hookResults.some((result) => result.status === 'rejected')) {
+      const hookNames = getHookNames();
 
-    for (const [i, r] of hookResults.entries()) {
-      (r as AfterCommitErrorResult).name = hookNames[i];
+      for (const [i, r] of hookResults.entries()) {
+        (r as AfterCommitErrorResult).name = hookNames[i];
+      }
+
+      const err = new AfterCommitError(result, hookResults);
+      if (!catchAfterCommitErrors) throw err;
+
+      for (const fn of catchAfterCommitErrors) {
+        try {
+          fn(err);
+        } catch {}
+      }
     }
+  } finally {
+    end?.();
+  }
+};
 
-    const err = new AfterCommitError(result, hookResults);
-    if (!catchAfterCommitErrors) throw err;
+// Run a standalone after-commit hook, registered for test transactions until the promise it returns settles.
+// A throw stays uncaught and a rejection unhandled; a rejection handled elsewhere becomes unhandled as well, as documented.
+const runAfterCommitHook = (
+  adapter: Adapter,
+  hook: AfterCommitStandaloneHook,
+) => {
+  const end = startAfterCommitRun(adapter);
+  if (!end) {
+    hook();
+    return;
+  }
 
-    for (const fn of catchAfterCommitErrors) {
-      try {
-        fn(err);
-      } catch {}
-    }
+  let result: unknown;
+  try {
+    result = hook();
+  } finally {
+    // `isPromise` tells native promises of other realms too, such as those of test runners
+    if (types.isPromise(result)) result.finally(end);
+    else end();
   }
 };
 
@@ -384,13 +418,16 @@ export class QueryTransaction {
    *
    * If the callback has no `try/catch` and throws an error,
    * this will cause `uncaughtException` if the callback is sync and `unhandledRejection` if it is async.
+   *
+   * While a test transaction is open, a hook added outside of a transaction causes `unhandledRejection` when its returned promise rejects, even when that promise is handled elsewhere.
    */
   afterCommit(this: Query, hook: AfterCommitStandaloneHook): void {
     const trx = this.internal.asyncStorage.getStore();
     if (isInUserTransaction(trx)) {
       (trx.afterCommit ??= []).push(hook);
     } else {
-      queueMicrotask(hook);
+      const { adapter } = this.q;
+      queueMicrotask(() => runAfterCommitHook(adapter, hook));
     }
   }
 

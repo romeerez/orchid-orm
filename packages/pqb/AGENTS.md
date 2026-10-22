@@ -65,12 +65,13 @@ it as the adapter of its new state, and existing states keep theirs. Tell the
 new state by comparing it with the state before the call: with wrappers of
 nested instances, an existing state also holds the adapter passed to the
 callback. The wrapper rejects queries, transactions, and savepoints once the
-rollback of its test transaction is called. The levels' own starts, rollbacks,
-and cleanup must bypass it: nested levels start through
-`db.transaction`, and the wrapper recognizes their callbacks. A test transaction
-of another instance sharing the adapter is a transaction of the tested code for
-it: bypassed, it would start inside a root whose rollback is called, and end
-after that root restored the adapter, binding the adapter back to the wrapper.
+rollback of its test transaction is called and the after-commit hooks running at
+that moment have ended. The levels' own starts, rollbacks, and cleanup must
+bypass it: nested levels start through `db.transaction`, and the wrapper
+recognizes their callbacks. A test transaction of another instance sharing the
+adapter is a transaction of the tested code for it: bypassed, it would start
+inside a root whose rollback is called, and end after that root restored the
+adapter, binding the adapter back to the wrapper.
 
 The root test transaction is the outermost one on the connection. It keeps the
 adapter methods it replaced and the wrappers of other instances started inside
@@ -129,7 +130,31 @@ would run after the rollback, on the outer level or on the reused connection of
 the next test transaction. Every `hackySavepoint` must be released or rolled
 back, also when a later query of its batch fails, or that rollback never ends.
 Never wait for callbacks of transactions of the tested code: the code of a
-timed-out test may never end them.
+timed-out test may never end them. Runs of after-commit hooks are the one
+exception, see below.
+
+A level's rollback also waits for registered runs of after-commit hooks across
+instances sharing the adapter, including hooks started by those runs: a test
+ending right after a query with such a hook is the normal case. Register a run
+inside the microtask that calls the hooks, right before calling them: fake
+timers replace `queueMicrotask`, and a hook may call the rollback at once. Keep
+the registration in the state of test transactions shared by the adapter, active
+while any of its instances has a live test transaction; the places that run
+hooks only call into it. Preserve after-commit error handling:
+`catchAfterCommitError` may handle hook failures, but otherwise unhandled
+rejections must remain visible.
+
+Until those hooks end, the wrapper of the outermost level keeps accepting
+queries. While a level of any depth is rolling back, the wrapper of its instance
+rejects starts of test transactions of other instances that pass through it,
+also when their callback resumes later; starts that bypass the wrapper are not
+covered. `teardownTimeout` bounds the wait only for `testTransaction.hooks`; a
+direct rollback waits for a hook that never ends.
+
+Exercise each place that runs hooks, hooks started by a hook (start the second
+query a turn of the event loop after the first hook ended, or a single wait lets
+the rollback go first), and the rollback of a nested level with a start of
+another instance.
 
 Exercise the wait under all three adapters with a `withOptions({ setConfig })`
 query in flight at the rollback of a test transaction on a pool of one
@@ -179,6 +204,9 @@ together, with a late failure of the teardown, which the test runner reports
 when it is left unhandled, and with fake timers enabled before the call. Hold
 the work past the limit on controlled promises or a `pg_sleep` query rather than
 racing a real teardown against a short limit.
+
+Keep the testTransaction guide to usage and outcomes; put guarantees and edge
+cases in the JSDoc and here.
 
 Queries of test bodies carry no async context and cannot be attributed to a test
 transaction: do not reject a query by the test transaction it came from.
