@@ -27,6 +27,48 @@ describe('custom type column', () => {
     assertType<Awaited<typeof number>, number>();
   });
 
+  it('should preserve nullability when parsing custom types and domains', () => {
+    const table = testDb('table', (t) => ({
+      value: t.type('custom').parse(String),
+      unparsed: t.type('custom'),
+      identity: t.type('custom').parse((input) => {
+        assertType<typeof input, NonNullable<unknown>>();
+        return input;
+      }),
+      nullableBefore: t.type('custom').nullable().parse(String),
+      nullableAfter: t.type('custom').parse(String).nullable(),
+      parsedNullBefore: t.type('custom').parseNull(() => false).parse(String),
+      parsedNullAfter: t.type('custom').parse(String).parseNull(() => false),
+      nullableParsedNull: t
+        .type('custom')
+        .nullable()
+        .parse(String)
+        .parseNull(() => false),
+      domain: t.domain('custom').parse(String),
+      nullableDomain: t.domain('custom').nullable().parse(String),
+    }));
+
+    assertType<
+      Awaited<typeof table>,
+      {
+        value: string;
+        unparsed: unknown;
+        identity: NonNullable<unknown>;
+        nullableBefore: string | null;
+        nullableAfter: string | null;
+        parsedNullBefore: string;
+        parsedNullAfter: string;
+        nullableParsedNull: string | boolean;
+        domain: string;
+        nullableDomain: string | null;
+      }[]
+    >();
+
+    // @ts-expect-error A non-nullable parsed custom type cannot output null.
+    const value: Awaited<typeof table>[number]['value'] = null;
+    void value;
+  });
+
   it('should accept value of `as` type', () => {
     const table = testDb('table', (t) => ({
       string: t.type('domainName').as(t.text()).primaryKey(),
