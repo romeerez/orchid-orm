@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.27
+
+### Patch Changes
+
+- 3df6576c: Fix `get` and `getOptional` of an aggregate sub-query inside `select` when the record is not found (#832)
+
 ## 0.73.26
 
 ### Patch Changes
