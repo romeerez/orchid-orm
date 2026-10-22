@@ -103,10 +103,7 @@ export const loadRelations = async (
   const relationsResult = (await maybeWrappedThen.call(
     selectQuery,
     undefined,
-    async (err) => {
-      await savepointState?.activeSavepoint?.rollback(err);
-      throw err;
-    },
+    undefined,
     savepointState,
   )) as RecordUnknown[];
 

@@ -1,6 +1,8 @@
 import {
   assertType,
   db,
+  PostData,
+  sql,
   testAdapter,
   testDb,
   UserData,
@@ -16,6 +18,7 @@ import { createDbWithAdapter } from '../db';
 import { NotFoundError, QueryError } from '../errors';
 import { noop } from '../../utils';
 import { AsyncState } from '../basic-features/storage/storage';
+import { testTransaction } from '../../testTransaction';
 
 const setMaxBindingParams = (value: number) => {
   (MAX_BINDING_PARAMS as unknown as { value: number }).value = value;
@@ -135,6 +138,71 @@ describe('then', () => {
       savepoint.mockRestore();
       expect(names).toHaveLength(2);
       expect(names[0]).not.toBe(names[1]);
+    });
+
+    describe('mutation with a selected relation', () => {
+      const createPost = () =>
+        db.post.get('Id').create({ ...PostData, user: { create: UserData } });
+
+      it('should release the savepoint after loading the relation', async () => {
+        const id = await createPost();
+        const trx = await testTransaction.start(db);
+
+        try {
+          const res = await db.post
+            .find(id)
+            .select({ user: (q) => q.user.select('Name') })
+            .update({ Body: 'updated' })
+            .catchUniqueError(() => 'caught');
+
+          expect(res).toEqual({ user: { Name: UserData.Name } });
+        } finally {
+          // the rollback waits for the savepoint until it is released
+          await trx.rollback();
+        }
+      });
+
+      it('should roll back the savepoint when the relation query fails', async () => {
+        const id = await createPost();
+
+        const res = await db.$transaction(async () => {
+          const res = await db.post
+            .find(id)
+            .select({
+              user: (q) =>
+                q.user.select({
+                  failing: sql`1 / 0`.type((t) => t.integer()),
+                }),
+            })
+            .update({ Body: 'updated' })
+            .catch(() => 'caught');
+
+          return [res, await db.post.get('Body').find(id)];
+        });
+
+        expect(res).toEqual(['caught', PostData.Body]);
+      });
+
+      it('should roll back the savepoint when the code between the queries fails', async () => {
+        const id = await createPost();
+        const trx = await testTransaction.start(db);
+
+        try {
+          const res = await db.post
+            .find(id)
+            .select({ user: (q) => q.user.select('Name') })
+            .afterUpdate([], () => {
+              throw new Error('hook');
+            })
+            .update({ Body: 'updated' })
+            .catch((err) => (err as Error).message);
+
+          expect(res).toBe('hook');
+          expect(await db.post.get('Body').find(id)).toBe(PostData.Body);
+        } finally {
+          await trx.rollback();
+        }
+      });
     });
   });
 
