@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.34
+
+### Patch Changes
+
+- 3c6f3286: Fix a test transaction rollback hanging after a caught create or update that selects a relation (#798)
+- Updated dependencies [3c6f3286]
+  - pqb@0.73.24
+  - rake-db@2.37.36
+
 ## 1.78.33
 
 ### Patch Changes

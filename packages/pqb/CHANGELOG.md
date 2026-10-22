@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.24
+
+### Patch Changes
+
+- 3c6f3286: Fix a test transaction rollback hanging after a caught create or update that selects a relation (#798)
+
 ## 0.73.23
 
 ### Patch Changes
