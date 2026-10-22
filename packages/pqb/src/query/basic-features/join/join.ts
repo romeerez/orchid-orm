@@ -34,7 +34,7 @@ import {
   setObjectValueImmutable,
 } from '../../../utils';
 import { getQueryAs } from '../as/as';
-import { Expression } from '../../expressions/expression';
+import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import {
   prepareSubQueryForSql,
@@ -817,27 +817,39 @@ export const _joinLateral = (
     joinQuery.q.returnType === 'valueOrThrow';
 
   let joinValueAs: string | undefined;
-  let joinValueSelect: SelectItem | undefined;
+  let joinValueSelect: SelectAsValue[string];
   let existingValue: JoinValueDedupItem | undefined;
 
   if (joinValue) {
-    const map = query.q.joinValueDedup
-      ? new Map(query.q.joinValueDedup)
-      : new Map<string, JoinValueDedupItem>();
-    query.q.joinValueDedup = map;
-
     const select = joinQuery.q.select as SelectItem[];
-    joinValueSelect = select[0];
-    joinQuery.q.select = [];
-    const dedupKey = getSqlText(joinQuery.toSQL());
-    joinQuery.q.select = select;
+    const item = select[0];
+    // `get` of a sub-query selects it under an alias, unwrap it to select under the join alias
+    joinValueSelect =
+      item && typeof item === 'object' && 'selectAs' in item
+        ? Object.values(item.selectAs)[0]
+        : item;
 
-    existingValue = map.get(dedupKey);
-    if (existingValue) {
-      joinValueAs = existingValue.a as string;
-    } else {
+    // the joined query wraps a sub-query value into an array by its own `getColumn`,
+    // so a sub-query value can't share a join of another query
+    if (typeof joinValueSelect === 'object' && !isExpression(joinValueSelect)) {
       joinValueAs = joinAs;
-      map.set(dedupKey, { q: joinQuery, a: as });
+    } else {
+      const map = query.q.joinValueDedup
+        ? new Map(query.q.joinValueDedup)
+        : new Map<string, JoinValueDedupItem>();
+      query.q.joinValueDedup = map;
+
+      joinQuery.q.select = [];
+      const dedupKey = getSqlText(joinQuery.toSQL());
+      joinQuery.q.select = select;
+
+      existingValue = map.get(dedupKey);
+      if (existingValue) {
+        joinValueAs = existingValue.a as string;
+      } else {
+        joinValueAs = joinAs;
+        map.set(dedupKey, { q: joinQuery, a: as });
+      }
     }
   }
 
@@ -895,7 +907,7 @@ export const _joinLateral = (
           selectAs: {
             ...((existingValue.q.q.select![0] as SelectAs)
               .selectAs as SelectAsValue),
-            [joinAs]: joinValueSelect as never,
+            [joinAs]: joinValueSelect,
           },
         },
       ];
@@ -903,9 +915,7 @@ export const _joinLateral = (
       return joinValueAs;
     }
 
-    joinQuery.q.select = [
-      { selectAs: { [joinValueAs]: joinValueSelect as string } },
-    ];
+    joinQuery.q.select = [{ selectAs: { [joinValueAs]: joinValueSelect } }];
   }
 
   pushQueryValueImmutable(query, 'join', {

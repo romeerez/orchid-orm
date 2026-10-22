@@ -502,6 +502,8 @@ const pushSubQuerySql = (
   ctx: ToSQLCtx,
   mainQuery: {
     joinedShapes?: QueryData['joinedShapes'];
+    returnType?: QueryData['returnType'];
+    getColumn?: Column;
   },
   query: SubQueryForSql,
   as: string,
@@ -537,7 +539,7 @@ const pushSubQuerySql = (
       default:
         throw new UnhandledTypeError(query, returnType);
     }
-    list.push(`${sql} "${as}"`);
+    list.push(`${wrapSubQueryValueToArray(mainQuery, sql)} "${as}"`);
     aliases?.push(as);
     return;
   }
@@ -571,7 +573,12 @@ const pushSubQuerySql = (
     }
 
     if (sql) {
-      list.push(`${coalesce(ctx, query, sql, quotedAs)} "${as}"`);
+      list.push(
+        `${wrapSubQueryValueToArray(
+          mainQuery,
+          coalesce(ctx, query, sql, quotedAs),
+        )} "${as}"`,
+      );
       aliases?.push(as);
     }
     return;
@@ -621,14 +628,26 @@ const pushSubQuerySql = (
   }
 
   list.push(
-    `${coalesce(
-      ctx,
-      query,
-      `(${moveMutativeQueryToCte(ctx, query)})`,
-      quotedAs,
+    `${wrapSubQueryValueToArray(
+      mainQuery,
+      coalesce(ctx, query, `(${moveMutativeQueryToCte(ctx, query)})`, quotedAs),
     )} "${as}"`,
   );
 };
+
+// a nested single-value query wraps its selected sub-query like it wraps an expression
+const wrapSubQueryValueToArray = (
+  mainQuery: {
+    returnType?: QueryData['returnType'];
+    getColumn?: Column;
+  },
+  sql: string,
+) =>
+  (mainQuery.returnType === 'value' ||
+    mainQuery.returnType === 'valueOrThrow') &&
+  mainQuery.getColumn?.data.valueToArray
+    ? `array[${sql}]`
+    : sql;
 
 const coalesce = (
   ctx: ToSQLCtx,

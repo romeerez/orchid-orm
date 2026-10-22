@@ -157,6 +157,21 @@ describe('get', () => {
       );
     });
 
+    it('should select a relation sub-query value from a callback', async () => {
+      await db.user.create({
+        ...UserData,
+        profile: { create: ProfileData },
+      });
+
+      const q = db.user.get((q) => q.profile.get(() => db.user.get('Name')));
+
+      const result = await q;
+
+      assertType<typeof result, string>();
+
+      expect(result).toBe(UserData.Name);
+    });
+
     it('should throw if not found', async () => {
       await expect(() => db.user.get('Id')).rejects.toThrow(NotFoundError);
     });

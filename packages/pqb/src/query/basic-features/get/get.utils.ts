@@ -1,7 +1,7 @@
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { Operators, setQueryOperators } from '../../../columns/operators';
 import { getFullColumnTable } from '../../query.utils';
-import { Column } from '../../../columns';
+import { Column, setColumnData } from '../../../columns';
 import {
   PickQueryQ,
   PickQueryRelationsWithData,
@@ -115,7 +115,10 @@ const _get = <
     returnType,
   );
   if (selected !== false) {
-    q.getColumn = column = selected;
+    // a selected sub-query wraps its own value into an array, the value of this query isn't wrapped
+    q.getColumn = column = selected?.data.valueToArray
+      ? setColumnData(selected, 'valueToArray', undefined)
+      : selected;
     value = selectAs.v || value;
   }
 
