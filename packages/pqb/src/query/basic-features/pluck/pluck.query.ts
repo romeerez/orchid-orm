@@ -1,8 +1,7 @@
-import { Query, SetQueryReturnsPluck } from '../../query';
+import { isQuery, Query, SetQueryReturnsPluck } from '../../query';
 import { QueryThen } from '../../then/then';
 import {
   Expression,
-  isExpression,
   SelectableOrExpression,
 } from '../../expressions/expression';
 import {
@@ -75,10 +74,7 @@ export class QueryPluck {
     if (item !== false) {
       q.q.getColumn = item;
 
-      selected =
-        typeof selectAs.pluck === 'object' && !isExpression(selectAs.pluck)
-          ? { selectAs }
-          : selectAs.pluck;
+      selected = isQuery(selectAs.pluck) ? { selectAs } : selectAs.pluck;
     }
 
     q.q.select = selected ? [selected as never] : undefined;

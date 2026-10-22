@@ -1,5 +1,6 @@
 import {
   IsQuery,
+  isQuery,
   Query,
   QuerySelectable,
   SelectableFromShape,
@@ -34,7 +35,7 @@ import {
   setObjectValueImmutable,
 } from '../../../utils';
 import { getQueryAs } from '../as/as';
-import { Expression, isExpression } from '../../expressions/expression';
+import { Expression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import {
   prepareSubQueryForSql,
@@ -831,7 +832,7 @@ export const _joinLateral = (
 
     // the joined query wraps a sub-query value into an array by its own `getColumn`,
     // so a sub-query value can't share a join of another query
-    if (typeof joinValueSelect === 'object' && !isExpression(joinValueSelect)) {
+    if (isQuery(joinValueSelect)) {
       joinValueAs = joinAs;
     } else {
       const map = query.q.joinValueDedup
