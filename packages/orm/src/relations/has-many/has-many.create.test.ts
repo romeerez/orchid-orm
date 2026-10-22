@@ -1274,6 +1274,7 @@ describe('hasMany create', () => {
 
         const created = await db.message
           .whereNot({ Id: { in: ids } })
+          .order('Id')
           .select('Id');
         expect(beforeCreate).toHaveBeenCalledTimes(1);
         expect(afterCreate).toHaveBeenCalledTimes(1);
