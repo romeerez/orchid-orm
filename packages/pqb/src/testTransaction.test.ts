@@ -1442,4 +1442,213 @@ describe('testTransaction', () => {
       await (await next).close();
     });
   });
+
+  describe('teardownTimeout', () => {
+    const teardownTimeout = {
+      kind: 'teardownTimeout',
+      message: "Test transaction teardown didn't end within 20 ms",
+    };
+
+    it('should throw for a teardownTimeout that `setTimeout` does not support', () => {
+      for (const value of [0, -1, NaN, Infinity, 2 ** 31]) {
+        expect(() =>
+          testTransaction.hooks(db, { teardownTimeout: value }),
+        ).toThrow(RangeError);
+      }
+    });
+
+    it('should block the adapter when the rollback waits for a query longer than the teardownTimeout', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const hooks = testTransaction.hooks(localDb, { teardownTimeout: 20 });
+      await hooks.start();
+      const query = localDb.query`SELECT pg_sleep(0.2)`;
+
+      const error = await expectTestTransactionError(
+        hooks.rollback(),
+        teardownTimeout,
+      );
+      await expectTestTransactionError(getSetting(localDb), {
+        kind: 'blocked',
+        cause: error,
+      });
+      await expectTestTransactionError(hooks.start(), {
+        kind: 'blocked',
+        cause: error,
+      });
+
+      // the rollback goes on once the query ends
+      await query;
+      await testTransaction.close(localDb);
+    });
+
+    it('should reject when fake timers are enabled before the teardown', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const started = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const hooks = testTransaction.hooks(localDb, {
+        teardownTimeout: 20,
+        async setup() {
+          started.resolve();
+          await release.promise;
+        },
+      });
+      const start = hooks.start();
+      await started.promise;
+
+      jest.useFakeTimers();
+      try {
+        await expectTestTransactionError(hooks.rollback(), teardownTimeout);
+      } finally {
+        jest.useRealTimers();
+      }
+
+      release.resolve();
+      await start;
+      await testTransaction.close(localDb);
+    });
+
+    it('should count the teardownTimeout from the call through all the steps of the teardown', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const started = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const hooks = testTransaction.hooks(localDb, {
+        teardownTimeout: 200,
+        async setup() {
+          started.resolve();
+          await release.promise;
+        },
+      });
+      const start = hooks.start();
+      await started.promise;
+
+      // the wait for the setup and the rollback waiting for a query take 120 ms each, each of them fits in the time on its own
+      const rollback = hooks.rollback();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const query = localDb.query`SELECT pg_sleep(0.12)`;
+      release.resolve();
+      await start;
+
+      await expectTestTransactionError(rollback, {
+        kind: 'teardownTimeout',
+      });
+
+      await query;
+      await testTransaction.close(localDb);
+    });
+
+    it('should not block the adapter after a teardown that ended in time', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const hooks = testTransaction.hooks(localDb, { teardownTimeout: 500 });
+      await hooks.start();
+      await hooks.rollback();
+
+      await new Promise((resolve) => setTimeout(resolve, 550));
+      await hooks.start();
+      expect(await getSetting(localDb)).toBe(null);
+
+      await hooks.close();
+    });
+
+    it('should block the adapter when the transaction of the start begins later than the teardownTimeout', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const { adapter } = localDb.q;
+      const begin = holdNextTransaction(adapter);
+      const hooks = testTransaction.hooks(localDb, { teardownTimeout: 20 });
+      const start = hooks.start().catch((err: unknown) => err);
+      await begin.called;
+
+      const error = await expectTestTransactionError(
+        hooks.rollback(),
+        teardownTimeout,
+      );
+      await expectTestTransactionError(adapter.query('SELECT 1'), {
+        kind: 'blocked',
+        cause: error,
+      });
+
+      // cancelled by the rollback before the timeout
+      begin.release();
+      expect(await start).toMatchObject({ name: 'AbortError' });
+      await testTransaction.close(localDb);
+    });
+
+    it('should block the adapter when closing the connection takes longer than the teardownTimeout', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const { adapter } = localDb.q;
+      const { close } = adapter;
+      const closing = Promise.withResolvers<void>();
+      const closed = closing.promise.then(() => close.call(adapter));
+      jest.spyOn(adapter, 'close').mockReturnValueOnce(closed);
+      const hooks = testTransaction.hooks(localDb, { teardownTimeout: 20 });
+      await hooks.start();
+
+      const error = await expectTestTransactionError(
+        hooks.close(),
+        teardownTimeout,
+      );
+      await expectTestTransactionError(adapter.query('SELECT 1'), {
+        kind: 'blocked',
+        cause: error,
+      });
+
+      closing.resolve();
+      await closed;
+    });
+
+    it('should keep the first cause when the adapter was blocked before the teardownTimeout', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const started = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const hooks = testTransaction.hooks(localDb, {
+        teardownTimeout: 20,
+        async setup() {
+          started.resolve();
+          await release.promise;
+        },
+      });
+      const start = hooks.start();
+      await started.promise;
+      const outer = await testTransaction.start(other);
+      await testTransaction.start(other);
+      const cause = await expectTestTransactionError(
+        outer.rollback(),
+        innerOpen,
+      );
+
+      await expectTestTransactionError(hooks.rollback(), teardownTimeout);
+      await expectTestTransactionError(getSetting(localDb), {
+        kind: 'blocked',
+        cause,
+      });
+
+      release.resolve();
+      await start;
+      await testTransaction.close(localDb);
+    });
+
+    // the test runner fails the test when the late failure is left unhandled
+    it('should ignore a failure of the teardown after the teardownTimeout', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const started = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const failure = new Error('setup failed');
+      const hooks = testTransaction.hooks(localDb, {
+        teardownTimeout: 20,
+        async setup() {
+          started.resolve();
+          await release.promise;
+          throw failure;
+        },
+      });
+      const start = hooks.start().catch((err: unknown) => err);
+      await started.promise;
+
+      await expectTestTransactionError(hooks.rollback(), teardownTimeout);
+      release.resolve();
+      expect(await start).toBe(failure);
+      await testTransaction.close(localDb);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+  });
 });
