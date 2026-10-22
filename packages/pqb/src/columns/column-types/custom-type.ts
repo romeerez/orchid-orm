@@ -10,7 +10,7 @@ export class CustomTypeColumn<
 > extends Column {
   declare __schema: Schema;
   operators = Operators.any;
-  declare __type: unknown;
+  declare __type: NonNullable<unknown>;
   declare __inputType: unknown;
   declare inputSchema: ReturnType<Schema['unknown']>;
   declare __outputType: unknown;

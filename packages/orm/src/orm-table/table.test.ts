@@ -469,6 +469,23 @@ describe('table', () => {
     expect(db.table.table).toBe('test');
   });
 
+  it('should preserve parsed custom type nullability in Selectable', () => {
+    const { defineTable } = createTableFactory();
+    const ItemTable = defineTable('item', (t) => ({
+      value: t.type('custom').parse(String),
+      nullable: t.type('custom').nullable().parse(String),
+    }));
+
+    assertType<
+      Selectable<typeof ItemTable>,
+      { value: string; nullable: string | null }
+    >();
+
+    // @ts-expect-error A non-nullable parsed custom type cannot output null.
+    const value: Selectable<typeof ItemTable>['value'] = null;
+    void value;
+  });
+
   it('should support validation schema methods on table definitions', () => {
     const { defineTable } = createTableFactory({
       schemaConfig: zodSchemaConfig,
