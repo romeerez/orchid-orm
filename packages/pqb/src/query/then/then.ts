@@ -5,6 +5,7 @@ import {
   AsyncTransactionState,
   isInUserTransaction,
 } from '../basic-features/transaction/transaction';
+import { startAfterCommitRun } from '../../testTransaction';
 import { processComputedResult } from '../extra-features/computed/computed';
 import { Column, ColumnsShape } from '../../columns';
 import { HookPurpose } from '../extra-features/hooks/hooks.sql';
@@ -695,6 +696,7 @@ const then = async (
           const localResult = result as unknown[];
           // to suppress throws of sync afterCommit hooks.
           queueMicrotask(async () => {
+            const end = startAfterCommitRun(q.q.adapter);
             const promises: (unknown | Promise<unknown>)[] = [];
             if (afterActionAndSaveCommit) {
               for (const fn of afterActionAndSaveCommit) {
@@ -727,6 +729,7 @@ const then = async (
                   ...(cteAfterCommitHooks || emptyArray),
                 ].map((h) => h.name),
               q.q.catchAfterCommitErrors,
+              end,
             );
           });
         }

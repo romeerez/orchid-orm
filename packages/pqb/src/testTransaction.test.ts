@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import {
   assertType,
   createTestDb,
@@ -1076,6 +1077,8 @@ describe('testTransaction', () => {
 
       await expectTestTransactionError(testTransaction.start(other), {
         kind: 'rolledBack',
+        message:
+          'A test transaction of another instance cannot start while a test transaction is rolling back',
       });
       await Promise.all([query, rollback]);
 
@@ -1265,6 +1268,289 @@ describe('testTransaction', () => {
       await rollback;
 
       await (await testTransaction.start(localDb)).close();
+    });
+  });
+
+  describe('after-commit hooks', () => {
+    const createLocalDb = () => createTestDb(testDbOptions);
+    type TestDb = ReturnType<typeof createLocalDb>;
+
+    // a table for queries with after-commit hooks, it exists inside the test transaction that creates it
+    const createTable = (db: Db) =>
+      db.query`CREATE TEMP TABLE hooked (id int PRIMARY KEY)`;
+    const hooked = (db: TestDb) =>
+      db('hooked', (t) => ({ id: t.integer().primaryKey() }));
+
+    // Resolves with `rolledBack` that is `false` while the rollback waits, after a turn of the event loop.
+    const isRolledBack = async (rollback: Promise<unknown>) => {
+      let rolledBack = false;
+      rollback.then(
+        () => (rolledBack = true),
+        () => (rolledBack = true),
+      );
+      await new Promise(setImmediate);
+      return rolledBack;
+    };
+
+    // the places that run after-commit hooks, each adds the hook and resolves once it has been called
+    const sites = [
+      [
+        'of a transaction',
+        (db: TestDb, hook: () => unknown) =>
+          db.transaction(async () => db.afterCommit(hook)),
+      ],
+      [
+        'of a query outside of a transaction',
+        async (db: TestDb, hook: () => unknown) => {
+          await createTable(db);
+          await hooked(db).insert({ id: 1 }).afterCreateCommit([], hook);
+        },
+      ],
+      [
+        'added outside of a transaction',
+        async (db: TestDb, hook: () => unknown) => db.afterCommit(hook),
+      ],
+    ] as const;
+
+    it.each(sites)(
+      'should roll back after the promise returned by an after-commit hook %s settles',
+      async (_, addHook) => {
+        const localDb = createLocalDb();
+        const root = await testTransaction.start(localDb);
+        await setSetting(localDb, 'root');
+        const level = await testTransaction.start(localDb);
+        const release = Promise.withResolvers<void>();
+        let work: Promise<unknown> | undefined;
+        await addHook(
+          localDb,
+          () =>
+            (work = release.promise.then(() => setSetting(localDb, 'hook'))),
+        );
+
+        const rollback = level.rollback();
+        expect(await isRolledBack(rollback)).toBe(false);
+
+        release.resolve();
+        await Promise.all([rollback, work]);
+        // the setting of the hook ended with the test transaction rather than landing in the outer one
+        expect(await getSetting(localDb)).toBe('root');
+        await root.close();
+      },
+    );
+
+    it.each(sites)(
+      'should let an after-commit hook %s run queries in the test transaction after it calls the rollback',
+      async (_, addHook) => {
+        const localDb = createLocalDb();
+        const root = await testTransaction.start(localDb);
+        let close: Promise<void> | undefined;
+        let work: Promise<unknown> | undefined;
+        await addHook(localDb, () => {
+          close = root.close();
+          return (work = localDb.transaction(async () => {
+            await setSetting(localDb, 'hook');
+            return getSetting(localDb);
+          }));
+        });
+
+        expect(await work).toBe('hook');
+        await close;
+      },
+    );
+
+    it('should roll back a test transaction of another instance sharing the adapter after the promise returned by its after-commit hook settles', async () => {
+      const localDb = createLocalDb();
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      await setSetting(localDb, 'root');
+      const inner = await testTransaction.start(other);
+      const release = Promise.withResolvers<void>();
+      let work: Promise<unknown> | undefined;
+      await other.transaction(async () =>
+        other.afterCommit(
+          () =>
+            (work = release.promise.then(() =>
+              other.transaction(async () => {
+                await setSetting(other, 'hook');
+                return getSetting(other);
+              }),
+            )),
+        ),
+      );
+
+      const rollback = inner.rollback();
+      expect(await isRolledBack(rollback)).toBe(false);
+
+      release.resolve();
+      expect(await work).toBe('hook');
+      await rollback;
+      expect(await getSetting(localDb)).toBe('root');
+      await root.close();
+    });
+
+    it('should not run a query builder returned by an after-commit hook added outside of a transaction', async () => {
+      const localDb = createLocalDb();
+      const root = await testTransaction.start(localDb);
+      await createTable(localDb);
+      localDb.afterCommit(() => hooked(localDb).insert({ id: 1 }));
+      // the hook has been called
+      await new Promise(setImmediate);
+
+      expect(await hooked(localDb).count()).toBe(0);
+      await root.close();
+    });
+
+    it('should roll back after a promise of another realm returned by an after-commit hook added outside of a transaction settles', async () => {
+      const localDb = createLocalDb();
+      const root = await testTransaction.start(localDb);
+      await setSetting(localDb, 'root');
+      const level = await testTransaction.start(localDb);
+      const realm: { resolve?: () => void } = {};
+      const released: Promise<void> = vm.runInNewContext(
+        'new Promise((resolve) => { this.resolve = resolve })',
+        realm,
+      );
+      expect(released).not.toBeInstanceOf(Promise);
+      let work: Promise<unknown> | undefined;
+      // `then` of a promise of another realm returns a promise of that realm
+      localDb.afterCommit(
+        () => (work = released.then(() => setSetting(localDb, 'hook'))),
+      );
+      // the hook has been called
+      await new Promise(setImmediate);
+
+      const rollback = level.rollback();
+      expect(await isRolledBack(rollback)).toBe(false);
+
+      realm.resolve!();
+      await Promise.all([rollback, work]);
+      expect(await getSetting(localDb)).toBe('root');
+      await root.close();
+    });
+
+    it('should wait for after-commit hooks of queries run by an after-commit hook', async () => {
+      const localDb = createLocalDb();
+      const root = await testTransaction.start(localDb);
+      await createTable(localDb);
+      await setSetting(localDb, 'root');
+      const level = await testTransaction.start(localDb);
+      let inserted: Promise<unknown> | undefined;
+      let work: Promise<unknown> | undefined;
+      await localDb.transaction(async () =>
+        localDb.afterCommit(
+          () =>
+            (inserted = hooked(localDb)
+              .insert({ id: 1 })
+              // starts its query once the first hook has ended, after the rollback would have been sent
+              .afterCreateCommit(
+                [],
+                () =>
+                  (work = inserted!
+                    .then(() => new Promise(setImmediate))
+                    .then(() => setSetting(localDb, 'hook'))),
+              )
+              .then(noop)),
+        ),
+      );
+
+      await level.rollback();
+      await work;
+      // the setting of the second hook ended with the test transaction rather than landing in the outer one
+      expect(await getSetting(localDb)).toBe('root');
+      await root.close();
+    });
+
+    it('should reject a test transaction of another instance sharing the adapter started while the rollback waits for after-commit hooks', async () => {
+      const localDb = createLocalDb();
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      const release = Promise.withResolvers<void>();
+      await localDb.transaction(async () =>
+        localDb.afterCommit(() => release.promise),
+      );
+
+      const close = root.close();
+      await expectTestTransactionError(testTransaction.start(other), {
+        kind: 'rolledBack',
+      });
+
+      release.resolve();
+      await close;
+    });
+
+    it('should reject a test transaction of another instance sharing the adapter started while the rollback of an inner test transaction waits for after-commit hooks', async () => {
+      const localDb = createLocalDb();
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      await setSetting(localDb, 'root');
+      const level = await testTransaction.start(localDb);
+      const release = Promise.withResolvers<void>();
+      await localDb.transaction(async () =>
+        localDb.afterCommit(() => release.promise),
+      );
+
+      // it would start inside the test transaction being rolled back, and be rolled back with it
+      const rollback = level.rollback();
+      await expectTestTransactionError(testTransaction.start(other), {
+        kind: 'rolledBack',
+        message:
+          'A test transaction of another instance cannot start while a test transaction is rolling back',
+      });
+      // discards the record of the failed start
+      await testTransaction.rollback(other);
+
+      release.resolve();
+      await rollback;
+      const inner = await testTransaction.start(other);
+      await setSetting(other, 'inner');
+      await inner.rollback();
+      expect(await getSetting(localDb)).toBe('root');
+      await root.close();
+    });
+
+    it('should reject a start of another instance through a test transaction of a third one that resumes while the rollback waits for after-commit hooks', async () => {
+      const localDb = createLocalDb();
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      const inner = await testTransaction.start(other);
+      const release = Promise.withResolvers<void>();
+      await localDb.transaction(async () =>
+        localDb.afterCommit(() => release.promise),
+      );
+      // create the savepoint, then delay the start until the rollback of the root is called
+      const held = holdNextSavepoint();
+      const innermost = testTransaction.start(third);
+      await held.created;
+
+      const rollback = root.rollback();
+      held.release();
+      await expectTestTransactionError(innermost, { kind: 'rolledBack' });
+
+      release.resolve();
+      await rollback;
+      // its savepoint is gone with the root
+      await expect(inner.rollback()).rejects.toThrow();
+      await root.close();
+    });
+
+    it('should block the adapter when an after-commit hook does not end within the teardownTimeout', async () => {
+      const localDb = createLocalDb();
+      const hooks = testTransaction.hooks(localDb, { teardownTimeout: 20 });
+      await hooks.start();
+      const release = Promise.withResolvers<void>();
+      await localDb.transaction(async () =>
+        localDb.afterCommit(() => release.promise),
+      );
+
+      await expectTestTransactionError(hooks.close(), {
+        kind: 'teardownTimeout',
+      });
+
+      release.resolve();
+      await expectTestTransactionError(localDb.query`SELECT 1`, {
+        kind: 'blocked',
+      });
     });
   });
 

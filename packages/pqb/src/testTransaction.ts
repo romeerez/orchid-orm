@@ -30,7 +30,7 @@ export class Rollback extends Error {}
  * - `startedAgain`: `start` of test transaction hooks was called again before the previous `start` was rolled back
  * - `innerOpen`: a test transaction was rolled back while test transactions started inside it were still open or starting, the open ones were rolled back as well, and the starting ones cancelled
  * - `byOuter`: the test transaction was rolled back together with an outer one
- * - `rolledBack`: a query or a transaction of a test transaction whose rollback was called
+ * - `rolledBack`: a query or a transaction of a test transaction whose rollback was called, or a test transaction of another instance started while a test transaction is rolling back
  * - `teardownTimeout`: `rollback` or `close` of test transaction hooks didn't end within their `teardownTimeout`
  * - `blocked`: a query, a transaction, or a test transaction on a database adapter blocked by an `innerOpen` or `teardownTimeout` error, which is its `cause`
  */
@@ -66,6 +66,7 @@ export interface TestTransaction {
    * Roll back this test transaction.
    * When test transactions started inside it are still open or starting, the open ones are rolled back as well, the starting ones are cancelled,
    * the adapter is blocked, and it rejects with a `TestTransactionError`, or with a database error if the rollback itself fails.
+   * It waits for the promises returned by after-commit hooks that are running, and accepts queries until they end.
    * Called again, it returns the rollback in progress, or does nothing once that rollback has ended.
    * After this test transaction is rolled back together with an outer one, it rejects with a `TestTransactionError`.
    */
@@ -89,6 +90,7 @@ export interface TestTransactionHooks {
   /**
    * Roll back the test transaction of the latest `start` of these hooks.
    * It cancels that `start` if its transaction hasn't started yet, and waits for the `setup` to finish.
+   * It waits for the promises returned by after-commit hooks that are running, and accepts queries until they end.
    * It rejects with an error of the `start` or the `setup`, other than the cancellation of the `start` by this call.
    * When it doesn't end within `teardownTimeout`, it blocks the adapter and rejects with a `TestTransactionError`, while the rollback goes on.
    */
@@ -119,9 +121,33 @@ interface SharedTestTransactions {
   blocked?: TestTransactionError;
   // levels whose transaction hasn't started yet, a block cancels them.
   starting: Set<TestTransactionLevel>;
+  // count of started transactions of all the instances whose lifecycle hasn't ended.
+  live: number;
+  // runs of after-commit hooks in progress, registered while `live` isn't zero.
+  hooks: Set<Promise<void>>;
 }
 
 const sharedTestTransactions = new WeakMap<Adapter, SharedTestTransactions>();
+
+/**
+ * Register a run of after-commit hooks when test transactions of the adapter are open to wait for it, returns the function that ends the run.
+ * Call it before the hooks: a hook may call a rollback of a test transaction right away.
+ */
+export const startAfterCommitRun = (adapter: Adapter) => {
+  const shared = sharedTestTransactions.get(adapter);
+  if (!shared?.live) return;
+
+  const { hooks } = shared;
+  let end!: () => void;
+  const run = new Promise<void>((resolve) => {
+    end = resolve;
+  });
+  hooks.add(run);
+  return () => {
+    hooks.delete(run);
+    end();
+  };
+};
 
 // The state of test transactions of one instance, stored in the `db.internal`.
 interface TestTransactions {
@@ -221,7 +247,9 @@ class TestTransactionAdapter implements TransactionAdapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
   driverAdapter: DriverAdapter;
-  // set when the rollback of its test transaction is called.
+  // count of rollbacks of its test transactions in progress, from the call to the end, they reject test transactions of other instances.
+  rollingBack = 0;
+  // set when the rollback of its test transaction is called, or once the after-commit hooks in progress at the call have ended.
   rolledBack?: boolean;
   // the root, set on wrappers of other instances started inside it.
   private root?: TestTransactionAdapter;
@@ -240,9 +268,12 @@ class TestTransactionAdapter implements TransactionAdapter {
     this.driverAdapter = adapter.driverAdapter;
   }
 
-  // Wait for the operations that are in flight now.
+  // Wait for the operations that are in flight now, and for the runs of after-commit hooks, including those started meanwhile.
   async settle(): Promise<void> {
-    await Promise.allSettled(this.inFlight);
+    const { hooks } = this.trx.shared;
+    do {
+      await Promise.allSettled([...this.inFlight, ...hooks]);
+    } while (hooks.size);
   }
 
   // Route the methods of the shared adapter through this wrapper.
@@ -283,10 +314,17 @@ class TestTransactionAdapter implements TransactionAdapter {
     bindAdapter(shared, nested.at(-1) ?? root);
   }
 
-  // Get the error to reject an operation with.
-  private getError() {
+  // Get the error to reject an operation with, `levelStart` for a start of a test transaction of another instance.
+  private getError(levelStart?: boolean) {
     const { blocked } = this.trx.shared;
     if (blocked) return toBlockedError(blocked);
+
+    if (levelStart && this.rollingBack) {
+      return new TestTransactionError(
+        'rolledBack',
+        'A test transaction of another instance cannot start while a test transaction is rolling back',
+      );
+    }
 
     if (this.rolledBack) {
       return new TestTransactionError(
@@ -341,18 +379,21 @@ class TestTransactionAdapter implements TransactionAdapter {
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T> {
-    // a test transaction of another instance sharing the adapter is a transaction of the tested code for this one
-    if (levelStarts.get(cb) === this.trx) {
+    const owner = levelStarts.get(cb);
+    if (owner === this.trx) {
       return this.adapter.transaction(asyncStorage, options, cb);
     }
 
-    const error = this.getError();
+    // a test transaction of another instance sharing the adapter is a transaction of the tested code for this one,
+    // it may not start once the rollback is called, even while after-commit hooks may still run transactions
+    const levelStart = !!owner;
+    const error = this.getError(levelStart);
     if (error) return Promise.reject(error);
 
     const outer = asyncStorage?.getStore();
-    return this.adapter.transaction(asyncStorage, options, () => {
+    const run = () => {
       // the rollback may have been called while the transaction was starting
-      const error = this.getError();
+      const error = this.getError(levelStart);
       if (error) throw error;
 
       // an instance with another storage gets a new state with the adapter of the transaction, route its queries through this adapter;
@@ -362,7 +403,10 @@ class TestTransactionAdapter implements TransactionAdapter {
         state.transactionAdapter = this;
       }
       return cb(this);
-    });
+    };
+    // the wrappers outside this one tell the start of a test transaction through it
+    if (owner) levelStarts.set(run, owner);
+    return this.adapter.transaction(asyncStorage, options, run);
   }
 
   savepoint<T>(
@@ -461,7 +505,7 @@ const toQueryError = (db: Query, err: unknown) => {
 const getShared = (adapter: Adapter) => {
   let shared = sharedTestTransactions.get(adapter);
   if (!shared) {
-    shared = { adapter, starting: new Set() };
+    shared = { adapter, starting: new Set(), live: 0, hooks: new Set() };
     sharedTestTransactions.set(adapter, shared);
   }
   return shared;
@@ -524,6 +568,7 @@ const begin = (
       }
 
       trx.live++;
+      trx.shared.live++;
       resolve(level);
       return ended;
     };
@@ -548,6 +593,7 @@ const begin = (
           trx.adapter = undefined;
         }
         trx.live--;
+        trx.shared.live--;
       });
 
     // rejects `start` when the transaction failed to start or was cancelled, has no effect once it has started
@@ -602,6 +648,11 @@ const block = (shared: SharedTestTransactions, error: TestTransactionError) => {
   adapter.query = adapter.arrays = adapter.transaction = reject;
 };
 
+// Wait for the runs of after-commit hooks, including those started meanwhile.
+const waitForHooks = async (hooks: Set<Promise<void>>) => {
+  while (hooks.size) await Promise.allSettled(hooks);
+};
+
 // Roll back the levels taken off the stack in one turn of the queue, the innermost first.
 // `level` is the outermost of them, the others are the levels started inside it.
 const rollbackLevels = (
@@ -626,10 +677,27 @@ const rollbackLevels = (
     block(trx.shared, error);
   }
 
-  if (level.adapter) level.adapter.rolledBack = true;
+  // a test transaction of another instance would start inside the levels being rolled back
+  const wrapper = trx.adapter;
+  if (wrapper) wrapper.rollingBack++;
 
-  return enqueue(trx, async () => {
-    // let queries and savepoints in flight finish in the transactions they started in
+  // after-commit hooks in progress may still use the test transaction, its queries are rejected once they end
+  let hooksEnded: Promise<void> | undefined;
+  const { adapter } = level;
+  if (adapter) {
+    const { hooks } = trx.shared;
+    if (hooks.size) {
+      hooksEnded = waitForHooks(hooks).then(() => {
+        adapter.rolledBack = true;
+      });
+    } else {
+      adapter.rolledBack = true;
+    }
+  }
+
+  const rollback = enqueue(trx, async () => {
+    await hooksEnded;
+    // let queries and savepoints in flight and after-commit hooks finish in the transactions they started in
     await trx.adapter?.settle();
 
     let failure: { error: unknown } | undefined;
@@ -647,6 +715,12 @@ const rollbackLevels = (
 
     if (error) throw error;
   });
+
+  if (wrapper) {
+    const ended = () => wrapper.rollingBack--;
+    rollback.then(ended, ended);
+  }
+  return rollback;
 };
 
 // Reject with a `teardownTimeout` error and block the adapter when the teardown doesn't end within `ms`;

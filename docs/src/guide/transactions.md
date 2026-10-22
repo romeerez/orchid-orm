@@ -411,34 +411,38 @@ describe('outer', () => {
 
 Check out [test factories](/guide/test-factories), a perfect pair with `testTransaction` to use for testing.
 
+### after-commit hooks in tests
+
+A rollback waits for running [after-commit hooks](/guide/hooks#after-commit-hooks), so that their queries are rolled back with the test.
+Use an async hook and await its work:
+
+```ts
+db.$afterCommit(async () => {
+  await db.emailLog.create({ id: 1 });
+});
+```
+
+A hook that never ends holds the rollback, see [teardown timeout](#teardown-timeout).
+
 ### timed-out hooks
 
-Test runners don't cancel a hook or a test that has exceeded its timeout: its code keeps running during the next tests.
-The functions returned by `testTransaction.hooks` handle such hooks:
+A hook or test can keep running after its timeout, during later tests.
+With `testTransaction.hooks`:
 
-- `rollback` and `close` roll back the test transaction of their own `start` rather than the latest started one, so a late `afterEach` doesn't roll back the test transaction of the next test in place of its own.
-- They wait for a `setup` that is still running, so that its data is rolled back rather than written after the rollback.
-  Create data for a `describe` in the `setup` rather than in a separate `beforeAll`.
-- A rollback waits for the queries that are in flight, so that they finish inside their test transaction.
-- When a test transaction is rolled back while test transactions started inside it are still open or starting, the open ones are rolled back as well, and the starting ones are cancelled.
-  `rollback` rejects with a `TestTransactionError` of kind `innerOpen`, or with a database error if the rollback itself fails.
-  It means that a test transaction was left open unexpectedly, usually by a hook or a test that didn't finish in time, and the isolation of the following tests can't be trusted.
-  From then on, `db` is blocked until the process ends, and so are other instances sharing its adapter.
-  Their queries, transactions, and test transactions reject with a `TestTransactionError` of kind `blocked`, whose `cause` is the first error that blocked `db`, so the following tests that use them fail with that cause.
-  `close` still closes `db`.
-  The block doesn't stop the test runner: treat this error as fatal and stop the test run, for example with the `bail` option of the runner.
-  When the runner shares modules between test files, as Bun does by default, `db` stays blocked in the remaining files.
-- Queries that reach the outermost test transaction once its rollback is called, such as queries of a `$withOptions` callback that outlived it, reject with a `TestTransactionError` instead of running outside of a transaction.
+- `rollback` and `close` end the test transaction of their own `start`.
+- They wait for `setup`, queries in flight, and running after-commit hooks.
+- Create data for a `describe` in `setup` rather than in a separate `beforeAll`.
 
-The hooks don't stop a test or a hook that keeps running, and don't make its late queries safe in general.
-Unless a query issued after its test transaction was rolled back is rejected as described above, it may run in whichever test transaction is open at that moment, or outside of a transaction.
+Late queries are rejected when possible, but may run in another test transaction or outside of one.
+
+If a rollback finds inner test transactions still open, it blocks `db` and instances sharing its adapter until the process ends.
+Their queries reject with a `TestTransactionError` of kind `blocked`; its `cause` tells what happened.
+Stop the test run on such errors, for example with the runner's `bail` option.
 
 ### teardown timeout
 
-When a test times out while its query is still running, `afterEach` waits for that query before rolling back.
-If the query is stuck, the following tests wait for that rollback and time out one after another.
-
-Set `teardownTimeout` in milliseconds to fail sooner:
+Set `teardownTimeout` in milliseconds to limit how long `rollback` or `close` of `testTransaction.hooks` may take.
+Choose a value shorter than your test runner's hook timeout:
 
 ```ts
 const each = testTransaction.hooks(db, { teardownTimeout: 4000 });
@@ -447,15 +451,10 @@ beforeEach(each.start);
 afterEach(each.rollback);
 ```
 
-The limit starts when `rollback` or `close` is called, and covers the whole teardown: waiting for the `start` and the `setup`, rolling back, and closing `db`.
-Choose it shorter than the hook timeout of your test runner.
-Without this option, the teardown has no time limit.
+Without this option, teardown has no time limit.
 
-When the limit is exceeded, `rollback` or `close` rejects with a `TestTransactionError` of kind `teardownTimeout`, and `db` is blocked as described above, so the following tests that use it fail with kind `blocked`.
-The rollback itself isn't cancelled and may stay pending.
-Treat this error as fatal, as the block doesn't stop the test runner.
-
-The option applies only to `testTransaction.hooks`: `testTransaction.rollback`, `testTransaction.close`, and the test transactions returned by `start` have no time limit.
+When the limit is exceeded, the operation rejects with a `TestTransactionError` of kind `teardownTimeout` and [blocks `db`](#timed-out-hooks).
+The teardown itself isn't cancelled.
 
 ### start, rollback, and close
 

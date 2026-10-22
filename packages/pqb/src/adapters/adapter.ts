@@ -35,7 +35,7 @@ import {
 } from './adapter.utils';
 import { _runAfterCommitHooks } from '../query/basic-features/transaction/transaction';
 import { PostgresInterval } from './driver-adapter-shared';
-import { Rollback } from '../testTransaction';
+import { Rollback, startAfterCommitRun } from '../testTransaction';
 
 export type { SqlSessionState } from './features/sql-session-context';
 
@@ -893,7 +893,7 @@ const realTransaction = async <T>(
 
   if (ctx.state) {
     // state was defined in the callback above;
-    runAfterCommit(ctx.state.afterCommit, result);
+    runAfterCommit(adapter, ctx.state.afterCommit, result);
   }
 
   return result;
@@ -966,7 +966,7 @@ const nestedTransaction = async <T>(
   if (ctx.state && transactionId === ctx.state.testTransactionCount) {
     const { afterCommit } = ctx.state;
     ctx.state.afterCommit = undefined;
-    runAfterCommit(afterCommit, result);
+    runAfterCommit(adapter, afterCommit, result);
   }
 
   return result;
@@ -974,12 +974,14 @@ const nestedTransaction = async <T>(
 
 // `afterCommit` hooks are detached from the main flow, this function won't throw.
 const runAfterCommit = (
+  adapter: Adapter,
   afterCommit: TransactionAfterCommitHook[] | undefined,
   result: unknown,
 ) => {
   // to suppress throws of sync afterCommit hooks.
   queueMicrotask(async () => {
     if (afterCommit) {
+      const end = startAfterCommitRun(adapter);
       const promises = [];
 
       let catchAfterCommitErrors: AfterCommitErrorHandler[] | undefined;
@@ -1031,6 +1033,7 @@ const runAfterCommit = (
         promises,
         getHookNames,
         catchAfterCommitErrors,
+        end,
       );
     }
   });
