@@ -1,3 +1,4 @@
+import { clearTimeout, setTimeout } from 'node:timers';
 import { Query } from './query/query';
 import { OrchidOrmError, QueryError } from './query/errors';
 import {
@@ -30,18 +31,20 @@ export class Rollback extends Error {}
  * - `innerOpen`: a test transaction was rolled back while test transactions started inside it were still open or starting, the open ones were rolled back as well, and the starting ones cancelled
  * - `byOuter`: the test transaction was rolled back together with an outer one
  * - `rolledBack`: a query or a transaction of a test transaction whose rollback was called
- * - `blocked`: a query, a transaction, or a test transaction on a database adapter blocked by an `innerOpen` error, which is its `cause`
+ * - `teardownTimeout`: `rollback` or `close` of test transaction hooks didn't end within their `teardownTimeout`
+ * - `blocked`: a query, a transaction, or a test transaction on a database adapter blocked by an `innerOpen` or `teardownTimeout` error, which is its `cause`
  */
 export type TestTransactionErrorKind =
   | 'startedAgain'
   | 'innerOpen'
   | 'byOuter'
   | 'rolledBack'
+  | 'teardownTimeout'
   | 'blocked';
 
 /**
  * Error of test transactions, `kind` tells what happened.
- * After an `innerOpen` error, the database adapter is blocked until the process ends:
+ * After an `innerOpen` or a `teardownTimeout` error, the database adapter is blocked until the process ends:
  * queries, transactions, and test transactions of every instance sharing it reject with a `blocked` error.
  * Its connections can still be closed.
  */
@@ -87,6 +90,7 @@ export interface TestTransactionHooks {
    * Roll back the test transaction of the latest `start` of these hooks.
    * It cancels that `start` if its transaction hasn't started yet, and waits for the `setup` to finish.
    * It rejects with an error of the `start` or the `setup`, other than the cancellation of the `start` by this call.
+   * When it doesn't end within `teardownTimeout`, it blocks the adapter and rejects with a `TestTransactionError`, while the rollback goes on.
    */
   rollback(): Promise<void>;
   /**
@@ -645,6 +649,23 @@ const rollbackLevels = (
   });
 };
 
+// Reject with a `teardownTimeout` error and block the adapter when the teardown doesn't end within `ms`;
+// the teardown goes on, and its late outcome is ignored.
+// The timer comes from `node:timers`, which fake timers of test runners don't replace.
+const limitTeardown = (db: Query, teardown: Promise<void>, ms: number) =>
+  new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const error = new TestTransactionError(
+        'teardownTimeout',
+        `Test transaction teardown didn't end within ${ms} ms`,
+      );
+      block(getShared(db.baseQuery.q.adapter), error);
+      reject(error);
+    }, ms);
+    timer.unref();
+    teardown.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+
 // Take the level and the levels started inside it off the stack, and roll them back.
 const rollbackWithInner = (
   trx: TestTransactions,
@@ -782,9 +803,25 @@ export const testTransaction = {
    *
    * @param arg - ORM instance or a queryable instance (such as db.someTable).
    * @param options - `setup`: runs inside the started test transaction, `rollback` and `close` wait for it to finish.
+   * `teardownTimeout`: milliseconds from the call of `rollback` or `close` for them to end;
+   * when it runs out, the adapter is blocked, and they reject with a `TestTransactionError` of kind `teardownTimeout`.
    */
-  hooks(arg: Arg, options?: { setup?: () => unknown }): TestTransactionHooks {
+  hooks(
+    arg: Arg,
+    options?: { setup?: () => unknown; teardownTimeout?: number },
+  ): TestTransactionHooks {
     const db = argToDb(arg);
+    const teardownTimeout = options?.teardownTimeout;
+    // `setTimeout` fires at once for a delay out of its range, and the first teardown would block the adapter
+    const maxDelay = 2 ** 31 - 1;
+    if (
+      teardownTimeout !== undefined &&
+      !(teardownTimeout >= 1 && teardownTimeout <= maxDelay)
+    ) {
+      throw new RangeError(
+        `teardownTimeout must be from 1 to ${maxDelay} ms, got ${teardownTimeout}`,
+      );
+    }
     let attempt: HooksAttempt | undefined;
 
     const end = async (close: boolean) => {
@@ -817,6 +854,11 @@ export const testTransaction = {
         throw ended.reason;
       }
     };
+
+    const teardown = (close: boolean) =>
+      teardownTimeout
+        ? limitTeardown(db, end(close), teardownTimeout)
+        : end(close);
 
     return {
       start() {
@@ -853,8 +895,8 @@ export const testTransaction = {
         // rather than writing outside the test transaction; Bun reports this late rejection as an error between tests
         return current.done;
       },
-      rollback: () => end(false),
-      close: () => end(true),
+      rollback: () => teardown(false),
+      close: () => teardown(true),
     };
   },
 };

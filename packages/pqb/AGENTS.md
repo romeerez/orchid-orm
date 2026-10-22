@@ -167,6 +167,19 @@ reports the late rejection as an error between tests: code after
 transaction. Exercise the wait with a `setup` held on a controlled promise while
 `rollback` is called.
 
+The `teardownTimeout` of `testTransaction.hooks` is one budget from the call of
+`rollback` or `close` through the wait for `start` and `setup`, the rollback,
+and closing the pool, not a limit per step. When it runs out, block the adapter
+and reject, and let the teardown go on, ignoring its late outcome; never unblock
+when it ends. Take the timer from `node:timers`: fake timers of test runners
+replace the global `setTimeout`, and a faked timer fires only when the test
+advances the time. Exercise it with a query, a `setup`, a `BEGIN`, and closing
+the pool held past the limit, with steps that each fit in the limit but not
+together, with a late failure of the teardown, which the test runner reports
+when it is left unhandled, and with fake timers enabled before the call. Hold
+the work past the limit on controlled promises or a `pg_sleep` query rather than
+racing a real teardown against a short limit.
+
 Queries of test bodies carry no async context and cannot be attributed to a test
 transaction: do not reject a query by the test transaction it came from.
 
