@@ -105,6 +105,8 @@ const toDataArr = (data?: unknown[], arg?: number | unknown[]) =>
 const assert = {
   hooksBeingCalledV2(params: {
     data?: unknown[];
+    // rows in any order, such as those returned by `UPDATE ... FROM`
+    unordered?: boolean;
     beforeQuery?: number;
     beforeCreate?: number;
     beforeUpdate?: number;
@@ -120,7 +122,8 @@ const assert = {
     afterDeleteCommit?: number | unknown[];
     afterSaveCommit?: number | unknown[];
   }) {
-    const data = params?.data?.map((item) => expect.objectContaining(item));
+    const rows = params?.data?.map((item) => expect.objectContaining(item));
+    const data = rows && params.unordered ? expect.arrayContaining(rows) : rows;
 
     const expected = {
       beforeQuery: params.beforeQuery || 0,
@@ -179,9 +182,18 @@ const assert = {
       afterSaveCommit: 1,
     });
   },
-  updateHooksBeingCalled({ data, cte }: { data: unknown[]; cte?: boolean }) {
+  updateHooksBeingCalled({
+    data,
+    cte,
+    unordered,
+  }: {
+    data: unknown[];
+    cte?: boolean;
+    unordered?: boolean;
+  }) {
     assert.hooksBeingCalledV2({
       data,
+      unordered,
       beforeQuery: cte ? 0 : 1,
       afterQuery: cte ? 0 : 1,
       beforeUpdate: 1,
@@ -1144,6 +1156,7 @@ describe('hooks', () => {
 
           assert.updateHooksBeingCalled({
             data: [{ Name: 'new1' }, { Name: 'new2' }],
+            unordered: true,
           });
         },
       );
@@ -1166,6 +1179,7 @@ describe('hooks', () => {
 
           assert.updateHooksBeingCalled({
             data: [{ Name: 'umby3' }, { Name: 'umby4' }],
+            unordered: true,
           });
         },
       );
