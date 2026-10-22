@@ -318,6 +318,7 @@ const then = async (
 
   let sql: Sql | undefined;
   let logData: unknown | undefined;
+  let startingSavepoint: ThenSavepointState | undefined;
   const log = state?.log ?? query.log;
   setCurrentDefaultSchema(state?.schema);
 
@@ -361,13 +362,12 @@ const then = async (
     let queryResult: QueryResult;
     let cteData: Record<string, unknown[]> | undefined;
 
-    const startingSavepoint = setCatchingSavepoint(
+    startingSavepoint = setCatchingSavepoint(
       !parentSavepoint && shouldCatch && state,
     );
 
     const releasingSavepoint =
-      checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations(sql) ||
-      parentSavepoint
+      checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations(sql)
         ? undefined
         : parentSavepoint || startingSavepoint;
 
@@ -442,23 +442,15 @@ const then = async (
             logData = log.beforeQuery(sql);
           }
 
-          // try/catch rather than `.catch`: `execQuery` can throw synchronously
-          let result;
-          try {
-            result = await execQuery(
-              adapter,
-              queryMethod,
-              sql,
-              log,
-              i === 0 ? startingSavepoint : undefined,
-              i === last ? releasingSavepoint : undefined,
-              sqlSessionContextGetStateFromAsyncState(state),
-            );
-          } catch (err) {
-            // the driver rolls the savepoint back by itself only when its own query, the first one of the batch, fails
-            await startingSavepoint?.activeSavepoint?.rollback(err);
-            throw err;
-          }
+          const result = await execQuery(
+            adapter,
+            queryMethod,
+            sql,
+            log,
+            i === 0 ? startingSavepoint : undefined,
+            i === last ? releasingSavepoint : undefined,
+            sqlSessionContextGetStateFromAsyncState(state),
+          );
 
           if (queryResult) {
             queryResult.rowCount += result.rowCount;
@@ -797,6 +789,9 @@ const then = async (
 
     return resolve ? resolve(result) : result;
   } catch (err) {
+    // a savepoint held open for the following queries is released only by the last of them
+    await startingSavepoint?.activeSavepoint?.rollback(err);
+
     let error;
     if (err instanceof adapter.errorClass) {
       // errno for Bun SQL, code for others
