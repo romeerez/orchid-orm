@@ -30,21 +30,23 @@ export class Rollback extends Error {}
  * - `startedAgain`: `start` of test transaction hooks was called again before the previous `start` was rolled back
  * - `innerOpen`: a test transaction was rolled back while test transactions started inside it were still open or starting, the open ones were rolled back as well, and the starting ones cancelled
  * - `byOuter`: the test transaction was rolled back together with an outer one
+ * - `userTransactionOpen`: a test transaction was rolled back while a transaction started inside it, including a test transaction of another instance, was still open
  * - `rolledBack`: a query or a transaction of a test transaction whose rollback was called, or a test transaction of another instance started while a test transaction is rolling back
  * - `teardownTimeout`: `rollback` or `close` of test transaction hooks didn't end within their `teardownTimeout`
- * - `blocked`: a query, a transaction, or a test transaction on a database adapter blocked by an `innerOpen` or `teardownTimeout` error, which is its `cause`
+ * - `blocked`: a query, a transaction, or a test transaction on a database adapter blocked by an `innerOpen`, `userTransactionOpen`, or `teardownTimeout` error, which is its `cause`
  */
 export type TestTransactionErrorKind =
   | 'startedAgain'
   | 'innerOpen'
   | 'byOuter'
+  | 'userTransactionOpen'
   | 'rolledBack'
   | 'teardownTimeout'
   | 'blocked';
 
 /**
  * Error of test transactions, `kind` tells what happened.
- * After an `innerOpen` or a `teardownTimeout` error, the database adapter is blocked until the process ends:
+ * After an `innerOpen`, a `userTransactionOpen`, or a `teardownTimeout` error, the database adapter is blocked until the process ends:
  * queries, transactions, and test transactions of every instance sharing it reject with a `blocked` error.
  * Its connections can still be closed.
  */
@@ -67,6 +69,9 @@ export interface TestTransaction {
    * When test transactions started inside it are still open or starting, the open ones are rolled back as well, the starting ones are cancelled,
    * the adapter is blocked, and it rejects with a `TestTransactionError`, or with a database error if the rollback itself fails.
    * It waits for the promises returned by after-commit hooks that are running, and accepts queries until they end.
+   * When a transaction started inside it, including a test transaction of another instance, is still open after that,
+   * it blocks the adapter as well, rolls back, and rejects with a `TestTransactionError`.
+   * A transaction found open only when the rollback ends blocks the adapter without making the rollback reject.
    * Called again, it returns the rollback in progress, or does nothing once that rollback has ended.
    * After this test transaction is rolled back together with an outer one, it rejects with a `TestTransactionError`.
    */
@@ -121,9 +126,10 @@ interface SharedTestTransactions {
   blocked?: TestTransactionError;
   // levels whose transaction hasn't started yet, a block cancels them.
   starting: Set<TestTransactionLevel>;
-  // count of started transactions of all the instances whose lifecycle hasn't ended.
-  live: number;
-  // runs of after-commit hooks in progress, registered while `live` isn't zero.
+  // test transactions of all the instances whose transaction is starting or started, and whose lifecycle hasn't ended,
+  // in the order of their start: a transaction on the connection starts inside the last one.
+  open: TestTransactionLevel[];
+  // runs of after-commit hooks in progress, registered while `open` isn't empty.
   hooks: Set<Promise<void>>;
 }
 
@@ -135,7 +141,7 @@ const sharedTestTransactions = new WeakMap<Adapter, SharedTestTransactions>();
  */
 export const startAfterCommitRun = (adapter: Adapter) => {
   const shared = sharedTestTransactions.get(adapter);
-  if (!shared?.live) return;
+  if (!shared?.open.length) return;
 
   const { hooks } = shared;
   let end!: () => void;
@@ -174,9 +180,9 @@ type Arg = { $qb: Query } | Query;
 // Get queryable instance from the transaction argument.
 const argToDb = (arg: Arg): Query => ('$qb' in arg ? arg.$qb : arg);
 
-// Callbacks of the transactions of test transactions, mapped to the test transactions of their instance:
+// Callbacks of the transactions of test transactions, mapped to their test transactions:
 // the adapter of the outermost one passes those of its own nested test transactions to the adapter it wraps.
-const levelStarts = new WeakMap<object, TestTransactions>();
+const levelStarts = new WeakMap<object, TestTransactionLevel>();
 
 // A record of a `start` call, it is also the handle returned by `start`.
 class TestTransactionLevel implements TestTransaction {
@@ -198,10 +204,13 @@ class TestTransactionLevel implements TestTransaction {
   byOuter?: boolean;
   // the adapter created by this level when it is the outermost one.
   adapter?: TestTransactionAdapter;
+  // count of transactions of the tested code, including test transactions of other instances,
+  // started while this level was the innermost on the connection and still open.
+  userTransactions = 0;
 
   constructor(
     private db: Query,
-    private trx: TestTransactions,
+    readonly trx: TestTransactions,
   ) {}
 
   rollback(): Promise<void> {
@@ -231,6 +240,24 @@ const toBlockedError = (cause: TestTransactionError) =>
     `The database adapter is blocked after a test transaction error: ${cause.message}`,
     { cause },
   );
+
+// Error of a test transaction that ends while transactions started inside it are still open.
+const toUserTransactionOpenError = (count: number) =>
+  new TestTransactionError(
+    'userTransactionOpen',
+    count === 1
+      ? 'Test transaction rollback found a transaction started inside it still open'
+      : `Test transaction rollback found ${count} transactions started inside it still open`,
+  );
+
+// Take the test transaction off the test transactions open on the connection, if it is there.
+const removeOpen = (
+  open: TestTransactionLevel[],
+  level: TestTransactionLevel,
+) => {
+  const i = open.indexOf(level);
+  if (i !== -1) open.splice(i, 1);
+};
 
 // Route the methods of the adapter shared by instances to the wrapper.
 const bindAdapter = (adapter: Adapter, wrapper: TestTransactionAdapter) => {
@@ -379,14 +406,14 @@ class TestTransactionAdapter implements TransactionAdapter {
     options: AdapterTransactionOptions | undefined,
     cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T> {
-    const owner = levelStarts.get(cb);
-    if (owner === this.trx) {
-      return this.adapter.transaction(asyncStorage, options, cb);
+    const start = levelStarts.get(cb);
+    if (start?.trx === this.trx) {
+      return this.startTransaction(asyncStorage, options, cb, start);
     }
 
     // a test transaction of another instance sharing the adapter is a transaction of the tested code for this one,
     // it may not start once the rollback is called, even while after-commit hooks may still run transactions
-    const levelStart = !!owner;
+    const levelStart = !!start;
     const error = this.getError(levelStart);
     if (error) return Promise.reject(error);
 
@@ -405,8 +432,39 @@ class TestTransactionAdapter implements TransactionAdapter {
       return cb(this);
     };
     // the wrappers outside this one tell the start of a test transaction through it
-    if (owner) levelStarts.set(run, owner);
-    return this.adapter.transaction(asyncStorage, options, run);
+    if (start) levelStarts.set(run, start);
+    return this.startTransaction(asyncStorage, options, run, start);
+  }
+
+  // Start the transaction in the wrapped adapter, `start` is the test transaction it starts.
+  // The root counts every transaction on the connection for the innermost test transaction,
+  // except an inner test transaction of the same instance.
+  private startTransaction<T>(
+    asyncStorage: AsyncStateStorage | undefined,
+    options: AdapterTransactionOptions | undefined,
+    cb: (adapter: TransactionAdapter) => Promise<T>,
+    start: TestTransactionLevel | undefined,
+  ): Promise<T> {
+    if (this.root) return this.adapter.transaction(asyncStorage, options, cb);
+
+    const { open } = this.trx.shared;
+    const level = open.at(-1);
+    // transactions on the connection start inside it from its `SAVEPOINT` until its transaction ends,
+    // which may come before the end of its test transaction
+    if (start) open.push(start);
+    const result = this.adapter.transaction(asyncStorage, options, cb);
+    if (start) {
+      const ended = () => removeOpen(open, start);
+      result.then(ended, ended);
+    }
+    if (level && level.trx !== start?.trx) {
+      level.userTransactions++;
+      const ended = () => {
+        level.userTransactions--;
+      };
+      result.then(ended, ended);
+    }
+    return result;
   }
 
   savepoint<T>(
@@ -505,7 +563,7 @@ const toQueryError = (db: Query, err: unknown) => {
 const getShared = (adapter: Adapter) => {
   let shared = sharedTestTransactions.get(adapter);
   if (!shared) {
-    shared = { adapter, starting: new Set(), live: 0, hooks: new Set() };
+    shared = { adapter, starting: new Set(), open: [], hooks: new Set() };
     sharedTestTransactions.set(adapter, shared);
   }
   return shared;
@@ -568,11 +626,13 @@ const begin = (
       }
 
       trx.live++;
-      trx.shared.live++;
+      // the root wrapper adds the others when they pass its checks
+      const { open } = trx.shared;
+      if (!open.includes(level)) open.push(level);
       resolve(level);
       return ended;
     };
-    levelStarts.set(run, trx);
+    levelStarts.set(run, level);
 
     level.lifecycle = db
       .transaction(run)
@@ -580,6 +640,11 @@ const begin = (
         if (!(err instanceof Rollback)) throw toQueryError(db, err);
       })
       .finally(() => {
+        removeOpen(trx.shared.open, level);
+        // also when the start was cancelled or rejected after its `SAVEPOINT`, or a transaction started after the check of the rollback
+        if (level.userTransactions) {
+          block(trx.shared, toUserTransactionOpenError(level.userTransactions));
+        }
         if (!level.end) return;
 
         if (state?.testTransactionCount) {
@@ -593,7 +658,6 @@ const begin = (
           trx.adapter = undefined;
         }
         trx.live--;
-        trx.shared.live--;
       });
 
     // rejects `start` when the transaction failed to start or was cancelled, has no effect once it has started
@@ -699,6 +763,15 @@ const rollbackLevels = (
     await hooksEnded;
     // let queries and savepoints in flight and after-commit hooks finish in the transactions they started in
     await trx.adapter?.settle();
+
+    // a transaction still open ends later with SQL that lands in the transaction open on the connection at that time
+    let userOpen = 0;
+    for (const item of levels) userOpen += item.userTransactions;
+    if (userOpen) {
+      const userTransactionOpen = toUserTransactionOpenError(userOpen);
+      block(trx.shared, userTransactionOpen);
+      error ??= userTransactionOpen;
+    }
 
     let failure: { error: unknown } | undefined;
     for (const item of levels) {

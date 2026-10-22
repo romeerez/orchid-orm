@@ -79,25 +79,18 @@ it, the innermost last. A wrapper of another instance routes the adapter to
 itself when it starts; when it ends, the adapter goes to the innermost wrapper
 left, or to the root. Only the root restores the replaced methods; a wrapper
 ending after the root leaves the adapter alone, even when a new root has
-started. Never restore what a wrapper found at its start: test transactions of
-different instances end in any order, and the adapter would stay bound to a
+started. Never restore what a wrapper found at its start: a wrapper of another
+instance may still end after the root, and the adapter would stay bound to a
 rolled back wrapper, rejecting every following test transaction.
 
 Check for the rollback again right before the callback of a transaction runs:
 its savepoint may already exist when the rollback is called, and a start of
 another instance would then attach its wrapper after the root.
 
-Exercise these orders with test transactions of separate instances:
-
-- Start test transactions of two other instances inside the root, roll back the
-  root first, then start a new one.
-- End a test transaction of another instance after a new root started: queries
-  of an instance without a test transaction must reach the new root.
-- Roll back the middle one of three while the innermost is open: queries of an
-  instance without a test transaction must reject rather than reach the root.
-- Delay the callback of a start of another instance until the root is rolled
-  back: the start must reject, and queries of an instance without a test
-  transaction must not reach its wrapper.
+Exercise a test transaction of another instance that ends after a new root has
+started: queries of an instance without a test transaction must reach the new
+root. Hold its end after its transaction has ended, or the rollback of the root
+blocks the adapter.
 
 A rollback with open or starting inner test transactions (a cascade) blocks the
 shared adapter for good: the late code of the test that lost its test
@@ -116,12 +109,9 @@ the block. A start on a blocked adapter is recorded on the stack and cancelled,
 so that the paired `rollback` discards it rather than rolling back an outer test
 transaction.
 
-Exercise the block with a cascade of another instance after the root was rolled
-back: queries of an instance without a test transaction must reject, and so must
-a root start paused in its turn before its transaction begins. Exercise an inner
-start whose `SAVEPOINT` is in flight at the rollback, a start waiting in the
-queue, which rejects at once, and a `withOptions` scope that outlives the
-block.
+Exercise the block with an inner start whose `SAVEPOINT` is in flight at the
+rollback, a start waiting in the queue, which rejects at once, and a
+`withOptions` scope that outlives the block.
 
 A level's rollback first waits for the queries and savepoints in flight through
 the wrapper, including a `hackySavepoint` until it is released or rolled back,
@@ -159,11 +149,41 @@ another instance.
 Exercise the wait under all three adapters with a `withOptions({ setConfig })`
 query in flight at the rollback of a test transaction on a pool of one
 connection, and with a `hackySavepoint` held over the rollback. Exercise the
-rejection with a `withOptions` scope and a transaction of another instance
-sharing the adapter that outlive their test transaction, and with a test
-transaction of another instance started while the rollback waits for a query.
-Exercise the chain with a nested test transaction of the outer instance inside a
-test transaction of another one, then query the outer instance after both end.
+rejection with a `withOptions` scope that outlives its test transaction, and
+with a test transaction of another instance started while the rollback waits for
+a query. Exercise the chain with a nested test transaction of the outer instance
+inside a test transaction of another one, then query the outer instance after
+both end.
+
+A transaction of the tested code still open after those waits blocks the
+adapter, and so does a test transaction of another instance: its late end may
+send `RELEASE` or `ROLLBACK TO` of a savepoint that is gone, which fails and
+aborts whatever transaction is open on the connection then. Check after the
+waits, since after-commit hooks run transactions. Check again when a test
+transaction ends on any path: a start cancelled or rejected after its
+`SAVEPOINT` doesn't go through the rollback, and a transaction may start after
+the first check.
+
+Attribute a transaction to the innermost test transaction on the connection,
+whatever its instance: savepoints nest by the time they start, not by the
+instance. A test transaction takes transactions from sending its `SAVEPOINT`
+until its transaction ends: a start rejected by a wrapper sends no SQL, and the
+end of a test transaction may come after its savepoint is gone; either would
+take the transactions counted meanwhile.
+
+Exercise it with:
+
+- a transaction started while the `SAVEPOINT` of a test transaction is in
+  flight, at its rollback and at the cancellation of its start;
+- a transaction and a starting test transaction of another instance;
+- a nested test transaction of an instance inside a test transaction of another
+  one;
+- a transaction started after a start of another instance was rejected during
+  the rollback;
+- a transaction started after the transaction of a nested test transaction
+  ended, while the end of the test transaction is held, which must not block.
+
+Transactions that ended or failed before the rollback must not block.
 
 Do not decide on restoring the adapter or closing the connection by what is left
 on the stack: a record leaves the stack when `rollback` is called and joins it

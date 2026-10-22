@@ -435,7 +435,7 @@ With `testTransaction.hooks`:
 
 Late queries are rejected when possible, but may run in another test transaction or outside of one.
 
-If a rollback finds inner test transactions still open, it blocks `db` and instances sharing its adapter until the process ends.
+If a test transaction is rolled back while transactions started inside it are still open, including inner test transactions, `db` and instances sharing its adapter are blocked until the process ends.
 Their queries reject with a `TestTransactionError` of kind `blocked`; its `cause` tells what happened.
 Stop the test run on such errors, for example with the runner's `bail` option.
 
@@ -474,6 +474,8 @@ afterEach(async () => {
 - `testTransaction.start` resolves with the started test transaction, its `rollback()` and `close()` target that test transaction.
   `start` accepts a `signal` to cancel the start before its transaction has started.
   A rollback of a test transaction with open inner ones rolls them back as well and blocks `db`, see [timed-out hooks](#timed-out-hooks).
+- When test transactions of several instances share an adapter, roll them back in the reverse order of their start, whichever instance started them.
+  Within one `describe`, Jest and Bun run `afterEach` hooks in the order of declaration, Vitest in reverse by default.
 
 ## transaction options
 

@@ -48,6 +48,11 @@ const byOuter = {
   message:
     'Test transaction was rolled back together with an outer test transaction',
 };
+const userTransactionOpen = {
+  kind: 'userTransactionOpen',
+  message:
+    'Test transaction rollback found a transaction started inside it still open',
+};
 const startedAgain = {
   kind: 'startedAgain',
   message:
@@ -704,37 +709,6 @@ describe('testTransaction', () => {
       await testTransaction.rollback(outside);
     });
 
-    it('should block the adapter when the root ended before the cascade', async () => {
-      const localDb = createTestDb(testDbOptions);
-      const close = jest.spyOn(localDb.q.adapter, 'close');
-      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
-      // has no test transaction, its queries go through the shared adapter
-      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
-      await testTransaction.start(localDb);
-      const outer = await testTransaction.start(other);
-      await testTransaction.start(other);
-      await testTransaction.rollback(localDb);
-      // a new root start in its turn, paused before its transaction begins
-      const begin = holdNextTransaction(localDb.q.adapter);
-      const next = testTransaction.start(localDb);
-      await begin.called;
-
-      // their savepoints are gone with the root, so their rollback fails as well
-      await outer.rollback().catch(noop);
-      begin.release();
-
-      const error = await expectTestTransactionError(next, { kind: 'blocked' });
-      expect(error.cause).toMatchObject(innerOpen);
-      await expectTestTransactionError(outside.query`SELECT 1`, {
-        kind: 'blocked',
-        cause: error.cause,
-      });
-
-      // the transaction of the cancelled start is rolled back, nothing is left to keep the connection open
-      await testTransaction.close(localDb);
-      expect(close).toHaveBeenCalled();
-    });
-
     it('should block the adapter when the inner test transaction is still starting', async () => {
       const localDb = createTestDb(testDbOptions);
       const root = await testTransaction.start(localDb);
@@ -1049,24 +1023,6 @@ describe('testTransaction', () => {
   });
 
   describe('code that outlives its test transaction', () => {
-    it('should reject queries of a transaction of another instance sharing the adapter that outlives its test transaction', async () => {
-      const localDb = createTestDb(testDbOptions);
-      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const root = await testTransaction.start(localDb);
-      let query: Promise<unknown> | undefined;
-      const late = holdTransaction(
-        other,
-        () => (query = other.query`SELECT 1`),
-      );
-      await late.opened;
-
-      await root.close();
-
-      late.release();
-      await late.transaction.catch(noop);
-      await expectTestTransactionError(query!, { kind: 'rolledBack' });
-    });
-
     it('should reject a test transaction of another instance sharing the adapter started once the rollback is called', async () => {
       const localDb = createTestDb(testDbOptions);
       const other = createDbWithAdapter({ adapter: localDb.q.adapter });
@@ -1089,68 +1045,26 @@ describe('testTransaction', () => {
       await next.close();
     });
 
-    it('should roll back a test transaction of another instance sharing the adapter to its own savepoint when a transaction of a third instance outlives it', async () => {
-      const localDb = createTestDb(testDbOptions);
-      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const root = await testTransaction.start(localDb);
-      await setSetting(localDb, 'root');
-      const inner = await testTransaction.start(other);
-      await setSetting(other, 'inner');
-      const late = holdTransaction(third);
-      await late.opened;
-
-      await inner.rollback();
-      expect(await getSetting(localDb)).toBe('root');
-
-      // the late end of the transaction must not release the savepoint of the next test transaction:
-      // its own savepoint is gone, so its `RELEASE` fails (postgres-js sends no `RELEASE`)
-      const next = await testTransaction.start(other);
-      late.release();
-      await late.transaction.catch(noop);
-      await next.rollback();
-      expect(await getSetting(localDb)).toBe('root');
-
-      await root.close();
-    });
-
-    it('should allow a new test transaction when the root is rolled back first', async () => {
-      const localDb = createTestDb(testDbOptions);
-      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
-      await testTransaction.start(localDb);
-      const inner = await testTransaction.start(other);
-      const innermost = await testTransaction.start(third);
-
-      await testTransaction.rollback(localDb);
-      // their savepoints are gone with the root
-      await expect(inner.rollback()).rejects.toThrow();
-      await expect(innermost.rollback()).rejects.toThrow();
-
-      const next = await testTransaction.start(localDb);
-      await setSetting(localDb, 'next');
-      expect(await getSetting(localDb)).toBe('next');
-      await next.close();
-    });
-
     it('should keep the adapter routed to the new root when an old test transaction of another instance ends late', async () => {
       const localDb = createTestDb(testDbOptions);
       const other = createDbWithAdapter({ adapter: localDb.q.adapter });
       // has no test transaction, its queries go through the shared adapter
       const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
       await testTransaction.start(localDb);
-      // let the savepoint roll back, but delay the end of the test transaction of `other` until the next root started
-      const rolledBack = Promise.withResolvers<void>();
+      // let the transaction of `other` end, but delay the end of its test transaction until the next root started
+      const ended = Promise.withResolvers<void>();
       const release = Promise.withResolvers<void>();
-      onNextSavepoint(noop, (result) =>
-        result.finally(() => {
-          rolledBack.resolve();
+      const { transaction } = other;
+      jest.spyOn(other, 'transaction').mockImplementationOnce(((
+        ...args: Parameters<typeof transaction>
+      ) =>
+        transaction.apply(other, args).finally(() => {
+          ended.resolve();
           return release.promise;
-        }),
-      );
+        })) as typeof transaction);
       const inner = await testTransaction.start(other);
       const rollback = inner.rollback();
-      await rolledBack.promise;
+      await ended.promise;
       await testTransaction.rollback(localDb);
 
       const next = await testTransaction.start(localDb);
@@ -1160,47 +1074,6 @@ describe('testTransaction', () => {
 
       expect(await getSetting(outside)).toBe('next');
       await next.close();
-    });
-
-    it('should reject a start of another instance that resumes after the root is rolled back', async () => {
-      const localDb = createTestDb(testDbOptions);
-      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
-      // has no test transaction, its queries go through the shared adapter
-      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const root = await testTransaction.start(localDb);
-      // create the savepoint, then delay the start until the root is rolled back
-      const { created, release } = holdNextSavepoint();
-      const inner = testTransaction.start(other);
-      await created;
-
-      await root.rollback();
-      release();
-
-      // its savepoint is gone with the root, so the rollback of the savepoint fails as well
-      await expect(inner).rejects.toThrow();
-      // the adapter is not routed to the test transaction of `other`
-      await outside.query`SELECT 1`;
-      await root.close();
-    });
-
-    it('should reject queries through the shared adapter after a middle test transaction ends', async () => {
-      const localDb = createTestDb(testDbOptions);
-      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
-      // has no test transaction, its queries go through the shared adapter
-      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
-      const root = await testTransaction.start(localDb);
-      await testTransaction.start(other);
-      const innermost = await testTransaction.start(third);
-
-      await testTransaction.rollback(other);
-      await expectTestTransactionError(outside.query`SELECT 1`, {
-        kind: 'rolledBack',
-      });
-
-      // its savepoint is gone with the test transaction of `other`
-      await innermost.rollback().catch(noop);
-      await root.close();
     });
 
     it('should wait for queries through the shared adapter before rolling back a test transaction of another instance', async () => {
@@ -1268,6 +1141,227 @@ describe('testTransaction', () => {
       await rollback;
 
       await (await testTransaction.start(localDb)).close();
+    });
+
+    it('should block the adapter when a transaction is open at the rollback', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const root = await testTransaction.start(localDb);
+      const level = await testTransaction.start(localDb);
+      let query: Promise<unknown> | undefined;
+      const late = holdTransaction(
+        localDb,
+        () => (query = localDb.query`SELECT 1`),
+      );
+      await late.opened;
+
+      const cause = await expectTestTransactionError(
+        level.rollback(),
+        userTransactionOpen,
+      );
+      const blocked = { kind: 'blocked', cause };
+      await expectTestTransactionError(testTransaction.start(localDb), blocked);
+
+      // the late queries of the transaction are rejected
+      late.release();
+      await late.transaction.catch(noop);
+      await expectTestTransactionError(query!, blocked);
+      await root.close();
+    });
+
+    it('should block the adapter when a transaction started while a test transaction begins is open at its rollback', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const root = await testTransaction.start(localDb);
+      let late: ReturnType<typeof holdTransaction> | undefined;
+      // its savepoint comes right after the savepoint of the test transaction
+      onNextSavepoint(() => (late = holdTransaction(localDb)));
+      const level = await testTransaction.start(localDb);
+      await late!.opened;
+
+      const cause = await expectTestTransactionError(
+        level.rollback(),
+        userTransactionOpen,
+      );
+      await expectTestTransactionError(testTransaction.start(localDb), {
+        kind: 'blocked',
+        cause,
+      });
+
+      late!.release();
+      await late!.transaction.catch(noop);
+      await root.close();
+    });
+
+    it('should block the adapter when a transaction started while a test transaction begins is open at the cancellation of its start', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const root = await testTransaction.start(localDb);
+      const { created, release } = holdNextSavepoint();
+      const level = testTransaction.start(localDb);
+      await created;
+      const late = holdTransaction(localDb);
+      await late.opened;
+
+      // cancels the start, its transaction is rolled back once it starts
+      const rollback = testTransaction.rollback(localDb);
+      release();
+      await expect(level).rejects.toThrow(
+        'The test transaction was rolled back before it started',
+      );
+      await rollback;
+
+      const error = await expectTestTransactionError(
+        testTransaction.start(localDb),
+        { kind: 'blocked' },
+      );
+      expect(error.cause).toMatchObject(userTransactionOpen);
+
+      late.release();
+      await late.transaction.catch(noop);
+      await root.close();
+    });
+
+    it('should block the adapter when a transaction of a third instance is open at the rollback of a test transaction of another instance', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      const inner = await testTransaction.start(other);
+      const late = holdTransaction(third);
+      await late.opened;
+
+      const cause = await expectTestTransactionError(
+        inner.rollback(),
+        userTransactionOpen,
+      );
+      await expectTestTransactionError(testTransaction.start(other), {
+        kind: 'blocked',
+        cause,
+      });
+
+      late.release();
+      await late.transaction.catch(noop);
+      await root.close();
+    });
+
+    it('should block the adapter when the root is rolled back while test transactions of other instances are open', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const close = jest.spyOn(localDb.q.adapter, 'close');
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const third = createDbWithAdapter({ adapter: localDb.q.adapter });
+      // has no test transaction, its queries go through the shared adapter
+      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
+      await testTransaction.start(localDb);
+      const inner = await testTransaction.start(other);
+      const innermost = await testTransaction.start(third);
+
+      const cause = await expectTestTransactionError(
+        testTransaction.rollback(localDb),
+        userTransactionOpen,
+      );
+      // their savepoints are gone with the root
+      await expect(inner.rollback()).rejects.toThrow();
+      await expect(innermost.rollback()).rejects.toThrow();
+
+      const blocked = { kind: 'blocked', cause };
+      await expectTestTransactionError(outside.query`SELECT 1`, blocked);
+      await expectTestTransactionError(testTransaction.start(localDb), blocked);
+      // nothing is left to keep the connection open
+      await testTransaction.close(localDb);
+      expect(close).toHaveBeenCalled();
+    });
+
+    it('should block the adapter when a test transaction of another instance is starting at the rollback', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      // has no test transaction, its queries go through the shared adapter
+      const outside = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      // create the savepoint, then delay the start until the root is rolled back
+      const { created, release } = holdNextSavepoint();
+      const inner = testTransaction.start(other);
+      await created;
+
+      const cause = await expectTestTransactionError(
+        root.rollback(),
+        userTransactionOpen,
+      );
+      release();
+
+      // its savepoint is gone with the root, so the rollback of the savepoint fails as well
+      await expect(inner).rejects.toThrow();
+      await expectTestTransactionError(outside.query`SELECT 1`, {
+        kind: 'blocked',
+        cause,
+      });
+      await root.close();
+    });
+
+    it('should block the adapter when a nested test transaction is open at the rollback of a test transaction of another instance it started in', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      const inner = await testTransaction.start(other);
+      const nested = await testTransaction.start(localDb);
+
+      const cause = await expectTestTransactionError(
+        inner.rollback(),
+        userTransactionOpen,
+      );
+      // its savepoint is gone with the test transaction of `other`
+      await expect(nested.rollback()).rejects.toThrow();
+      await expectTestTransactionError(testTransaction.start(localDb), {
+        kind: 'blocked',
+        cause,
+      });
+      await root.close();
+    });
+
+    it('should not block the adapter for a transaction started after the transaction of a nested test transaction ended', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const root = await testTransaction.start(localDb);
+      // let the transaction of the inner test transaction end, but delay the end of the test transaction
+      const ended = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const { transaction } = localDb;
+      jest.spyOn(localDb, 'transaction').mockImplementationOnce(((
+        ...args: Parameters<typeof transaction>
+      ) =>
+        transaction.apply(localDb, args).finally(() => {
+          ended.resolve();
+          return release.promise;
+        })) as typeof transaction);
+      const level = await testTransaction.start(localDb);
+      const rollback = level.rollback();
+      await ended.promise;
+
+      // starts inside the root
+      const late = holdTransaction(localDb);
+      await late.opened;
+      release.resolve();
+      await rollback;
+
+      late.release();
+      await late.transaction;
+      await (await testTransaction.start(localDb)).rollback();
+      await root.close();
+    });
+
+    it('should not block the adapter after transactions that ended before the rollback', async () => {
+      const localDb = createTestDb(testDbOptions);
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      const level = await testTransaction.start(localDb);
+      await localDb.transaction(() => localDb.transaction(async () => {}));
+      await other
+        .transaction(async () => {
+          throw new Error('failed');
+        })
+        .catch(noop);
+      await (await testTransaction.start(other)).rollback();
+
+      await level.rollback();
+
+      await (await testTransaction.start(localDb)).rollback();
+      await root.close();
     });
   });
 
@@ -1508,6 +1602,32 @@ describe('testTransaction', () => {
       await root.close();
     });
 
+    it('should block the adapter for a transaction started after a start of another instance was rejected during the rollback', async () => {
+      const localDb = createLocalDb();
+      const other = createDbWithAdapter({ adapter: localDb.q.adapter });
+      const root = await testTransaction.start(localDb);
+      const level = await testTransaction.start(localDb);
+      const release = Promise.withResolvers<void>();
+      await localDb.transaction(async () =>
+        localDb.afterCommit(() => release.promise),
+      );
+
+      const rollback = level.rollback();
+      const start = testTransaction.start(other);
+      // starts after the rejected start began, and is inside the test transaction being rolled back
+      await Promise.resolve();
+      const late = holdTransaction(localDb);
+      await expectTestTransactionError(start, { kind: 'rolledBack' });
+      await late.opened;
+
+      release.resolve();
+      await expectTestTransactionError(rollback, userTransactionOpen);
+
+      late.release();
+      await late.transaction.catch(noop);
+      await root.close();
+    });
+
     it('should reject a start of another instance through a test transaction of a third one that resumes while the rollback waits for after-commit hooks', async () => {
       const localDb = createLocalDb();
       const other = createDbWithAdapter({ adapter: localDb.q.adapter });
@@ -1528,7 +1648,7 @@ describe('testTransaction', () => {
       await expectTestTransactionError(innermost, { kind: 'rolledBack' });
 
       release.resolve();
-      await rollback;
+      await expectTestTransactionError(rollback, userTransactionOpen);
       // its savepoint is gone with the root
       await expect(inner.rollback()).rejects.toThrow();
       await root.close();
