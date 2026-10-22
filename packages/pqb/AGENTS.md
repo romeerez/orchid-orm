@@ -23,221 +23,118 @@ PostgreSQL custom type; that separate concern belongs to `t.type(name)`.
 
 ## Test transactions
 
-`start`, `rollback`, and `close` of one instance must run one at a time in the
-call order, each finishing its cleanup before the next one starts; only the
-cancellation of a start that has not started yet takes effect at once: a start
-still waiting for its turn rejects at once and is skipped in its turn, and one
-whose `BEGIN` or `SAVEPOINT` is in flight is rolled back. A rollback may wait
-behind a slow query of a timed-out test while the next hook already calls
-`start`; out of order, that `start` reads a transaction state that the rollback
-overwrites later. Exercise this with a rollback held behind a `pg_sleep` query
-while the next `start` is called, and check that cancelling that `start` rejects
-it before the query ends.
+Keep the testTransaction guide to usage and outcomes; put guarantees and edge
+cases in the JSDoc and here.
 
-`testTransaction.rollback(db)` pairs with the latest `start` call, including one
-that failed or is still starting, because test runners run `afterEach` and
-`afterAll` after a failed or timed-out `beforeEach` or `beforeAll`. A failed
-`start` keeps its record for that `rollback` to discard; otherwise that
-`rollback` reaches the outer test transaction. A starting one is cancelled when
-`rollback` is called rather than in its turn of the queue, so that its `start`
-rejects without leaving a test transaction open and the hook awaiting it stops;
-the `rollback` settles once that `start` does. An aborted `signal` of `start`
-cancels it the same way.
+### Queue and pairing
 
-Exercise this with a failed `start` inside an aborted test transaction: after
-the paired `rollback`, the aborted transaction must still be open. To cancel a
-start while its `BEGIN` or `SAVEPOINT` is in flight, call `rollback` or abort
-from a spy on `adapter.transaction` or
-`TransactionAdapterClass.prototype.savepoint`: right after `start`, the
-cancellation happens before any SQL.
+`start`, `rollback`, and `close` of one instance run one at a time in the call
+order, each finishing its cleanup before the next one starts: a rollback may
+wait behind a slow query of a timed-out test while the next hook already calls
+`start`, and, out of order, that `start` reads a state the rollback overwrites
+later. Cancelling a start is decided at the call, not in its turn: a start
+waiting for its turn rejects at once, so that a hook awaiting it stops without
+leaving a test transaction open.
 
-When called, a handle's `rollback` claims the test transactions whose `start`
-was called after its own, rather than those left when its turn in the queue
-comes, so a `start` called later is never rolled back with it. Open ones among
-them are rolled back as well and reported with `TestTransactionError`; failed
-starts are dropped silently.
+`testTransaction.rollback(db)` pairs with the latest `start` call, including a
+failed or starting one, because test runners run `afterEach` and `afterAll`
+after a failed or timed-out `beforeEach` or `beforeAll`; without the record of a
+failed `start`, it would roll back the outer test transaction. A handle's
+`rollback` claims the starts called after its own when it is called, not when
+its turn comes.
 
-The outermost test transaction of an instance routes the tested code through a
-`TestTransactionAdapter`: it replaces the transaction adapter of its state, so
-that `withOptions` copies keep it, and the bound adapter methods, so that other
-instances sharing the adapter reach it; a transaction of another instance gets
-it as the adapter of its new state, and existing states keep theirs. Tell the
-new state by comparing it with the state before the call: with wrappers of
-nested instances, an existing state also holds the adapter passed to the
-callback. The wrapper rejects queries, transactions, and savepoints once the
-rollback of its test transaction is called and the after-commit hooks running at
-that moment have ended. The levels' own starts, rollbacks, and cleanup must
-bypass it: nested levels start through `db.transaction`, and the wrapper
-recognizes their callbacks. A test transaction of another instance sharing the
-adapter is a transaction of the tested code for it: bypassed, it would start
-inside a root whose rollback is called, and end after that root restored the
-adapter, binding the adapter back to the wrapper.
+Do not decide on restoring the adapter or closing the pool by the stack: records
+join and leave it when `start` and `rollback` are called, while transactions
+begin and end in their turn of the queue. Otherwise a `start` called during a
+rollback begins on the released connection, or closing the pool waits for a
+rollback queued behind it.
 
-The root test transaction is the outermost one on the connection. It keeps the
-adapter methods it replaced and the wrappers of other instances started inside
-it, the innermost last. A wrapper of another instance routes the adapter to
-itself when it starts; when it ends, the adapter goes to the innermost wrapper
-left, or to the root. Only the root restores the replaced methods; a wrapper
-ending after the root leaves the adapter alone, even when a new root has
-started. Never restore what a wrapper found at its start: a wrapper of another
-instance may still end after the root, and the adapter would stay bound to a
-rolled back wrapper, rejecting every following test transaction.
+To cancel a start while its `BEGIN` or `SAVEPOINT` is in flight, cancel from a
+spy on `adapter.transaction` or `TransactionAdapterClass.prototype.savepoint`:
+right after `start`, no SQL has been sent yet.
+
+### Routing
+
+The `TestTransactionAdapter` of the outermost test transaction of an instance
+must route the queries of `withOptions` copies and of other instances sharing
+the adapter. The levels' own starts, rollbacks, and cleanup bypass it, but a
+test transaction of another instance goes through it as tested code: if it
+bypassed the wrapper, it would start inside a root whose rollback is called, and
+end after that root restored the adapter, binding the adapter back to the
+wrapper.
+
+Only the root, the outermost test transaction on the connection, restores the
+adapter methods. Never restore what a wrapper found at its start: a wrapper of
+another instance may end after the root, even after a new root has started, and
+the adapter would stay bound to a rolled back wrapper, rejecting every following
+test transaction. Exercise it by holding the end of such a test transaction
+after its database transaction has ended; holding the database transaction
+itself makes the rollback of the root block the adapter.
 
 Check for the rollback again right before the callback of a transaction runs:
 its savepoint may already exist when the rollback is called, and a start of
 another instance would then attach its wrapper after the root.
 
-Exercise a test transaction of another instance that ends after a new root has
-started: queries of an instance without a test transaction must reach the new
-root. Hold its end after its transaction has ended, or the rollback of the root
-blocks the adapter.
+### Waits before a rollback
 
-A rollback with open or starting inner test transactions (a cascade) blocks the
-shared adapter for good: the late code of the test that lost its test
-transaction may reach any test transaction on that adapter. Decide the block
-synchronously when `rollback()` is called, not in its turn of the queue, and
-keep the first error in the state shared by the instances of the adapter.
+A rollback waits for the queries and savepoints in flight through the wrapper,
+including a `hackySavepoint` until it is released or rolled back: SQL they send
+later (the restore of the SQL session context, `RELEASE`) would run on the outer
+level or on the connection of the next test transaction. Every `hackySavepoint`
+must be released or rolled back, also when a later query of its batch fails, or
+the rollback never ends.
 
-The block cancels every start whose transaction hasn't started, including one
-whose `BEGIN` or `SAVEPOINT` is in flight: a start leaves that set only once its
-transaction has started or its start has failed. It binds the methods of the
-shared adapter to a rejecting target at once, also when no wrapper routes them.
-Wrappers check the block as well, since `withOptions` scopes keep them.
+It also waits for runs of after-commit hooks across instances sharing the
+adapter, including runs started by those hooks: a test ending right after a
+query with such a hook is the normal case. Never wait for callbacks of
+transactions of the tested code: a timed-out test may never end them.
 
-Never unblock: `detach` on a blocked adapter rebinds nothing, and `close` keeps
-the block. A start on a blocked adapter is recorded on the stack and cancelled,
-so that the paired `rollback` discards it rather than rolling back an outer test
-transaction.
+Register a run of hooks inside the microtask that calls them, right before
+calling them: fake timers replace `queueMicrotask`, and a hook may call the
+rollback at once. Failures of hooks not handled by `catchAfterCommitError` must
+remain unhandled rejections.
 
-Exercise the block with an inner start whose `SAVEPOINT` is in flight at the
-rollback, a start waiting in the queue, which rejects at once, and a
-`withOptions` scope that outlives the block.
+Exercise the waits under all three adapters with a `withOptions({ setConfig })`
+query in flight on a pool of one connection. To test the hooks of a query run by
+a hook, start that query a turn of the event loop after the first hook ended, or
+a single wait lets the rollback go first.
 
-A level's rollback first waits for the queries and savepoints in flight through
-the wrapper, including a `hackySavepoint` until it is released or rolled back,
-since SQL they send later (the restore of the SQL session context, `RELEASE`)
-would run after the rollback, on the outer level or on the reused connection of
-the next test transaction. Every `hackySavepoint` must be released or rolled
-back, also when a later query of its batch fails, or that rollback never ends.
-Never wait for callbacks of transactions of the tested code: the code of a
-timed-out test may never end them. Runs of after-commit hooks are the one
-exception, see below.
+### Blocking
 
-A level's rollback also waits for registered runs of after-commit hooks across
-instances sharing the adapter, including hooks started by those runs: a test
-ending right after a query with such a hook is the normal case. Register a run
-inside the microtask that calls the hooks, right before calling them: fake
-timers replace `queueMicrotask`, and a hook may call the rollback at once. Keep
-the registration in the state of test transactions shared by the adapter, active
-while any of its instances has a live test transaction; the places that run
-hooks only call into it. Preserve after-commit error handling:
-`catchAfterCommitError` may handle hook failures, but otherwise unhandled
-rejections must remain visible.
+A rollback with open or starting inner test transactions, a transaction still
+open after the waits, and a teardown over `teardownTimeout` block the shared
+adapter for good: the late code of the test that lost its test transaction may
+reach any test transaction on that adapter. A late end of a transaction also
+sends `RELEASE` or `ROLLBACK TO` of a savepoint that is gone, which fails and
+aborts whatever transaction is open on the connection then.
 
-Until those hooks end, the wrapper of the outermost level keeps accepting
-queries. While a level of any depth is rolling back, the wrapper of its instance
-rejects starts of test transactions of other instances that pass through it,
-also when their callback resumes later; starts that bypass the wrapper are not
-covered. `teardownTimeout` bounds the wait only for `testTransaction.hooks`; a
-direct rollback waits for a hook that never ends.
+Decide the block for inner test transactions synchronously when `rollback()` is
+called, not in its turn of the queue, and keep the first error. The block
+cancels every start whose transaction hasn't started, including one whose
+`BEGIN` or `SAVEPOINT` is in flight, and reaches adapters kept by `withOptions`
+scopes. Never unblock, whether by `detach` or `close`.
 
-Exercise each place that runs hooks, hooks started by a hook (start the second
-query a turn of the event loop after the first hook ended, or a single wait lets
-the rollback go first), and the rollback of a nested level with a start of
-another instance.
-
-Exercise the wait under all three adapters with a `withOptions({ setConfig })`
-query in flight at the rollback of a test transaction on a pool of one
-connection, and with a `hackySavepoint` held over the rollback. Exercise the
-rejection with a `withOptions` scope that outlives its test transaction, and
-with a test transaction of another instance started while the rollback waits for
-a query. Exercise the chain with a nested test transaction of the outer instance
-inside a test transaction of another one, then query the outer instance after
-both end.
-
-A transaction of the tested code still open after those waits blocks the
-adapter, and so does a test transaction of another instance: its late end may
-send `RELEASE` or `ROLLBACK TO` of a savepoint that is gone, which fails and
-aborts whatever transaction is open on the connection then. Check after the
-waits, since after-commit hooks run transactions. Check again when a test
-transaction ends on any path: a start cancelled or rejected after its
-`SAVEPOINT` doesn't go through the rollback, and a transaction may start after
-the first check.
+Check for open transactions after the waits, since after-commit hooks run
+transactions.
 
 Attribute a transaction to the innermost test transaction on the connection,
-whatever its instance: savepoints nest by the time they start, not by the
-instance. A test transaction takes transactions from sending its `SAVEPOINT`
-until its transaction ends: a start rejected by a wrapper sends no SQL, and the
-end of a test transaction may come after its savepoint is gone; either would
-take the transactions counted meanwhile.
+whatever its instance: savepoints nest by the time they start. A test
+transaction counts transactions from sending its `SAVEPOINT` until its database
+transaction ends, not from the call of `start` to the end of the test
+transaction: a start rejected by a wrapper sends no SQL, and the test
+transaction may end after its savepoint is gone, so either would count
+transactions of the level around it.
 
-Exercise it with:
+### `testTransaction.hooks`
 
-- a transaction started while the `SAVEPOINT` of a test transaction is in
-  flight, at its rollback and at the cancellation of its start;
-- a transaction and a starting test transaction of another instance;
-- a nested test transaction of an instance inside a test transaction of another
-  one;
-- a transaction started after a start of another instance was rejected during
-  the rollback;
-- a transaction started after the transaction of a nested test transaction
-  ended, while the end of the test transaction is held, which must not block.
-
-Transactions that ended or failed before the rollback must not block.
-
-Do not decide on restoring the adapter or closing the connection by what is left
-on the stack: a record leaves the stack when `rollback` is called and joins it
-when `start` is called, while the transaction ends or begins only in its turn of
-the queue. The outermost test transaction of an instance restores the
-transaction adapter of its state and ends its routing of the shared adapter when
-it ends, and the pool is closed only when no started test transaction is left
-open, whether or not it is still on the stack. Otherwise a `start` called during
-a rollback begins on the released connection of the rolled back transaction, or
-closing the pool waits for a rollback queued behind it. Exercise both with a
-rollback that is not awaited before the next `start` or `close`.
-
-`testTransaction.hooks` wait for their `start` and `setup` before rolling back,
-because a timed-out hook keeps running and its `setup` would write past the
-rollback. Once both have ended, `rollback` and `close` reach the test
-transaction in the same call, so a `start` called right after is not rolled back
-with it, and `close` uses the `close` of the test transaction so that nothing
-runs between the rollback and closing the pool. After a failed `start` there is
-no test transaction: close by the count of open test transactions, never with
-`testTransaction.close(db)`, which takes the record of another start off the
-stack. A second `start` before the teardown of the previous one rejects rather
-than replacing it, since the replaced test transaction would stay open without
-an error. Keep a `start` cancelled by its teardown rejecting, even though Bun
-reports the late rejection as an error between tests: code after
-`await start()` in a timed-out hook must stop rather than write outside the test
-transaction. Exercise the wait with a `setup` held on a controlled promise while
-`rollback` is called.
-
-The `teardownTimeout` of `testTransaction.hooks` is one budget from the call of
-`rollback` or `close` through the wait for `start` and `setup`, the rollback,
-and closing the pool, not a limit per step. When it runs out, block the adapter
-and reject, and let the teardown go on, ignoring its late outcome; never unblock
-when it ends. Take the timer from `node:timers`: fake timers of test runners
-replace the global `setTimeout`, and a faked timer fires only when the test
-advances the time. Exercise it with a query, a `setup`, a `BEGIN`, and closing
-the pool held past the limit, with steps that each fit in the limit but not
-together, with a late failure of the teardown, which the test runner reports
-when it is left unhandled, and with fake timers enabled before the call. Hold
+Exercise `teardownTimeout` with fake timers enabled before the call, and hold
 the work past the limit on controlled promises or a `pg_sleep` query rather than
 racing a real teardown against a short limit.
 
-Keep the testTransaction guide to usage and outcomes; put guarantees and edge
-cases in the JSDoc and here.
+### Async context
 
-Queries of test bodies carry no async context and cannot be attributed to a test
-transaction: do not reject a query by the test transaction it came from.
-
-Code outside of `withOptions` scopes and transaction callbacks, such as a test
-body, runs in the innermost test transaction through the storage fallback.
-`withOptions` scopes take precedence over the fallback, and a test transaction
-started inside a scope keeps that scope's state as the fallback until it is
-rolled back.
-
-Exercise the fallback with `withOptions({ setConfig })` inside a test
-transaction started on the same instance, and with a test transaction started
-inside a `withOptions` scope: after its rollback, queries must see the outer
-test transaction's settings.
+Queries of test bodies carry no async context: do not reject a query by the test
+transaction it came from. They run in the innermost test transaction through the
+storage fallback; `withOptions` scopes take precedence over it, and a test
+transaction started inside a scope keeps that scope's state as the fallback
+until it is rolled back.
