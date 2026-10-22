@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.33
+
+### Patch Changes
+
+- b3c1f3b3: Wait for after-commit hooks before rolling back a test transaction (#798)
+- Updated dependencies [b3c1f3b3]
+  - pqb@0.73.23
+  - rake-db@2.37.35
+
 ## 1.78.32
 
 ### Patch Changes

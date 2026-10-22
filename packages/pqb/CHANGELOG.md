@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.23
+
+### Patch Changes
+
+- b3c1f3b3: Wait for after-commit hooks before rolling back a test transaction (#798)
+
 ## 0.73.22
 
 ### Patch Changes
