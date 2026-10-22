@@ -6,6 +6,7 @@ import {
   UserData,
   useTestDatabase,
 } from 'test-utils';
+import { NotFoundError } from '../../errors';
 
 describe('select-sub-query value', () => {
   useTestDatabase();
@@ -171,6 +172,136 @@ describe('select-sub-query value', () => {
     expect(res).toEqual([{ profile: { user: true } }]);
   });
 
+  describe('get of a sub-query', () => {
+    it('should return the value of a sub-query', async () => {
+      await db.user.insert(UserData);
+
+      const q = db.user.select({
+        count: () => db.user.get(() => db.user.count()),
+        name: () => db.user.get(() => db.user.get('Name')),
+        self: (q) => q.get(() => db.user.count()),
+      });
+
+      const result = await q;
+
+      assertType<
+        typeof result,
+        { count: number; name: string; self: number }[]
+      >();
+
+      expect(result).toEqual([{ count: 1, name: UserData.Name, self: 1 }]);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT
+            (
+              SELECT (SELECT count(*) FROM "schema"."user" "User") "v"
+              FROM "schema"."user" "User"
+              LIMIT 1
+            ) "count",
+            (
+              SELECT array[(
+                SELECT array["User"."name"] FROM "schema"."user" "User" LIMIT 1
+              )] "v"
+              FROM "schema"."user" "User"
+              LIMIT 1
+            ) "name",
+            (
+              SELECT (SELECT count(*) FROM "schema"."user" "User") "v"
+              FROM "schema"."user" "User"
+              LIMIT 1
+            ) "self"
+          FROM "schema"."user" "User"
+        `,
+      );
+    });
+
+    it('should tell a not found record from a null value of a sub-query', async () => {
+      await db.user.insert(UserData);
+      const none = db.user.where({ Name: 'none' });
+
+      const found = await db.user.select({
+        count: () => db.user.getOptional(() => db.user.count()),
+        age: () => db.user.get(() => db.user.getOptional('Age')),
+      });
+      expect(found).toEqual([{ count: 1, age: null }]);
+
+      const optional = await db.user.select({
+        value: () => none.getOptional(() => db.user.get('Name')),
+      });
+      expect(optional).toEqual([{ value: undefined }]);
+
+      const age = db.user.getOptional('Age').transform((age) => age ?? 0);
+      const transformed = await db.user.select({
+        // the transform applies only to a value of a found record
+        found: () => db.user.get(() => age),
+        notFound: () => none.getOptional(() => age),
+      });
+      expect(transformed).toEqual([{ found: 0, notFound: undefined }]);
+
+      const relation = await db.user.select({
+        value: (q) => q.profile.getOptional(() => db.user.get('Name')),
+      });
+      expect(relation).toEqual([{ value: undefined }]);
+
+      await expect(
+        db.user.select({
+          value: () => none.get(() => db.user.getOptional('Age')),
+        }),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('should return a relation value of a sub-query', async () => {
+      await db.user.insert({ ...UserData, profile: { create: ProfileData } });
+
+      const q = db.user.select({
+        value: () => db.user.get((q) => q.profile.get('Bio')),
+      });
+
+      const result = await q;
+
+      assertType<typeof result, { value: string | null }[]>();
+
+      expect(result).toEqual([{ value: ProfileData.Bio }]);
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT (
+            SELECT array["v"."v"] "v"
+            FROM "schema"."user" "User"
+            JOIN LATERAL (
+              SELECT array["profile"."bio"] "v"
+              FROM "schema"."profile"
+              WHERE "profile"."user_id" = "User"."id" AND "profile"."profile_key" = "User"."user_key"
+            ) "v" ON true
+            LIMIT 1
+          ) "value"
+          FROM "schema"."user" "User"
+        `,
+      );
+    });
+
+    it('should return a sub-query value of a relation', async () => {
+      await db.user.insert({ ...UserData, profile: { create: ProfileData } });
+
+      const result = await db.user.select({
+        // a value of the same relation that isn't wrapped into an array
+        profiles: (q) => q.profile.count(),
+        count: (q) => q.profile.get(() => db.user.count()),
+        name: (q) => q.profile.get(() => db.user.get('Name')),
+      });
+
+      assertType<
+        typeof result,
+        { profiles: number; count: number; name: string }[]
+      >();
+
+      expect(result).toEqual([{ profiles: 1, count: 1, name: UserData.Name }]);
+    });
+  });
+
   describe('pluck', () => {
     it('should support value query from a callback', async () => {
       await db.user.insertMany([
@@ -188,6 +319,26 @@ describe('select-sub-query value', () => {
       assertType<typeof result, (string | null)[]>();
 
       expect(result).toEqual([null, undefined]);
+    });
+
+    it('should support a sub-query value of a relation', async () => {
+      await db.user.insertMany([
+        {
+          ...UserData,
+          profile: { create: {} },
+        },
+        UserData,
+      ]);
+
+      const q = db.user
+        .order('Id')
+        .pluck((q) => q.profile.get(() => db.user.get('Name')));
+
+      const result = await q;
+
+      assertType<typeof result, string[]>();
+
+      expect(result).toEqual([UserData.Name, undefined]);
     });
 
     it('should resolve any aggregations to null, because aggregations always return null', async () => {

@@ -77,6 +77,24 @@ const addParsersForSelectJoinedWildcard = (
   }
 };
 
+// batch parser path of a single-value query selected under `key`:
+// the query's batch parsers are rooted at its value, which is the `key` itself,
+// or its first element when the value is wrapped into an array
+const getNestedValueBatchParserPath = (
+  key: string,
+  q: QueryData,
+  path: BatchParserPathEntry[],
+): BatchParserPathEntry[] => {
+  const { returnType } = path[0];
+  return (q.getColumn as Column.Pick.Data | undefined)?.data.valueToArray
+    ? [
+        { key, returnType: q.returnType },
+        { key: '0', returnType },
+        ...path.slice(1),
+      ]
+    : [{ key, returnType }, ...path.slice(1)];
+};
+
 export interface QueryBatchResult {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
@@ -98,11 +116,16 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
     const { q } = arg as Query;
 
     if (q.batchParsers) {
+      const isValue =
+        q.returnType === 'value' || q.returnType === 'valueOrThrow';
+
       pushQueryArrayImmutable(
         query as unknown as Query,
         'batchParsers',
         q.batchParsers.map((bp) => ({
-          path: [{ key, returnType: q.returnType }, ...bp.path],
+          path: isValue
+            ? getNestedValueBatchParserPath(key, q, bp.path)
+            : [{ key, returnType: q.returnType }, ...bp.path],
           fn: bp.fn,
         })),
       );
