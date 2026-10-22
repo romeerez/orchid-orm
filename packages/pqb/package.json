@@ -1,6 +1,6 @@
 {
   "name": "pqb",
-  "version": "0.73.24",
+  "version": "0.73.25",
   "description": "Postgres query builder",
   "keywords": [
     "pg",

@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.35
+
+### Patch Changes
+
+- ed3d58ad: Fix `get` and `getOptional` with a sub-query callback when selected inside `select` (#820), and when called on a relation (#821).
+- Updated dependencies [ed3d58ad]
+  - pqb@0.73.25
+  - rake-db@2.37.37
+
 ## 1.78.34
 
 ### Patch Changes

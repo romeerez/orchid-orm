@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.25
+
+### Patch Changes
+
+- ed3d58ad: Fix `get` and `getOptional` with a sub-query callback when selected inside `select` (#820), and when called on a relation (#821).
+
 ## 0.73.24
 
 ### Patch Changes
