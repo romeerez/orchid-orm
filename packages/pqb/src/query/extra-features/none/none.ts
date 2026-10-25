@@ -4,11 +4,46 @@ import { RawSql } from '../../expressions/raw-sql';
 import { NotFoundError } from '../../errors';
 import { applyTransforms } from '../data-transform/transform';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
+import { FnExpression } from '../../expressions/fn-expression';
+import { Column } from '../../../columns/column';
+
+/**
+ * Value of an aggregate over no records: `0` for `count`, `null` for others.
+ * `undefined` for what it doesn't evaluate: a grouped or `having`-filtered aggregate,
+ * a window function, and an aggregate compared by an operator such as `count().gt(0)`.
+ */
+export const getNoneAggregateValue = ({
+  expr,
+  getColumn,
+  group,
+  having,
+  chain,
+}: QueryData) => {
+  if (
+    expr instanceof FnExpression &&
+    // result columns of aggregates skip the not found wrapping, unlike a column of `fn`
+    (getColumn as Column.Pick.Data | undefined)?.data.skipValueToArray &&
+    !expr.options.over &&
+    !group &&
+    !having &&
+    !chain
+  ) {
+    return expr.fn === 'count' ? 0 : null;
+  }
+  return;
+};
 
 const noneResult = (q: Query, queryData: QueryData, type: QueryReturnType) => {
   if (!type || type === 'all' || type === 'rows' || type === 'pluck') {
     return [];
-  } else if (type === 'one' || type === 'value' || type === 'void') {
+  }
+
+  if (type === 'value' || type === 'valueOrThrow') {
+    const value = getNoneAggregateValue(queryData);
+    if (value !== undefined) return value;
+  }
+
+  if (type === 'one' || type === 'value' || type === 'void') {
     return queryData.notFoundDefault;
   } else if (type === 'valueOrThrow' && queryData.returning) {
     return 0;

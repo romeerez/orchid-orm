@@ -9,10 +9,12 @@ import { QueryData, SelectAllColumn } from '../../query-data';
 import { _queryGetOptional } from '../get/get.utils';
 import { queryJson } from '../json/json.utils';
 import { queryWrap } from '../wrap/wrap';
-import { isQueryNone } from '../../extra-features/none/none';
+import {
+  getNoneAggregateValue,
+  isQueryNone,
+} from '../../extra-features/none/none';
 import { anyShape } from '../../../columns/any-shape';
 import { Column } from '../../../columns/column';
-import { IntegerBaseColumn } from '../../../columns/column-types/number';
 import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { SelectItemExpression } from '../../expressions/select-item-expression';
 import { HookSelect, HookSelectValue } from './hook-select';
@@ -521,16 +523,13 @@ const pushSubQuerySql = (
       case 'void':
         return;
       case 'value':
-      case 'valueOrThrow':
-        if (
-          query.q.returning ||
-          query.q.expr?.result.value instanceof IntegerBaseColumn
-        ) {
-          sql = '0';
-        } else {
-          return;
-        }
+      case 'valueOrThrow': {
+        const value = query.q.returning ? 0 : getNoneAggregateValue(query.q);
+        if (value === undefined) return;
+
+        sql = String(value);
         break;
+      }
       case 'all':
       case 'pluck':
       case 'rows':

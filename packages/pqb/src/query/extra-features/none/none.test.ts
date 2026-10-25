@@ -81,6 +81,44 @@ describe('none', () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it('should return 0 for count and null for other aggregates', async () => {
+    const result = await Promise.all([
+      db.user.none().count(),
+      db.user.count().none(),
+      db.user.none().sum('Balance'),
+      db.user.max('Id').none(),
+      db.user.none().boolAnd('Active'),
+    ]);
+
+    assertType<
+      typeof result,
+      [number, number, string | null, number | null, boolean | null]
+    >();
+
+    expect(result).toEqual([0, 0, null, null, null]);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('should throw NotFoundError for a grouped or `having`-filtered aggregate, a window function, and an aggregate compared by an operator', async () => {
+    const result = await Promise.allSettled([
+      db.user.select('Name').group('Name').none().count(),
+      db.user
+        .none()
+        .having((q) => q.count().gt(0))
+        .count(),
+      db.user.none().count('*', { over: { partitionBy: 'Name' } }),
+      db.user.none().count().gt(0),
+    ]);
+
+    expect(result).toEqual([
+      { status: 'rejected', reason: expect.any(NotFoundError) },
+      { status: 'rejected', reason: expect.any(NotFoundError) },
+      { status: 'rejected', reason: expect.any(NotFoundError) },
+      { status: 'rejected', reason: expect.any(NotFoundError) },
+    ]);
+    expect(query).not.toHaveBeenCalled();
+  });
+
   it('should return false for exists', async () => {
     const result = await db.user.none().exists();
 
@@ -141,6 +179,65 @@ describe('none', () => {
       assertType<typeof result, { exists: boolean }>();
 
       expect(result).toEqual({ exists: false });
+    });
+
+    it('should return 0 for count and null for other aggregates in a sub-select', async () => {
+      await db.user.insert(UserData);
+
+      const q = db.user
+        .select({
+          count: () => db.user.none().count(),
+          countThenNone: () => db.user.count().none(),
+          sum: () => db.user.none().sum('Balance'),
+          relationSum: (q) => q.messages.none().sum('Decimal'),
+        })
+        .take();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT 0 "count", 0 "countThenNone", null "sum", null "relationSum"
+          FROM "schema"."user" "User"
+          LEFT JOIN LATERAL (
+            SELECT sum("messages"."decimal") "relationSum"
+            FROM "schema"."message" "messages"
+            WHERE ((false)
+              AND "messages"."author_id" = "User"."id"
+              AND "messages"."message_key" = "User"."user_key")
+              AND ("messages"."deleted_at" IS NULL)
+          ) "relationSum" ON true
+          LIMIT 1
+        `,
+      );
+
+      const result = await q;
+
+      assertType<
+        typeof result,
+        {
+          count: number;
+          countThenNone: number;
+          sum: string | null;
+          relationSum: string | null;
+        }
+      >();
+
+      expect(result).toEqual({
+        count: 0,
+        countThenNone: 0,
+        sum: null,
+        relationSum: null,
+      });
+    });
+
+    it('should return 0 for a count sub-query of `getOptional`', async () => {
+      await db.user.insert(UserData);
+
+      const result = await db.user.getOptional(() => db.user.count().none());
+
+      assertType<typeof result, number | undefined>();
+
+      expect(result).toBe(0);
     });
   });
 });
