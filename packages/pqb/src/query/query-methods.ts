@@ -683,7 +683,14 @@ export class QueryMethods<ColumnTypes> {
    * await db.table.all().delete(); // -> 0
    * ```
    *
-   * When it's being used in sub-selects, it will return empty arrays, `undefined`'s, or `0` for count,
+   * Aggregates don't execute a query either: `count` returns `0`, other aggregates return `null`.
+   *
+   * ```ts
+   * await db.table.none().count(); // -> 0
+   * await db.table.none().sum('price'); // -> null
+   * ```
+   *
+   * When it's being used in sub-selects, it will return empty arrays, `undefined`'s, `0` for count, `null` for other aggregates,
    * or it will throw if the sub-query require a result:
    *
    * ```ts
@@ -702,6 +709,8 @@ export class QueryMethods<ColumnTypes> {
    *   petsNames: (q) => q.pets.none().pluck('name'),
    *   // returns 0
    *   petsCount: (q) => q.pets.none().count(),
+   *   // returns null
+   *   petsAgeSum: (q) => q.pets.none().sum('age'),
    * });
    * ```
    *
