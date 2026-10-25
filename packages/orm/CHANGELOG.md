@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.38
+
+### Patch Changes
+
+- a1e9c8c1: Fix aggregates of a `none` query: return `0` for `count` and `null` for other aggregates instead of throwing `NotFoundError` (#827)
+- Updated dependencies [a1e9c8c1]
+  - pqb@0.73.28
+  - rake-db@2.37.40
+
 ## 1.78.37
 
 ### Patch Changes

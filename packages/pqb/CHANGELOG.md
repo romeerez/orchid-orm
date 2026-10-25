@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.28
+
+### Patch Changes
+
+- a1e9c8c1: Fix aggregates of a `none` query: return `0` for `count` and `null` for other aggregates instead of throwing `NotFoundError` (#827)
+
 ## 0.73.27
 
 ### Patch Changes
