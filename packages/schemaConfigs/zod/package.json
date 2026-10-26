@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-schema-to-zod",
-  "version": "1.2.32",
+  "version": "1.2.33",
   "description": "Orchid-ORM columns schema to Zod converter",
   "keywords": [
     "orchid-orm",

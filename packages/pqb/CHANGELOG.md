@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.29
+
+### Patch Changes
+
+- 88adcf80: Fix `orCreate` and `upsert` of a `none` query: create the record instead of resolving without creating it (#839)
+
 ## 0.73.28
 
 ### Patch Changes

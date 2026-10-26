@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.39
+
+### Patch Changes
+
+- 88adcf80: Fix `orCreate` and `upsert` of a `none` query: create the record instead of resolving without creating it (#839)
+- Updated dependencies [88adcf80]
+  - pqb@0.73.29
+  - rake-db@2.37.41
+
 ## 1.78.38
 
 ### Patch Changes
