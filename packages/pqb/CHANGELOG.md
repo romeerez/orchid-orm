@@ -1,5 +1,12 @@
 # pqb
 
+## 0.73.30
+
+### Patch Changes
+
+- bf826cbe: Fix invalid SQL when a `where` or `orWhere` group has only `undefined` values (#850)
+- bf826cbe: Fix `orWhere` bypassing relation conditions and `clear('where')` removing them (#845)
+
 ## 0.73.29
 
 ### Patch Changes

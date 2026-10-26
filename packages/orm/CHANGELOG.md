@@ -1,5 +1,15 @@
 # orchid-orm
 
+## 1.78.40
+
+### Patch Changes
+
+- bf826cbe: Fix `orWhere` bypassing relation conditions and `clear('where')` removing them (#845)
+- Updated dependencies [bf826cbe]
+- Updated dependencies [bf826cbe]
+  - pqb@0.73.30
+  - rake-db@2.37.42
+
 ## 1.78.39
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "orchid-orm-test-factory",
-  "version": "1.2.33",
+  "version": "1.2.34",
   "description": "Orchid ORM factories for tests",
   "keywords": [
     "factory",
