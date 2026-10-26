@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../errors';
+import { NotFoundError, QueryError } from '../../errors';
 import {
   assertType,
   db,
@@ -65,6 +65,18 @@ describe('none', () => {
     ]);
 
     expect(result).toEqual([0, 0, 0]);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('should not execute `orCreate` and `upsert` called before `none`', async () => {
+    const result = await Promise.all([
+      db.user.find(1).orCreate(UserData).none(),
+      db.user.find(1).upsert({ update: {}, create: UserData }).none(),
+      db.user.none().find(1).orCreate(UserData).none(),
+      db.user.none().find(1).upsert({ update: {}, create: UserData }).none(),
+    ]);
+
+    expect(result).toEqual([undefined, undefined, undefined, undefined]);
     expect(query).not.toHaveBeenCalled();
   });
 
@@ -238,6 +250,21 @@ describe('none', () => {
       assertType<typeof result, number | undefined>();
 
       expect(result).toBe(0);
+    });
+
+    it('should keep the transaction usable after catching an error of `orCreate`', async () => {
+      const id = await db.user.get('Id').insert(UserData);
+
+      await db.$transaction(async () => {
+        const err = await db.user
+          .none()
+          .find(1)
+          .orCreate({ ...UserData, Id: id })
+          .catch((err) => err);
+
+        expect(err).toBeInstanceOf(QueryError);
+        expect(await db.user.count()).toBe(1);
+      });
     });
   });
 });

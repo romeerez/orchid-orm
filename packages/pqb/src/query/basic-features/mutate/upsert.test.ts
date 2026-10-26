@@ -213,6 +213,51 @@ describe('upsert', () => {
     expect(user.Name).toBe('created');
   });
 
+  it('should create a record with a single query after `none`', async () => {
+    querySpy.mockClear();
+    arraysSpy.mockClear();
+
+    const name = await db.user
+      .get('Name')
+      .none()
+      .find(123)
+      .upsert({
+        update: { Name: 'updated' },
+        create: minUserData,
+      });
+
+    assertType<typeof name, string>();
+
+    expect(name).toBe(minUserData.Name);
+    expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
+      [
+        'WITH "q" AS (' +
+          'UPDATE "schema"."user" "User" SET "name" = $1, "updated_at" = now() WHERE (false) RETURNING "User"."name" "Name"' +
+          '), "q2" AS (' +
+          'INSERT INTO "schema"."user" AS "User"("name", "user_key", "password") SELECT $2, $3, $4 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING "User"."name" "Name"' +
+          ') SELECT "q"."Name" FROM "q" UNION ALL SELECT "q2"."Name" FROM "q2"',
+        ['updated', ...Object.values(minUserData)],
+        undefined,
+      ],
+    ]);
+  });
+
+  it('should not update existing records by `upsert` of a `none` query', async () => {
+    const id = await db.user.get('Id').insert(minUserData);
+
+    const data = {
+      update: { Name: 'updated' },
+      create: { ...minUserData, Name: 'created' },
+    };
+
+    await db.user.none().find(123).orWhere({ Id: id }).upsert(data);
+    await db.user.none().find(123).upsert(data).orWhere({ Id: id });
+    await db.user.none().clear('where').find(id).upsert(data);
+
+    const names = await db.user.order('Id').pluck('Name');
+    expect(names).toEqual([minUserData.Name, 'created', 'created', 'created']);
+  });
+
   // FOR UPDATE only makes sense for SELECT queries, it should be omitted for both the update and insert parts
   it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
     querySpy.mockClear();
@@ -572,6 +617,45 @@ describe('upsert', () => {
             Age: null,
           },
         ],
+        expect.any(Object),
+      );
+    } finally {
+      await testTransaction.rollback(db);
+    }
+  });
+
+  it('should call only create hooks for a `none` query', async () => {
+    const beforeUpdate = jest.fn();
+    const afterUpdate = jest.fn();
+    const beforeCreate = jest.fn();
+    const afterCreate = jest.fn();
+    const afterCreateCommit = jest.fn();
+
+    await testTransaction.start(db);
+
+    try {
+      await db.user
+        .none()
+        .find(123)
+        .upsert({
+          data: minUserData,
+          create: minUserData,
+        })
+        .beforeUpdate(beforeUpdate)
+        .afterUpdate(['Id'], afterUpdate)
+        .beforeCreate(beforeCreate)
+        .afterCreate(['Password'], afterCreate)
+        .afterCreateCommit(['Age'], afterCreateCommit);
+
+      expect(beforeUpdate).not.toHaveBeenCalled();
+      expect(afterUpdate).not.toHaveBeenCalled();
+      expect(beforeCreate).toHaveBeenCalledTimes(1);
+      expect(afterCreate).toHaveBeenCalledWith(
+        [{ Password: 'password', Age: null }],
+        expect.any(Object),
+      );
+      expect(afterCreateCommit).toHaveBeenCalledWith(
+        [{ Password: 'password', Age: null }],
         expect.any(Object),
       );
     } finally {

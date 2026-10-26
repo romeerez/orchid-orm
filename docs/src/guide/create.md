@@ -435,6 +435,8 @@ UNION ALL
 SELECT * FROM insert_row
 ```
 
+Called after [none](/guide/query-methods.html#none), `orCreate` performs only the second query.
+
 ### onConflict
 
 [//]: # 'has JSDoc'

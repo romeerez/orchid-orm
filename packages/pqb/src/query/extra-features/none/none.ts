@@ -6,6 +6,7 @@ import { applyTransforms } from '../data-transform/transform';
 import { pushQueryValueImmutable, QueryData } from '../../query-data';
 import { FnExpression } from '../../expressions/fn-expression';
 import { Column } from '../../../columns/column';
+import { getThen } from '../../then/then';
 
 /**
  * Value of an aggregate over no records: `0` for `count`, `null` for others.
@@ -63,6 +64,11 @@ export const noneMethods = {
     resolve?: (data?: unknown) => void,
     reject?: (err: unknown) => void,
   ) {
+    // `orCreate` and `upsert` of a `none` query create the record
+    if (this.q.upsertSecond) {
+      return getThen().call(this, resolve, reject);
+    }
+
     try {
       let result = noneResult(this, this.q, this.q.returnType);
 
@@ -80,27 +86,38 @@ export const noneMethods = {
       return reject?.(err);
     }
   },
-  catch(this: PromiseLike<unknown>, reject?: (err: unknown) => void) {
-    return this.then(undefined, reject);
-  },
 };
 
 export const _queryNone = <T>(q: T): T => {
   if (isQueryNone(q)) return q;
 
   q = extendQuery(q as Query, noneMethods) as T;
+  // `none` cancels `orCreate` and `upsert` of a `none` query
+  (q as Query).q.upsertSecond = undefined;
 
   pushQueryValueImmutable(q as Query, 'and', new RawSql('false'));
 
   pushQueryValueImmutable(
     q as Query,
     'transform',
-    (_: unknown, queryData: QueryData) =>
-      noneResult(q as Query, queryData, queryData.returnType),
+    (data: unknown, queryData: QueryData) =>
+      queryData.upsertSecond
+        ? data
+        : noneResult(q as Query, queryData, queryData.returnType),
   );
 
   return q;
 };
 
+/**
+ * Whether the query resolves without querying the database.
+ * `orCreate` and `upsert` of a `none` query don't: they create the record.
+ */
 export const isQueryNone = (q: unknown) =>
-  (q as Query).then === noneMethods.then;
+  (q as Query).then === noneMethods.then && !(q as Query).q.upsertSecond;
+
+/**
+ * Whether the query is `orCreate` or `upsert` of a `none` query.
+ */
+export const isQueryNoneUpsert = (q: unknown) =>
+  (q as Query).then === noneMethods.then && !!(q as Query).q.upsertSecond;

@@ -40,6 +40,7 @@ import { pushForSql } from '../basic-features/for/for.sql';
 import { setCurrentDefaultSchema } from '../basic-features/storage/storage';
 import { MutativeQueriesSelectRelationsSqlState } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 import { emptyArray } from '../../utils';
+import { isQueryNoneUpsert } from '../extra-features/none/none';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -198,6 +199,12 @@ export const toSql: ToSql = (
         skipSelect = true;
 
         const upsertOrCreate = _clone(table as Query);
+
+        // a `none` query finds nothing, whatever filters it has
+        if (isQueryNoneUpsert(table)) {
+          upsertOrCreate.q.and = [new RawSql('false')];
+          upsertOrCreate.q.or = undefined;
+        }
 
         // it expected for update to not find records, do not throw if not found
         if (upsertOrCreate.q.returnType === 'oneOrThrow') {
