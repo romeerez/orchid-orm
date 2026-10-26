@@ -373,6 +373,43 @@ describe('orWhere', () => {
     );
   });
 
+  it('should skip groups that add no condition (#850)', () => {
+    expectSql(
+      db.user.orWhere({ Name: undefined }).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User"`,
+    );
+
+    expectSql(
+      db.user.where({ Name: undefined }).orWhere({ Age: 20 }).toSQL(),
+      `
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
+        WHERE "User"."age" = $1
+      `,
+      [20],
+    );
+
+    expectSql(
+      db.user.where({ Age: 10 }).orWhere({}, { Name: undefined }).toSQL(),
+      `
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
+        WHERE "User"."age" = $1
+      `,
+      [10],
+    );
+
+    expectSql(
+      db.user
+        .where({ Age: 10 })
+        .orWhere({ Name: undefined }, { Age: 20 }, {})
+        .toSQL(),
+      `
+        SELECT ${UserSelectAll} FROM "schema"."user" "User"
+        WHERE "User"."age" = $1 OR "User"."age" = $2
+      `,
+      [10, 20],
+    );
+  });
+
   it('should wrap sub-wheres with parens', () => {
     const q = db.user.where((q) => q.orWhere({ Age: 20 }, { Age: 30 }), {
       Name: 'name',

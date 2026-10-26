@@ -1,4 +1,4 @@
-import { useTestORM } from '../test-utils/orm.test-utils';
+import { postSelectAll, useTestORM } from '../test-utils/orm.test-utils';
 import {
   db,
   Post,
@@ -1526,6 +1526,159 @@ describe('relations chain', () => {
         `DELETE FROM "schema"."message" "messages" WHERE EXISTS (SELECT 1 FROM "schema"."chat" "Chat" WHERE "Chat"."title" = $1 AND "Chat"."id_of_chat" = "messages"."chat_id" AND "Chat"."chat_key" = "messages"."message_key") AND "messages"."text" = $2`,
         ['title', 'text'],
       );
+    });
+
+    describe('chain condition (#845)', () => {
+      const createUsers = () =>
+        db.user.createMany(
+          ['one', 'two'].map((name) => ({
+            ...UserData,
+            Name: name,
+            posts: { create: [{ ...PostData, Body: name }] },
+          })),
+        );
+
+      it('should not be bypassed by `orWhere`', async () => {
+        const [one] = await createUsers();
+
+        const q = db.user
+          .find(one.Id)
+          .chain('posts')
+          .where({ Body: 'none' })
+          .orWhere({ Body: 'two' });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT ${postSelectAll} FROM "schema"."post" "posts"
+            WHERE ("posts"."body" = $1 OR "posts"."body" = $2)
+              AND EXISTS (
+                SELECT 1 FROM "schema"."user" "User"
+                WHERE "User"."id" = $3
+                  AND "User"."id" = "posts"."user_id"
+                  AND "User"."user_key" = "posts"."title"
+              )
+          `,
+          ['none', 'two', one.Id],
+        );
+
+        expect(await q.pluck('Body')).toEqual([]);
+        expect(await q.delete()).toBe(0);
+        expect(await db.post.order('Body').pluck('Body')).toEqual([
+          'one',
+          'two',
+        ]);
+      });
+
+      it('should not be bypassed by `orWhere` of the parent query', async () => {
+        await createUsers();
+
+        const bodies = await db.user
+          .where({ Name: 'none' })
+          .orWhere({ Name: 'two' })
+          .chain('posts')
+          .pluck('Body');
+
+        expect(bodies).toEqual(['two']);
+      });
+
+      it('should not be bypassed by `orWhere` of the parent query in `select`', async () => {
+        await createUsers();
+
+        const users = await db.user.order('Name').select('Name', {
+          viaExists: (q) =>
+            q.posts
+              .where({ Body: 'none' })
+              .orWhere({ Body: 'one' })
+              .chain('user')
+              .pluck('Name'),
+          viaJoin: (q) =>
+            q.posts
+              .where({ Body: 'none' })
+              .orWhere({ Body: 'one' })
+              .chain('user')
+              .order('posts.Body')
+              .pluck('Name'),
+        });
+
+        expect(users).toEqual([
+          { Name: 'one', viaExists: ['one'], viaJoin: ['one'] },
+          { Name: 'two', viaExists: [], viaJoin: [] },
+        ]);
+      });
+
+      it('should not be bypassed by `orWhere` of the parent query in `select` of a chain of many records', async () => {
+        await db.user.createMany(
+          ['one', 'two'].map((name) => ({
+            ...UserData,
+            Name: name,
+            posts: {
+              create: [
+                {
+                  ...PostData,
+                  Body: name,
+                  postTags: { create: [{ tag: { create: { Tag: name } } }] },
+                },
+              ],
+            },
+          })),
+        );
+
+        const q = db.user.order('Name').select('Name', {
+          tags: (q) =>
+            q.posts
+              .where({ Body: 'none' })
+              .orWhere({ Body: 'one' })
+              .chain('postTags')
+              .order('posts.Id')
+              .pluck('Tag'),
+        });
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "User"."name" "Name", COALESCE("tags"."tags", '[]') "tags"
+            FROM "schema"."user" "User"
+            LEFT JOIN LATERAL (
+              SELECT json_agg("t"."Tag") "tags"
+              FROM (
+                SELECT "t"."Tag"
+                FROM (
+                  SELECT "postTags"."tag" "Tag", row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r"
+                  FROM "schema"."post_tag" "postTags"
+                  JOIN "schema"."post" "posts"
+                    ON ("posts"."body" = $1 OR "posts"."body" = $2)
+                   AND "posts"."user_id" = "User"."id"
+                   AND "posts"."title" = "User"."user_key"
+                   AND "posts"."id" = "postTags"."post_id"
+                  ORDER BY "posts"."id" ASC
+                ) "t"
+                WHERE (r = 1)
+              ) "t"
+            ) "tags" ON true
+            ORDER BY "User"."name" ASC
+          `,
+          ['none', 'one'],
+        );
+
+        expect(await q).toEqual([
+          { Name: 'one', tags: ['one'] },
+          { Name: 'two', tags: [] },
+        ]);
+      });
+
+      it('should remain after `clear`', async () => {
+        const [one] = await createUsers();
+
+        const bodies = await db.user
+          .find(one.Id)
+          .chain('posts')
+          .where({ Body: 'none' })
+          .clear('where')
+          .pluck('Body');
+
+        expect(bodies).toEqual(['one']);
+      });
     });
 
     it('should support chained select', async () => {

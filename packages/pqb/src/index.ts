@@ -346,6 +346,10 @@ export { raw } from './query/expressions/raw-sql';
 export { addTopCte, addTopCteSql } from './query/basic-features/cte/cte.sql';
 export { pushQueryOnForOuter } from './query/basic-features/join/join';
 export {
+  markRelationConditions,
+  isRelationCondition,
+} from './query/basic-features/where/relation-conditions';
+export {
   type FromArg,
   type FromResult,
 } from './query/basic-features/from/from';

@@ -14,6 +14,7 @@ import {
 import {
   _queryTake,
   _queryTakeOptional,
+  markRelationConditions,
   CreateData,
   VirtualColumn,
   WhereArg,
@@ -34,6 +35,7 @@ import {
   makeHasAndBelongsToManyMethod,
 } from './has-and-belongs-to-many/has-and-belongs-to-many';
 import { getSourceRelation, getThroughRelation } from './common/utils';
+import { markJoinRelationConditions } from './common/relation-conditions';
 import { Query } from 'pqb';
 import { OrmTableThunks, TableInstance } from '../orm-instance/orm-instance';
 
@@ -406,14 +408,22 @@ const applyRelation = (
       data.virtualColumn;
   }
 
-  baseQuery.joinQuery = data.joinQuery;
+  // conditions of the relation definition
+  markRelationConditions(query);
+
+  const joinQuery = markJoinRelationConditions(data.joinQuery);
+  baseQuery.joinQuery = joinQuery;
 
   (dbTable.relations as RecordUnknown)[relationName] = {
     table: otherDbTable,
     query,
-    queryRelated: data.queryRelated,
-    joinQuery: data.joinQuery,
-    reverseJoin: data.reverseJoin,
+    queryRelated(params: RecordUnknown) {
+      const q = data.queryRelated(params);
+      markRelationConditions(q, query.q.and);
+      return q;
+    },
+    joinQuery,
+    reverseJoin: markJoinRelationConditions(data.reverseJoin),
     modifyRelatedQuery: data.modifyRelatedQuery,
   };
 

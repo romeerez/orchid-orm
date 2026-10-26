@@ -4,6 +4,7 @@ import { _queryAll } from '../../query.utils';
 import { QueryData } from '../../query-data';
 import { RelationConfigBase } from '../../relations';
 import { _applyRelationAliases, getQueryAs } from '../../basic-features/as/as';
+import { markRelationConditions } from '../../basic-features/where/relation-conditions';
 
 export const _chain = (
   fromQuery: IsQuery,
@@ -34,11 +35,13 @@ export const _chain = (
   } else {
     // Relation query returns a single record in case of belongsTo or hasOne,
     // but when called as a query chain like `q.user.profile` it should return many.
+    const prevAnd = toTable.q.and;
     query = _queryWhere(_queryAll(toTable), [
       {
         EXISTS: { q: rel.reverseJoin(self, toTable) },
       },
     ]);
+    markRelationConditions(query, prevAnd);
 
     q = query.q as QueryData;
 

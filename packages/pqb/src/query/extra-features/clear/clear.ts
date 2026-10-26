@@ -1,6 +1,7 @@
 import { isExpression } from '../../expressions/expression';
 import { RecordUnknown } from '../../../utils';
 import { _clone } from '../../basic-features/clone/clone';
+import { isRelationCondition } from '../../basic-features/where/relation-conditions';
 
 export type ClearStatement =
   | 'with'
@@ -21,7 +22,10 @@ export class Clear {
     const q = _clone(this);
     clears.forEach((clear) => {
       if (clear === 'where') {
-        delete q.q.and;
+        // conditions of a relation remain
+        const and = q.q.and?.filter(isRelationCondition);
+        if (and?.length) q.q.and = and;
+        else delete q.q.and;
         delete q.q.or;
       } else if (clear === 'counters') {
         if ('type' in q.q && q.q.type === 'update') {
