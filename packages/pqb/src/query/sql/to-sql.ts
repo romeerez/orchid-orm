@@ -40,6 +40,7 @@ import { pushForSql } from '../basic-features/for/for.sql';
 import { setCurrentDefaultSchema } from '../basic-features/storage/storage';
 import { MutativeQueriesSelectRelationsSqlState } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 import { emptyArray } from '../../utils';
+import { UpdateReturningSql } from '../basic-features/select/row-versions';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -71,6 +72,7 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSqlValues {
   sql: string[];
   selectedCount: number;
   cteName?: string;
+  updateReturning?: UpdateReturningSql;
   wrapAs?: string;
 }
 

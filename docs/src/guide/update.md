@@ -104,6 +104,44 @@ db.$qb
   .from('b');
 ```
 
+## old and new values
+
+On PostgreSQL 18+, `select` placed after `update` can return column values from before and after the update, using `old.` and `new.` prefixes:
+
+```ts
+const result = await db.user
+  .find(1)
+  .update({ name: 'new name' })
+  .select({ oldName: 'old.name', newName: 'new.name' });
+// { oldName: 'old name', newName: 'new name' }
+```
+
+Columns without a prefix return new values.
+Without an alias, `old.name` is returned under the `name` key, so use different aliases to select both versions of the same column.
+
+Use `old.*` and `new.*` to return nested objects with the table's default columns:
+
+```ts
+const result = await db.user
+  .find(1)
+  .update({ name: 'new name' })
+  .select('name', { fullOld: 'old.*', fullNew: 'new.*' });
+// {
+//   name: 'new name',
+//   fullOld: { id: 1, name: 'old name', ... },
+//   fullNew: { id: 1, name: 'new name', ... },
+// }
+```
+
+Without aliases, the objects are returned under the `old` and `new` keys.
+Columns marked with `select(false)` are excluded from these objects and can be selected explicitly, for example as `old.password`.
+
+Relations and computed columns cannot be prefixed and are not included in `old.*` and `new.*`.
+If the table, or a table joined before `select`, is named or aliased `old` or `new`, the prefix refers to that table.
+A table joined after `select` doesn't change what the prefixes refer to.
+
+When there are no columns to update, the update is [turned into a `SELECT`](#empty-set), and both prefixes return the current values.
+
 ## select relations for update
 
 You can load related data in `update` methods by chaining `.select()` with relation queries.
