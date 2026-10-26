@@ -506,6 +506,178 @@ describe('relations', () => {
     });
   });
 
+  describe('`orWhere` in a relation query (#845)', () => {
+    const createUsers = () =>
+      db.user.createMany(
+        ['one', 'two'].map((name) => ({
+          ...UserData,
+          Name: name,
+          profile: { create: { ...ProfileData, Bio: name } },
+          posts: { create: [{ ...PostData, Body: name }] },
+          chats: { create: [{ ...ChatData, Title: name }] },
+        })),
+      );
+
+    it('should not bypass the relation condition in `select`', async () => {
+      await createUsers();
+
+      const users = await db.user.order('Name').select('Name', {
+        posts: (q) =>
+          q.posts
+            .where({ Body: 'none' })
+            .orWhere({ Body: 'two' })
+            .pluck('Body'),
+        postsCount: (q) => q.posts.orWhere({ Body: 'two' }).count(),
+        profile: (q) =>
+          q.profile
+            .where({ Bio: 'none' })
+            .orWhere({ Bio: 'two' })
+            .getOptional('Bio'),
+        chats: (q) =>
+          q.chats
+            .where({ Title: 'none' })
+            .orWhere({ Title: 'two' })
+            .pluck('Title'),
+      });
+
+      expect(users).toEqual([
+        {
+          Name: 'one',
+          posts: [],
+          postsCount: 0,
+          profile: undefined,
+          chats: [],
+        },
+        {
+          Name: 'two',
+          posts: ['two'],
+          postsCount: 1,
+          profile: 'two',
+          chats: ['two'],
+        },
+      ]);
+
+      const profiles = await db.profile.order('Bio').select('Bio', {
+        user: (q) =>
+          q.user
+            .where({ Name: 'none' })
+            .orWhere({ Name: 'two' })
+            .getOptional('Name'),
+        posts: (q) =>
+          q.posts
+            .where({ Body: 'none' })
+            .orWhere({ Body: 'two' })
+            .pluck('Body'),
+      });
+
+      expect(profiles).toEqual([
+        { Bio: 'one', user: undefined, posts: [] },
+        { Bio: 'two', user: 'two', posts: ['two'] },
+      ]);
+    });
+
+    it('should not bypass the relation condition in `whereExists` and `join`', async () => {
+      await createUsers();
+
+      const exists = await db.user
+        .whereExists('posts', (q) =>
+          q.where({ Body: 'none' }).orWhere({ Body: 'two' }),
+        )
+        .pluck('Name');
+
+      const joined = await db.user
+        .join('posts', (q) =>
+          q.where({ Body: 'none' }).orWhere({ Body: 'two' }),
+        )
+        .pluck('Name');
+
+      expect({ exists, joined }).toEqual({ exists: ['two'], joined: ['two'] });
+    });
+
+    it('should not bypass conditions of the relation definition', async () => {
+      await db.user.create({
+        ...UserData,
+        posts: { create: [{ ...PostData, Body: 'inactive', Active: false }] },
+      });
+
+      const users = await db.user.select({
+        posts: (q) =>
+          q.activePosts
+            .where({ Body: 'none' })
+            .orWhere({ Body: 'inactive' })
+            .pluck('Body'),
+      });
+
+      expect(users).toEqual([{ posts: [] }]);
+    });
+
+    it('should not bypass the relation condition of `queryRelated`', async () => {
+      const [one] = await createUsers();
+
+      const posts = await db.user
+        .queryRelated('posts', one)
+        .where({ Body: 'none' })
+        .orWhere({ Body: 'two' })
+        .pluck('Body');
+
+      expect(posts).toEqual([]);
+    });
+
+    it('should not bypass the relation condition when `where` adds no condition (#850)', async () => {
+      const [one] = await createUsers();
+
+      const posts = await db.user
+        .queryRelated('posts', one)
+        .where({ Body: undefined })
+        .orWhere({ Body: { in: ['one', 'two'] } })
+        .pluck('Body');
+
+      expect(posts).toEqual(['one']);
+    });
+
+    it('should not bypass the relation condition and the soft-delete scope', async () => {
+      const ChatId = await db.chat.get('IdOfChat').create(ChatData);
+      const [one, two] = await db.user.createMany([UserData, UserData]);
+      await db.message.createMany([
+        { ...MessageData, ChatId, AuthorId: one.Id, Text: 'one' },
+        {
+          ...MessageData,
+          ChatId,
+          AuthorId: one.Id,
+          Text: 'deleted',
+          DeletedAt: new Date(),
+        },
+        { ...MessageData, ChatId, AuthorId: two.Id, Text: 'two' },
+      ]);
+
+      const texts = await db.user
+        .queryRelated('messages', one)
+        .where({ Text: 'none' })
+        .orWhere({ Text: { in: ['one', 'deleted', 'two'] } })
+        .pluck('Text');
+
+      expect(texts).toEqual(['one']);
+    });
+
+    it('should keep the relation conditions after `clear`', async () => {
+      await db.user.create({
+        ...UserData,
+        posts: { create: [{ ...PostData, Body: 'inactive', Active: false }] },
+      });
+      await db.user.create({
+        ...UserData,
+        posts: { create: [{ ...PostData, Body: 'other', Active: true }] },
+      });
+
+      const users = await db.user.order('Id').select({
+        posts: (q) =>
+          q.activePosts.where({ Body: 'none' }).clear('where').pluck('Body'),
+      });
+
+      expect(users).toEqual([{ posts: [] }, { posts: ['other'] }]);
+    });
+  });
+
   it('should be able to update json on a table without relations (#311)', () => {
     const UserTable = defineTable('user', (t) => ({
       id: t.identity().primaryKey(),

@@ -21,6 +21,7 @@ import {
 import { WhereSearchItem } from '../../extra-features/search/search.sql';
 import { joinSubQuery } from '../join/join';
 import { ColumnsShape } from '../../../columns';
+import { isRelationCondition, RelationCondition } from './relation-conditions';
 
 export type WhereItem =
   | {
@@ -38,7 +39,8 @@ export type WhereItem =
       SEARCH?: MaybeArray<WhereSearchItem>;
     }
   | Query
-  | Expression;
+  | Expression
+  | RelationCondition;
 
 export interface WhereInItem {
   columns: string[];
@@ -168,10 +170,21 @@ const andOrToSql = (
 ): string | undefined => {
   let sql;
   if (query.or) {
-    const ors = query.and?.length ? [query.and, ...query.or] : query.or;
+    const userAnd = query.and?.filter((item) => !isRelationCondition(item));
+    const ors = userAnd?.length ? [userAnd, ...query.or] : query.or;
     sql = ors
       .map((and) => processAnds(and, ctx, table, query, quotedAs))
+      // skip groups that add no condition, such as `{ a: undefined }`
+      .filter(Boolean)
       .join(' OR ');
+
+    // `orWhere` must not bypass conditions of a relation
+    const relationAnd = query.and?.filter(isRelationCondition);
+    const relationSql =
+      relationAnd && processAnds(relationAnd, ctx, table, query, quotedAs);
+    if (relationSql) {
+      sql = sql ? `(${sql}) AND ${relationSql}` : relationSql;
+    }
   } else if (query.and) {
     sql = processAnds(query.and, ctx, table, query, quotedAs);
   } else {
@@ -207,6 +220,11 @@ const processWhere = (
   data: WhereItem,
   quotedAs?: string,
 ) => {
+  if (isRelationCondition(data)) {
+    processWhere(ands, ctx, table, query, data.condition, quotedAs);
+    return;
+  }
+
   if ('prototype' in data || 'baseQuery' in data) {
     const query = data as Query;
     if (query.q.expr) {

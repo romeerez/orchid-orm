@@ -19,6 +19,7 @@ import {
   UpsertData,
   UpsertThis,
   isQueryReturnsAll,
+  markRelationConditions,
   emptyArray,
 } from 'pqb/internal';
 import {
@@ -121,9 +122,12 @@ export const nestedUpdate = ({
         foreignKeys,
       );
 
+      // detach every record that references the deleted ones, including records of other parents
       self.q.and = self.q.or = undefined;
 
       _queryWhereIn(self, true, foreignKeys, selectIdsSql);
+      // so that `orWhere` can't add records that don't reference the deleted ones
+      markRelationConditions(self);
 
       const deleteQuery = _queryDelete(relQuery);
       // don't throw "not found" if it is not found for delete

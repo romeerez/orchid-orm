@@ -904,6 +904,8 @@ The clear key can be one of the following:
 - offset
 - counters: removes increment and decrement
 
+In a relation query, `clear('where')` keeps the conditions of the relation, including the ones from its definition.
+
 Note that currently, it does not affect on resulting TypeScript type, it may be improved in the future.
 
 ```ts

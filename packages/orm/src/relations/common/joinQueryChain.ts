@@ -10,6 +10,7 @@ import {
   Column,
 } from 'pqb/internal';
 import { Query } from 'pqb';
+import { markJoinRelationConditions } from './relation-conditions';
 
 export const joinQueryChainHOF =
   (
@@ -76,12 +77,14 @@ export const joinQueryChainHOF =
 
     if (useWhereExist) {
       return jq.where({
-        EXISTS: { q: reverseJoin(query, jq) },
+        EXISTS: { q: markJoinRelationConditions(reverseJoin)(query, jq) },
       });
     }
 
     const result = jq.join(
-      { _internalJoin: reverseJoin(query, jq) } as never,
+      {
+        _internalJoin: markJoinRelationConditions(reverseJoin)(query, jq),
+      } as never,
       undefined,
     );
 

@@ -4,7 +4,7 @@ import {
   useRelationCallback,
   useTestORM,
 } from '../../test-utils/orm.test-utils';
-import { db, UserData, ProfileData } from 'test-utils';
+import { db, UserData, ProfileData, ChatData, MessageData } from 'test-utils';
 
 describe('belongsTo update', () => {
   useTestORM();
@@ -456,6 +456,68 @@ describe('belongsTo update', () => {
 
       const exists = await db.user.findOptional(user.Id).exists();
       expect(exists).toBe(true);
+    });
+
+    it('should nullify foreignKey of records of other parents that reference the deleted record', async () => {
+      const AuthorId = await db.user.get('Id').create(UserData);
+      const [one, two] = await db.chat.createMany([ChatData, ChatData]);
+      await db.message.createMany(
+        [one, two].map((chat) => ({
+          ...MessageData,
+          ChatId: chat.IdOfChat,
+          AuthorId,
+        })),
+      );
+
+      await db.chat
+        .queryRelated('messages', one)
+        .update({ sender: { delete: true } });
+
+      expect(await db.message.pluck('AuthorId')).toEqual([null, null]);
+      expect(await db.user.findOptional(AuthorId)).toBe(undefined);
+    });
+
+    it('should not let `orWhere` delete related records of other parents (#845)', async () => {
+      const [one, two] = await db.user.createMany(
+        ['one', 'two'].map((name) => ({
+          ...UserData,
+          Name: name,
+          profile: { create: { ...ProfileData, Bio: name } },
+        })),
+      );
+
+      await db.user
+        .queryRelated('profile', one)
+        .orWhere({ Bio: { in: ['one', 'two'] } })
+        .update({ user: { delete: true } });
+
+      const profiles = await db.profile.order('Bio').select('Bio', 'UserId');
+      expect(profiles).toEqual([
+        { Bio: 'one', UserId: null },
+        { Bio: 'two', UserId: two.Id },
+      ]);
+      expect(await db.user.order('Id').pluck('Id')).toEqual([two.Id]);
+    });
+
+    it('should not let `orWhere` update records that do not reference the deleted record (#845)', async () => {
+      const [one, two] = await db.user.createMany(
+        ['one', 'two'].map((name) => ({
+          ...UserData,
+          Name: name,
+          profile: { create: { ...ProfileData, Bio: name } },
+        })),
+      );
+
+      await db.user
+        .queryRelated('profile', one)
+        .update({ user: { delete: true } })
+        .orWhere({ Bio: { in: ['one', 'two'] } });
+
+      const profiles = await db.profile.order('Bio').select('Bio', 'UserId');
+      expect(profiles).toEqual([
+        { Bio: 'one', UserId: null },
+        { Bio: 'two', UserId: two.Id },
+      ]);
     });
 
     describe('relation callbacks', () => {

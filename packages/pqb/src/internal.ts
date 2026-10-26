@@ -316,6 +316,7 @@ export { getQueryAs } from './index';
 export { raw } from './index';
 export { addTopCte, addTopCteSql } from './index';
 export { pushQueryOnForOuter } from './index';
+export { markRelationConditions, isRelationCondition } from './index';
 export { type FromArg, type FromResult } from './index';
 
 // Merge
