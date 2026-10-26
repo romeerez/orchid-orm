@@ -136,6 +136,28 @@ describe('orCreate', () => {
     expect(user.Name).toBe('created');
   });
 
+  it('should create a record with a single query after `none`', async () => {
+    querySpy.mockClear();
+    arraysSpy.mockClear();
+
+    const name = await db.user.get('Name').none().find(123).orCreate(UserData);
+
+    assertType<typeof name, string>();
+
+    expect(name).toBe(UserData.Name);
+    expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([
+      [
+        'WITH "q" AS (' +
+          'SELECT "User"."name" "Name" FROM "schema"."user" "User" WHERE (false)' +
+          '), "q2" AS (' +
+          'INSERT INTO "schema"."user" AS "User"("name", "user_key", "password", "updated_at", "created_at") SELECT $1, $2, $3, $4, $5 WHERE (NOT EXISTS (SELECT 1 FROM "q")) RETURNING "User"."name" "Name"' +
+          ') SELECT "q"."Name" FROM "q" UNION ALL SELECT "q2"."Name" FROM "q2"',
+        Object.values(UserData),
+        undefined,
+      ],
+    ]);
+  });
+
   it('should create hasMany records when creating the record', async () => {
     const user = await db.user
       .select('Id', 'UserKey')
@@ -295,6 +317,27 @@ describe('orCreate', () => {
       const res = await testDb.qb
         .select({
           Id: () => db.user.find(0).get('Id').orCreate(UserData),
+        })
+        .take();
+
+      expect(res).toEqual({ Id: expect.any(Number) });
+    });
+
+    it('should create a record when a `none` query is nested in select', async () => {
+      const res = await testDb.qb
+        .select({
+          Id: () => db.user.none().find(0).get('Id').orCreate(UserData),
+        })
+        .take();
+
+      expect(res).toEqual({ Id: expect.any(Number) });
+    });
+
+    it('should create a record when a required `none` query is nested in select', async () => {
+      const res = await testDb.qb
+        .select({
+          Id: () =>
+            db.user.none().find(0).get('Id').orCreate(UserData).require(),
         })
         .take();
 

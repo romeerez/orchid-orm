@@ -6,6 +6,7 @@ import {
 } from '../../pick-query-types';
 import { FnUnknownToUnknown, RecordUnknown } from '../../../utils';
 import { _clone } from '../clone/clone';
+import { isQueryNone } from '../../extra-features/none/none';
 
 // `orCreate` arg type.
 // Unlike `upsert`, doesn't pass a data to `create` callback.
@@ -26,6 +27,11 @@ export function _orCreate<T extends PickQueryHasSelectResultReturnType>(
   }
 
   q.type = 'upsert';
+
+  // a `none` query finds nothing: run only the query that creates the record
+  if (isQueryNone(query)) {
+    q.upsertSecond = true;
+  }
 
   if (typeof data === 'function') {
     q.upsertInsert = () =>
@@ -111,6 +117,8 @@ export class QueryOrCreate {
    * UNION ALL
    * SELECT * FROM insert_row
    * ```
+   *
+   * Called after [none](/guide/query-methods.html#none), `orCreate` performs only the second query.
    *
    * @param data - the same data as for `create`, it may be returned from a callback
    */

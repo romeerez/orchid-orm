@@ -28,6 +28,8 @@ If the record is created by another process in between the two queries, `beforeC
 [upsert](/guide/create.html#upsert) has the same behavior for `beforeCreate` as `orCreate`.
 `beforeUpdate` hook is always called once by this `upsert` command, even if the record for the update does not exist.
 
+Called after [none](/guide/query-methods.html#none), `orCreate` and `upsert` execute only the second query, and `upsert` doesn't call `beforeUpdate`.
+
 ```ts
 export const SomeTable = defineTable('someTable', (t) => ({
   ...someColumns,

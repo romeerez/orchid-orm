@@ -690,6 +690,14 @@ export class QueryMethods<ColumnTypes> {
    * await db.table.none().sum('price'); // -> null
    * ```
    *
+   * [orCreate](/guide/create.html#orcreate) and [upsert](/guide/create.html#upsert) called after `none` find nothing, so they create the record with a single query.
+   * Called before `none`, they don't execute.
+   *
+   * ```ts
+   * await db.table.none().find(1).orCreate(data); // creates the record
+   * await db.table.find(1).orCreate(data).none(); // doesn't execute
+   * ```
+   *
    * When it's being used in sub-selects, it will return empty arrays, `undefined`'s, `0` for count, `null` for other aggregates,
    * or it will throw if the sub-query require a result:
    *
