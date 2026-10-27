@@ -4,7 +4,16 @@ import {
   useRelationCallback,
   useTestORM,
 } from '../../test-utils/orm.test-utils';
-import { db, UserData, ProfileData, ChatData, MessageData } from 'test-utils';
+import {
+  db,
+  defineTable,
+  now,
+  UserData,
+  ProfileData,
+  ChatData,
+  MessageData,
+} from 'test-utils';
+import { orchidORMWithAdapter } from '../../orm-instance/orm-instance';
 
 describe('belongsTo update', () => {
   useTestORM();
@@ -456,6 +465,126 @@ describe('belongsTo update', () => {
 
       const exists = await db.user.findOptional(user.Id).exists();
       expect(exists).toBe(true);
+    });
+
+    it('should nullify foreignKey and delete related record in a `chain` query (#849)', async () => {
+      const [one, two] = await db.user
+        .pluck('Id')
+        .createMany([UserData, UserData]);
+      const [chatOne, chatTwo] = await db.chat
+        .pluck('IdOfChat')
+        .createMany([ChatData, ChatData]);
+      await db.message.createMany([
+        { ...MessageData, Text: 'one', ChatId: chatOne, AuthorId: one },
+        { ...MessageData, Text: 'two', ChatId: chatTwo, AuthorId: two },
+      ]);
+
+      await db.chat
+        .find(chatOne)
+        .chain('messages')
+        .update({ sender: { delete: true } });
+
+      const authorIds = await db.message.order('Text').pluck('AuthorId');
+      expect(authorIds).toEqual([null, two]);
+      expect(await db.user.pluck('Id')).toEqual([two]);
+    });
+
+    it('should nullify foreignKey and delete related record in a query with a table alias', async () => {
+      const [one, two] = await db.user.pluck('Id').createMany(
+        ['one', 'two'].map((name) => ({
+          ...UserData,
+          profile: { create: { ...ProfileData, Bio: name } },
+        })),
+      );
+
+      await db.profile
+        .as('p')
+        .where({ 'p.UserId': one })
+        .update({ user: { delete: true } });
+
+      const profiles = await db.profile.order('Bio').pluck('UserId');
+      expect(profiles).toEqual([null, two]);
+      expect(await db.user.pluck('Id')).toEqual([two]);
+    });
+
+    it('should nullify foreignKey and delete related record in a query with a scope', async () => {
+      const UserTable = defineTable('user', { schema: 'schema' }, (t) => ({
+        Id: t.name('id').identity().primaryKey(),
+      }));
+      const ProfileTable = defineTable(
+        'profile',
+        { schema: 'schema' },
+        (t) => ({
+          Id: t.name('id').identity().primaryKey(),
+          UserId: t.name('user_id').integer().nullable(),
+          Active: t.name('active').boolean().nullable(),
+        }),
+      )
+        .scopes({ active: (q) => q.where({ Active: true }) })
+        .relations((profile) => ({
+          user: profile('UserId').belongsTo(() => UserTable('Id')),
+        }));
+      const local = orchidORMWithAdapter(
+        { db: db.$qb },
+        { user: UserTable, profile: ProfileTable },
+      );
+
+      const [, inactive] = await db.user.pluck('Id').createMany(
+        [true, false].map((Active) => ({
+          ...UserData,
+          profile: { create: { ...ProfileData, Active } },
+        })),
+      );
+
+      await local.profile.scope('active').update({ user: { delete: true } });
+
+      const profiles = await db.profile.order('Active').select('UserId');
+      expect(profiles).toEqual([{ UserId: inactive }, { UserId: null }]);
+      expect(await db.user.pluck('Id')).toEqual([inactive]);
+    });
+
+    it('should nullify foreignKey and delete related record in a query with `includeDeleted`', async () => {
+      const AuthorId = await db.user.get('Id').create(UserData);
+      const Id = await db.message.get('Id').create({
+        ...MessageData,
+        AuthorId,
+        DeletedAt: now,
+        chat: { create: ChatData },
+      });
+
+      await db.message
+        .includeDeleted()
+        .where({ Id })
+        .update({ sender: { delete: true } });
+
+      const authorIds = await db.message.includeDeleted().pluck('AuthorId');
+      expect(authorIds).toEqual([null]);
+      expect(await db.user.findOptional(AuthorId)).toBe(undefined);
+    });
+
+    it('should nullify foreignKey and delete related record in a query with a schema', async () => {
+      await db.$query`CREATE SCHEMA "tenant"`;
+      await db.$query`CREATE TABLE "tenant"."profile" (LIKE "schema"."profile" INCLUDING ALL)`;
+
+      const [tenantUserId, userId] = await db.user
+        .pluck('Id')
+        .createMany([UserData, UserData]);
+      await db.profile
+        .withSchema('tenant')
+        .create({ ...ProfileData, UserId: tenantUserId });
+      await db.profile.create({ ...ProfileData, UserId: userId });
+
+      await db.profile
+        .withSchema('tenant')
+        .where({ Bio: ProfileData.Bio })
+        .update({ user: { delete: true } });
+
+      const tenantUserIds = await db.profile
+        .withSchema('tenant')
+        .pluck('UserId');
+      expect(tenantUserIds).toEqual([null]);
+      expect(await db.profile.pluck('UserId')).toEqual([userId]);
+      expect(await db.user.pluck('Id')).toEqual([userId]);
     });
 
     it('should nullify foreignKey of records of other parents that reference the deleted record', async () => {
@@ -947,6 +1076,27 @@ describe('belongsTo update', () => {
 
       const user = await db.profile.queryRelated('user', updated);
       expect(user?.Name).toBe('created');
+    });
+
+    it('should update related record in a `chain` query (#849)', async () => {
+      const [one] = await db.user.pluck('Id').createMany(
+        ['one', 'two'].map((name) => ({
+          ...UserData,
+          Name: name,
+          profile: { create: ProfileData },
+        })),
+      );
+
+      await db.user
+        .find(one)
+        .chain('profile')
+        .take()
+        .update({
+          user: { upsert: { update: { Name: 'updated' }, create: UserData } },
+        });
+
+      const names = await db.user.order('Name').pluck('Name');
+      expect(names).toEqual(['two', 'updated']);
     });
 
     it('should throw in batch update', () => {

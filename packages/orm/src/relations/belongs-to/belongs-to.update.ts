@@ -203,6 +203,10 @@ const makeSelectIdsQuery = (self: Query, foreignKeys: string[]) => {
   const selectIdsQuery = self.baseQuery.clone();
   selectIdsQuery.q.distinct = emptyArray;
   selectIdsQuery.q.select = foreignKeys;
+  // the query can override the alias, schema, and scopes of the table
+  selectIdsQuery.q.as = self.q.as;
+  selectIdsQuery.q.schema = self.q.schema;
+  selectIdsQuery.q.scopes = self.q.scopes;
   selectIdsQuery.q.and = self.q.and;
   selectIdsQuery.q.or = self.q.or;
   return selectIdsQuery;
