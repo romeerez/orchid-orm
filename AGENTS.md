@@ -120,7 +120,7 @@ For database-backed work, start PostgreSQL 15+ (for example `docker compose -f d
 - Prefer `interface` over `type` when practical.
 - For type-only error paths that throw, use `expect(() => expression).toThrow()` rather than unreachable `false &&` or `if (false)` blocks.
 - Do not use IIFEs. Save nested ternary results to a named constant instead of nesting them in another expression.
-- Use an index or `slice` instead of array destructuring or a rest copy that does the same: `select[0]` rather than `const [item] = select`, `path[0]` and `path.slice(1)` rather than a `[{ returnType }, ...rest]` parameter. Where the runtime cost is the same, keep the shorter or more readable code.
+- In production runtime code (not tests), prefer micro-optimizations, especially on hot paths. For example, use an index or `slice` instead of array destructuring or a rest copy that does the same: `select[0]` rather than `const [item] = select`, `path[0]` and `path.slice(1)` rather than a `[{ returnType }, ...rest]` parameter.
 - Prefer `if (!value)` over explicit null/undefined comparisons only when no other falsey value is valid. Comment genuine edge cases.
 - Group parameters into an object for user-facing functions; prefer positional parameters for small local helpers.
 - Minimal casts that expand user-provided generic types are acceptable. Otherwise treat `as` as a potential design problem rather than hiding a mismatch.
