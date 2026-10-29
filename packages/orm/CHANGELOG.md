@@ -1,5 +1,11 @@
 # orchid-orm
 
+## 1.78.43
+
+### Patch Changes
+
+- 05792472: Fix nested `belongsTo` `delete` and `upsert` failing in a `chain` query or a query with `as`, and ignoring `withSchema` and the scopes of the query (#849)
+
 ## 1.78.42
 
 ### Patch Changes
