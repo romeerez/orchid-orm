@@ -176,6 +176,24 @@ describe('none', () => {
     expect(res).toEqual({ err });
   });
 
+  it('should return result in `catch`', async () => {
+    const res = await db.user
+      .none()
+      .count()
+      .catch(() => 'error');
+
+    expect(res).toBe(0);
+  });
+
+  it('should reject in `then` without an error callback', async () => {
+    const res = db.user
+      .none()
+      .take()
+      .then((user) => user.Name);
+
+    await expect(res).rejects.toThrow(NotFoundError);
+  });
+
   describe('with db', () => {
     useTestDatabase();
 
