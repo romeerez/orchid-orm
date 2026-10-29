@@ -16,22 +16,13 @@ By default, `update` will return a count of updated records.
 Place `select`, `selectAll`, or `get` before `update` to specify returning columns.
 
 You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
-To ensure that the whole table won't be updated by accident, updating without effective where conditions will result in TypeScript and runtime errors.
-
-Empty filters, filters where every value is ignored as `undefined`, and empty `notIn` lists, which match all records, do not count as conditions for `update`:
-
-```ts
-await db.table.where({}).update({ name: 'new name' }); // throws
-await db.table.where({ id: undefined }).update({ name: 'new name' }); // throws
-await db.table.where({ id: { notIn: [] } }).update({ name: 'new name' }); // throws
-await db.table.whereNotIn('id', []).update({ name: 'new name' }); // throws
-```
+To ensure that the whole table won't be updated by accident, `update` without conditions is a TypeScript error.
+Conditions that don't limit the records, such as `where({ id: undefined })` or an empty `notIn` list, pass the type check, and `update` throws at runtime.
 
 Use `all()` to update ALL records without conditions:
 
 ```ts
 await db.table.all().update({ name: 'new name' });
-await db.table.all().where({ id: undefined }).update({ name: 'new name' });
 ```
 
 If `select` and `where` were specified before the update it will return an array of updated records.

@@ -600,6 +600,16 @@ export class Where {
    * };
    * ```
    *
+   * `update` and `delete` with such an empty filter throw, unless `all()` is called:
+   *
+   * ```ts
+   * // throws when params is an empty object
+   * await db.table.where(params).update(data);
+   *
+   * // updates all records when params is an empty object
+   * await db.table.all().where(params).update(data);
+   * ```
+   *
    * It supports a sub-query that is selecting a single value to compare it with a column:
    *
    * ```ts

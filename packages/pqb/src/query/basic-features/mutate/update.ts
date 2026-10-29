@@ -379,7 +379,8 @@ export class QueryUpdate {
    * returning columns.
    *
    * You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
-   * To ensure that the whole table won't be updated by accident, updating without where conditions will result in TypeScript and runtime errors.
+   * To ensure that the whole table won't be updated by accident, `update` without conditions is a TypeScript error.
+   * Conditions that don't limit the records, such as `where({ id: undefined })` or an empty `notIn` list, pass the type check, and `update` throws at runtime.
    *
    * Use `all()` to update ALL records without conditions:
    *
