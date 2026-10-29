@@ -44,6 +44,38 @@ describe('delete', () => {
     expect(() =>
       db.user.whereNotIn('Id', []).orWhere({ Id: 1 }).delete().toSQL(),
     ).toThrow('Dangerous delete without conditions');
+
+    expect(() =>
+      db.user
+        .whereNotIn('Id', [])
+        .where({ Name: undefined })
+        .orWhere({ Id: 1 })
+        .delete()
+        .toSQL(),
+    ).toThrow('Dangerous delete without conditions');
+
+    expect(() =>
+      db.user
+        .where({ Id: { notIn: [] } })
+        .delete()
+        .toSQL(),
+    ).toThrow('Dangerous delete without conditions');
+
+    expect(() =>
+      db.user
+        .where({ Id: 1 })
+        .orWhere({ Name: undefined, Id: { notIn: [] } })
+        .delete()
+        .toSQL(),
+    ).toThrow('Dangerous delete without conditions');
+
+    class EmptyNotIn {
+      notIn: number[] = [];
+    }
+
+    expect(() =>
+      db.user.where({ Id: new EmptyNotIn() }).delete().toSQL(),
+    ).toThrow('Dangerous delete without conditions');
   });
 
   it('should allow deleting after explicit all with an empty effective where filter', () => {
@@ -52,6 +84,34 @@ describe('delete', () => {
       `
         DELETE FROM "schema"."user" "User"
       `,
+    );
+  });
+
+  it('should allow deleting after explicit all with an empty `notIn` list', () => {
+    expectSql(
+      db.user
+        .all()
+        .where({ Id: { notIn: [] } })
+        .delete()
+        .toSQL(),
+      `
+        DELETE FROM "schema"."user" "User"
+        WHERE true
+      `,
+    );
+  });
+
+  it('should delete by other conditions next to an empty `notIn` list', () => {
+    expectSql(
+      db.user
+        .where({ Name: 'name', Id: { notIn: [] } })
+        .delete()
+        .toSQL(),
+      `
+        DELETE FROM "schema"."user" "User"
+        WHERE "User"."name" = $1 AND true
+      `,
+      ['name'],
     );
   });
 

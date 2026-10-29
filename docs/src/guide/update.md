@@ -18,11 +18,13 @@ Place `select`, `selectAll`, or `get` before `update` to specify returning colum
 You need to provide `where`, `findBy`, or `find` conditions before calling `update`.
 To ensure that the whole table won't be updated by accident, updating without effective where conditions will result in TypeScript and runtime errors.
 
-Empty filters, and filters where every value is ignored as `undefined`, do not count as conditions for `update`:
+Empty filters, filters where every value is ignored as `undefined`, and empty `notIn` lists, which match all records, do not count as conditions for `update`:
 
 ```ts
 await db.table.where({}).update({ name: 'new name' }); // throws
 await db.table.where({ id: undefined }).update({ name: 'new name' }); // throws
+await db.table.where({ id: { notIn: [] } }).update({ name: 'new name' }); // throws
+await db.table.whereNotIn('id', []).update({ name: 'new name' }); // throws
 ```
 
 Use `all()` to update ALL records without conditions:

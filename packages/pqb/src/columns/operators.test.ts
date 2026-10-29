@@ -307,6 +307,16 @@ describe('operators', () => {
         `,
       );
     });
+
+    it('should use `true` for empty array in a nested condition', () => {
+      expectSql(
+        db.user.whereNot((q) => q.where({ Name: { notIn: [] } })).toSQL(),
+        `
+          SELECT ${UserSelectAll} FROM "schema"."user" "User"
+          WHERE NOT (true)
+        `,
+      );
+    });
   });
 
   describe('lt', () => {

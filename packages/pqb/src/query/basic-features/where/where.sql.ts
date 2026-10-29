@@ -128,7 +128,7 @@ export const whereToSql = (
   if (query.scopes) {
     sql = andOrToSql(ctx, table, query, quotedAs, true);
 
-    if (checkIfHasExplicitWhere && sql) {
+    if (checkIfHasExplicitWhere && sql && !matchesAllByEmptyNotIn(query)) {
       checkIfHasExplicitWhere.value = true;
     }
 
@@ -145,7 +145,8 @@ export const whereToSql = (
         if (
           checkIfHasExplicitWhere &&
           key !== 'default' &&
-          key !== 'nonDeleted'
+          key !== 'nonDeleted' &&
+          !matchesAllByEmptyNotIn(data)
         ) {
           checkIfHasExplicitWhere.value = true;
         }
@@ -154,7 +155,7 @@ export const whereToSql = (
   } else {
     sql = andOrToSql(ctx, table, query, quotedAs, parens);
 
-    if (checkIfHasExplicitWhere && sql) {
+    if (checkIfHasExplicitWhere && sql && !matchesAllByEmptyNotIn(query)) {
       checkIfHasExplicitWhere.value = true;
     }
   }
@@ -214,6 +215,80 @@ const isEmptyNotIn = (item: WhereItem) => item === emptyNotInCondition;
  * Whether the `and` group has only empty `whereNotIn` lists, so it matches all records.
  */
 const isMatchAllGroup = (and: WhereItem[]) => and.every(isEmptyNotIn);
+
+/**
+ * Whether an empty `whereNotIn` or `notIn` list makes the user condition match all records,
+ * so the condition doesn't permit `update` or `delete`.
+ * It reads only the top-level conditions: SQL of an empty `notIn` list is `true`, which keeps its meaning in nested conditions.
+ */
+const matchesAllByEmptyNotIn = ({ and, or }: QueryDataForWhere) =>
+  // a relation condition limits the records
+  !and?.some(isRelationCondition) &&
+  ((!!and && isUnrestrictedGroup(and)) || !!or?.some(isUnrestrictedGroup));
+
+/**
+ * Whether the `and` group has an empty `whereNotIn` or `notIn` list, and its other conditions add nothing, such as `{ a: undefined }`.
+ */
+const isUnrestrictedGroup = (and: WhereItem[]) => {
+  let hasEmptyNotIn = false;
+  for (const item of and) {
+    if (item === emptyNotInCondition) {
+      hasEmptyNotIn = true;
+      continue;
+    }
+
+    if (!isColumnConditions(item)) return false;
+
+    for (const key in item) {
+      const value = item[key];
+      if (value === undefined) continue;
+
+      // a special key such as `NOT` holds conditions rather than operators
+      if (whereSpecialKeys.has(key) || !isColumnOperators(value)) return false;
+
+      for (const op in value) {
+        const arg = value[op];
+        if (arg === undefined) continue;
+
+        if (op !== 'notIn' || !Array.isArray(arg) || arg.length) return false;
+        hasEmptyNotIn = true;
+      }
+    }
+  }
+  return hasEmptyNotIn;
+};
+
+/**
+ * Whether `processWhere` reads the `where` item as conditions of columns, such as `{ id: 1 }`,
+ * rather than as a relation condition, a sub-query, or an expression.
+ */
+const isColumnConditions = (item: WhereItem): item is RecordUnknown =>
+  !isRelationCondition(item) &&
+  !('prototype' in item) &&
+  !('baseQuery' in item) &&
+  !isExpression(item);
+
+/**
+ * Whether `processWhere` reads the value of a column condition as operators, such as `{ gt: 5 }`,
+ * rather than as a value to compare with `=`, a sub-query, or an expression.
+ */
+const isColumnOperators = (value: unknown): value is RecordUnknown =>
+  typeof value === 'object' &&
+  value !== null &&
+  !(value instanceof Date) &&
+  !Array.isArray(value) &&
+  !('baseQuery' in value) &&
+  !isExpression(value);
+
+const whereSpecialKeys = new Set([
+  'AND',
+  'OR',
+  'NOT',
+  'ON',
+  'IN',
+  'EXISTS',
+  'SEARCH',
+]);
 
 const processAnds = (
   and: WhereItem[],

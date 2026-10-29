@@ -14,6 +14,7 @@ const User = testDb(
     scopes: {
       default: (q) => q.where({ deletedAt: null }).orWhere({ active: true }),
       someScope: (q) => q.where({ name: 'a' }).orWhere({ name: 'b' }),
+      emptyNotIn: (q) => q.where({ id: { notIn: [] } }),
     },
   },
 );
@@ -79,6 +80,20 @@ describe('ScopeMethods', () => {
 
       q.scope('someScope').update({});
       q.scope('someScope').delete();
+    });
+
+    it('should allow updating and deleting by a scope only when it limits the records', () => {
+      const q = User.unscope('default');
+
+      expect(() =>
+        q.scope('emptyNotIn').update({ name: 'name' }).toSQL(),
+      ).toThrow('Dangerous update without conditions');
+      expect(() => q.scope('emptyNotIn').delete().toSQL()).toThrow(
+        'Dangerous delete without conditions',
+      );
+
+      q.scope('someScope').update({ name: 'name' }).toSQL();
+      q.scope('someScope').delete().toSQL();
     });
 
     it('should use default scope by default', () => {

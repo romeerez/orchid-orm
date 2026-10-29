@@ -18,11 +18,13 @@ Place `select`, `selectAll`, or `get` before `delete` to specify returning colum
 Need to provide `where`, `findBy`, or `find` conditions before calling `delete`.
 To prevent accidental deletion of all records, deleting without effective where conditions will result in TypeScript and a runtime error.
 
-Empty filters, and filters where every value is ignored as `undefined`, do not count as conditions for `delete`:
+Empty filters, filters where every value is ignored as `undefined`, and empty `notIn` lists, which match all records, do not count as conditions for `delete`:
 
 ```ts
 await db.table.where({}).delete(); // throws
 await db.table.where({ id: undefined }).delete(); // throws
+await db.table.where({ id: { notIn: [] } }).delete(); // throws
+await db.table.whereNotIn('id', []).delete(); // throws
 ```
 
 Use `all()` to delete ALL records without conditions:
