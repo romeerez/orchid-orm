@@ -14,6 +14,10 @@ export const _chain = (
   const self = fromQuery as Query;
   const toTable = toQuery as Query;
 
+  // Combine aliases of the self query and the relation query before building conditions,
+  // so the conditions refer to the final free alias of the query, not to its original name.
+  _applyRelationAliases(self, toTable.q as QueryData);
+
   let query: Query;
   let q: QueryData;
   if (self.q.subQuery) {
@@ -38,7 +42,12 @@ export const _chain = (
     const prevAnd = toTable.q.and;
     query = _queryWhere(_queryAll(toTable), [
       {
-        EXISTS: { q: rel.reverseJoin(self, toTable) },
+        EXISTS: {
+          q: rel.reverseJoin(self, toTable),
+          // remember the alias of this query to resolve it to the current alias on SQL building,
+          // it may be changed later by `as` or by a next query in the chain
+          outerAs: getQueryAs(toTable),
+        },
       },
     ]);
     markRelationConditions(query, prevAnd);
@@ -53,8 +62,6 @@ export const _chain = (
   } else {
     q.relChain = [{ query: self, rel }];
   }
-
-  _applyRelationAliases(self, q);
 
   q.joinedShapes = {
     [getQueryAs(self)]: self.q.selectShape,
