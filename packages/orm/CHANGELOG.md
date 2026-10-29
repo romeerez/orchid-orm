@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.44
+
+### Patch Changes
+
+- d704a9d6: Fix `delete` and `update` with an empty `notIn` list changing all records instead of throwing (#847)
+- Updated dependencies [d704a9d6]
+  - pqb@0.73.33
+  - rake-db@2.37.45
+
 ## 1.78.43
 
 ### Patch Changes

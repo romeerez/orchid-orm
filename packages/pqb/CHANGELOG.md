@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.33
+
+### Patch Changes
+
+- d704a9d6: Fix `delete` and `update` with an empty `notIn` list changing all records instead of throwing (#847)
+
 ## 0.73.32
 
 ### Patch Changes
