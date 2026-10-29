@@ -81,9 +81,10 @@ export const noneMethods = {
         );
       }
 
-      return resolve?.(result);
+      return resolve ? resolve(result) : result;
     } catch (err) {
-      return reject?.(err);
+      if (!reject) throw err;
+      return reject(err);
     }
   },
 };
