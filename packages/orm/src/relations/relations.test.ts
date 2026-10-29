@@ -446,11 +446,11 @@ describe('relations', () => {
       await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const q = db.user.select({
-        posts: (q) => q.posts.whereIn('Id', []).select('Id'),
-        postsCount: (q) => q.posts.whereIn('Id', []).count(),
-        firstPost: (q) => q.posts.whereIn('Id', []).select('Id').takeOptional(),
-        firstPostTitle: (q) => q.posts.whereIn('Id', []).getOptional('Title'),
-        pluckPostTitles: (q) => q.posts.whereIn('Id', []).pluck('Title'),
+        posts: (q) => q.posts.none().select('Id'),
+        postsCount: (q) => q.posts.none().count(),
+        firstPost: (q) => q.posts.none().select('Id').takeOptional(),
+        firstPostTitle: (q) => q.posts.none().getOptional('Title'),
+        pluckPostTitles: (q) => q.posts.none().pluck('Title'),
       });
 
       const res = await q;
@@ -481,13 +481,13 @@ describe('relations', () => {
       await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const one = db.user.select({
-        firstPost: (q) => q.posts.whereIn('Id', []).select('Id').take(),
+        firstPost: (q) => q.posts.none().select('Id').take(),
       });
 
       await expect(one).rejects.toThrow('Record is not found');
 
       const get = db.user.select({
-        firstPostTitle: (q) => q.posts.whereIn('Id', []).get('Title'),
+        firstPostTitle: (q) => q.posts.none().get('Title'),
       });
 
       await expect(get).rejects.toThrow('Record is not found');
@@ -497,8 +497,7 @@ describe('relations', () => {
       await db.user.create({ ...UserData, posts: { create: [PostData] } });
 
       const q = db.user.select({
-        firstPost: (q) =>
-          q.posts.require().whereIn('Id', []).select('Id').take(),
+        firstPost: (q) => q.posts.require().none().select('Id').take(),
       });
 
       const res = await q;
@@ -528,6 +527,8 @@ describe('relations', () => {
             .orWhere({ Body: 'two' })
             .pluck('Body'),
         postsCount: (q) => q.posts.orWhere({ Body: 'two' }).count(),
+        // an empty `orWhereNotIn` list matches all posts of the user
+        allPosts: (q) => q.posts.orWhereNotIn('Id', []).pluck('Body'),
         profile: (q) =>
           q.profile
             .where({ Bio: 'none' })
@@ -545,6 +546,7 @@ describe('relations', () => {
           Name: 'one',
           posts: [],
           postsCount: 0,
+          allPosts: ['one'],
           profile: undefined,
           chats: [],
         },
@@ -552,6 +554,7 @@ describe('relations', () => {
           Name: 'two',
           posts: ['two'],
           postsCount: 1,
+          allPosts: ['two'],
           profile: 'two',
           chats: ['two'],
         },
