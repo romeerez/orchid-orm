@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.42
+
+### Patch Changes
+
+- 378c6807: Fix an empty list in `whereNotIn`, `orWhereIn`, `orWhereNotIn`, or `whereIn` with `orWhere` matching no records, which made `orCreate` and `upsert` insert duplicates (#842). Fix `create` and other insert methods after an empty `whereIn` inserting nothing (#841)
+- Updated dependencies [378c6807]
+  - pqb@0.73.32
+  - rake-db@2.37.44
+
 ## 1.78.41
 
 ### Patch Changes
