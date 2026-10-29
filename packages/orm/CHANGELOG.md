@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.41
+
+### Patch Changes
+
+- 5dba66b0: Fix `then` and `catch` of a `none` query losing the result or the error (#858)
+- Updated dependencies [5dba66b0]
+  - pqb@0.73.31
+  - rake-db@2.37.43
+
 ## 1.78.40
 
 ### Patch Changes

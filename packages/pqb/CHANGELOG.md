@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.31
+
+### Patch Changes
+
+- 5dba66b0: Fix `then` and `catch` of a `none` query losing the result or the error (#858)
+
 ## 0.73.30
 
 ### Patch Changes
