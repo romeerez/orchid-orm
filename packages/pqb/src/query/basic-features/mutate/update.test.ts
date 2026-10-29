@@ -73,6 +73,18 @@ describe('update', () => {
     expect(() =>
       db.user.where({ Name: undefined }).update(update).toSQL(),
     ).toThrow('Dangerous update without conditions');
+
+    expect(() => db.user.whereNotIn('Id', []).update(update).toSQL()).toThrow(
+      'Dangerous update without conditions',
+    );
+
+    expect(() =>
+      db.user.where({ Id: 1 }).orWhereNotIn('Id', []).update(update).toSQL(),
+    ).toThrow('Dangerous update without conditions');
+
+    expect(() =>
+      db.user.whereNotIn('Id', []).orWhere({ Id: 1 }).update(update).toSQL(),
+    ).toThrow('Dangerous update without conditions');
   });
 
   it('should throw when updateOrThrow has an empty effective where filter', () => {

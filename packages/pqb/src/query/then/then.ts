@@ -50,6 +50,8 @@ import {
   checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations,
   loadMutativeQueriesSelectRelations,
 } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.result-handler';
+import { isWhereEmptyIn } from '../basic-features/where/empty-in';
+import { noneMethods } from '../extra-features/none/none';
 
 // This is a standard Promise['then'] method
 // copied from TS standard library because the original `then` is not decoupled from the Promise
@@ -199,6 +201,20 @@ export function maybeWrappedThen(
   parentSavepoint?: ThenSavepointState,
 ): Promise<unknown> {
   const { q } = this;
+
+  // an empty `whereIn` list leaves no records to find, update, or delete,
+  // unless a CTE writes or a union adds records,
+  // and a relation load must release the savepoint it inherits from its mutation
+  if (
+    q.type !== 'insert' &&
+    q.type !== 'upsert' &&
+    !q.with &&
+    !q.union &&
+    !parentSavepoint &&
+    isWhereEmptyIn(q)
+  ) {
+    return noneMethods.then.call(this, resolve, reject);
+  }
 
   const shouldCatch = q.catch;
 

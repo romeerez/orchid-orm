@@ -19,7 +19,6 @@ import {
 } from '../join/join';
 import { sqlQueryArgsToExpression } from '../../expressions/raw-sql';
 import { preprocessJoinArg, processJoinArgs } from '../join/process-join-args';
-import { _queryNone } from '../../extra-features/none/none';
 import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { prepareOpArg } from '../../../columns/operators';
 import {
@@ -43,6 +42,7 @@ import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-q
 import { OrchidOrmInternalError } from '../../errors';
 import { SQLQueryArgs } from '../../db-sql-query';
 import { getClonedQueryData, pushQueryValueImmutable } from '../../query-data';
+import { emptyInCondition, emptyNotInCondition } from './empty-in';
 
 /*
 Argument of `where`:
@@ -425,6 +425,22 @@ export const _queryOrNot = <T extends PickQuerySelectableRelations>(
 };
 
 /**
+ * Adds the condition of an empty {@link Where.prototype.whereIn} list.
+ */
+const pushEmptyIn = <T>(
+  q: T,
+  and: boolean,
+  not?: boolean,
+): T & QueryHasWhere => {
+  const item = not ? emptyNotInCondition : emptyInCondition;
+  return (
+    and
+      ? pushQueryValueImmutable(q as never, 'and', item)
+      : pushQueryValueImmutable(q as never, 'or', [item])
+  ) as never;
+};
+
+/**
  * Mutative {@link Where.prototype.whereIn}
  */
 export const _queryWhereIn = <T>(
@@ -439,7 +455,7 @@ export const _queryWhereIn = <T>(
     if (isIterable(values)) values = [...values];
 
     if ('length' in values && !values.length) {
-      return _queryNone(q) as T & QueryHasWhere;
+      return pushEmptyIn(q, and, not);
     }
 
     if (values instanceof (q as Query).constructor) {
@@ -465,7 +481,7 @@ export const _queryWhereIn = <T>(
         ('length' in values && !values.length) ||
         ('size' in values && !values.size)
       ) {
-        return _queryNone(q) as T & QueryHasWhere;
+        return pushEmptyIn(q, and, not);
       }
 
       if (values instanceof (q as Query).constructor) {
@@ -1094,14 +1110,25 @@ export class Where {
    * db.table.whereIn(['id', 'name'], sql`((1, 'one'), (2, 'two'))`);
    * ```
    *
-   * When empty set of values is given, `whereIn` will resolve into a {@link QueryMethods.none} query that has a special behavior.
+   * An empty list passed to `whereIn` or `orWhereIn` matches no records, and an empty list passed to `whereNotIn` or `orWhereNotIn` matches all records.
+   *
+   * An empty `whereIn` list, alone or with other `where` conditions, makes the query return an empty result without querying the database, the same as {@link QueryMethods.none}.
+   * A query with `with` or `union` still queries the database.
    *
    * ```ts
-   * // following queries resolves into `none`:
-   * db.table.whereIn('id', [])
-   * db.table.whereIn(['id', 'name'], [])
-   * db.table.whereIn({ id: [] })
+   * // return an empty result without querying the database:
+   * db.table.whereIn('id', []);
+   * db.table.whereIn(['id', 'name'], []);
+   * db.table.whereIn({ id: [] });
+   * db.table.where({ name: 'Ann' }).whereIn('id', []);
+   *
+   * // return records named Ann:
+   * db.table.whereIn('id', []).orWhere({ name: 'Ann' });
+   * db.table.where({ name: 'Ann' }).orWhereIn('id', []);
+   * db.table.where({ name: 'Ann' }).whereNotIn('id', []);
    * ```
+   *
+   * `update` and `delete` throw when an empty `whereNotIn` or `orWhereNotIn` list makes them match all records, unless `all()` is called.
    */
   whereIn<
     T extends PickQuerySelectableRelations,

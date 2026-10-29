@@ -258,6 +258,24 @@ describe('upsert', () => {
     expect(names).toEqual([minUserData.Name, 'created', 'created', 'created']);
   });
 
+  it('should update the record found by other conditions combined with an empty list (#842)', async () => {
+    const ids = await db.user
+      .pluck('Id')
+      .insertMany([minUserData, minUserData]);
+
+    const data = (name: string) => ({
+      update: { Name: name },
+      create: { ...minUserData, Name: name },
+    });
+
+    await db.user.find(ids[0]).whereNotIn('Id', []).upsert(data('not in'));
+    await db.user.find(ids[1]).orWhereIn('Id', []).upsert(data('or in'));
+    await db.user.whereIn('Id', []).takeOptional().upsert(data('in'));
+
+    const names = await db.user.order('Id').pluck('Name');
+    expect(names).toEqual(['not in', 'or in', 'in']);
+  });
+
   // FOR UPDATE only makes sense for SELECT queries, it should be omitted for both the update and insert parts
   it('should keep FOR UPDATE for the select part, but omit it for the INSERT part', async () => {
     querySpy.mockClear();

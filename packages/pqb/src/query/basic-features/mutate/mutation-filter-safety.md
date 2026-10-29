@@ -26,7 +26,7 @@ Where renderer skips `undefined` values and empty operator objects. Those inputs
 
 These count as real predicate when they render SQL: raw SQL expressions, existence predicates, relation joins that make `EXISTS`, non-empty `whereIn`, `find`, `findBy`, and named scopes that add conditions.
 
-Empty `whereIn`-style inputs keep old safe behavior: they become `none()`. They must not become full-table mutations.
+Empty `whereIn` list renders `false`. Empty `whereNotIn` list matches all rows, so it must not permit mutation: it renders no SQL, and when its `and` or `or` group has nothing else, whole user condition is dropped from SQL. Empty lists must not become full-table mutations.
 
 Scopes render late in `whereToSql`. Scope SQL can set marker, except built-in `default` and `nonDeleted` scopes. Those are hidden table behavior, not user mutation permission.
 

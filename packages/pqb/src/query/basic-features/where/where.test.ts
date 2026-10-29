@@ -10,6 +10,10 @@ import {
   UserSelectAllWithTable,
   useTestDatabase,
 } from 'test-utils';
+import { TransactionAdapterClass } from '../../../adapters/adapter';
+
+const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
+const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
 
 describe('where', () => {
   describe('callback', () => {
@@ -283,25 +287,76 @@ describe('where sub query', () => {
 
 describe('whereIn', () => {
   describe('empty whereIn', () => {
-    it('should resolve to none for a single column', async () => {
-      const res = await db.user.whereIn('Id', []);
+    useTestDatabase();
 
-      expect(res).toEqual([]);
+    it('should resolve without querying the database when no records can match', async () => {
+      querySpy.mockClear();
+      arraysSpy.mockClear();
+
+      const res = await Promise.all([
+        db.user.whereIn('Id', []),
+        db.user.whereIn(['Id', 'Name'], []),
+        db.user.whereIn({ Id: [], Name: [] }),
+        db.user.where({ Name: 'Ann' }).whereIn('Id', []).orWhereIn('Id', []),
+        db.user.whereIn('Id', []).count(),
+        db.user.whereIn('Id', []).update({ Name: 'Bob' }),
+        db.user.whereIn('Id', []).delete(),
+      ]);
+
+      expect(res).toEqual([[], [], [], [], 0, 0, 0]);
+      expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toEqual([]);
     });
 
-    it('should resolve to none for multiple columns', async () => {
-      const res = await db.user.whereIn(['Id', 'Name'], []);
+    it('should query the database when a CTE or a union can change the result', async () => {
+      querySpy.mockClear();
+      arraysSpy.mockClear();
 
-      expect(res).toEqual([]);
+      await Promise.all([
+        db.user.with('created', db.user.insert(UserData)).whereIn('Id', []),
+        db.user.select('Id').union(db.user.select('Id')).whereIn('Id', []),
+      ]);
+
+      expect([...querySpy.mock.calls, ...arraysSpy.mock.calls]).toHaveLength(2);
+      expect(await db.user.count()).toBe(1);
     });
 
-    it('should resolve to none for object argument', async () => {
-      const res = await db.user.whereIn({
-        Id: [],
-        Name: [],
+    it('should complete a transaction after a caught `create` that selects a relation', async () => {
+      await db.$transaction(async () => {
+        await db.user
+          .whereIn('Id', [])
+          .select('Id', { posts: (q) => q.posts })
+          .create(UserData)
+          .catch(() => undefined);
       });
 
-      expect(res).toEqual([]);
+      expect(await db.user.count()).toBe(1);
+    });
+
+    it('should apply other conditions (#842)', async () => {
+      await db.user.insertMany([
+        { ...UserData, Name: 'Ann' },
+        { ...UserData, Name: 'Bob' },
+      ]);
+
+      const q = db.user.order('Name');
+
+      const res = await Promise.all([
+        q.whereIn('Id', []).orWhere({ Name: 'Ann' }).pluck('Name'),
+        q.where({ Name: 'Ann' }).orWhereIn('Id', []).pluck('Name'),
+        q.where({ Name: 'Ann' }).whereNotIn('Id', []).pluck('Name'),
+        q.whereNotIn('Id', []).pluck('Name'),
+        q.where({ Name: 'Ann' }).orWhereNotIn('Id', []).pluck('Name'),
+        q.whereNotIn('Id', []).orWhere({ Name: 'Ann' }).pluck('Name'),
+      ]);
+
+      expect(res).toEqual([
+        ['Ann'],
+        ['Ann'],
+        ['Ann'],
+        ['Ann', 'Bob'],
+        ['Ann', 'Bob'],
+        ['Ann', 'Bob'],
+      ]);
     });
   });
 });

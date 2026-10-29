@@ -22,6 +22,7 @@ import { WhereSearchItem } from '../../extra-features/search/search.sql';
 import { joinSubQuery } from '../join/join';
 import { ColumnsShape } from '../../../columns';
 import { isRelationCondition, RelationCondition } from './relation-conditions';
+import { emptyNotInCondition } from './empty-in';
 
 export type WhereItem =
   | {
@@ -170,16 +171,29 @@ const andOrToSql = (
 ): string | undefined => {
   let sql;
   if (query.or) {
-    const userAnd = query.and?.filter((item) => !isRelationCondition(item));
-    const ors = userAnd?.length ? [userAnd, ...query.or] : query.or;
-    sql = ors
-      .map((and) => processAnds(and, ctx, table, query, quotedAs))
-      // skip groups that add no condition, such as `{ a: undefined }`
-      .filter(Boolean)
-      .join(' OR ');
+    let userAnd: WhereItem[] | undefined;
+    let relationAnd: WhereItem[] | undefined;
+    if (query.and) {
+      for (const item of query.and) {
+        if (isRelationCondition(item)) (relationAnd ??= []).push(item);
+        else (userAnd ??= []).push(item);
+      }
+    }
+
+    // a group of only empty `whereNotIn` lists matches all records, so the user condition adds nothing
+    if (
+      !(userAnd && isMatchAllGroup(userAnd)) &&
+      !query.or.some(isMatchAllGroup)
+    ) {
+      if (userAnd) sql = processAnds(userAnd, ctx, table, query, quotedAs);
+      for (const and of query.or) {
+        const orSql = processAnds(and, ctx, table, query, quotedAs);
+        // skip groups that add no condition, such as `{ a: undefined }`
+        if (orSql) sql = sql ? `${sql} OR ${orSql}` : orSql;
+      }
+    }
 
     // `orWhere` must not bypass conditions of a relation
-    const relationAnd = query.and?.filter(isRelationCondition);
     const relationSql =
       relationAnd && processAnds(relationAnd, ctx, table, query, quotedAs);
     if (relationSql) {
@@ -193,6 +207,13 @@ const andOrToSql = (
 
   return parens && sql ? `(${sql})` : sql;
 };
+
+const isEmptyNotIn = (item: WhereItem) => item === emptyNotInCondition;
+
+/**
+ * Whether the `and` group has only empty `whereNotIn` lists, so it matches all records.
+ */
+const isMatchAllGroup = (and: WhereItem[]) => and.every(isEmptyNotIn);
 
 const processAnds = (
   and: WhereItem[],
@@ -243,7 +264,11 @@ const processWhere = (
   }
 
   if (isExpression(data)) {
-    ands.push(`(${data.toSQL(ctx, quotedAs)})`);
+    // an empty `whereNotIn` list matches all records, so it adds nothing to other conditions,
+    // and it doesn't permit `update` or `delete`
+    if (data !== emptyNotInCondition) {
+      ands.push(`(${data.toSQL(ctx, quotedAs)})`);
+    }
     return;
   }
 

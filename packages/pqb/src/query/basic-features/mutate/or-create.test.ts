@@ -158,6 +158,26 @@ describe('orCreate', () => {
     ]);
   });
 
+  it('should find the record by other conditions combined with an empty list (#842)', async () => {
+    const id = await db.user.get('Id').insert(UserData);
+
+    await db.user
+      .find(id)
+      .whereNotIn('Id', [])
+      .orCreate({ ...UserData, Name: 'not in' });
+    await db.user
+      .find(id)
+      .orWhereIn('Id', [])
+      .orCreate({ ...UserData, Name: 'or in' });
+    await db.user
+      .whereIn('Id', [])
+      .takeOptional()
+      .orCreate({ ...UserData, Name: 'in' });
+
+    const names = await db.user.order('Id').pluck('Name');
+    expect(names).toEqual([UserData.Name, 'in']);
+  });
+
   it('should create hasMany records when creating the record', async () => {
     const user = await db.user
       .select('Id', 'UserKey')

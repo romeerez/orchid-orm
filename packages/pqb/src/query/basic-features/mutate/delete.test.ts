@@ -32,6 +32,18 @@ describe('delete', () => {
     expect(() => db.user.where({ Id: undefined }).delete().toSQL()).toThrow(
       'Dangerous delete without conditions',
     );
+
+    expect(() => db.user.whereNotIn('Id', []).delete().toSQL()).toThrow(
+      'Dangerous delete without conditions',
+    );
+
+    expect(() =>
+      db.user.where({ Id: 1 }).orWhereNotIn('Id', []).delete().toSQL(),
+    ).toThrow('Dangerous delete without conditions');
+
+    expect(() =>
+      db.user.whereNotIn('Id', []).orWhere({ Id: 1 }).delete().toSQL(),
+    ).toThrow('Dangerous delete without conditions');
   });
 
   it('should allow deleting after explicit all with an empty effective where filter', () => {

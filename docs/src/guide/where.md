@@ -367,14 +367,25 @@ It supports raw SQL expression:
 db.table.whereIn(['id', 'name'], sql`((1, 'one'), (2, 'two'))`);
 ```
 
-When empty set of values is given, `whereIn` will resolve into a [none](/guide/query-methods#none) query that has a special behavior.
+An empty list passed to `whereIn` or `orWhereIn` matches no records, and an empty list passed to `whereNotIn` or `orWhereNotIn` matches all records.
+
+An empty `whereIn` list, alone or with other `where` conditions, makes the query return an empty result without querying the database, the same as [none](/guide/query-methods#none).
+A query with `with` or `union` still queries the database.
 
 ```ts
-// following queries resolves into `none`:
+// return an empty result without querying the database:
 db.table.whereIn('id', []);
 db.table.whereIn(['id', 'name'], []);
 db.table.whereIn({ id: [] });
+db.table.where({ name: 'Ann' }).whereIn('id', []);
+
+// return records named Ann:
+db.table.whereIn('id', []).orWhere({ name: 'Ann' });
+db.table.where({ name: 'Ann' }).orWhereIn('id', []);
+db.table.where({ name: 'Ann' }).whereNotIn('id', []);
 ```
+
+`update` and `delete` throw when an empty `whereNotIn` or `orWhereNotIn` list makes them match all records, unless `all()` is called.
 
 #### orWhereIn
 
