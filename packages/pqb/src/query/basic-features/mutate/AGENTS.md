@@ -13,9 +13,10 @@ filters stay in the query data and render nothing.
 don't revoke the permission.
 
 The `default` and `nonDeleted` scopes limit the records implicitly, so they
-don't permit a mutation, while named scopes that add conditions do. So
-`where({}).delete()` of a soft-delete table throws, though its update has the
-`deletedAt IS NULL` condition. `hardDelete()` removes the `nonDeleted` scope
+don't permit a mutation, while named scopes that add conditions do, unless an
+empty `notIn` list makes them match all records. So `where({}).delete()` of a
+soft-delete table throws, though its update has the `deletedAt IS NULL`
+condition. `hardDelete()` removes the `nonDeleted` scope
 first, so `all().hardDelete()` deletes all records visible after user scopes.
 
 `updateFrom` and `updateMany` skip the check: their `FROM` data limits the

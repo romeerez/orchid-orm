@@ -638,6 +638,18 @@ describe('relations', () => {
       expect(posts).toEqual(['one']);
     });
 
+    it('should permit a mutation by the relation condition when `orWhere` matches all records', async () => {
+      const [one] = await createUsers();
+
+      await db.user
+        .queryRelated('posts', one)
+        .orWhere({ Body: { notIn: [] } })
+        .update({ Body: 'updated' });
+
+      const bodies = await db.post.order('Body').pluck('Body');
+      expect(bodies).toEqual(['two', 'updated']);
+    });
+
     it('should not bypass the relation condition and the soft-delete scope', async () => {
       const ChatId = await db.chat.get('IdOfChat').create(ChatData);
       const [one, two] = await db.user.createMany([UserData, UserData]);

@@ -85,6 +85,30 @@ describe('update', () => {
     expect(() =>
       db.user.whereNotIn('Id', []).orWhere({ Id: 1 }).update(update).toSQL(),
     ).toThrow('Dangerous update without conditions');
+
+    expect(() =>
+      db.user
+        .whereNotIn('Id', [])
+        .where({ Name: undefined })
+        .orWhere({ Id: 1 })
+        .update(update)
+        .toSQL(),
+    ).toThrow('Dangerous update without conditions');
+
+    expect(() =>
+      db.user
+        .where({ Id: { notIn: [] } })
+        .update(update)
+        .toSQL(),
+    ).toThrow('Dangerous update without conditions');
+
+    expect(() =>
+      db.user
+        .where({ Id: 1 })
+        .orWhere({ Name: undefined, Id: { notIn: [] } })
+        .update(update)
+        .toSQL(),
+    ).toThrow('Dangerous update without conditions');
   });
 
   it('should throw when updateOrThrow has an empty effective where filter', () => {
@@ -110,6 +134,39 @@ describe('update', () => {
             "updated_at" = now()
       `,
       ['new name'],
+    );
+  });
+
+  it('should allow updating after explicit all with an empty `notIn` list', () => {
+    expectSql(
+      db.user
+        .all()
+        .where({ Id: { notIn: [] } })
+        .update({ Name: 'new name' })
+        .toSQL(),
+      `
+        UPDATE "schema"."user" "User"
+        SET "name" = $1,
+            "updated_at" = now()
+        WHERE true
+      `,
+      ['new name'],
+    );
+  });
+
+  it('should update by other conditions next to an empty `notIn` list', () => {
+    expectSql(
+      db.user
+        .where({ Name: 'name', Id: { notIn: [] } })
+        .update({ Name: 'new name' })
+        .toSQL(),
+      `
+        UPDATE "schema"."user" "User"
+        SET "name" = $1,
+            "updated_at" = now()
+        WHERE "User"."name" = $2 AND true
+      `,
+      ['new name', 'name'],
     );
   });
 

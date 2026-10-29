@@ -15,9 +15,11 @@ condition, and never for `insert` and `upsert`, which must create records, or
 with a CTE, which may write, or a union, which may add records. Do not skip a
 relation load that must release the savepoint of its mutation.
 
-An empty `whereNotIn` list must not permit `update` or `delete`: it renders no
-SQL, and when its `and` or `or` group has no other conditions, the whole user
-condition is left out of SQL.
+An empty `whereNotIn` list or `notIn` operator list must not permit `update`
+or `delete` when the other conditions of its top-level `and` or `or` group add
+nothing. Make the mutation check decide this, and keep the `true` SQL of an
+empty `notIn` list: nested conditions such as `whereNot` and the `AND` that
+`delete` with `join` appends rely on it.
 
 Test each method with an empty list against the database together with other
 conditions, `orCreate` and `upsert` with an existing matching record, and
