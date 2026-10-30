@@ -7,13 +7,21 @@ interface PostgresJsParser {
 
 interface PostgresJsOptionsWithArrays extends postgres.ParsedOptions {
   shared: {
-    typeArrayMap: Record<number, number>;
+    typeArrayMap?: Record<number, number>;
   };
   parsers: Record<number, PostgresJsParser>;
 }
 
+/**
+ * Makes array parsers of postgres.js v3 return `null` for `NULL` items.
+ * postgres.js v4 parses `NULL` items itself and has no `typeArrayMap`,
+ * so it is left as is.
+ */
 export const patchPostgresJsArrayParsers = (sql: postgres.Sql): void => {
   const options = sql.options as PostgresJsOptionsWithArrays;
+  const { typeArrayMap } = options.shared;
+  if (!typeArrayMap) return;
+
   const { parsers } = options;
   const serializers = options.serializers;
 
@@ -27,7 +35,7 @@ export const patchPostgresJsArrayParsers = (sql: postgres.Sql): void => {
         return result;
       }
 
-      const oid = findTypeOidByArrayOid(options.shared.typeArrayMap, typarray);
+      const oid = findTypeOidByArrayOid(typeArrayMap, typarray);
       if (!oid) return result;
 
       const itemParser = parsers[oid];

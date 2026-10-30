@@ -13,7 +13,7 @@ interface AffectedPackages {
   dependents: string[];
 }
 
-type AdapterName = 'postgres-js' | 'node-postgres' | 'bun';
+type AdapterName = 'postgres-js' | 'postgres-js-v3' | 'node-postgres' | 'bun';
 
 interface CommandSpec {
   label: string;
@@ -72,6 +72,11 @@ const testAdapters: {
   env?: Record<string, string>;
 }[] = [
   { name: 'postgres-js', script: 'check' },
+  {
+    name: 'postgres-js-v3',
+    script: 'check',
+    env: { ADAPTER: 'postgres-js-v3' },
+  },
   {
     name: 'node-postgres',
     script: 'check',

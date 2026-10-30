@@ -92,12 +92,14 @@
     "tagged-tag": "1.0.0"
   },
   "devDependencies": {
+    "postgres": "4.0.0",
+    "postgres3": "npm:postgres@3.4.9",
     "test-utils": "workspace:*",
     "zod": "4.4.3"
   },
   "peerDependencies": {
     "pg": ">=8",
-    "postgres": ">=3"
+    "postgres": "^3 || ^4"
   },
   "peerDependenciesMeta": {
     "pg": {

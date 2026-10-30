@@ -11,7 +11,11 @@ export async function setupPackageJSON(config: InitConfig): Promise<void> {
   const pairs = await Promise.all([
     getLatestPackageVersion('dotenv', 'dependencies'),
     getLatestPackageVersion('orchid-orm', 'dependencies'),
-    getLatestPackageVersion('postgres', 'dependencies'),
+    [
+      'postgres',
+      // the latest major of the `postgres` peer dependency range of `pqb`
+      { version: '^4', kind: 'dependencies' },
+    ] as [string, { version: string; kind: DependencyKind }],
     config.validation === 'zod'
       ? getLatestPackageVersion('orchid-orm-schema-to-zod', 'dependencies')
       : config.validation === 'valibot'

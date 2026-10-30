@@ -86,6 +86,10 @@ jobs:
         run: |
           ADAPTER=postgres-js pnpm check:coverage
 
+      - name: (postgres-js v3) Run tests
+        run: |
+          ADAPTER=postgres-js-v3 pnpm check
+
       - name: (node-postgres) Run tests
         run: |
           ADAPTER=node-postgres pnpm check

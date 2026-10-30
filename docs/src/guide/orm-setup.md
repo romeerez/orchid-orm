@@ -72,6 +72,14 @@ export const db = orchidORM(
 );
 ```
 
+### postgres-js
+
+The `orchid-orm/postgres-js` adapter supports [postgres.js](https://github.com/porsager/postgres) v3 and v4.
+
+::: warning
+postgres.js v4 is published only as ES modules.
+:::
+
 ### Bun SQL
 
 Bun SQL is supported via the `orchid-orm/bun` adapter and works only under the Bun runtime.

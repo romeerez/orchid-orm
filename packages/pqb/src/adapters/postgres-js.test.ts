@@ -25,8 +25,9 @@ describe('postgres-js', () => {
   describe('queryClient unit', () => {
     it('wraps non-arrays query result', async () => {
       const rawResult = makeRawResult([{ one: 1 }], [{ name: 'one' }]);
+      const query = { execute: () => Promise.resolve(rawResult) };
       const client = {
-        unsafe: jest.fn(() => Promise.resolve(rawResult)),
+        unsafe: jest.fn(() => query),
       };
 
       const result = await PostgresJsAdapter.queryClient(
@@ -44,10 +45,12 @@ describe('postgres-js', () => {
       const objectResult = makeRawResult([{ one: 1 }], [{ name: 'one' }]);
       const arraysResult = makeRawResult([[1]], [{ name: 'one' }]);
 
-      const query = Promise.resolve(objectResult) as Promise<MockRawResult> & {
-        values: jest.Mock;
+      const query = {
+        execute: () => Promise.resolve(objectResult),
+        values: jest.fn(() => ({
+          execute: () => Promise.resolve(arraysResult),
+        })),
       };
-      query.values = jest.fn(() => Promise.resolve(arraysResult));
 
       const client = {
         unsafe: jest.fn(() => query),
