@@ -303,6 +303,14 @@ test('uses all adapters for adapter changes', async () => {
       args: ['pnpm', '--filter', 'orchid-orm', 'check', '-o'],
     },
     {
+      label: 'changed checks postgres-js-v3',
+      type: 'tests',
+      adapter: 'postgres-js-v3',
+      env: { ADAPTER: 'postgres-js-v3' },
+      packages: [{ name: 'orchid-orm', folderName: 'orm', role: 'changed' }],
+      args: ['pnpm', '--filter', 'orchid-orm', 'check', '-o'],
+    },
+    {
       label: 'changed checks node-postgres',
       type: 'tests',
       adapter: 'node-postgres',
@@ -322,6 +330,20 @@ test('uses all adapters for adapter changes', async () => {
       label: 'dependent checks',
       type: 'tests',
       adapter: 'postgres-js',
+      packages: [
+        {
+          name: 'orchid-orm-test-factory',
+          folderName: 'test-factory',
+          role: 'dependent',
+        },
+      ],
+      args: ['pnpm', '--filter', 'orchid-orm-test-factory', 'check'],
+    },
+    {
+      label: 'dependent checks postgres-js-v3',
+      type: 'tests',
+      adapter: 'postgres-js-v3',
+      env: { ADAPTER: 'postgres-js-v3' },
       packages: [
         {
           name: 'orchid-orm-test-factory',

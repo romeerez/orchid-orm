@@ -40,9 +40,17 @@ export const createDb = <
   });
 };
 
+/**
+ * postgres.js options except `host` and `user`,
+ * which the adapter accepts only as strings.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PostgresJsDriverOptions = Omit<postgres.Options<any>, 'host' | 'user'>;
+
 export interface PostgresJsAdapterOptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  extends postgres.Options<any>, Omit<AdapterConfigBase, 'searchPath' | 'ssl'> {
+  extends
+    PostgresJsDriverOptions,
+    Omit<AdapterConfigBase, 'searchPath' | 'ssl'> {
   databaseURL?: string;
   schema?: QuerySchema;
 }
@@ -120,8 +128,8 @@ export const PostgresJsAdapter: DriverAdapter = {
     internalQuery: 'internal_query',
     where: 'where',
     column: 'column_name',
-    // postgres.js names it with a space
-    dataType: 'data type_name',
+    // postgres.js v3 names it with a space
+    dataType: ['data_type_name', 'data type_name'],
     file: 'file',
     line: 'line',
     routine: 'routine',
@@ -167,7 +175,9 @@ export const PostgresJsAdapter: DriverAdapter = {
 
     if (arraysMode) query = query.values();
 
-    const result = await query;
+    // Schedule this query before a subsequent `SAVEPOINT` issued by the driver.
+    // Awaiting the query directly defers scheduling by an extra microtask.
+    const result = await query.execute();
     if (result.constructor === Array) {
       return (result as RawResult[]).map((res) =>
         makePostgresJsResult(res, arraysMode),

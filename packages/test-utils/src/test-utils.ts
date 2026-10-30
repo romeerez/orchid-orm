@@ -36,10 +36,21 @@ import { rakeDb as bunsRakeDb } from '../../rake-db/src/adapters/bun';
  *
  * This union and `adapterSetups` must change together.
  */
-export type TestAdapterName = 'postgres-js' | 'node-postgres' | 'bun';
+export type TestAdapterName =
+  | 'postgres-js'
+  | 'postgres-js-v3'
+  | 'node-postgres'
+  | 'bun';
 
 /** The adapter used by the fast local test path when `ADAPTER` is unset. */
 export const defaultAdapter: TestAdapterName = 'postgres-js';
+
+const postgresJsSetup = () => ({
+  TestAdapter: PostgresJsAdapter,
+  createDb: postgresJsCreateDb,
+  orchidORM: postgresJsOrchidORM,
+  rakeDb: postgresJsRakeDb,
+});
 
 /**
  * The first-party test adapter registry.
@@ -54,12 +65,9 @@ const adapterSetups = {
     orchidORM: nodePostgresOrchidORM,
     rakeDb: nodePostgresRakeDb,
   }),
-  'postgres-js': () => ({
-    TestAdapter: PostgresJsAdapter,
-    createDb: postgresJsCreateDb,
-    orchidORM: postgresJsOrchidORM,
-    rakeDb: postgresJsRakeDb,
-  }),
+  'postgres-js': postgresJsSetup,
+  // Jest maps `postgres` to postgres.js v3 for it
+  'postgres-js-v3': postgresJsSetup,
   bun: () => ({
     TestAdapter: BunAdapter,
     createDb: bunCreateDb,

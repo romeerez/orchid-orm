@@ -278,7 +278,11 @@ export interface DriverAdapter {
   schemaConfig?: AdapterSchemaConfigOptions;
   // oxlint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
-  errorFields: RecordString;
+  /**
+   * Driver error property names by `QueryError` property names.
+   * An array lists fallback names in priority order.
+   */
+  errorFields: { [K: string]: string | readonly string[] };
   configure(config: AdapterConfigBase): Pool;
   manualPool: boolean;
   borrow(pool: Pool): Client;
@@ -471,10 +475,14 @@ export class AdapterClass implements Adapter {
 
   assignError(to: QueryError, from: Error): void {
     const { errorFields } = this.driverAdapter;
+    const source = from as unknown as RecordUnknown;
     for (const key in errorFields) {
-      (to as unknown as RecordUnknown)[key] = (
-        from as unknown as RecordUnknown
-      )[errorFields[key]];
+      const field = errorFields[key];
+      const name =
+        typeof field === 'string'
+          ? field
+          : field.find((item) => source[item] !== undefined);
+      (to as unknown as RecordUnknown)[key] = name && source[name];
     }
   }
 }
