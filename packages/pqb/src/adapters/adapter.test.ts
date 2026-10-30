@@ -1264,6 +1264,39 @@ describe('adapter runtime abstractions', () => {
             constraint: 'user_pkey',
           });
         });
+
+        it('assigns column, data type, and internal query of db errors to QueryError', async () => {
+          class TestError extends QueryError {}
+
+          const getError = async (text: string) => {
+            const dbErr = await adapter.query(text).catch((err) => err);
+            const err = new TestError({} as never);
+            adapter.assignError(err, dbErr);
+            return err;
+          };
+
+          // the failed `DO` blocks leave no table or domain behind
+          const [column, dataType, internal] = await Promise.all([
+            getError(
+              `DO $$ BEGIN CREATE TEMP TABLE "not_null" ("a" int NOT NULL); INSERT INTO "not_null" VALUES (NULL); END $$`,
+            ),
+            getError(
+              `DO $$ BEGIN CREATE DOMAIN "positive" AS int CHECK (VALUE > 0); PERFORM 0::"positive"; END $$`,
+            ),
+            getError(`DO $$ BEGIN EXECUTE 'SELECT 1 +'; END $$`),
+          ]);
+
+          expect(column).toMatchObject({ code: '23502', column: 'a' });
+          expect(dataType).toMatchObject({
+            code: '23514',
+            dataType: 'positive',
+          });
+          expect(internal).toMatchObject({
+            code: '42601',
+            internalQuery: 'SELECT 1 +',
+            internalPosition: '11',
+          });
+        });
       });
     },
   );

@@ -116,7 +116,12 @@ export const PostgresJsAdapter: DriverAdapter = {
     constraint: 'constraint_name',
     hint: 'hint',
     position: 'position',
+    internalPosition: 'internal_position',
+    internalQuery: 'internal_query',
     where: 'where',
+    column: 'column_name',
+    // postgres.js names it with a space
+    dataType: 'data type_name',
     file: 'file',
     line: 'line',
     routine: 'routine',
