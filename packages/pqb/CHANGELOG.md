@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.34
+
+### Patch Changes
+
+- f8e0758d: Fill `column`, `dataType`, `internalPosition`, and `internalQuery` of query errors under postgres.js, as under node-postgres and Bun
+
 ## 0.73.33
 
 ### Patch Changes

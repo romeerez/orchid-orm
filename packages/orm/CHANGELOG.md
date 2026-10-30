@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.45
+
+### Patch Changes
+
+- f8e0758d: Fill `column`, `dataType`, `internalPosition`, and `internalQuery` of query errors under postgres.js, as under node-postgres and Bun
+- Updated dependencies [f8e0758d]
+  - pqb@0.73.34
+  - rake-db@2.37.46
+
 ## 1.78.44
 
 ### Patch Changes
