@@ -1,5 +1,13 @@
 # rake-db
 
+## 2.37.47
+
+### Patch Changes
+
+- 37aadf61: Support postgres.js v4, and limit the `postgres` peer dependency to v3 and v4
+- Updated dependencies [37aadf61]
+  - pqb@0.73.35
+
 ## 2.37.46
 
 ### Patch Changes

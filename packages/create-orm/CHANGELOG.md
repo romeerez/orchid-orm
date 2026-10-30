@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.5.1
+
+### Patch Changes
+
+- 37aadf61: Support postgres.js v4, and limit the `postgres` peer dependency to v3 and v4
+
 ## 0.5.0
 
 ### Minor Changes

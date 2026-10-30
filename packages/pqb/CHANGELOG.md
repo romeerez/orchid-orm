@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.35
+
+### Patch Changes
+
+- 37aadf61: Support postgres.js v4, and limit the `postgres` peer dependency to v3 and v4
+
 ## 0.73.34
 
 ### Patch Changes
