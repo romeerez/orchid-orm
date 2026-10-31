@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.36
+
+### Patch Changes
+
+- 01112c37: Fix `chain` queries over direct relations when using `as` or repeating a relation (#864)
+
 ## 0.73.35
 
 ### Patch Changes

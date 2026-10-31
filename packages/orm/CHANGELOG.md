@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.47
+
+### Patch Changes
+
+- 01112c37: Fix `chain` queries over direct relations when using `as` or repeating a relation (#864)
+- Updated dependencies [01112c37]
+  - pqb@0.73.36
+  - rake-db@2.37.48
+
 ## 1.78.46
 
 ### Patch Changes
