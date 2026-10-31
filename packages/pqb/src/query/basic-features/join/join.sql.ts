@@ -312,14 +312,10 @@ export const processJoinItem = (
           },
           // conditions of the join query may refer to its alias recorded when it was built,
           // map that alias to the current alias of the query
-          ...(outerAs && outerAs !== as
-            ? {
-                outerAliases: {
-                  ...q.q.outerAliases,
-                  [outerAs]: as,
-                },
-              }
-            : undefined),
+          outerAliases:
+            outerAs && outerAs !== as
+              ? { ...q.q.outerAliases, [outerAs]: as }
+              : q.q.outerAliases,
         },
         joinAs,
       );
