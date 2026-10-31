@@ -1737,9 +1737,10 @@ describe('relations chain', () => {
       });
 
       it('should refer to the aliases of repeated relations', async () => {
-        await createUsers();
+        const [one] = await createUsers();
 
         const q = db.user
+          .find(one.Id)
           .chain('posts')
           .chain('user')
           .chain('posts')
@@ -1754,7 +1755,8 @@ describe('relations chain', () => {
                 SELECT 1 FROM "schema"."post" "posts"
                 WHERE EXISTS (
                   SELECT 1 FROM "schema"."user" "User"
-                  WHERE "User"."id" = "posts"."user_id"
+                  WHERE "User"."id" = $1
+                    AND "User"."id" = "posts"."user_id"
                     AND "User"."user_key" = "posts"."title"
                 )
                   AND "posts"."user_id" = "user"."id"
@@ -1764,10 +1766,11 @@ describe('relations chain', () => {
                 AND "user"."user_key" = "posts2"."title"
             )
             ORDER BY "posts2"."body" ASC`,
+          [one.Id],
         );
 
-        const bodies = await q.pluck('Body');
-        expect(bodies).toEqual(['one', 'two']);
+        expect(await q.as('p').pluck('Body')).toEqual(['one']);
+        expect(await q.pluck('Body')).toEqual(['one']);
       });
     });
 
