@@ -79,7 +79,6 @@ export const joinQueryChainHOF =
       return jq.where({
         EXISTS: {
           q: markJoinRelationConditions(reverseJoin)(query, jq),
-          // remember the alias of the query to resolve it to the current alias on SQL building
           outerAs: getQueryAs(jq),
         },
       });

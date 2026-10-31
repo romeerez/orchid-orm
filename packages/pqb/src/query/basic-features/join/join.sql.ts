@@ -88,8 +88,7 @@ export type JoinItemArgs =
       q: IsQuery;
       // join a sub query, is not applicable in whereExists
       s: boolean;
-      // alias of the joining query recorded when the join query was built,
-      // to resolve conditions to its current alias on SQL building
+      // Outer query alias used when the correlation conditions were built.
       outerAs?: string;
     }
   | {
@@ -310,8 +309,7 @@ export const processJoinItem = (
             ...q.q.joinedShapes,
             [as]: table.q.selectShape,
           },
-          // conditions of the join query may refer to its alias recorded when it was built,
-          // map that alias to the current alias of the query
+          // Resolve the recorded outer alias after the query is renamed.
           outerAliases:
             outerAs && outerAs !== as
               ? { ...q.q.outerAliases, [outerAs]: as }
