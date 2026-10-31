@@ -3,4 +3,4 @@
 'orchid-orm': patch
 ---
 
-Fix `chain` conditions referring to the relation name instead of the table alias of the query, which made the query fail with `as` or when the chain repeats a relation (#864)
+Fix `chain` queries over direct relations when using `as` or repeating a relation (#864)
