@@ -25,3 +25,7 @@ mutations, and check that the test fails without the marking. Test queries that
 select the records of another query on a `chain` query, a query with `as`,
 `withSchema`, an added scope, and a removed scope, and check that they select
 neither more nor fewer records than that query.
+
+For chained relation alias tests, filter the initial parent and include records
+of another parent. Check that renaming a repeated relation chain preserves that
+filter and leaves the reusable source query unchanged.
