@@ -14,6 +14,9 @@ export const _chain = (
   const self = fromQuery as Query;
   const toTable = toQuery as Query;
 
+  // Assign collision-free aliases before building correlation conditions.
+  _applyRelationAliases(self, toTable.q as QueryData);
+
   let query: Query;
   let q: QueryData;
   if (self.q.subQuery) {
@@ -38,7 +41,10 @@ export const _chain = (
     const prevAnd = toTable.q.and;
     query = _queryWhere(_queryAll(toTable), [
       {
-        EXISTS: { q: rel.reverseJoin(self, toTable) },
+        EXISTS: {
+          q: rel.reverseJoin(self, toTable),
+          outerAs: getQueryAs(toTable),
+        },
       },
     ]);
     markRelationConditions(query, prevAnd);
@@ -53,8 +59,6 @@ export const _chain = (
   } else {
     q.relChain = [{ query: self, rel }];
   }
-
-  _applyRelationAliases(self, q);
 
   q.joinedShapes = {
     [getQueryAs(self)]: self.q.selectShape,

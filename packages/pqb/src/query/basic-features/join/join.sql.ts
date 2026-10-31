@@ -88,6 +88,8 @@ export type JoinItemArgs =
       q: IsQuery;
       // join a sub query, is not applicable in whereExists
       s: boolean;
+      // Outer query alias used when the correlation conditions were built.
+      outerAs?: string;
     }
   | {
       // `updateFrom`: forbid LATERAL
@@ -262,9 +264,10 @@ export const processJoinItem = (
       .map(([key, column]) => `"${column.data.name || key}"`)
       .join(', ')})`;
   } else {
-    const { q, s } = args as {
+    const { q, s, outerAs } = args as {
       q: SubQueryForSql;
       s: boolean;
+      outerAs?: string;
     };
     let joinAs;
 
@@ -295,6 +298,7 @@ export const processJoinItem = (
     // if it's a sub query, WHERE conditions are already in the sub query
     if (!s) {
       if (whereExists) target = appendQueryJoins(ctx, target, q, joinAs);
+      const as = (table.q.as || table.table) as string;
       const whereSql = whereToSql(
         ctx,
         q,
@@ -303,8 +307,13 @@ export const processJoinItem = (
           joinedShapes: {
             ...query.joinedShapes,
             ...q.q.joinedShapes,
-            [(table.q.as || table.table) as string]: table.q.selectShape,
+            [as]: table.q.selectShape,
           },
+          // Resolve the recorded outer alias after the query is renamed.
+          outerAliases:
+            outerAs && outerAs !== as
+              ? { ...q.q.outerAliases, [outerAs]: as }
+              : q.q.outerAliases,
         },
         joinAs,
       );

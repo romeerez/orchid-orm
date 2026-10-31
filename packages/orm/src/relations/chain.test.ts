@@ -1681,6 +1681,99 @@ describe('relations chain', () => {
       });
     });
 
+    describe('chain condition (#864)', () => {
+      const createUsers = () =>
+        db.user.createMany(
+          ['one', 'two'].map((name) => ({
+            ...UserData,
+            Name: name,
+            posts: { create: [{ ...PostData, Body: name }] },
+          })),
+        );
+
+      it('should refer to the table alias set by `as`', async () => {
+        const [one] = await createUsers();
+
+        const q = db.user.find(one.Id).chain('posts').as('p');
+
+        expectSql(
+          q.toSQL(),
+          `SELECT ${postSelectAll} FROM "schema"."post" "p"
+            WHERE EXISTS (
+              SELECT 1 FROM "schema"."user" "User"
+              WHERE "User"."id" = $1
+                AND "User"."id" = "p"."user_id"
+                AND "User"."user_key" = "p"."title"
+            )`,
+          [one.Id],
+        );
+
+        expect(await q.pluck('Body')).toEqual(['one']);
+      });
+
+      it('should update records through the alias set by `as`', async () => {
+        const [one] = await createUsers();
+
+        const q = db.user.find(one.Id).chain('posts').as('p');
+
+        expectSql(
+          q.update({ Body: 'updated' }).toSQL(),
+          `UPDATE "schema"."post" "p" SET "body" = $1, "updated_at" = now()
+            WHERE EXISTS (
+              SELECT 1 FROM "schema"."user" "User"
+              WHERE "User"."id" = $2
+                AND "User"."id" = "p"."user_id"
+                AND "User"."user_key" = "p"."title"
+            )`,
+          ['updated', one.Id],
+        );
+
+        await q.update({ Body: 'updated' });
+
+        expect(await db.post.order('Body').pluck('Body')).toEqual([
+          'two',
+          'updated',
+        ]);
+      });
+
+      it('should refer to the aliases of repeated relations', async () => {
+        const [one] = await createUsers();
+
+        const q = db.user
+          .find(one.Id)
+          .chain('posts')
+          .chain('user')
+          .chain('posts')
+          .order('Body');
+
+        expectSql(
+          q.toSQL(),
+          `SELECT ${postSelectAll} FROM "schema"."post" "posts2"
+            WHERE EXISTS (
+              SELECT 1 FROM "schema"."user"
+              WHERE EXISTS (
+                SELECT 1 FROM "schema"."post" "posts"
+                WHERE EXISTS (
+                  SELECT 1 FROM "schema"."user" "User"
+                  WHERE "User"."id" = $1
+                    AND "User"."id" = "posts"."user_id"
+                    AND "User"."user_key" = "posts"."title"
+                )
+                  AND "posts"."user_id" = "user"."id"
+                  AND "posts"."title" = "user"."user_key"
+              )
+                AND "user"."id" = "posts2"."user_id"
+                AND "user"."user_key" = "posts2"."title"
+            )
+            ORDER BY "posts2"."body" ASC`,
+          [one.Id],
+        );
+
+        expect(await q.as('p').pluck('Body')).toEqual(['one']);
+        expect(await q.pluck('Body')).toEqual(['one']);
+      });
+    });
+
     it('should support chained select', async () => {
       await db.user.create({
         ...UserData,

@@ -77,7 +77,10 @@ export const joinQueryChainHOF =
 
     if (useWhereExist) {
       return jq.where({
-        EXISTS: { q: markJoinRelationConditions(reverseJoin)(query, jq) },
+        EXISTS: {
+          q: markJoinRelationConditions(reverseJoin)(query, jq),
+          outerAs: getQueryAs(jq),
+        },
       });
     }
 
