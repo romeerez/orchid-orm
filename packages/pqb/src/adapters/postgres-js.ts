@@ -110,6 +110,15 @@ const types: Record<string, Partial<postgres.PostgresType>> = {
   },
 };
 
+/**
+ * Combines the caller's postgres.js `types` with the adapter's parsers.
+ * The adapter's entries win where both define the same key, since its result
+ * decoding depends on them; a caller's own keys, such as `bigint`, are kept.
+ */
+export const mergeTypes = (
+  custom: PostgresJsAdapterOptions['types'],
+): PostgresJsAdapterOptions['types'] => ({ ...custom, ...types });
+
 export const PostgresJsAdapter: DriverAdapter = {
   manualPool: false,
 
@@ -138,7 +147,7 @@ export const PostgresJsAdapter: DriverAdapter = {
   configure(params: PostgresJsAdapterOptions): postgres.Sql {
     const config: PostgresJsAdapterOptions = {
       ...params,
-      types,
+      types: mergeTypes(params.types),
     };
 
     if (config.setConfig?.search_path) {

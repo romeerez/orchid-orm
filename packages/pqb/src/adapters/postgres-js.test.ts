@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { PostgresJsAdapter } from './postgres-js';
+import { mergeTypes, PostgresJsAdapter } from './postgres-js';
 
 class MockRawResult extends Array<unknown> {
   count: number;
@@ -66,6 +66,24 @@ describe('postgres-js', () => {
       expect(query.values).toHaveBeenCalledTimes(1);
       expect(result.rowCount).toBe(1);
       expect(result.rows[0]).toEqual([1]);
+    });
+  });
+
+  describe('configure types', () => {
+    it('keeps a caller type the adapter does not define', () => {
+      const bigint = { to: 20, from: 20, parse: (x: string) => BigInt(x) };
+      const merged = mergeTypes({ bigint } as never)!;
+
+      expect(merged.bigint).toBe(bigint);
+      expect(merged.json).toBeDefined();
+    });
+
+    it('lets the adapter parser win on a shared key', () => {
+      const customJson = { from: [114], parse: () => 'custom' };
+      const merged = mergeTypes({ json: customJson } as never)!;
+
+      expect(merged.json).not.toBe(customJson);
+      expect((merged.json as { from: number[] }).from).toEqual([114, 3802]);
     });
   });
 });
