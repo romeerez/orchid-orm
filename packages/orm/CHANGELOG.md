@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.48
+
+### Patch Changes
+
+- d69524f2: Fix merging relation value subqueries with different parameter values (#876)
+- Updated dependencies [d69524f2]
+  - pqb@0.73.37
+  - rake-db@2.37.49
+
 ## 1.78.47
 
 ### Patch Changes

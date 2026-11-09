@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.37
+
+### Patch Changes
+
+- d69524f2: Fix merging relation value subqueries with different parameter values (#876)
+
 ## 0.73.36
 
 ### Patch Changes
