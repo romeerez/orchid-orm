@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import {
   IsQuery,
   isQuery,
@@ -62,7 +63,7 @@ import { throwIfJoinLateral } from '../../query.utils';
 import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
 import { SelectAs, SelectAsValue, SelectItem } from '../select/select.sql';
 import { JoinItemArgs } from './join.sql';
-import { getSqlText } from '../../sql/sql';
+import { queryToSql } from '../../sql/sql';
 import { JoinValueDedupItem, pushQueryValueImmutable } from '../../query-data';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { QueryThenByQuery } from '../../then/then';
@@ -837,19 +838,24 @@ export const _joinLateral = (
     } else {
       const map = query.q.joinValueDedup
         ? new Map(query.q.joinValueDedup)
-        : new Map<string, JoinValueDedupItem>();
+        : new Map<string, JoinValueDedupItem[]>();
       query.q.joinValueDedup = map;
 
       joinQuery.q.select = [];
-      const dedupKey = getSqlText(joinQuery.toSQL());
+      const sql = queryToSql(joinQuery);
       joinQuery.q.select = select;
 
-      existingValue = map.get(dedupKey);
+      const items = map.get(sql.text);
+      existingValue = items?.find((item) =>
+        isDeepStrictEqual(item.values, sql.values),
+      );
       if (existingValue) {
         joinValueAs = existingValue.a as string;
       } else {
         joinValueAs = joinAs;
-        map.set(dedupKey, { q: joinQuery, a: as });
+        const nextItems = items ? items.slice() : [];
+        nextItems.push({ q: joinQuery, a: as, values: sql.values });
+        map.set(sql.text, nextItems);
       }
     }
   }

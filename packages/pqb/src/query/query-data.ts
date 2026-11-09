@@ -116,6 +116,7 @@ export type WithItems = CteItem[];
 export interface JoinValueDedupItem {
   q: Query;
   a: string;
+  values: unknown[] | undefined;
 }
 
 export type QueryType =
@@ -299,7 +300,7 @@ export interface QueryData
   distinct?: SelectableOrExpression[];
   only?: boolean;
   join?: JoinItem[];
-  joinValueDedup?: Map<string, JoinValueDedupItem>;
+  joinValueDedup?: Map<string, JoinValueDedupItem[]>;
   group?: (string | Expression)[];
   having?: HavingItem[];
   window?: WindowItem[];
