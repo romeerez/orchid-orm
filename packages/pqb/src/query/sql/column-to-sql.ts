@@ -1,7 +1,7 @@
 import { JoinedShapes, QueryData } from '../query-data';
 import { ToSQLCtx } from './to-sql';
 import { Column } from '../../columns/column';
-import { RecordString } from '../../utils';
+import { quoteIdentifier, RecordString } from '../../utils';
 import { ColumnsParsers } from '../query-columns/query-column-parsers';
 import { _getQueryAliasOrName } from '../basic-features/as/as';
 import { Expression, SelectableOrExpression } from '../expressions/expression';
@@ -44,7 +44,7 @@ export function simpleColumnToSQL(
           const joinAs = queryData.valuesJoinedAs?.[key];
           sql = joinAs
             ? joinedValueToSql(ctx, queryData, shape, key, joinAs)
-            : `"${key}"`;
+            : quoteIdentifier(key);
           break;
         }
       }
@@ -55,7 +55,7 @@ export function simpleColumnToSQL(
   if (!sql) {
     if (!column) {
       dontAlias = key === as;
-      sql = `${quotedAs ? `${quotedAs}.` : ''}"${key}"`;
+      sql = `${quotedAs ? `${quotedAs}.` : ''}${quoteIdentifier(key)}`;
     } else {
       if (jsonList && as) {
         jsonList[as] = column && getSelectedColumnData(column as Column);
@@ -73,11 +73,11 @@ export function simpleColumnToSQL(
         if (!select && !queryData.valuesJoinedUnderColumns?.[key]) {
           const joinAs = !select && queryData.valuesJoinedAs?.[key];
           if (joinAs) {
-            quotedAs = `"${joinAs}"`;
+            quotedAs = quoteIdentifier(joinAs);
           }
         }
 
-        sql = `${quotedAs ? `${quotedAs}.` : ''}"${name}"`;
+        sql = `${quotedAs ? `${quotedAs}.` : ''}${quoteIdentifier(name)}`;
       }
     }
   }
@@ -94,7 +94,7 @@ export function simpleColumnToSQL(
   }
 
   if (as && !dontAlias) {
-    sql = `${sql} "${as}"`;
+    sql = `${sql} ${quoteIdentifier(as)}`;
   }
 
   return sql;
@@ -120,7 +120,7 @@ export const joinedValueToSql = (
     shape,
     key,
     queryData.valuesJoinedUnderColumns?.[key] || shape[key],
-    `"${joinAs}"`,
+    quoteIdentifier(joinAs),
     undefined,
     undefined,
     undefined,
@@ -160,14 +160,14 @@ export const tableColumnToSql = (
     if (shape) {
       sql = select
         ? makeRowToJson(ctx, table, shape as never, true)
-        : `"${table}".*`;
+        : `${quoteIdentifier(table)}.*`;
     } else {
-      sql = `"${table}"."${key}"`;
+      sql = `${quoteIdentifier(table)}.${quoteIdentifier(key)}`;
       dontAlias = true;
     }
   } else {
     const tableName = _getQueryAliasOrName(queryData, table);
-    const quoted = `"${table}"`;
+    const quoted = quoteIdentifier(table);
 
     const joined = queryData.joinedShapes?.[tableName];
 
@@ -182,11 +182,11 @@ export const tableColumnToSql = (
     if (col?.data.selectSql) {
       sql = `(${col.data.selectSql.toSQL(ctx, quoted)})`;
     } else if (col?.data.name) {
-      sql = `"${tableName}"."${col.data.name}"`;
+      sql = `${quoteIdentifier(tableName)}.${quoteIdentifier(col.data.name)}`;
     } else if (col?.data.computed) {
       sql = `(${col.data.computed.toSQL(ctx, quoted)})`;
     } else {
-      sql = `"${tableName}"."${key}"`;
+      sql = `${quoteIdentifier(tableName)}.${quoteIdentifier(key)}`;
       dontAlias = key === as;
     }
 
@@ -202,7 +202,7 @@ export const tableColumnToSql = (
   }
 
   if (as && !dontAlias) {
-    sql = `${sql} "${as}"`;
+    sql = `${sql} ${quoteIdentifier(as)}`;
   }
 
   return sql;

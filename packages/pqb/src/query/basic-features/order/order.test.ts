@@ -43,6 +43,27 @@ describe('order', () => {
     expectQueryNotMutated(q);
   });
 
+  it.each([
+    ['id" ASC, (select 1) --', '"User"."id"" ASC, (select 1) --"'],
+    ['User.id" ASC, (select 1) --', '"User"."id"" ASC, (select 1) --"'],
+    ['u".id"', '"u"""."id"""'],
+    ['u".*', '"u"""."*"'],
+  ])('escapes dynamic order field %s', (field, columnSql) => {
+    const q = db.user.select('Id');
+
+    for (const query of [
+      q.order({ [field]: 'ASC' }),
+      // @ts-expect-error runtime input must be escaped despite invalid types
+      q.order(field),
+    ]) {
+      expectSql(
+        query.order('Id').toSQL(),
+        `SELECT "User"."id" "Id" FROM "schema"."user" "User"
+         ORDER BY ${columnSql} ASC, "User"."id" ASC`,
+      );
+    }
+  });
+
   it('adds order with raw sql', () => {
     const q = db.user.all();
     expectSql(
@@ -99,6 +120,16 @@ describe('order', () => {
           SELECT "User"."id" "Name" FROM "schema"."user" "User"
           ORDER BY "Name" ASC
         `,
+    );
+  });
+
+  it('escapes a selected column alias in order', () => {
+    const q = db.user.select({ 'sort"key': 'Id' }).order('sort"key');
+
+    expectSql(
+      q.toSQL(),
+      `SELECT "User"."id" "sort""key" FROM "schema"."user" "User"
+       ORDER BY "sort""key" ASC`,
     );
   });
 
