@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.38
+
+### Patch Changes
+
+- 075b87a5: Fix SQL injection through column names containing double quotes, such as dynamic `order()` fields (#881).
+
 ## 0.73.37
 
 ### Patch Changes

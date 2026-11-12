@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.49
+
+### Patch Changes
+
+- 075b87a5: Fix SQL injection through column names containing double quotes, such as dynamic `order()` fields (#881).
+- Updated dependencies [075b87a5]
+  - pqb@0.73.38
+  - rake-db@2.37.50
+
 ## 1.78.48
 
 ### Patch Changes
