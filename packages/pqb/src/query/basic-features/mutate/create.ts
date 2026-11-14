@@ -1,3 +1,4 @@
+import { OmitRowVersions } from '../select/row-versions';
 import {
   Query,
   SetQueryReturnsColumnOptional,
@@ -241,52 +242,60 @@ type CreateRelationsDataValidation<
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-export type CreateResult<T extends CreateSelf, Data> = T extends {
-  isCount: true;
-}
-  ? T
-  : T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsOneResult<T, NarrowCreateResult<T, Data>>
-    : T['returnType'] extends 'pluck'
-      ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T, Data>>
-      : SetQueryResult<T, NarrowCreateResult<T, Data>>;
+export type CreateResult<T extends CreateSelf, Data> = OmitRowVersions<
+  T extends {
+    isCount: true;
+  }
+    ? T
+    : T['returnType'] extends undefined | 'all'
+      ? SetQueryReturnsOneResult<T, NarrowCreateResult<T, Data>>
+      : T['returnType'] extends 'pluck'
+        ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T, Data>>
+        : SetQueryResult<T, NarrowCreateResult<T, Data>>
+>;
 
 // `insert` method output type
 // - query returns inserted row count by default.
 // - returns a record with selected columns if the query has a select.
 // - if the query returns multiple, forces it to return one record.
 // - if it is a `pluck` query, forces it to return a single value
-type InsertResult<T extends CreateSelf, Data> = T['__hasSelect'] extends true
-  ? T['returnType'] extends undefined | 'all'
-    ? SetQueryReturnsOneResult<T, NarrowCreateResult<T, Data>>
-    : T['returnType'] extends 'pluck'
-      ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T, Data>>
-      : SetQueryResult<T, NarrowCreateResult<T, Data>>
-  : SetQueryReturnsRowCount<T>;
+type InsertResult<T extends CreateSelf, Data> = OmitRowVersions<
+  T['__hasSelect'] extends true
+    ? T['returnType'] extends undefined | 'all'
+      ? SetQueryReturnsOneResult<T, NarrowCreateResult<T, Data>>
+      : T['returnType'] extends 'pluck'
+        ? SetQueryReturnsColumnResult<T, NarrowCreateResult<T, Data>>
+        : SetQueryResult<T, NarrowCreateResult<T, Data>>
+    : SetQueryReturnsRowCount<T>
+>;
 
 // `createMany` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
 // - If the query returns a single record, forces it to return multiple.
 // - otherwise, query result remains as is.
-type CreateManyResult<T extends CreateSelf> = T extends { isCount: true }
-  ? T
-  : T['returnType'] extends 'one' | 'oneOrThrow'
-    ? SetQueryReturnsAll<T>
-    : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetValueQueryReturnsPluckColumn<T>
-      : T;
+type CreateManyResult<T extends CreateSelf> = OmitRowVersions<
+  T extends { isCount: true }
+    ? T
+    : T['returnType'] extends 'one' | 'oneOrThrow'
+      ? SetQueryReturnsAll<T>
+      : T['returnType'] extends 'value' | 'valueOrThrow'
+        ? SetValueQueryReturnsPluckColumn<T>
+        : T
+>;
 
 // `insertMany` method output type
 // - query returns inserted row count by default.
 // - returns records with selected columns if the query has a select.
 // - if the query returns a single record, forces it to return multiple records.
-type InsertManyResult<T extends CreateSelf> = T['__hasSelect'] extends true
-  ? T['returnType'] extends 'one' | 'oneOrThrow'
-    ? SetQueryReturnsAll<T>
-    : T['returnType'] extends 'value' | 'valueOrThrow'
-      ? SetValueQueryReturnsPluckColumn<T>
-      : T
-  : SetQueryReturnsRowCountMany<T>;
+type InsertManyResult<T extends CreateSelf> = OmitRowVersions<
+  T['__hasSelect'] extends true
+    ? T['returnType'] extends 'one' | 'oneOrThrow'
+      ? SetQueryReturnsAll<T>
+      : T['returnType'] extends 'value' | 'valueOrThrow'
+        ? SetValueQueryReturnsPluckColumn<T>
+        : T
+    : SetQueryReturnsRowCountMany<T>
+>;
 
 /**
  * When creating a record with a *belongs to* nested record,

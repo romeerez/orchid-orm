@@ -28,7 +28,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-trixie
+        image: postgres:18-trixie
         env:
           POSTGRES_PASSWORD: password
         ports:
@@ -72,7 +72,7 @@ jobs:
 
       - name: Install db extensions
         run: |
-          docker exec "${{ job.services.postgres.id }}" sh -c "apt-get update && apt-get install -y --no-install-recommends postgresql-16-postgis-3 postgresql-16-pgvector"
+          docker exec "${{ job.services.postgres.id }}" sh -c "apt-get update && apt-get install -y --no-install-recommends postgresql-18-postgis-3 postgresql-18-pgvector"
 
       - name: Create database
         working-directory: packages/rake-db
