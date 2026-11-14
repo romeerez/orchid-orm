@@ -437,7 +437,7 @@ export class QueryUpdate {
    *   fromRelation: (q) => q.relatedTable.get('someColumn'),
    *
    *   // set a new value to the `.foo.bar` path into a JSON column
-   *   jsonColumn: (q) => q.jsonSet('jsonColumn', ['foo', 'bar'], 'new value'),
+   *   jsonColumn: (q) => q.get('jsonColumn').jsonSet(['foo', 'bar'], 'new value'),
    * });
    * ```
    *
