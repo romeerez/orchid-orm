@@ -750,7 +750,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{key}', '"value"'],
+          ['{"key"}', '"value"'],
         );
       });
 
@@ -766,7 +766,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{name}'],
+          ['{"name"}'],
         );
       });
 
@@ -784,7 +784,7 @@ describe('operators', () => {
               "updated_at" = now()
             WHERE "User"."id" = $3
           `,
-          ['{key}', '"value"', 1],
+          ['{"key"}', '"value"', 1],
         );
       });
 
@@ -812,7 +812,7 @@ describe('operators', () => {
             SET "da_ta" = jsonb_set("table"."da_ta", $1, $2)
             WHERE "table"."id" = $3
           `,
-          ['{key}', '"value"', 1],
+          ['{"key"}', '"value"', 1],
         );
       });
     });
@@ -830,7 +830,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{key}', '"value"'],
+          ['{"key"}', '"value"'],
         );
       });
 
@@ -846,7 +846,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{name}'],
+          ['{"name"}'],
         );
       });
 
@@ -864,7 +864,7 @@ describe('operators', () => {
               "updated_at" = now()
             WHERE "User"."id" = $3
           `,
-          ['{key}', '"value"', 1],
+          ['{"key"}', '"value"', 1],
         );
       });
     });
@@ -882,7 +882,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{key}', '"value"'],
+          ['{"key"}', '"value"'],
         );
       });
 
@@ -898,7 +898,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{name}'],
+          ['{"name"}'],
         );
       });
 
@@ -916,7 +916,7 @@ describe('operators', () => {
               "updated_at" = now()
             WHERE "User"."id" = $3
           `,
-          ['{key}', '"value"', 1],
+          ['{"key"}', '"value"', 1],
         );
       });
 
@@ -934,7 +934,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{key}', '"value"'],
+          ['{"key"}', '"value"'],
         );
       });
 
@@ -953,7 +953,7 @@ describe('operators', () => {
               "updated_at" = now()
             WHERE "User"."id" = $3
           `,
-          ['{key}', '"value"', 1],
+          ['{"key"}', '"value"', 1],
         );
       });
     });
@@ -971,7 +971,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{key}'],
+          ['{"key"}'],
         );
       });
 
@@ -989,8 +989,63 @@ describe('operators', () => {
               "updated_at" = now()
             WHERE "User"."id" = $2
           `,
-          ['{key}', 1],
+          ['{"key"}', 1],
         );
+      });
+    });
+
+    describe('json path', () => {
+      const keys = ['a,b', 'say "hi"', 'x}', '\\', '', 'null', ' a '];
+
+      it('should set values by keys with special characters', async () => {
+        const id = await jsonTable.get('id').insert({
+          name: 'name',
+          password: 'password',
+          data: {},
+        });
+
+        await jsonTable.find(id).update({
+          data: (q) =>
+            keys.reduce(
+              (data, key) => data.jsonSet([key], true),
+              q.get('data'),
+            ),
+        });
+
+        const data = await jsonTable.find(id).get('data');
+        expect(Object.keys(data as object).sort()).toEqual([...keys].sort());
+      });
+
+      it('should remove a value by a nested path of keys with special characters', async () => {
+        const id = await jsonTable.get('id').insert({
+          name: 'name',
+          password: 'password',
+          data: { 'a,b': { 'say "hi"': 1, a: 2 } },
+        });
+
+        await jsonTable.find(id).update({
+          data: (q) => q.get('data').jsonRemove(['a,b', 'say "hi"']),
+        });
+
+        expect(await jsonTable.find(id).get('data')).toEqual({
+          'a,b': { a: 2 },
+        });
+      });
+
+      it('should use a number as an array index', async () => {
+        const id = await jsonTable.get('id').insert({
+          name: 'name',
+          password: 'password',
+          data: { tags: ['one', 'two'] },
+        });
+
+        await jsonTable.find(id).update({
+          data: (q) => q.get('data').jsonRemove(['tags', 0]),
+        });
+
+        expect(await jsonTable.find(id).get('data')).toEqual({
+          tags: ['two'],
+        });
       });
     });
 
@@ -1524,7 +1579,7 @@ describe('operators', () => {
             FROM "schema"."user" "User"
             LIMIT 1
           `,
-          ['{a}', '1', '{b}', '2', '{c}', '3', '{d}', '4', '{e}'],
+          ['{"a"}', '1', '{"b"}', '2', '{"c"}', '3', '{"d"}', '4', '{"e"}'],
         );
       });
 
@@ -1567,7 +1622,7 @@ describe('operators', () => {
             ), "updated_at" = now()
             WHERE "User"."id" = $10
           `,
-          ['{a}', '1', '{b}', '2', '{c}', '3', '{d}', '4', '{e}', 1],
+          ['{"a"}', '1', '{"b"}', '2', '{"c"}', '3', '{"d"}', '4', '{"e"}', 1],
         );
       });
     });
