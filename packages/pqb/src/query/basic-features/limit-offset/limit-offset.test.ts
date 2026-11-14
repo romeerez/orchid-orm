@@ -11,6 +11,14 @@ describe('limit', () => {
     expectSql(q.toSQL(), `SELECT ${UserSelectAll} FROM "schema"."user" "User"`);
   });
 
+  it('should set zero limit', () => {
+    expectSql(
+      db.user.limit(0).toSQL(),
+      `SELECT ${UserSelectAll} FROM "schema"."user" "User" LIMIT $1`,
+      [0],
+    );
+  });
+
   it('should reset limit', () => {
     const q = db.user.all();
     expectSql(

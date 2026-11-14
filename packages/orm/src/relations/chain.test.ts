@@ -1820,6 +1820,48 @@ describe('relations chain', () => {
       });
     });
 
+    it('should apply zero limit to chained select', async () => {
+      await db.user.create({
+        ...UserData,
+        posts: {
+          create: [
+            {
+              ...PostData,
+              postTags: {
+                create: [
+                  {
+                    ...PostTagData,
+                    tag: {
+                      create: TagData,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const q = db.user
+        .select({
+          items: (q) =>
+            q.posts
+              .chain('postTags')
+              .order('posts.Id')
+              .select('Tag', 'posts.Body')
+              .limit(0),
+        })
+        .take();
+
+      expectSql(
+        q.toSQL(),
+        `SELECT COALESCE("items"."items", '[]') "items" FROM "schema"."user" "User" LEFT JOIN LATERAL (SELECT json_agg(row_to_json(t.*)) "items" FROM (SELECT "t"."Tag", "t"."Body" FROM (SELECT "postTags"."tag" "Tag", "posts"."body" "Body", row_number() OVER (PARTITION BY "postTags"."post_id", "postTags"."tag") "r" FROM "schema"."post_tag" "postTags" JOIN "schema"."post" "posts" ON "posts"."user_id" = "User"."id" AND "posts"."title" = "User"."user_key" AND "posts"."id" = "postTags"."post_id" ORDER BY "posts"."id" ASC) "t" WHERE (r = 1) LIMIT $1) "t") "items" ON true LIMIT 1`,
+        [0],
+      );
+
+      expect(await q).toEqual({ items: [] });
+    });
+
     it('should support chained select via where exists', async () => {
       await db.user.create({
         ...UserData,
