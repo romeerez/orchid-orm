@@ -11,7 +11,7 @@ export function pushLimitOffsetSql(
 ) {
   if (query.useFromLimitOffset) {
     const q = fromQuery?.q as QueryData;
-    if (q.limit) {
+    if (q.limit !== undefined) {
       ctx.sql.push(`LIMIT ${addValue(ctx.values, q.limit)}`);
     }
     if (q.offset) {
@@ -30,7 +30,7 @@ export function pushLimitSQL(sql: string[], values: unknown[], q: QueryData) {
   if (!q.returnsOne) {
     if (queryTypeWithLimitOne[q.returnType as string] && !q.returning) {
       sql.push(`LIMIT 1`);
-    } else if (q.limit) {
+    } else if (q.limit !== undefined) {
       sql.push(`LIMIT ${addValue(values, q.limit)}`);
     }
   }
