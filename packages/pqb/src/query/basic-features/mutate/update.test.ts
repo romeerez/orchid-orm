@@ -919,7 +919,7 @@ describe('update', () => {
           WHERE "User"."id" = $7
           RETURNING "User"."id" "Id"
         `,
-        ['{0}', '"data"', 1, 'password', 1, 'name', 1],
+        ['{"0"}', '"data"', 1, 'password', 1, 'name', 1],
       );
     });
   });

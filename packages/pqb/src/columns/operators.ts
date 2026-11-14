@@ -622,8 +622,20 @@ export interface OperatorsJson extends Ord<unknown> {
   };
 }
 
-const encodeJsonPath = (ctx: ToSQLCtx, path: MaybeArray<string | number>) =>
-  addValue(ctx.values, `{${Array.isArray(path) ? path.join(', ') : path}}`);
+const encodeJsonPath = (ctx: ToSQLCtx, path: MaybeArray<string | number>) => {
+  const keys = Array.isArray(path)
+    ? path.map(quoteJsonPathKey).join(',')
+    : quoteJsonPathKey(path);
+  return addValue(ctx.values, `{${keys}}`);
+};
+
+/**
+ * Quotes a JSON path key as an element of a Postgres array literal, so that
+ * commas, braces, quotes, surrounding whitespace, an empty key, and `null` stay
+ * a part of the key.
+ */
+const quoteJsonPathKey = (key: string | number) =>
+  `"${String(key).replace(/[\\"]/g, '\\$&')}"`;
 
 const jsonPathQueryOp = (
   key: string,
