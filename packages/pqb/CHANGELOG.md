@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.40
+
+### Patch Changes
+
+- 66b12d2f: Fix `jsonSet`, `jsonReplace`, `jsonInsert`, and `jsonRemove` for path keys containing special characters (#883)
+
 ## 0.73.39
 
 ### Patch Changes

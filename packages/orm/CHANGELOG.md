@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.51
+
+### Patch Changes
+
+- 66b12d2f: Fix `jsonSet`, `jsonReplace`, `jsonInsert`, and `jsonRemove` for path keys containing special characters (#883)
+- Updated dependencies [66b12d2f]
+  - pqb@0.73.40
+  - rake-db@2.37.52
+
 ## 1.78.50
 
 ### Patch Changes
