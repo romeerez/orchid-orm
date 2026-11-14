@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.50
+
+### Patch Changes
+
+- 00cb6a5e: Fix `limit(0)` to add `LIMIT 0` instead of returning all records (#883)
+- Updated dependencies [00cb6a5e]
+  - pqb@0.73.39
+  - rake-db@2.37.51
+
 ## 1.78.49
 
 ### Patch Changes

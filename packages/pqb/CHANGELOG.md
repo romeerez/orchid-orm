@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.39
+
+### Patch Changes
+
+- 00cb6a5e: Fix `limit(0)` to add `LIMIT 0` instead of returning all records (#883)
+
 ## 0.73.38
 
 ### Patch Changes
