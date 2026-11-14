@@ -175,7 +175,7 @@ node .gitnexus/run.cjs analyze
 ## Pull Request Descriptions
 
 - Describe the problem or the need in the present tense, and the change as what happens with this PR.
-- Show a change of behavior with an example of the code a user would write, rather than a bare sequence of internal calls. A refactor or a docs change may state its purpose directly.
+- Show a change of behavior with an example of the code a user would write, rather than a bare sequence of internal calls. The example is optional when the issue already shows it. A refactor or a docs change may state its purpose directly.
 - Comment the significant steps of an example: what a call does, what fails or what it returns, and why, with the SQL when it helps. Declare every instance the example uses.
 - Check what each example claims: run it for runtime behavior, typecheck it for types. An example of a bug must reproduce it without this PR, and work with it. Name the drivers checked when the result differs between them.
 - State the conditions an example depends on, such as timing or the driver, instead of claiming that it always fails.
