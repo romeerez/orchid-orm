@@ -761,6 +761,9 @@ export const _joinLateralProcessArg = (
   let result = resolveSubQueryCallback(
     arg as Query,
     cb as never,
+    // The query passed to joinLateral is a sub-query of its own: keep its conditions
+    // and inherited default scopes (such as a soft-delete scope).
+    false,
   ) as unknown as Query;
 
   if (relation) {
