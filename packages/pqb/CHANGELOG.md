@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.43
+
+### Patch Changes
+
+- cc3cc636: Make tables of an ORM bound to an existing `db` inherit its `log`, `logger`, and `autoPreparedStatements` options (#890)
+
 ## 0.73.42
 
 ### Patch Changes

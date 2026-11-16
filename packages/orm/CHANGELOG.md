@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.54
+
+### Patch Changes
+
+- cc3cc636: Make tables of an ORM bound to an existing `db` inherit its `log`, `logger`, and `autoPreparedStatements` options (#890)
+- Updated dependencies [cc3cc636]
+  - pqb@0.73.43
+  - rake-db@2.37.55
+
 ## 1.78.53
 
 ### Patch Changes
