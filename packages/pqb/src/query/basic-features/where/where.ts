@@ -240,7 +240,9 @@ const resolveCallbacksInArgs = <T extends PickQuerySelectableRelations>(
             );
           }
           copy[key] = resolved;
-        } else {
+        } else if (value && typeof value === 'object') {
+          // Only objects can contain query operands.
+          // Iterating a primitive string would visit each character.
           prepareWhereObj(q, value, true);
         }
       }

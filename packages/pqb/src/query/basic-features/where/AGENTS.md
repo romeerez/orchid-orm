@@ -6,6 +6,12 @@ them. The SQL joins them by `AND` with the whole user condition, including
 `orWhere` groups, and `clear('where')` keeps them. Test them in the ORM relation
 tests.
 
+## Scalar conditions
+
+Treat primitive condition values as opaque bind values; only objects can
+contain nested query operands. Preserve empty strings, zero, false, null and
+undefined according to their SQL semantics.
+
 ## Empty `whereIn` lists
 
 An empty list is a condition, not `none()`: an `orWhere` group can still match
