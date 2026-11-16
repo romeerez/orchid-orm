@@ -118,6 +118,8 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
           | keyof QueryExpressions
           | 'table' // is needed for `useHelper`
           | 'get'
+          | 'exists'
+          | 'notExists'
           | 'columnTypes'
           | '__selectable'
           | 'relations'
@@ -142,6 +144,8 @@ export type WhereQueryBuilder<T extends PickQueryRelations> =
                   | keyof QueryExpressions
                   | 'table' // is needed for `useHelper`
                   | 'get'
+                  | 'exists'
+                  | 'notExists'
                   | 'columnTypes'
                   | '__selectable'
                   | 'relations'

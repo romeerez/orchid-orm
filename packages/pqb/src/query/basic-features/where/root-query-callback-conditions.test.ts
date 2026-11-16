@@ -4,7 +4,7 @@ describe('conditions on the root query in a select/where callback', () => {
   it('select: exists() becomes the conditions themselves', () => {
     expectSql(
       db.user
-        .select({ isAlice: (q) => q.where({ name: 'Alice' }).exists() })
+        .select({ isAlice: (q) => q.where({ Name: 'Alice' }).exists() })
         .toSQL(),
       `SELECT ("User"."name" = $1) "isAlice" FROM "schema"."user" "User"`,
       ['Alice'],
@@ -12,7 +12,7 @@ describe('conditions on the root query in a select/where callback', () => {
   });
 
   it('select: exists() with a helper keeps the helper conditions', () => {
-    const isAlice = db.user.makeHelper((q) => q.where({ name: 'Alice' }));
+    const isAlice = db.user.makeHelper((q) => q.where({ Name: 'Alice' }));
 
     expectSql(
       db.user.select({ isAlice: (q) => q.useHelper(isAlice).exists() }).toSQL(),
@@ -24,7 +24,7 @@ describe('conditions on the root query in a select/where callback', () => {
   it('select: notExists() becomes the negated conditions', () => {
     expectSql(
       db.user
-        .select({ notAlice: (q) => q.where({ name: 'Alice' }).notExists() })
+        .select({ notAlice: (q) => q.where({ Name: 'Alice' }).notExists() })
         .toSQL(),
       `SELECT NOT ("User"."name" = $1) "notAlice" FROM "schema"."user" "User"`,
       ['Alice'],
@@ -33,7 +33,7 @@ describe('conditions on the root query in a select/where callback', () => {
 
   it('where: exists() becomes the conditions themselves', () => {
     expectSql(
-      db.user.where((q) => q.where({ name: 'Alice' }).exists()).toSQL(),
+      db.user.where((q) => q.where({ Name: 'Alice' }).exists()).toSQL(),
       `SELECT ${UserSelectAll} FROM "schema"."user" "User" WHERE ("User"."name" = $1)`,
       ['Alice'],
     );
@@ -42,7 +42,7 @@ describe('conditions on the root query in a select/where callback', () => {
   it('select: count() with conditions throws instead of dropping them', () => {
     expect(() =>
       db.user
-        .select({ alices: (q) => q.where({ name: 'Alice' }).count() })
+        .select({ alices: (q) => q.where({ Name: 'Alice' }).count() })
         .toSQL(),
     ).toThrow('cannot apply the query');
   });
@@ -50,7 +50,7 @@ describe('conditions on the root query in a select/where callback', () => {
   it('select: get() with conditions throws instead of dropping them', () => {
     expect(() =>
       db.user
-        .select({ name: (q) => q.where({ name: 'Alice' }).get('name') })
+        .select({ name: (q) => q.where({ Name: 'Alice' }).get('Name') })
         .toSQL(),
     ).toThrow('cannot apply the query');
   });
