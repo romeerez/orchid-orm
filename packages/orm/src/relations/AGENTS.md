@@ -29,3 +29,6 @@ neither more nor fewer records than that query.
 For chained relation alias tests, filter the initial parent and include records
 of another parent. Check that renaming a repeated relation chain preserves that
 filter and leaves the reusable source query unchanged.
+
+Applying relations must not call a dynamic `schema` function of a table: an ORM
+can be created outside of the context it relies on.

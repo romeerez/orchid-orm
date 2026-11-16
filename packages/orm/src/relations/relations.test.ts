@@ -818,6 +818,44 @@ describe('relations', () => {
         },
       ]);
     });
+
+    it('should not call a dynamic schema of a table referenced by an existing foreign key', () => {
+      const schema = jest.fn(() => 'custom');
+
+      const UserTable = defineTable('user', { schema }, (t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        Id2: t.name('id_2').integer(),
+      }));
+
+      const userFn = () => UserTable;
+
+      const ProfileTable = defineTable('profile', (t) => ({
+        Id: t.name('id').identity().primaryKey(),
+        UserId: t.name('user_id').integer().foreignKey(userFn, 'Id'),
+        UserId2: t.name('user_id_2').integer(),
+      }))
+        .foreignKey(['UserId2'], userFn, ['Id2'])
+        .relations((profile) => ({
+          user: profile('UserId').belongsTo(() => UserTable('Id')),
+          user2: profile('UserId2').belongsTo(() => UserTable('Id2')),
+        }));
+
+      const db = orchidORMWithAdapter(ormParams, {
+        user: UserTable,
+        profile: ProfileTable,
+      });
+
+      expect(schema).not.toHaveBeenCalled();
+      expect(db.profile.internal.tableData.constraints).toEqual([
+        {
+          references: {
+            columns: ['UserId2'],
+            fnOrTable: userFn,
+            foreignColumns: ['Id2'],
+          },
+        },
+      ]);
+    });
   });
 
   describe('map', () => {

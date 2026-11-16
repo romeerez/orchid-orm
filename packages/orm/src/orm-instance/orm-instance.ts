@@ -476,6 +476,57 @@ const getViewData = (
   };
 };
 
+/**
+ * Separator of a schema and a name in a comparison key.
+ * A Postgres identifier cannot contain the zero character, while joined with
+ * a dot, `a.b` + `c` and `a` + `b.c` look the same.
+ */
+const nameKeySeparator = '\0';
+
+/**
+ * Comparison key of a table or a view: its name in the database with the
+ * schema its queries use, or `undefined` when that schema is a function.
+ * The schema is its own, or else the schema of the ORM.
+ * A dynamic schema is known only when a query is built, and calling it while
+ * creating an ORM fails outside of the context it relies on.
+ */
+const getStaticNameKey = (
+  table: ORMTableInput,
+  ormSchema: DbSharedOptions['schema'],
+): string | undefined => {
+  const schema = table.schema || ormSchema;
+  if (typeof schema === 'function') return;
+
+  return schema ? schema + nameKeySeparator + table.nameInDb : table.nameInDb;
+};
+
+/**
+ * Throws when a table and a view have the same schema and name in the database.
+ * A table or a view with a dynamic schema is not checked.
+ */
+const throwIfTableAndViewShareNameInDb = (
+  tables: Record<string, ORMTableInput>,
+  views: Record<string, ORMTableInput>,
+  ormSchema: DbSharedOptions['schema'],
+) => {
+  const viewNameKeys = new Set<string>();
+  for (const key in views) {
+    const nameKey = getStaticNameKey(views[key], ormSchema);
+    if (nameKey) viewNameKeys.add(nameKey);
+  }
+
+  if (!viewNameKeys.size) return;
+
+  for (const key in tables) {
+    const nameKey = getStaticNameKey(tables[key], ormSchema);
+    if (nameKey && viewNameKeys.has(nameKey)) {
+      throw new Error(
+        `Cannot configure both a table and a view for database relation ${nameKey.replace(nameKeySeparator, '.')}`,
+      );
+    }
+  }
+};
+
 export const bundleOrchidORM = <
   T extends OrmTableThunks = EmptyObject,
   V extends OrmTableThunks = EmptyObject,
@@ -700,22 +751,7 @@ const privateOrchidORMWithAdapter = <
       schema,
     );
 
-    const tableDbNames = Object.values(tableInstances).map((table) => {
-      const s =
-        typeof table.schema === 'function' ? table.schema() : table.schema;
-      return `${s ? s + '.' : ''}${table.nameInDb}`;
-    });
-
-    for (const key in views) {
-      const view = viewInstances[key];
-      const s = typeof view.schema === 'function' ? view.schema() : view.schema;
-      const name = `${s ? s + '.' : ''}${view.nameInDb}`;
-      if (tableDbNames.includes(name)) {
-        throw new Error(
-          `Cannot configure both a table and a view for database relation ${name}`,
-        );
-      }
-    }
+    throwIfTableAndViewShareNameInDb(tableInstances, viewInstances, schema);
   }
 
   applyRelations(

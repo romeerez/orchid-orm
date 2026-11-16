@@ -26,7 +26,7 @@ import {
   makeOrchidOrmDbWithAdapter,
   orchidORMWithAdapter,
 } from '../orm-instance/orm-instance';
-import { QueryHelperResult } from 'pqb';
+import { QueryHelperResult, QuerySchema } from 'pqb';
 import { CannotMutateReadOnlyTableError } from 'pqb/internal';
 
 describe('view', () => {
@@ -642,6 +642,96 @@ describe('view', () => {
     ).toThrow(
       'Cannot configure both a table and a view for database relation custom.user',
     );
+  });
+
+  it('should allow a table and a view that differ in where a dot splits the schema and the name', () => {
+    const UserTable = defineTable('user', { schema: 'a.b' }, (t) => ({
+      id: t.integer().primaryKey(),
+    }));
+    const UserView = defineView(
+      'user',
+      { nameInDb: 'b.user', sql: sql`SELECT id FROM "user"` },
+      (t) => ({
+        id: t.integer(),
+      }),
+    );
+
+    const local = orchidORMWithAdapter(
+      {
+        adapter: testAdapter,
+        schema: 'a',
+        views: {
+          user: UserView,
+        },
+      },
+      {
+        user: UserTable,
+      },
+    );
+
+    expectSql(local.user.toSQL(), `SELECT * FROM "a.b"."user"`);
+    expectSql(local.$views.user.toSQL(), `SELECT * FROM "a"."b.user" "user"`);
+  });
+
+  describe('table and view of the same name', () => {
+    const createOrm = (schemas: {
+      orm?: QuerySchema;
+      table?: QuerySchema;
+      view?: QuerySchema;
+    }) => {
+      const UserTable = defineTable('user', { schema: schemas.table }, (t) => ({
+        id: t.integer().primaryKey(),
+      }));
+      const UserView = defineView(
+        'user',
+        { schema: schemas.view, sql: sql`SELECT id FROM "user"` },
+        (t) => ({
+          id: t.integer(),
+        }),
+      );
+
+      return orchidORMWithAdapter(
+        {
+          adapter: testAdapter,
+          schema: schemas.orm,
+          views: {
+            user: UserView,
+          },
+        },
+        {
+          user: UserTable,
+        },
+      );
+    };
+
+    it('should be rejected when one of them takes the same schema from the ORM', () => {
+      const message =
+        'Cannot configure both a table and a view for database relation custom.user';
+
+      expect(() => createOrm({ orm: 'custom', table: 'custom' })).toThrow(
+        message,
+      );
+      expect(() => createOrm({ orm: 'custom', view: 'custom' })).toThrow(
+        message,
+      );
+    });
+
+    it('should be allowed in different schemas', () => {
+      expect(() => createOrm({ table: 'one', view: 'two' })).not.toThrow();
+      expect(() => createOrm({ orm: 'one', table: 'two' })).not.toThrow();
+      expect(() => createOrm({ orm: 'one', view: 'two' })).not.toThrow();
+    });
+
+    it('should be allowed in a dynamic schema, without calling it', () => {
+      const schema = jest.fn(() => 'custom');
+
+      createOrm({ table: schema, view: 'custom' });
+      createOrm({ table: 'custom', view: schema });
+      createOrm({ table: schema, view: schema });
+      createOrm({ orm: schema });
+
+      expect(schema).not.toHaveBeenCalled();
+    });
   });
 
   it('should support query-defined view', () => {

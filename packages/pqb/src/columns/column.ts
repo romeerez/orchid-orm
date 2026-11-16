@@ -570,19 +570,37 @@ export namespace Column {
     | AsTypeArgWithoutType<Schema>;
 }
 
-export const getForeignKeyTableInstance = (
-  table: Column.ForeignKey.TableParam,
-): Column.ForeignKey.TableParamInstance => {
+const instantiateForeignKeyTable = (table: Column.ForeignKey.TableParam) => {
   const item = 'instance' in table ? table.instance() : new table();
 
   if (!item.table)
     throw new Error('Referenced table is missing table property');
+
+  return item as typeof item & { table: string };
+};
+
+export const getForeignKeyTableInstance = (
+  table: Column.ForeignKey.TableParam,
+): Column.ForeignKey.TableParamInstance => {
+  const item = instantiateForeignKeyTable(table);
 
   return {
     ...item,
     schema: typeof item.schema === 'function' ? item.schema() : item.schema,
     table: item.table,
   };
+};
+
+/**
+ * Database name of the table referenced by a foreign key, without the schema.
+ * Unlike `getForeignKeyTableInstance`, it does not call a dynamic schema,
+ * so it is safe outside of the context that the schema function relies on.
+ */
+export const getForeignKeyTableNameInDb = (
+  table: Column.ForeignKey.TableParam,
+): string => {
+  const item = instantiateForeignKeyTable(table);
+  return item.nameInDb || item.table;
 };
 
 // change column type and all schemas to nullable
