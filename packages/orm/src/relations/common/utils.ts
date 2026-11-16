@@ -5,7 +5,7 @@ import {
   _queryWhereIn,
   Column,
   CreateCtx,
-  getForeignKeyTableInstance,
+  getForeignKeyTableNameInDb,
   getQueryAs,
   isQueryReturnsAll,
   pushQueryOnForOuter,
@@ -385,8 +385,7 @@ export const addAutoForeignKey = (
           fkeyTable = fkey.fnOrTable;
           fkeyColumn = getColumnKeyFromDbName(to, fkeyColumn);
         } else {
-          const instance = getForeignKeyTableInstance(fkey.fnOrTable());
-          fkeyTable = instance.nameInDb || (instance.table as string);
+          fkeyTable = getForeignKeyTableNameInDb(fkey.fnOrTable());
         }
 
         if (toTable === fkeyTable && pkey === fkeyColumn) return;
@@ -411,9 +410,8 @@ export const addAutoForeignKey = (
               getColumnKeyFromDbName(to, column) === sortedPkeys[i],
           );
       } else {
-        const instance = getForeignKeyTableInstance(refs.fnOrTable());
         sameForeignTable =
-          (instance.nameInDb || instance.table) === toTable &&
+          getForeignKeyTableNameInDb(refs.fnOrTable()) === toTable &&
           refs.foreignColumns.every((column, i) => column === sortedPkeys[i]);
       }
 

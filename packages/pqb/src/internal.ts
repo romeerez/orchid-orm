@@ -101,7 +101,10 @@ export {
   type DateColumnInput,
 } from './index';
 
-export { getForeignKeyTableInstance } from './columns/column';
+export {
+  getForeignKeyTableInstance,
+  getForeignKeyTableNameInDb,
+} from './columns/column';
 
 // Operators
 export { Operators, type OperatorsDate, type OperatorsNumber } from './index';

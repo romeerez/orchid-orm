@@ -14,9 +14,11 @@ import {
   MessageData,
   ChatData,
   UserData,
+  sql,
   testAdapter,
 } from 'test-utils';
 import { Db, QueryHelperResult } from 'pqb';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 describe('orm', () => {
   useTestORM();
@@ -246,6 +248,64 @@ describe('orm', () => {
       expect(initSpy).toHaveBeenCalledTimes(2);
       expect(initSpy).toHaveBeenNthCalledWith(1, first);
       expect(initSpy).toHaveBeenNthCalledWith(2, second);
+    });
+
+    describe('dynamic schema', () => {
+      const tenant = new AsyncLocalStorage<string>();
+
+      const schema = () => {
+        const name = tenant.getStore();
+        if (!name) throw new Error('Tenant is not set');
+        return name;
+      };
+
+      const TenantUserTable = defineTable('user', { schema }, (t) => ({
+        id: t.identity().primaryKey(),
+      }));
+
+      it('should not be called until a query is built', () => {
+        const local = makeOrchidOrmDbWithAdapter(
+          bundleOrchidORMTables({ user: TenantUserTable }),
+          { db: db.$qb },
+        );
+
+        expect(() => local.user.toSQL()).toThrow('Tenant is not set');
+
+        for (const name of ['one', 'two']) {
+          expectSql(
+            tenant.run(name, () => local.user.toSQL()),
+            `SELECT * FROM "${name}"."user"`,
+          );
+        }
+      });
+
+      it('should not be called until a query is built when views are configured', () => {
+        const TenantUserView = defineView(
+          'activeUser',
+          { schema, sql: sql`SELECT id FROM "user"` },
+          (t) => ({
+            id: t.integer(),
+          }),
+        );
+
+        const local = makeOrchidOrmDbWithAdapter(
+          bundleOrchidORM({
+            tables: { user: TenantUserTable },
+            views: { activeUser: TenantUserView },
+          }),
+          { db: db.$qb },
+        );
+
+        for (const name of ['one', 'two']) {
+          tenant.run(name, () => {
+            expectSql(local.user.toSQL(), `SELECT * FROM "${name}"."user"`);
+            expectSql(
+              local.$views.activeUser.toSQL(),
+              `SELECT * FROM "${name}"."active_user" "activeUser"`,
+            );
+          });
+        }
+      });
     });
   });
 
