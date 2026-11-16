@@ -15,6 +15,11 @@ import { getClonedQueryData } from '../../query-data';
 export const resolveSubQueryCallback = (
   q: ToSQLQuery,
   cb: (q: ToSQLQuery) => ToSQLQuery,
+  // When the passed-in query is the root query itself (select/update/create/where
+  // callbacks), its conditions belong to the outer query and are reset on the arg.
+  // `joinLateral` passes a query of the joined table which is a sub-query of its own:
+  // its conditions and default scopes (such as a soft-delete scope) must be inherited.
+  resetRootConditions = true,
 ): ToSQLQuery => {
   let base;
   // `with` can pass a generic `qb` here, it has no table.
@@ -48,6 +53,14 @@ export const resolveSubQueryCallback = (
 
   arg.q = getClonedQueryData(q.q);
   arg.q.subQuery = 1;
+  if (resetRootConditions) {
+    // Conditions already on the root query belong to the outer query and are rendered as its WHERE.
+    // A callback expression must apply only the conditions added inside the callback itself,
+    // so reset them just like `resolveCallbacksInArgs` does for `where` callbacks.
+    // Without this, a search on the outer query would leak into `headline` and other
+    // select expressions of the self-referencing query.
+    arg.q.and = arg.q.or = arg.q.scopes = undefined;
+  }
   // Deleting `with` because sub-query should duplicate WITH statements of the parent query in its SQL
   arg.q.with = arg.q.relChain = undefined;
   _setSubQueryAliases(arg);
