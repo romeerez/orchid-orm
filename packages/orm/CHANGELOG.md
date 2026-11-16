@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.55
+
+### Patch Changes
+
+- f12b4b21: Avoid unnecessary traversal of scalar `where` values when building queries
+- Updated dependencies [f12b4b21]
+  - pqb@0.73.44
+  - rake-db@2.37.56
+
 ## 1.78.54
 
 ### Patch Changes

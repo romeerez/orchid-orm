@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.44
+
+### Patch Changes
+
+- f12b4b21: Avoid unnecessary traversal of scalar `where` values when building queries
+
 ## 0.73.43
 
 ### Patch Changes
