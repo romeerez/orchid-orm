@@ -428,7 +428,9 @@ const then = async (
         const fieldName =
           method === 'query' ? queryResult.fields[lastFieldI].name : lastFieldI;
         cteData = queryResult.rows[lastRowI][fieldName];
-        queryResult.fields.length = lastFieldI;
+        // don't mutate `fields`: postgres.js reuses the array
+        // to decode the next results of a prepared statement
+        queryResult.fields = queryResult.fields.slice(0, lastFieldI);
         queryResult.rowCount--;
         queryResult.rows.length = lastRowI;
 
