@@ -415,6 +415,25 @@ await db.books
   .where({ 'author.isPopular': true });
 ```
 
+The callback argument `q` is a query, and values taken from it, such as `q.get('column')` and `q.exists()`, are evaluated for the current record.
+Conditions added to `q` in the callback apply to the current record:
+
+```ts
+const isPublished = db.post.makeHelper((q) => q.where({ published: true }));
+
+await db.post.select('title', {
+  // CASE WHEN <conditions> THEN true ELSE false END
+  isPublished: (q) => q.useHelper(isPublished).exists(),
+  // not found when the record doesn't match: `undefined`, and `get` throws `NotFoundError`
+  publishedAt: (q) => q.where({ published: true }).getOptional('updatedAt'),
+});
+```
+
+Aggregate methods such as `count` cannot apply such conditions unless they use the `over` option: use the `filter` option of the aggregate to filter its input records instead.
+A function called with `fn` applies them like other values, even when it is an aggregate.
+`ref` and `column` throw after adding conditions: use `get` or `getOptional` instead, or express the conditions explicitly in SQL.
+Adding a join to the query in the callback, or using its relation after adding conditions, throws an error.
+
 ### conditional select
 
 `if` allows to select additional columns based on a condition:

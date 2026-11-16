@@ -78,6 +78,17 @@ await db.table.where({ ...conditions }).update({
 });
 ```
 
+Conditions added to the callback argument apply to the current record:
+the value is `NULL` for a record that doesn't match them, so the updated column must be nullable.
+The conditions of the update query still select the records to update.
+
+```ts
+// updates all records: sets `bonus` to `salary` for managers, and to NULL for others
+await db.table.all().update({
+  bonus: (q) => q.where({ role: 'manager' }).get('salary'),
+});
+```
+
 `update` can be used in [with](/guide/advanced-queries#with) expressions:
 
 ```ts

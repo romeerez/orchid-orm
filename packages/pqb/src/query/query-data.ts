@@ -38,6 +38,7 @@ import { QueryDataTransform } from './extra-features/data-transform/transform';
 import { QueryHookUtils } from './extra-features/hooks/hooks';
 import { SelectItem } from './basic-features/select/select.sql';
 import { QueryDataSources } from './extra-features/search/search.sql';
+import { RootQueryBase } from './internal-features/sub-query/root-query-value';
 import { JoinItem, JoinItemArgs } from './basic-features/join/join.sql';
 import { WhereItem } from './basic-features/where/where.sql';
 import { OrderItem } from './basic-features/order/order.sql';
@@ -268,6 +269,8 @@ export interface QueryData
   // the join will be applied after callback is resolved.
   // 1 for the same query, 2 for relation queries returned from the callback.
   subQuery?: number;
+  // the parts of the root query when it was passed to a callback, to tell what the callback added to it
+  rootBase?: RootQueryBase;
   // once there is a hasMany or hasAndBelongsToMany in the chain,
   // the following belongTo and hasOne must also return multiple
   chainMultiple?: boolean;

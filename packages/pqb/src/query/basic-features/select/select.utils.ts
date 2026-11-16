@@ -43,6 +43,10 @@ import { NotFoundError } from '../../errors';
 import { finalizeNestedHookSelect } from '../../extra-features/hooks/hooks';
 import { applyBatchTransforms } from '../../extra-features/data-transform/transform';
 import { resolveSubQueryCallback } from '../../internal-features/sub-query/sub-query';
+import {
+  getRootValueConditions,
+  RootValueExpression,
+} from '../../internal-features/sub-query/root-query-value';
 import { isRelationQuery } from '../../relations';
 import { _copyQueryAliasToQuery } from '../as/as';
 import { _addToHookSelect, _addToHookSelectWithTable } from './hook-select';
@@ -367,6 +371,11 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
     }
 
     if (!joinQuery && (arg as Query).q?.subQuery && arg.q.expr) {
+      // the value is parsed by the batch parser above
+      if (getRootValueConditions(arg as Query)) {
+        return new RootValueExpression(arg as Query);
+      }
+
       arg = arg.q.expr;
     }
 
@@ -525,8 +534,11 @@ export const processSelectAsArg = <T extends SelectSelf>(
       column = value.result.value as Column;
     } else {
       // subQuery is undefined when doing `select({ x: () => db.someTable })`, returning unrelated query
-      // subQuery is 1 when doing `select({ x: (q) => q })`, returning a self query
-      const isSelfReferencingQuery = value.q.subQuery === 1;
+      // subQuery is 1 when doing `select({ x: (q) => q })`, returning a self query,
+      // a value of a self query with conditions added in the callback acts as a nested value query: it can be not found
+      const isSelfReferencingQuery =
+        value.q.subQuery === 1 &&
+        !(value.q.expr && getRootValueConditions(value));
       // subQuery is > 1 when doing `select({ x: (q) => q.relation })`, returning a relation
       const isSelectingRelation = value.q.subQuery && value.q.subQuery > 1;
 

@@ -31,6 +31,7 @@ import { isExpression } from '../../expressions/expression';
 import { throwOnReadOnlyUpdate } from '../../query.utils';
 import { OrchidOrmInternalError } from '../../errors';
 import { ensureCTECount } from '../../extra-features/hooks/hooks.sql';
+import { wrapRootValueSql } from '../../internal-features/sub-query/root-query-value';
 import {
   MutativeQueriesSelectRelationsSqlState,
   newMutativeQueriesSelectRelationsSqlState,
@@ -376,7 +377,12 @@ const processValue = (
     } else if (value instanceof (QueryClass as never)) {
       const subQuery = value as Query;
       if (subQuery.q.subQuery === 1) {
-        return selectToSql(ctx, query, subQuery.q, quotedAs);
+        return wrapRootValueSql(
+          ctx,
+          subQuery,
+          selectToSql(ctx, query, subQuery.q, quotedAs),
+          quotedAs,
+        );
       }
 
       return `(${moveMutativeQueryToCte(
