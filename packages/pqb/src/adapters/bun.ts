@@ -448,6 +448,14 @@ class BunQueryResult<T> implements QueryResult<T> {
 
     return (this._fields ??= getFields(this.result));
   }
+
+  /**
+   * Sets the fields, which `then` replaces when it removes the column of CTE
+   * hook data. Without a setter, the assignment throws because of the getter.
+   */
+  set fields(fields: QueryResult<T>['fields']) {
+    this._fields = fields;
+  }
 }
 
 const isMultiResult = <T>(

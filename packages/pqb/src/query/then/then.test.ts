@@ -298,6 +298,31 @@ describe('then', () => {
     });
   });
 
+  describe('autoPreparedStatements', () => {
+    it('should return selected columns of a repeated query with CTE hook data', async () => {
+      const local = createDbWithAdapter({
+        adapter: testAdapter,
+        schema: () => 'schema',
+        autoPreparedStatements: true,
+      });
+      const User = local('user', (t) => ({
+        id: t.identity().primaryKey(),
+        name: t.text(),
+      }));
+      const id = await db.user.get('Id').create(UserData);
+
+      // strict `updateMany` selects the data of a CTE hook
+      // that counts the updated records
+      const update = (name: string) =>
+        User.select('name').updateMany([{ id, name }]);
+
+      // the test transaction runs both queries on one connection,
+      // so the second one reuses the statement prepared by the first one
+      expect(await update('one')).toEqual([{ name: 'one' }]);
+      expect(await update('two')).toEqual([{ name: 'two' }]);
+    });
+  });
+
   it('should throw NotFoundError with proper stack trace', async () => {
     let error: Error | undefined;
     try {
