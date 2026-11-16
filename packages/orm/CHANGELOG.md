@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.52
+
+### Patch Changes
+
+- 40bb77a1: Fix dynamic `schema` functions being called during ORM initialization instead of only when building queries (#762)
+- Updated dependencies [40bb77a1]
+  - pqb@0.73.41
+  - rake-db@2.37.53
+
 ## 1.78.51
 
 ### Patch Changes

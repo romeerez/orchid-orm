@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.41
+
+### Patch Changes
+
+- 40bb77a1: Fix dynamic `schema` functions being called during ORM initialization instead of only when building queries (#762)
+
 ## 0.73.40
 
 ### Patch Changes
