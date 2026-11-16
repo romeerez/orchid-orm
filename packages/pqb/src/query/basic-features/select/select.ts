@@ -339,13 +339,53 @@ export function _querySelect(q: Query, args: any[]): any {
 
   const as = q.q.as || q.table;
   const selectArgs: SelectItem[] = [];
+  // Copy the parser map once per group of consecutive plain columns.
+  // Copying it for each parsed column can make the copying work quadratic.
+  // Node 24 build + toSQL benchmarks: ~13% less time with 3 parsed columns,
+  // ~46% with 24. Two columns without parsers took ~6% longer (~0.04 µs);
+  // a mix of 200 query shapes showed no measurable difference.
+  let parsersCopy: Query['q']['parsers'];
   for (const arg of args) {
+    if (isPlainSelectColumn(q.q, arg)) {
+      const parser = q.q.defaultParsers?.[arg];
+      if (parser) {
+        // The existing map may be shared with the parent query.
+        // Copy it once for this group of plain columns, not once per column.
+        if (!parsersCopy) {
+          parsersCopy = { ...q.q.parsers };
+          q.q.parsers = parsersCopy;
+        }
+        parsersCopy[arg] = parser;
+      }
+      selectArgs.push(arg);
+      continue;
+    }
+
+    // A complex selection can capture or replace q.q.parsers. The next
+    // plain column must make a fresh copy so those snapshots stay unchanged.
+    parsersCopy = undefined;
     const item = processSelectArg(q, as, arg);
     if (item) selectArgs.push(item);
     else if (item === false) return _queryNone(q);
   }
 
   return pushQueryArrayImmutable(q, 'select', selectArgs);
+}
+
+// Plain column names only need their table's default parser. Wildcards,
+// qualified names, relation values, and runtime computeds need the full
+// selection handler to resolve aliases, parsers, or computed dependencies.
+function isPlainSelectColumn(q: Query['q'], arg: unknown): arg is string {
+  return (
+    typeof arg === 'string' &&
+    arg !== '' &&
+    arg !== '*' &&
+    // Direct assignment would set the prototype instead of an own property.
+    arg !== '__proto__' &&
+    !arg.includes('.') &&
+    !q.valuesJoinedAs?.[arg] &&
+    !q.runtimeComputeds?.[arg]
+  );
 }
 
 export const _querySelectAll = (query: IsQuery) => {

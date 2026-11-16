@@ -269,18 +269,30 @@ describe('select', () => {
       expectQueryNotMutated(q);
     });
 
-    it('should not apply table column parsers to a selected expression with the same name as a table column', async () => {
+    it('should keep selected expression parsers independent between query branches', async () => {
       await db.user.insert(UserData);
 
       const q = db.user.take().select({
         updatedAt: () => sql<boolean>`true`,
       });
+      const parsed = q.select('createdAt');
+      const branches = [
+        parsed.select('createdAt', 'updatedAt'),
+        parsed.select('createdAt', 'User.createdAt', 'updatedAt'),
+      ];
 
       const res = await q;
 
       assertType<typeof res, { updatedAt: boolean }>();
 
       expect(res.updatedAt).toBe(true);
+      expect((await parsed).updatedAt).toBe(true);
+      for (const branch of branches) {
+        expect(await branch).toEqual({
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date),
+        });
+      }
     });
 
     describe('loading records', () => {
