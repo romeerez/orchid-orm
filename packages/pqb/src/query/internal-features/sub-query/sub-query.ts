@@ -48,6 +48,12 @@ export const resolveSubQueryCallback = (
 
   arg.q = getClonedQueryData(q.q);
   arg.q.subQuery = 1;
+  // Conditions already on the root query belong to the outer query and are rendered as its WHERE.
+  // A callback expression must apply only the conditions added inside the callback itself,
+  // so reset them just like `resolveCallbacksInArgs` does for `where` callbacks.
+  // Without this, a search on the outer query would leak into `headline` and other
+  // select expressions of the self-referencing query.
+  arg.q.and = arg.q.or = arg.q.scopes = undefined;
   // Deleting `with` because sub-query should duplicate WITH statements of the parent query in its SQL
   arg.q.with = arg.q.relChain = undefined;
   _setSubQueryAliases(arg);
