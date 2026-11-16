@@ -25,6 +25,7 @@ import { isQueryNone } from '../../extra-features/none/none';
 import { cloneQueryBaseUnscoped } from '../wrap/wrap';
 import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { RawSql } from '../../expressions/raw-sql';
+import { ExprWithOwnWhereExpression } from '../where/where.sql';
 import { SelectArg, SelectAsArg, SelectSelf } from './select';
 import { _joinLateral } from '../join/join';
 import {
@@ -367,7 +368,14 @@ export const addParserForSelectItem = <T extends PickQuerySelectable>(
     }
 
     if (!joinQuery && (arg as Query).q?.subQuery && arg.q.expr) {
-      arg = arg.q.expr;
+      arg =
+        (arg as Query).q.subQuery === 1
+          ? new ExprWithOwnWhereExpression(
+              arg.q.expr,
+              arg as never,
+              arg.q as never,
+            )
+          : arg.q.expr;
     }
 
     if (isExpression(arg)) {

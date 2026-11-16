@@ -10,7 +10,12 @@ import { moveMutativeQueryToCte } from '../cte/cte.sql';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { _getQueryOuterAliases, getQueryAs, QueryDataAliases } from '../as/as';
 import { ColumnsParsers } from '../../query-columns/query-column-parsers';
-import { Expression, isExpression } from '../../expressions/expression';
+import {
+  Expression,
+  ExpressionData,
+  isExpression,
+} from '../../expressions/expression';
+import { RawSql } from '../../expressions/raw-sql';
 import {
   addValue,
   MaybeArray,
@@ -114,6 +119,60 @@ export const pushWhereToSql = (
     sql.push(res);
   }
 };
+
+// A terminal method (`exists()`/`notExists()`/`count()`/`get()`) sets `q.expr` on a
+// self-referencing root query (`subQuery === 1`) inside a `select`/`where` callback.
+// Conditions accumulated on that query are not part of the expr and were silently
+// dropped by the renderer. Combine them with the expr: for `exists()`/`notExists()`
+// the conditions become the boolean value itself; other terminal methods cannot
+// carry the conditions in this position, so throw instead of generating SQL that
+// ignores them. Returns undefined when the query has no `where` conditions.
+export const selfReferencingExprWithWhereSql = (
+  ctx: ToSQLCtx,
+  table: ToSQLQuery,
+  query: QueryDataForWhere,
+  expr: Expression,
+  quotedAs?: string,
+): string | undefined => {
+  const condSql = whereToSql(ctx, table, query, quotedAs, true);
+  if (!condSql) return undefined;
+
+  if (expr instanceof RawSql && expr._sql === 'true') return condSql;
+  if (expr instanceof RawSql && expr._sql === 'false') return `NOT ${condSql}`;
+
+  throw new Error(
+    "A terminal method (count(), get(), ...) on the root query inside a select/where callback cannot apply the query's own `where` conditions to the current row. Use a standalone sub-query with these conditions instead.",
+  );
+};
+
+// Expression wrapper for a terminal select expression (`q.expr`) of a
+// self-referencing root query: renders the expression combined with the query's
+// own `where` conditions, or the bare expression when there are no conditions.
+export class ExprWithOwnWhereExpression extends Expression<Column.Pick.QueryColumn> {
+  result: { value: Column.Pick.QueryColumn };
+  q: ExpressionData = { expr: this };
+
+  constructor(
+    public expr: Expression,
+    public table: ToSQLQuery,
+    public query: QueryDataForWhere,
+  ) {
+    super();
+    this.result = expr.result;
+  }
+
+  makeSQL(ctx: ToSQLCtx, quotedAs?: string): string {
+    return (
+      selfReferencingExprWithWhereSql(
+        ctx,
+        this.table,
+        this.query,
+        this.expr,
+        quotedAs,
+      ) ?? this.expr.toSQL(ctx, quotedAs)
+    );
+  }
+}
 
 export const whereToSql = (
   ctx: ToSQLCtx,
@@ -251,6 +310,14 @@ const processWhere = (
     if (query.q.expr) {
       if (query.q.subQuery === 1) {
         ands.push(selectToSql(ctx, table, query.q, quotedAs));
+        const condSql = selfReferencingExprWithWhereSql(
+          ctx,
+          query,
+          query.q,
+          query.q.expr,
+          quotedAs,
+        );
+        if (condSql) ands[ands.length - 1] = condSql;
       } else {
         const q = joinSubQuery(table, query);
         q.q.select = [query.q.expr];
