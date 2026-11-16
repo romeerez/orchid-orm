@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.42
+
+### Patch Changes
+
+- d2b8fff0: Fix repeated queries with CTE hooks under `autoPreparedStatements` with postgres.js (#889)
+
 ## 0.73.41
 
 ### Patch Changes

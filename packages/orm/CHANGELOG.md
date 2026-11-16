@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.53
+
+### Patch Changes
+
+- d2b8fff0: Fix repeated queries with CTE hooks under `autoPreparedStatements` with postgres.js (#889)
+- Updated dependencies [d2b8fff0]
+  - pqb@0.73.42
+  - rake-db@2.37.54
+
 ## 1.78.52
 
 ### Patch Changes
