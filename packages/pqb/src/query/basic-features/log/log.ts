@@ -64,51 +64,70 @@ const makeMessage = (
   return `${result} ${colors ? valuesColor(formattedValues) : formattedValues}`;
 };
 
+/**
+ * Key of the logger of a log object.
+ * It's registered globally to be the same in every loaded copy of pqb, such as its CommonJS and ES module builds.
+ * The property under this key is not enumerable, so a log object copied into a `log` option doesn't bring its logger.
+ */
+const loggerKey = Symbol.for('pqb.queryLogger');
+
+interface LogObjectWithLogger extends QueryLogObject {
+  [loggerKey]: QueryLogger;
+}
+
+/**
+ * Default settings and callbacks of a log object.
+ * The callbacks take `colors` and the logger from the log object they are called on.
+ */
+const defaultLogObject: QueryLogObject = {
+  colors: true,
+  beforeQuery() {
+    return process.hrtime();
+  },
+  afterQuery(this: LogObjectWithLogger, sql, time: [number, number]) {
+    this[loggerKey].log(
+      makeMessage(
+        this.colors,
+        logColors.boldCyanBright,
+        time,
+        logColors.boldBlue,
+        sql.text,
+        logColors.boldYellow,
+        sql.values,
+      ),
+    );
+  },
+  onError(this: LogObjectWithLogger, error, sql, time: [number, number]) {
+    const { colors } = this;
+    const message = `Error: ${error.message}`;
+
+    this[loggerKey].error(
+      `${makeMessage(
+        colors,
+        logColors.boldMagenta,
+        time,
+        logColors.boldRed,
+        sql.text,
+        logColors.boldYellow,
+        sql.values,
+      )} ${colors ? logColors.boldRed(message) : message}`,
+    );
+  },
+};
+
 export const logParamToLogObject = (
   logger: QueryLogger,
   log: QueryLogOptions['log'],
 ): QueryLogObject | undefined => {
   if (!log) return;
 
-  const logObject = Object.assign(
-    {
-      colors: true,
-      beforeQuery() {
-        return process.hrtime();
-      },
-      afterQuery(sql, time: [number, number]) {
-        logger.log(
-          makeMessage(
-            colors,
-            logColors.boldCyanBright,
-            time,
-            logColors.boldBlue,
-            sql.text,
-            logColors.boldYellow,
-            sql.values,
-          ),
-        );
-      },
-      onError(error, sql, time: [number, number]) {
-        const message = `Error: ${error.message}`;
-
-        logger.error(
-          `${makeMessage(
-            colors,
-            logColors.boldMagenta,
-            time,
-            logColors.boldRed,
-            sql.text,
-            logColors.boldYellow,
-            sql.values,
-          )} ${colors ? logColors.boldRed(message) : message}`,
-        );
-      },
-    } as QueryLogObject,
-    log === true ? {} : log,
+  const logObject: QueryLogObject = Object.assign(
+    {},
+    defaultLogObject,
+    log === true ? undefined : log,
   );
 
-  const colors = logObject.colors;
+  Object.defineProperty(logObject, loggerKey, { value: logger });
 
   return logObject;
 };

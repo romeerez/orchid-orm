@@ -683,9 +683,14 @@ const privateOrchidORMWithAdapter = <
   let asyncStorage;
   let qb: Db;
   if ('db' in options) {
-    adapter = options.db.q.adapter;
+    const { q } = options.db;
+    adapter = q.adapter;
     asyncStorage = options.db.internal.asyncStorage;
     qb = options.db.qb as Db;
+
+    commonOptions.log ??= q.log;
+    commonOptions.logger ??= q.logger;
+    commonOptions.autoPreparedStatements ??= q.autoPreparedStatements;
   } else {
     adapter = options.adapter;
 

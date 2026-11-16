@@ -17,7 +17,7 @@ import {
   sql,
   testAdapter,
 } from 'test-utils';
-import { Db, QueryHelperResult } from 'pqb';
+import { createDbWithAdapter, Db, QueryHelperResult } from 'pqb';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 describe('orm', () => {
@@ -248,6 +248,140 @@ describe('orm', () => {
       expect(initSpy).toHaveBeenCalledTimes(2);
       expect(initSpy).toHaveBeenNthCalledWith(1, first);
       expect(initSpy).toHaveBeenNthCalledWith(2, second);
+    });
+
+    describe('query options of the given db', () => {
+      const orm = bundleOrchidORMTables({ user: UserTable });
+
+      const createLog = () => ({
+        beforeQuery: jest.fn(),
+        afterQuery: jest.fn(),
+      });
+
+      const createLogger = () => ({
+        log: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      });
+
+      it('should log and prepare table queries with `log` and `autoPreparedStatements` of the db', async () => {
+        const log = createLog();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({
+            adapter: testAdapter,
+            log,
+            autoPreparedStatements: true,
+          }),
+        });
+
+        await local.user.count();
+
+        expect(log.beforeQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            text: expect.stringContaining('SELECT count(*)'),
+            prepare: true,
+          }),
+        );
+      });
+
+      it('should log a table query with `logger` of the db', async () => {
+        const logger = createLogger();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({ adapter: testAdapter, logger }),
+        });
+
+        await local.user.count().log();
+
+        expect(logger.log).toHaveBeenCalledWith(
+          expect.stringContaining('SELECT count(*)'),
+        );
+      });
+
+      it('should not log table queries when logging is turned off on the db with `log(false)`', async () => {
+        const log = createLog();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({ adapter: testAdapter, log }).log(false),
+        });
+
+        await local.user.count();
+
+        expect(log.beforeQuery).not.toHaveBeenCalled();
+      });
+
+      it('should log table queries with `log` of the db to `logger` passed with the db', async () => {
+        const dbLogger = createLogger();
+        const logger = createLogger();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({
+            adapter: testAdapter,
+            log: true,
+            logger: dbLogger,
+          }),
+          logger,
+        });
+
+        await local.user.count();
+        await expect(local.user.whereSql`wrong_column = 1`).rejects.toThrow(
+          'column "wrong_column" does not exist',
+        );
+
+        expect(logger.log).toHaveBeenCalledWith(
+          expect.stringContaining('SELECT count(*)'),
+        );
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('wrong_column = 1'),
+        );
+        expect(dbLogger.log).not.toHaveBeenCalled();
+        expect(dbLogger.error).not.toHaveBeenCalled();
+      });
+
+      it('should keep `log` options of the db when logging to `logger` passed with the db', async () => {
+        const logger = createLogger();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({
+            adapter: testAdapter,
+            log: { colors: false },
+          }),
+          logger,
+        });
+
+        await local.user.count();
+
+        // without colors, the message starts with the elapsed time
+        expect(logger.log).toHaveBeenCalledWith(
+          expect.stringMatching(/^\([^)]+\) SELECT count\(\*\)/),
+        );
+      });
+
+      it('should disable inherited logging with `log: false`', async () => {
+        const log = createLog();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({ adapter: testAdapter, log }),
+          log: false,
+        });
+
+        await local.user.count();
+
+        expect(log.beforeQuery).not.toHaveBeenCalled();
+      });
+
+      it('should disable inherited prepared statements with `autoPreparedStatements: false`', async () => {
+        const log = createLog();
+        const local = makeOrchidOrmDbWithAdapter(orm, {
+          db: createDbWithAdapter({
+            adapter: testAdapter,
+            autoPreparedStatements: true,
+          }),
+          log,
+          autoPreparedStatements: false,
+        });
+
+        await local.user.count();
+
+        expect(log.beforeQuery).toHaveBeenCalledWith(
+          expect.not.objectContaining({ prepare: true }),
+        );
+      });
     });
 
     describe('dynamic schema', () => {

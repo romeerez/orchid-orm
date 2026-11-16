@@ -6,7 +6,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { createDbWithAdapter } from '../../db';
-import { logColors } from './log';
+import { logColors, logParamToLogObject } from './log';
 
 const hrtime = jest.spyOn(process, 'hrtime');
 hrtime.mockReturnValue([0, 0]);
@@ -162,6 +162,29 @@ describe('query log', () => {
     expect(logger.error.mock.calls).toEqual([
       [`(1s 1.0ms) SELECT something Error: column "something" does not exist`],
     ]);
+  });
+
+  it('should log with settings of a log object built by another copy of pqb to the given logger', () => {
+    let other!: { logParamToLogObject: typeof logParamToLogObject };
+    jest.isolateModules(() => {
+      other = jest.requireActual('./log');
+    });
+    const otherLogger = { log: jest.fn(), error: jest.fn(), warn: noop };
+
+    const log = logParamToLogObject(
+      logger,
+      other.logParamToLogObject(otherLogger, { colors: false }),
+    )!;
+    const sql = { text: 'SELECT 1', values: [] };
+    log.afterQuery(sql, log.beforeQuery(sql));
+    log.onError(new Error('error'), sql, log.beforeQuery(sql));
+
+    expect(logger.log.mock.calls).toEqual([['(1s 1.0ms) SELECT 1']]);
+    expect(logger.error.mock.calls).toEqual([
+      ['(1s 1.0ms) SELECT 1 Error: error'],
+    ]);
+    expect(otherLogger.log).not.toHaveBeenCalled();
+    expect(otherLogger.error).not.toHaveBeenCalled();
   });
 });
 
