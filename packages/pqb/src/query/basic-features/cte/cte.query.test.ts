@@ -291,6 +291,66 @@ describe('withSql', () => {
     expect(res).toEqual([{ one: 1, two: 'two' }]);
   });
 
+  describe('named column', () => {
+    const withNamed = () =>
+      db.user.withSql(
+        'w',
+        (t) => ({
+          authorId: t.name('author_id').text().parse(parseInt),
+          points: t.integer(),
+        }),
+        () => sql`SELECT '1', 10`,
+      );
+
+    it('should reference a named column by its key', async () => {
+      const q = withNamed()
+        .from('w')
+        .select('authorId', 'points')
+        .where({ authorId: '1' });
+
+      expectSql(
+        q.toSQL(),
+        `
+          WITH "w"("authorId", "points") AS (SELECT '1', 10)
+          SELECT "w"."authorId", "w"."points"
+          FROM "w"
+          WHERE "w"."authorId" = $1
+        `,
+        ['1'],
+      );
+
+      expect(await q).toEqual([{ authorId: 1, points: 10 }]);
+    });
+
+    it('should return and parse a named column by its key when selecting all', async () => {
+      const res = await withNamed().from('w');
+
+      expect(res).toEqual([{ authorId: 1, points: 10 }]);
+    });
+
+    it('should expose a named column by its key to another CTE', async () => {
+      const res = await withNamed()
+        .with('v', (q) => q.from('w'))
+        .from('v')
+        .select('authorId');
+
+      expect(res).toEqual([{ authorId: 1 }]);
+    });
+
+    it('should not change the shape returned from the shape callback', () => {
+      db.user.withSql(
+        'w',
+        () => db.user.shape,
+        () => sql`SELECT * FROM "schema"."user"`,
+      );
+
+      expectSql(
+        db.user.select('UserKey').toSQL(),
+        `SELECT "User"."user_key" "UserKey" FROM "schema"."user" "User"`,
+      );
+    });
+  });
+
   it('should support all with options', () => {
     for (const { options: opts, sql: s } of makeOptions('*', ['id', 'name'])) {
       const q = db.user
