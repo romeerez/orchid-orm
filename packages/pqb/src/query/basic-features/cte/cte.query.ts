@@ -2,7 +2,7 @@ import { Query } from '../../query';
 import { setQueryObjectValueImmutable } from '../../query.utils';
 import { _queryUnion } from '../union/union';
 import { CteItem, CteOptions } from './cte.sql';
-import { Column } from '../../../columns';
+import { Column, setColumnData } from '../../../columns';
 import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import {
   PickQueryResult,
@@ -506,7 +506,16 @@ export class CteQuery {
     const [options, shapeFn, sql] =
       args.length === 2 ? [undefined, args[0], args[1]] : args;
 
-    const shape = shapeFn(this.columnTypes);
+    const shape = { ...shapeFn(this.columnTypes) };
+
+    // the CTE declares its columns by the shape keys,
+    // so references to them must not use `name()`
+    for (const key in shape) {
+      const column = shape[key];
+      if (column.data.name) {
+        shape[key] = setColumnData(column, 'name', undefined);
+      }
+    }
 
     pushQueryValueImmutable(q, 'with', {
       n: name,
