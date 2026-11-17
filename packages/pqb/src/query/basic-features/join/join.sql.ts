@@ -365,7 +365,6 @@ const getArgQueryTarget = (
   let joinAs = quotedFrom || `"${first.table}"`;
 
   const qAs = joinQuery.as ? `"${joinQuery.as}"` : undefined;
-  const aliasToAdd = getQueryRelationAliasForAs(first, joinQuery.as);
 
   if (joinSubQuery) {
     return {
@@ -373,6 +372,7 @@ const getArgQueryTarget = (
       joinAs: qAs || joinAs,
     };
   } else {
+    const aliasToAdd = getQueryRelationAliasForAs(first, joinQuery.as);
     let target = quotedFrom || quoteTableWithSchema(first);
     if (aliasToAdd) {
       joinAs = aliasToAdd;

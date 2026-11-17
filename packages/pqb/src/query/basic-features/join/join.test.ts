@@ -11,6 +11,7 @@ import {
   expectSql,
   ProfileSelectAll,
   ProfileSelectAllWithTable,
+  testDb,
   UserData,
   UserSelectAll,
   UserSelectAllWithTable,
@@ -105,6 +106,38 @@ describe('using db', () => {
       .select('messagesCount');
 
     expect(await q).toEqual([{ firstJoinName: 0, messagesCount: 0 }]);
+  });
+
+  it('should join a table-less query built with `fromSql`', async () => {
+    const userId = await db.user.get('Id').insert(UserData);
+
+    const q = db.user
+      .join(
+        testDb.fromSql`(SELECT ${userId}::int AS user_id, 10 AS points)`
+          .select({
+            userId: testDb.sql<number>`user_id`,
+            points: testDb.sql<number>`points`,
+          })
+          .as('score'),
+        'score.userId',
+        'Id',
+      )
+      .select('Name', 'score.points');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "User"."name" "Name", "score"."points"
+        FROM ${quotedUser}
+        JOIN (
+          SELECT user_id "userId", points "points"
+          FROM (SELECT $1::int AS user_id, 10 AS points) "score"
+        ) "score" ON "score"."userId" = "User"."id"
+      `,
+      [userId],
+    );
+
+    expect(await q).toEqual([{ Name: UserData.Name, points: 10 }]);
   });
 });
 
