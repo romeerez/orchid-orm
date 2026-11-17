@@ -182,7 +182,7 @@ db.$qb
 
 Use `withSql` to add a Common Table Expression (CTE) based on a custom SQL.
 
-Similarly to [with](#with), `withRecursive` can be chained to any table or `db.$qb`.
+Similarly to [with](#with), `withSql` can be chained to any table or `db.$qb`.
 
 ```ts
 import { sql } from './table-factory';
