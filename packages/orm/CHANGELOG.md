@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.59
+
+### Patch Changes
+
+- 3dc66156: Fix `withSql` referencing a shape column with `name()` by its name instead of the key the CTE declares (#903)
+- Updated dependencies [3dc66156]
+  - pqb@0.73.48
+  - rake-db@2.37.60
+
 ## 1.78.58
 
 ### Patch Changes

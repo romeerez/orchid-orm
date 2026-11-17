@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.48
+
+### Patch Changes
+
+- 3dc66156: Fix `withSql` referencing a shape column with `name()` by its name instead of the key the CTE declares (#903)
+
 ## 0.73.47
 
 ### Patch Changes
