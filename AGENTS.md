@@ -161,7 +161,7 @@ After a code changing task is ready, run a verification:
 pnpm verify
 ```
 
-After successfully verifying a task, run:
+After successfully verifying a task, refresh the local GitNexus index if `.gitnexus/run.cjs` exists; otherwise skip this step silently:
 
 ```sh
 node .gitnexus/run.cjs analyze
