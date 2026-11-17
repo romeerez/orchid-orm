@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.46
+
+### Patch Changes
+
+- a8ce6e4c: Support a function returning a query as the first argument of `joinLateral` and `leftJoinLateral` (#900)
+
 ## 0.73.45
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.57
+
+### Patch Changes
+
+- a8ce6e4c: Support a function returning a query as the first argument of `joinLateral` and `leftJoinLateral` (#900)
+- Updated dependencies [a8ce6e4c]
+  - pqb@0.73.46
+  - rake-db@2.37.58
+
 ## 1.78.56
 
 ### Patch Changes
