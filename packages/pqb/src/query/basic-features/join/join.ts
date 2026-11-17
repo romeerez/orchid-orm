@@ -55,7 +55,7 @@ import { getShapeFromSelect } from '../select/select.utils';
 import { WithDataItem } from '../cte/cte.sql';
 import {
   isRelationQuery,
-  RelationConfigBase,
+  RelationJoinQuery,
   RelationsBase,
 } from '../../relations';
 import { ComputedColumns } from '../../extra-features/computed/computed';
@@ -737,11 +737,16 @@ export const _joinLateralProcessArg = (
     result: Column.QueryColumns;
   },
 ): Query => {
-  let relation: RelationConfigBase | undefined;
-  if (typeof arg === 'string') {
-    relation = q.relations[arg];
+  let joinQuery: RelationJoinQuery | undefined;
+  if (typeof arg === 'function') {
+    const query = arg(q.relationQueries) as Query;
+    if (isRelationQuery(query)) joinQuery = query.joinQuery;
+    arg = query;
+  } else if (typeof arg === 'string') {
+    const relation = q.relations[arg];
     if (relation) {
       arg = _clone(relation.query);
+      joinQuery = relation.joinQuery;
     } else {
       const w = q.q.withShapes?.[arg];
       if (w) {
@@ -764,11 +769,8 @@ export const _joinLateralProcessArg = (
     cb as never,
   ) as unknown as Query;
 
-  if (relation) {
-    result = relation.joinQuery(
-      result as unknown as Query,
-      q as unknown as Query,
-    ) as unknown as Query;
+  if (joinQuery) {
+    result = joinQuery(result, q) as Query;
   }
 
   return result;
@@ -1494,7 +1496,7 @@ export class QueryJoin {
   /**
    * `joinLateral` allows joining a table with a sub-query that can reference the main table of current query and the other joined tables.
    *
-   * First argument is the other table you want to join, or a name of relation, or a name of `with` defined table.
+   * First argument is the other table you want to join, or a name of relation, or a name of `with` defined table, or a callback returning a query or a relation picked as a property of `q`, the same as in {@link join}.
    *
    * Second argument is a callback where you can reference other tables using `on` and `orOn`, select columns, do `where` conditions, and use any other query methods to build a sub-query.
    *

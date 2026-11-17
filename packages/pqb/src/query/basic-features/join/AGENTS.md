@@ -18,3 +18,9 @@ bound parameters, and returned values for different relation filters. Include
 an A/B/A filter sequence to verify that matching queries still share a join
 after a different parameter variant, and distinct instances of equal compound
 parameters to verify value comparison.
+
+`joinLateral` and `leftJoinLateral` accept every first-argument form of `join`:
+a query, a relation name, a `with` table name, and a function returning a query.
+A relation query returned by the function must still get the relation join
+conditions. Cover the function form in `join-lateral.test.ts` and its relation
+variant in the ORM relation tests.

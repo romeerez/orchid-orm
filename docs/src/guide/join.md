@@ -441,7 +441,7 @@ Use `joinLateral` for `JOIN LATERAL` in SQL to join with a subquery that can ref
 
 `joinLateral` allows joining a table with a sub-query that can reference the main table of current query and the other joined tables.
 
-First argument is the other table you want to join, or a name of relation, or a name of `with` defined table.
+First argument is the other table you want to join, or a name of relation, or a name of `with` defined table, or a callback returning a query or a relation picked as a property of `q`, the same as in [join](#join).
 
 Second argument is a callback where you can reference other tables using `on` and `orOn`, select columns, do `where` conditions, and use any other query methods to build a sub-query.
 

@@ -498,6 +498,35 @@ describe('hasMany', () => {
         [true, 'one', 'two'],
       );
     });
+
+    it('should join a relation query returned by a function', () => {
+      const q = db.user
+        .joinLateral(
+          (q) => q.messages.as('m').where({ ChatId: 123 }),
+          (q) => q.where({ Text: 'one' }),
+        )
+        .select('Name', { message: 'm.*' });
+
+      assertType<Awaited<typeof q>, { Name: string; message: Message }[]>();
+
+      expectSql(
+        q.toSQL(),
+        `
+          SELECT "User"."name" "Name", ${messageRowToJSON('m')} "message"
+          FROM "schema"."user" "User"
+          JOIN LATERAL (
+            SELECT ${messageSelectAll}
+            FROM "schema"."message" "m"
+            WHERE ("m"."chat_id" = $1
+              AND "m"."text" = $2
+              AND "m"."author_id" = "User"."id"
+              AND "m"."message_key" = "User"."user_key")
+              AND ("m"."deleted_at" IS NULL)
+          ) "m" ON true
+        `,
+        [123, 'one'],
+      );
+    });
   });
 
   describe('select', () => {
