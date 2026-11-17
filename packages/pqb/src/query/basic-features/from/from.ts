@@ -1,6 +1,11 @@
 import { IsQuery, Query, SelectableFromShape } from '../../query';
 import { sqlQueryArgsToExpression } from '../../expressions/raw-sql';
-import { anyShape, Column, ColumnsShape } from '../../../columns';
+import {
+  anyShape,
+  Column,
+  ColumnsShape,
+  setColumnData,
+} from '../../../columns';
 import {
   prepareSubQueryForSql,
   SubQueryForSql,
@@ -15,6 +20,8 @@ import {
   PickQuerySelectable,
   PickQueryShape,
   PickQueryWithData,
+  PickQueryColumTypes,
+  PickQueryTable,
 } from '../../pick-query-types';
 import { MaybeArray, UnionToIntersection } from '../../../utils';
 import { getQueryAs, SetQueryTableAlias } from '../as/as';
@@ -22,13 +29,14 @@ import {
   ColumnsParsers,
   getQueryParsers,
 } from '../../query-columns/query-column-parsers';
-import { isExpression } from '../../expressions/expression';
+import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
 import { getShapeFromSelect } from '../select/select.utils';
 import { WithDataItems } from '../cte/cte.sql';
 import { SQLQueryArgs } from '../../db-sql-query';
 import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
 import { QueryThenByQuery } from '../../then/then';
+import { FromSqlWithColumns } from './from-expression.sql';
 
 export interface FromQuerySelf
   extends
@@ -121,7 +129,8 @@ export function queryFrom<
   if (typeof arg === 'string') {
     data.as ||= arg;
     const w = data.withShapes?.[arg];
-    data.selectShape = (w?.shape ?? anyShape) as ColumnsShape;
+    data.selectShape = data.selectAllShape = (w?.shape ??
+      anyShape) as ColumnsShape;
     data.runtimeComputeds = w?.computeds;
 
     const parsers: ColumnsParsers = {};
@@ -161,11 +170,16 @@ export function queryFrom<
       }
     }
 
+    // several sources keep the select-all columns of the table, a preceding `fromSql` or `from` must not leak into them
+    data.selectAllShape = (self as unknown as Query).baseQuery.q.selectAllShape;
     data.joinedParsers = joinedParsers;
   } else {
     const q = prepareSubQueryForSql(self as never, arg as never);
     data.as ||= q.q.as || q.table || 't';
-    data.selectShape = getShapeFromSelect(q, true) as ColumnsShape;
+    data.selectShape = data.selectAllShape = getShapeFromSelect(
+      q,
+      true,
+    ) as ColumnsShape;
     data.defaultParsers = getQueryParsers(q as unknown as Query);
     data.batchParsers = q.q.batchParsers;
   }
@@ -176,6 +190,21 @@ export function queryFrom<
   return self as never;
 }
 
+export type FromSqlResult<
+  T extends FromQuerySelf,
+  Shape extends Column.QueryColumns,
+> = {
+  [K in keyof T]: K extends '__defaultSelect'
+    ? keyof Shape
+    : K extends '__selectable'
+      ? SelectableFromShape<Shape, T['__as']>
+      : K extends 'result' | 'shape'
+        ? Shape
+        : K extends 'then'
+          ? QueryThenByQuery<T, Shape>
+          : T[K];
+};
+
 export function queryFromSql<T extends FromQuerySelf>(
   self: T,
   args: SQLQueryArgs,
@@ -184,6 +213,40 @@ export function queryFromSql<T extends FromQuerySelf>(
   data.as ||= 't';
   data.from = sqlQueryArgsToExpression(args);
   data.selectAllColumns = undefined;
+  return self;
+}
+
+function queryFromSqlWithShape(
+  self: FromQuerySelf & PickQueryColumTypes,
+  shapeFn: (t: unknown) => Column.Shape.QueryInit,
+  sql: Expression,
+) {
+  const data = (self as unknown as PickQueryQ).q;
+  const declared = shapeFn(self.columnTypes);
+
+  // the columns are named by their keys: a `name()` would refer to a column the SQL doesn't have
+  const shape: ColumnsShape = {};
+  const parsers: ColumnsParsers = {};
+  for (const key in declared) {
+    const column = declared[key] as unknown as Column;
+    shape[key] = column.data.name
+      ? setColumnData(column, 'name', undefined)
+      : column;
+    if (column._parse) parsers[key] = column._parse;
+  }
+
+  // default to the table name, so the SQL alias matches `__as` in the type of the query
+  data.as ||= (self as unknown as PickQueryTable).table || 't';
+  data.from = new FromSqlWithColumns(sql, Object.keys(shape));
+  data.selectShape = data.selectAllShape = shape;
+  data.defaultParsers = parsers;
+
+  data.selectAllColumns =
+    data.scopes =
+    data.fromShape =
+    data.runtimeComputeds =
+      undefined;
+
   return self;
 }
 
@@ -236,10 +299,46 @@ export class FromMethods {
    * db.table.fromSql`value = ${value}`;
    * ```
    *
-   * @param args - SQL expression
+   * To get a typed query that works as a table, declare the columns of the SQL result.
+   * The declared columns name the result columns by position, and their types parse the values and provide column operators.
+   * The SQL is rendered inline as a sub-query, so the query can be used wherever a table query is accepted: `join`, `whereExists`, `whereIn`, a sub-query in `select`, etc.
+   * Conditions of the query can reference an outer table, as in `whereExists` or a sub-query in `select`, but the SQL itself is not `LATERAL` and cannot reference other tables of the same `FROM`.
+   *
+   * ```ts
+   * import { sql } from './base-table';
+   *
+   * const score = db.$qb
+   *   .fromSql(
+   *     (t) => ({
+   *       authorId: t.integer(),
+   *       points: t.integer(),
+   *     }),
+   *     sql`SELECT author_id, sum(points)::int FROM vote GROUP BY author_id`,
+   *   )
+   *   .as('score');
+   *
+   * // SELECT * FROM (SELECT ...) "score"("authorId", "points") WHERE "score"."points" > $1
+   * score.where({ points: { gt: 5 } });
+   *
+   * db.author.join(score, 'score.authorId', 'id').select('name', 'score.points');
+   * db.author.whereExists(score, 'score.authorId', 'id');
+   * ```
    */
-  fromSql<T extends FromQuerySelf>(this: T, ...args: SQLQueryArgs): T {
-    return queryFromSql(_clone(this), args as never) as never;
+  fromSql<T extends FromQuerySelf>(this: T, ...args: SQLQueryArgs): T;
+  fromSql<
+    T extends FromQuerySelf & PickQueryColumTypes,
+    Shape extends Column.Shape.QueryInit,
+  >(
+    this: T,
+    shape: T['__hasSelect'] extends true
+      ? '`select` must be placed after `fromSql`'
+      : (t: T['columnTypes']) => Shape,
+    sql: Expression,
+  ): FromSqlResult<T, Shape>;
+  fromSql(this: FromQuerySelf & PickQueryColumTypes, ...args: unknown[]) {
+    return typeof args[0] === 'function'
+      ? queryFromSqlWithShape(_clone(this), args[0] as never, args[1] as never)
+      : queryFromSql(_clone(this), args as never);
   }
 
   /**

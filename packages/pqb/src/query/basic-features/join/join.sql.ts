@@ -20,6 +20,7 @@ import {
   requireTableOrStringFrom,
 } from '../../sql/sql';
 import { getQuerySchema } from '../storage/storage';
+import { fromExpressionToSql } from '../from/from-expression.sql';
 import { SelectItem } from '../select/select.sql';
 import { ColumnsShape } from '../../../columns';
 
@@ -291,7 +292,15 @@ export const processJoinItem = (
       joinAs = res.joinAs;
 
       if ('a' in args) {
-        on = processArgs(args.a, ctx, query, joinAs, q.shape, quotedAs);
+        // a source that is not wrapped into a sub-query exposes the columns of its `FROM`
+        on = processArgs(
+          args.a,
+          ctx,
+          query,
+          joinAs,
+          s ? q.shape : q.q.selectShape,
+          quotedAs,
+        );
       }
     }
 
@@ -370,6 +379,11 @@ const getArgQueryTarget = (
     return {
       target: subJoinToSql(ctx, first, joinAs, lateral, qAs, cloned),
       joinAs: qAs || joinAs,
+    };
+  } else if (isExpression(joinQuery.from)) {
+    return {
+      target: fromExpressionToSql(ctx, joinQuery.from, qAs),
+      joinAs: qAs as string,
     };
   } else {
     const aliasToAdd = getQueryRelationAliasForAs(first, joinQuery.as);

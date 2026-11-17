@@ -521,6 +521,31 @@ const value = 123;
 db.table.fromSql`value = ${value}`;
 ```
 
+To get a typed query that works as a table, declare the columns of the SQL result.
+The declared columns name the result columns by position, and their types parse the values and provide column operators.
+The SQL is rendered inline as a sub-query, so the query can be used wherever a table query is accepted: `join`, `whereExists`, `whereIn`, a sub-query in `select`, etc.
+Conditions of the query can reference an outer table, as in `whereExists` or a sub-query in `select`, but the SQL itself is not `LATERAL` and cannot reference other tables of the same `FROM`.
+
+```ts
+import { sql } from './base-table';
+
+const score = db.$qb
+  .fromSql(
+    (t) => ({
+      authorId: t.integer(),
+      points: t.integer(),
+    }),
+    sql`SELECT author_id, sum(points)::int FROM vote GROUP BY author_id`,
+  )
+  .as('score');
+
+// SELECT * FROM (SELECT ...) "score"("authorId", "points") WHERE "score"."points" > $1
+score.where({ points: { gt: 5 } });
+
+db.author.join(score, 'score.authorId', 'id').select('name', 'score.points');
+db.author.whereExists(score, 'score.authorId', 'id');
+```
+
 ### only
 
 [//]: # 'has JSDoc'

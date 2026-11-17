@@ -327,7 +327,7 @@ export const toSql: ToSql = (
               : columnToSqlNotSelect(
                   ctx,
                   table.q,
-                  table.shape,
+                  query.selectShape,
                   item as string,
                   quotedAs,
                 );

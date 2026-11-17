@@ -13,6 +13,7 @@ import {
 } from '../../sql/sql';
 import { checkIfASimpleQuery } from '../../sql/check-if-a-simple-query';
 import { getQuerySchema } from '../storage/storage';
+import { fromExpressionToSql } from './from-expression.sql';
 
 let fromQuery: SubQueryForSql | undefined;
 
@@ -83,15 +84,12 @@ const fromToSql = (
   let sql;
   if (typeof from === 'object') {
     if (isExpression(from)) {
-      sql = from.toSQL(ctx, quotedAs) + ' ' + quotedAs;
+      sql = fromExpressionToSql(ctx, from, quotedAs);
     } else {
       only = from.q.only;
 
-      if (!from.table) {
-        sql = `(${moveMutativeQueryToCte(ctx, from)})`;
-      }
       // if the query contains more than just schema return (SELECT ...)
-      else if (!checkIfASimpleQuery(from)) {
+      if (!from.table || !checkIfASimpleQuery(from)) {
         sql = `(${moveMutativeQueryToCte(ctx, from)}) ${
           quotedAs || `"${getQueryAs(from)}"`
         }`;
