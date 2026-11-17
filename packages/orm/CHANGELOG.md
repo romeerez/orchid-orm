@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.56
+
+### Patch Changes
+
+- 9256cbbb: Reduce parser-map copying when selecting multiple plain columns in one call.
+- Updated dependencies [9256cbbb]
+  - pqb@0.73.45
+  - rake-db@2.37.57
+
 ## 1.78.55
 
 ### Patch Changes

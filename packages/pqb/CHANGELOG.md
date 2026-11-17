@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.45
+
+### Patch Changes
+
+- 9256cbbb: Reduce parser-map copying when selecting multiple plain columns in one call.
+
 ## 0.73.44
 
 ### Patch Changes
