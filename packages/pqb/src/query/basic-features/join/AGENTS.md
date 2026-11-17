@@ -24,3 +24,9 @@ a query, a relation name, a `with` table name, and a function returning a query.
 A relation query returned by the function must still get the relation join
 conditions. Cover the function form in `join-lateral.test.ts` and its relation
 variant in the ORM relation tests.
+
+A joined query that is not wrapped into a sub-query, such as the source of
+`whereExists`, exposes the columns of its `FROM`: resolve its columns, in join
+arguments and in the join callback, by its `selectShape`, not by the table
+shape. Cover it with a query whose `FROM` is replaced, such as a `fromSql`
+query built on a table with a renamed column.

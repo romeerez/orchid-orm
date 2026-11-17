@@ -6,7 +6,6 @@ import {
   PickQueryQ,
   PickQueryRelationsWithData,
   PickQuerySelectable,
-  PickQueryShape,
   PickQueryTable,
 } from '../../pick-query-types';
 import { Expression, isExpression } from '../../expressions/expression';
@@ -85,7 +84,7 @@ export const _getSelectableColumn = (
       const column = arg.slice(index + 1);
 
       if (table === as) {
-        type = (q as unknown as PickQueryShape).shape[column];
+        type = (q as unknown as PickQueryQ).q.selectShape[column];
       } else {
         type = (q as unknown as PickQueryQ).q.joinedShapes?.[table]?.[column];
       }

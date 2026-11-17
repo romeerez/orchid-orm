@@ -206,8 +206,8 @@ const makeJoinQueryBuilder = (
     q.q.scopes = undefined;
   }
 
-  if (shape) {
-    q.q.selectShape = shape as ColumnsShape;
-  }
+  // without a sub-query, the columns of the `FROM` of the joined query are available
+  q.q.selectShape = (shape ||
+    (joinedQuery as Query).q.selectShape) as ColumnsShape;
   return q as never;
 };
