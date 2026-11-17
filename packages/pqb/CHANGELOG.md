@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.47
+
+### Patch Changes
+
+- 027395f9: Fix `join` and `leftJoin` throwing for a query built with `fromSql` (#901)
+
 ## 0.73.46
 
 ### Patch Changes

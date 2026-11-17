@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.58
+
+### Patch Changes
+
+- 027395f9: Fix `join` and `leftJoin` throwing for a query built with `fromSql` (#901)
+- Updated dependencies [027395f9]
+  - pqb@0.73.47
+  - rake-db@2.37.59
+
 ## 1.78.57
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "rake-db",
-  "version": "2.37.58",
+  "version": "2.37.59",
   "description": "Migrations tool for Postgresql DB",
   "keywords": [
     "migration",
