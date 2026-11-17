@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.60
+
+### Patch Changes
+
+- 1e5494b1: Support declaring columns in `fromSql` to get a typed query usable as a table in `join`, `whereExists`, `whereIn`, and sub-queries. Fix `whereExists` resolving a column selected under an alias as a table column (#902)
+- Updated dependencies [1e5494b1]
+  - pqb@0.73.49
+  - rake-db@2.37.61
+
 ## 1.78.59
 
 ### Patch Changes

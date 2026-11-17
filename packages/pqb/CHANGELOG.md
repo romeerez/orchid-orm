@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.49
+
+### Patch Changes
+
+- 1e5494b1: Support declaring columns in `fromSql` to get a typed query usable as a table in `join`, `whereExists`, `whereIn`, and sub-queries. Fix `whereExists` resolving a column selected under an alias as a table column (#902)
+
 ## 0.73.48
 
 ### Patch Changes
