@@ -134,6 +134,31 @@ describe('joinLateral', () => {
     ]);
   });
 
+  it('should join a query returned by a function', () => {
+    const q = db.user
+      .joinLateral(
+        () => db.message.as('m'),
+        (q) => q.on('AuthorId', 'User.Id'),
+      )
+      .select('Id', 'm.Text');
+
+    assertType<Awaited<typeof q>, { Id: number; Text: string }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "User"."id" "Id", "m"."Text"
+        FROM "schema"."user" "User"
+        JOIN LATERAL (
+          SELECT ${MessageColumnsSql}
+          FROM "schema"."message" "m"
+          WHERE ("m"."author_id" = "User"."id")
+            AND ("m"."deleted_at" IS NULL)
+        ) "m" ON true
+      `,
+    );
+  });
+
   it('should make joined columns nullable for leftJoinLateral', () => {
     const q = db.user
       .leftJoinLateral(db.message.as('m'), (q) => q)
