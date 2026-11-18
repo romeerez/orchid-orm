@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.50
+
+### Patch Changes
+
+- c02fcf62: Export `AdapterClass` and the `Adapter` type from `pqb` and `orchid-orm`, and the driver adapter option types `PostgresJsAdapterOptions`, `NodePostgresAdapterOptions`, `BunAdapterOptions` from the driver-specific `orchid-orm` paths
+
 ## 0.73.49
 
 ### Patch Changes

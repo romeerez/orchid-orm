@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.78.61
+
+### Patch Changes
+
+- c02fcf62: Export `AdapterClass` and the `Adapter` type from `pqb` and `orchid-orm`, and the driver adapter option types `PostgresJsAdapterOptions`, `NodePostgresAdapterOptions`, `BunAdapterOptions` from the driver-specific `orchid-orm` paths
+- Updated dependencies [c02fcf62]
+  - pqb@0.73.50
+  - rake-db@2.37.62
+
 ## 1.78.60
 
 ### Patch Changes
