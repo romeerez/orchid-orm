@@ -1,7 +1,24 @@
-import { createBaseTable } from 'orchid-orm';
-import { orchidORM as orchidOrmPostgresJs } from 'orchid-orm/postgres-js';
-import { orchidORM as orchidOrmNodePostgres } from 'orchid-orm/node-postgres';
-import { orchidORM as orchidOrmBun } from 'orchid-orm/bun';
+import {
+  Adapter,
+  AdapterClass,
+  createBaseTable,
+  orchidORMWithAdapter,
+} from 'orchid-orm';
+import {
+  Adapter as PostgresJsAdapter,
+  PostgresJsAdapterOptions,
+  orchidORM as orchidOrmPostgresJs,
+} from 'orchid-orm/postgres-js';
+import {
+  Adapter as NodePostgresAdapter,
+  NodePostgresAdapterOptions,
+  orchidORM as orchidOrmNodePostgres,
+} from 'orchid-orm/node-postgres';
+import {
+  Adapter as BunAdapter,
+  BunAdapterOptions,
+  orchidORM as orchidOrmBun,
+} from 'orchid-orm/bun';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import { valibotSchemaConfig } from 'orchid-orm-valibot';
 import { z } from 'zod/v4';
@@ -85,6 +102,36 @@ export const dbValibotNodePostgres = orchidOrmNodePostgres(
     table: TableValibot,
   },
 );
+
+/** ORM with adapter **/
+
+const postgresJsConfig: PostgresJsAdapterOptions = { databaseURL: '' };
+const nodePostgresConfig: NodePostgresAdapterOptions = { databaseURL: '' };
+const bunConfig: BunAdapterOptions = { databaseURL: '' };
+
+export const postgresJsAdapter: Adapter = new AdapterClass({
+  driverAdapter: PostgresJsAdapter,
+  config: postgresJsConfig,
+});
+
+export const nodePostgresAdapter: Adapter = new AdapterClass({
+  driverAdapter: NodePostgresAdapter,
+  config: nodePostgresConfig,
+});
+
+export const bunAdapter: Adapter = new AdapterClass({
+  driverAdapter: BunAdapter,
+  config: bunConfig,
+});
+
+export const dbWithAdapter = orchidORMWithAdapter(
+  { adapter: postgresJsAdapter },
+  {
+    table: TableZod,
+  },
+);
+
+export const currentAdapter: Adapter = dbWithAdapter.$getAdapter();
 
 /** rake-db **/
 

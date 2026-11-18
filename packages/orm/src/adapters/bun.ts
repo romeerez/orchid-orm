@@ -8,7 +8,7 @@ import {
 } from 'orchid-orm';
 import { BunAdapter, BunAdapterOptions, createDb as cdb } from 'pqb/bun';
 import { DbSharedOptions, AdapterClass, EmptyObject } from 'pqb/internal';
-export { bunSchemaConfig } from 'pqb/bun';
+export { bunSchemaConfig, type BunAdapterOptions } from 'pqb/bun';
 
 export interface BunOrchidORMOptions
   extends BunAdapterOptions, DbSharedOptions {
