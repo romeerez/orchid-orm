@@ -12,6 +12,7 @@ import {
   createDb as cdb,
 } from 'pqb/postgres-js';
 import { DbSharedOptions, AdapterClass, EmptyObject } from 'pqb/internal';
+export { type PostgresJsAdapterOptions } from 'pqb/postgres-js';
 
 export interface PostgresJsOrchidORMOptions
   extends PostgresJsAdapterOptions, DbSharedOptions {

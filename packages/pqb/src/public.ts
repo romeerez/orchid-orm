@@ -2,6 +2,8 @@
 // These are the only exports that are considered part of the public API
 
 export {
+  AdapterClass,
+  type Adapter,
   getColumnInfo,
   copyTableData,
   testTransaction,
