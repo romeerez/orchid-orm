@@ -11,7 +11,7 @@ import {
 import { EmptyObject, pushOrNewArrayToObjectImmutable } from '../../../utils';
 import { Expression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
-import { getShapeFromSelect } from '../select/select.utils';
+import { getOutputShape } from '../select/select.utils';
 import { QuerySql } from '../../sql/sql';
 import { pushQueryValueImmutable } from '../../query-data';
 
@@ -124,7 +124,7 @@ export const _with = (
     p: prepend,
   });
 
-  const shape = getShapeFromSelect(query, true);
+  const shape = getOutputShape(query);
 
   if (typeof name === 'string') {
     setQueryObjectValueImmutable(q, 'withShapes', name, {
@@ -400,7 +400,7 @@ export class CteQuery {
     const arg = q.qb.clone();
     arg.q.withShapes = q.q.withShapes;
     let query = typeof baseFn === 'function' ? baseFn(arg) : baseFn;
-    const shape = getShapeFromSelect(query, true) as Column.Shape.QueryInit;
+    const shape = getOutputShape(query) as Column.Shape.QueryInit;
     const withConfig = { shape, computeds: query.q.runtimeComputeds };
     (arg.q.withShapes ??= {})[name] = withConfig;
     const recursive = recursiveFn(arg);

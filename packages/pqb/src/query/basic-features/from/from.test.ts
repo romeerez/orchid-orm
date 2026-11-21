@@ -104,6 +104,18 @@ describe('from', () => {
         },
       ]);
     });
+
+    it('should read a raw SQL value through nested sub-queries without column metadata', async () => {
+      const inner = testDb
+        .from(testDb.get(sql`42 AS value`).as('s'))
+        .select('value');
+
+      const res = await testDb.from(inner.as('p')).select('value');
+
+      assertType<typeof res, { value: unknown }[]>();
+
+      expect(res).toEqual([{ value: 42 }]);
+    });
   });
 });
 

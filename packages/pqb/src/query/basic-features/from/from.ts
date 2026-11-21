@@ -31,7 +31,7 @@ import {
 } from '../../query-columns/query-column-parsers';
 import { Expression, isExpression } from '../../expressions/expression';
 import { _clone } from '../clone/clone';
-import { getShapeFromSelect } from '../select/select.utils';
+import { getOutputShape, getShapeFromSelect } from '../select/select.utils';
 import { WithDataItems } from '../cte/cte.sql';
 import { SQLQueryArgs } from '../../db-sql-query';
 import { JoinedParsers, WithConfig, WithConfigs } from '../../query-data';
@@ -176,10 +176,7 @@ export function queryFrom<
   } else {
     const q = prepareSubQueryForSql(self as never, arg as never);
     data.as ||= q.q.as || q.table || 't';
-    data.selectShape = data.selectAllShape = getShapeFromSelect(
-      q,
-      true,
-    ) as ColumnsShape;
+    data.selectShape = data.selectAllShape = getOutputShape(q) as ColumnsShape;
     data.defaultParsers = getQueryParsers(q as unknown as Query);
     data.batchParsers = q.q.batchParsers;
   }
