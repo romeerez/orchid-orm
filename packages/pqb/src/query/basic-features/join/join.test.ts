@@ -151,6 +151,27 @@ describe('join', () => {
     text: 'Text',
     selectFrom: `SELECT ${UserSelectAllWithTable} FROM ${quotedUser}`,
   });
+
+  it('should join a union sub query by its selected column names', () => {
+    const at = db.user.select({ at: 'updatedAt' });
+
+    const q = db.user
+      .join(at.unionAll(at).as('t'), 't.at', 'User.updatedAt')
+      .select('t.at');
+
+    expectSql(
+      q.toSQL(),
+      `
+        SELECT "t"."at"
+        FROM ${quotedUser}
+        JOIN (
+          (SELECT "User"."updated_at" "at" FROM ${quotedUser})
+          UNION ALL
+          (SELECT "User"."updated_at" "at" FROM ${quotedUser})
+        ) "t" ON "t"."at" = "User"."updated_at"
+      `,
+    );
+  });
 });
 
 describe.each`
