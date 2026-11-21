@@ -764,6 +764,12 @@ export const getShapeFromSelect = (
   isSubQuery?: boolean,
 ): Column.QueryColumns => {
   const query = (q as Query).q;
+  // a select with a union outputs the columns of its first query,
+  // a mutation outputs its own returning columns.
+  if (query.union && !query.type) {
+    return getShapeFromSelect(query.union.b, true);
+  }
+
   const { selectShape } = query;
   let select: SelectItem[] | undefined;
 

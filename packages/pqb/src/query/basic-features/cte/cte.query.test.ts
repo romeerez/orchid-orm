@@ -187,6 +187,77 @@ describe('cte', () => {
       [1, 'name', true],
     );
   });
+
+  it('should read a renamed union column through a second CTE', () => {
+    const q = db.user
+      .with('u', () =>
+        db.user.select({ i: 'Id' }).unionAll(db.user.select({ i: 'Id' })),
+      )
+      .with('c', (q) => q.from('u').select({ renamed: 'u.i' }))
+      .from('c');
+
+    assertType<Awaited<typeof q>, { renamed: number }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "u" AS (
+          (SELECT "User"."id" "i" FROM "schema"."user" "User")
+          UNION ALL
+          (SELECT "User"."id" "i" FROM "schema"."user" "User")
+        ), "c" AS (
+          SELECT "u"."i" "renamed" FROM "u"
+        )
+        SELECT * FROM "c"
+      `,
+    );
+  });
+
+  it('should parse columns of a union CTE by their selected keys', async () => {
+    await db.user.insert(UserData);
+
+    const res = await db.user
+      .with('u', () =>
+        db.user
+          .select({ at: 'updatedAt' })
+          .unionAll(db.user.select({ at: 'updatedAt' })),
+      )
+      .from('u');
+
+    assertType<typeof res, { at: Date }[]>();
+
+    expect(res).toEqual([{ at: expect.any(Date) }, { at: expect.any(Date) }]);
+  });
+
+  it('should expose RETURNING columns of a mutation chained after a union', () => {
+    const q = db.user
+      .with('d', () =>
+        db.user
+          .unionAll(db.user)
+          .where({ Id: 1 })
+          .delete()
+          .select({ deletedAt: 'updatedAt' }),
+      )
+      .with('c', (q) => q.from('d').select({ renamed: 'd.deletedAt' }))
+      .from('c');
+
+    assertType<Awaited<typeof q>, { renamed: Date }[]>();
+
+    expectSql(
+      q.toSQL(),
+      `
+        WITH "d" AS (
+          DELETE FROM "schema"."user" "User"
+          WHERE "User"."id" = $1
+          RETURNING "User"."updated_at" "deletedAt"
+        ), "c" AS (
+          SELECT "d"."deletedAt" "renamed" FROM "d"
+        )
+        SELECT * FROM "c"
+      `,
+      [1],
+    );
+  });
 });
 
 describe('withRecursive', () => {
