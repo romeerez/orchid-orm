@@ -5,6 +5,7 @@ import { QueryData } from '../../query-data';
 import { RelationConfigBase } from '../../relations';
 import { _applyRelationAliases, getQueryAs } from '../../basic-features/as/as';
 import { markRelationConditions } from '../../basic-features/where/relation-conditions';
+import { assertRootQueryUnchanged } from '../../internal-features/sub-query/root-query-value';
 
 export const _chain = (
   fromQuery: IsQuery,
@@ -20,6 +21,9 @@ export const _chain = (
   let query: Query;
   let q: QueryData;
   if (self.q.subQuery) {
+    // the relation is correlated to the current record, conditions of the root query cannot apply to it
+    assertRootQueryUnchanged(self, 'a relation');
+
     query = toTable;
     query.q.subQuery = 2;
     q = query.q as QueryData;

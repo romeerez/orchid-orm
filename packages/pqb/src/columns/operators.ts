@@ -12,6 +12,7 @@ import {
   PrepareSubQueryForSql,
 } from '../query/internal-features/sub-query/sub-query-for-sql';
 import { Db } from '../query/db';
+import type { WrapRootValueSql } from '../query/internal-features/sub-query/root-query-value';
 import {
   PickQueryColumTypes,
   PickQueryQ,
@@ -44,6 +45,11 @@ export const setMoveMutativeQueryToCte = (fn: MoveMutativeQueryToCte) => {
 let prepareSubQueryForSql: PrepareSubQueryForSql;
 export const setPrepareSubQueryForSql = (fn: PrepareSubQueryForSql) => {
   prepareSubQueryForSql = fn;
+};
+
+let wrapRootValueSql: WrapRootValueSql;
+export const setWrapRootValueSql = (fn: WrapRootValueSql) => {
+  wrapRootValueSql = fn;
 };
 
 let dbClass: typeof Db;
@@ -347,11 +353,21 @@ const boolean = {
   ...ord,
   and: make(
     (key, value, ctx, quotedAs) =>
-      `${key} AND ${value.q.expr.toSQL(ctx, quotedAs)}`,
+      `${key} AND ${wrapRootValueSql(
+        ctx,
+        value,
+        value.q.expr.toSQL(ctx, quotedAs),
+        quotedAs,
+      )}`,
   ),
   or: make(
     (key, value, ctx, quotedAs) =>
-      `(${key}) OR (${value.q.expr.toSQL(ctx, quotedAs)})`,
+      `(${key}) OR (${wrapRootValueSql(
+        ctx,
+        value,
+        value.q.expr.toSQL(ctx, quotedAs),
+        quotedAs,
+      )})`,
   ),
 } as unknown as OperatorsBoolean;
 

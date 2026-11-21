@@ -1,7 +1,11 @@
 import { FnUnknownToUnknown } from '../../../utils';
 import { _clone } from '../clone/clone';
 import { SQLQueryArgs } from '../../db-sql-query';
-import { PickQueryQ } from '../../pick-query-types';
+import { Query } from '../../query';
+import {
+  assertRootQueryUnchanged,
+  setRootQueryBase,
+} from '../../internal-features/sub-query/root-query-value';
 import { pushQueryValueImmutable } from '../../query-data';
 
 // Function argument of `having`:
@@ -65,10 +69,17 @@ export class Having {
    */
   having<T>(this: T, ...args: HavingArgFn<T>[]): T {
     const q = _clone(this);
+    const root = _clone(q);
+    setRootQueryBase(root.q, q.q, '`having`');
+
     return pushQueryValueImmutable(
       q,
       'having',
-      args.map((arg) => ((arg as FnUnknownToUnknown)(q) as PickQueryQ).q.expr),
+      args.map((arg) => {
+        const result = (arg as FnUnknownToUnknown)(root) as Query;
+        assertRootQueryUnchanged(result, '`having`');
+        return result.q.expr;
+      }),
     ) as never;
   }
 

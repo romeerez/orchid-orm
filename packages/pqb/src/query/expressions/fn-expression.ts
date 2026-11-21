@@ -75,6 +75,8 @@ export class FnExpression<
 > extends Expression<T> {
   result: { value: T };
   q: ExpressionData;
+  // is set for an arbitrary SQL function called with `fn`, which can be either a scalar or an aggregate function
+  custom?: true;
 
   /**
    * @param query - query object.

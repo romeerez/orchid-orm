@@ -2,6 +2,7 @@ import {
   PickQueryColumTypes,
   PickQueryHasSelect,
   PickQueryMetaSelectableResultRelationsWindowsColumnTypes,
+  PickQueryQ,
   PickQuerySelectable,
   PickQueryShape,
 } from '../pick-query-types';
@@ -11,10 +12,16 @@ import { RefExpression } from './ref-expression';
 import { _clone } from '../basic-features/clone/clone';
 import { getFullColumnTable } from '../query.utils';
 import { SelectableOrExpressions } from './expression';
-import { AggregateOptions, makeFnExpression } from './fn-expression';
+import {
+  AggregateOptions,
+  FnExpression,
+  makeFnExpression,
+} from './fn-expression';
 import { OrExpression, OrExpressionArg } from './or-expression';
 
 import { QueryThen } from '../then/then';
+import { Query } from '../query';
+import { assertNoRootValueConditions } from '../internal-features/sub-query/root-query-value';
 
 interface QueryReturnsFnAdd<
   T extends PickQueryColumTypes,
@@ -70,6 +77,8 @@ export class QueryExpressions {
     this: T,
     name: K,
   ): ColumnRefExpression<T['shape'][K]> & T['shape'][K]['operators'] {
+    assertNoRootValueConditions(this as unknown as Query, '`column`');
+
     const column = (this.shape as { [K: PropertyKey]: Column })[name];
     return new ColumnRefExpression(
       (column || UnknownColumn.instance) as T['shape'][K],
@@ -111,6 +120,8 @@ export class QueryExpressions {
     arg: K,
   ): RefExpression<T['__selectable'][K]['column']> &
     T['__selectable'][K]['column']['operators'] {
+    assertNoRootValueConditions(this as unknown as Query, '`ref`');
+
     const q = _clone(this);
 
     const { selectShape } = q.q;
@@ -185,13 +196,15 @@ export class QueryExpressions {
     args: SelectableOrExpressions<T>,
     options?: AggregateOptions<T>,
   ): SetQueryReturnsFn<T, C> {
-    return makeFnExpression(
+    const q = makeFnExpression(
       this,
       UnknownColumn.instance,
       fn,
       args as never,
       options,
-    ) as never;
+    ) as unknown as PickQueryQ;
+    (q.q.expr as FnExpression).custom = true;
+    return q as never;
   }
 
   or(...args: [OrExpressionArg, ...OrExpressionArg[]]): OrExpression {

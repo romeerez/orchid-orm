@@ -9,6 +9,7 @@ import { QueryOrExpressionBooleanOrNullResult } from '../query';
 import { moveMutativeQueryToCte } from '../basic-features/cte/cte.sql';
 import { SubQueryForSql } from '../internal-features/sub-query/sub-query-for-sql';
 import { ToSQLCtx } from '../sql/to-sql';
+import { wrapRootValueSql } from '../internal-features/sub-query/root-query-value';
 
 export interface OrExpression
   extends Expression<BooleanQueryColumn>, OperatorsBoolean {}
@@ -37,12 +38,15 @@ export class OrExpression extends Expression<BooleanQueryColumn> {
           const sql = arg.toSQL(ctx, quotedAs);
           if (sql) res.push(sql);
         } else {
-          res.push(
-            `(${moveMutativeQueryToCte(
-              ctx,
-              arg as unknown as SubQueryForSql,
-            )})`,
-          );
+          const query = arg as unknown as SubQueryForSql;
+          const { q } = query;
+          // a value of the root query of a callback is a value of the current record
+          if (q.rootBase && q.expr) {
+            const sql = q.expr.toSQL(ctx, quotedAs);
+            res.push(wrapRootValueSql(ctx, query as never, sql, quotedAs));
+          } else {
+            res.push(`(${moveMutativeQueryToCte(ctx, query)})`);
+          }
         }
       }
     }

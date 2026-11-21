@@ -4,6 +4,7 @@ import { _chain } from '../../extra-features/chain/chain';
 import { _setSubQueryAliases } from '../../basic-features/as/as';
 import { ToSQLQuery } from '../../sql/to-sql';
 import { getClonedQueryData } from '../../query-data';
+import { setRootQueryBase } from './root-query-value';
 
 /**
  * In `select`, `update`, `create` it's possible to pass a callback with a sub-query.
@@ -48,6 +49,7 @@ export const resolveSubQueryCallback = (
 
   arg.q = getClonedQueryData(q.q);
   arg.q.subQuery = 1;
+  setRootQueryBase(arg.q, q.q);
   // Deleting `with` because sub-query should duplicate WITH statements of the parent query in its SQL
   arg.q.with = arg.q.relChain = undefined;
   _setSubQueryAliases(arg);

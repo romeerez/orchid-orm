@@ -23,6 +23,7 @@ import { joinSubQuery } from '../join/join';
 import { ColumnsShape } from '../../../columns';
 import { isRelationCondition, RelationCondition } from './relation-conditions';
 import { emptyNotInCondition } from './empty-in';
+import { wrapRootValueSql } from '../../internal-features/sub-query/root-query-value';
 
 export type WhereItem =
   | {
@@ -325,7 +326,14 @@ const processWhere = (
     const query = data as Query;
     if (query.q.expr) {
       if (query.q.subQuery === 1) {
-        ands.push(selectToSql(ctx, table, query.q, quotedAs));
+        ands.push(
+          wrapRootValueSql(
+            ctx,
+            query,
+            selectToSql(ctx, table, query.q, quotedAs),
+            quotedAs,
+          ),
+        );
       } else {
         const q = joinSubQuery(table, query);
         q.q.select = [query.q.expr];
