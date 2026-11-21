@@ -41,6 +41,7 @@ import { setCurrentDefaultSchema } from '../basic-features/storage/storage';
 import { MutativeQueriesSelectRelationsSqlState } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
 import { emptyArray } from '../../utils';
 import { isQueryNoneUpsert } from '../extra-features/none/none';
+import { UpdateReturningSql } from '../basic-features/select/row-versions';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -72,6 +73,7 @@ export interface ToSQLCtx extends ToSqlOptionsInternal, ToSqlValues {
   sql: string[];
   selectedCount: number;
   cteName?: string;
+  updateReturning?: UpdateReturningSql;
   wrapAs?: string;
 }
 

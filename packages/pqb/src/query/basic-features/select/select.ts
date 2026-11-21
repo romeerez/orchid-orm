@@ -22,6 +22,7 @@ import { processSelectArg } from './select.utils';
 import { SelectItem } from './select.sql';
 import { QueryThenByReturnType } from '../../then/then';
 import { RelationQueryMaybeSingle } from '../../relations';
+import { RowVersionSelectable } from './row-versions';
 
 export interface SelectSelf
   extends
@@ -35,11 +36,13 @@ export interface SelectSelf
     PickQueryWithData {}
 
 // .select method argument.
-export type SelectArg<T extends SelectSelf> = '*' | keyof T['__selectable'];
+export type SelectArg<T extends SelectSelf> =
+  | '*'
+  | keyof RowVersionSelectable<T>;
 
 export type SelectArgs<T extends SelectSelf> = (
   | '*'
-  | keyof T['__selectable']
+  | keyof RowVersionSelectable<T>
 )[];
 
 interface SubQueryAddition<T extends PickQueryWithData> extends IsSubQuery {
@@ -62,7 +65,7 @@ export type SelectAsFnArg<T extends PickQueryRelationsWithData> =
 // value can be a column, raw, or a function returning query or raw.
 export interface SelectAsArg<T extends SelectSelf> {
   [K: string]:
-    | keyof T['__selectable']
+    | keyof RowVersionSelectable<T>
     | Expression
     | ((q: SelectAsFnArg<T>) => unknown);
 }
@@ -95,7 +98,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
       ? {
           [K in '*' extends Columns[number]
             ? Exclude<Columns[number], '*'> | T['__defaultSelect']
-            : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
+            : Columns[number] as RowVersionSelectable<T>[K]['as']]: RowVersionSelectable<T>[K]['column'];
         } & (T['__hasSelect'] extends (
           T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
         )
@@ -110,7 +113,7 @@ type SelectResult<T extends SelectSelf, Columns extends PropertyKey[]> = {
               {
                 [K in '*' extends Columns[number]
                   ? Exclude<Columns[number], '*'> | T['__defaultSelect']
-                  : Columns[number] as T['__selectable'][K]['as']]: T['__selectable'][K]['column'];
+                  : Columns[number] as RowVersionSelectable<T>[K]['as']]: RowVersionSelectable<T>[K]['column'];
               } & (T['__hasSelect'] extends (
                 T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
               )
@@ -196,10 +199,10 @@ type SelectResultColumnsAndObj<
                   ? Exclude<Columns[number], '*'> | T['__defaultSelect']
                   : Columns[number])
               | keyof Obj as K extends Columns[number]
-              ? T['__selectable'][K]['as']
+              ? RowVersionSelectable<T>[K]['as']
               : K]: K extends keyof Obj
               ? SelectAsValueResult<T, Obj[K]>
-              : T['__selectable'][K]['column'];
+              : RowVersionSelectable<T>[K]['column'];
           } & (T['__hasSelect'] extends (
             T['returnType'] extends 'value' | 'valueOrThrow' ? never : true
           )
@@ -217,10 +220,10 @@ type SelectResultColumnsAndObj<
                         ? Exclude<Columns[number], '*'> | T['__defaultSelect']
                         : Columns[number])
                     | keyof Obj as K extends Columns[number]
-                    ? T['__selectable'][K]['as']
+                    ? RowVersionSelectable<T>[K]['as']
                     : K]: K extends keyof Obj
                     ? SelectAsValueResult<T, Obj[K]>
-                    : T['__selectable'][K]['column'];
+                    : RowVersionSelectable<T>[K]['column'];
                 } & (T['__hasSelect'] extends (
                   T['returnType'] extends 'value' | 'valueOrThrow'
                     ? never
@@ -270,8 +273,8 @@ type SelectAsSelectable<Obj> = UnionToIntersection<
 type SelectAsValueResult<
   T extends SelectSelf,
   Arg,
-> = Arg extends keyof T['__selectable']
-  ? T['__selectable'][Arg]['column']
+> = Arg extends keyof RowVersionSelectable<T>
+  ? RowVersionSelectable<T>[Arg]['column']
   : Arg extends Expression
     ? Arg['result']['value']
     : Arg extends (q: never) => IsQuery
