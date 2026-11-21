@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.52
+
+### Patch Changes
+
+- 959a6e31: Fix reading SQL computed columns from CTEs, unions, and sub-queries in FROM (#925)
+
 ## 0.73.51
 
 ### Patch Changes
