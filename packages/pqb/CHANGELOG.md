@@ -1,5 +1,11 @@
 # pqb
 
+## 0.73.51
+
+### Patch Changes
+
+- 0c5f08f4: Fix `from` and `join` of a CTE that reads a union CTE, and parse aliased columns when reading a union CTE with `from` (#924)
+
 ## 0.73.50
 
 ### Patch Changes
