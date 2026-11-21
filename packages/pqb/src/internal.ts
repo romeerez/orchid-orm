@@ -444,3 +444,4 @@ export { type IsolationLevel, type TransactionOptions } from './index';
 
 // Error types
 export { CannotMutateReadOnlyTableError, OrchidOrmError } from './query/errors';
+export { TransactionRolledBackError } from './index';

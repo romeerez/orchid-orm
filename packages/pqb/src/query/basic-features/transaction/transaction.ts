@@ -449,6 +449,8 @@ export class QueryTransaction {
    * });
    * ```
    *
+   * The changes of such a transaction are rolled back, and `$transaction` rejects.
+   *
    * You can use `catch` method on a query instead of `try-catch` to surpass the problem.
    * The following transaction won't fail:
    *

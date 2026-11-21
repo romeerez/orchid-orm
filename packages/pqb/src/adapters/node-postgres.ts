@@ -17,6 +17,7 @@ import {
   defaultSchemaConfig,
   quoteIdentifier,
   AdapterSchemaConfigOptions,
+  TransactionRolledBackError,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
 import { HackySavepointState, SavepointCallback } from './adapter';
@@ -208,7 +209,12 @@ export const NodePostgresAdapter: DriverAdapter = {
         await queryClient(client, 'ROLLBACK');
         throw err;
       }
-      await queryClient(client, 'COMMIT');
+      // PostgreSQL answers `COMMIT` of a transaction aborted by a failed query with `ROLLBACK` and no error
+      const commit = await queryClient(client, 'COMMIT');
+      if ((commit as pg.QueryResult).command !== 'COMMIT') {
+        throw new TransactionRolledBackError();
+      }
+
       return result as Result;
     } finally {
       client.release();

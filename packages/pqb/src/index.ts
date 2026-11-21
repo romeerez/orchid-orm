@@ -519,4 +519,5 @@ export {
   OrchidOrmInternalError,
   NotFoundError,
   QueryError,
+  TransactionRolledBackError,
 } from './query/errors';

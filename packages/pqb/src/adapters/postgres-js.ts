@@ -203,22 +203,9 @@ export const PostgresJsAdapter: DriverAdapter = {
     cb: (adapter: DriverClient) => Promise<Result>,
     options?: string,
   ): Promise<Result> {
-    let ok: boolean | undefined;
-    let result: unknown;
+    const fn = (sql: TransactionSql) => cb(sql as DriverClient);
 
-    const fn = (sql: TransactionSql): Promise<Result> =>
-      cb(sql as DriverClient).then((res) => {
-        ok = true;
-        return (result = res);
-      });
-
-    return (options ? client.begin(options, fn) : client.begin(fn)).catch(
-      (err) => {
-        if (ok) return result;
-
-        throw err;
-      },
-    ) as never;
+    return (options ? client.begin(options, fn) : client.begin(fn)) as never;
   },
 
   async savepoint<T>(
