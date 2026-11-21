@@ -5,7 +5,11 @@ import {
   HackySavepointState,
   TransactionAdapterClass,
 } from './adapter';
-import { OrchidOrmInternalError, QueryError } from '../query/errors';
+import {
+  OrchidOrmInternalError,
+  QueryError,
+  TransactionRolledBackError,
+} from '../query/errors';
 import { Rollback } from '../testTransaction';
 import { allDriverAdapters, sql, testDb, testDbOptions } from 'test-utils';
 import { createDbWithAdapter } from 'pqb';
@@ -287,6 +291,79 @@ describe('adapter runtime abstractions', () => {
             ]);
           });
 
+          describe('a transaction that is not committed', () => {
+            const table = `"adapter_test_not_committed"`;
+            const observer = new AdapterClass({
+              driverAdapter,
+              config: testDbOptions,
+            });
+
+            // another connection sees only what was committed
+            const countCommittedRows = async () => {
+              const { rows } = await observer.query<{ count: number }>(
+                `SELECT count(*)::int "count" FROM ${table}`,
+              );
+              return rows[0].count;
+            };
+
+            beforeAll(async () => {
+              try {
+                await adapter.query(
+                  `CREATE TABLE ${table} ("id" integer UNIQUE DEFERRABLE INITIALLY DEFERRED)`,
+                );
+              } finally {
+                await adapter.close();
+              }
+            });
+
+            afterEach(() => observer.close());
+
+            afterAll(async () => {
+              try {
+                await adapter.query(`DROP TABLE ${table}`);
+              } finally {
+                await adapter.close();
+              }
+            });
+
+            it('rejects when a deferred constraint fails at COMMIT', async () => {
+              let callbackResolved = false;
+
+              const errorCode = await adapter
+                .transaction(undefined, undefined, async (trx) => {
+                  await trx.query(`INSERT INTO ${table} VALUES (1), (1)`);
+                  callbackResolved = true;
+                })
+                .catch(getDriverErrorCode);
+
+              expect(callbackResolved).toBe(true);
+              expect(errorCode).toBe('23505');
+              expect(await countCommittedRows()).toBe(0);
+            });
+
+            it('rejects when the callback handled the error of a failed query', async () => {
+              let callbackResolved = false;
+
+              const error = await adapter
+                .transaction(undefined, undefined, async (trx) => {
+                  await trx.query(`INSERT INTO ${table} VALUES (1)`);
+                  await trx.query('SELECT 1/0').catch(() => {});
+                  callbackResolved = true;
+                })
+                .catch((err) => err);
+
+              expect(callbackResolved).toBe(true);
+              // postgres.js rolls back on its own and rejects with the error of the query,
+              // for other drivers PostgreSQL answers `COMMIT` with `ROLLBACK` and no error
+              if (name === 'postgres-js') {
+                expect(error).toMatchObject({ code: '22012' });
+              } else {
+                expect(error).toBeInstanceOf(TransactionRolledBackError);
+              }
+              expect(await countCommittedRows()).toBe(0);
+            });
+          });
+
           it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
             const beginSpy = jest.spyOn(adapter.driverAdapter, 'begin');
             const savepointSpy = jest.spyOn(
@@ -347,14 +424,19 @@ describe('adapter runtime abstractions', () => {
 
           it('rejects a savepoint with the SAVEPOINT error and skips its callback in an aborted transaction', async () => {
             const cb = jest.fn();
+            const rollback = new Error('rollback');
             let error: unknown;
 
-            await adapter.transaction(undefined, undefined, async (trx) => {
-              await trx.query('SELECT 1/0').catch(() => {});
-              error = await trx
-                .savepoint('aborted', undefined, cb)
-                .catch((err) => err);
-            });
+            await expect(
+              adapter.transaction(undefined, undefined, async (trx) => {
+                await trx.query('SELECT 1/0').catch(() => {});
+                error = await trx
+                  .savepoint('aborted', undefined, cb)
+                  .catch((err) => err);
+
+                throw rollback;
+              }),
+            ).rejects.toBe(rollback);
 
             expect(getDriverErrorCode(error as object)).toBe('25P02');
             expect(cb).not.toHaveBeenCalled();
@@ -763,6 +845,27 @@ describe('adapter runtime abstractions', () => {
             );
           });
 
+          it('preserves the query error in a nested transaction with a role and commits the outer transaction', async () => {
+            let error: unknown;
+
+            await adapter.query(`UPDATE ${counterTable} SET "value" = 0`);
+
+            await adapter.transaction(undefined, undefined, async (trx) => {
+              await trx.query(incrementCounterSql);
+
+              error = await trx
+                .transaction(undefined, { role: 'app-user' }, () =>
+                  trx.query('SELECT 1/0'),
+                )
+                .catch((err) => err);
+            });
+
+            expect(getDriverErrorCode(error as object)).toBe('22012');
+
+            const { rows } = await adapter.query(getCounterValueSql);
+            expect(rows).toEqual([{ value: 1 }]);
+          });
+
           it('applies role and setConfig of a nested transaction after a previous one threw synchronously', async () => {
             const currentRole = adapter.getUser();
             const options = {
@@ -1125,17 +1228,22 @@ describe('adapter runtime abstractions', () => {
           });
 
           it('rejects with the SAVEPOINT error in an aborted transaction', async () => {
+            const rollback = new Error('rollback');
             let error: unknown;
 
-            await adapter.transaction(undefined, undefined, async (trx) => {
-              await trx.query('SELECT 1/0').catch(() => {});
-              const state: HackySavepointState = { name: 'hacky_aborted' };
-              error = await trx
-                .hackySavepoint(state, 'SELECT 1')
-                .catch((err) => err);
+            await expect(
+              adapter.transaction(undefined, undefined, async (trx) => {
+                await trx.query('SELECT 1/0').catch(() => {});
+                const state: HackySavepointState = { name: 'hacky_aborted' };
+                error = await trx
+                  .hackySavepoint(state, 'SELECT 1')
+                  .catch((err) => err);
 
-              await state.activeSavepoint!.rollback(error);
-            });
+                await state.activeSavepoint!.rollback(error);
+
+                throw rollback;
+              }),
+            ).rejects.toBe(rollback);
 
             expect(getDriverErrorCode(error as object)).toBe('25P02');
           });

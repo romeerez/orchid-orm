@@ -948,15 +948,14 @@ const nestedTransaction = async <T>(
         driverAdapter.queryClient(client, setConfigSql);
       }
 
-      let result;
-      try {
-        result = await cb(new TransactionAdapterClass(adapter, client));
-        // config is reverted by rollback to savepoint, role is not reverted and it is undone manually in the finally section
-      } finally {
-        const resetRoleSql = getResetRoleSql(parentRole, options);
-        if (resetRoleSql) {
-          await driverAdapter.queryClient(client, resetRoleSql);
-        }
+      const result = await cb(new TransactionAdapterClass(adapter, client));
+
+      // `RELEASE SAVEPOINT` keeps the role and the config, so they are undone here.
+      // After a failure, `ROLLBACK TO SAVEPOINT` reverts both,
+      // and a query sent to the aborted transaction would fail.
+      const resetRoleSql = getResetRoleSql(parentRole, options);
+      if (resetRoleSql) {
+        await driverAdapter.queryClient(client, resetRoleSql);
       }
 
       const resetSetConfigSql = getResetSetConfigSql(parentSetConfig, options);

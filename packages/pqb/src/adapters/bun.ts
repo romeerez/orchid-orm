@@ -15,6 +15,7 @@ import {
   quoteIdentifier,
   RecordUnknown,
   AdapterSchemaConfigOptions,
+  TransactionRolledBackError,
 } from 'pqb/internal';
 import { createDbWithAdapter } from 'pqb';
 import { HackySavepointState, SavepointCallback } from './adapter';
@@ -117,6 +118,7 @@ interface BunSqlQuery<
 interface BunSqlResult<Row = unknown> extends Array<Row> {
   count?: number;
   affectedRows?: number;
+  command?: string;
 }
 
 // oxlint-disable-next-line typescript/no-explicit-any
@@ -246,7 +248,12 @@ export const BunAdapter: DriverAdapter = {
         throw err;
       }
 
-      await queryClient(client, 'COMMIT');
+      // PostgreSQL answers `COMMIT` of a transaction aborted by a failed query with `ROLLBACK` and no error
+      const commit = await queryClient(client, 'COMMIT');
+      if ((commit as BunQueryResult<unknown>).result.command !== 'COMMIT') {
+        throw new TransactionRolledBackError();
+      }
+
       return result as Result;
     } finally {
       releaseBunClient(client);
@@ -432,7 +439,7 @@ class BunQueryResult<T> implements QueryResult<T> {
   private _fields?: QueryResult<T>['fields'];
 
   constructor(
-    private result: BunSqlResult<T>,
+    readonly result: BunSqlResult<T>,
     private isArray?: boolean,
   ) {
     this.rowCount = result.count ?? result.affectedRows ?? result.length;

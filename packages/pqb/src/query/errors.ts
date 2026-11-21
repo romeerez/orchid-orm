@@ -29,6 +29,18 @@ export class NotFoundError extends OrchidOrmError {
   }
 }
 
+/**
+ * Error of a transaction that PostgreSQL rolled back in response to `COMMIT`.
+ * PostgreSQL does so, with no error of its own, when a query of the transaction failed and the callback handled that error and resolved.
+ */
+export class TransactionRolledBackError extends OrchidOrmError {
+  constructor() {
+    super(
+      'The transaction was rolled back instead of being committed because one of its queries failed',
+    );
+  }
+}
+
 export class OrchidOrmInternalError extends Error {
   // `#query` is private to prevent it from serializing to not cause problems to test runner reports
   // it is exposed with `getQuery` method which prevents this problem from both Vitest and Jest.

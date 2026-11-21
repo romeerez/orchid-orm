@@ -6,7 +6,7 @@ description: Error handling with OrchidOrmError, NotFoundError, QueryError, catc
 
 `Orchid ORM` and a query builder `pqb` can throw errors of two classes (that you can import from 'orchid-orm'):
 
-`OrchidOrmError` - can be exposed to user, for now only `NotFoundError` extends it.
+`OrchidOrmError` - the base class of expected errors, such as `NotFoundError`.
 
 `OrchidOrmInternalError` - should not be exposed, has several sub-classes:
 
@@ -18,7 +18,7 @@ description: Error handling with OrchidOrmError, NotFoundError, QueryError, catc
 
 When using `find`, `findBy`, `take`, `get`, the ORM will throw `NotFoundError` in case when record is not found.
 
-This is the only ORM error that can be safely exposed to users.
+Its default message, `Record is not found`, can be safely exposed to users.
 
 Here is how centralized error handler may look like:
 

@@ -14,6 +14,7 @@ export {
   OrchidOrmInternalError,
   NotFoundError,
   QueryError,
+  TransactionRolledBackError,
   createDbWithAdapter,
   Db,
   Expression,

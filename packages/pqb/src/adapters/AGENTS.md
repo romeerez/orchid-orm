@@ -7,6 +7,28 @@ that setting as `''` rather than `NULL`. Assertions that a setting did not leak
 out of a transaction must treat `''` and `NULL` as unset, because the pool may
 run the follow-up query on that connection or on a fresh one.
 
+## Transaction outcome
+
+A transaction rejects when it was not committed, under every driver.
+
+Propagate a rejection from `sql.begin` of postgres.js even after the callback
+resolves. The transaction may have rolled back, or its outcome may be unknown.
+
+PostgreSQL answers `COMMIT` of a transaction aborted by a failed query with the
+`ROLLBACK` command tag and no error. A driver adapter that sends `COMMIT` itself
+checks the tag and rejects with `TransactionRolledBackError`.
+
+Under postgres.js, a failed query sent through the transaction client makes
+`sql.begin` roll back and reject, even when the failure was handled. Send a
+query through the client of a savepoint when the code goes on with the
+transaction after its failure.
+
+If the callback of a nested transaction throws or rejects, let the rollback to
+its savepoint restore the parent role and config. If the callback succeeds,
+restore them before returning.
+
+To assert that nothing was committed, read through another adapter instance.
+
 ## Savepoints
 
 A failed `SAVEPOINT` leaves no savepoint to roll back to: running
