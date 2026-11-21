@@ -285,6 +285,253 @@ describe('computed', () => {
 
         expect(res).toEqual({ as: nameAndKey, dec: 1, dep: depSql });
       });
+
+      it('should select a computed column from a with statement', async () => {
+        const q = testDb
+          .with('u', () => User.select('nameAndKey'))
+          .from('u')
+          .select('nameAndKey');
+
+        expectSql(
+          q.toSQL(),
+          `
+            WITH "u" AS (
+              SELECT ("User"."name" || ' ' || "User"."user_key") "nameAndKey"
+              FROM "schema"."user" "User"
+            )
+            SELECT "u"."nameAndKey" FROM "u"
+          `,
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { nameAndKey: string }[]>();
+
+        expect(res).toEqual([{ nameAndKey }]);
+      });
+
+      it('should select a computed column with alias from a with statement that is a union', async () => {
+        const dec = User.select({ dec: 'decimal' });
+
+        const q = testDb
+          .with('u', () => dec.unionAll(dec))
+          .from('u')
+          .select('dec');
+
+        expectSql(
+          q.toSQL(),
+          `
+            WITH "u" AS (
+              (SELECT (1::decimal) "dec" FROM "schema"."user" "User")
+              UNION ALL
+              (SELECT (1::decimal) "dec" FROM "schema"."user" "User")
+            )
+            SELECT "u"."dec" FROM "u"
+          `,
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { dec: number }[]>();
+
+        expect(res).toEqual([{ dec: 1 }, { dec: 1 }]);
+      });
+
+      it('should read a computed column that a with statement selects by an expression', async () => {
+        const q = testDb
+          .with('u', () => User.select({ as: (q) => q.column('nameAndKey') }))
+          .from('u')
+          .select('as');
+
+        expectSql(
+          q.toSQL(),
+          `
+            WITH "u" AS (
+              SELECT ("User"."name" || ' ' || "User"."user_key") "as"
+              FROM "schema"."user" "User"
+            )
+            SELECT "u"."as" FROM "u"
+          `,
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { as: string }[]>();
+
+        expect(res).toEqual([{ as: nameAndKey }]);
+      });
+
+      it('should read an aliased computed expression by its output key in explicit and default selects', async () => {
+        const UserWithNamedComputed = testDb(
+          'User',
+          (t) => ({
+            id: t.identity().primaryKey(),
+          }),
+          undefined,
+          {
+            schema: () => 'schema',
+            computed: () => ({
+              seven: sql`7`.type((t) => t.name('stored').integer()),
+            }),
+          },
+        );
+
+        const u = testDb.with('u', () =>
+          UserWithNamedComputed.select({ n: (q) => q.column('seven') }),
+        );
+
+        const all = u.from('u');
+
+        expectSql(
+          all.toSQL(),
+          `
+            WITH "u" AS (SELECT (7) "n" FROM "schema"."user" "User")
+            SELECT * FROM "u"
+          `,
+        );
+
+        const selected = u.from('u').select('n');
+
+        expectSql(
+          selected.toSQL(),
+          `
+            WITH "u" AS (SELECT (7) "n" FROM "schema"."user" "User")
+            SELECT "u"."n" FROM "u"
+          `,
+        );
+
+        const res = await Promise.all([all, selected]);
+
+        assertType<typeof res, [{ n: number }[], { n: number }[]]>();
+
+        expect(res).toEqual([[{ n: 7 }], [{ n: 7 }]]);
+      });
+
+      it('should reference a computed column by its key inside and outside of a recursive with statement', async () => {
+        const q = testDb
+          .withRecursive('u', User.select('nameAndKey'), (q) =>
+            q.from('u').where({ nameAndKey: '' }),
+          )
+          .from('u')
+          .select('nameAndKey');
+
+        expectSql(
+          q.toSQL(),
+          `
+            WITH RECURSIVE "u" AS (
+              (
+                SELECT ("User"."name" || ' ' || "User"."user_key") "nameAndKey"
+                FROM "schema"."user" "User"
+              )
+              UNION ALL
+              (SELECT * FROM "u" WHERE "u"."nameAndKey" = $1)
+            )
+            SELECT "u"."nameAndKey" FROM "u"
+          `,
+          [''],
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { nameAndKey: string }[]>();
+
+        expect(res).toEqual([{ nameAndKey }]);
+      });
+
+      it('should support `get` of a computed column in a with statement', async () => {
+        const one = User.get('decimal');
+
+        const res = await Promise.all([
+          testDb
+            .with('u', () => one)
+            .from('u')
+            .select('value'),
+          testDb
+            .with('u', () => one.unionAll(one))
+            .from('u')
+            .select('value'),
+          testDb
+            .with('u', () => User.select('name').merge(one))
+            .from('u')
+            .select('value'),
+        ]);
+
+        assertType<
+          typeof res,
+          [{ value: number }[], { value: number }[], { value: number }[]]
+        >();
+
+        expect(res).toEqual([
+          [{ value: 1 }],
+          [{ value: 1 }, { value: 1 }],
+          [{ value: 1 }],
+        ]);
+      });
+
+      it('should read an aliased computed column selected after `get`', async () => {
+        const res = await testDb
+          .with('u', () => User.get('name').select({ n: 'nameAndKey' }))
+          .from('u')
+          .select('n');
+
+        assertType<typeof res, { n: string }[]>();
+
+        expect(res).toEqual([{ n: nameAndKey }]);
+      });
+
+      it('should select a computed column from a sub-query in `from`', async () => {
+        const q = testDb.from(User.select('nameAndKey')).select('nameAndKey');
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "User"."nameAndKey"
+            FROM (
+              SELECT ("User"."name" || ' ' || "User"."user_key") "nameAndKey"
+              FROM "schema"."user" "User"
+            ) "User"
+          `,
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { nameAndKey: string }[]>();
+
+        expect(res).toEqual([{ nameAndKey }]);
+      });
+
+      it('should select a computed column from a joined union', async () => {
+        const users = User.select('id', 'nameAndKey');
+
+        const q = db.profile
+          .join(users.unionAll(users).as('t'), 't.id', 'Profile.UserId')
+          .select('t.nameAndKey');
+
+        expectSql(
+          q.toSQL(),
+          `
+            SELECT "t"."nameAndKey"
+            FROM "schema"."profile" "Profile"
+            JOIN (
+              (
+                SELECT "User"."id", ("User"."name" || ' ' || "User"."user_key") "nameAndKey"
+                FROM "schema"."user" "User"
+              )
+              UNION ALL
+              (
+                SELECT "User"."id", ("User"."name" || ' ' || "User"."user_key") "nameAndKey"
+                FROM "schema"."user" "User"
+              )
+            ) "t" ON "t"."id" = "Profile"."user_id"
+          `,
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { nameAndKey: string }[]>();
+
+        expect(res).toEqual([{ nameAndKey }, { nameAndKey }]);
+      });
     });
 
     describe('where', () => {
@@ -340,6 +587,32 @@ describe('computed', () => {
           `,
           [0, 'dep'],
         );
+      });
+
+      it('should filter by a computed column of a with statement', async () => {
+        const q = testDb
+          .with('u', () => User.select('id', 'nameAndKey'))
+          .from('u')
+          .where({ nameAndKey })
+          .select('id');
+
+        expectSql(
+          q.toSQL(),
+          `
+            WITH "u" AS (
+              SELECT "User"."id", ("User"."name" || ' ' || "User"."user_key") "nameAndKey"
+              FROM "schema"."user" "User"
+            )
+            SELECT "u"."id" FROM "u" WHERE "u"."nameAndKey" = $1
+          `,
+          [nameAndKey],
+        );
+
+        const res = await q;
+
+        assertType<typeof res, { id: number }[]>();
+
+        expect(res).toEqual([{ id: userId }]);
       });
     });
 

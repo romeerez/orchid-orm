@@ -767,7 +767,7 @@ export const getShapeFromSelect = (
   // a select with a union outputs the columns of its first query,
   // a mutation outputs its own returning columns.
   if (query.union && !query.type) {
-    return getShapeFromSelect(query.union.b, true);
+    return getOutputShape(query.union.b);
   }
 
   const { selectShape } = query;
@@ -850,6 +850,46 @@ export const getShapeFromSelect = (
   }
 
   return result;
+};
+
+// returns the shape of a query for reading it from outside:
+// a SQL computed column that the query outputs under a key is computed inside of the query,
+// outside it is a plain column that is read by that key
+export const getOutputShape = (q: IsQuery): Column.QueryColumns => {
+  const { union, type, select } = (q as Query).q;
+  // a select with a union outputs the columns of its first query
+  if (union && !type) return getOutputShape(union.b);
+
+  const shape = getShapeFromSelect(q, true);
+
+  // a value selected without a key, such as the value of `get`, has no alias in SQL,
+  // so outside it cannot be read by a key
+  let unaliasedValue: unknown;
+  if (select) {
+    for (const item of select) {
+      if (isExpression(item)) unaliasedValue = item.result.value;
+    }
+  }
+
+  for (const key in shape) {
+    // a selected column has no description when it is a value of raw SQL without a type
+    const column = shape[key] as unknown as Column.Pick.Data | undefined;
+    if (column?.data.computed && column !== unaliasedValue) {
+      const cloned = Object.create(column);
+      cloned.data = {
+        ...column.data,
+        // a column selected by an expression still has its name and `explicitSelect`
+        name: undefined,
+        explicitSelect: undefined,
+        // a computed column stores its SQL in `selectSql` as well
+        computed: undefined,
+        selectSql: undefined,
+      };
+      shape[key] = cloned;
+    }
+  }
+
+  return shape;
 };
 
 // converts selected items into a shape of columns
